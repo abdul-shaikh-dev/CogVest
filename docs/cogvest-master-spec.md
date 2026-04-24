@@ -1,4 +1,4 @@
-# Cogfolio Tracker — Master Product Spec
+# CogVest Tracker — Master Product Spec
 > Android-first personal portfolio tracker with behavioural insights and Minimal Mode  
 > Covers: Crypto + Indian Stocks + ETFs + Cash  
 > Last updated: April 2026
@@ -7,7 +7,7 @@
 
 ## 1. Product Summary
 
-Cogfolio Tracker is an **Android-only, mobile-first portfolio app** designed for tracking a mixed portfolio of **crypto, Indian equities, ETFs, and cash**.
+CogVest Tracker is an **Android-only, mobile-first portfolio app** designed for tracking a mixed portfolio of **crypto, Indian equities, ETFs, and cash**.
 
 The app is intentionally built around three layers:
 
@@ -39,7 +39,7 @@ But also:
 
 ### Product identity
 
-Cogfolio is not just a tracker.
+CogVest is not just a tracker.
 
 It is:
 
@@ -742,10 +742,10 @@ Insights should feel informative, not scolding.
 Use these mockups as visual references while building:
 
 ### Combined standard + minimal screen collage
-- [App screens mockup](cogfolio_standard_mode.png)
+- [App screens mockup](CogVest_standard_mode.png)
 
 ### Minimal Mode screen collage
-- [Minimal Mode screens](cogfolio_minimal_mode.png)
+- [Minimal Mode screens](CogVest_minimal_mode.png)
 
 These mockups cover:
 - Dashboard
