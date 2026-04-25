@@ -268,6 +268,7 @@ export interface Asset {
   assetClass: AssetClass
   currency: "INR" | "USD"
   exchange?: "NSE" | "BSE" | "CRYPTO"
+  logoUrl?: string
   isTaxEligible?: boolean
 }
 
@@ -285,6 +286,7 @@ export interface Trade {
   // Behaviour layer
   conviction?: 1 | 2 | 3 | 4 | 5
   intendedHoldDays?: number
+  whyThisTrade?: string
 }
 
 export interface CashEntry {
@@ -292,7 +294,9 @@ export interface CashEntry {
   label: string
   amount: number
   institution?: string
-  lastUpdated: string
+  type: "addition" | "withdrawal"
+  date: string
+  notes?: string
 }
 
 export interface Quote {
@@ -300,6 +304,7 @@ export interface Quote {
   price: number
   currency: "INR" | "USD"
   dayChangePct?: number
+  dayChangeAbs?: number
   asOf: string
   source: "yahoo" | "coingecko" | "manual"
 }
@@ -317,15 +322,24 @@ export interface Holding {
   heldDays?: number
   ltcgEligible?: boolean
   daysToLtcg?: number
+  lastUpdated?: string
+}
+
+export type ChartRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL"
+
+export interface MinimalModePrefs {
+  hideDayChange: boolean
+  hideTopMovers: boolean
+  hideDashboardInsights: boolean
+  maskPortfolioValues: boolean
+  defaultChartRange: ChartRange
 }
 
 export interface Preferences {
   displayMode: "standard" | "minimal"
-  showDayChange: boolean
-  showTopMovers: boolean
-  showDashboardInsights: boolean
-  maskPortfolioValues: boolean
-  defaultAssetChartRange: "1M" | "3M" | "6M" | "1Y" | "ALL"
+  minimal: MinimalModePrefs
+  defaultChartRange: ChartRange
+  hasCompletedOnboarding: boolean
 }
 ```
 
@@ -337,8 +351,8 @@ Persist:
 - assets
 - trades
 - cashEntries
-- quotes
 - preferences
+- last successful quote cache
 
 Derive:
 - holdings
@@ -373,7 +387,8 @@ Derived values:
 ### 9.2 Portfolio total
 
 ```text
-Portfolio Total = sum(all holding current values) + sum(all cash amounts)
+Portfolio Total = sum(all holding current values) + cash balance
+Cash balance = sum(additions) - sum(withdrawals)
 ```
 
 ### 9.3 Allocation
@@ -387,17 +402,22 @@ Allocation should be grouped by asset class:
 ### 9.4 Realised P&L
 
 Later version.
-Can initially be deferred if needed.
+Can initially be implemented as a pure helper if useful, but should not block
+the core tracker MVP UI.
 
 ### 9.5 LTCG tracker
 
 For Indian stocks / ETFs:
 
 ```typescript
-daysHeld = today - buyDate
-ltcgEligible = daysHeld >= 365
-daysToLtcg = Math.max(0, 365 - daysHeld)
+Each buy is treated as its own lot.
+eligibleDate = buyDate + 365 days
+ltcgEligible = today >= eligibleDate
+daysToLtcg = Math.max(0, eligibleDate - today)
 ```
+
+Partial sells should reduce remaining lots using FIFO. A holding is fully
+LTCG eligible only when all remaining units are eligible.
 
 ### 9.6 Conviction analysis
 
@@ -735,6 +755,42 @@ Insights should feel informative, not scolding.
 - less chart obsession
 - stronger long-term framing
 
+## 13A. Visual Implementation Rules
+
+### Elevation
+- No drop shadows on cards
+- Use subtle border: 1px solid rgba(255,255,255,0.08)
+- Slightly elevated cards use rgba(255,255,255,0.04) background
+- No coloured shadows anywhere
+
+### Touch feedback
+- Use Pressable with opacity: 0.75 on pressed state
+- No Android ripple effect
+- Haptic feedback on primary actions via expo-haptics
+
+### Typography contrast
+- Labels/captions: fontWeight 400, color text.secondary
+- Body values: fontWeight 600, color text.primary
+- INR amounts: fontWeight 800, fontFamily monospace
+- Hero portfolio value: fontWeight 900, fontFamily monospace
+
+### Spacing rhythm
+- Within card: 12px between elements
+- Between cards: 10px gap
+- Screen horizontal padding: 16px
+- Section headers: 20px margin top, 8px margin bottom
+
+### Colour discipline
+- Green (#2E7D52) only on: primary CTA, positive P&L, LTCG eligible
+- Red (#FF4D6D) only on: negative P&L, sell actions
+- Amber (#F5A623) only on: LTCG warning, neutral signals
+- Never use green/red for decorative purposes
+
+### Minimal Mode overrides
+- Replace #00C48C gain colour with #4CAF50 (softer)
+- Replace #FF4D6D loss colour with #EF5350 (softer)
+- Reduce all semantic colour opacity by 30%
+- Increase spacing between cards by 4px
 ---
 
 ## 14. Generated UI References
@@ -742,10 +798,10 @@ Insights should feel informative, not scolding.
 Use these mockups as visual references while building:
 
 ### Combined standard + minimal screen collage
-- [App screens mockup](CogVest_standard_mode.png)
+- [App screens mockup](cogvest_standard_mode.png)
 
 ### Minimal Mode screen collage
-- [Minimal Mode screens](CogVest_minimal_mode.png)
+- [Minimal Mode screens](cogvest_minimal_mode.png)
 
 These mockups cover:
 - Dashboard
@@ -765,17 +821,19 @@ These mockups cover:
 ## 15.1 Folder structure
 
 ```text
-src/
-  app/
-    (tabs)/
-      dashboard.tsx
-      holdings.tsx
-      add-trade.tsx
-      history.tsx
-      cash.tsx
-    asset/[id].tsx
-    settings.tsx
+app/
+  _layout.tsx
+  (tabs)/
+    _layout.tsx
+    dashboard.tsx
+    holdings.tsx
+    add-trade.tsx
+    history.tsx
+    cash.tsx
+  asset/[id].tsx
+  settings.tsx
 
+mosrc/
   components/
     cards/
       PortfolioValueCard.tsx
@@ -841,6 +899,7 @@ src/
 
   types/
     asset.ts
+    cash.ts
     trade.ts
     holding.ts
     preferences.ts
@@ -851,6 +910,9 @@ src/
     spacing.ts
     typography.ts
     modes.ts
+
+  utils/
+    id.ts
 ```
 
 ## 15.2 State slices
@@ -885,6 +947,10 @@ Selectors should derive:
 ---
 
 ## 16. MVP Scope / Release Plan
+
+Implementation note: the data model may include later-stage optional fields
+from the first build so migrations are simpler. UI surfaces and insights should
+still follow the phased release order below.
 
 ## v0.1 — Core Tracker
 Goal: replace Excel for day-to-day usage.
