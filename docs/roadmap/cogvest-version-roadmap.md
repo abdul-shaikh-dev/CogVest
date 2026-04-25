@@ -104,3 +104,6 @@ Issues created:
 - V1 detailed issues: #1-#16
 - V2 placeholder issues: #17-#21
 - V3 placeholder issues: #22-#26
+
+Planning PR:
+- https://github.com/abdul-shaikh-dev/CogVest/pull/27

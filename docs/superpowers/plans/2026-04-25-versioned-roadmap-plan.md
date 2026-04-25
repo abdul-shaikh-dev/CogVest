@@ -93,7 +93,9 @@
 **Files:**
 - All generated docs.
 
-- [ ] Run markdown consistency scans.
-- [ ] Commit branch.
-- [ ] Push `roadmap/versioned-planning`.
-- [ ] Open PR or provide manual PR body if unavailable.
+- [x] Run markdown consistency scans.
+- [x] Commit branch.
+- [x] Push `roadmap/versioned-planning`.
+- [x] Open PR or provide manual PR body if unavailable.
+
+PR: https://github.com/abdul-shaikh-dev/CogVest/pull/27
