@@ -4,6 +4,29 @@
 CogVest is an Android-first React Native portfolio tracker with 
 behavioural investing insights and Minimal Mode.
 
+## Current Roadmap
+- Build in phases from docs/roadmap/cogvest-version-roadmap.md.
+- Current execution focus: V1 MVP.
+- V1 goal: local-first Android tracker with live current quotes, Add Trade,
+  derived holdings, dashboard, cash tracking, value masking, and lightweight
+  conviction capture/state.
+- V2 adds Minimal Mode, basic LTCG, patience/frequency analysis, behaviour
+  insight cards, and insight detail.
+- V3 adds historical charts, advanced asset search, import/export, advanced
+  FIFO LTCG, quote-cache hardening, and polish.
+
+## V1 Scope Boundaries
+- Include live quote fetching for current prices on app open and pull-to-refresh.
+- Include manual current-price fallback when quote APIs fail.
+- Include optional conviction input and basic "not enough data" conviction state.
+- Do not add Minimal Mode in V1.
+- Do not add LTCG UI or tax badges in V1.
+- Do not add historical charts in V1.
+- Do not add patience analysis, trade-frequency analysis, or full behaviour
+  engine in V1.
+- Do not add import/export, backend, auth, cloud sync, analytics, or push
+  notifications in V1.
+
 ## Stack
 - React Native + Expo SDK 52+
 - TypeScript only. No JavaScript.
@@ -23,6 +46,10 @@ behavioural investing insights and Minimal Mode.
 - No backend. No auth. No cloud. Local device storage only.
 - All domain calculations must be pure functions in src/domain/.
 - No business logic in components.
+- For V1 implementation, work from GitHub issues #1-#16 in order unless the
+  user explicitly changes priority.
+- V2/V3 GitHub issues are placeholders and should not be expanded until V1 is
+  validated.
 
 ## Design
 - Material Design 3 influenced
@@ -30,7 +57,24 @@ behavioural investing insights and Minimal Mode.
 - Primary green: #2E7D52
 - Standard Mode: full information density, red/green P&L cues
 - Minimal Mode: calmer palette, reduced noise, long-term framing
+- No coloured card shadows; use subtle 1px borders.
+- Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI work.
+
+## Release Gates
+- V1 dev-complete requires typecheck, tests, Expo doctor, app launch, core
+  manual flows, preview APK build, and preview APK install on a real Android
+  device.
+- V1 release-candidate additionally requires production AAB build success, EAS
+  build URL recorded, and Play Console internal testing upload ready/manual.
+- Do not auto-submit to Google Play in V1.
 
 ## References
 - Full spec: docs/cogvest-master-spec.md
+- Version roadmap: docs/roadmap/cogvest-version-roadmap.md
+- V1 spec: docs/roadmap/v1-mvp-spec.md
+- V1 prompts: docs/roadmap/v1-codex-prompts.md
+- V1 issue drafts: docs/issues/v1-issue-drafts.md
+- V1 testing plan: docs/testing/v1-testing-plan.md
+- Android release process: docs/release/android-release-process.md
 - Mockups: docs/cogvest_standard_mode.png, docs/cogvest_minimal_mode.png
+- Figma roadmap mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
