@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { Trade, TradeType } from "@/src/types";
 
 type ValidationResult =
@@ -8,12 +10,48 @@ type SellQuantityResult =
   | { availableQuantity: number; isValid: true }
   | { availableQuantity: number; isValid: false; message: string };
 
-type TradeInput = {
+export type TradeInput = {
   date: string;
   pricePerUnit: number;
   quantity: number;
   type: TradeType;
 };
+
+const tradeTypes = ["buy", "sell"] as const;
+
+export const tradeTypeSchema = z.enum(tradeTypes);
+
+export function isValidDateString(value: string) {
+  return !Number.isNaN(new Date(value).getTime());
+}
+
+export function isFutureDate(value: string, now = new Date()) {
+  const date = new Date(value);
+
+  return isValidDateString(value) && date.getTime() > now.getTime();
+}
+
+export function createTradeInputSchema(now = new Date()) {
+  return z.object({
+    date: z
+      .string()
+      .trim()
+      .min(1, "Date is required.")
+      .refine(isValidDateString, "Date must be valid.")
+      .refine((value) => !isFutureDate(value, now), "Date cannot be in the future."),
+    quantity: z
+      .number()
+      .finite("Quantity must be a valid number.")
+      .positive("Quantity must be greater than zero."),
+    pricePerUnit: z
+      .number()
+      .finite("Price must be a valid number.")
+      .positive("Price must be greater than zero."),
+    type: tradeTypeSchema,
+  });
+}
+
+export const tradeInputSchema = createTradeInputSchema();
 
 export function getAvailableQuantity(trades: Trade[]) {
   return trades.reduce((quantity, trade) => {
@@ -45,24 +83,15 @@ export function validateSellQuantity(
   };
 }
 
-export function validateTradeInput(input: TradeInput): ValidationResult {
-  const errors: string[] = [];
+export function validateTradeInput(input: TradeInput, now = new Date()): ValidationResult {
+  const result = createTradeInputSchema(now).safeParse(input);
 
-  if (input.quantity <= 0) {
-    errors.push("Quantity must be greater than zero.");
+  if (result.success) {
+    return { isValid: true };
   }
 
-  if (input.pricePerUnit <= 0) {
-    errors.push("Price must be greater than zero.");
-  }
-
-  if (Number.isNaN(new Date(input.date).getTime())) {
-    errors.push("Date must be valid.");
-  }
-
-  if (errors.length > 0) {
-    return { errors, isValid: false };
-  }
-
-  return { isValid: true };
+  return {
+    errors: result.error.issues.map((issue) => issue.message),
+    isValid: false,
+  };
 }
