@@ -1,3 +1,4 @@
+export { AddTradeForm } from "./add-trade-form";
 export {
   createTradeFormSchema,
   tradeFormSchema,

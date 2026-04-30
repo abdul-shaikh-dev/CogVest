@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/src/components/common/PlaceholderScreen";
+import { AddTradeForm } from "@/src/features/trades";
 
 export default function AddTradeScreen() {
-  return <PlaceholderScreen title="Add Trade" />;
+  return <AddTradeForm />;
 }
