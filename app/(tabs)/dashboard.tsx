@@ -1,5 +1,13 @@
-import { PlaceholderScreen } from "@/src/components/common/PlaceholderScreen";
+import { router } from "expo-router";
+
+import { DashboardScreen as DashboardFeatureScreen } from "@/src/features/dashboard";
 
 export default function DashboardScreen() {
-  return <PlaceholderScreen title="Dashboard" />;
+  return (
+    <DashboardFeatureScreen
+      onAddTrade={() => {
+        router.push("/(tabs)/add-trade");
+      }}
+    />
+  );
 }
