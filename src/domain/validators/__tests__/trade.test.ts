@@ -49,4 +49,21 @@ describe("trade validators", () => {
       isValid: false,
     });
   });
+
+  it("rejects future-dated trades", () => {
+    expect(
+      validateTradeInput(
+        {
+          date: "2026-04-21T00:00:00.000Z",
+          pricePerUnit: 100,
+          quantity: 1,
+          type: "buy",
+        },
+        new Date("2026-04-20T12:00:00.000Z"),
+      ),
+    ).toEqual({
+      errors: ["Date cannot be in the future."],
+      isValid: false,
+    });
+  });
 });
