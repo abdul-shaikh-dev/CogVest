@@ -1,5 +1,13 @@
-import { PlaceholderScreen } from "@/src/components/common/PlaceholderScreen";
+import { router } from "expo-router";
+
+import { HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings";
 
 export default function HoldingsScreen() {
-  return <PlaceholderScreen title="Holdings" />;
+  return (
+    <HoldingsFeatureScreen
+      onAddTrade={() => {
+        router.push("/(tabs)/add-trade");
+      }}
+    />
+  );
 }

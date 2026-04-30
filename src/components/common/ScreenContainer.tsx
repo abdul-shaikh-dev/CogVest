@@ -1,17 +1,25 @@
 import type { ReactNode } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import type { ReactElement } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  type RefreshControlProps,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/src/theme";
 
 type ScreenContainerProps = {
   children: ReactNode;
+  refreshControl?: ReactElement<RefreshControlProps>;
   scroll?: boolean;
   testID?: string;
 };
 
 export function ScreenContainer({
   children,
+  refreshControl,
   scroll = false,
   testID,
 }: ScreenContainerProps) {
@@ -20,6 +28,7 @@ export function ScreenContainer({
       <SafeAreaView style={styles.safe} testID={testID}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          refreshControl={refreshControl}
           style={styles.scroll}
         >
           {children}

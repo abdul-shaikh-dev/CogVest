@@ -1,1 +1,1 @@
-export {};
+export { HoldingCard } from "./HoldingCard";
