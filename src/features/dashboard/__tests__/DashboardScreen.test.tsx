@@ -31,11 +31,11 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getByText } = render(
+    const { getAllByText, getByText } = render(
       <DashboardScreen store={store} onAddTrade={onAddTrade} />,
     );
 
-    expect(getByText("₹0.00")).toBeTruthy();
+    expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
     expect(getByText("No allocation yet")).toBeTruthy();
     expect(
       getByText("Add your first trade to build holdings automatically."),
@@ -69,7 +69,8 @@ describe("DashboardScreen", () => {
     const { getByText, queryByText } = render(<DashboardScreen store={store} />);
 
     expect(getByText("₹350.00")).toBeTruthy();
-    expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+    expect(getByText("+₹27.27")).toBeTruthy();
+    expect(getByText("(+10.00%) today")).toBeTruthy();
     expect(getByText("Stock")).toBeTruthy();
     expect(getByText("85.71%")).toBeTruthy();
     expect(getByText("Cash")).toBeTruthy();
@@ -98,6 +99,7 @@ describe("DashboardScreen", () => {
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("₹300.00")).toBeNull();
+    expect(queryByText("+₹100.00")).toBeNull();
     expect(getAllByText("100.00%").length).toBeGreaterThan(0);
   });
 });

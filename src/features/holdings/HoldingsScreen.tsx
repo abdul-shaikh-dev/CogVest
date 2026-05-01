@@ -24,7 +24,7 @@ export function HoldingsScreen({
   refreshQuotes,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
-  const { failures, holdings, isRefreshing, refresh } = useHoldings({
+  const { failures, holdings, isRefreshing, maskWealthValues, refresh } = useHoldings({
     refreshQuotes,
     store,
   });
@@ -77,7 +77,11 @@ export function HoldingsScreen({
             testID="holdings-list"
           >
             {holdings.map((holding) => (
-              <HoldingCard key={holding.asset.id} holding={holding} />
+              <HoldingCard
+                key={holding.asset.id}
+                holding={holding}
+                masked={maskWealthValues}
+              />
             ))}
           </View>
         )}

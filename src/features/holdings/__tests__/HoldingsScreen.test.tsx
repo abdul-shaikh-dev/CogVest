@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
+import { MASKED_INR_VALUE } from "@/src/components/common";
 import { HoldingsScreen } from "@/src/features/holdings";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -64,7 +65,8 @@ describe("HoldingsScreen", () => {
     expect(getByText("Qty 2")).toBeTruthy();
     expect(getByText("Avg ₹100.00")).toBeTruthy();
     expect(getByText("₹250.00")).toBeTruthy();
-    expect(getByText("+₹50.00 (+25.00%)")).toBeTruthy();
+    expect(getByText("+₹50.00")).toBeTruthy();
+    expect(getByText("+25.00%")).toBeTruthy();
     expect(getByText("Updated 20 Apr 2026")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
   });
@@ -105,5 +107,28 @@ describe("HoldingsScreen", () => {
       expect(getByText("₹300.00")).toBeTruthy();
       expect(getByText("Updated 21 Apr 2026")).toBeTruthy();
     });
+  });
+
+  it("masks wealth values without hiding quantities or percentages", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-20T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 125,
+      source: "yahoo",
+    });
+
+    const { getAllByText, getByText, queryByText } = render(
+      <HoldingsScreen store={store} />,
+    );
+
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(getByText("Qty 2")).toBeTruthy();
+    expect(getByText("+25.00%")).toBeTruthy();
+    expect(queryByText("₹250.00")).toBeNull();
   });
 });

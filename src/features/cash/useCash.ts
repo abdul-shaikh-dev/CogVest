@@ -22,6 +22,7 @@ export type UseCashResult = {
   addEntry: (entry: AddCashEntryInput) => CashEntry;
   balance: number;
   entries: CashEntry[];
+  maskWealthValues: boolean;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -55,5 +56,6 @@ export function useCash({
     addEntry,
     balance: calculateCashBalance(snapshot.cashEntries),
     entries: sortCashEntries(snapshot.cashEntries),
+    maskWealthValues: snapshot.preferences.maskWealthValues,
   };
 }

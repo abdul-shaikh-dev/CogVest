@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
+import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
@@ -52,5 +53,25 @@ describe("CashScreen", () => {
     expect(getByText("Amount must be a valid number.")).toBeTruthy();
     expect(getByText("Label is required.")).toBeTruthy();
     expect(getByText("Date is required.")).toBeTruthy();
+  });
+
+  it("masks cash wealth values when value masking is enabled", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addCashEntry({
+      amount: 1000,
+      date: "2026-04-20",
+      id: "cash-1",
+      label: "Broker cash",
+      type: "addition",
+    });
+
+    const { getAllByText, getByText, queryByText } = render(
+      <CashScreen store={store} />,
+    );
+
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(getByText("Broker cash")).toBeTruthy();
+    expect(queryByText("₹1,000.00")).toBeNull();
   });
 });

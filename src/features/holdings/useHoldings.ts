@@ -24,6 +24,7 @@ export type UseHoldingsResult = {
   failures: QuoteRefreshFailure[];
   holdings: Holding[];
   isRefreshing: boolean;
+  maskWealthValues: boolean;
   refresh: () => Promise<QuoteRefreshResult>;
 };
 
@@ -97,6 +98,7 @@ export function useHoldings({
     failures,
     holdings,
     isRefreshing,
+    maskWealthValues: snapshot.preferences.maskWealthValues,
     refresh,
   };
 }

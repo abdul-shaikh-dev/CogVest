@@ -1,12 +1,13 @@
 import { StyleSheet, View } from "react-native";
 
-import { AppText } from "@/src/components/common";
+import { AppText, MaskedValue } from "@/src/components/common";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { colors, radii, shadows, spacing } from "@/src/theme";
 import type { CashEntry } from "@/src/types";
 
 type CashEntryRowProps = {
   entry: CashEntry;
+  masked?: boolean;
 };
 
 function formatCashAmount(entry: CashEntry) {
@@ -15,7 +16,7 @@ function formatCashAmount(entry: CashEntry) {
   return entry.type === "addition" ? `+${amount}` : `-${amount}`;
 }
 
-export function CashEntryRow({ entry }: CashEntryRowProps) {
+export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
   const isAddition = entry.type === "addition";
 
   return (
@@ -31,12 +32,12 @@ export function CashEntryRow({ entry }: CashEntryRowProps) {
           </AppText>
         ) : null}
       </View>
-      <AppText
+      <MaskedValue
+        masked={masked}
         style={isAddition ? styles.addition : styles.withdrawal}
+        value={formatCashAmount(entry)}
         weight="bold"
-      >
-        {formatCashAmount(entry)}
-      </AppText>
+      />
     </View>
   );
 }
