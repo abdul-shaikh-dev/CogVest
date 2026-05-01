@@ -32,8 +32,8 @@
 Preview APK:
 
 ```text
-Pending. The 2026-05-01 verification run could not start an EAS preview build
-because this environment has no Expo login or EXPO_TOKEN.
+2026-05-01 preview EAS build:
+https://expo.dev/accounts/abdul_shaikh_dev/projects/cogvest/builds/82740e7b-97b0-48b1-a970-9457311dcc0b
 ```
 
 Production AAB:
@@ -58,10 +58,14 @@ Record device model, Android version, and any issues found during preview APK te
 - `npx eas-cli build --platform android --profile preview --non-interactive`: blocked before build start because no Expo account login or `EXPO_TOKEN` is available.
 - `adb devices`: blocked because `adb` is not installed or not on `PATH` in this environment.
 
+### 2026-05-01 - Preview APK Build
+
+- GitHub Actions workflow: `Android Preview APK`.
+- GitHub Actions run: `https://github.com/abdul-shaikh-dev/CogVest/actions/runs/25209354761`.
+- EAS preview APK build: `https://expo.dev/accounts/abdul_shaikh_dev/projects/cogvest/builds/82740e7b-97b0-48b1-a970-9457311dcc0b`.
+- Status: preview APK build passed.
+
 Pending before issue #16 can be closed:
 
-- Set `EXPO_TOKEN` or run `eas login` in an approved environment.
-- Run `eas build --platform android --profile preview --non-interactive`.
-- Record the preview EAS build URL above.
 - Install the generated APK on a real Android device.
 - Record device model, Android version, pass/fail status for core flows, and any defects.
