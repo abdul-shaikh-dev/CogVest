@@ -70,10 +70,16 @@ Notes:
 
 ## Android Production Build
 
-Path: `.github/workflows/android-production.yml`
+Purpose: build a production Android App Bundle for the V1 release-candidate
+gate. This is not part of the V1 dev-complete gate.
+
+Required GitHub secret:
+- `EXPO_TOKEN`
+
+Draft workflow file: `.github/workflows/android-production.yml`
 
 ```yaml
-name: Android Production Build
+name: Android Production AAB
 
 on:
   workflow_dispatch:
@@ -82,19 +88,48 @@ on:
       - "v*.*.*"
 
 jobs:
-  production:
+  production-aab:
+    name: Build Android production AAB
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npx expo doctor
-      - run: npx eas-cli build --platform android --profile production --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test -- --runInBand
+
+      - name: Expo doctor
+        run: npm run doctor
+
+      - name: Build production AAB
+        run: eas build --platform android --profile production --non-interactive
 ```
+
+Notes:
+- This workflow is manual through `workflow_dispatch` or tag-triggered for
+  `v*.*.*` release tags.
+- It depends on the root `eas.json` production profile, which outputs AAB.
+- V1 does not auto-submit to Google Play.
+- Google Play upload remains manual through Play Console internal testing.
+- Record the EAS build URL in `docs/release/v1-release-checklist.md` during
+  release-candidate verification.
