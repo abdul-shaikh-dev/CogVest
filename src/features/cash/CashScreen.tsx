@@ -3,7 +3,13 @@ import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { CashEntryRow } from "@/src/components/cards";
-import { AppButton, AppText, EmptyState, ScreenContainer } from "@/src/components/common";
+import {
+  AppButton,
+  AppText,
+  EmptyState,
+  MaskedValue,
+  ScreenContainer,
+} from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -54,7 +60,7 @@ function validateCashEntry({
 }
 
 export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
-  const { addEntry, balance, entries } = useCash({ store });
+  const { addEntry, balance, entries, maskWealthValues } = useCash({ store });
   const [type, setType] = useState<CashEntryType>("addition");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
@@ -97,9 +103,13 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
       <View style={styles.content}>
         <View style={styles.heroCard}>
           <AppText color="secondary">Cash balance</AppText>
-          <AppText selectable variant="hero" weight="bold">
-            {formatINR(balance)}
-          </AppText>
+          <MaskedValue
+            masked={maskWealthValues}
+            selectable
+            value={formatINR(balance)}
+            variant="hero"
+            weight="bold"
+          />
         </View>
 
         <View style={styles.segmentedControl}>
@@ -174,7 +184,11 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
               Cash history
             </AppText>
             {entries.map((entry) => (
-              <CashEntryRow entry={entry} key={entry.id} />
+              <CashEntryRow
+                entry={entry}
+                key={entry.id}
+                masked={maskWealthValues}
+              />
             ))}
           </View>
         )}

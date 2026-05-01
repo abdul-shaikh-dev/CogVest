@@ -39,9 +39,7 @@ export function DashboardScreen({
 }: DashboardScreenProps) {
   const dashboard = useDashboard({ store });
   const hasAllocation = dashboard.allocation.length > 0;
-  const dayChangeText = `${formatSignedINR(dashboard.dayChange.absolute)} (${formatPercentage(
-    dashboard.dayChange.percentage,
-  )}) today`;
+  const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
 
   return (
     <ScreenContainer scroll testID="dashboard-screen">
@@ -54,12 +52,19 @@ export function DashboardScreen({
             variant="hero"
             weight="bold"
           />
-          <AppText
-            color="primary"
-            style={dashboard.dayChange.absolute >= 0 ? styles.profit : styles.loss}
-          >
-            {dayChangeText}
-          </AppText>
+          <View style={styles.dayChangeLine}>
+            <MaskedValue
+              masked={dashboard.maskWealthValues}
+              style={dashboard.dayChange.absolute >= 0 ? styles.profit : styles.loss}
+              value={dayChangeAmount}
+            />
+            <AppText
+              color="primary"
+              style={dashboard.dayChange.absolute >= 0 ? styles.profit : styles.loss}
+            >
+              ({formatPercentage(dashboard.dayChange.percentage)}) today
+            </AppText>
+          </View>
           {onAddTrade && hasAllocation ? (
             <AppButton title="Add Trade" onPress={onAddTrade} />
           ) : null}
@@ -145,6 +150,11 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  dayChangeLine: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   heroCard: {
     ...shadows.none,

@@ -8,20 +8,20 @@ import { AppText, MaskedValue } from "../common";
 
 type HoldingCardProps = {
   holding: Holding;
+  masked?: boolean;
 };
 
 function formatQuantity(value: number) {
   return Number.isInteger(value) ? value.toString() : value.toFixed(4);
 }
 
-function formatPnL(holding: Holding) {
+function formatPnLAmount(holding: Holding) {
   const amount = formatINR(holding.unrealisedPnL);
-  const percentage = formatPercentage(holding.unrealisedPnLPct);
 
-  return `${holding.unrealisedPnL > 0 ? "+" : ""}${amount} (${percentage})`;
+  return `${holding.unrealisedPnL > 0 ? "+" : ""}${amount}`;
 }
 
-export function HoldingCard({ holding }: HoldingCardProps) {
+export function HoldingCard({ holding, masked = false }: HoldingCardProps) {
   const isProfit = holding.unrealisedPnL >= 0;
 
   return (
@@ -36,16 +36,25 @@ export function HoldingCard({ holding }: HoldingCardProps) {
         <View style={styles.valueBlock}>
           <MaskedValue
             align="right"
+            masked={masked}
             value={formatINR(holding.currentValue)}
             weight="bold"
           />
-          <AppText
-            align="right"
-            color={isProfit ? "primary" : "primary"}
-            style={isProfit ? styles.profit : styles.loss}
-          >
-            {formatPnL(holding)}
-          </AppText>
+          <View style={styles.pnlLine}>
+            <MaskedValue
+              align="right"
+              masked={masked}
+              style={isProfit ? styles.profit : styles.loss}
+              value={formatPnLAmount(holding)}
+            />
+            <AppText
+              align="right"
+              color={isProfit ? "primary" : "primary"}
+              style={isProfit ? styles.profit : styles.loss}
+            >
+              {formatPercentage(holding.unrealisedPnLPct)}
+            </AppText>
+          </View>
         </View>
       </View>
 
@@ -94,6 +103,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  pnlLine: {
+    alignItems: "flex-end",
+    gap: spacing.xs,
   },
   profit: {
     color: colors.profit,
