@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/src/components/common/PlaceholderScreen";
+import { CashScreen as CashFeatureScreen } from "@/src/features/cash";
 
 export default function CashScreen() {
-  return <PlaceholderScreen title="Cash" />;
+  return <CashFeatureScreen />;
 }
