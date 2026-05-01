@@ -16,6 +16,13 @@ describe("Android app identity", () => {
     expect(Number.isInteger(expo.android.versionCode)).toBe(true);
   });
 
+  it("links the Expo project for EAS builds", () => {
+    expect(expo.owner).toBe("abdul_shaikh_dev");
+    expect(expo.extra.eas.projectId).toBe(
+      "e831d362-739b-4075-95b7-f5f85a48e610",
+    );
+  });
+
   it("configures Android icon and splash assets", () => {
     expect(expo.icon).toBe("./assets/icon.png");
     expect(expo.splash.image).toBe("./assets/splash-icon.png");
