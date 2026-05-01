@@ -70,7 +70,7 @@ Before production build:
 
 ## EAS Profiles
 
-Recommended `eas.json`:
+Configured in root `eas.json`:
 
 ```json
 {
