@@ -52,6 +52,7 @@ V1 release-candidate requires:
 - production AAB builds successfully
 - EAS build URL is recorded
 - Play Console internal testing upload is ready/manual
+- Google Play auto-submit remains disabled
 
 ## Android Identity
 
