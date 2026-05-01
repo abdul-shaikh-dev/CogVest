@@ -108,6 +108,9 @@ Do not commit secrets.
 GitHub Actions secrets:
 - `EXPO_TOKEN`
 
+Draft GitHub Actions workflows are documented in
+`docs/release/github-actions-drafts.md`.
+
 Future Play submission secrets:
 - Google Play service account JSON, only if EAS Submit is configured.
 
