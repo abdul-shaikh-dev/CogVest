@@ -1,0 +1,7 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- tapOn: "Settings"
+- assertVisible: "Value masking"
+- tapOn: "Value masking"
+- assertVisible: "Values masked"

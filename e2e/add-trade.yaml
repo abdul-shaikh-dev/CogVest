@@ -1,0 +1,7 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- tapOn: "Add Trade"
+- assertVisible: "Add Trade"
+- assertVisible: "Log a buy or sell"
+# Full form entry is intentionally deferred until stable form testIDs exist.
