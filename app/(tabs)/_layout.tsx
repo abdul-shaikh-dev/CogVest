@@ -55,11 +55,26 @@ export default function TabLayout() {
         ),
       })}
     >
-      <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />
-      <Tabs.Screen name="holdings" options={{ title: "Holdings" }} />
-      <Tabs.Screen name="add-trade" options={{ title: "Add" }} />
-      <Tabs.Screen name="history" options={{ title: "History" }} />
-      <Tabs.Screen name="cash" options={{ title: "Cash" }} />
+      <Tabs.Screen
+        name="dashboard"
+        options={{ tabBarButtonTestID: "dashboard-tab", title: "Dashboard" }}
+      />
+      <Tabs.Screen
+        name="holdings"
+        options={{ tabBarButtonTestID: "holdings-tab", title: "Holdings" }}
+      />
+      <Tabs.Screen
+        name="add-trade"
+        options={{ tabBarButtonTestID: "add-trade-tab", title: "Add" }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{ tabBarButtonTestID: "history-tab", title: "History" }}
+      />
+      <Tabs.Screen
+        name="cash"
+        options={{ tabBarButtonTestID: "cash-tab", title: "Cash" }}
+      />
     </Tabs>
   );
 }

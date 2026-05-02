@@ -2,7 +2,8 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- tapOn: "Add"
+- tapOn:
+    id: "add-trade-tab"
 - tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
@@ -18,11 +19,22 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "price-input"
 - inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-trade-button"
+    direction: DOWN
 - tapOn:
     id: "review-trade-button"
+- assertVisible: "Review buy"
+- scrollUntilVisible:
+    element:
+      id: "save-trade-button"
+    direction: DOWN
 - tapOn:
     id: "save-trade-button"
-- tapOn: "Holdings"
+- tapOn:
+    id: "holdings-tab"
 - assertVisible:
     id: "holdings-screen"
 - assertVisible: "Reliance Industries"

@@ -151,14 +151,22 @@ installed, the harness should not fail.
 Check Maestro:
 
 ```powershell
-maestro --version
+npm run maestro:check
 ```
 
 Run a flow after CogVest is installed on the emulator:
 
 ```powershell
-maestro test e2e/smoke-launch.yaml
+npm run maestro:test -- e2e/smoke-launch.yaml
 ```
+
+Run the full local Maestro suite:
+
+```powershell
+npm run maestro:test
+```
+
+See `docs/testing/maestro-e2e.md` for install and troubleshooting notes.
 
 ## Stable V1 testIDs
 

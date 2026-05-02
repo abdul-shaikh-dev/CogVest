@@ -53,12 +53,14 @@ Install Maestro separately if needed. The repo does not add Maestro as a npm
 dependency.
 
 ```powershell
-maestro test e2e/smoke-launch.yaml
-maestro test e2e/add-trade.yaml
-maestro test e2e/holdings.yaml
-maestro test e2e/cash.yaml
-maestro test e2e/value-masking.yaml
-maestro test e2e/persistence.yaml
+npm run maestro:check
+npm run maestro:test
+```
+
+To run one flow:
+
+```powershell
+npm run maestro:test -- e2e/smoke-launch.yaml
 ```
 
 If Maestro is unavailable, record that as:
