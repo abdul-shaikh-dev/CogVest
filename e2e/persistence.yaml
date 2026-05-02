@@ -2,7 +2,8 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- tapOn: "Cash"
+- tapOn:
+    id: "cash-tab"
 - tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
@@ -12,10 +13,12 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "cash-date-input"
 - inputText: "2026-04-20"
+- hideKeyboard
 - tapOn:
     id: "save-cash-entry-button"
 - assertVisible: "Broker cash"
 - stopApp
 - launchApp
-- tapOn: "Cash"
+- tapOn:
+    id: "cash-tab"
 - assertVisible: "Broker cash"
