@@ -61,9 +61,9 @@ behavioural investing insights and Minimal Mode.
 - Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI work.
 
 ## Release Gates
-- V1 dev-complete requires typecheck, tests, Expo doctor, app launch, core
-  manual flows, preview APK build, and preview APK install on a real Android
-  device.
+- V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,
+  local APK build/install on emulator, and passing or logged defects for the
+  PC-based V1 core-flow matrix.
 - V1 release-candidate additionally requires production AAB build success, EAS
   build URL recorded, and Play Console internal testing upload ready/manual.
 - Do not auto-submit to Google Play in V1.
@@ -72,6 +72,8 @@ behavioural investing insights and Minimal Mode.
 - Prefer PC-only Android verification with Android Emulator and `adb`; do not
   assume a physical phone is required.
 - Use `npm run test:verify` for static checks, Jest, and Expo doctor.
+- Use `npm run test:v1:pc` for the V1 PC verification gate. It extends
+  `test:verify` with Android doctor and strict installed-app smoke checks.
 - Use `npm run android:doctor` to check Node, npm, adb, emulator visibility,
   Expo CLI, package scripts, and optional Maestro.
 - Use `npm run android:smoke` for emulator/package smoke checks; use
@@ -89,6 +91,8 @@ behavioural investing insights and Minimal Mode.
 - PC harness docs live in `docs/testing/android-pc-test-harness.md`,
   `docs/testing/android-emulator-checklist.md`, and
   `docs/testing/apk-smoke-test-checklist.md`.
+- V1 core-flow coverage lives in `docs/testing/v1-core-flow-test-matrix.md`
+  and `docs/testing/v1-pc-verification-checklist.md`.
 
 ## References
 - Full spec: docs/cogvest-master-spec.md
@@ -97,6 +101,7 @@ behavioural investing insights and Minimal Mode.
 - V1 prompts: docs/roadmap/v1-codex-prompts.md
 - V1 issue drafts: docs/issues/v1-issue-drafts.md
 - V1 testing plan: docs/testing/v1-testing-plan.md
+- V1 PC verification matrix: docs/testing/v1-core-flow-test-matrix.md
 - Android release process: docs/release/android-release-process.md
 - Mockups: docs/cogvest_standard_mode.png, docs/cogvest_minimal_mode.png
 - Figma roadmap mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d

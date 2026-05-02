@@ -1,7 +1,30 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
-- tapOn: "Add Trade"
-- assertVisible: "Add Trade"
-- assertVisible: "Log a buy or sell"
-# Full form entry is intentionally deferred until stable form testIDs exist.
+- launchApp:
+    clearState: true
+- tapOn: "Add"
+- assertVisible:
+    id: "add-trade-screen"
+- tapOn:
+    id: "asset-input"
+- inputText: "Reliance Industries"
+- tapOn:
+    id: "symbol-input"
+- inputText: "RELIANCE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "RELIANCE.NS"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- tapOn:
+    id: "conviction-4"
+- tapOn:
+    id: "review-trade-button"
+- assertVisible: "Review buy"
+- tapOn:
+    id: "save-trade-button"
+- assertVisible: "Trade logged."

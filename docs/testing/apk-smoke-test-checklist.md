@@ -1,6 +1,6 @@
 # APK Smoke Test Checklist
 
-- [ ] Download APK from EAS/Expo.
+- [ ] Build or download an APK. Prefer local PC builds for developer smoke tests.
 - [ ] Start Android Emulator.
 - [ ] Confirm emulator is ready with `adb devices`.
 - [ ] Install APK with `adb install -r path/to/app.apk`.
@@ -11,7 +11,7 @@
 - [ ] Verify Settings opens.
 - [ ] Verify app survives close/reopen.
 - [ ] Run `npm run android:smoke -- --strict`.
-- [ ] Record APK build URL.
+- [ ] Record APK source. Use a local path for local builds or a build URL for EAS.
 - [ ] Record emulator/device name.
 - [ ] Record Android version.
 - [ ] Record result.
@@ -19,7 +19,7 @@
 ## Evidence
 
 ```text
-APK build URL:
+APK source:
 Emulator/device name:
 Android version:
 Install command:

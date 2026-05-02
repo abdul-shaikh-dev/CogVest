@@ -270,6 +270,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
                 resetReview();
               }}
               placeholder="RELIANCE"
+              testID="symbol-input"
               value={symbol}
             />
           </View>
@@ -283,6 +284,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
                 resetReview();
               }}
               placeholder="RELIANCE.NS"
+              testID="ticker-input"
               value={ticker}
             />
           </View>
@@ -426,7 +428,11 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       ) : null}
 
       <View style={styles.actions}>
-        <AppButton title="Review Trade" onPress={handleReview} />
+        <AppButton
+          title="Review Trade"
+          testID="review-trade-button"
+          onPress={handleReview}
+        />
         <AppButton
           disabled={!reviewTrade}
           testID="save-trade-button"

@@ -65,6 +65,15 @@ npm test
 npm run doctor
 ```
 
+For the full V1 PC verification gate, run:
+
+```powershell
+npm run test:v1:pc
+```
+
+This extends `test:verify` with `android:doctor` and strict installed-app
+smoke status. It is intentionally not part of default GitHub PR CI.
+
 ## Android Harness Checks
 
 Run:
@@ -151,16 +160,17 @@ Run a flow after CogVest is installed on the emulator:
 maestro test e2e/smoke-launch.yaml
 ```
 
-## Recommended Future testIDs
+## Stable V1 testIDs
 
-Several screen-level testIDs already exist, but robust form E2E flows need more
-stable controls. Recommended follow-up testIDs:
+Stable Android E2E IDs are available for V1 flows:
 
 - `dashboard-screen`
 - `holdings-screen`
 - `add-trade-screen`
 - `add-trade-button`
 - `asset-input`
+- `symbol-input`
+- `ticker-input`
 - `quantity-input`
 - `price-input`
 - `conviction-1`
@@ -168,8 +178,17 @@ stable controls. Recommended follow-up testIDs:
 - `conviction-3`
 - `conviction-4`
 - `conviction-5`
+- `review-trade-button`
 - `save-trade-button`
 - `value-mask-toggle`
+- `cash-screen`
+- `cash-amount-input`
+- `cash-label-input`
+- `cash-date-input`
+- `save-cash-entry-button`
+
+See `docs/testing/v1-core-flow-test-matrix.md` for the full feature coverage
+map.
 
 ## Troubleshooting
 

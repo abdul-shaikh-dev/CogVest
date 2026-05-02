@@ -46,6 +46,8 @@ describe("AddTradeForm", () => {
 
     expect(getByTestId("add-trade-screen")).toBeTruthy();
     expect(getByTestId("asset-input")).toBeTruthy();
+    expect(getByTestId("symbol-input")).toBeTruthy();
+    expect(getByTestId("ticker-input")).toBeTruthy();
     expect(getByTestId("quantity-input")).toBeTruthy();
     expect(getByTestId("price-input")).toBeTruthy();
     expect(getByTestId("conviction-1")).toBeTruthy();
@@ -53,6 +55,7 @@ describe("AddTradeForm", () => {
     expect(getByTestId("conviction-3")).toBeTruthy();
     expect(getByTestId("conviction-4")).toBeTruthy();
     expect(getByTestId("conviction-5")).toBeTruthy();
+    expect(getByTestId("review-trade-button")).toBeTruthy();
     expect(getByTestId("save-trade-button")).toBeTruthy();
 
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");

@@ -9,8 +9,13 @@ describe("CashScreen", () => {
   it("shows an empty cash state with zero balance", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
-    const { getByText } = render(<CashScreen store={store} />);
+    const { getByTestId, getByText } = render(<CashScreen store={store} />);
 
+    expect(getByTestId("cash-screen")).toBeTruthy();
+    expect(getByTestId("cash-amount-input")).toBeTruthy();
+    expect(getByTestId("cash-label-input")).toBeTruthy();
+    expect(getByTestId("cash-date-input")).toBeTruthy();
+    expect(getByTestId("save-cash-entry-button")).toBeTruthy();
     expect(getByText("₹0.00")).toBeTruthy();
     expect(getByText("No cash entries yet")).toBeTruthy();
     expect(getByText("Add available broker or bank cash to include it in portfolio value.")).toBeTruthy();

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "android:doctor": "node scripts/android-doctor.mjs",
     "android:smoke": "node scripts/android-smoke-check.mjs",
-    "test:verify": "npm run typecheck && npm test && npm run doctor"
+    "test:verify": "npm run typecheck && npm test && npm run doctor",
+    "test:v1:pc": "npm run test:verify && npm run android:doctor && npm run android:smoke -- --strict"
   },
   "jest": {
     "preset": "jest-expo",

@@ -1,5 +1,9 @@
 # V1 Testing Plan
 
+V1 verification is PC-only. A physical Android phone is not required. The
+canonical feature matrix is `docs/testing/v1-core-flow-test-matrix.md`, and the
+release checklist is `docs/testing/v1-pc-verification-checklist.md`.
+
 ## Automated Tests
 
 Run on every V1 issue:
@@ -12,8 +16,7 @@ npm test
 Run before release gate:
 
 ```bash
-npx expo doctor
-npx expo start
+npm run test:v1:pc
 ```
 
 ## Unit Tests
@@ -40,7 +43,7 @@ Cover:
 - MaskedValue display.
 - Cash add/withdraw rows.
 
-## Manual Android QA
+## Android Emulator QA
 
 - Add buy trade.
 - Add sell trade.
@@ -55,13 +58,18 @@ Cover:
 
 ## E2E Scope
 
-Maestro is optional for V1 development but recommended before release:
+Maestro is optional for V1 development but recommended before release. It must
+run locally against Android Emulator and must not be required in default PR CI:
+
 - add trade
 - holdings update
 - dashboard total
 - cash flow
 - value masking
+- persistence
+- cold launch
 
 ## Known Test Boundaries
 
-Default CI should not require Android emulator. Device/emulator testing is manual or release-gate only.
+Default CI should not require Android emulator. Emulator, APK, and Maestro
+testing are local PC verification gates only unless explicitly opted in.

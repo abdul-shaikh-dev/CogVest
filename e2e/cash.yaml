@@ -1,0 +1,20 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- tapOn: "Cash"
+- assertVisible:
+    id: "cash-screen"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "1000"
+- tapOn:
+    id: "cash-label-input"
+- inputText: "Broker cash"
+- tapOn:
+    id: "cash-date-input"
+- inputText: "2026-04-20"
+- tapOn:
+    id: "save-cash-entry-button"
+- assertVisible: "Broker cash"
+- assertVisible: "Cash balance"

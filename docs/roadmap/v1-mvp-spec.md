@@ -24,7 +24,7 @@ The user can record trades quickly, see current holdings and portfolio value in 
 - Cash screen for additions and withdrawals.
 - Simple settings with value masking.
 - Empty states with direct CTAs.
-- Android preview APK build documentation and V1 release checklist.
+- Android PC verification harness, local APK smoke path, and V1 release checklist.
 
 ## Explicitly Excluded Features
 
@@ -89,9 +89,9 @@ Do not persist holdings, allocation, dashboard totals, or insights.
 
 - Unit tests for domain calculations, formatters, validators, selectors, and store actions.
 - Component tests for empty states, value masking, conviction selector, and Add Trade validation.
-- Manual Android checks for navigation, trade entry, holdings, dashboard, cash, masking, and persistence.
+- PC-based Android Emulator checks for navigation, trade entry, holdings, dashboard, cash, masking, and persistence.
 
-## Manual QA Checklist
+## PC Verification Checklist
 
 - Add a buy trade for BTC.
 - Add a buy trade for RELIANCE.
@@ -106,16 +106,15 @@ Do not persist holdings, allocation, dashboard totals, or insights.
 ## Definition of Done
 
 - All V1 issues complete or intentionally deferred with notes.
-- `npm run typecheck` passes.
-- `npm test` passes.
-- `npx expo doctor` passes.
-- App launches with `npx expo start`.
-- Preview APK builds and installs on a real Android device.
+- `npm run test:v1:pc` passes.
+- App launches on Android Emulator.
+- Local APK builds and installs on Android Emulator.
+- Core V1 matrix passes or defects are logged.
 
 ## Release Gate
 
 Dev-complete gate:
-- typecheck, tests, Expo doctor, app launch, manual V1 flows, preview APK build, preview APK device install.
+- `npm run test:v1:pc`, Android Emulator app launch, local APK build/install, and `docs/testing/v1-core-flow-test-matrix.md`.
 
 Release-candidate gate:
 - production AAB builds, EAS build URL recorded, Play Console internal testing upload ready/manual.

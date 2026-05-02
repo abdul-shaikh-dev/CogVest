@@ -13,6 +13,7 @@ const requiredScripts = [
   "android:doctor",
   "android:smoke",
   "test:verify",
+  "test:v1:pc",
 ];
 
 function run(command, args = []) {

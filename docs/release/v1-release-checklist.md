@@ -3,18 +3,12 @@
 ## Dev-Complete Gate
 
 - [ ] `npm install` succeeds.
-- [ ] `npm run typecheck` passes.
-- [ ] `npm test` passes.
-- [ ] `npx expo doctor` passes.
-- [ ] App starts with `npx expo start`.
-- [ ] Add Trade works manually.
-- [ ] Holdings update after trade.
-- [ ] Dashboard total updates after holdings/cash changes.
-- [ ] Cash entry updates cash total.
-- [ ] Value masking works.
-- [ ] App data persists after restart.
-- [ ] Preview APK builds successfully.
-- [ ] Preview APK installs on real Android device.
+- [ ] `npm run test:v1:pc` passes.
+- [ ] App starts on Android Emulator.
+- [ ] Local APK builds successfully on the developer PC.
+- [ ] Local APK installs on Android Emulator.
+- [ ] Core V1 flows pass through `docs/testing/v1-core-flow-test-matrix.md`.
+- [ ] Defects are logged with `docs/testing/v1-defect-report-template.md`.
 - [ ] No backend/auth/cloud was added.
 - [ ] Secrets are not committed.
 
@@ -29,11 +23,10 @@
 
 ## Build URL Log
 
-Preview APK:
+Local APK:
 
 ```text
-Pending. The 2026-05-01 verification run could not start an EAS preview build
-because this environment has no Expo login or EXPO_TOKEN.
+Record local APK path or EAS preview build URL if one is explicitly requested.
 ```
 
 Production AAB:
@@ -44,7 +37,8 @@ Record production EAS build URL during release-candidate verification.
 
 ## Manual QA Notes
 
-Record device model, Android version, and any issues found during preview APK testing.
+Record emulator model, Android version, APK source, and any issues found during
+PC-based APK testing.
 
 ## Verification Runs
 
@@ -58,10 +52,8 @@ Record device model, Android version, and any issues found during preview APK te
 - `npx eas-cli build --platform android --profile preview --non-interactive`: blocked before build start because no Expo account login or `EXPO_TOKEN` is available.
 - `adb devices`: blocked because `adb` is not installed or not on `PATH` in this environment.
 
-Pending before issue #16 can be closed:
+Superseded physical-device notes:
 
-- Set `EXPO_TOKEN` or run `eas login` in an approved environment.
-- Run `eas build --platform android --profile preview --non-interactive`.
-- Record the preview EAS build URL above.
-- Install the generated APK on a real Android device.
-- Record device model, Android version, pass/fail status for core flows, and any defects.
+- The old physical-phone preview APK gate was superseded by issue #54.
+- V1 dev-complete verification should use the PC/emulator matrix in `docs/testing/`.
+- EAS preview builds remain optional unless explicitly requested.

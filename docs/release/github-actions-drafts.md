@@ -5,8 +5,8 @@ requests or pushes until the release process is approved.
 
 ## Android Preview APK
 
-Purpose: manually trigger a V1 preview APK build for installation testing on a
-real Android device.
+Purpose: manually trigger an optional V1 preview APK build for internal
+distribution. This is not required for the local PC/emulator developer gate.
 
 Required GitHub secret:
 - `EXPO_TOKEN`
@@ -65,8 +65,8 @@ Notes:
 - This workflow is manual only through `workflow_dispatch`.
 - It does not use an emulator.
 - It depends on the root `eas.json` preview profile, which outputs APK.
-- Record the EAS build URL in `docs/release/v1-release-checklist.md` during
-  release verification.
+- Record the EAS build URL in `docs/release/v1-release-checklist.md` only if
+  an EAS preview build is explicitly requested for release verification.
 
 ## Android Production Build
 

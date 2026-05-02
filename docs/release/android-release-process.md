@@ -15,7 +15,9 @@ eas build --platform android --profile development
 
 ### Preview Build
 
-Purpose: installable APK for manual testing on real Android devices.
+Purpose: optional installable APK for internal distribution. For local
+developer verification, prefer a PC-built APK installed on Android Emulator so
+EAS cloud compute is not consumed.
 
 Command:
 
@@ -40,13 +42,12 @@ Output: AAB.
 ## V1 Gate Split
 
 V1 dev-complete requires:
-- `npm run typecheck`
-- `npm test`
-- `npx expo doctor`
-- app starts with `npx expo start`
-- core manual flows pass
-- preview APK builds
-- preview APK installs on a real Android device
+- `npm run test:v1:pc`
+- app starts on Android Emulator
+- local APK builds on the developer PC
+- local APK installs on Android Emulator
+- core V1 flows pass through `docs/testing/v1-core-flow-test-matrix.md`
+- defects are logged with `docs/testing/v1-defect-report-template.md`
 
 V1 release-candidate requires:
 - production AAB builds successfully

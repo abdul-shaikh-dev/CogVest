@@ -1,6 +1,29 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
+- launchApp:
+    clearState: true
+- tapOn: "Add"
+- tapOn:
+    id: "asset-input"
+- inputText: "Reliance Industries"
+- tapOn:
+    id: "symbol-input"
+- inputText: "RELIANCE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "RELIANCE.NS"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- tapOn:
+    id: "review-trade-button"
+- tapOn:
+    id: "save-trade-button"
 - tapOn: "Holdings"
-- assertVisible: "Holdings"
-- assertVisible: "Add Trade"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Reliance Industries"
+- assertVisible: "Qty 2"
