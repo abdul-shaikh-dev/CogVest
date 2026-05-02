@@ -20,9 +20,12 @@ function candidateNames(command) {
 }
 
 function findExecutable(command) {
-  const pathValue = process.env.PATH ?? "";
+  const delimiter = process.platform === "win32" ? ";" : ":";
+  const pathValue = [process.env.PATH, process.env.Path, process.env.path]
+    .filter(Boolean)
+    .join(delimiter);
 
-  for (const directory of pathValue.split(process.platform === "win32" ? ";" : ":")) {
+  for (const directory of pathValue.split(delimiter)) {
     for (const candidate of candidateNames(command)) {
       const fullPath = join(directory, candidate);
       if (existsSync(fullPath)) {
@@ -35,6 +38,14 @@ function findExecutable(command) {
 }
 
 function run(command, args = []) {
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(command)) {
+    return spawnSync(command, args, {
+      encoding: "utf8",
+      shell: true,
+      stdio: "inherit",
+    });
+  }
+
   return spawnSync(command, args, {
     encoding: "utf8",
     stdio: "inherit",
