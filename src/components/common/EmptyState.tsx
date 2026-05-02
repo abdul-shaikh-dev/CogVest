@@ -7,6 +7,7 @@ import { AppText } from "./AppText";
 
 type EmptyStateProps = {
   actionLabel?: string;
+  actionTestID?: string;
   message: string;
   onAction?: () => void;
   title: string;
@@ -14,6 +15,7 @@ type EmptyStateProps = {
 
 export function EmptyState({
   actionLabel,
+  actionTestID,
   message,
   onAction,
   title,
@@ -27,7 +29,7 @@ export function EmptyState({
         {message}
       </AppText>
       {actionLabel && onAction ? (
-        <AppButton title={actionLabel} onPress={onAction} />
+        <AppButton title={actionLabel} testID={actionTestID} onPress={onAction} />
       ) : null}
     </View>
   );

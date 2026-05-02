@@ -31,10 +31,12 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getAllByText, getByText } = render(
+    const { getAllByText, getByTestId, getByText } = render(
       <DashboardScreen store={store} onAddTrade={onAddTrade} />,
     );
 
+    expect(getByTestId("dashboard-screen")).toBeTruthy();
+    expect(getByTestId("add-trade-button")).toBeTruthy();
     expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
     expect(getByText("No allocation yet")).toBeTruthy();
     expect(

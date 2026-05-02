@@ -44,6 +44,7 @@ export function SettingsScreen({
             styles.toggleRow,
             pressed && styles.pressed,
           ]}
+          testID="value-mask-toggle"
         >
           <View style={styles.toggleCopy}>
             <AppText variant="title" weight="bold">

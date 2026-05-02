@@ -32,10 +32,12 @@ describe("HoldingsScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getByText } = render(
+    const { getByTestId, getByText } = render(
       <HoldingsScreen store={store} onAddTrade={onAddTrade} />,
     );
 
+    expect(getByTestId("holdings-screen")).toBeTruthy();
+    expect(getByTestId("add-trade-button")).toBeTruthy();
     expect(getByText("No holdings yet")).toBeTruthy();
     expect(
       getByText("Holdings are created automatically from your trades."),

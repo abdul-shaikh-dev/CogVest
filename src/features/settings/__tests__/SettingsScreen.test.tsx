@@ -16,8 +16,11 @@ describe("SettingsScreen", () => {
 
   it("shows privacy settings and toggles value masking", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByText } = render(<SettingsScreen store={store} />);
+    const { getByLabelText, getByTestId, getByText } = render(
+      <SettingsScreen store={store} />,
+    );
 
+    expect(getByTestId("value-mask-toggle")).toBeTruthy();
     expect(getByText("Settings")).toBeTruthy();
     expect(getByText("Value masking")).toBeTruthy();
     expect(getByText("Values visible")).toBeTruthy();

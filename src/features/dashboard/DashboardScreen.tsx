@@ -66,7 +66,11 @@ export function DashboardScreen({
             </AppText>
           </View>
           {onAddTrade && hasAllocation ? (
-            <AppButton title="Add Trade" onPress={onAddTrade} />
+            <AppButton
+              title="Add Trade"
+              testID="add-trade-button"
+              onPress={onAddTrade}
+            />
           ) : null}
         </View>
 
@@ -92,6 +96,7 @@ export function DashboardScreen({
         ) : (
           <EmptyState
             actionLabel={onAddTrade ? "Add Trade" : undefined}
+            actionTestID="add-trade-button"
             message="Add your first trade to build holdings automatically."
             title="No allocation yet"
             onAction={onAddTrade}
