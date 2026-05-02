@@ -75,10 +75,14 @@ pass("adb found");
 
 const devicesResult = run(adbPath, ["devices"]);
 if (devicesResult.status !== 0) {
+  const details = `${devicesResult.stderr ?? devicesResult.stdout ?? devicesResult.error?.message ?? ""}`.trim();
   if (strict) {
     fail("adb devices could not run in this shell");
   } else {
     warning("adb devices could not run in this shell");
+  }
+  if (details) {
+    warning(details);
   }
   console.log("DONE Android smoke check complete");
   process.exit(strict ? 1 : 0);

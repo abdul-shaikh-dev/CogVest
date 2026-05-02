@@ -106,7 +106,7 @@ if (adbPath) {
   const devicesResult = run(adbPath, ["devices"]);
   if (devicesResult.status !== 0) {
     warning("adb devices could not run in this shell");
-    const details = `${devicesResult.stderr || devicesResult.stdout}`.trim();
+    const details = `${devicesResult.stderr ?? devicesResult.stdout ?? devicesResult.error?.message ?? ""}`.trim();
     if (details) {
       warning(details);
     }
