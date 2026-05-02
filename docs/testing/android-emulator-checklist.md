@@ -11,6 +11,7 @@
 - [ ] `npm run typecheck` passes.
 - [ ] `npm test` passes.
 - [ ] `npm run doctor` passes.
+- [ ] `npm run test:v1:pc` passes after CogVest is installed.
 - [ ] `npm run android:doctor` prints readable PASS/FAIL/WARNING output.
 - [ ] `npm run android:smoke` prints connected emulator/app-install status.
 - [ ] `npm run start:clear` starts Metro.
@@ -22,6 +23,7 @@
 - [ ] Cash tab renders.
 - [ ] Settings opens.
 - [ ] App can be closed and reopened.
+- [ ] `docs/testing/v1-core-flow-test-matrix.md` is completed or defects are logged.
 
 ## Notes
 

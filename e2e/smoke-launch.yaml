@@ -1,6 +1,10 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
 - assertVisible: "Dashboard"
 - assertVisible: "Holdings"
-- assertVisible: "Add Trade"
+- assertVisible: "Add"
+- assertNotVisible: "Unmatched Route"

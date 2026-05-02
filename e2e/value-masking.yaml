@@ -1,7 +1,9 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
-- tapOn: "Settings"
+- launchApp:
+    clearState: true
+- openLink: "cogvest://settings"
 - assertVisible: "Value masking"
-- tapOn: "Value masking"
+- tapOn:
+    id: "value-mask-toggle"
 - assertVisible: "Values masked"

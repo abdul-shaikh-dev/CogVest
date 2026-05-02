@@ -147,6 +147,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             label="Amount"
             onChangeText={setAmount}
             placeholder="1000"
+            testID="cash-amount-input"
             value={amount}
           />
           <FormTextField
@@ -154,6 +155,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             label="Label"
             onChangeText={setLabel}
             placeholder={type === "addition" ? "Broker cash" : "Withdrawal"}
+            testID="cash-label-input"
             value={label}
           />
           <FormTextField
@@ -161,6 +163,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             label="Date"
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
+            testID="cash-date-input"
             value={date}
           />
           <FormTextField
@@ -170,7 +173,11 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             placeholder="Optional note"
             value={notes}
           />
-          <AppButton title="Save Cash Entry" onPress={submit} />
+          <AppButton
+            title="Save Cash Entry"
+            testID="save-cash-entry-button"
+            onPress={submit}
+          />
         </View>
 
         {entries.length === 0 ? (
