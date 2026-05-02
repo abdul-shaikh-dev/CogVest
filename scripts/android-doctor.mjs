@@ -147,7 +147,7 @@ if (existsSync("package.json")) {
 if (findExecutable("maestro")) {
   pass("Maestro found");
 } else {
-  warning("Maestro not found");
+  warning("Maestro not found. Run npm run maestro:check for setup guidance.");
 }
 
 if (!nodeOk || !npmPath) {

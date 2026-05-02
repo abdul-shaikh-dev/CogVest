@@ -34,13 +34,8 @@ Android Emulator, not a physical Android phone.
 
 ## Optional Maestro Gate
 
-- [ ] `maestro --version` works, or unavailable status is recorded.
-- [ ] `maestro test e2e/smoke-launch.yaml` passes.
-- [ ] `maestro test e2e/add-trade.yaml` passes.
-- [ ] `maestro test e2e/holdings.yaml` passes.
-- [ ] `maestro test e2e/cash.yaml` passes.
-- [ ] `maestro test e2e/value-masking.yaml` passes.
-- [ ] `maestro test e2e/persistence.yaml` passes.
+- [ ] `npm run maestro:check` works, or unavailable status is recorded.
+- [ ] `npm run maestro:test` passes.
 
 ## Evidence
 

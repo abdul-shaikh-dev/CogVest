@@ -84,6 +84,8 @@ behavioural investing insights and Minimal Mode.
 - Do not trigger EAS cloud builds unless the user explicitly asks.
 - Do not put emulator, APK, or Maestro checks in default GitHub PR CI unless
   explicitly requested.
+- Use `npm run maestro:check` and `npm run maestro:test` for optional local
+  Maestro E2E verification when Maestro is installed.
 - For installed APK checks, remember APK is locally installable with `adb`;
   AAB is for Play Store distribution and is not directly installable locally.
 - If Codex adb access fails in the sandbox, retry adb/harness commands with
