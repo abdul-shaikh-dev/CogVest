@@ -68,6 +68,28 @@ behavioural investing insights and Minimal Mode.
   build URL recorded, and Play Console internal testing upload ready/manual.
 - Do not auto-submit to Google Play in V1.
 
+## Android PC Test Harness
+- Prefer PC-only Android verification with Android Emulator and `adb`; do not
+  assume a physical phone is required.
+- Use `npm run test:verify` for static checks, Jest, and Expo doctor.
+- Use `npm run android:doctor` to check Node, npm, adb, emulator visibility,
+  Expo CLI, package scripts, and optional Maestro.
+- Use `npm run android:smoke` for emulator/package smoke checks; use
+  `npm run android:smoke -- --strict` only when CogVest should already be
+  installed.
+- Use `npm run start:clear`, then press `a`, for the normal Expo emulator loop.
+- Use `npm run android` for local native dev build/install on the emulator.
+- Do not trigger EAS cloud builds unless the user explicitly asks.
+- Do not put emulator, APK, or Maestro checks in default GitHub PR CI unless
+  explicitly requested.
+- For installed APK checks, remember APK is locally installable with `adb`;
+  AAB is for Play Store distribution and is not directly installable locally.
+- If Codex adb access fails in the sandbox, retry adb/harness commands with
+  elevated sandbox permission before concluding the emulator is unavailable.
+- PC harness docs live in `docs/testing/android-pc-test-harness.md`,
+  `docs/testing/android-emulator-checklist.md`, and
+  `docs/testing/apk-smoke-test-checklist.md`.
+
 ## References
 - Full spec: docs/cogvest-master-spec.md
 - Version roadmap: docs/roadmap/cogvest-version-roadmap.md

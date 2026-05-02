@@ -1,0 +1,6 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- assertVisible: "Dashboard"
+- assertVisible: "Holdings"
+- assertVisible: "Add Trade"
