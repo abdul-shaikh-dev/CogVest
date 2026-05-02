@@ -11,6 +11,7 @@ type FormTextFieldProps = {
   multiline?: boolean;
   onChangeText: (value: string) => void;
   placeholder?: string;
+  testID?: string;
   value: string;
 };
 
@@ -21,6 +22,7 @@ export function FormTextField({
   multiline = false,
   onChangeText,
   placeholder,
+  testID,
   value,
 }: FormTextFieldProps) {
   return (
@@ -36,6 +38,7 @@ export function FormTextField({
         placeholder={placeholder}
         placeholderTextColor={colors.text.muted}
         style={[styles.input, multiline && styles.multiline, error && styles.invalid]}
+        testID={testID}
         value={value}
       />
       {error ? (

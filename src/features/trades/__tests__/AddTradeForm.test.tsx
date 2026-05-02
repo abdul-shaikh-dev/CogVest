@@ -40,7 +40,20 @@ describe("AddTradeForm", () => {
 
   it("creates a manual asset and persists a reviewed buy trade", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByText } = render(<AddTradeForm store={store} />);
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddTradeForm store={store} />,
+    );
+
+    expect(getByTestId("add-trade-screen")).toBeTruthy();
+    expect(getByTestId("asset-input")).toBeTruthy();
+    expect(getByTestId("quantity-input")).toBeTruthy();
+    expect(getByTestId("price-input")).toBeTruthy();
+    expect(getByTestId("conviction-1")).toBeTruthy();
+    expect(getByTestId("conviction-2")).toBeTruthy();
+    expect(getByTestId("conviction-3")).toBeTruthy();
+    expect(getByTestId("conviction-4")).toBeTruthy();
+    expect(getByTestId("conviction-5")).toBeTruthy();
+    expect(getByTestId("save-trade-button")).toBeTruthy();
 
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
@@ -49,7 +62,7 @@ describe("AddTradeForm", () => {
     fireEvent.changeText(getByLabelText("Price per unit"), "100");
     fireEvent.changeText(getByLabelText("Fees"), "5");
     fireEvent.changeText(getByLabelText("Trade date"), "2026-04-20");
-    fireEvent.changeText(getByLabelText("Conviction"), "4");
+    fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Core portfolio add");
 
     fireEvent.press(getByText("Review Trade"));

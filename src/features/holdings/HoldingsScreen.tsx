@@ -67,6 +67,7 @@ export function HoldingsScreen({
         {holdings.length === 0 ? (
           <EmptyState
             actionLabel={onAddTrade ? "Add Trade" : undefined}
+            actionTestID="add-trade-button"
             message="Holdings are created automatically from your trades."
             title="No holdings yet"
             onAction={onAddTrade}

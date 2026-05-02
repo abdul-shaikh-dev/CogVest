@@ -18,6 +18,7 @@ type AddTradeFormProps = {
 type FieldErrors = Partial<Record<string, string>>;
 
 const manualAssetId = "__manual_asset__";
+const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -255,6 +256,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
             resetReview();
           }}
           placeholder="Reliance Industries"
+          testID="asset-input"
           value={assetName}
         />
         <View style={styles.row}>
@@ -302,6 +304,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
                 resetReview();
               }}
               placeholder="2"
+              testID="quantity-input"
               value={quantity}
             />
           </View>
@@ -315,6 +318,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
                 resetReview();
               }}
               placeholder="100"
+              testID="price-input"
               value={pricePerUnit}
             />
           </View>
@@ -346,17 +350,48 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
             />
           </View>
         </View>
-        <FormTextField
-          error={errors.conviction}
-          keyboardType="number-pad"
-          label="Conviction"
-          onChangeText={(value) => {
-            setConviction(value);
-            resetReview();
-          }}
-          placeholder="Optional 1-5"
-          value={conviction}
-        />
+        <View style={styles.convictionGroup}>
+          <AppText color="secondary" variant="caption" weight="medium">
+            Conviction
+          </AppText>
+          <View style={styles.convictionRow}>
+            {convictionScores.map((score) => {
+              const scoreValue = score.toString();
+              const isSelected = conviction === scoreValue;
+
+              return (
+                <Pressable
+                  accessibilityLabel={`Conviction ${score}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  key={score}
+                  onPress={() => {
+                    setConviction(isSelected ? "" : scoreValue);
+                    resetReview();
+                  }}
+                  style={({ pressed }) => [
+                    styles.convictionChip,
+                    isSelected && styles.convictionChipActive,
+                    pressed && styles.pressed,
+                  ]}
+                  testID={`conviction-${score}`}
+                >
+                  <AppText
+                    color={isSelected ? "inverse" : "secondary"}
+                    weight="bold"
+                  >
+                    {score}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+          {errors.conviction ? (
+            <AppText selectable style={styles.errorText} variant="caption">
+              {errors.conviction}
+            </AppText>
+          ) : null}
+        </View>
         <FormTextField
           label="Note"
           multiline
@@ -394,6 +429,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
         <AppButton title="Review Trade" onPress={handleReview} />
         <AppButton
           disabled={!reviewTrade}
+          testID="save-trade-button"
           title="Confirm Trade"
           onPress={handleConfirm}
           variant="secondary"
@@ -432,6 +468,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.cardInner,
     padding: spacing.cardInner,
+  },
+  convictionChip: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.subtle,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  convictionChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  convictionGroup: {
+    gap: spacing.xs,
+  },
+  convictionRow: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  errorText: {
+    color: colors.loss,
   },
   flex: {
     flex: 1,
