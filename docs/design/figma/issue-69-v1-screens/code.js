@@ -148,13 +148,24 @@ async function main() {
   }
 
   function top(frame, title, subtitle, actions = []) {
-    text(frame, title, 24, 72, 24, C.text, "Semi Bold", 230);
-    text(frame, subtitle, 24, 104, 14, C.secondary, "Regular", 250);
+    const titleWidth = actions.length > 0 ? 220 : 285;
+    text(frame, title, 24, 72, 23, C.text, "Semi Bold", titleWidth);
+    text(frame, subtitle, 24, 104, 13, C.secondary, "Regular", 255);
     actions.forEach((action, i) => {
       const x = 286 + i * 46;
       card(frame, x, 68, 38, 38, 10);
       svg(frame, action, x + 9, 77, 20, C.text);
     });
+  }
+
+  function topBack(frame, title, subtitle, action = null) {
+    svg(frame, "home", 24, 74, 20);
+    text(frame, title, 70, 70, 22, C.text, "Semi Bold", 230);
+    text(frame, subtitle, 70, 102, 13, C.secondary, "Regular", 240);
+    if (action) {
+      card(frame, 331, 68, 38, 38, 10);
+      svg(frame, action, 340, 77, 20, C.text);
+    }
   }
 
   function nav(frame, selected) {
@@ -224,15 +235,15 @@ async function main() {
   }
 
   function holdingRow(frame, y, type, name, meta, current, invested, pnl, alloc, note = "") {
-    card(frame, 24, y, 345, 80, 12);
-    iconCircle(frame, 36, y + 16, type, 34);
-    text(frame, name, 82, y + 16, 15, C.text, "Medium", 150);
-    text(frame, meta, 82, y + 39, 11, C.secondary, "Regular", 178);
-    if (note) text(frame, note, 82, y + 57, 10, C.warning, "Regular", 130);
-    text(frame, current, 265, y + 18, 15, C.text, "Medium", 82, "RIGHT");
-    text(frame, `Invested  ${invested}`, 36, y + 56, 10, C.secondary, "Regular", 105);
-    text(frame, `P&L  ${pnl}`, 160, y + 56, 10, C.positive, "Regular", 86);
-    text(frame, `Allocation  ${alloc}`, 260, y + 56, 10, C.secondary, "Regular", 84, "RIGHT");
+    card(frame, 24, y, 345, 72, 12);
+    iconCircle(frame, 36, y + 14, type, 32);
+    text(frame, name, 78, y + 12, 14, C.text, "Medium", 150);
+    text(frame, meta, 78, y + 33, 10, C.secondary, "Regular", 178);
+    if (note) text(frame, note, 78, y + 50, 9, C.warning, "Regular", 130);
+    text(frame, current, 265, y + 14, 14, C.text, "Medium", 82, "RIGHT");
+    text(frame, `Invested ${invested}`, 36, y + 52, 9, C.secondary, "Regular", 106);
+    text(frame, `P&L ${pnl}`, 158, y + 52, 9, C.positive, "Regular", 88);
+    text(frame, alloc, 318, y + 52, 9, C.secondary, "Regular", 36, "RIGHT");
   }
 
   text(page, "CogVest V1 UI Concepts - Issue #69", 24, 24, 28, C.text, "Bold", 620);
@@ -244,20 +255,20 @@ async function main() {
   card(dashboard, 24, 258, 345, 44, 12);
   text(dashboard, "●  Quotes updated 2m ago  •  Manual fallback ready", 38, 272, 12, C.secondary, "Regular", 250);
   svg(dashboard, "refresh", 324, 268, 18);
-  card(dashboard, 24, 318, 164, 260);
-  text(dashboard, "Allocation", 38, 334, 16, C.text, "Semi Bold", 120);
-  text(dashboard, "View details", 95, 334, 12, C.positive, "Medium", 80, "RIGHT");
-  allocationRows(dashboard, 38, 382);
-  card(dashboard, 204, 318, 165, 260);
-  text(dashboard, "This month", 220, 334, 16, C.text, "Semi Bold", 120);
-  text(dashboard, "May 2026", 292, 336, 12, C.positive, "Medium", 60, "RIGHT");
-  metric(dashboard, "Invested", "₹1,20,000", 248, 390, 90);
-  metric(dashboard, "Savings rate", "42%", 248, 462, 90);
-  metric(dashboard, "Cash change", "+₹70,000", 248, 534, 90);
-  card(dashboard, 24, 596, 345, 72);
-  iconCircle(dashboard, 38, 613, "neutral", 34);
-  text(dashboard, "Conviction data is still building", 86, 614, 15, C.text, "Medium", 230);
-  text(dashboard, "Optional conviction improves context over time.", 86, 638, 12, C.secondary, "Regular", 240);
+  card(dashboard, 24, 318, 345, 230);
+  text(dashboard, "Allocation", 38, 334, 16, C.text, "Semi Bold", 150);
+  text(dashboard, "View details", 274, 336, 12, C.positive, "Medium", 80, "RIGHT");
+  allocationRows(dashboard, 38, 378);
+  card(dashboard, 24, 562, 345, 98);
+  text(dashboard, "This month", 38, 578, 16, C.text, "Semi Bold", 130);
+  text(dashboard, "May 2026", 294, 580, 12, C.positive, "Medium", 60, "RIGHT");
+  metric(dashboard, "Invested", "₹1,20,000", 42, 616, 92);
+  metric(dashboard, "Savings rate", "42%", 154, 616, 92);
+  metric(dashboard, "Cash change", "+₹70,000", 266, 616, 84);
+  card(dashboard, 24, 674, 345, 64);
+  iconCircle(dashboard, 38, 689, "neutral", 32);
+  text(dashboard, "Conviction data is still building", 82, 688, 14, C.text, "Medium", 230);
+  text(dashboard, "Optional conviction improves context over time.", 82, 710, 11, C.secondary, "Regular", 240);
   nav(dashboard, "Dashboard");
 
   const holdings = screen("Holdings", 448);
@@ -266,16 +277,15 @@ async function main() {
   text(holdings, "●  Quotes updated 2m ago  •  1 manual price", 38, 218, 12, C.secondary, "Regular", 230);
   ["All", "Equity", "Debt", "Crypto", "Cash"].forEach((label, i) => chip(holdings, label, 24 + i * 68, 260, i === 0));
   text(holdings, "Sorted by asset class", 24, 310, 12, C.secondary, "Regular", 160);
-  holdingRow(holdings, 344, "equity", "HDFC Bank", "Equity · Financial Services", "₹1,82,850", "₹1,64,235", "+₹18,615", "14.6%");
-  holdingRow(holdings, 434, "equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50,665", "₹44,220", "+₹6,445", "4.1%");
-  holdingRow(holdings, 524, "debt", "Sovereign Gold Bond", "Debt · Government Bond", "₹57,110", "₹52,950", "+₹4,160", "4.6%");
-  holdingRow(holdings, 614, "crypto", "Bitcoin", "Crypto · Coin", "₹13,90,400", "₹11,05,000", "+₹2,85,400", "11.1%", "● Manual · 8h ago");
-  holdingRow(holdings, 704, "debt", "Liquid Fund", "Debt · Liquid / Overnight", "₹2,50,250", "₹2,50,000", "+₹250", "2.0%");
+  holdingRow(holdings, 334, "equity", "HDFC Bank", "Equity · Financial Services", "₹1,82,850", "₹1,64,235", "+₹18,615", "14.6%");
+  holdingRow(holdings, 414, "equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50,665", "₹44,220", "+₹6,445", "4.1%");
+  holdingRow(holdings, 494, "debt", "Sovereign Gold Bond", "Debt · Government Bond", "₹57,110", "₹52,950", "+₹4,160", "4.6%");
+  holdingRow(holdings, 574, "crypto", "Bitcoin", "Crypto · Coin", "₹13,90,400", "₹11,05,000", "+₹2,85,400", "11.1%", "● Manual · 8h ago");
+  holdingRow(holdings, 654, "debt", "Liquid Fund", "Debt · Liquid / Overnight", "₹2,50,250", "₹2,50,000", "+₹250", "2.0%");
   nav(holdings, "Holdings");
 
   const addHolding = screen("Add Holding", 872);
-  top(addHolding, "Add Holding", "Opening position • local only", []);
-  svg(addHolding, "home", 24, 72, 20);
+  topBack(addHolding, "Add Holding", "Opening position • local only");
   text(addHolding, "?", 342, 74, 22, C.secondary, "Semi Bold", 24, "CENTER");
   ["Asset", "Classification", "Position", "Review"].forEach((label, i) => {
     const x = 58 + i * 86;
@@ -353,7 +363,7 @@ async function main() {
   nav(cash, "Cash");
 
   const monthly = screen("Monthly Progression", 1720);
-  top(monthly, "Monthly Progression", "May 2026 snapshot", ["eye"]);
+  topBack(monthly, "Monthly Progression", "May 2026 snapshot", "eye");
   text(monthly, "‹  Apr 2026", 24, 128, 13, C.secondary, "Regular", 100);
   text(monthly, "May 2026", 164, 128, 15, C.positive, "Medium", 80, "CENTER");
   text(monthly, "Jun 2026  ›", 286, 128, 13, C.secondary, "Regular", 80, "RIGHT");
@@ -372,21 +382,21 @@ async function main() {
     text(monthly, caption, 78, y + 16, 10, C.secondary, "Regular", 170);
     text(monthly, value, 288, y + 4, 13, value.startsWith("-") ? C.negative : C.text, "Medium", 70, "RIGHT");
   });
-  card(monthly, 24, 484, 345, 118);
+  card(monthly, 24, 484, 345, 100);
   text(monthly, "Progression (last 6 months)", 38, 500, 16, C.text, "Semi Bold", 230);
   line(monthly, 60, 568, 270, C.secondary, 0.75);
-  card(monthly, 24, 620, 345, 128);
-  text(monthly, "Asset class snapshot", 38, 636, 16, C.text, "Semi Bold", 200);
+  card(monthly, 24, 600, 345, 128);
+  text(monthly, "Asset class snapshot", 38, 616, 16, C.text, "Semi Bold", 200);
   [["equity", "Equity", "₹12,45,000", "62.6%"], ["debt", "Debt", "₹3,22,000", "16.2%"], ["crypto", "Crypto", "₹1,20,000", "6.0%"], ["cash", "Cash", "₹3,25,470", "16.3%"]].forEach(([type, label, value, pct], i) => {
-    const y = 674 + i * 26;
+    const y = 654 + i * 26;
     iconCircle(monthly, 38, y - 6, type, 24);
     text(monthly, label, 70, y, 12, C.text, "Medium", 70);
     text(monthly, value, 226, y, 12, C.text, "Regular", 80, "RIGHT");
     text(monthly, pct, 322, y, 12, C.secondary, "Regular", 40, "RIGHT");
   });
-  card(monthly, 24, 764, 345, 52, 12);
-  text(monthly, "May note", 76, 776, 14, C.text, "Medium", 120);
-  text(monthly, "Optional note for future review", 76, 798, 11, C.secondary, "Regular", 180);
+  card(monthly, 24, 742, 345, 40, 12);
+  text(monthly, "May note", 76, 750, 13, C.text, "Medium", 120);
+  text(monthly, "Optional note", 246, 752, 10, C.secondary, "Regular", 90);
   nav(monthly, "Dashboard");
 
   const settings = screen("Settings", 2144);
@@ -398,14 +408,14 @@ async function main() {
     text(settings, title, 92, y + 22, 16, C.text, "Semi Bold", 180);
     lines.forEach(([label, color], i) => text(settings, label, 92, y + 48 + i * 22, 12, color || C.secondary, "Regular", 225));
   }
-  settingCard(128, "Privacy", [["Data stays on this device"], ["●  Local storage: Active", C.positive], ["No account  •  No cloud sync  •  No analytics"]], 126);
-  settingCard(268, "Value masking", [["Hide amounts on screen and in app switcher."], ["Masked preview   ₹••,••,•••"]], 106);
-  settingCard(388, "Quotes", [["Live quote refresh     Every 15 min"], ["Last refresh     3 May 2026, 10:15 AM"], ["Provider status     Available", C.positive]], 126);
-  settingCard(528, "Currency", [["Base currency     INR"], ["Foreign assets converted for summary     On"], ["USD & crypto prices: manual fallback     On"]], 126);
-  settingCard(668, "Display & App info", [["Density     Standard (V1)"], ["Minimal Mode     V2 locked", C.muted], ["App version 1.0.0 · Build preview"]], 126);
-  card(settings, 24, 794, 345, 38, 10, C.bg).strokes = [paint(C.negative, 0.55)];
-  text(settings, "Clear local data", 52, 804, 12, C.negative, "Medium", 150);
-  text(settings, "Deletes all local data", 208, 804, 10, C.muted, "Regular", 130, "RIGHT");
+  settingCard(128, "Privacy", [["Data stays on this device"], ["●  Local storage: Active", C.positive], ["No account • No cloud sync • No analytics"]], 100);
+  settingCard(240, "Value masking", [["Hide amounts on screen and app switcher."], ["Masked preview   ₹••,••,•••"]], 92);
+  settingCard(344, "Quotes", [["Live refresh     Every 15 min"], ["Last refresh     3 May, 10:15 AM"], ["Provider status     Available", C.positive]], 110);
+  settingCard(466, "Currency", [["Base currency     INR"], ["Foreign assets summary     On"], ["USD & crypto fallback     On"]], 110);
+  settingCard(588, "Display & App info", [["Density     Standard (V1)"], ["Minimal Mode     V2 locked", C.muted], ["App version 1.0.0 · preview"]], 110);
+  card(settings, 24, 720, 345, 38, 10, C.bg).strokes = [paint(C.negative, 0.45)];
+  text(settings, "Clear local data", 52, 730, 12, C.negative, "Medium", 150);
+  text(settings, "Deletes local data", 224, 730, 10, C.muted, "Regular", 114, "RIGHT");
   nav(settings, "Settings");
 
   figma.viewport.scrollAndZoomIntoView([dashboard, holdings, addHolding, cash, monthly, settings]);
