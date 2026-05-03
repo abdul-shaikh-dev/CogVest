@@ -1,12 +1,13 @@
 # CogVest — Agent Instructions
 
 ## Project
-CogVest is an Android-first React Native portfolio tracker with 
-behavioural investing insights and Minimal Mode.
+CogVest is an Android-first, local-first React Native portfolio tracker. The
+near-term MVP is replacing the user's Excel investment tracker before expanding
+into behaviour insights and Minimal Mode.
 
 ## Current Roadmap
 - Build in phases from docs/roadmap/cogvest-version-roadmap.md.
-- Current execution focus: V1 MVP.
+- Current execution focus: V1 MVP plus Excel tracker parity from issue #60.
 - V1 goal: local-first Android tracker with live current quotes, Add Trade,
   derived holdings, dashboard, cash tracking, value masking, and lightweight
   conviction capture/state.
@@ -26,6 +27,8 @@ behavioural investing insights and Minimal Mode.
   engine in V1.
 - Do not add import/export, backend, auth, cloud sync, analytics, or push
   notifications in V1.
+- Before V2/V3 work, finish Excel tracker parity issues #60-#66 unless the user
+  explicitly changes priority.
 
 ## Stack
 - React Native + Expo SDK 52+
@@ -52,13 +55,15 @@ behavioural investing insights and Minimal Mode.
   validated.
 
 ## Design
-- Material Design 3 influenced
-- Dark background: #1C1B1F
-- Primary green: #2E7D52
-- Standard Mode: full information density, red/green P&L cues
-- Minimal Mode: calmer palette, reduced noise, long-term framing
-- No coloured card shadows; use subtle 1px borders.
-- Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI work.
+- Follow root `DESIGN.md` for every UI task unless an issue explicitly
+  overrides it.
+- CogVest should feel calm, premium, disciplined, local-first, Android-native,
+  low-noise, fintech, and long-term investing focused.
+- Use Material 3 as the usability foundation, but avoid generic Material
+  templates and trading-app/crypto-exchange energy.
+- Green is an accent, not decoration. Financial values must be readable,
+  maskable, and INR-first.
+- Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI context.
 
 ## Release Gates
 - V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,
@@ -97,6 +102,7 @@ behavioural investing insights and Minimal Mode.
   and `docs/testing/v1-pc-verification-checklist.md`.
 
 ## References
+- Design system: DESIGN.md
 - Full spec: docs/cogvest-master-spec.md
 - Version roadmap: docs/roadmap/cogvest-version-roadmap.md
 - V1 spec: docs/roadmap/v1-mvp-spec.md
