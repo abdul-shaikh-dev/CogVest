@@ -25,12 +25,15 @@ async function main() {
   };
 
   const PAGE_NAME = "Issue 69 - V1 UI Concepts";
-  const existing = figma.root.children.find((page) => page.name === PAGE_NAME);
-  if (existing) existing.remove();
-
-  const page = figma.createPage();
-  page.name = PAGE_NAME;
+  let page = figma.root.children.find((item) => item.name === PAGE_NAME);
+  if (!page) {
+    page = figma.createPage();
+    page.name = PAGE_NAME;
+  }
   await figma.setCurrentPageAsync(page);
+  for (const child of [...page.children]) {
+    child.remove();
+  }
 
   function rgb(hex) {
     const h = hex.replace("#", "");
