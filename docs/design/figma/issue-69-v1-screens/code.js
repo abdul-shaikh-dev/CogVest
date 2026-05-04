@@ -232,7 +232,7 @@ async function main() {
       ["cash", "Cash", "10%", "₹1,65,600"]
     ];
     rows.forEach(([type, label, pct, value], i) => {
-      const yy = y + i * 56;
+      const yy = y + i * 42;
       iconCircle(frame, x, yy, type, 34);
       text(frame, label, x + 50, yy + 4, 14, C.text, "Medium", 80);
       text(frame, pct, x + 230, yy + 4, 14, C.text, "Medium", 45, "RIGHT");
@@ -245,15 +245,15 @@ async function main() {
   }
 
   function holdingRow(frame, y, type, name, meta, current, invested, pnl, alloc, note = "") {
-    card(frame, 24, y, 345, 72, 12);
+    card(frame, 24, y, 345, 68, 12);
     iconCircle(frame, 36, y + 14, type, 32);
     text(frame, name, 78, y + 12, 14, C.text, "Medium", 150);
     text(frame, meta, 78, y + 33, 10, C.secondary, "Regular", 178);
-    if (note) text(frame, note, 78, y + 50, 9, C.warning, "Regular", 130);
+    if (note) text(frame, note, 78, y + 49, 9, C.warning, "Regular", 120);
     text(frame, current, 265, y + 14, 14, C.text, "Medium", 82, "RIGHT");
-    text(frame, `Invested ${invested}`, 36, y + 52, 9, C.secondary, "Regular", 106);
-    text(frame, `P&L ${pnl}`, 158, y + 52, 9, C.positive, "Regular", 88);
-    text(frame, alloc, 318, y + 52, 9, C.secondary, "Regular", 36, "RIGHT");
+    text(frame, `Invested ${invested}`, 36, y + 50, 9, C.secondary, "Regular", 106);
+    text(frame, `P&L ${pnl}`, 170, y + 50, 9, C.positive, "Regular", 76);
+    text(frame, alloc, 318, y + 50, 9, C.secondary, "Regular", 36, "RIGHT");
   }
 
   text(page, "CogVest V1 UI Concepts - Issue #69", 24, 24, 28, C.text, "Bold", 620);
@@ -265,20 +265,20 @@ async function main() {
   card(dashboard, 24, 246, 345, 42, 12);
   text(dashboard, "●  Quotes updated 2m ago  •  Manual fallback ready", 38, 259, 12, C.secondary, "Regular", 250);
   svg(dashboard, "refresh", 324, 255, 18);
-  card(dashboard, 24, 304, 345, 230);
+  card(dashboard, 24, 304, 345, 212);
   text(dashboard, "Allocation", 38, 320, 16, C.text, "Semi Bold", 150);
   text(dashboard, "View details", 274, 322, 12, C.positive, "Medium", 80, "RIGHT");
-  allocationRows(dashboard, 38, 364);
-  card(dashboard, 24, 552, 345, 100);
-  text(dashboard, "This month", 38, 568, 16, C.text, "Semi Bold", 130);
-  text(dashboard, "May 2026", 294, 570, 12, C.positive, "Medium", 60, "RIGHT");
-  metric(dashboard, "Invested", "₹1.20L", 42, 606, 92);
-  metric(dashboard, "Savings rate", "42%", 154, 606, 92);
-  metric(dashboard, "Cash change", "+₹70K", 266, 606, 84);
-  card(dashboard, 24, 668, 345, 64);
-  iconCircle(dashboard, 38, 683, "neutral", 32);
-  text(dashboard, "Conviction data is still building", 82, 682, 14, C.text, "Medium", 230);
-  text(dashboard, "Optional conviction improves context over time.", 82, 704, 11, C.secondary, "Regular", 240);
+  allocationRows(dashboard, 38, 356);
+  card(dashboard, 24, 532, 345, 96);
+  text(dashboard, "This month", 38, 548, 16, C.text, "Semi Bold", 130);
+  text(dashboard, "May 2026", 294, 550, 12, C.positive, "Medium", 60, "RIGHT");
+  metric(dashboard, "Invested", "₹1.20L", 42, 586, 92);
+  metric(dashboard, "Savings rate", "42%", 154, 586, 92);
+  metric(dashboard, "Cash change", "+₹70K", 266, 586, 84);
+  card(dashboard, 24, 646, 345, 64);
+  iconCircle(dashboard, 38, 661, "neutral", 32);
+  text(dashboard, "Conviction data is still building", 82, 660, 14, C.text, "Medium", 230);
+  text(dashboard, "Optional conviction improves context over time.", 82, 682, 11, C.secondary, "Regular", 240);
   nav(dashboard, "Dashboard");
 
   const holdings = screen("Holdings", 448);
@@ -290,7 +290,7 @@ async function main() {
   holdingRow(holdings, 334, "equity", "HDFC Bank", "Equity · Financial Services", "₹1.83L", "₹1.64L", "+₹18.6K", "14.6%");
   holdingRow(holdings, 414, "equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50.7K", "₹44.2K", "+₹6.4K", "4.1%");
   holdingRow(holdings, 494, "debt", "Sovereign Gold Bond", "Debt · Government Bond", "₹57.1K", "₹53.0K", "+₹4.2K", "4.6%");
-  holdingRow(holdings, 574, "crypto", "Bitcoin", "Crypto · Coin", "₹13.90L", "₹11.05L", "+₹2.85L", "11.1%", "● Manual · 8h ago");
+  holdingRow(holdings, 574, "crypto", "Bitcoin", "Crypto · Manual price", "₹13.90L", "₹11.05L", "+₹2.85L", "11.1%");
   holdingRow(holdings, 654, "debt", "Liquid Fund", "Debt · Liquid / Overnight", "₹2.50L", "₹2.50L", "+₹250", "2.0%");
   nav(holdings, "Holdings");
 
@@ -322,16 +322,16 @@ async function main() {
   chip(addHolding, "Live", 42, 486, true);
   chip(addHolding, "Manual", 112, 486, false);
   text(addHolding, "Date acquired: 15 Apr 2024", 42, 532, 12, C.secondary, "Regular", 210);
-  card(addHolding, 24, 574, 345, 96, 12);
+  card(addHolding, 24, 574, 345, 90, 12);
   text(addHolding, "Derived preview", 82, 592, 16, C.text, "Semi Bold", 150);
-  ["₹36,250", "₹41,956", "+₹5,706", "+2.34%"].forEach((value, i) => metric(addHolding, ["Invested", "Current", "P&L", "Allocation"][i], value, 42 + i * 80, 626, 76, i > 1 ? C.positive : C.text));
-  card(addHolding, 24, 684, 345, 52, 12);
-  text(addHolding, "Conviction optional", 82, 697, 14, C.text, "Medium", 170);
-  text(addHolding, "Add later", 82, 718, 11, C.secondary, "Regular", 100);
-  card(addHolding, 24, 750, 160, 40, 8, C.bg);
-  text(addHolding, "Save and add another", 34, 761, 12, C.text, "Medium", 140, "CENTER");
-  card(addHolding, 202, 750, 166, 40, 8, C.green);
-  text(addHolding, "Save holding", 218, 761, 12, C.text, "Medium", 130, "CENTER");
+  ["₹36K", "₹42K", "+₹5.7K", "+2.34%"].forEach((value, i) => metric(addHolding, ["Invested", "Current", "P&L", "Allocation"][i], value, 42 + i * 80, 624, 76, i > 1 ? C.positive : C.text));
+  card(addHolding, 24, 678, 345, 48, 12);
+  text(addHolding, "Conviction optional", 82, 689, 14, C.text, "Medium", 170);
+  text(addHolding, "Add later", 82, 710, 11, C.secondary, "Regular", 100);
+  card(addHolding, 24, 738, 160, 34, 8, C.bg);
+  text(addHolding, "Save and add another", 34, 747, 11, C.text, "Medium", 140, "CENTER");
+  card(addHolding, 202, 738, 166, 34, 8, C.green);
+  text(addHolding, "Save holding", 218, 747, 11, C.text, "Medium", 130, "CENTER");
   nav(addHolding, "Add");
 
   const cash = screen("Cash", 1296);
@@ -364,10 +364,7 @@ async function main() {
     text(cash, label, 42, y, 11, C.secondary, "Regular", 160);
     text(cash, value, 286, y, 12, color, "Medium", 70, "RIGHT");
   });
-  card(cash, 24, 738, 345, 48, 12);
-  iconCircle(cash, 38, 745, "cash", 28);
-  text(cash, "Cash is included in total allocation", 78, 748, 12, C.text, "Medium", 200);
-  text(cash, "Last updated 03 May 2026, 9:40 AM", 78, 768, 10, C.secondary, "Regular", 200);
+  text(cash, "Cash is included in total allocation", 38, 744, 11, C.secondary, "Regular", 220);
   nav(cash, "Cash");
 
   const monthly = screen("Monthly Progression", 1720);
@@ -391,18 +388,15 @@ async function main() {
   card(monthly, 24, 484, 345, 100);
   text(monthly, "Progression (last 6 months)", 38, 500, 16, C.text, "Semi Bold", 230);
   line(monthly, 60, 568, 270, C.secondary, 0.75);
-  card(monthly, 24, 600, 345, 128);
-  text(monthly, "Asset class snapshot", 38, 616, 16, C.text, "Semi Bold", 200);
+  card(monthly, 24, 596, 345, 138);
+  text(monthly, "Asset class snapshot", 38, 612, 16, C.text, "Semi Bold", 200);
   [["equity", "Equity", "₹12,45,000", "62.6%"], ["debt", "Debt", "₹3,22,000", "16.2%"], ["crypto", "Crypto", "₹1,20,000", "6.0%"], ["cash", "Cash", "₹3,25,470", "16.3%"]].forEach(([type, label, value, pct], i) => {
-    const y = 654 + i * 26;
+    const y = 644 + i * 25;
     iconCircle(monthly, 38, y - 6, type, 24);
     text(monthly, label, 70, y, 12, C.text, "Medium", 70);
     text(monthly, value, 226, y, 12, C.text, "Regular", 80, "RIGHT");
     text(monthly, pct, 322, y, 12, C.secondary, "Regular", 40, "RIGHT");
   });
-  card(monthly, 24, 742, 345, 40, 12);
-  text(monthly, "May note", 76, 750, 13, C.text, "Medium", 120);
-  text(monthly, "Optional note", 246, 752, 10, C.secondary, "Regular", 90);
   nav(monthly, "Dashboard");
 
   const settings = screen("Settings", 2144);
@@ -414,14 +408,14 @@ async function main() {
     text(settings, title, 92, y + 22, 16, C.text, "Semi Bold", 180);
     lines.forEach(([label, color], i) => text(settings, label, 92, y + 48 + i * 22, 12, color || C.secondary, "Regular", 225));
   }
-  settingCard(128, "Privacy", [["Data stays on this device"], ["●  Local storage: Active", C.positive], ["No account • No cloud sync • No analytics"]], 100);
-  settingCard(240, "Value masking", [["Hide amounts on screen and app switcher."], ["Masked preview   ₹••,••,•••"]], 92);
-  settingCard(344, "Quotes", [["Live refresh     Every 15 min"], ["Last refresh     3 May, 10:15 AM"], ["Provider status     Available", C.positive]], 110);
-  settingCard(466, "Currency", [["Base currency     INR"], ["Foreign assets summary     On"], ["USD & crypto fallback     On"]], 110);
-  settingCard(588, "Display & App info", [["Density     Standard (V1)"], ["Minimal Mode     V2 locked", C.muted], ["App version 1.0.0 · preview"]], 110);
-  card(settings, 24, 720, 345, 38, 10, C.bg).strokes = [paint(C.negative, 0.45)];
-  text(settings, "Clear local data", 52, 730, 12, C.negative, "Medium", 150);
-  text(settings, "Deletes local data", 224, 730, 10, C.muted, "Regular", 114, "RIGHT");
+  settingCard(128, "Privacy", [["Data stays on this device"], ["●  Local storage: Active", C.positive], ["No account • No cloud • No analytics"]], 104);
+  settingCard(246, "Value masking", [["Hide amounts on screen"], ["Masked preview   ₹••,••,•••"]], 88);
+  settingCard(348, "Quotes", [["Live refresh     Every 15 min"], ["Last refresh     3 May, 10:15 AM"], ["Provider status     Available", C.positive]], 104);
+  settingCard(466, "Currency", [["Base currency     INR"], ["Foreign assets summary     On"], ["USD & crypto fallback     On"]], 104);
+  settingCard(584, "Display & App info", [["Density     Standard (V1)"], ["Minimal Mode     V2 locked", C.muted], ["App version 1.0.0 · preview"]], 104);
+  card(settings, 24, 704, 345, 38, 10, C.bg).strokes = [paint(C.negative, 0.45)];
+  text(settings, "Clear local data", 52, 714, 12, C.negative, "Medium", 150);
+  text(settings, "Deletes local data", 224, 714, 10, C.muted, "Regular", 114, "RIGHT");
   nav(settings, "Settings");
 
   figma.viewport.scrollAndZoomIntoView([dashboard, holdings, addHolding, cash, monthly, settings]);
