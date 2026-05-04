@@ -71,9 +71,8 @@ describe("DashboardScreen", () => {
     const { getByText, queryByText } = render(<DashboardScreen store={store} />);
 
     expect(getByText("₹350.00")).toBeTruthy();
-    expect(getByText("+₹27.27")).toBeTruthy();
-    expect(getByText("(+10.00%) today")).toBeTruthy();
-    expect(getByText("Stock")).toBeTruthy();
+    expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+    expect(getByText("Equity")).toBeTruthy();
     expect(getByText("85.71%")).toBeTruthy();
     expect(getByText("Cash")).toBeTruthy();
     expect(getByText("14.29%")).toBeTruthy();

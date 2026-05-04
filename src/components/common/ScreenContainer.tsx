@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xl,
     paddingHorizontal: spacing.screenHorizontal,
   },
 });

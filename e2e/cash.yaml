@@ -3,7 +3,7 @@ appId: com.abdulshaikh.cogvest
 - launchApp:
     clearState: true
 - tapOn:
-    id: "cash-tab"
+    id: "tab-cash"
 - assertVisible:
     id: "cash-screen"
 - tapOn:

@@ -4,7 +4,7 @@ import { StyleSheet, Text } from "react-native";
 
 import { colors, typography } from "@/src/theme";
 
-type TextVariant = "caption" | "body" | "title" | "hero";
+type TextVariant = "caption" | "body" | "title" | "largeTitle" | "hero";
 type TextColor = keyof typeof colors.text | "primary";
 
 export type AppTextProps = TextProps & {
@@ -57,7 +57,11 @@ const styles = StyleSheet.create({
   },
   hero: {
     fontSize: typography.sizes.hero,
-    lineHeight: 40,
+    lineHeight: 50,
+  },
+  largeTitle: {
+    fontSize: typography.sizes.largeTitle,
+    lineHeight: 38,
   },
   title: {
     fontSize: typography.sizes.title,

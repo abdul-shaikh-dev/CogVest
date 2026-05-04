@@ -2,18 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
-const TAB_BAR_BACKGROUND = "#1C1B1F";
-const ACTIVE_TINT = "#2E7D52";
-const INACTIVE_TINT = "#CAC4D0";
+import { colors } from "@/src/theme";
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
 const tabIcons: Record<string, TabIconName> = {
-  dashboard: "grid-outline",
-  holdings: "wallet-outline",
+  dashboard: "home-outline",
+  holdings: "pie-chart-outline",
   "add-trade": "add",
-  history: "time-outline",
-  cash: "cash-outline",
+  history: "analytics-outline",
+  cash: "wallet-outline",
+  settings: "settings-outline",
 };
 
 function TabIcon({
@@ -28,7 +27,7 @@ function TabIcon({
   if (routeName === "add-trade") {
     return (
       <View style={styles.fab}>
-        <Ionicons name="add" color="#E6E1E5" size={size + 4} />
+        <Ionicons name="add" color={colors.text.primary} size={size + 4} />
       </View>
     );
   }
@@ -47,8 +46,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: ACTIVE_TINT,
-        tabBarInactiveTintColor: INACTIVE_TINT,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.text.secondary,
         tabBarStyle: styles.tabBar,
         tabBarIcon: ({ color, size }) => (
           <TabIcon routeName={route.name} color={color} size={size} />
@@ -57,23 +56,27 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="dashboard"
-        options={{ tabBarButtonTestID: "dashboard-tab", title: "Dashboard" }}
+        options={{ tabBarButtonTestID: "tab-dashboard", title: "Dashboard" }}
       />
       <Tabs.Screen
         name="holdings"
-        options={{ tabBarButtonTestID: "holdings-tab", title: "Holdings" }}
+        options={{ tabBarButtonTestID: "tab-holdings", title: "Holdings" }}
       />
       <Tabs.Screen
         name="add-trade"
-        options={{ tabBarButtonTestID: "add-trade-tab", title: "Add" }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{ tabBarButtonTestID: "history-tab", title: "History" }}
+        options={{ tabBarButtonTestID: "tab-add", title: "Add" }}
       />
       <Tabs.Screen
         name="cash"
-        options={{ tabBarButtonTestID: "cash-tab", title: "Cash" }}
+        options={{ tabBarButtonTestID: "tab-cash", title: "Cash" }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ tabBarButtonTestID: "tab-settings", title: "Settings" }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{ href: null, title: "Progress" }}
       />
     </Tabs>
   );
@@ -82,7 +85,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   fab: {
     alignItems: "center",
-    backgroundColor: ACTIVE_TINT,
+    backgroundColor: colors.primary,
     borderRadius: 28,
     height: 56,
     justifyContent: "center",
@@ -90,10 +93,10 @@ const styles = StyleSheet.create({
     width: 56,
   },
   tabBar: {
-    backgroundColor: TAB_BAR_BACKGROUND,
-    borderTopColor: "#2A2A2A",
-    height: 72,
-    paddingBottom: 10,
+    backgroundColor: colors.surface.card,
+    borderTopColor: colors.border.subtle,
+    height: 78,
+    paddingBottom: 12,
     paddingTop: 8,
   },
 });

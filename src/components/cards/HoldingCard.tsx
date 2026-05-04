@@ -1,12 +1,14 @@
 import { StyleSheet, View } from "react-native";
 
+import { CategoryIcon, PremiumCard, assetClassLabel } from "@/src/components/common";
 import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
-import { colors, radii, shadows, spacing } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 import type { Holding } from "@/src/types";
 
 import { AppText, MaskedValue } from "../common";
 
 type HoldingCardProps = {
+  allocationPct?: number;
   holding: Holding;
   masked?: boolean;
 };
@@ -21,17 +23,27 @@ function formatPnLAmount(holding: Holding) {
   return `${holding.unrealisedPnL > 0 ? "+" : ""}${amount}`;
 }
 
-export function HoldingCard({ holding, masked = false }: HoldingCardProps) {
+export function HoldingCard({
+  allocationPct,
+  holding,
+  masked = false,
+}: HoldingCardProps) {
   const isProfit = holding.unrealisedPnL >= 0;
 
   return (
-    <View style={styles.card}>
+    <PremiumCard style={styles.card}>
       <View style={styles.header}>
+        <CategoryIcon assetClass={holding.asset.assetClass} />
         <View style={styles.identity}>
-          <AppText variant="title" weight="bold">
+          <AppText weight="bold">
             {holding.asset.name}
           </AppText>
-          <AppText color="secondary">{holding.asset.symbol}</AppText>
+          <AppText color="secondary" variant="caption">
+            {holding.asset.symbol}
+          </AppText>
+          <AppText color="secondary" variant="caption">
+            {assetClassLabel(holding.asset.assetClass)}
+          </AppText>
         </View>
         <View style={styles.valueBlock}>
           <MaskedValue
@@ -66,6 +78,11 @@ export function HoldingCard({ holding, masked = false }: HoldingCardProps) {
         <AppText color="secondary">
           Current {formatINR(holding.currentPrice)}
         </AppText>
+        {allocationPct !== undefined ? (
+          <AppText color="secondary">
+            Allocation {formatPercentage(allocationPct).replace("+", "")}
+          </AppText>
+        ) : null}
       </View>
 
       <AppText color="muted" variant="caption">
@@ -73,21 +90,16 @@ export function HoldingCard({ holding, masked = false }: HoldingCardProps) {
           ? `Updated ${formatDate(holding.lastUpdated)}`
           : "Quote not refreshed yet"}
       </AppText>
-    </View>
+    </PremiumCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    ...shadows.none,
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.card,
-    borderWidth: 1,
     gap: spacing.cardInner,
-    padding: spacing.md,
   },
   header: {
+    alignItems: "flex-start",
     flexDirection: "row",
     gap: spacing.cardInner,
     justifyContent: "space-between",

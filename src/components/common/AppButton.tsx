@@ -91,7 +91,5 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
-    borderWidth: 1,
   },
 });

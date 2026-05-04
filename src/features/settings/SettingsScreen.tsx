@@ -2,9 +2,16 @@ import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppText, ScreenContainer } from "@/src/components/common";
+import {
+  AppText,
+  GroupedListRow,
+  PremiumCard,
+  ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
+} from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, shadows, spacing } from "@/src/theme";
+import { colors, interaction, radii, spacing } from "@/src/theme";
 
 import { useSettings } from "./useSettings";
 
@@ -25,12 +32,7 @@ export function SettingsScreen({
   return (
     <ScreenContainer scroll testID="settings-screen">
       <View style={styles.content}>
-        <View style={styles.header}>
-          <AppText color="secondary">Privacy and app controls</AppText>
-          <AppText variant="hero" weight="bold">
-            Settings
-          </AppText>
-        </View>
+        <ScreenHeader title="Settings" subtitle="Local-first controls" />
 
         <Pressable
           accessibilityLabel="Toggle value masking"
@@ -47,7 +49,7 @@ export function SettingsScreen({
           testID="value-mask-toggle"
         >
           <View style={styles.toggleCopy}>
-            <AppText variant="title" weight="bold">
+            <AppText weight="bold">
               Value masking
             </AppText>
             <AppText color="secondary">
@@ -67,38 +69,59 @@ export function SettingsScreen({
           </View>
         </Pressable>
 
-        <View style={styles.card}>
-          <AppText weight="bold">
-            {maskWealthValues ? "Values masked" : "Values visible"}
-          </AppText>
-          <AppText color="secondary">
-            This preference is stored locally on this device.
-          </AppText>
-        </View>
+        <PremiumCard>
+          <SectionHeader title="Privacy" />
+          <GroupedListRow
+            icon="lock-closed-outline"
+            title="Local-first privacy"
+            meta="No backend, auth, analytics, or cloud sync is enabled in V1."
+            value="Active"
+          />
+          <GroupedListRow
+            icon="phone-portrait-outline"
+            title={maskWealthValues ? "Values masked" : "Values visible"}
+            meta="This preference is stored locally on this device."
+          />
+        </PremiumCard>
 
-        <View style={styles.card}>
-          <AppText variant="title" weight="bold">
-            Local-first privacy
-          </AppText>
-          <AppText color="secondary">
-            CogVest keeps portfolio data on-device. No backend, auth, analytics,
-            or cloud sync is enabled in V1.
-          </AppText>
-        </View>
+        <PremiumCard>
+          <SectionHeader title="Quotes" />
+          <GroupedListRow
+            icon="refresh-outline"
+            title="Quote refresh"
+            meta="Dashboard and Holdings refresh current quotes on demand."
+            value="Manual fallback"
+          />
+          <GroupedListRow
+            icon="cloud-offline-outline"
+            title="Provider fallback"
+            meta="Manual prices remain available when quote APIs fail."
+          />
+        </PremiumCard>
 
-        <View style={styles.card}>
-          <AppText variant="title" weight="bold">
-            Quote refresh
-          </AppText>
-          <AppText color="secondary">
-            Dashboard and Holdings refresh current quotes on demand. Manual
-            prices remain available when quote APIs fail.
-          </AppText>
-        </View>
+        <PremiumCard>
+          <SectionHeader title="Currency" />
+          <GroupedListRow title="Base currency" value="INR" />
+          <GroupedListRow title="Foreign asset summary" value="On" />
+          <GroupedListRow title="USD & crypto fallback" value="On" />
+        </PremiumCard>
 
-        <View style={styles.card}>
-          <AppText color="secondary">App version 1.0.0</AppText>
-        </View>
+        <PremiumCard>
+          <SectionHeader title="Display & App Info" />
+          <GroupedListRow title="Density" value="Standard (V1)" />
+          <GroupedListRow title="Minimal Mode" value="V2 locked" />
+          <GroupedListRow title="App version 1.0.0" value="Preview" />
+        </PremiumCard>
+
+        <PremiumCard>
+          <SectionHeader title="Data" />
+          <GroupedListRow
+            destructive
+            icon="trash-outline"
+            title="Clear local data"
+            meta="Destructive action. Keep disabled until implemented."
+          />
+        </PremiumCard>
       </View>
     </ScreenContainer>
   );
@@ -106,11 +129,8 @@ export function SettingsScreen({
 
 const styles = StyleSheet.create({
   card: {
-    ...shadows.none,
     backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
     borderRadius: radii.card,
-    borderWidth: 1,
     gap: spacing.cardInner,
     padding: spacing.md,
   },
@@ -118,9 +138,6 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
-  },
-  header: {
-    gap: spacing.xs,
   },
   pressed: {
     opacity: interaction.pressedOpacity,
@@ -139,9 +156,7 @@ const styles = StyleSheet.create({
   },
   switchTrack: {
     backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
     borderRadius: radii.pill,
-    borderWidth: 1,
     justifyContent: "center",
     padding: 3,
     width: 48,

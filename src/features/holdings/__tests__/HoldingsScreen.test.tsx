@@ -60,13 +60,13 @@ describe("HoldingsScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText, queryByText } = render(<HoldingsScreen store={store} />);
+    const { getAllByText, getByText, queryByText } = render(<HoldingsScreen store={store} />);
 
     expect(getByText("Reliance Industries")).toBeTruthy();
     expect(getByText("RELIANCE")).toBeTruthy();
     expect(getByText("Qty 2")).toBeTruthy();
     expect(getByText("Avg ₹100.00")).toBeTruthy();
-    expect(getByText("₹250.00")).toBeTruthy();
+    expect(getAllByText("₹250.00").length).toBeGreaterThan(0);
     expect(getByText("+₹50.00")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
     expect(getByText("Updated 20 Apr 2026")).toBeTruthy();
@@ -99,14 +99,14 @@ describe("HoldingsScreen", () => {
         },
       });
 
-    const { getByText } = render(
+    const { getAllByText, getByText } = render(
       <HoldingsScreen store={store} refreshQuotes={refreshQuotes} />,
     );
 
     fireEvent.press(getByText("Refresh Quotes"));
 
     await waitFor(() => {
-      expect(getByText("₹300.00")).toBeTruthy();
+      expect(getAllByText("₹300.00").length).toBeGreaterThan(0);
       expect(getByText("Updated 21 Apr 2026")).toBeTruthy();
     });
   });

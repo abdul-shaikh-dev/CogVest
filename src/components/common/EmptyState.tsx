@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { colors, radii, shadows, spacing } from "@/src/theme";
+import { colors, radii, spacing } from "@/src/theme";
 
 import { AppButton } from "./AppButton";
 import { AppText } from "./AppText";
@@ -37,12 +37,9 @@ export function EmptyState({
 
 const styles = StyleSheet.create({
   card: {
-    ...shadows.none,
     alignItems: "center",
     backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
     borderRadius: radii.card,
-    borderWidth: 1,
     gap: spacing.cardInner,
     padding: spacing.md,
   },
