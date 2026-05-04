@@ -6,8 +6,9 @@ editable V1 screen frames for issue #69.
 ## Why This Exists
 
 Generated PNG mockups are useful for exploration, but they are unstable design
-sources. This plugin recreates the approved direction as editable Figma layers:
-frames, cards, text, vector icons, and simple shapes.
+sources. This plugin recreates the approved true-dark private ledger direction
+as editable Figma layers: frames, borderless cards, text, vector icons, and
+simple shapes.
 
 ## How To Run
 

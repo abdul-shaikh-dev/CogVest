@@ -8,20 +8,20 @@ async function main() {
   await figma.loadFontAsync({ family: "Inter", style: "Bold" });
 
   const C = {
-    bg: "#1C1B1F",
-    surface: "#242329",
-    elevated: "#2B2930",
-    text: "#E6E1E5",
-    secondary: "#CAC4D0",
-    muted: "#938F99",
-    green: "#2E7D52",
-    positive: "#22C55E",
+    bg: "#000000",
+    surface: "#1C1C1E",
+    elevated: "#2C2C2E",
+    text: "#F5F5F7",
+    secondary: "#98989D",
+    muted: "#636366",
+    green: "#34C759",
+    positive: "#34C759",
     warning: "#F59E0B",
-    negative: "#EF4444",
-    border: "#3A3740",
-    blue: "#3D5FA8",
-    cashBlue: "#2E5F9E",
-    amber: "#B7791F"
+    negative: "#FF453A",
+    border: "#FFFFFF",
+    blue: "#0A84FF",
+    cashBlue: "#64D2FF",
+    amber: "#FF9F0A"
   };
 
   const PAGE_NAME = "Issue 69 - V1 UI Concepts";
@@ -63,7 +63,7 @@ async function main() {
     return node;
   }
 
-  function card(parent, x, y, width, height, radius = 14, fill = C.surface) {
+  function card(parent, x, y, width, height, radius = 18, fill = C.surface) {
     const node = figma.createRectangle();
     parent.appendChild(node);
     node.x = x;
@@ -71,12 +71,11 @@ async function main() {
     node.resize(width, height);
     node.cornerRadius = radius;
     node.fills = [paint(fill)];
-    node.strokes = [paint(C.border)];
-    node.strokeWeight = 1;
+    node.strokes = [];
     return node;
   }
 
-  function line(parent, x, y, width, color = C.border, opacity = 0.65) {
+  function line(parent, x, y, width, color = C.border, opacity = 0.1) {
     const node = figma.createLine();
     parent.appendChild(node);
     node.x = x;
@@ -136,6 +135,18 @@ async function main() {
     return outer;
   }
 
+  function iconGlyph(parent, x, y, type, size = 22) {
+    const config = {
+      equity: [C.positive, "trend"],
+      debt: [C.blue, "shield"],
+      crypto: [C.amber, "btc"],
+      cash: [C.cashBlue, "wallet"],
+      neutral: [C.secondary, "trend"]
+    };
+    const [color, icon] = config[type] || config.neutral;
+    return svg(parent, icon, x, y, size, color);
+  }
+
   function screen(name, x) {
     const frame = figma.createFrame();
     page.appendChild(frame);
@@ -153,27 +164,34 @@ async function main() {
 
   function top(frame, title, subtitle, actions = []) {
     const titleWidth = actions.length > 0 ? 220 : 285;
-    text(frame, title, 24, 72, 23, C.text, "Semi Bold", titleWidth);
-    text(frame, subtitle, 24, 104, 13, C.secondary, "Regular", 255);
+    text(frame, title, 24, 70, 28, C.text, "Bold", titleWidth);
+    text(frame, subtitle, 24, 108, 13, C.secondary, "Regular", 255);
     actions.forEach((action, i) => {
       const x = 286 + i * 46;
-      card(frame, x, 68, 38, 38, 10);
+      card(frame, x, 70, 38, 38, 12, C.elevated);
       svg(frame, action, x + 9, 77, 20, C.text);
     });
   }
 
   function topBack(frame, title, subtitle, action = null) {
     svg(frame, "back", 24, 74, 20, C.text);
-    text(frame, title, 70, 70, 22, C.text, "Semi Bold", 230);
-    text(frame, subtitle, 70, 102, 13, C.secondary, "Regular", 240);
+    text(frame, title, 70, 68, 26, C.text, "Bold", 230);
+    text(frame, subtitle, 70, 104, 13, C.secondary, "Regular", 240);
     if (action) {
-      card(frame, 331, 68, 38, 38, 10);
+      card(frame, 331, 70, 38, 38, 12, C.elevated);
       svg(frame, action, 340, 77, 20, C.text);
     }
   }
 
   function nav(frame, selected) {
-    card(frame, 0, 778, 393, 74, 0, "#202026").strokes = [];
+    const navBg = figma.createRectangle();
+    frame.appendChild(navBg);
+    navBg.x = 0;
+    navBg.y = 778;
+    navBg.resize(393, 74);
+    navBg.fills = [paint(C.surface, 0.86)];
+    navBg.strokes = [paint(C.border, 0.08)];
+    navBg.strokeWeight = 1;
     const items = [
       ["Dashboard", "home", 48],
       ["Holdings", "pie", 122],
@@ -189,11 +207,11 @@ async function main() {
         circle.x = 176;
         circle.y = 787;
         circle.resize(40, 40);
-        circle.fills = [paint(C.green, 0.86)];
+        circle.fills = [paint(C.green)];
         svg(frame, "plus", 186, 797, 20, C.text);
       } else {
         svg(frame, icon, x - 12, 793, 24, active ? C.positive : C.secondary);
-        if (active) card(frame, x - 24, 778, 48, 3, 2, C.green).strokes = [];
+        if (active) card(frame, x - 24, 778, 48, 3, 2, C.green);
       }
       text(frame, label, x - 34, 829, 11, active ? C.positive : C.secondary, "Regular", 68, "CENTER");
     });
@@ -201,7 +219,7 @@ async function main() {
 
   function metric(frame, label, value, x, y, width = 80, color = C.text) {
     text(frame, label, x, y, 11, C.secondary, "Regular", width);
-    text(frame, value, x, y + 21, 14, color, "Medium", width);
+    text(frame, value, x, y + 21, 15, color, "Semi Bold", width);
   }
 
   function summary(frame, y, values) {
@@ -219,8 +237,18 @@ async function main() {
     text(frame, value, x + 10, y + 42, 14, C.text, "Medium", width - 20);
   }
 
+  function metricStrip(frame, y, items) {
+    card(frame, 24, y, 345, 76);
+    items.forEach(([label, value], i) => {
+      const x = 38 + i * 84;
+      text(frame, label, x, y + 14, 10, C.secondary, "Regular", 70);
+      text(frame, value, x, y + 43, 15, C.text, "Semi Bold", 70);
+      if (i > 0) line(frame, x - 14, y + 18, 42);
+    });
+  }
+
   function chip(frame, label, x, y, active = false) {
-    card(frame, x, y, 58, 30, 15, active ? C.green : C.bg);
+    card(frame, x, y, 58, 30, 15, active ? C.green : C.elevated);
     text(frame, label, x, y + 7, 12, active ? C.text : C.secondary, "Medium", 58, "CENTER");
   }
 
@@ -233,7 +261,7 @@ async function main() {
     ];
     rows.forEach(([type, label, pct, value], i) => {
       const yy = y + i * 42;
-      iconCircle(frame, x, yy, type, 34);
+      iconGlyph(frame, x + 6, yy + 6, type, 22);
       text(frame, label, x + 50, yy + 4, 14, C.text, "Medium", 80);
       text(frame, pct, x + 230, yy + 4, 14, C.text, "Medium", 45, "RIGHT");
       card(frame, x + 50, yy + 30, 120, 5, 3, "#34313B").strokes = [];
@@ -246,7 +274,7 @@ async function main() {
 
   function holdingRow(frame, y, type, name, meta, current, invested, pnl, alloc, note = "") {
     card(frame, 24, y, 345, 68, 12);
-    iconCircle(frame, 36, y + 14, type, 32);
+    iconGlyph(frame, 42, y + 22, type, 22);
     text(frame, name, 78, y + 12, 14, C.text, "Medium", 150);
     text(frame, meta, 78, y + 33, 10, C.secondary, "Regular", 178);
     if (note) text(frame, note, 78, y + 49, 9, C.warning, "Regular", 120);
@@ -276,7 +304,7 @@ async function main() {
   metric(dashboard, "Savings rate", "42%", 154, 586, 92);
   metric(dashboard, "Cash change", "+₹70K", 266, 586, 84);
   card(dashboard, 24, 646, 345, 64);
-  iconCircle(dashboard, 38, 661, "neutral", 32);
+  iconGlyph(dashboard, 44, 669, "neutral", 20);
   text(dashboard, "Conviction data is still building", 82, 660, 14, C.text, "Medium", 230);
   text(dashboard, "Optional conviction improves context over time.", 82, 682, 11, C.secondary, "Regular", 240);
   nav(dashboard, "Dashboard");
@@ -299,22 +327,22 @@ async function main() {
   text(addHolding, "?", 342, 74, 22, C.secondary, "Semi Bold", 24, "CENTER");
   ["Asset", "Classification", "Position", "Review"].forEach((label, i) => {
     const x = 58 + i * 86;
-    iconCircle(addHolding, x, 142, "neutral", 32);
+    iconGlyph(addHolding, x + 5, 147, "neutral", 22);
     text(addHolding, label, x - 22, 180, 11, i === 2 ? C.positive : C.secondary, "Medium", 76, "CENTER");
     if (i < 3) line(addHolding, x + 42, 158, 42);
   });
   card(addHolding, 24, 222, 345, 58, 12);
-  iconCircle(addHolding, 38, 234, "neutral", 32);
+  iconGlyph(addHolding, 44, 242, "neutral", 20);
   text(addHolding, "Asset", 82, 234, 15, C.text, "Medium", 120);
   text(addHolding, "HDFC Bank · HDFCBANK · INR", 82, 256, 11, C.secondary, "Regular", 190);
   text(addHolding, "Edit ›", 310, 242, 13, C.secondary, "Medium", 50);
   card(addHolding, 24, 292, 345, 58, 12);
-  iconCircle(addHolding, 38, 304, "equity", 32);
+  iconGlyph(addHolding, 44, 312, "equity", 20);
   text(addHolding, "Classification", 82, 304, 15, C.text, "Medium", 130);
   text(addHolding, "Equity · Large Cap · Financial Services", 82, 326, 11, C.secondary, "Regular", 220);
   text(addHolding, "Edit ›", 310, 312, 13, C.secondary, "Medium", 50);
   card(addHolding, 24, 364, 345, 196, 12);
-  iconCircle(addHolding, 38, 378, "neutral", 32);
+  iconGlyph(addHolding, 44, 386, "neutral", 20);
   text(addHolding, "Position details", 82, 382, 16, C.text, "Semi Bold", 160);
   metric(addHolding, "Quantity *", "25", 42, 426, 74);
   metric(addHolding, "Average cost *", "₹1,450.00", 136, 426, 104);
@@ -337,34 +365,31 @@ async function main() {
   const cash = screen("Cash", 1296);
   top(cash, "Cash", "Manual ledger • local only", ["plus", "eye"]);
   card(cash, 24, 130, 345, 88);
-  iconCircle(cash, 38, 152, "cash", 38);
+  iconGlyph(cash, 48, 162, "cash", 24);
   text(cash, "Cash balance", 92, 146, 13, C.secondary, "Regular", 120);
   text(cash, "₹1,65,600", 92, 174, 28, C.text, "Semi Bold", 180);
   text(cash, "₹••,•••", 282, 174, 16, C.secondary, "Medium", 70);
-  [["Added", "₹70K"], ["Invested", "₹45K"], ["Available", "₹1.20L"], ["Savings", "32.8%"]].forEach(([label, value], i) => {
-    const x = 24 + i * 86;
-    miniMetricCard(cash, x, 234, label, value);
-  });
-  card(cash, 24, 332, 345, 178);
-  text(cash, "Add cash entry", 38, 348, 16, C.text, "Semi Bold", 160);
-  chip(cash, "Deposit", 38, 386, true);
-  chip(cash, "Withdrawal", 112, 386, false);
-  card(cash, 200, 386, 132, 30, 15, C.bg);
-  text(cash, "Investment transfer", 200, 394, 10, C.secondary, "Medium", 132, "CENTER");
-  metric(cash, "Amount (INR) *", "₹0", 38, 438, 110);
-  metric(cash, "Date *", "03 May 2026", 192, 438, 120);
-  text(cash, "Note (optional)  e.g., Salary, SIP transfer", 38, 488, 11, C.muted, "Regular", 260);
-  card(cash, 250, 520, 92, 34, 8, C.green);
-  text(cash, "Save entry", 262, 530, 12, C.text, "Medium", 70, "CENTER");
-  card(cash, 24, 574, 345, 150);
-  text(cash, "Recent cash ledger", 38, 590, 16, C.text, "Semi Bold", 180);
-  text(cash, "View all", 296, 592, 12, C.positive, "Medium", 60, "RIGHT");
+  metricStrip(cash, 234, [["Added", "₹70K"], ["Invested", "₹45K"], ["Available", "₹1.20L"], ["Savings", "32.8%"]]);
+  card(cash, 24, 328, 345, 178);
+  text(cash, "Add cash entry", 38, 344, 16, C.text, "Semi Bold", 160);
+  chip(cash, "Deposit", 38, 382, true);
+  chip(cash, "Withdrawal", 112, 382, false);
+  card(cash, 200, 382, 132, 30, 15, C.elevated);
+  text(cash, "Investment transfer", 200, 390, 10, C.secondary, "Medium", 132, "CENTER");
+  metric(cash, "Amount (INR) *", "₹0", 38, 434, 110);
+  metric(cash, "Date *", "03 May 2026", 192, 434, 120);
+  text(cash, "Note (optional)  e.g., Salary, SIP transfer", 38, 484, 11, C.muted, "Regular", 260);
+  card(cash, 250, 516, 92, 34, 10, C.green);
+  text(cash, "Save entry", 262, 526, 12, C.bg, "Semi Bold", 70, "CENTER");
+  card(cash, 24, 570, 345, 150);
+  text(cash, "Recent cash ledger", 38, 586, 16, C.text, "Semi Bold", 180);
+  text(cash, "View all", 296, 588, 12, C.positive, "Medium", 60, "RIGHT");
   [["Salary added", "₹70,000", C.positive], ["SIP transfer – Index Fund", "-₹15,000", C.text], ["Emergency fund top-up", "₹10,000", C.positive], ["SIP transfer – Large Cap", "-₹15,000", C.text]].forEach(([label, value, color], i) => {
-    const y = 626 + i * 24;
+    const y = 622 + i * 24;
     text(cash, label, 42, y, 11, C.secondary, "Regular", 160);
     text(cash, value, 286, y, 12, color, "Medium", 70, "RIGHT");
   });
-  text(cash, "Cash is included in total allocation", 38, 744, 11, C.secondary, "Regular", 220);
+  text(cash, "Cash is included in total allocation", 38, 740, 11, C.secondary, "Regular", 220);
   nav(cash, "Cash");
 
   const monthly = screen("Monthly Progression", 1720);
@@ -372,15 +397,12 @@ async function main() {
   text(monthly, "‹  Apr 2026", 24, 128, 13, C.secondary, "Regular", 100);
   text(monthly, "May 2026", 164, 128, 15, C.positive, "Medium", 80, "CENTER");
   text(monthly, "Jun 2026  ›", 286, 128, 13, C.secondary, "Regular", 80, "RIGHT");
-  [["Portfolio", "₹19.87L"], ["Invested", "₹1.40L"], ["Cash", "₹3.25L"], ["Savings", "34%"]].forEach(([label, value], i) => {
-    const x = 24 + i * 86;
-    miniMetricCard(monthly, x, 170, label, value);
-  });
-  card(monthly, 24, 270, 345, 196);
-  text(monthly, "What changed this month?", 38, 286, 16, C.text, "Semi Bold", 210);
+  metricStrip(monthly, 170, [["Portfolio", "₹19.87L"], ["Invested", "₹1.40L"], ["Cash", "₹3.25L"], ["Savings", "34%"]]);
+  card(monthly, 24, 264, 345, 196);
+  text(monthly, "What changed this month?", 38, 280, 16, C.text, "Semi Bold", 210);
   [["equity", "Equity", "Market value and contributions", "+₹58,000"], ["debt", "Debt", "Stable allocation", "+₹12,000"], ["crypto", "Crypto", "Manual price movement", "-₹8,500"], ["cash", "Cash", "Net cash change", "+₹70,000"]].forEach(([type, label, caption, value], i) => {
     const y = 326 + i * 34;
-    iconCircle(monthly, 38, y - 5, type, 28);
+    iconGlyph(monthly, 41, y, type, 20);
     text(monthly, label, 78, y, 13, C.text, "Medium", 80);
     text(monthly, caption, 78, y + 16, 10, C.secondary, "Regular", 170);
     text(monthly, value, 288, y + 4, 13, value.startsWith("-") ? C.negative : C.text, "Medium", 70, "RIGHT");
@@ -392,7 +414,7 @@ async function main() {
   text(monthly, "Asset class snapshot", 38, 612, 16, C.text, "Semi Bold", 200);
   [["equity", "Equity", "₹12,45,000", "62.6%"], ["debt", "Debt", "₹3,22,000", "16.2%"], ["crypto", "Crypto", "₹1,20,000", "6.0%"], ["cash", "Cash", "₹3,25,470", "16.3%"]].forEach(([type, label, value, pct], i) => {
     const y = 644 + i * 25;
-    iconCircle(monthly, 38, y - 6, type, 24);
+    iconGlyph(monthly, 40, y - 1, type, 18);
     text(monthly, label, 70, y, 12, C.text, "Medium", 70);
     text(monthly, value, 226, y, 12, C.text, "Regular", 80, "RIGHT");
     text(monthly, pct, 322, y, 12, C.secondary, "Regular", 40, "RIGHT");
@@ -404,9 +426,9 @@ async function main() {
   text(settings, "ⓘ", 342, 76, 20, C.secondary, "Regular", 24, "CENTER");
   function settingCard(y, title, lines, height = 106) {
     card(settings, 24, y, 345, height);
-    iconCircle(settings, 40, y + 20, "neutral", 34);
-    text(settings, title, 92, y + 22, 16, C.text, "Semi Bold", 180);
-    lines.forEach(([label, color], i) => text(settings, label, 92, y + 48 + i * 22, 12, color || C.secondary, "Regular", 225));
+    iconGlyph(settings, 48, y + 28, "neutral", 20);
+    text(settings, title, 84, y + 22, 16, C.text, "Semi Bold", 180);
+    lines.forEach(([label, color], i) => text(settings, label, 84, y + 48 + i * 22, 12, color || C.secondary, "Regular", 235));
   }
   settingCard(128, "Privacy", [["Data stays on this device"], ["●  Local storage: Active", C.positive], ["No account • No cloud • No analytics"]], 104);
   settingCard(246, "Value masking", [["Hide amounts on screen"], ["Masked preview   ₹••,••,•••"]], 88);
