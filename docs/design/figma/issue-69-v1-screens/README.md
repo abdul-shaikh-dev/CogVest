@@ -16,7 +16,7 @@ frames, cards, text, vector icons, and simple shapes.
 2. In Figma desktop, go to `Plugins -> Development -> Import plugin from manifest...`.
 3. Select `docs/design/figma/issue-69-v1-screens/manifest.json`.
 4. Run `Plugins -> Development -> CogVest Issue 69 V1 Screens`.
-5. The plugin creates or replaces the page `Issue 69 - V1 UI Concepts`.
+5. The plugin creates or refreshes the page `Issue 69 - V1 UI Concepts`.
 
 ## Output
 
@@ -31,7 +31,7 @@ The plugin creates six editable Android frames:
 
 ## Notes
 
-- The plugin deletes and recreates only the page named
+- The plugin clears and recreates only the child layers inside the page named
   `Issue 69 - V1 UI Concepts`.
 - It does not modify the existing roadmap pages.
 - Use these frames as the stable source for later Figma refinements.

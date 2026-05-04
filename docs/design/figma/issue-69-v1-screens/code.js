@@ -100,7 +100,8 @@ async function main() {
       btc: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 4v16M13 4v16M7 7h6.2c2 0 3.3 1 3.3 2.6 0 1.1-.7 2-1.9 2.3 1.5.3 2.4 1.3 2.4 2.8 0 1.8-1.5 3.3-3.8 3.3H7M7 12h6" stroke="${s}" stroke-width="2" stroke-linecap="round"/></svg>`,
       eye: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="${s}" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="${s}" stroke-width="2"/></svg>`,
       refresh: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5" stroke="${s}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12a6 6 0 0 0-10.2-4.2L4 11m16 2-3.8 3.2A6 6 0 0 1 6 12" stroke="${s}" stroke-width="2" stroke-linecap="round"/></svg>`,
-      search: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="${s}" stroke-width="2"/><path d="m16 16 5 5" stroke="${s}" stroke-width="2" stroke-linecap="round"/></svg>`
+      search: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="${s}" stroke-width="2"/><path d="m16 16 5 5" stroke="${s}" stroke-width="2" stroke-linecap="round"/></svg>`,
+      back: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="m15 6-6 6 6 6" stroke="${s}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
     };
     return icons[name] || icons.trend;
   }
@@ -162,7 +163,7 @@ async function main() {
   }
 
   function topBack(frame, title, subtitle, action = null) {
-    svg(frame, "home", 24, 74, 20);
+    svg(frame, "back", 24, 74, 20, C.text);
     text(frame, title, 70, 70, 22, C.text, "Semi Bold", 230);
     text(frame, subtitle, 70, 102, 13, C.secondary, "Regular", 240);
     if (action) {
@@ -199,17 +200,23 @@ async function main() {
   }
 
   function metric(frame, label, value, x, y, width = 80, color = C.text) {
-    text(frame, label, x, y, 12, C.secondary, "Regular", width);
-    text(frame, value, x, y + 22, 15, color, "Medium", width);
+    text(frame, label, x, y, 11, C.secondary, "Regular", width);
+    text(frame, value, x, y + 21, 14, color, "Medium", width);
   }
 
   function summary(frame, y, values) {
-    card(frame, 24, y, 345, 112);
+    card(frame, 24, y, 345, 102);
     values.forEach(([label, value, color], i) => {
       const x = 38 + i * 84;
-      metric(frame, label, value, x, y + 26, 78, color || C.text);
-      if (i > 0) line(frame, x - 14, y + 26, 64);
+      metric(frame, label, value, x, y + 24, 70, color || C.text);
+      if (i > 0) line(frame, x - 14, y + 24, 56);
     });
+  }
+
+  function miniMetricCard(frame, x, y, label, value, width = 78) {
+    card(frame, x, y, width, 72, 10);
+    text(frame, label, x + 10, y + 12, 10, C.secondary, "Regular", width - 20);
+    text(frame, value, x + 10, y + 42, 14, C.text, "Medium", width - 20);
   }
 
   function chip(frame, label, x, y, active = false) {
@@ -254,37 +261,37 @@ async function main() {
 
   const dashboard = screen("Dashboard", 24);
   top(dashboard, "Dashboard", "Local portfolio • 3 May 2026", ["eye", "refresh"]);
-  summary(dashboard, 132, [["Current value", "₹18,42,500"], ["Invested", "₹15,32,000"], ["P&L", "+₹3,10,500", C.positive], ["P&L %", "+20.26%", C.positive]]);
-  card(dashboard, 24, 258, 345, 44, 12);
-  text(dashboard, "●  Quotes updated 2m ago  •  Manual fallback ready", 38, 272, 12, C.secondary, "Regular", 250);
-  svg(dashboard, "refresh", 324, 268, 18);
-  card(dashboard, 24, 318, 345, 230);
-  text(dashboard, "Allocation", 38, 334, 16, C.text, "Semi Bold", 150);
-  text(dashboard, "View details", 274, 336, 12, C.positive, "Medium", 80, "RIGHT");
-  allocationRows(dashboard, 38, 378);
-  card(dashboard, 24, 562, 345, 98);
-  text(dashboard, "This month", 38, 578, 16, C.text, "Semi Bold", 130);
-  text(dashboard, "May 2026", 294, 580, 12, C.positive, "Medium", 60, "RIGHT");
-  metric(dashboard, "Invested", "₹1,20,000", 42, 616, 92);
-  metric(dashboard, "Savings rate", "42%", 154, 616, 92);
-  metric(dashboard, "Cash change", "+₹70,000", 266, 616, 84);
-  card(dashboard, 24, 674, 345, 64);
-  iconCircle(dashboard, 38, 689, "neutral", 32);
-  text(dashboard, "Conviction data is still building", 82, 688, 14, C.text, "Medium", 230);
-  text(dashboard, "Optional conviction improves context over time.", 82, 710, 11, C.secondary, "Regular", 240);
+  summary(dashboard, 132, [["Current", "₹18.42L"], ["Invested", "₹15.32L"], ["P&L", "+₹3.10L", C.positive], ["P&L %", "+20.2%", C.positive]]);
+  card(dashboard, 24, 246, 345, 42, 12);
+  text(dashboard, "●  Quotes updated 2m ago  •  Manual fallback ready", 38, 259, 12, C.secondary, "Regular", 250);
+  svg(dashboard, "refresh", 324, 255, 18);
+  card(dashboard, 24, 304, 345, 230);
+  text(dashboard, "Allocation", 38, 320, 16, C.text, "Semi Bold", 150);
+  text(dashboard, "View details", 274, 322, 12, C.positive, "Medium", 80, "RIGHT");
+  allocationRows(dashboard, 38, 364);
+  card(dashboard, 24, 552, 345, 100);
+  text(dashboard, "This month", 38, 568, 16, C.text, "Semi Bold", 130);
+  text(dashboard, "May 2026", 294, 570, 12, C.positive, "Medium", 60, "RIGHT");
+  metric(dashboard, "Invested", "₹1.20L", 42, 606, 92);
+  metric(dashboard, "Savings rate", "42%", 154, 606, 92);
+  metric(dashboard, "Cash change", "+₹70K", 266, 606, 84);
+  card(dashboard, 24, 668, 345, 64);
+  iconCircle(dashboard, 38, 683, "neutral", 32);
+  text(dashboard, "Conviction data is still building", 82, 682, 14, C.text, "Medium", 230);
+  text(dashboard, "Optional conviction improves context over time.", 82, 704, 11, C.secondary, "Regular", 240);
   nav(dashboard, "Dashboard");
 
   const holdings = screen("Holdings", 448);
   top(holdings, "Holdings", "24 positions • local data", ["search", "eye"]);
-  summary(holdings, 128, [["Current value", "₹12,48,212"], ["Invested", "₹11,05,823"], ["P&L", "+₹1,42,389", C.positive], ["Drift", "3.2%", C.warning]]);
+  summary(holdings, 128, [["Current", "₹12.48L"], ["Invested", "₹11.05L"], ["P&L", "+₹1.42L", C.positive], ["Drift", "3.2%", C.warning]]);
   text(holdings, "●  Quotes updated 2m ago  •  1 manual price", 38, 218, 12, C.secondary, "Regular", 230);
   ["All", "Equity", "Debt", "Crypto", "Cash"].forEach((label, i) => chip(holdings, label, 24 + i * 68, 260, i === 0));
   text(holdings, "Sorted by asset class", 24, 310, 12, C.secondary, "Regular", 160);
-  holdingRow(holdings, 334, "equity", "HDFC Bank", "Equity · Financial Services", "₹1,82,850", "₹1,64,235", "+₹18,615", "14.6%");
-  holdingRow(holdings, 414, "equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50,665", "₹44,220", "+₹6,445", "4.1%");
-  holdingRow(holdings, 494, "debt", "Sovereign Gold Bond", "Debt · Government Bond", "₹57,110", "₹52,950", "+₹4,160", "4.6%");
-  holdingRow(holdings, 574, "crypto", "Bitcoin", "Crypto · Coin", "₹13,90,400", "₹11,05,000", "+₹2,85,400", "11.1%", "● Manual · 8h ago");
-  holdingRow(holdings, 654, "debt", "Liquid Fund", "Debt · Liquid / Overnight", "₹2,50,250", "₹2,50,000", "+₹250", "2.0%");
+  holdingRow(holdings, 334, "equity", "HDFC Bank", "Equity · Financial Services", "₹1.83L", "₹1.64L", "+₹18.6K", "14.6%");
+  holdingRow(holdings, 414, "equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50.7K", "₹44.2K", "+₹6.4K", "4.1%");
+  holdingRow(holdings, 494, "debt", "Sovereign Gold Bond", "Debt · Government Bond", "₹57.1K", "₹53.0K", "+₹4.2K", "4.6%");
+  holdingRow(holdings, 574, "crypto", "Bitcoin", "Crypto · Coin", "₹13.90L", "₹11.05L", "+₹2.85L", "11.1%", "● Manual · 8h ago");
+  holdingRow(holdings, 654, "debt", "Liquid Fund", "Debt · Liquid / Overnight", "₹2.50L", "₹2.50L", "+₹250", "2.0%");
   nav(holdings, "Holdings");
 
   const addHolding = screen("Add Holding", 872);
@@ -334,11 +341,9 @@ async function main() {
   text(cash, "Cash balance", 92, 146, 13, C.secondary, "Regular", 120);
   text(cash, "₹1,65,600", 92, 174, 28, C.text, "Semi Bold", 180);
   text(cash, "₹••,•••", 282, 174, 16, C.secondary, "Medium", 70);
-  [["May added", "₹70,000"], ["May invested", "₹45,000"], ["Available", "₹1,20,600"], ["Savings rate", "32.8%"]].forEach(([label, value], i) => {
+  [["Added", "₹70K"], ["Invested", "₹45K"], ["Available", "₹1.20L"], ["Savings", "32.8%"]].forEach(([label, value], i) => {
     const x = 24 + i * 86;
-    card(cash, x, 234, 78, 82, 10);
-    text(cash, label, x + 10, 248, 10, C.secondary, "Regular", 60);
-    text(cash, value, x + 10, 286, 15, C.text, "Medium", 62);
+    miniMetricCard(cash, x, 234, label, value);
   });
   card(cash, 24, 332, 345, 178);
   text(cash, "Add cash entry", 38, 348, 16, C.text, "Semi Bold", 160);
@@ -370,11 +375,9 @@ async function main() {
   text(monthly, "‹  Apr 2026", 24, 128, 13, C.secondary, "Regular", 100);
   text(monthly, "May 2026", 164, 128, 15, C.positive, "Medium", 80, "CENTER");
   text(monthly, "Jun 2026  ›", 286, 128, 13, C.secondary, "Regular", 80, "RIGHT");
-  [["Portfolio value", "₹19,87,450"], ["Monthly investment", "₹1,40,000"], ["Cash balance", "₹3,25,470"], ["Savings rate", "34%"]].forEach(([label, value], i) => {
+  [["Portfolio", "₹19.87L"], ["Invested", "₹1.40L"], ["Cash", "₹3.25L"], ["Savings", "34%"]].forEach(([label, value], i) => {
     const x = 24 + i * 86;
-    card(monthly, x, 170, 78, 82, 10);
-    text(monthly, label, x + 10, 184, 10, C.secondary, "Regular", 58);
-    text(monthly, value, x + 10, 222, 14, C.text, "Medium", 60);
+    miniMetricCard(monthly, x, 170, label, value);
   });
   card(monthly, 24, 270, 345, 196);
   text(monthly, "What changed this month?", 38, 286, 16, C.text, "Semi Bold", 210);
