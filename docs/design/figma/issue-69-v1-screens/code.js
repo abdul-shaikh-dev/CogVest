@@ -1,12 +1,8 @@
-// CogVest — V1 editable Figma screens
+// CogVest — Figma Plugin
 // Run from Figma Desktop as a development plugin.
-// Improvements: conviction stars, better spacing system,
-// improved hero card, insight card, consistent borders,
-// better typography contrast.
-// Navigation model fixed:
+//
 // Main tabs: Dashboard, Holdings, Progress, Cash, Settings
-// Quick Add: header action button, not middle FAB
-// Secondary screen: Add Holding
+// Secondary screens: Add Holding
 
 async function main() {
   await figma.loadFontAsync({ family: "Inter", style: "Regular" });
@@ -65,7 +61,7 @@ async function main() {
   };
 
   // ─── PAGE SETUP ──────────────────────────────────────────────
-  const PAGE_NAME = "Issue 69 - V1 UI Concepts";
+  const PAGE_NAME = "CogVest — Screens";
   let page = figma.root.children.find((p) => p.name === PAGE_NAME);
   if (!page) {
     page = figma.createPage();
@@ -189,7 +185,7 @@ async function main() {
 
       check: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="${s}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 
-      sparkle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6.2 4.6 2.4 7.2L12 16.6l-6.2 4.4 2.4-7.2L2 9.2h7.6L12 2Z" stroke="${s}" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+      sparkle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" stroke="${s}" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
 
       info: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="${s}" stroke-width="1.8"/><path d="M12 11v6" stroke="${s}" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1" fill="${s}"/></svg>`,
 
@@ -232,14 +228,13 @@ async function main() {
     return pillW;
   }
 
-  function convictionStars(parent, x, y, filled, outOf = 5) {
-    const starSize = 11;
-    const gap = 2;
+  function convictionDots(parent, x, y, selected = 4, outOf = 5) {
+    for (let i = 1; i <= outOf; i++) {
+      const dotX = x + (i - 1) * 30;
+      const active = i <= selected;
 
-    for (let i = 0; i < outOf; i++) {
-      const starX = x + i * (starSize + gap);
-      const isFilled = i < filled;
-      t(parent, "★", starX, y, starSize, isFilled ? C.warning : C.muted, "Semi Bold", starSize + 2);
+      rect(parent, dotX, y, 22, 22, S.radius.full, active ? C.greenDim : C.elevated, active ? C.green : C.border, 0.35);
+      t(parent, String(i), dotX, y + 6, 10, active ? C.greenText : C.secondary, "Semi Bold", 22, "CENTER");
     }
   }
 
@@ -470,7 +465,6 @@ async function main() {
         pnl: "+₹18.6K",
         pnlPct: "+11.4%",
         alloc: "14.6%",
-        conviction: 4,
       },
       {
         type: "equity",
@@ -481,7 +475,6 @@ async function main() {
         pnl: "+₹6.5K",
         pnlPct: "+14.7%",
         alloc: "4.1%",
-        conviction: 3,
       },
       {
         type: "debt",
@@ -492,7 +485,6 @@ async function main() {
         pnl: "+₹4.1K",
         pnlPct: "+7.7%",
         alloc: "4.6%",
-        conviction: 5,
       },
       {
         type: "crypto",
@@ -503,7 +495,6 @@ async function main() {
         pnl: "+₹2.85L",
         pnlPct: "+25.7%",
         alloc: "11.1%",
-        conviction: 4,
       },
       {
         type: "debt",
@@ -514,7 +505,6 @@ async function main() {
         pnl: "+₹250",
         pnlPct: "+0.1%",
         alloc: "2.0%",
-        conviction: null,
       },
       {
         type: "cash",
@@ -525,7 +515,6 @@ async function main() {
         pnl: "+₹70K",
         pnlPct: "",
         alloc: "10.0%",
-        conviction: null,
       },
     ];
 
@@ -561,10 +550,6 @@ async function main() {
 
       t(frame, row.pnl, x + 282, rowY + 8, 13, pnlColor, "Semi Bold", 68, "RIGHT");
       t(frame, row.pnlPct, x + 282, rowY + 28, 10, C.secondary, "Regular", 68, "RIGHT");
-
-      if (row.conviction) {
-        convictionStars(frame, x + W - 80, rowY + 10, row.conviction);
-      }
     });
   }
 
@@ -638,16 +623,14 @@ async function main() {
 
   donutChart(dashboard, S.screenPad, 312);
 
-  const insightY = 546;
+  const convictionY = 546;
 
-  rect(dashboard, S.screenPad, insightY, 353, 76, S.radius.md, "#1A1530", C.purple, 0.4);
-  ico(dashboard, "sparkle", S.screenPad + 14, insightY + 14, 18, C.purple);
-  t(dashboard, "INSIGHT", S.screenPad + 40, insightY + 14, 9, C.purple, "Semi Bold", 80);
-  t(dashboard, "Conviction data still building", S.screenPad + 14, insightY + 36, 13, C.text, "Semi Bold", 230);
-  t(dashboard, "Rate your next 3 trades to unlock personalised insights.", S.screenPad + 14, insightY + 54, 11, C.secondary, "Regular", 280);
-  t(dashboard, "×", 353, insightY + 10, 16, C.muted, "Regular", 22, "CENTER");
+  card(dashboard, S.screenPad, convictionY, 353, 72, S.radius.md);
+  ico(dashboard, "sparkle", S.screenPad + 14, convictionY + 17, 18, C.secondary);
+  t(dashboard, "Conviction data is still building", S.screenPad + 44, convictionY + 14, 13, C.text, "Semi Bold", 230);
+  t(dashboard, "Optional conviction improves context over time.", S.screenPad + 44, convictionY + 36, 11, C.secondary, "Regular", 250);
 
-  const monthY = 638;
+  const monthY = 632;
 
   card(dashboard, S.screenPad, monthY, 353, 90, S.radius.md);
   t(dashboard, "This month", S.screenPad + 14, monthY + 14, 13, C.text, "Semi Bold", 120);
@@ -778,19 +761,12 @@ async function main() {
     t(addTrade, val, vx, previewY + 52, 14, vColor, "Semi Bold", 76);
   });
 
-  const convY = 606;
+  const addConvictionY = 606;
 
-  rect(addTrade, S.screenPad, convY, 353, 56, S.radius.md, C.elevated, C.border, 0.2);
-  t(addTrade, "Conviction  ", S.screenPad + 14, convY + 10, 12, C.text, "Medium", 100);
-  t(addTrade, "optional", S.screenPad + 100, convY + 11, 11, C.secondary, "Regular", 60);
-
-  [1, 2, 3, 4, 5].forEach((n, i) => {
-    const bx = S.screenPad + 14 + i * 46;
-    const active = n === 4;
-
-    rect(addTrade, bx, convY + 30, 38, 22, S.radius.sm, active ? C.greenDim : C.elevated, active ? C.green : C.border, 0.4);
-    t(addTrade, String(n), bx, convY + 36, 12, active ? C.green : C.secondary, "Semi Bold", 38, "CENTER");
-  });
+  card(addTrade, S.screenPad, addConvictionY, 353, 58, S.radius.md);
+  t(addTrade, "Conviction optional", S.screenPad + 14, addConvictionY + 10, 13, C.text, "Semi Bold", 160);
+  t(addTrade, "1 low · 5 high", S.screenPad + 14, addConvictionY + 31, 10, C.secondary, "Regular", 100);
+  convictionDots(addTrade, S.screenPad + 184, addConvictionY + 18, 4);
 
   rect(addTrade, S.screenPad, 676, 353, 48, S.radius.md, C.green, null);
   t(addTrade, "Save holding", S.screenPad, 692, 14, C.text, "Bold", 353, "CENTER");
@@ -1011,10 +987,10 @@ async function main() {
   nav(settings, "Settings");
 
   // ─── PAGE TITLE ──────────────────────────────────────────────
-  t(page, "CogVest — V1 UI Concepts", 24, 24, 28, C.text, "Bold", 900);
+  t(page, "CogVest — Screens", 24, 24, 28, C.text, "Bold", 900);
   t(
     page,
-    "6 screens · Dashboard · Holdings · Add Holding · Cash · Progress · Settings · Quick actions moved to header · Bottom nav is navigation only",
+    "6 screens · Dashboard · Holdings · Add Holding · Cash · Progress · Settings",
     24,
     62,
     13,
@@ -1033,7 +1009,7 @@ async function main() {
     settings,
   ]);
 
-  figma.closePlugin("✓ CogVest V1 screens generated — quick actions moved to header.");
+  figma.closePlugin("✓ CogVest screens generated.");
 }
 
 main().catch((err) => figma.closePlugin(`Failed: ${err.message}`));
