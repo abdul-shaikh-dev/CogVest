@@ -6,7 +6,7 @@ export default function HoldingsScreen() {
   return (
     <HoldingsFeatureScreen
       onAddTrade={() => {
-        router.push("/(tabs)/add-trade");
+        router.push("/add-holding");
       }}
     />
   );

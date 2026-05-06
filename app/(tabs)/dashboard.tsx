@@ -6,7 +6,7 @@ export default function DashboardScreen() {
   return (
     <DashboardFeatureScreen
       onAddTrade={() => {
-        router.push("/(tabs)/add-trade");
+        router.push("/add-holding");
       }}
     />
   );

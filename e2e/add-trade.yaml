@@ -2,10 +2,9 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- tapOn:
-    id: "add-trade-tab"
+- openLink: "cogvest:///add-holding"
 - assertVisible:
-    id: "add-trade-screen"
+    id: "add-holding-screen"
 - tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
@@ -26,11 +25,11 @@ appId: com.abdulshaikh.cogvest
     id: "conviction-4"
 - tapOn:
     id: "review-trade-button"
-- assertVisible: "Review buy"
+- assertVisible: "Derived preview"
 - scrollUntilVisible:
     element:
       id: "save-trade-button"
     direction: DOWN
 - tapOn:
     id: "save-trade-button"
-- assertVisible: "Trade logged."
+- assertVisible: "Holding saved."

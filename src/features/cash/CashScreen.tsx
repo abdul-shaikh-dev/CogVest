@@ -7,8 +7,13 @@ import {
   AppButton,
   AppText,
   EmptyState,
+  HeroMetric,
+  MetricGroup,
   MaskedValue,
+  PremiumCard,
   ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { formatINR } from "@/src/domain/formatters";
@@ -101,16 +106,33 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
   return (
     <ScreenContainer scroll testID="cash-screen">
       <View style={styles.content}>
-        <View style={styles.heroCard}>
-          <AppText color="secondary">Cash balance</AppText>
-          <MaskedValue
-            masked={maskWealthValues}
-            selectable
-            value={formatINR(balance)}
-            variant="hero"
-            weight="bold"
-          />
-        </View>
+        <ScreenHeader title="Cash Ledger" subtitle="Manual ledger • local only" />
+
+        <HeroMetric
+          label="Cash balance"
+          masked={maskWealthValues}
+          value={formatINR(balance)}
+          subValue="Included in total allocation"
+          subValueTone="secondary"
+        />
+
+        <MetricGroup
+          metrics={[
+            {
+              label: "Entries",
+              value: entries.length.toString(),
+            },
+            {
+              label: "Available",
+              masked: maskWealthValues,
+              value: formatINR(balance),
+            },
+            {
+              label: "Savings",
+              value: "Not enough data",
+            },
+          ]}
+        />
 
         <View style={styles.segmentedControl}>
           {(["addition", "withdrawal"] as const).map((entryType) => (
@@ -131,16 +153,14 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
                 color={type === entryType ? "inverse" : "secondary"}
                 weight="bold"
               >
-                {entryType === "addition" ? "Add Cash" : "Withdraw"}
+                {entryType === "addition" ? "Deposit" : "Withdraw"}
               </AppText>
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.card}>
-          <AppText variant="body" weight="bold">
-            Cash entry
-          </AppText>
+        <PremiumCard>
+          <SectionHeader title="Add cash entry" />
           <FormTextField
             error={errors.amount}
             keyboardType="decimal-pad"
@@ -178,7 +198,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             testID="save-cash-entry-button"
             onPress={submit}
           />
-        </View>
+        </PremiumCard>
 
         {entries.length === 0 ? (
           <EmptyState
@@ -187,9 +207,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
           />
         ) : (
           <View style={styles.history}>
-            <AppText variant="title" weight="bold">
-              Cash history
-            </AppText>
+            <SectionHeader title="Recent cash ledger" />
             {entries.map((entry) => (
               <CashEntryRow
                 entry={entry}
@@ -205,26 +223,10 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.cardInner,
-    padding: spacing.md,
-  },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
-  },
-  heroCard: {
-    backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.cardInner,
-    padding: spacing.md,
   },
   history: {
     gap: spacing.cardGap,
@@ -243,9 +245,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
     borderRadius: radii.pill,
-    borderWidth: 1,
     flexDirection: "row",
     padding: spacing.xs,
   },

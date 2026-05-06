@@ -1,0 +1,26 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- assertVisible:
+    id: "dashboard-screen"
+- tapOn:
+    id: "tab-holdings"
+- assertVisible:
+    id: "holdings-screen"
+- tapOn:
+    id: "tab-progress"
+- assertVisible:
+    id: "progress-screen"
+- tapOn:
+    id: "tab-cash"
+- assertVisible:
+    id: "cash-screen"
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-screen"
+- openLink: "cogvest:///add-holding"
+- assertVisible:
+    id: "add-trade-screen"
+- assertVisible:
+    id: "add-holding-screen"

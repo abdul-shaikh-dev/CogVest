@@ -22,5 +22,7 @@ long-term investing.
 - Review these images one screen at a time before moving approved designs into
   Figma.
 - Treat the images as visual direction, not implementation-ready specs.
+- Prefer the editable Figma plugin in
+  `docs/design/figma/issue-69-v1-screens/` for stable future iteration.
 - Preserve the V1 non-goals: no spreadsheet grid UI, no Minimal Mode, no LTCG
   UI, no import/export, no cloud sync, and no trading-terminal patterns.

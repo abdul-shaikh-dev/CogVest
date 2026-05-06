@@ -42,18 +42,18 @@ Use these colors as the canonical CogVest palette.
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| Background | `#1C1B1F` | App background, root canvas, tab bar base |
-| Surface | `#242329` | Default cards, panels, grouped content |
-| Elevated Surface | `#2B2930` | Inputs, active cards, selected panels |
-| Primary Text | `#E6E1E5` | Headings, primary values, selected labels |
-| Secondary Text | `#CAC4D0` | Body copy, labels, supporting metrics |
-| Muted Text | `#938F99` | Captions, timestamps, empty-state helper text |
-| Primary Green | `#2E7D52` | Main CTA, active tab, selected state, positive brand emphasis |
-| Deep Green | `#0E6B4F` | Pressed states, deeper accents, selected backgrounds |
-| Border | `#3A3740` | Card borders, input strokes, separators |
-| Positive | `#22C55E` | Gains, positive returns, successful states |
+| Background | `#000000` | OLED root canvas and app background |
+| Surface | `#1C1C1E` | Default cards, panels, grouped content |
+| Elevated Surface | `#2C2C2E` | Inputs, active cards, selected panels, action wells |
+| Primary Text | `#F5F5F7` | Headings, primary values, selected labels |
+| Secondary Text | `#98989D` | Body copy, labels, supporting metrics |
+| Muted Text | `#636366` | Captions, timestamps, empty-state helper text |
+| Primary Green | `#34C759` | Main CTA, active tab, selected state, positive brand emphasis |
+| Deep Green | `#248A3D` | Pressed states and selected backgrounds |
+| Separator | `rgba(255,255,255,0.10)` | Hairline separators only when needed |
+| Positive | `#34C759` | Gains, positive returns, successful states |
 | Warning | `#F59E0B` | Incomplete data, stale quotes, non-blocking risk |
-| Negative | `#EF4444` | Losses, destructive actions, validation errors |
+| Negative | `#FF453A` | Losses, destructive actions, validation errors |
 
 Rules:
 
@@ -63,7 +63,7 @@ Rules:
 - Avoid saturated gradient cards unless an issue explicitly asks for them.
 - Use `Positive` and `Negative` only for financial state, not generic ornament.
 - Warning should be sparse and explanatory, never alarming.
-- Borders should define structure more often than shadows.
+- Prefer borderless true-dark surfaces. Use only subtle hairline separators when structure needs extra clarity.
 - Financial values must remain readable on all surfaces.
 - All financial values must be maskable and INR-first.
 
@@ -107,23 +107,23 @@ Components should feel tactile, quiet, and clearly Android-native.
 
 Cards:
 
-- Use spacious cards with 1px borders.
+- Use spacious borderless cards with 16-20px radius.
 - Prefer `Surface` for standard cards and `Elevated Surface` for interactive or nested surfaces.
-- Use consistent radii.
+- Use consistent large radii that feel closer to continuous/squircle curves than sharp Material boxes.
 - Avoid coloured card shadows.
 - Avoid dense card grids unless the screen is explicitly analytical.
 
 Buttons:
 
 - Primary actions use `Primary Green`.
-- Secondary actions use bordered or elevated neutral surfaces.
+- Secondary actions use elevated neutral surfaces or subtle hairline separators.
 - Destructive actions use `Negative` only when the action is genuinely destructive.
 - Button labels should be direct: `Add Trade`, `Save`, `Refresh Quotes`, `Add Cash`.
 - Avoid marketing-style CTA language.
 
 Inputs:
 
-- Inputs use `Elevated Surface`, clear labels, and visible borders.
+- Inputs use `Elevated Surface`, clear labels, and subtle separators only where needed.
 - Validation errors use `Negative` with concise copy.
 - Keep finance inputs explicit: quantity, price per unit, fees, date, currency.
 - Preserve keyboard ergonomics on Android.
@@ -196,8 +196,8 @@ Depth should be quiet and structural.
 
 Rules:
 
-- Use dark surface shifts and borders before shadows.
-- Use 1px borders for cards and inputs.
+- Use OLED black background with dark surface shifts before shadows.
+- Avoid solid card borders. Use `Separator` hairlines only for internal dividers or rare edge clarity.
 - Shadows should be rare and subtle.
 - Do not use coloured shadows.
 - Elevation should imply interaction or grouping, not decoration.
@@ -208,7 +208,7 @@ Recommended hierarchy:
 - Background: root app canvas.
 - Surface: default card.
 - Elevated Surface: inputs, selected panels, nested cards.
-- Border: separation and scannability.
+- Separator: subtle internal grouping and scannability.
 - Green accent: selected/action state only.
 
 ## 7. Motion Rules

@@ -1,20 +1,26 @@
 export {};
 export const colors = {
-  background: "#1C1B1F",
+  background: "#000000",
+  blue: "#0A84FF",
+  cashBlue: "#64D2FF",
+  cryptoAmber: "#FFD60A",
+  deepGreen: "#0E6B4F",
   primary: "#2E7D52",
-  profit: "#4CAF7A",
-  loss: "#D65A5A",
+  profit: "#34C759",
+  loss: "#FF453A",
+  warning: "#FF9F0A",
   border: {
-    subtle: "rgba(255,255,255,0.08)",
+    subtle: "rgba(255,255,255,0.10)",
+    strong: "#38383A",
   },
   surface: {
-    card: "#2A2930",
-    elevated: "#312F36",
+    card: "#1C1C1E",
+    elevated: "#2C2C2E",
   },
   text: {
-    primary: "#E6E1E5",
-    secondary: "#CAC4D0",
-    muted: "#938F99",
+    primary: "#FFFFFF",
+    secondary: "#8E8E93",
+    muted: "#48484A",
     inverse: "#FFFFFF",
   },
 } as const;
@@ -22,8 +28,8 @@ export const colors = {
 export const spacing = {
   xs: 4,
   sm: 8,
-  cardGap: 10,
-  cardInner: 12,
+  cardGap: 14,
+  cardInner: 16,
   md: 16,
   lg: 24,
   xl: 32,
@@ -31,9 +37,10 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  sm: 8,
-  card: 12,
+  sm: 10,
+  card: 20,
   button: 16,
+  sheet: 24,
   pill: 999,
 } as const;
 
@@ -42,7 +49,8 @@ export const typography = {
     caption: 12,
     body: 16,
     title: 20,
-    hero: 32,
+    largeTitle: 32,
+    hero: 42,
   },
   weights: {
     regular: "400",

@@ -3,7 +3,14 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppButton, AppText, ScreenContainer } from "@/src/components/common";
+import {
+  AppButton,
+  AppText,
+  PremiumCard,
+  ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
+} from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { validateTradeForm } from "@/src/features/trades/tradeForm";
 import { colors, interaction, radii, spacing } from "@/src/theme";
@@ -180,19 +187,17 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       source: "manual",
     });
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSuccessMessage("Trade logged.");
+    setSuccessMessage("Holding saved.");
     setReviewTrade(undefined);
   }
 
   return (
     <ScreenContainer scroll testID="add-trade-screen">
-      <View style={styles.header}>
-        <AppText variant="title" weight="bold">
-          Add Trade
-        </AppText>
-        <AppText color="secondary">
-          Log a buy or sell in under a minute. Holdings stay local.
-        </AppText>
+      <View testID="add-holding-screen">
+        <ScreenHeader
+          title="Add Holding"
+          subtitle="Portfolio entry • local only"
+        />
       </View>
 
       <View style={styles.segmentedControl}>
@@ -218,7 +223,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       </View>
 
       {snapshot.assets.length > 0 ? (
-        <View style={styles.card}>
+        <PremiumCard>
           <AppText color="secondary" variant="caption" weight="medium">
             Existing assets
           </AppText>
@@ -240,13 +245,11 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
               </Pressable>
             ))}
           </View>
-        </View>
+        </PremiumCard>
       ) : null}
 
-      <View style={styles.card}>
-        <AppText variant="body" weight="bold">
-          Asset
-        </AppText>
+      <PremiumCard>
+        <SectionHeader title="Asset" />
         <FormTextField
           error={errors.assetName}
           label="Asset name"
@@ -289,12 +292,10 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
             />
           </View>
         </View>
-      </View>
+      </PremiumCard>
 
-      <View style={styles.card}>
-        <AppText variant="body" weight="bold">
-          Trade details
-        </AppText>
+      <PremiumCard>
+        <SectionHeader title="Position Details" />
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
@@ -404,12 +405,12 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
           placeholder="Optional note"
           value={notes}
         />
-      </View>
+      </PremiumCard>
 
       {reviewTrade && reviewAsset ? (
-        <View style={styles.reviewCard}>
+        <PremiumCard elevated>
           <AppText variant="body" weight="bold">
-            Review {reviewTrade.type}
+            Derived preview
           </AppText>
           <AppText color="secondary">
             {reviewAsset.symbol} · {reviewTrade.quantity} units @ ₹
@@ -418,7 +419,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
           <AppText selectable weight="bold">
             Total: ₹{reviewTrade.totalValue.toFixed(2)}
           </AppText>
-        </View>
+        </PremiumCard>
       ) : null}
 
       {successMessage ? (
@@ -429,14 +430,14 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
 
       <View style={styles.actions}>
         <AppButton
-          title="Review Trade"
+          title="Review Holding"
           testID="review-trade-button"
           onPress={handleReview}
         />
         <AppButton
           disabled={!reviewTrade}
           testID="save-trade-button"
-          title="Confirm Trade"
+          title="Save Holding"
           onPress={handleConfirm}
           variant="secondary"
         />
@@ -452,42 +453,29 @@ const styles = StyleSheet.create({
   },
   assetChip: {
     backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
     borderRadius: radii.card,
-    borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.cardInner,
     width: "48%",
   },
   assetChipActive: {
-    borderColor: colors.primary,
+    backgroundColor: colors.deepGreen,
   },
   assetGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
   },
-  card: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.cardInner,
-    padding: spacing.cardInner,
-  },
   convictionChip: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
     borderRadius: radii.pill,
-    borderWidth: 1,
     flex: 1,
     justifyContent: "center",
     minHeight: 44,
   },
   convictionChipActive: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   convictionGroup: {
     gap: spacing.xs,
@@ -508,14 +496,6 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: interaction.pressedOpacity,
   },
-  reviewCard: {
-    backgroundColor: colors.surface.elevated,
-    borderColor: colors.primary,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.cardInner,
-  },
   row: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -531,9 +511,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
     borderRadius: radii.pill,
-    borderWidth: 1,
     flexDirection: "row",
     padding: spacing.xs,
   },

@@ -9,21 +9,21 @@ describe("CashScreen", () => {
   it("shows an empty cash state with zero balance", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
-    const { getByTestId, getByText } = render(<CashScreen store={store} />);
+    const { getAllByText, getByTestId, getByText } = render(<CashScreen store={store} />);
 
     expect(getByTestId("cash-screen")).toBeTruthy();
     expect(getByTestId("cash-amount-input")).toBeTruthy();
     expect(getByTestId("cash-label-input")).toBeTruthy();
     expect(getByTestId("cash-date-input")).toBeTruthy();
     expect(getByTestId("save-cash-entry-button")).toBeTruthy();
-    expect(getByText("₹0.00")).toBeTruthy();
+    expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
     expect(getByText("No cash entries yet")).toBeTruthy();
     expect(getByText("Add available broker or bank cash to include it in portfolio value.")).toBeTruthy();
   });
 
   it("adds and withdraws cash and shows history rows", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByText } = render(<CashScreen store={store} />);
+    const { getAllByText, getByLabelText, getByText } = render(<CashScreen store={store} />);
 
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "Broker cash");
@@ -31,7 +31,7 @@ describe("CashScreen", () => {
     fireEvent.press(getByText("Save Cash Entry"));
 
     await waitFor(() => {
-      expect(getByText("₹1,000.00")).toBeTruthy();
+      expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
       expect(getByText("Broker cash")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
     });
@@ -43,7 +43,7 @@ describe("CashScreen", () => {
     fireEvent.press(getByText("Save Cash Entry"));
 
     await waitFor(() => {
-      expect(getByText("₹750.00")).toBeTruthy();
+      expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
       expect(getByText("Emergency withdrawal")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
     });

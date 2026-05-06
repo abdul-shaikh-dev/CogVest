@@ -56,9 +56,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface.elevated,
-    borderColor: colors.border.subtle,
     borderRadius: radii.card,
-    borderWidth: 1,
     color: colors.text.primary,
     minHeight: 48,
     paddingHorizontal: spacing.cardInner,

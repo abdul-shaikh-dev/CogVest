@@ -68,11 +68,11 @@ describe("AddTradeForm", () => {
     fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Core portfolio add");
 
-    fireEvent.press(getByText("Review Trade"));
-    expect(getByText("Review buy")).toBeTruthy();
+    fireEvent.press(getByText("Review Holding"));
+    expect(getByText("Derived preview")).toBeTruthy();
     expect(getByText("Total: ₹205.00")).toBeTruthy();
 
-    fireEvent.press(getByText("Confirm Trade"));
+    fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().assets).toHaveLength(1);
@@ -99,7 +99,7 @@ describe("AddTradeForm", () => {
       source: "manual",
     });
     expect(Haptics.notificationAsync).toHaveBeenCalledWith("success");
-    expect(getByText("Trade logged.")).toBeTruthy();
+    expect(getByText("Holding saved.")).toBeTruthy();
   });
 
   it("shows an actionable error for invalid sell quantity", () => {
@@ -114,7 +114,7 @@ describe("AddTradeForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "2");
     fireEvent.changeText(getByLabelText("Price per unit"), "100");
     fireEvent.changeText(getByLabelText("Trade date"), "2026-04-20");
-    fireEvent.press(getByText("Review Trade"));
+    fireEvent.press(getByText("Review Holding"));
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(store.getState().trades).toEqual([existingBuy]);
