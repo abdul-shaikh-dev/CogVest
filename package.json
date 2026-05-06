@@ -1,7 +1,7 @@
 {
   "name": "cogvest",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "./index.ts",
   "scripts": {
     "start": "expo start",
     "start:clear": "expo start --clear",

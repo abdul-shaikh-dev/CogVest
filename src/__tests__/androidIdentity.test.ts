@@ -1,9 +1,11 @@
 import appConfig from "../../app.json";
+import packageJson from "../../package.json";
 
 describe("Android app identity", () => {
   const expo = appConfig.expo;
 
   it("configures the public app identity", () => {
+    expect(packageJson.main).toBe("./index.ts");
     expect(expo.name).toBe("CogVest");
     expect(expo.slug).toBe("cogvest");
     expect(expo.scheme).toBe("cogvest");
