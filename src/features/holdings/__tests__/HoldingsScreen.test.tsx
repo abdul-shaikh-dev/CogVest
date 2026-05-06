@@ -28,7 +28,7 @@ const buyTrade: Trade = {
 };
 
 describe("HoldingsScreen", () => {
-  it("shows an empty state with an Add Trade action", () => {
+  it("shows an empty state with an Add Holding action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
@@ -40,10 +40,10 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("add-trade-button")).toBeTruthy();
     expect(getByText("No holdings yet")).toBeTruthy();
     expect(
-      getByText("Holdings are created automatically from your trades."),
+      getByText("Holdings are created automatically from your portfolio entries."),
     ).toBeTruthy();
 
-    fireEvent.press(getByText("Add Trade"));
+    fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });

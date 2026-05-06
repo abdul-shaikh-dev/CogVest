@@ -109,7 +109,6 @@ export function SettingsScreen({
         <PremiumCard>
           <SectionHeader title="Display & App Info" />
           <GroupedListRow title="Density" value="Standard (V1)" />
-          <GroupedListRow title="Minimal Mode" value="V2 locked" />
           <GroupedListRow title="App version 1.0.0" value="Preview" />
         </PremiumCard>
 

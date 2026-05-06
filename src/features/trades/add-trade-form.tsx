@@ -196,7 +196,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       <View testID="add-holding-screen">
         <ScreenHeader
           title="Add Holding"
-          subtitle="Opening position • local only"
+          subtitle="Portfolio entry • local only"
         />
       </View>
 

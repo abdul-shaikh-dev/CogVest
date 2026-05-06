@@ -100,7 +100,7 @@ export function DashboardScreen({
 
         {onAddTrade && hasAllocation ? (
           <AppButton
-            title="Add Trade"
+            title="Add Holding"
             testID="add-trade-button"
             onPress={onAddTrade}
           />
@@ -133,9 +133,9 @@ export function DashboardScreen({
           </PremiumCard>
         ) : (
           <EmptyState
-            actionLabel={onAddTrade ? "Add Trade" : undefined}
+            actionLabel={onAddTrade ? "Add Holding" : undefined}
             actionTestID="add-trade-button"
-            message="Add your first trade to build holdings automatically."
+            message="Add your first portfolio entry to build holdings automatically."
             title="No allocation yet"
             onAction={onAddTrade}
           />

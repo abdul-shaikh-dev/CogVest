@@ -14,9 +14,9 @@ describe("SettingsScreen", () => {
     jest.clearAllMocks();
   });
 
-  it("shows privacy settings and toggles value masking", () => {
+  it("shows privacy settings without V2 settings leaks and toggles value masking", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByText } = render(
       <SettingsScreen store={store} />,
     );
 
@@ -26,6 +26,7 @@ describe("SettingsScreen", () => {
     expect(getByText("Values visible")).toBeTruthy();
     expect(getByText("Local-first privacy")).toBeTruthy();
     expect(getByText("App version 1.0.0")).toBeTruthy();
+    expect(queryByText(/Minimal Mode/i)).toBeNull();
 
     fireEvent.press(getByLabelText("Toggle value masking"));
 

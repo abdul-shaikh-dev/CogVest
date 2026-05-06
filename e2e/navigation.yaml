@@ -8,11 +8,9 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "holdings-screen"
 - tapOn:
-    id: "tab-add"
+    id: "tab-progress"
 - assertVisible:
-    id: "add-trade-screen"
-- assertVisible:
-    id: "add-holding-screen"
+    id: "progress-screen"
 - tapOn:
     id: "tab-cash"
 - assertVisible:
@@ -21,3 +19,8 @@ appId: com.abdulshaikh.cogvest
     id: "tab-settings"
 - assertVisible:
     id: "settings-screen"
+- openLink: "cogvest:///add-holding"
+- assertVisible:
+    id: "add-trade-screen"
+- assertVisible:
+    id: "add-holding-screen"

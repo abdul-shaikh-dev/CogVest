@@ -118,10 +118,10 @@ export function ProgressScreen({
             </PremiumCard>
 
             <PremiumCard>
-              <SectionHeader title="Progression (last 6 months)" />
+              <SectionHeader title="Progress trend" />
               <View style={styles.chartPlaceholder}>
                 <AppText color="secondary" align="center">
-                  Historical chart appears after monthly snapshots are recorded.
+                  Trend appears after monthly records are available.
                 </AppText>
               </View>
             </PremiumCard>
@@ -147,7 +147,7 @@ export function ProgressScreen({
         ) : (
           <EmptyState
             title="No monthly progress yet"
-            message="Add holdings and cash entries to build a monthly snapshot without opening Excel."
+            message="Add holdings and cash entries to build monthly progress context without opening Excel."
           />
         )}
       </View>

@@ -2,8 +2,7 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- tapOn:
-    id: "tab-add"
+- openLink: "cogvest:///add-holding"
 - tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"

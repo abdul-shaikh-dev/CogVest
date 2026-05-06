@@ -6,5 +6,5 @@ appId: com.abdulshaikh.cogvest
     id: "dashboard-screen"
 - assertVisible: "Dashboard"
 - assertVisible: "Holdings"
-- assertVisible: "Add"
+- assertVisible: "Progress"
 - assertNotVisible: "Unmatched Route"

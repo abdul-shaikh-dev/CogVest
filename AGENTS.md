@@ -8,7 +8,7 @@ into behaviour insights and Minimal Mode.
 ## Current Roadmap
 - Build in phases from docs/roadmap/cogvest-version-roadmap.md.
 - Current execution focus: V1 MVP plus Excel tracker parity from issue #60.
-- V1 goal: local-first Android tracker with live current quotes, Add Trade,
+- V1 goal: local-first Android tracker with live current quotes, Add Holding,
   derived holdings, dashboard, cash tracking, value masking, and lightweight
   conviction capture/state.
 - V2 adds Minimal Mode, basic LTCG, patience/frequency analysis, behaviour
@@ -31,7 +31,7 @@ into behaviour insights and Minimal Mode.
   explicitly changes priority.
 
 ## Stack
-- React Native + Expo SDK 52+
+- React Native + Expo SDK 54
 - TypeScript only. No JavaScript.
 - Expo Router (file-based navigation)
 - MMKV for persistence
@@ -53,6 +53,9 @@ into behaviour insights and Minimal Mode.
   user explicitly changes priority.
 - V2/V3 GitHub issues are placeholders and should not be expanded until V1 is
   validated.
+- User-facing V1 language should prefer Dashboard, Holdings, Add Holding,
+  Progress, Cash, and Settings. Keep "trade" wording internal unless an
+  existing domain API requires it.
 
 ## Design
 - Follow root `DESIGN.md` for every UI task unless an issue explicitly
@@ -63,6 +66,9 @@ into behaviour insights and Minimal Mode.
   templates and trading-app/crypto-exchange energy.
 - Green is an accent, not decoration. Financial values must be readable,
   maskable, and INR-first.
+- Current V1 Figma source is
+  `docs/design/figma/issue-69-v1-screens/code.js`: main tabs are Dashboard,
+  Holdings, Progress, Cash, Settings; Add Holding is a secondary screen.
 - Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI context.
 
 ## Release Gates

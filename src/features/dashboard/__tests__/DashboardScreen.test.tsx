@@ -27,7 +27,7 @@ const buyTrade: Trade = {
 };
 
 describe("DashboardScreen", () => {
-  it("shows the empty dashboard with a zero total and Add Trade action", () => {
+  it("shows the empty dashboard with a zero total and Add Holding action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
@@ -40,10 +40,10 @@ describe("DashboardScreen", () => {
     expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
     expect(getByText("No allocation yet")).toBeTruthy();
     expect(
-      getByText("Add your first trade to build holdings automatically."),
+      getByText("Add your first portfolio entry to build holdings automatically."),
     ).toBeTruthy();
 
-    fireEvent.press(getByText("Add Trade"));
+    fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });
