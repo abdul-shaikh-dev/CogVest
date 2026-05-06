@@ -41,6 +41,14 @@ into behaviour insights and Minimal Mode.
 - React Hook Form + Zod for forms
 
 ## Rules
+- Use Superpowers skills by default for non-trivial work. At minimum, follow the
+  loop: clarify/update spec, write plan, implement, review against the spec,
+  request/review code quality, verify with evidence, then commit/PR.
+- For feature work, use `superpowers:brainstorming` before changing behavior,
+  `superpowers:writing-plans` for multi-step work, and
+  `superpowers:verification-before-completion` before claiming completion.
+- For bugs, use `superpowers:systematic-debugging` before fixing. For major
+  changes, use `superpowers:requesting-code-review` before merge readiness.
 - Functional components with hooks only. No class components.
 - Persist raw data, derive everything else.
 - All amounts in INR (Indian Rupees ₹).
