@@ -1,5 +1,10 @@
 # CogVest V1 Codex Prompts
 
+> Status: historical execution prompt reference. The live GitHub issues,
+> `AGENTS.md`, `DESIGN.md`, and `docs/roadmap/v1-mvp-spec.md` are the current
+> source of truth. User-facing V1 language should prefer Add Holding; existing
+> code and tests may still use trade terminology internally.
+
 Use these prompts in order. Each issue should remain independently testable and should not add V2/V3 scope.
 
 ## [V1] Scaffold Expo Android app
@@ -11,7 +16,7 @@ Files:
 - `app/(tabs)/_layout.tsx`
 - `app/(tabs)/dashboard.tsx`
 - `app/(tabs)/holdings.tsx`
-- `app/(tabs)/add-trade.tsx`
+- `app/add-holding.tsx`
 - `app/(tabs)/cash.tsx`
 - `app/settings.tsx`
 - `package.json`
@@ -86,7 +91,7 @@ Acceptance:
 - Failures return null/empty and do not throw into UI.
 - Manual price fallback remains available.
 
-## [V1] Build Add Trade form validation
+## [V1] Build Add Holding form validation
 
 Create form schema and validation logic before UI integration.
 
@@ -101,12 +106,12 @@ Acceptance:
 - Sell quantity cannot exceed current holding.
 - Conviction remains optional.
 
-## [V1] Build Add Trade screen
+## [V1] Build Add Holding screen
 
 Implement fast trade entry with live/manual price and optional conviction.
 
 Files:
-- `app/(tabs)/add-trade.tsx`
+- `app/add-holding.tsx`
 - `src/components/forms/ConvictionSelector.tsx`
 - `src/components/forms/AssetPicker.tsx`
 - `src/components/forms/TradeReviewSheet.tsx`
@@ -227,5 +232,5 @@ Files:
 
 Acceptance:
 - Preview APK builds.
-- Preview APK installs on real Android device.
+- Preview/local APK installs on Android Emulator.
 - EAS URL and manual test notes are recorded.

@@ -10,7 +10,7 @@ V2 introduces Minimal Mode and behaviour insights. Standard Mode remains informa
 
 ### Minimal Dashboard
 
-Show portfolio value, updated timestamp, allocation, Add Trade CTA, and optional LTCG banner. Hide daily P&L, top movers, and insight card by default.
+Show portfolio value, updated timestamp, allocation, Add Holding CTA, and optional LTCG banner. Hide daily P&L, top movers, and insight card by default.
 
 ### Minimal Holdings
 
@@ -36,7 +36,7 @@ Small cards prompting conviction/intended hold input. Must not block trade entry
 
 - Mode switch applies immediately.
 - Insight cards can be dismissed or opened.
-- Minimal Mode never removes Add Trade, Holdings, Cash, or History access.
+- Minimal Mode never removes Add Holding, Holdings, Progress, or Cash access.
 
 ## Manual Figma Recreation Notes
 

@@ -1,37 +1,35 @@
 # V1 UI Mockup Plan
 
+> Status: historical V1 visual planning reference. For current V1 UI work, use
+> `DESIGN.md` and `docs/design/figma/issue-69-v1-screens/code.js` as the
+> source of truth. This document remains only for early context.
+
 Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 
 ## Design System
 
 - Android frame: 390 x 844.
-- Background: `#1C1B1F`.
-- Card background: `#2A2930`.
-- Elevated card: `#312F36`.
-- Primary green: `#2E7D52`.
-- Text primary: `#E6E1E5`.
-- Text secondary: `#CAC4D0`.
-- Border: `rgba(255,255,255,0.08)`.
-- Radius: 12px for cards, 16px for primary buttons.
-- No coloured shadows.
+- Current V1 uses the true-dark palette, borderless cards, and typography rules
+  from `DESIGN.md`.
+- Older colors in early mockups are superseded.
 
 ## Screens
 
 ### Empty Dashboard
 
-Show total `₹0.00`, no allocation, and a strong `Add Trade` CTA. Empty copy should explain that holdings are created from trades.
+Show total `₹0.00`, no allocation, and a strong `Add Holding` CTA. Empty copy should explain that holdings are created from user-entered records.
 
 ### Filled Dashboard
 
-Show portfolio value, day change, allocation summary, quote freshness, basic conviction nudge, and Add Trade CTA. Do not show Minimal Mode or LTCG.
+Show portfolio value, allocation summary, quote freshness, monthly context, basic conviction nudge, and Add Holding CTA. Do not show Minimal Mode or LTCG.
 
-### Add Trade
+### Add Holding
 
-Top segmented control for Buy/Sell. Asset field, quantity, price, total, date, optional fees, optional conviction row, optional note, sticky Review Trade button.
+Use the multi-phase Figma direction: Asset, Classification, Position, Review. Include asset lookup/autofill where available, manual fallback, quantity, average/current price, date, optional conviction, optional note, and review before save.
 
 ### Holdings Empty
 
-Show empty card with “No holdings yet” and CTA to Add Trade.
+Show empty card with “No holdings yet” and CTA to Add Holding.
 
 ### Holdings Filled
 
@@ -52,7 +50,7 @@ Mask INR wealth values with `₹**** **,***.**`. Do not mask quantities, percent
 ## Interactions
 
 - Pressable opacity feedback at 0.75.
-- Haptics on Add Trade confirm and value masking toggle.
+- Haptics on Add Holding confirm and value masking toggle.
 - Pull-to-refresh on Dashboard/Holdings.
 - Clear error text for invalid sell quantity and quote failures.
 

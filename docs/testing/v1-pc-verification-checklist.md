@@ -22,7 +22,7 @@ Android Emulator, not a physical Android phone.
 ## Core Flow Gate
 
 - [ ] Dashboard shows portfolio value and bottom tabs.
-- [ ] Add Trade can save a buy trade.
+- [ ] Add Holding can save an opening/buy entry.
 - [ ] Holdings reflect the saved trade.
 - [ ] Invalid trade data shows validation errors.
 - [ ] Cash can be added.

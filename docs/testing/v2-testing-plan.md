@@ -10,7 +10,7 @@
 
 - Toggle Minimal Mode from Settings.
 - Confirm day-change noise is hidden.
-- Confirm Add Trade and Cash remain available.
+- Confirm Add Holding and Cash remain available.
 - Add intended hold, sell later, verify patience insight.
 - Generate enough rated trades for conviction insight.
 - Verify LTCG appears for Indian stock/ETF and never for crypto.

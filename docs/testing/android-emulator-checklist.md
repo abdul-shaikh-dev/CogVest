@@ -19,7 +19,7 @@
 - [ ] App launches to Dashboard, not Unmatched Route.
 - [ ] Dashboard tab renders.
 - [ ] Holdings tab renders.
-- [ ] Add Trade tab renders.
+- [ ] Add Holding flow renders.
 - [ ] Cash tab renders.
 - [ ] Settings opens.
 - [ ] App can be closed and reopened.

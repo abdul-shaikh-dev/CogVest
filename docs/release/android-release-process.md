@@ -19,6 +19,18 @@ Purpose: optional installable APK for internal distribution. For local
 developer verification, prefer a PC-built APK installed on Android Emulator so
 EAS cloud compute is not consumed.
 
+Local PC command:
+
+```powershell
+.\android\gradlew.bat -p android assembleRelease
+```
+
+Local output:
+
+```text
+android/app/build/outputs/apk/release/
+```
+
 Command:
 
 ```bash

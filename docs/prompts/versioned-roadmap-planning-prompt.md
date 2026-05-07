@@ -2,6 +2,11 @@ You are working on CogVest.
 
 This repo uses the Superpowers plugin in Codex CLI.
 
+> Status: historical planning prompt. It records how the versioned roadmap was
+> created, but it is not the current implementation contract. Current agents
+> should start with `AGENTS.md`, `DESIGN.md`,
+> `docs/roadmap/cogvest-version-roadmap.md`, and the active GitHub issues.
+
 Read these files first:
 - AGENTS.md
 - docs/cogvest-master-spec.md

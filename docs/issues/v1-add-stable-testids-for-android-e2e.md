@@ -30,7 +30,7 @@ Add stable testIDs where needed for Android E2E:
 
 ## Acceptance Criteria
 
-- Maestro Add Trade flow can target controls by stable IDs.
+- Maestro Add Holding flow can target controls by stable IDs.
 - Value masking flow can target the toggle by stable ID.
 - Existing component tests remain green.
 - No behavior or visual design changes are introduced.

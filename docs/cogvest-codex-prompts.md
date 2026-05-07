@@ -1,4 +1,12 @@
 # CogVest — Codex CLI Prompts
+
+> Status: historical reference only.
+>
+> This was the original all-in prompt set and it contains stale V1 guidance,
+> including Minimal Mode, LTCG UI, History, and older Add Trade wording. Do not
+> use it as the current implementation source of truth. Use `AGENTS.md`,
+> `DESIGN.md`, `docs/roadmap/cogvest-version-roadmap.md`, and the current
+> GitHub issues instead.
 ---
 
 ## How to use these prompts

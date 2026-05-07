@@ -10,7 +10,7 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 
 ## Included Features
 
-- Minimal Mode across Dashboard, Holdings, Add Trade, Cash, Settings, and History/Asset Detail if present.
+- Minimal Mode across Dashboard, Holdings, Add Holding, Progress, Cash, Settings, and Asset Detail if present.
 - Improved conviction analytics.
 - Patience analysis using intended hold periods.
 - Trade frequency analysis.
@@ -33,8 +33,8 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 - Insight detail.
 - Settings with Minimal Mode preferences.
 - Holdings with basic LTCG states.
-- Add Trade with intended hold period.
-- History or Asset Detail if V1 deferred them.
+- Add Holding with intended hold period.
+- Progress or Asset Detail if V1 deferred them.
 
 ## Data Model Changes
 
@@ -68,7 +68,7 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 ## Manual QA Checklist
 
 - Switch Standard/Minimal Mode.
-- Confirm Add Trade still works in Minimal Mode.
+- Confirm Add Holding still works in Minimal Mode.
 - Add intended hold period and later sell to test patience analysis.
 - Add enough rated trades for conviction insight.
 - Verify LTCG hidden for crypto and visible for Indian stock/ETF.

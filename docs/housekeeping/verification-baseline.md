@@ -2,6 +2,10 @@
 
 Date: 2026-05-06
 
+Status: historical verification snapshot. #72 was later addressed by PR #78;
+re-run `npm run test:v1:pc` and Maestro before using this as current release
+evidence.
+
 Environment:
 
 - OS shell: Windows PowerShell

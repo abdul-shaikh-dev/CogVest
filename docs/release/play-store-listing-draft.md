@@ -24,7 +24,7 @@ Initial V1 preview:
 
 - Dashboard filled.
 - Dashboard masked.
-- Add Trade.
+- Add Holding.
 - Holdings filled.
 - Cash.
 - Settings.

@@ -122,6 +122,26 @@ npm run android
 Use this when a local native build is needed. For normal JavaScript and
 TypeScript iteration, start Metro and press `a`.
 
+## Local Release APK Build
+
+Use this path for developer APK smoke testing when you do not want to spend EAS
+cloud build compute:
+
+```powershell
+.\android\gradlew.bat -p android assembleRelease
+```
+
+The release APK is generated under:
+
+```text
+android/app/build/outputs/apk/release/
+```
+
+Install it on the emulator with `adb install -r path\to\app-release.apk`, then
+run `npm run android:smoke -- --strict`. If Gradle signing is not configured,
+use the local dev build path (`npm run android`) for emulator verification and
+record the release APK blocker as a defect.
+
 ## Install a Preview APK
 
 APK files can be installed locally on an emulator:
@@ -170,11 +190,14 @@ See `docs/testing/maestro-e2e.md` for install and troubleshooting notes.
 
 ## Stable V1 testIDs
 
-Stable Android E2E IDs are available for V1 flows:
+Stable Android E2E IDs are available for V1 flows. Some IDs still use internal
+`trade` naming for backward compatibility while the user-facing screen says Add
+Holding:
 
 - `dashboard-screen`
 - `holdings-screen`
 - `add-trade-screen`
+- `add-holding-screen`
 - `add-trade-button`
 - `asset-input`
 - `symbol-input`

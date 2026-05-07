@@ -63,7 +63,7 @@ npm run maestro:test -- e2e/smoke-launch.yaml
 ## Flow Set
 
 - `e2e/smoke-launch.yaml`: cold-launch and Dashboard smoke.
-- `e2e/add-trade.yaml`: add a buy trade with stable form IDs.
+- `e2e/add-trade.yaml`: add a holding/opening entry with stable form IDs.
 - `e2e/holdings.yaml`: create a trade and verify Holdings.
 - `e2e/cash.yaml`: add cash and verify Cash.
 - `e2e/value-masking.yaml`: open Settings by deep link and toggle masking.

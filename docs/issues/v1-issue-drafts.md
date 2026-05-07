@@ -1,5 +1,10 @@
 # V1 Issue Drafts
 
+> Status: historical issue-draft reference. The live GitHub issues are the
+> source of truth. User-facing V1 language should now prefer Add Holding,
+> Dashboard, Holdings, Progress, Cash, and Settings; internal code may still use
+> trade terminology until refactored.
+
 Milestone: CogVest V1 MVP
 
 ## [V1] Scaffold Expo Android app
@@ -190,7 +195,7 @@ V1 should feel like a tracker, not a static ledger.
 - `npx jest`
 - `npx expo start`
 
-## [V1] Build Add Trade validation
+## [V1] Build Add Holding validation
 
 Labels: `v1`, `domain`, `testing`, `feature`, `priority-high`
 
@@ -225,12 +230,12 @@ Trade validation must be correct before the UI writes local data.
 - `npx jest`
 - `npx expo start`
 
-## [V1] Build Add Trade screen
+## [V1] Build Add Holding screen
 
 Labels: `v1`, `frontend`, `feature`, `priority-high`
 
 ### Context
-Fast trade entry is the core V1 workflow.
+Fast Add Holding entry is the core V1 workflow.
 
 ### Scope
 - Buy/sell toggle.
@@ -315,7 +320,7 @@ Dashboard gives the at-a-glance portfolio view.
 - Allocation.
 - Quote freshness.
 - Basic conviction nudge.
-- Add Trade CTA.
+- Add Holding CTA.
 - Value masking support.
 
 ### Out of Scope
@@ -548,7 +553,7 @@ Production AAB should be a release-candidate gate, not a dev-complete blocker.
 - `npx jest`
 - `npx expo start`
 
-## [V1] Verify preview APK on device
+## [V1] Verify preview APK on emulator
 
 Labels: `v1`, `infra`, `release`, `testing`, `priority-high`
 
@@ -558,7 +563,7 @@ V1 dev-complete requires an installable Android preview build.
 ### Scope
 - Run V1 release checklist dev-complete gate.
 - Build preview APK.
-- Install on real device.
+- Install on Android Emulator.
 - Record build URL and manual QA notes.
 
 ### Out of Scope
@@ -573,7 +578,7 @@ V1 dev-complete requires an installable Android preview build.
 
 ### Acceptance Criteria
 - Preview APK builds.
-- APK installs on a real Android device.
+- APK installs on Android Emulator.
 - Core manual flows pass or defects are logged.
 
 ### Test Steps
