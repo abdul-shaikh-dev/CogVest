@@ -2,6 +2,9 @@
 
 Date: 2026-05-06
 
+Status: historical issue-triage snapshot. #72 was later addressed by PR #78,
+and later issues #79-#84 were created after this report.
+
 ## Repository State
 
 - Base branch reviewed: `main`
@@ -13,7 +16,7 @@ Date: 2026-05-06
 
 | Issue | State | Recommendation |
 | --- | --- | --- |
-| #72 Android release APK bottom navigation bug | Open | Keep open. Confirmed by fresh Maestro run. This is the top blocker. |
+| #72 Android release APK bottom navigation bug | Historical: later addressed by PR #78 | Re-run Maestro before treating this as current. |
 | #60 Excel tracker parity MVP | Open | Keep open. Parent cannot close until #61-#66 are complete and verified. |
 | #61 Opening positions | Open | Keep open. Current Add Holding is partial but does not satisfy all acceptance criteria. |
 | #62 Asset metadata | Open | Keep open and do next after #72. Required for debt/sector/instrument parity. |

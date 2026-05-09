@@ -38,7 +38,7 @@ Cover:
 Cover:
 - Empty Dashboard.
 - Empty Holdings.
-- Add Trade validation messages.
+- Add Holding validation messages.
 - Conviction selector select/deselect.
 - MaskedValue display.
 - Cash add/withdraw rows.

@@ -1,6 +1,7 @@
 # APK Smoke Test Checklist
 
-- [ ] Build or download an APK. Prefer local PC builds for developer smoke tests.
+- [ ] Build or download an APK. Prefer local PC builds for developer smoke tests:
+  `.\android\gradlew.bat -p android assembleRelease`.
 - [ ] Start Android Emulator.
 - [ ] Confirm emulator is ready with `adb devices`.
 - [ ] Install APK with `adb install -r path/to/app.apk`.

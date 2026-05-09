@@ -2,6 +2,11 @@
 
 Focused V1 UI concept images for issue #69.
 
+> Status: historical image exploration. These PNGs are not the stable design
+> source. Use the editable Figma plugin under
+> `docs/design/figma/issue-69-v1-screens/` plus `DESIGN.md` for current V1 UI
+> work.
+
 ## Direction
 
 These screens explore the **Private Ledger** direction from `DESIGN.md`: calm,

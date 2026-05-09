@@ -2,6 +2,9 @@
 
 Date: 2026-05-06
 
+Status: historical audit snapshot. Issue #74 tracks the cleanup work produced
+from this audit.
+
 ## Canonical Documents
 
 | Document | Status | Notes |
@@ -9,7 +12,7 @@ Date: 2026-05-06
 | `AGENTS.md` | Canonical | Current agent rules, V1 scope boundaries, Android PC harness, and Superpowers workflow. |
 | `DESIGN.md` | Canonical | Current design direction with true-dark premium UI and Android-first constraints. |
 | `docs/roadmap/cogvest-version-roadmap.md` | Canonical roadmap | Current phase map. Keep aligned as V1 issues evolve. |
-| `docs/roadmap/v1-mvp-spec.md` | Canonical V1 scope | Mostly current, but still uses some Add Trade language where UI now says Add Holding. |
+| `docs/roadmap/v1-mvp-spec.md` | Canonical V1 scope | Updated during #74 cleanup to prefer Add Holding and Monthly Progress for V1. |
 | `docs/testing/v1-core-flow-test-matrix.md` | Current supporting doc | Useful for V1 PC verification, but should link the Excel parity checklist after #66. |
 | `docs/testing/v1-pc-verification-checklist.md` | Current supporting doc | Useful for PC harness flow. |
 
@@ -19,7 +22,7 @@ Date: 2026-05-06
 | --- | --- | --- |
 | `docs/cogvest-codex-prompts.md` | Historical / stale | Contains old all-in prompts with V1 Minimal Mode and LTCG instructions. Conflicts with current V1 boundaries. |
 | `docs/cogvest-master-spec.md` | Broad product spec | Valuable product context, but contains Minimal Mode, LTCG, and older screen language that should not be interpreted as V1 implementation scope. |
-| `docs/design/v1-ui-mockup-plan.md` | Partially stale | Still references Add Trade CTA and older mockup direction. Should be reconciled with Add Holding and Figma issue #69 output. |
+| `docs/design/v1-ui-mockup-plan.md` | Historical visual reference | Updated during #74 cleanup to point current V1 work to `DESIGN.md` and Figma issue #69 files. |
 | `docs/design/v2-ui-mockup-plan.md` | Future reference | Fine for V2, but should not drive current V1 work. |
 | `docs/design/v3-ui-mockup-plan.md` | Future reference | Fine for V3, but should not drive current V1 work. |
 | `docs/cogvest_standard_mode.png` | Historical mockup | Older visual direction. Current Figma/code.js and `DESIGN.md` should override it. |
@@ -39,10 +42,9 @@ Date: 2026-05-06
 
 ## Recommended Doc Tasks
 
-1. Create a V1 docs cleanup issue to label old prompt/mockup docs as historical
-   and remove V1-scope ambiguity.
+1. Created #74 and updated old prompt/mockup docs as historical references.
 2. Complete #66 with an Excel parity checklist that references #61-#65 and
    makes the #60 gate explicit.
-3. Update V1 docs to consistently use Add Holding for user-facing UI.
-4. Add a local Gradle release APK note to Android PC harness docs:
+3. Updated V1 docs to consistently use Add Holding for user-facing UI where applicable.
+4. Added a local Gradle release APK note to Android PC harness docs:
    debug APK needs Metro; release APK is the standalone local install artifact.

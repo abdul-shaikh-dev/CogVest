@@ -3,6 +3,13 @@
 > Covers: Crypto + Indian Stocks + ETFs + Cash  
 > Last updated: April 2026
 
+> Scope note: this is the broad product vision, not the current V1 execution
+> contract. For V1 work, use `AGENTS.md`, `DESIGN.md`,
+> `docs/roadmap/cogvest-version-roadmap.md`, and
+> `docs/roadmap/v1-mvp-spec.md`. V1 user-facing language prefers Add Holding
+> and Progress; Minimal Mode, LTCG UI, and old History-tab guidance are future
+> scope unless a current issue explicitly says otherwise.
+
 ---
 
 ## 1. Product Summary

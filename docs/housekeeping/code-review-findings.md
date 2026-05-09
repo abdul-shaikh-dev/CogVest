@@ -2,21 +2,23 @@
 
 Date: 2026-05-06
 
+Status: historical review snapshot. Findings that cite #72 predate PR #78 and
+must be re-verified before being treated as current defects.
+
 Review mode: current-state review against V1 MVP, issue #60 Excel parity, and
 Android PC verification requirements.
 
 ## Findings
 
-### Critical: Android release APK touch navigation blocks E2E
+### Resolved / Re-verify: Android release APK touch navigation blocked E2E
 
 - Evidence: `npm run maestro:test` fails in `e2e/navigation.yaml` after tapping
   `tab-holdings`; `holdings-screen` never becomes visible.
 - Existing issue: #72.
-- Impact: PC-only E2E cannot prove core manual flows. V1 dev-complete should
-  remain blocked.
-- Likely area to inspect first: `app/(tabs)/_layout.tsx`, tab route naming,
-  release APK navigation behavior, and any overlays/touch handling around
-  `ScreenContainer`.
+- Later update: PR #78 addressed the Android navigation entrypoint issue and
+  merged into `main`.
+- Impact: re-run the Maestro navigation/core-flow suite before deciding whether
+  any runtime blocker remains.
 
 ### Important: Asset metadata is too narrow for Excel parity
 

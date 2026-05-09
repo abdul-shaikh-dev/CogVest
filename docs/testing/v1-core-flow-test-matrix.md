@@ -37,10 +37,10 @@ approved.
 | V1 feature | Primary verification | Emulator / E2E coverage | Evidence |
 | --- | --- | --- | --- |
 | Cold launch | `src/__tests__/rootRoute.test.ts` | `e2e/smoke-launch.yaml` launches `com.abdulshaikh.cogvest` and asserts `dashboard-screen` | UI tree or Maestro output shows Dashboard, not Unmatched Route |
-| Dashboard empty state | `src/features/dashboard/__tests__/DashboardScreen.test.tsx` | `e2e/smoke-launch.yaml` asserts `dashboard-screen` and tab labels | Dashboard shows portfolio value and Add Trade path |
-| Add Trade buy flow | `src/features/trades/__tests__/AddTradeForm.test.tsx` | `e2e/add-trade.yaml` uses stable form IDs and saves a buy trade | Trade logged message or holding appears |
-| Add Trade validation | `src/features/trades/__tests__/AddTradeForm.test.tsx`, `src/domain/validators/__tests__/trade.test.ts` | Optional Maestro follow-up for validation text | Invalid oversell and missing fields are rejected |
-| Holdings derivation | `src/features/holdings/__tests__/HoldingsScreen.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | `e2e/holdings.yaml` asserts holdings after Add Trade | Holding row shows symbol, quantity, value |
+| Dashboard empty state | `src/features/dashboard/__tests__/DashboardScreen.test.tsx` | `e2e/smoke-launch.yaml` asserts `dashboard-screen` and tab labels | Dashboard shows portfolio value and Add Holding path |
+| Add Holding buy flow | `src/features/trades/__tests__/AddTradeForm.test.tsx` | `e2e/add-trade.yaml` uses stable form IDs and saves an opening/buy entry | Saved message or holding appears |
+| Add Holding validation | `src/features/trades/__tests__/AddTradeForm.test.tsx`, `src/domain/validators/__tests__/trade.test.ts` | Optional Maestro follow-up for validation text | Invalid oversell and missing fields are rejected |
+| Holdings derivation | `src/features/holdings/__tests__/HoldingsScreen.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | `e2e/holdings.yaml` asserts holdings after Add Holding | Holding row shows symbol, quantity, value |
 | Quote refresh and fallback | `src/services/quotes/__tests__/quotes.test.ts`, `src/services/quotes/__tests__/useQuoteRefresh.test.tsx`, Holdings tests | Manual emulator pull-to-refresh or Refresh Quotes action where network is available | Failures keep manual prices visible |
 | Cash tracking | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | `e2e/cash.yaml` adds cash by stable IDs | Cash balance and cash history update |
 | Value masking | `src/features/settings/__tests__/SettingsScreen.test.tsx`, dashboard/holdings/cash masked-value tests | `e2e/value-masking.yaml` opens `cogvest://settings` and toggles `value-mask-toggle` | Wealth values mask; quantities and percentages remain visible |

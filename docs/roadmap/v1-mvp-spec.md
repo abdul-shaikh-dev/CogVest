@@ -6,7 +6,7 @@ Ship a usable Android portfolio tracker that replaces a spreadsheet for local da
 
 ## Target User Value
 
-The user can record trades quickly, see current holdings and portfolio value in INR, track cash, mask sensitive values, and begin collecting conviction context without needing login, backend, or cloud sync.
+The user can add holdings quickly, see current holdings and portfolio value in INR, track cash, mask sensitive values, and begin collecting conviction context without needing login, backend, or cloud sync.
 
 ## Included Features
 
@@ -18,7 +18,8 @@ The user can record trades quickly, see current holdings and portfolio value in 
 - Quote services for Yahoo Finance and CoinGecko current prices.
 - Quote refresh on app open and pull-to-refresh.
 - Manual current-price fallback if quote fetching fails.
-- Add Trade screen with optional conviction.
+- Add Holding screen for opening positions and trade-backed local entries, with optional conviction.
+- Lightweight asset lookup/autofill for common supported assets, with manual fallback.
 - Holdings screen derived from trades and current quotes.
 - Dashboard with total value, allocation, quote freshness, and basic conviction nudge.
 - Cash screen for additions and withdrawals.
@@ -43,11 +44,10 @@ The user can record trades quickly, see current holdings and portfolio value in 
 
 - Dashboard.
 - Holdings.
-- Add Trade.
+- Add Holding.
 - Cash.
+- Monthly Progress.
 - Settings.
-
-History can be a simple trade list if it fits V1 timing; otherwise trade rows appear within Holdings/Add Trade validation support and History moves to V2.
 
 ## Data Model Changes
 
@@ -88,7 +88,7 @@ Do not persist holdings, allocation, dashboard totals, or insights.
 ## Test Plan
 
 - Unit tests for domain calculations, formatters, validators, selectors, and store actions.
-- Component tests for empty states, value masking, conviction selector, and Add Trade validation.
+- Component tests for empty states, value masking, conviction selector, and Add Holding validation.
 - PC-based Android Emulator checks for navigation, trade entry, holdings, dashboard, cash, masking, and persistence.
 
 ## PC Verification Checklist
@@ -139,5 +139,5 @@ Portfolio values, quantities, trades, notes, and conviction stay local. Quote AP
 
 - Yahoo/CoinGecko informal API reliability.
 - Real-time quote source limits.
-- History screen may be scoped down if V1 timeline tightens.
+- Monthly Progress depends on persisted monthly snapshots; missing snapshot support must be logged against the Excel parity issues.
 - Export/import deferred creates local-device data loss risk.

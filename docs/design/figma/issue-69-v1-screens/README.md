@@ -27,7 +27,7 @@ The plugin creates six editable Android frames:
 - Holdings
 - Add Holding
 - Cash
-- Monthly Progression
+- Monthly Progress
 - Settings
 
 ## Notes

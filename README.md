@@ -2,7 +2,7 @@
 
 CogVest is an Android-first React Native portfolio tracker for Indian retail
 investors. V1 is local-first and focused on portfolio tracking, live current
-quotes, trade entry, derived holdings, cash tracking, value masking, and
+quotes, Add Holding entry, derived holdings, cash tracking, value masking, and
 lightweight conviction capture.
 
 The app is built with Expo Router, TypeScript, Zustand, MMKV, React Hook Form,
@@ -17,7 +17,7 @@ V1 includes:
 
 - Android-first app shell with Expo Router tabs.
 - Local data persistence.
-- Add Trade flow.
+- Add Holding flow.
 - Derived holdings and dashboard.
 - Cash tracking.
 - Value masking.
@@ -184,7 +184,7 @@ npm run maestro:test -- e2e/smoke-launch.yaml
 The full local suite covers:
 
 - App cold launch.
-- Add Trade.
+- Add Holding.
 - Holdings from trade entry.
 - Cash entry.
 - Value masking through Settings.

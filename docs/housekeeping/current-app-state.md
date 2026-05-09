@@ -2,7 +2,13 @@
 
 Date: 2026-05-06
 
-Base commit: `bcbeeed Merge pull request #73 from abdul-shaikh-dev/docs/superpowers-workflow-agents`
+Status: historical review snapshot, updated by later housekeeping where noted.
+
+Base commit reviewed: `bcbeeed Merge pull request #73 from abdul-shaikh-dev/docs/superpowers-workflow-agents`
+
+Known later update: #72 was addressed by PR #78 and merged into `main` at
+`1d26750`. Re-run Android/Maestro verification before treating this report as
+current runtime evidence.
 
 Branch reviewed: `housekeeping/app-state-review`
 
@@ -13,10 +19,8 @@ holdings, dashboard summaries, cash tracking, quote refresh plumbing, value
 masking, Android PC harness scripts, and Maestro flows.
 
 It is not yet Excel-parity complete. The biggest product gaps are the
-Excel-style metadata model, first-class debt support, monthly snapshots, and
-complete V1 E2E navigation. The biggest runtime blocker is issue #72: Android
-release APK touch navigation does not move between tabs in Maestro/emulator
-testing.
+Excel-style metadata model, first-class debt support, monthly snapshots,
+lightweight asset lookup/autofill, and complete V1 E2E verification.
 
 ## Implemented Screens
 
@@ -69,13 +73,13 @@ testing.
 | #64 Consolidated rollups | Partial. Totals/allocation exist but sector/instrument grouping and allocation details are missing. |
 | #65 Monthly snapshots | Not complete. Current progress screen is derived-current-month only. |
 | #66 Excel parity gate docs/tests | Not complete. Existing testing docs mention V1 flows but do not provide a full Excel parity checklist. |
-| #72 Android release APK navigation | Confirmed. Full Maestro suite fails at tab navigation. |
+| #72 Android release APK navigation | Historical finding. Addressed by PR #78; re-run Maestro before relying on current status. |
 
 ## Next Recommended Order
 
-1. Fix #72 before relying on emulator E2E results.
-2. Implement #62 before expanding the UI further; metadata is the base for #63 and #64.
-3. Implement #61 with explicit opening-position semantics after the metadata model is settled.
+1. Implement #62 before expanding the UI further; metadata is the base for #63 and #64.
+2. Implement #84 so Add Holding can lookup/autofill common asset metadata and prices.
+3. Implement #61/#79 with explicit multi-phase opening-position semantics after the metadata model is settled.
 4. Implement #63 and #64 together or back-to-back because debt support and rollups share the same model boundary.
 5. Implement #65 monthly snapshots.
 6. Complete #66 and then evaluate #60 for closure.

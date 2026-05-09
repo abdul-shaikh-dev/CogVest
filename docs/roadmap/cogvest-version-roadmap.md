@@ -3,10 +3,10 @@
 ## Source References
 
 - Master spec: `docs/cogvest-master-spec.md`
-- Original full prompt set: `docs/cogvest-codex-prompts.md`
+- Historical full prompt set: `docs/cogvest-codex-prompts.md` (reference only; current V1 scope is this roadmap plus `AGENTS.md`)
 - Planning prompt: `docs/prompts/versioned-roadmap-planning-prompt.md`
 - Figma mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
-- Visual references: `docs/cogvest_standard_mode.png`, `docs/cogvest_minimal_mode.png`
+- Historical visual references: `docs/cogvest_standard_mode.png`, `docs/cogvest_minimal_mode.png` (superseded for V1 by `DESIGN.md` and the issue #69 Figma screens)
 
 ## Version Strategy
 
@@ -21,7 +21,8 @@ Goal: replace a spreadsheet for day-to-day local portfolio tracking on Android.
 Included:
 - Expo/React Native foundation with TypeScript strict mode.
 - Local MMKV persistence through Zustand.
-- Add Trade with buy/sell, quantity, price, date, fees, notes, and optional conviction.
+- Add Holding with opening position entry, asset metadata, current/manual price, notes, and optional conviction.
+- Lightweight asset lookup/autofill for common supported assets, with manual fallback.
 - Live quote fetching for current prices on app open and pull-to-refresh.
 - Manual price fallback when quotes fail.
 - Holdings derived from trades.
@@ -44,7 +45,7 @@ Excluded:
 - Automatic Play Store submission.
 
 Release gates:
-- V1 dev-complete: typecheck, tests, Expo doctor, app launch, manual core flows, preview APK build, preview APK install on real Android device.
+- V1 dev-complete: typecheck, tests, Expo doctor, Android Emulator app launch, local APK build/install on the emulator, and passing or logged defects for core flows.
 - V1 release-candidate: production AAB build succeeds, EAS URL recorded, Play Console internal testing upload ready/manual.
 
 ## V2: Behaviour Layer

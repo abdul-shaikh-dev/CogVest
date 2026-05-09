@@ -12,7 +12,7 @@ Reduce day-change noise, colour emphasis, and information density across support
 
 ## [V2] Add intended hold capture
 
-Extend Add Trade with optional intended hold period and persistence.
+Extend Add Holding with optional intended hold period and persistence.
 
 ## [V2] Implement behaviour analytics
 

@@ -87,7 +87,7 @@ Suggested hierarchy:
 | Role | Use |
 | --- | --- |
 | Display value | Portfolio total, cash balance, major KPI |
-| Screen title | Dashboard, Holdings, Add Trade, Cash, Settings |
+| Screen title | Dashboard, Holdings, Add Holding, Cash, Settings |
 | Section title | Allocation, Quote freshness, Trade details |
 | Body | Explanatory copy and insight text |
 | Label | Field labels and metric labels |
@@ -118,7 +118,7 @@ Buttons:
 - Primary actions use `Primary Green`.
 - Secondary actions use elevated neutral surfaces or subtle hairline separators.
 - Destructive actions use `Negative` only when the action is genuinely destructive.
-- Button labels should be direct: `Add Trade`, `Save`, `Refresh Quotes`, `Add Cash`.
+- Button labels should be direct: `Add Holding`, `Save`, `Refresh Quotes`, `Add Cash`.
 - Avoid marketing-style CTA language.
 
 Inputs:
@@ -255,7 +255,7 @@ Holdings:
 - Include current value, invested value, P&L, P&L %, and allocation where appropriate.
 - Metadata such as instrument type and sector should support understanding without crowding.
 
-Add Trade / Add Holding:
+Add Holding:
 
 - Use clear sectioning and direct labels.
 - Financial entry must be reviewable before save.
@@ -273,7 +273,7 @@ Settings:
 - Value masking should be obvious and reliable.
 - Keep release/build/technical notes secondary.
 
-Progression:
+Monthly Progress:
 
 - Monthly progression should feel like long-term tracking, not performance pressure.
 - Show trend, monthly contribution, cash, and savings context with restraint.
