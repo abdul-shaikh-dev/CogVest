@@ -249,13 +249,14 @@ async function main() {
     return width;
   }
 
-  function row(parent, x, y, w, type, title, meta, value, sub = null, valueColor = C.text) {
+  function row(parent, x, y, w, type, title, meta, value, sub = null, valueColor = C.text, allocation = null) {
     rect(parent, x, y, w, 72, C.surface, 18);
     glyph(parent, x + 12, y + 19, type, 34);
     text(parent, title, x + 58, y + 15, 14, C.text, "Semi Bold", 150);
     text(parent, meta, x + 58, y + 36, 10.5, C.secondary, "Regular", 180);
     text(parent, value, x + w - 112, y + 15, 14, valueColor, "Bold", 96, "RIGHT");
-    if (sub) text(parent, sub, x + w - 112, y + 38, 10.5, sub.startsWith("-") ? C.negative : C.green, "Semi Bold", 96, "RIGHT");
+    if (sub) text(parent, sub, x + w - 112, y + 35, 10.5, sub.startsWith("-") ? C.negative : C.green, "Semi Bold", 96, "RIGHT");
+    if (allocation) text(parent, allocation, x + w - 112, y + 53, 9.5, C.secondary, "Regular", 96, "RIGHT");
   }
 
   function groupedRows(parent, x, y, rows) {
@@ -384,12 +385,12 @@ async function main() {
     chipX += chip(holdings, c, chipX, 272, i === 0) + 8;
   });
   [
-    ["equity", "HDFC Bank", "Equity · Financial Services", "₹1.83L", "+₹18.6K"],
-    ["equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50.7K", "+₹6.5K"],
-    ["debt", "Sovereign Gold Bond", "Debt · Government Bond · Manual", "₹57.1K", "+₹4.1K"],
-    ["crypto", "Bitcoin", "Crypto · Manual price", "₹13.90L", "+₹2.85L"],
-    ["debt", "Liquid Fund", "Debt · Overnight", "₹2.50L", "+₹250"],
-  ].forEach((r, i) => row(holdings, PAD, 326 + i * 82, CONTENT_W, r[0], r[1], r[2], r[3], r[4]));
+    ["equity", "HDFC Bank", "Equity · Financial Services", "₹1.83L", "+₹18.6K", "14.6% allocation"],
+    ["equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50.7K", "+₹6.5K", "4.1% allocation"],
+    ["debt", "Sovereign Gold Bond", "Debt · Government Bond · Manual", "₹57.1K", "+₹4.1K", "4.6% allocation"],
+    ["crypto", "Bitcoin", "Crypto · Manual price", "₹13.90L", "+₹2.85L", "11.1% allocation"],
+    ["debt", "Liquid Fund", "Debt · Overnight", "₹2.50L", "+₹250", "2.0% allocation"],
+  ].forEach((r, i) => row(holdings, PAD, 326 + i * 82, CONTENT_W, r[0], r[1], r[2], r[3], r[4], C.text, r[5]));
   nav(holdings, "Holdings");
 
   // Add Holding - Asset Lookup
