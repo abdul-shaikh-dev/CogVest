@@ -370,7 +370,7 @@ async function main() {
   // Holdings
   stage = "draw holdings";
   const holdings = screen("Holdings", 448);
-  header(holdings, "Holdings", "24 positions · local data", ["eye", "search"]);
+  header(holdings, "Holdings", "24 positions · local data", ["plus", "search", "eye"]);
   metricStrip(holdings, PAD, 144, [
     { label: "Current", value: "₹12.48L" },
     { label: "Invested", value: "₹11.05L" },
