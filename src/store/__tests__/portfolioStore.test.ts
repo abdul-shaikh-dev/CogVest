@@ -12,7 +12,10 @@ const asset: Asset = {
   currency: "INR",
   exchange: "NSE",
   id: "asset-reliance",
+  instrumentType: "stock",
   name: "Reliance Industries",
+  quoteSourceId: "RELIANCE.NS",
+  sectorType: "financialServices",
   symbol: "RELIANCE",
   ticker: "RELIANCE.NS",
 };
@@ -112,7 +115,7 @@ describe("portfolio store", () => {
       cashEntries: [cashEntry],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 2,
+      schemaVersion: 3,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -140,7 +143,7 @@ describe("portfolio store", () => {
       cashEntries: [cashEntry],
       openingPositions: [openingPosition],
       preferences: { ...createDefaultPreferences(), maskWealthValues: true },
-      schemaVersion: 2,
+      schemaVersion: 3,
       trades: [trade],
     });
     storage.setItem(quoteCacheStorageKey, {
@@ -172,6 +175,41 @@ describe("portfolio store", () => {
     expect(store.getState().assets).toEqual([asset]);
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(2);
+    expect(store.getState().schemaVersion).toBe(3);
+    expect(store.getState().assets[0]).toMatchObject({
+      instrumentType: "stock",
+      quoteSourceId: "RELIANCE.NS",
+      sectorType: "financialServices",
+    });
+  });
+
+  it("migrates V2 snapshots by defaulting missing asset metadata", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [
+        {
+          assetClass: "etf",
+          currency: "INR",
+          id: "asset-niftybees",
+          name: "Nifty 50 ETF",
+          symbol: "NIFTYBEES",
+          ticker: "NIFTYBEES.NS",
+        },
+      ],
+      cashEntries: [],
+      openingPositions: [],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 2,
+      trades: [],
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().assets[0]).toMatchObject({
+      instrumentType: "etf",
+      quoteSourceId: "NIFTYBEES.NS",
+      sectorType: "diversified",
+    });
+    expect(store.getState().schemaVersion).toBe(3);
   });
 });

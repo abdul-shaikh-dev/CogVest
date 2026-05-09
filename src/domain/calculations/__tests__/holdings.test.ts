@@ -3,8 +3,10 @@ import {
   calculateCashBalance,
   calculateHolding,
   calculateHoldings,
+  calculateInstrumentAllocation,
   calculatePortfolioDayChange,
   calculatePortfolioTotal,
+  calculateSectorAllocation,
   daysHeld,
   getConvictionReadiness,
 } from "@/src/domain/calculations";
@@ -14,7 +16,9 @@ const reliance: Asset = {
   assetClass: "stock",
   currency: "INR",
   id: "asset-reliance",
+  instrumentType: "stock",
   name: "Reliance Industries",
+  sectorType: "energy",
   symbol: "RELIANCE",
   ticker: "RELIANCE.NS",
 };
@@ -23,7 +27,9 @@ const bitcoin: Asset = {
   assetClass: "crypto",
   currency: "USD",
   id: "asset-btc",
+  instrumentType: "crypto",
   name: "Bitcoin",
+  sectorType: "digitalAsset",
   symbol: "BTC",
   ticker: "bitcoin",
 };
@@ -289,6 +295,35 @@ describe("portfolio calculations", () => {
       { assetClass: "crypto", percentage: 50, value: 5000 },
       { assetClass: "cash", percentage: 38, value: 3800 },
       { assetClass: "stock", percentage: 12, value: 1200 },
+    ]);
+  });
+
+  it("derives instrument and sector allocation from asset metadata", () => {
+    const stockHolding = calculateHolding({
+      asset: reliance,
+      currentPrice: 120,
+      trades: [trade({ quantity: 10, totalValue: 1000 })],
+    });
+    const cryptoHolding = calculateHolding({
+      asset: bitcoin,
+      currentPrice: 50000,
+      trades: [
+        trade({
+          assetId: bitcoin.id,
+          pricePerUnit: 50000,
+          quantity: 0.1,
+          totalValue: 5000,
+        }),
+      ],
+    });
+
+    expect(calculateInstrumentAllocation([stockHolding, cryptoHolding])).toEqual([
+      { label: "crypto", percentage: 80.65, value: 5000 },
+      { label: "stock", percentage: 19.35, value: 1200 },
+    ]);
+    expect(calculateSectorAllocation([stockHolding, cryptoHolding])).toEqual([
+      { label: "digitalAsset", percentage: 80.65, value: 5000 },
+      { label: "energy", percentage: 19.35, value: 1200 },
     ]);
   });
 });

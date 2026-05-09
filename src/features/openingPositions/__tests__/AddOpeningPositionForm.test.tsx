@@ -28,6 +28,9 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("asset-input")).toBeTruthy();
     expect(getByTestId("symbol-input")).toBeTruthy();
     expect(getByTestId("ticker-input")).toBeTruthy();
+    expect(getByTestId("instrument-type-input")).toBeTruthy();
+    expect(getByTestId("sector-type-input")).toBeTruthy();
+    expect(getByTestId("quote-source-id-input")).toBeTruthy();
     expect(getByTestId("quantity-input")).toBeTruthy();
     expect(getByTestId("average-cost-input")).toBeTruthy();
     expect(getByTestId("price-input")).toBeTruthy();
@@ -38,6 +41,9 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
     fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    fireEvent.changeText(getByLabelText("Instrument type"), "stock");
+    fireEvent.changeText(getByLabelText("Sector type"), "energy");
+    fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
@@ -60,7 +66,10 @@ describe("AddOpeningPositionForm", () => {
 
     expect(store.getState().assets[0]).toMatchObject({
       assetClass: "stock",
+      instrumentType: "stock",
       name: "Reliance Industries",
+      quoteSourceId: "RELIANCE.NS",
+      sectorType: "energy",
       symbol: "RELIANCE",
       ticker: "RELIANCE.NS",
     });

@@ -12,9 +12,21 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
+import {
+  getDefaultAssetMetadata,
+  isInstrumentType,
+  isSectorType,
+} from "@/src/domain/assets";
 import { validateTradeForm } from "@/src/features/trades/tradeForm";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type { Asset, ConvictionScore, Trade, TradeType } from "@/src/types";
+import type {
+  Asset,
+  ConvictionScore,
+  InstrumentType,
+  SectorType,
+  Trade,
+  TradeType,
+} from "@/src/types";
 import { createId } from "@/src/utils";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 
@@ -42,6 +54,9 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
   const [assetName, setAssetName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [ticker, setTicker] = useState("");
+  const [instrumentType, setInstrumentType] = useState<InstrumentType>("stock");
+  const [sectorType, setSectorType] = useState<SectorType>("financialServices");
+  const [quoteSourceId, setQuoteSourceId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [fees, setFees] = useState("");
@@ -75,6 +90,13 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
 
     setSelectedAssetId(asset.id);
     setAssetName(asset.name);
+    setInstrumentType(
+      asset.instrumentType ?? getDefaultAssetMetadata(asset.assetClass).instrumentType,
+    );
+    setQuoteSourceId(asset.quoteSourceId ?? asset.ticker);
+    setSectorType(
+      asset.sectorType ?? getDefaultAssetMetadata(asset.assetClass).sectorType,
+    );
     setSymbol(asset.symbol);
     setTicker(asset.ticker);
     if (quote) {
@@ -89,7 +111,10 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       currency: "INR",
       exchange: "NSE",
       id: createId("asset"),
+      instrumentType,
       name: assetName.trim(),
+      quoteSourceId: quoteSourceId.trim().toUpperCase() || ticker.trim().toUpperCase(),
+      sectorType,
       symbol: symbol.trim().toUpperCase(),
       ticker: ticker.trim().toUpperCase(),
     };
@@ -108,6 +133,14 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
 
     if (isManualAsset && ticker.trim().length === 0) {
       nextErrors.ticker = "Ticker is required.";
+    }
+
+    if (isManualAsset && !isInstrumentType(instrumentType)) {
+      nextErrors.instrumentType = "Instrument type is not supported.";
+    }
+
+    if (isManualAsset && !isSectorType(sectorType)) {
+      nextErrors.sectorType = "Sector type is not supported.";
     }
 
     if (type === "sell" && isManualAsset) {
@@ -292,6 +325,47 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
             />
           </View>
         </View>
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <FormTextField
+              error={errors.instrumentType}
+              label="Instrument type"
+              onChangeText={(value) => {
+                setInstrumentType(value as InstrumentType);
+                setSelectedAssetId("");
+                resetReview();
+              }}
+              placeholder="stock"
+              testID="instrument-type-input"
+              value={instrumentType}
+            />
+          </View>
+          <View style={styles.flex}>
+            <FormTextField
+              error={errors.sectorType}
+              label="Sector type"
+              onChangeText={(value) => {
+                setSectorType(value as SectorType);
+                setSelectedAssetId("");
+                resetReview();
+              }}
+              placeholder="financialServices"
+              testID="sector-type-input"
+              value={sectorType}
+            />
+          </View>
+        </View>
+        <FormTextField
+          label="Quote source ID"
+          onChangeText={(value) => {
+            setQuoteSourceId(value);
+            setSelectedAssetId("");
+            resetReview();
+          }}
+          placeholder="RELIANCE.NS"
+          testID="quote-source-id-input"
+          value={quoteSourceId}
+        />
       </PremiumCard>
 
       <PremiumCard>

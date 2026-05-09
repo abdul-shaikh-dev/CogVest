@@ -93,6 +93,31 @@ describe("Yahoo quote service", () => {
 
     expect(result.ok).toBe(false);
   });
+
+  it("uses quote source ID when it differs from display ticker", async () => {
+    const fetcher = jest.fn().mockResolvedValue(
+      response({
+        chart: {
+          result: [
+            {
+              meta: {
+                regularMarketPrice: 101,
+              },
+            },
+          ],
+        },
+      }),
+    );
+
+    await fetchYahooQuote({
+      asset: { ...reliance, quoteSourceId: "RELIANCE.BO" },
+      fetcher,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://query1.finance.yahoo.com/v8/finance/chart/RELIANCE.BO?range=1d&interval=1d",
+    );
+  });
 });
 
 describe("CoinGecko quote service", () => {
@@ -126,6 +151,26 @@ describe("CoinGecko quote service", () => {
         source: "coingecko",
       },
     });
+  });
+
+  it("uses crypto quote source ID when it differs from ticker", async () => {
+    const fetcher = jest.fn().mockResolvedValue(
+      response({
+        ethereum: {
+          inr: 320000,
+        },
+      }),
+    );
+
+    const result = await fetchCoinGeckoQuote({
+      asset: { ...bitcoin, quoteSourceId: "ethereum" },
+      fetcher,
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=inr&include_24hr_change=true",
+    );
+    expect(result.ok && result.quote.price).toBe(320000);
   });
 });
 

@@ -28,6 +28,12 @@ export type AllocationItem = {
   value: number;
 };
 
+export type MetadataAllocationItem = {
+  label: string;
+  percentage: number;
+  value: number;
+};
+
 export type PortfolioDayChange = {
   absolute: number;
   percentage: number;
@@ -236,6 +242,41 @@ export function calculateAllocation({
       value,
     }))
     .sort((left, right) => right.value - left.value);
+}
+
+export function calculateMetadataAllocation(
+  holdings: Holding[],
+  metadataKey: "instrumentType" | "sectorType",
+): MetadataAllocationItem[] {
+  const values = new Map<string, number>();
+
+  for (const holding of holdings) {
+    const label = holding.asset[metadataKey] ?? "other";
+
+    values.set(label, (values.get(label) ?? 0) + holding.currentValue);
+  }
+
+  const total = [...values.values()].reduce((sum, value) => sum + value, 0);
+
+  if (total === 0) {
+    return [];
+  }
+
+  return [...values.entries()]
+    .map(([label, value]) => ({
+      label,
+      percentage: round((value / total) * 100),
+      value,
+    }))
+    .sort((left, right) => right.value - left.value);
+}
+
+export function calculateInstrumentAllocation(holdings: Holding[]) {
+  return calculateMetadataAllocation(holdings, "instrumentType");
+}
+
+export function calculateSectorAllocation(holdings: Holding[]) {
+  return calculateMetadataAllocation(holdings, "sectorType");
 }
 
 export function daysHeld(fromIsoDate: string, toIsoDate = new Date().toISOString()) {

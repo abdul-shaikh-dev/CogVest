@@ -44,6 +44,10 @@ export function HoldingCard({
           <AppText color="secondary" variant="caption">
             {assetClassLabel(holding.asset.assetClass)}
           </AppText>
+          <AppText color="secondary" variant="caption">
+            {holding.asset.instrumentType ?? "other"} ·{" "}
+            {holding.asset.sectorType ?? "other"}
+          </AppText>
         </View>
         <View style={styles.valueBlock}>
           <MaskedValue

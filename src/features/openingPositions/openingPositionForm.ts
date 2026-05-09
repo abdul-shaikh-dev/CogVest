@@ -1,4 +1,10 @@
-import type { AssetClass, ConvictionScore } from "@/src/types";
+import type {
+  AssetClass,
+  ConvictionScore,
+  InstrumentType,
+  SectorType,
+} from "@/src/types";
+import { isInstrumentType, isSectorType } from "@/src/domain/assets";
 
 export type OpeningPositionFormValues = {
   assetClass: AssetClass;
@@ -7,8 +13,11 @@ export type OpeningPositionFormValues = {
   conviction?: string;
   currentPrice: string;
   date: string;
+  instrumentType: string;
   notes?: string;
+  quoteSourceId?: string;
   quantity: string;
+  sectorType: string;
   symbol: string;
   ticker: string;
 };
@@ -20,8 +29,11 @@ export type ValidOpeningPositionForm = {
   conviction?: ConvictionScore;
   currentPrice: number;
   date: string;
+  instrumentType: InstrumentType;
   notes?: string;
+  quoteSourceId: string;
   quantity: number;
+  sectorType: SectorType;
   symbol: string;
   ticker: string;
 };
@@ -90,6 +102,14 @@ export function validateOpeningPositionForm(
     errors.date = "Date must use YYYY-MM-DD.";
   }
 
+  if (!isInstrumentType(values.instrumentType)) {
+    errors.instrumentType = "Instrument type is not supported.";
+  }
+
+  if (!isSectorType(values.sectorType)) {
+    errors.sectorType = "Sector type is not supported.";
+  }
+
   if (
     conviction !== undefined &&
     (!Number.isInteger(conviction) || conviction < 1 || conviction > 5)
@@ -113,8 +133,13 @@ export function validateOpeningPositionForm(
       conviction: conviction as ConvictionScore | undefined,
       currentPrice: currentPrice as number,
       date: values.date,
+      instrumentType: values.instrumentType as InstrumentType,
       notes: values.notes?.trim() || undefined,
+      quoteSourceId:
+        values.quoteSourceId?.trim().toUpperCase() ||
+        values.ticker.trim().toUpperCase(),
       quantity: quantity as number,
+      sectorType: values.sectorType as SectorType,
       symbol: values.symbol.trim().toUpperCase(),
       ticker: values.ticker.trim().toUpperCase(),
     },
