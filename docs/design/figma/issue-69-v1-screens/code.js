@@ -335,7 +335,7 @@ async function main() {
   }
 
   stage = "draw canvas";
-  rect(page, -80, -80, 3200, 1120, C.canvas, 0);
+  rect(page, -80, -80, 4300, 1120, C.canvas, 0);
   stage = "draw title";
   pageTitle();
 
@@ -371,7 +371,7 @@ async function main() {
   // Holdings
   stage = "draw holdings";
   const holdings = screen("Holdings", 448);
-  header(holdings, "Holdings", "24 positions · local data", ["plus", "search", "eye"]);
+  header(holdings, "Holdings", "24 positions · local data", ["plus", "search"]);
   metricStrip(holdings, PAD, 144, [
     { label: "Current", value: "₹12.48L" },
     { label: "Invested", value: "₹11.05L" },
@@ -392,55 +392,91 @@ async function main() {
   ].forEach((r, i) => row(holdings, PAD, 326 + i * 82, CONTENT_W, r[0], r[1], r[2], r[3], r[4]));
   nav(holdings, "Holdings");
 
-  // Add Holding
-  stage = "draw add holding";
-  const add = screen("Add Holding", 872, 150, 1100);
-  header(add, "Add Holding", "Opening position · local only", ["help"]);
+  // Add Holding - Asset Lookup
+  stage = "draw add holding asset";
+  const addAsset = screen("Add Holding - Asset Lookup", 872);
+  header(addAsset, "Add Holding", "Opening position · local only", ["help"]);
   ["Asset", "Class", "Position", "Review"].forEach((s, i) => {
     const cx = 55 + i * 94;
-    glyph(add, cx - 14, 144, i === 0 ? "equity" : "neutral", 28);
-    text(add, s, cx - 34, 180, 10, i === 0 ? C.green : C.secondary, i === 0 ? "Bold" : "Regular", 68, "CENTER");
-    if (i < 3) line(add, cx + 20, 158, 50, 0.32);
+    glyph(addAsset, cx - 14, 144, i === 0 ? "equity" : "neutral", 28);
+    text(addAsset, s, cx - 34, 180, 10, i === 0 ? C.green : C.secondary, i === 0 ? "Bold" : "Regular", 68, "CENTER");
+    if (i < 3) line(addAsset, cx + 20, 158, 50, 0.32);
   });
-  card(add, PAD, 216, CONTENT_W, 122);
-  sectionTitle(add, "Find asset", 38, 238);
-  rect(add, 38, 268, 314, 44, C.field, 16);
-  icon(add, "search", 52, 280, C.secondary, 18);
-  text(add, "Search name or symbol", 80, 280, 13, C.secondary, "Regular", 190);
-  text(add, "Only search text is sent to quote providers.", 38, 318, 10.5, C.muted, "Regular", 260);
-  row(add, PAD, 352, CONTENT_W, "equity", "HDFC Bank", "HDFCBANK.NS · NSE · INR · Equity", "₹1,678.25", "Live", C.text);
-  row(add, PAD, 424, CONTENT_W, "crypto", "Bitcoin", "bitcoin · CoinGecko · INR", "₹92.10L", "Live", C.text);
-  card(add, PAD, 510, CONTENT_W, 86);
-  sectionTitle(add, "Selected asset", 38, 530);
-  metric(add, "Name", "HDFC Bank", 38, 558, 88);
-  metric(add, "Ticker", "HDFCBANK.NS", 142, 558, 104);
-  metric(add, "Currency", "INR", 270, 558, 60);
-  card(add, PAD, 610, CONTENT_W, 74);
-  sectionTitle(add, "Next: Classification", 38, 630);
-  metric(add, "Suggested", "Equity · Large Cap", 38, 656, 128);
-  metric(add, "Sector", "Financial Services", 190, 656, 136);
-  card(add, PAD, 698, CONTENT_W, 92);
-  sectionTitle(add, "Position details", 38, 718);
-  metric(add, "Quantity", "25", 38, 750, 70);
-  metric(add, "Average cost", "₹1,450.00", 122, 750, 92);
-  metric(add, "Current price", "₹1,678.25", 232, 750, 96);
-  card(add, PAD, 804, CONTENT_W, 90);
-  sectionTitle(add, "Derived preview", 38, 824);
-  metric(add, "Invested", "₹36,250", 38, 856, 82);
-  metric(add, "Current", "₹41,956", 134, 856, 82);
-  metric(add, "P&L", "+₹5,706 · +15.7%", 230, 856, 112, C.green);
-  card(add, PAD, 908, CONTENT_W, 64);
-  sectionTitle(add, "Review", 38, 928);
-  text(add, "Conviction and notes stay optional. Save only after derived values look right.", 38, 954, 11, C.secondary, "Regular", 276);
-  rect(add, PAD, 992, 176, 48, C.brandGreen, 18);
-  text(add, "Continue", PAD, 1008, 13, C.text, "Bold", 176, "CENTER");
-  rect(add, PAD + 188, 992, 126, 48, C.surface, 18, C.separator, 0.45);
-  text(add, "Enter manually", PAD + 188, 1008, 13, C.text, "Semi Bold", 126, "CENTER");
-  nav(add, "Holdings");
+  card(addAsset, PAD, 216, CONTENT_W, 150);
+  sectionTitle(addAsset, "Find asset", 38, 238);
+  rect(addAsset, 38, 270, 314, 48, C.field, 16);
+  icon(addAsset, "search", 52, 284, C.secondary, 18);
+  text(addAsset, "Search name or symbol", 80, 284, 13, C.secondary, "Regular", 190);
+  text(addAsset, "Only search text is sent to quote providers.", 38, 330, 10.5, C.muted, "Regular", 260);
+  row(addAsset, PAD, 396, CONTENT_W, "equity", "HDFC Bank", "HDFCBANK.NS · NSE · INR · Equity", "₹1,678.25", "Live", C.text);
+  row(addAsset, PAD, 480, CONTENT_W, "crypto", "Bitcoin", "bitcoin · CoinGecko · INR", "₹92.10L", "Live", C.text);
+  card(addAsset, PAD, 588, CONTENT_W, 74);
+  sectionTitle(addAsset, "Selected result", 38, 608, "Change");
+  text(addAsset, "HDFC Bank · HDFCBANK.NS · INR", 38, 638, 13, C.text, "Semi Bold", 230);
+  rect(addAsset, PAD, 704, CONTENT_W, 48, C.brandGreen, 18);
+  text(addAsset, "Continue to position", PAD, 720, 13, C.text, "Bold", CONTENT_W, "CENTER");
+  nav(addAsset, "Holdings");
+
+  // Add Holding - Position
+  stage = "draw add holding position";
+  const addPosition = screen("Add Holding - Position", 1296);
+  header(addPosition, "Add Holding", "Position details · HDFC Bank", ["help"]);
+  ["Asset", "Class", "Position", "Review"].forEach((s, i) => {
+    const cx = 55 + i * 94;
+    glyph(addPosition, cx - 14, 144, i <= 2 ? "equity" : "neutral", 28);
+    text(addPosition, s, cx - 34, 180, 10, i === 2 ? C.green : C.secondary, i === 2 ? "Bold" : "Regular", 68, "CENTER");
+    if (i < 3) line(addPosition, cx + 20, 158, 50, 0.32);
+  });
+  card(addPosition, PAD, 224, CONTENT_W, 112);
+  sectionTitle(addPosition, "Classification", 38, 246, "Edit");
+  metric(addPosition, "Asset class", "Equity", 38, 278, 82);
+  metric(addPosition, "Type", "Large Cap", 132, 278, 82);
+  metric(addPosition, "Sector", "Financial", 234, 278, 96);
+  card(addPosition, PAD, 360, CONTENT_W, 174);
+  sectionTitle(addPosition, "Position details", 38, 382);
+  formField(addPosition, 38, 420, 148, "Quantity", "25");
+  formField(addPosition, 202, 420, 150, "Average cost", "₹1,450.00");
+  formField(addPosition, 38, 492, 148, "Current price", "₹1,678.25");
+  formField(addPosition, 202, 492, 150, "Date acquired", "15 Apr 2024");
+  card(addPosition, PAD, 560, CONTENT_W, 98);
+  sectionTitle(addPosition, "Live quote", 38, 582);
+  text(addPosition, "Provider found HDFCBANK.NS. Manual fallback remains available.", 38, 612, 12, C.secondary, "Regular", 270);
+  rect(addPosition, PAD, 704, CONTENT_W, 48, C.brandGreen, 18);
+  text(addPosition, "Review holding", PAD, 720, 13, C.text, "Bold", CONTENT_W, "CENTER");
+  nav(addPosition, "Holdings");
+
+  // Add Holding - Review
+  stage = "draw add holding review";
+  const addReview = screen("Add Holding - Review", 1720);
+  header(addReview, "Add Holding", "Review before saving", ["help"]);
+  ["Asset", "Class", "Position", "Review"].forEach((s, i) => {
+    const cx = 55 + i * 94;
+    glyph(addReview, cx - 14, 144, "equity", 28);
+    text(addReview, s, cx - 34, 180, 10, i === 3 ? C.green : C.secondary, i === 3 ? "Bold" : "Regular", 68, "CENTER");
+    if (i < 3) line(addReview, cx + 20, 158, 50, 0.32);
+  });
+  card(addReview, PAD, 224, CONTENT_W, 118);
+  sectionTitle(addReview, "Holding summary", 38, 246);
+  metric(addReview, "Asset", "HDFC Bank", 38, 278, 88);
+  metric(addReview, "Ticker", "HDFCBANK.NS", 144, 278, 104);
+  metric(addReview, "Source", "Live", 270, 278, 60);
+  card(addReview, PAD, 366, CONTENT_W, 110);
+  sectionTitle(addReview, "Derived preview", 38, 388);
+  metric(addReview, "Invested", "₹36,250", 38, 424, 82);
+  metric(addReview, "Current", "₹41,956", 134, 424, 82);
+  metric(addReview, "P&L", "+₹5,706 · +15.7%", 230, 424, 112, C.green);
+  card(addReview, PAD, 500, CONTENT_W, 76);
+  sectionTitle(addReview, "Optional context", 38, 520);
+  text(addReview, "Conviction and notes stay optional. CogVest can save without them.", 38, 548, 12, C.secondary, "Regular", 276);
+  rect(addReview, PAD, 704, 176, 48, C.brandGreen, 18);
+  text(addReview, "Save holding", PAD, 720, 13, C.text, "Bold", 176, "CENTER");
+  rect(addReview, PAD + 188, 704, 126, 48, C.surface, 18, C.separator, 0.45);
+  text(addReview, "Enter manually", PAD + 188, 720, 13, C.text, "Semi Bold", 126, "CENTER");
+  nav(addReview, "Holdings");
 
   // Progress
   stage = "draw progress";
-  const progress = screen("Monthly Progress", 1296);
+  const progress = screen("Monthly Progress", 2144);
   header(progress, "Monthly Progress", "May 2026 snapshot", ["eye"]);
   chip(progress, "Apr 2026", PAD, 144, false, 86);
   chip(progress, "May 2026", PAD + 96, 144, true, 94);
@@ -470,7 +506,7 @@ async function main() {
 
   // Cash
   stage = "draw cash";
-  const cash = screen("Cash Ledger", 1720);
+  const cash = screen("Cash Ledger", 2568);
   header(cash, "Cash Ledger", "Manual ledger · local only", ["eye", "plus"]);
   card(cash, PAD, 144, CONTENT_W, 134);
   text(cash, "Cash balance", 38, 166, 12, C.secondary, "Semi Bold", 120);
@@ -497,7 +533,7 @@ async function main() {
 
   // Settings
   stage = "draw settings";
-  const settings = screen("Settings", 2144);
+  const settings = screen("Settings", 2992);
   header(settings, "Settings", "Local-first controls", ["info"]);
   sectionLabel(settings, "Privacy", PAD, 144);
   groupedRows(settings, PAD, 166, [
@@ -529,7 +565,7 @@ async function main() {
 
   // V1 States
   stage = "draw states";
-  const states = screen("V1 States", 2568);
+  const states = screen("V1 States", 3416);
   header(states, "V1 States", "Implementation coverage", []);
   card(states, PAD, 144, CONTENT_W, 128);
   glyph(states, 38, 166, "equity", 56);
@@ -551,7 +587,7 @@ async function main() {
   text(states, "Monthly Progress becomes useful after the first saved snapshot. Keep the chart area calm.", 38, 634, 12, C.secondary, "Regular", 280);
 
   stage = "zoom to screens";
-  figma.viewport.scrollAndZoomIntoView([dashboard, holdings, add, progress, cash, settings, states]);
+  figma.viewport.scrollAndZoomIntoView([dashboard, holdings, addAsset, addPosition, addReview, progress, cash, settings, states]);
   figma.closePlugin("CogVest Issue 86 premium screens generated.");
 }
 

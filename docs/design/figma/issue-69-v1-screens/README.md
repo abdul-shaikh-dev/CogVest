@@ -21,13 +21,15 @@ shapes, and SVG chart groups.
 
 ## Output
 
-The plugin creates seven editable Android frames:
+The plugin creates nine editable Android frames:
 
 - Dashboard
 - Holdings
-- Add Holding
+- Add Holding - Asset Lookup
+- Add Holding - Position
+- Add Holding - Review
 - Monthly Progress
-- Cash
+- Cash Ledger
 - Settings
 - V1 States
 
@@ -37,7 +39,7 @@ The plugin creates seven editable Android frames:
   existing nodes. This avoids Figma rerun failures and keeps revision history
   available for comparison.
 - It does not modify the existing roadmap pages.
-- The Add Holding frame is intentionally taller than one viewport so the Figma
-  source captures the full lookup-first flow from the HTML preview.
+- Add Holding is split into focused states so the full lookup-first behavior is
+  captured without making one crowded long-form screen.
 - Use these frames as the stable source for later Figma refinements.
 - Keep `DESIGN.md` as the product design contract.
