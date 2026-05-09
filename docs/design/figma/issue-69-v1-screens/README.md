@@ -37,5 +37,7 @@ The plugin creates seven editable Android frames:
   existing nodes. This avoids Figma rerun failures and keeps revision history
   available for comparison.
 - It does not modify the existing roadmap pages.
+- The Add Holding frame is intentionally taller than one viewport so the Figma
+  source captures the full lookup-first flow from the HTML preview.
 - Use these frames as the stable source for later Figma refinements.
 - Keep `DESIGN.md` as the product design contract.

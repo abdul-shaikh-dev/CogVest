@@ -175,13 +175,13 @@ async function main() {
     return r;
   }
 
-  function screen(name, x, y = 150) {
+  function screen(name, x, y = 150, height = H) {
     const frame = figma.createFrame();
     page.appendChild(frame);
     frame.name = name;
     frame.x = x;
     frame.y = y;
-    frame.resize(W, H);
+    frame.resize(W, height);
     frame.cornerRadius = 34;
     frame.fills = [paint(C.bg)];
     frame.clipsContent = true;
@@ -197,7 +197,8 @@ async function main() {
   }
 
   function nav(frame, selected) {
-    rect(frame, 0, H - NAV_H, W, NAV_H, C.surface, 0, C.separator, 0.35);
+    const frameH = frame.height || H;
+    rect(frame, 0, frameH - NAV_H, W, NAV_H, C.surface, 0, C.separator, 0.35);
     const items = [
       ["Dashboard", "home"],
       ["Holdings", "holdings"],
@@ -208,9 +209,9 @@ async function main() {
     items.forEach(([label, iconName], i) => {
       const active = label === selected;
       const cx = 38 + i * 78;
-      if (active) rect(frame, cx - 19, H - NAV_H, 38, 3, C.green, 999);
-      icon(frame, iconName, cx - 10, H - 52, active ? C.green : C.secondary, 21);
-      text(frame, label, cx - 34, H - 24, 10, active ? C.green : C.secondary, "Regular", 68, "CENTER");
+      if (active) rect(frame, cx - 19, frameH - NAV_H, 38, 3, C.green, 999);
+      icon(frame, iconName, cx - 10, frameH - 52, active ? C.green : C.secondary, 21);
+      text(frame, label, cx - 34, frameH - 24, 10, active ? C.green : C.secondary, "Regular", 68, "CENTER");
     });
   }
 
@@ -393,7 +394,7 @@ async function main() {
 
   // Add Holding
   stage = "draw add holding";
-  const add = screen("Add Holding", 872);
+  const add = screen("Add Holding", 872, 150, 1100);
   header(add, "Add Holding", "Opening position · local only", ["help"]);
   ["Asset", "Class", "Position", "Review"].forEach((s, i) => {
     const cx = 55 + i * 94;
@@ -408,19 +409,33 @@ async function main() {
   text(add, "Search name or symbol", 80, 280, 13, C.secondary, "Regular", 190);
   text(add, "Only search text is sent to quote providers.", 38, 318, 10.5, C.muted, "Regular", 260);
   row(add, PAD, 352, CONTENT_W, "equity", "HDFC Bank", "HDFCBANK.NS · NSE · INR · Equity", "₹1,678.25", "Live", C.text);
-  card(add, PAD, 438, CONTENT_W, 96);
-  sectionTitle(add, "Position details", 38, 458);
-  formField(add, 38, 490, 148, "Quantity", "25");
-  formField(add, 202, 490, 150, "Average cost", "₹1,450.00");
-  formField(add, 38, 560, 148, "Current price", "₹1,678.25");
-  formField(add, 202, 560, 150, "Price source", "Live");
-  card(add, PAD, 632, CONTENT_W, 92);
-  sectionTitle(add, "Derived preview", 38, 652);
-  metric(add, "Invested", "₹36,250", 38, 684, 82);
-  metric(add, "Current", "₹41,956", 134, 684, 82);
-  metric(add, "P&L", "+₹5,706", 230, 684, 82, C.green);
-  rect(add, PAD, 740, CONTENT_W, 48, C.brandGreen, 18);
-  text(add, "Continue", PAD, 756, 13, C.text, "Bold", CONTENT_W, "CENTER");
+  row(add, PAD, 424, CONTENT_W, "crypto", "Bitcoin", "bitcoin · CoinGecko · INR", "₹92.10L", "Live", C.text);
+  card(add, PAD, 510, CONTENT_W, 86);
+  sectionTitle(add, "Selected asset", 38, 530);
+  metric(add, "Name", "HDFC Bank", 38, 558, 88);
+  metric(add, "Ticker", "HDFCBANK.NS", 142, 558, 104);
+  metric(add, "Currency", "INR", 270, 558, 60);
+  card(add, PAD, 610, CONTENT_W, 74);
+  sectionTitle(add, "Next: Classification", 38, 630);
+  metric(add, "Suggested", "Equity · Large Cap", 38, 656, 128);
+  metric(add, "Sector", "Financial Services", 190, 656, 136);
+  card(add, PAD, 698, CONTENT_W, 92);
+  sectionTitle(add, "Position details", 38, 718);
+  metric(add, "Quantity", "25", 38, 750, 70);
+  metric(add, "Average cost", "₹1,450.00", 122, 750, 92);
+  metric(add, "Current price", "₹1,678.25", 232, 750, 96);
+  card(add, PAD, 804, CONTENT_W, 90);
+  sectionTitle(add, "Derived preview", 38, 824);
+  metric(add, "Invested", "₹36,250", 38, 856, 82);
+  metric(add, "Current", "₹41,956", 134, 856, 82);
+  metric(add, "P&L", "+₹5,706 · +15.7%", 230, 856, 112, C.green);
+  card(add, PAD, 908, CONTENT_W, 64);
+  sectionTitle(add, "Review", 38, 928);
+  text(add, "Conviction and notes stay optional. Save only after derived values look right.", 38, 954, 11, C.secondary, "Regular", 276);
+  rect(add, PAD, 992, 176, 48, C.brandGreen, 18);
+  text(add, "Continue", PAD, 1008, 13, C.text, "Bold", 176, "CENTER");
+  rect(add, PAD + 188, 992, 126, 48, C.surface, 18, C.separator, 0.45);
+  text(add, "Enter manually", PAD + 188, 1008, 13, C.text, "Semi Bold", 126, "CENTER");
   nav(add, "Holdings");
 
   // Progress
