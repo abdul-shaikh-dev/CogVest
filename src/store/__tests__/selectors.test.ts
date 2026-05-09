@@ -1,10 +1,11 @@
 import {
   selectAssetById,
   selectCashBalance,
+  selectOpeningPositionsForAsset,
   selectQuoteForAsset,
   selectTradesForAsset,
 } from "@/src/store";
-import type { Asset, CashEntry, Quote, Trade } from "@/src/types";
+import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 
 const stock: Asset = {
   assetClass: "stock",
@@ -45,6 +46,25 @@ const trades: Trade[] = [
   },
 ];
 
+const openingPositions: OpeningPosition[] = [
+  {
+    assetId: stock.id,
+    averageCostPrice: 100,
+    currentPrice: 110,
+    date: "2026-04-01T00:00:00.000Z",
+    id: "opening-1",
+    quantity: 2,
+  },
+  {
+    assetId: crypto.id,
+    averageCostPrice: 50000,
+    currentPrice: 55000,
+    date: "2026-04-01T00:00:00.000Z",
+    id: "opening-2",
+    quantity: 0.1,
+  },
+];
+
 const cashEntries: CashEntry[] = [
   {
     amount: 5000,
@@ -74,6 +94,9 @@ describe("portfolio selectors", () => {
   it("selects assets and trades by asset ID", () => {
     expect(selectAssetById([stock, crypto], stock.id)).toEqual(stock);
     expect(selectTradesForAsset(trades, stock.id)).toEqual([trades[0]]);
+    expect(selectOpeningPositionsForAsset(openingPositions, stock.id)).toEqual([
+      openingPositions[0],
+    ]);
   });
 
   it("calculates cash balance from raw cash entries", () => {

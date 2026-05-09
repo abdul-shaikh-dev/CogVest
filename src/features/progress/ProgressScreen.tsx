@@ -53,6 +53,7 @@ export function ProgressScreen({
   const snapshot = usePortfolioSnapshot(store);
   const holdings = calculateHoldings({
     assets: snapshot.assets,
+    openingPositions: snapshot.openingPositions,
     quoteCache: snapshot.quoteCache,
     trades: snapshot.trades,
   });
@@ -62,9 +63,17 @@ export function ProgressScreen({
     (total, holding) => total + holding.totalInvested,
     0,
   );
-  const monthlyInvestment = snapshot.trades
+  const monthlyTradeInvestment = snapshot.trades
     .filter((trade) => trade.type === "buy" && isCurrentMonth(trade.date))
     .reduce((total, trade) => total + trade.totalValue, 0);
+  const monthlyOpeningInvestment = snapshot.openingPositions
+    .filter((position) => isCurrentMonth(position.date))
+    .reduce(
+      (total, position) =>
+        total + position.quantity * position.averageCostPrice,
+      0,
+    );
+  const monthlyInvestment = monthlyTradeInvestment + monthlyOpeningInvestment;
   const monthlyCashAdded = snapshot.cashEntries
     .filter((entry) => entry.type === "addition" && isCurrentMonth(entry.date))
     .reduce((total, entry) => total + entry.amount, 0);

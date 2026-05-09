@@ -1,5 +1,5 @@
-import { AddTradeForm } from "@/src/features/trades";
+import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 
 export default function AddHoldingScreen() {
-  return <AddTradeForm />;
+  return <AddOpeningPositionForm />;
 }

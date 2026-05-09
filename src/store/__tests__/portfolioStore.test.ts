@@ -5,7 +5,7 @@ import {
   quoteCacheStorageKey,
 } from "@/src/store";
 import { createMemoryJsonStorage } from "@/src/services/storage";
-import type { Asset, CashEntry, Quote, Trade } from "@/src/types";
+import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -35,6 +35,15 @@ const cashEntry: CashEntry = {
   type: "addition",
 };
 
+const openingPosition: OpeningPosition = {
+  assetId: asset.id,
+  averageCostPrice: 1450,
+  currentPrice: 1678.25,
+  date: "2026-04-15T00:00:00.000Z",
+  id: "opening-1",
+  quantity: 25,
+};
+
 const quote: Quote = {
   asOf: "2026-04-26T10:00:00.000Z",
   assetId: asset.id,
@@ -49,6 +58,7 @@ describe("portfolio store", () => {
 
     expect(store.getState().assets).toEqual([]);
     expect(store.getState().trades).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
     expect(store.getState().preferences).toEqual(createDefaultPreferences());
   });
@@ -57,20 +67,31 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
     store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
     store.getState().addTrade(trade);
     store.getState().addCashEntry(cashEntry);
     store.getState().updatePreferences({ maskWealthValues: true });
 
     expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
     expect(store.getState().trades).toEqual([trade]);
     expect(store.getState().cashEntries).toEqual([cashEntry]);
     expect(store.getState().preferences.maskWealthValues).toBe(true);
 
+    store.getState().updateOpeningPosition({
+      ...openingPosition,
+      quantity: 30,
+    });
+
+    expect(store.getState().openingPositions[0]?.quantity).toBe(30);
+
+    store.getState().removeOpeningPosition(openingPosition.id);
     store.getState().removeTrade(trade.id);
     store.getState().removeCashEntry(cashEntry.id);
     store.getState().removeAsset(asset.id);
 
     expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
   });
@@ -80,6 +101,7 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
     store.getState().addTrade(trade);
     store.getState().addCashEntry(cashEntry);
 
@@ -88,8 +110,9 @@ describe("portfolio store", () => {
     expect(persisted).toEqual({
       assets: [asset],
       cashEntries: [cashEntry],
+      openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 1,
+      schemaVersion: 2,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -115,8 +138,9 @@ describe("portfolio store", () => {
     storage.setItem(portfolioStorageKey, {
       assets: [asset],
       cashEntries: [cashEntry],
+      openingPositions: [openingPosition],
       preferences: { ...createDefaultPreferences(), maskWealthValues: true },
-      schemaVersion: 1,
+      schemaVersion: 2,
       trades: [trade],
     });
     storage.setItem(quoteCacheStorageKey, {
@@ -126,9 +150,28 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
     expect(store.getState().trades).toEqual([trade]);
     expect(store.getState().cashEntries).toEqual([cashEntry]);
     expect(store.getState().preferences.maskWealthValues).toBe(true);
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
+  });
+
+  it("migrates V1 persisted snapshots by adding empty opening positions", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [asset],
+      cashEntries: [cashEntry],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 1,
+      trades: [trade],
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().trades).toEqual([trade]);
+    expect(store.getState().schemaVersion).toBe(2);
   });
 });

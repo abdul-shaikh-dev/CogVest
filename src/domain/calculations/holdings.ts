@@ -3,6 +3,7 @@ import type {
   AssetClass,
   CashEntry,
   Holding,
+  OpeningPosition,
   QuoteCache,
   Trade,
 } from "@/src/types";
@@ -10,11 +11,13 @@ import type {
 type CalculateHoldingInput = {
   asset: Asset;
   currentPrice: number;
+  openingPositions?: OpeningPosition[];
   trades: Trade[];
 };
 
 type CalculateHoldingsInput = {
   assets: Asset[];
+  openingPositions?: OpeningPosition[];
   quoteCache: QuoteCache;
   trades: Trade[];
 };
@@ -56,23 +59,43 @@ function sortTradesByDate(trades: Trade[]) {
 export function calculateHolding({
   asset,
   currentPrice,
+  openingPositions = [],
   trades,
 }: CalculateHoldingInput): Holding {
   let averageCostPrice = 0;
   let totalUnits = 0;
+  const costBasisEvents = [
+    ...openingPositions.map((position) => ({
+      date: position.date,
+      fees: 0,
+      pricePerUnit: position.averageCostPrice,
+      quantity: position.quantity,
+      type: "opening" as const,
+    })),
+    ...sortTradesByDate(trades).map((trade) => ({
+      date: trade.date,
+      fees: trade.fees ?? 0,
+      pricePerUnit: trade.pricePerUnit,
+      quantity: trade.quantity,
+      type: trade.type,
+    })),
+  ].sort(
+    (left, right) =>
+      new Date(left.date).getTime() - new Date(right.date).getTime(),
+  );
 
-  for (const trade of sortTradesByDate(trades)) {
-    if (trade.type === "buy") {
+  for (const event of costBasisEvents) {
+    if (event.type === "buy" || event.type === "opening") {
       const existingCost = totalUnits * averageCostPrice;
-      const buyCost = trade.pricePerUnit * trade.quantity + (trade.fees ?? 0);
-      const nextUnits = totalUnits + trade.quantity;
+      const buyCost = event.pricePerUnit * event.quantity + event.fees;
+      const nextUnits = totalUnits + event.quantity;
 
       averageCostPrice = nextUnits > 0 ? (existingCost + buyCost) / nextUnits : 0;
       totalUnits = nextUnits;
       continue;
     }
 
-    totalUnits = Math.max(0, totalUnits - trade.quantity);
+    totalUnits = Math.max(0, totalUnits - event.quantity);
 
     if (totalUnits === 0) {
       averageCostPrice = 0;
@@ -99,21 +122,32 @@ export function calculateHolding({
 
 export function calculateHoldings({
   assets,
+  openingPositions = [],
   quoteCache,
   trades,
 }: CalculateHoldingsInput) {
   return assets
     .map((asset) => {
       const assetTrades = trades.filter((trade) => trade.assetId === asset.id);
+      const assetOpeningPositions = openingPositions.filter(
+        (position) => position.assetId === asset.id,
+      );
 
-      if (assetTrades.length === 0) {
+      if (assetTrades.length === 0 && assetOpeningPositions.length === 0) {
         return null;
       }
 
-      const currentPrice = quoteCache[asset.id]?.price ?? 0;
+      const latestManualPrice = [...assetOpeningPositions]
+        .filter((position) => position.currentPrice !== undefined)
+        .sort(
+          (left, right) =>
+            new Date(right.date).getTime() - new Date(left.date).getTime(),
+        )[0]?.currentPrice;
+      const currentPrice = quoteCache[asset.id]?.price ?? latestManualPrice ?? 0;
       const holding = calculateHolding({
         asset,
         currentPrice,
+        openingPositions: assetOpeningPositions,
         trades: assetTrades,
       });
 
@@ -215,20 +249,26 @@ export function daysHeld(fromIsoDate: string, toIsoDate = new Date().toISOString
 export function getConvictionReadiness(
   trades: Trade[],
   requiredTradeCount = defaultConvictionTradeCount,
+  openingPositions: OpeningPosition[] = [],
 ): ConvictionReadiness {
-  const ratedTrades = trades.filter((trade) => trade.conviction !== undefined);
-  const highConvictionCount = ratedTrades.filter(
-    (trade) => trade.conviction !== undefined && trade.conviction >= 4,
+  const ratedConvictions = [
+    ...trades.map((trade) => trade.conviction),
+    ...openingPositions.map((position) => position.conviction),
+  ].filter((conviction): conviction is NonNullable<typeof conviction> =>
+    conviction !== undefined,
+  );
+  const highConvictionCount = ratedConvictions.filter(
+    (conviction) => conviction >= 4,
   ).length;
-  const lowConvictionCount = ratedTrades.filter(
-    (trade) => trade.conviction !== undefined && trade.conviction <= 2,
+  const lowConvictionCount = ratedConvictions.filter(
+    (conviction) => conviction <= 2,
   ).length;
 
   return {
     highConvictionCount,
-    isReady: ratedTrades.length >= requiredTradeCount,
+    isReady: ratedConvictions.length >= requiredTradeCount,
     lowConvictionCount,
-    ratedTradeCount: ratedTrades.length,
+    ratedTradeCount: ratedConvictions.length,
     requiredTradeCount,
   };
 }

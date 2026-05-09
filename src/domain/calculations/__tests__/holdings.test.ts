@@ -8,7 +8,7 @@ import {
   daysHeld,
   getConvictionReadiness,
 } from "@/src/domain/calculations";
-import type { Asset, CashEntry, Quote, Trade } from "@/src/types";
+import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 
 const reliance: Asset = {
   assetClass: "stock",
@@ -37,6 +37,20 @@ function trade(overrides: Partial<Trade>): Trade {
     quantity: 1,
     totalValue: 100,
     type: "buy",
+    ...overrides,
+  };
+}
+
+function openingPosition(
+  overrides: Partial<OpeningPosition>,
+): OpeningPosition {
+  return {
+    assetId: reliance.id,
+    averageCostPrice: 1400,
+    currentPrice: 1678.25,
+    date: "2026-04-15T00:00:00.000Z",
+    id: `opening-${Math.random()}`,
+    quantity: 25,
     ...overrides,
   };
 }
@@ -122,6 +136,76 @@ describe("holding calculations", () => {
     expect(holdings).toHaveLength(1);
     expect(holdings[0]?.asset).toEqual(reliance);
     expect(holdings[0]?.currentPrice).toBe(125);
+  });
+
+  it("derives an Excel-style opening position without historical trades", () => {
+    const holding = calculateHolding({
+      asset: reliance,
+      currentPrice: 1678.25,
+      openingPositions: [openingPosition({})],
+      trades: [],
+    });
+
+    expect(holding.totalUnits).toBe(25);
+    expect(holding.averageCostPrice).toBe(1400);
+    expect(holding.totalInvested).toBe(35000);
+    expect(holding.currentValue).toBe(41956.25);
+    expect(holding.unrealisedPnL).toBe(6956.25);
+    expect(holding.unrealisedPnLPct).toBeCloseTo(19.875, 3);
+  });
+
+  it("uses opening-position manual price when quote cache is empty", () => {
+    const holdings = calculateHoldings({
+      assets: [reliance],
+      openingPositions: [openingPosition({ currentPrice: 1600 })],
+      quoteCache: {},
+      trades: [],
+    });
+
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0]?.currentPrice).toBe(1600);
+    expect(holdings[0]?.currentValue).toBe(40000);
+  });
+
+  it("lets quote cache override opening-position manual price", () => {
+    const holdings = calculateHoldings({
+      assets: [reliance],
+      openingPositions: [openingPosition({ currentPrice: 1600 })],
+      quoteCache: {
+        [reliance.id]: {
+          assetId: reliance.id,
+          asOf: "2026-05-09T00:00:00.000Z",
+          currency: "INR",
+          price: 1700,
+          source: "yahoo",
+        },
+      },
+      trades: [],
+    });
+
+    expect(holdings[0]?.currentPrice).toBe(1700);
+  });
+
+  it("keeps opening-position cost basis stable after a later sell", () => {
+    const holding = calculateHolding({
+      asset: reliance,
+      currentPrice: 1500,
+      openingPositions: [openingPosition({ averageCostPrice: 1000, quantity: 10 })],
+      trades: [
+        trade({
+          date: "2026-04-20T00:00:00.000Z",
+          pricePerUnit: 1500,
+          quantity: 4,
+          totalValue: 6000,
+          type: "sell",
+        }),
+      ],
+    });
+
+    expect(holding.totalUnits).toBe(6);
+    expect(holding.averageCostPrice).toBe(1000);
+    expect(holding.totalInvested).toBe(6000);
+    expect(holding.currentValue).toBe(9000);
   });
 });
 
@@ -229,6 +313,22 @@ describe("date and conviction calculations", () => {
       lowConvictionCount: 1,
       ratedTradeCount: 2,
       requiredTradeCount: 5,
+    });
+  });
+
+  it("includes opening-position conviction in readiness", () => {
+    expect(
+      getConvictionReadiness(
+        [trade({ conviction: 2 })],
+        2,
+        [openingPosition({ conviction: 5 })],
+      ),
+    ).toEqual({
+      highConvictionCount: 1,
+      isReady: true,
+      lowConvictionCount: 1,
+      ratedTradeCount: 2,
+      requiredTradeCount: 2,
     });
   });
 });

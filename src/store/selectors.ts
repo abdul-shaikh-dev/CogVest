@@ -1,4 +1,10 @@
-import type { Asset, CashEntry, QuoteCache, Trade } from "@/src/types";
+import type {
+  Asset,
+  CashEntry,
+  OpeningPosition,
+  QuoteCache,
+  Trade,
+} from "@/src/types";
 
 export function selectAssetById(assets: Asset[], assetId: string) {
   return assets.find((asset) => asset.id === assetId) ?? null;
@@ -6,6 +12,13 @@ export function selectAssetById(assets: Asset[], assetId: string) {
 
 export function selectTradesForAsset(trades: Trade[], assetId: string) {
   return trades.filter((trade) => trade.assetId === assetId);
+}
+
+export function selectOpeningPositionsForAsset(
+  openingPositions: OpeningPosition[],
+  assetId: string,
+) {
+  return openingPositions.filter((position) => position.assetId === assetId);
 }
 
 export function selectCashBalance(cashEntries: CashEntry[]) {
