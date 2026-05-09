@@ -63,6 +63,7 @@ export function useDashboard({
   const holdings = withQuoteMetadata(
     calculateHoldings({
       assets: snapshot.assets,
+      openingPositions: snapshot.openingPositions,
       quoteCache: snapshot.quoteCache,
       trades: snapshot.trades,
     }),
@@ -76,7 +77,11 @@ export function useDashboard({
       holdings,
     }),
     cashBalance,
-    convictionReadiness: getConvictionReadiness(snapshot.trades),
+    convictionReadiness: getConvictionReadiness(
+      snapshot.trades,
+      undefined,
+      snapshot.openingPositions,
+    ),
     dayChange: calculatePortfolioDayChange(holdings),
     holdings,
     latestQuoteAsOf: getLatestQuoteAsOf(holdings),

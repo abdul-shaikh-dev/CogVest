@@ -5,6 +5,7 @@ import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
   Asset,
   CashEntry,
+  OpeningPosition,
   Preferences,
   Quote,
   QuoteCache,
@@ -14,17 +15,19 @@ import type {
 export {
   selectAssetById,
   selectCashBalance,
+  selectOpeningPositionsForAsset,
   selectQuoteForAsset,
   selectTradesForAsset,
 } from "./selectors";
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
-export const portfolioSchemaVersion = 1;
+export const portfolioSchemaVersion = 2;
 
 export type RawPortfolioSnapshot = {
   assets: Asset[];
   cashEntries: CashEntry[];
+  openingPositions: OpeningPosition[];
   preferences: Preferences;
   schemaVersion: typeof portfolioSchemaVersion;
   trades: Trade[];
@@ -33,14 +36,17 @@ export type RawPortfolioSnapshot = {
 export type PortfolioStoreState = RawPortfolioSnapshot & {
   addAsset: (asset: Asset) => void;
   addCashEntry: (cashEntry: CashEntry) => void;
+  addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
   removeCashEntry: (cashEntryId: string) => void;
+  removeOpeningPosition: (openingPositionId: string) => void;
   removeTrade: (tradeId: string) => void;
   updateAsset: (asset: Asset) => void;
   updateCashEntry: (cashEntry: CashEntry) => void;
+  updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
   updateTrade: (trade: Trade) => void;
   upsertQuote: (quote: Quote) => void;
@@ -62,24 +68,32 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
   return {
     assets: [],
     cashEntries: [],
+    openingPositions: [],
     preferences: createDefaultPreferences(),
     schemaVersion: portfolioSchemaVersion,
     trades: [],
   };
 }
 
+type StoredPortfolioSnapshot = Partial<
+  Omit<RawPortfolioSnapshot, "schemaVersion">
+> & {
+  schemaVersion?: number;
+};
+
 function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
-  const stored = storage.getItem<RawPortfolioSnapshot & JsonValue>(
+  const stored = storage.getItem<StoredPortfolioSnapshot & JsonValue>(
     portfolioStorageKey,
   );
 
-  if (!stored || stored.schemaVersion !== portfolioSchemaVersion) {
+  if (!stored || ![1, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)) {
     return createEmptyPortfolioSnapshot();
   }
 
   return {
     assets: stored.assets ?? [],
     cashEntries: stored.cashEntries ?? [],
+    openingPositions: stored.openingPositions ?? [],
     preferences: {
       ...createDefaultPreferences(),
       ...stored.preferences,
@@ -99,6 +113,7 @@ function selectRawSnapshot(
   return {
     assets: state.assets,
     cashEntries: state.cashEntries,
+    openingPositions: state.openingPositions,
     preferences: state.preferences,
     schemaVersion: portfolioSchemaVersion,
     trades: state.trades,
@@ -132,6 +147,12 @@ export function createPortfolioStore({
       set((state) => ({ cashEntries: [...state.cashEntries, cashEntry] }));
       persistPortfolio(storage, get());
     },
+    addOpeningPosition: (openingPosition) => {
+      set((state) => ({
+        openingPositions: [...state.openingPositions, openingPosition],
+      }));
+      persistPortfolio(storage, get());
+    },
     addTrade: (trade) => {
       set((state) => ({ trades: [...state.trades, trade] }));
       persistPortfolio(storage, get());
@@ -155,6 +176,14 @@ export function createPortfolioStore({
       }));
       persistPortfolio(storage, get());
     },
+    removeOpeningPosition: (openingPositionId) => {
+      set((state) => ({
+        openingPositions: state.openingPositions.filter(
+          (openingPosition) => openingPosition.id !== openingPositionId,
+        ),
+      }));
+      persistPortfolio(storage, get());
+    },
     removeTrade: (tradeId) => {
       set((state) => ({
         trades: state.trades.filter((trade) => trade.id !== tradeId),
@@ -174,6 +203,16 @@ export function createPortfolioStore({
       set((state) => ({
         cashEntries: state.cashEntries.map((currentEntry) =>
           currentEntry.id === cashEntry.id ? cashEntry : currentEntry,
+        ),
+      }));
+      persistPortfolio(storage, get());
+    },
+    updateOpeningPosition: (openingPosition) => {
+      set((state) => ({
+        openingPositions: state.openingPositions.map((currentPosition) =>
+          currentPosition.id === openingPosition.id
+            ? openingPosition
+            : currentPosition,
         ),
       }));
       persistPortfolio(storage, get());

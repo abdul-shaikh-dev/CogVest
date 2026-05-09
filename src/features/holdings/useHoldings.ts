@@ -66,6 +66,7 @@ export function useHoldings({
   const holdings = withQuoteMetadata(
     calculateHoldings({
       assets: snapshot.assets,
+      openingPositions: snapshot.openingPositions,
       quoteCache: snapshot.quoteCache,
       trades: snapshot.trades,
     }),

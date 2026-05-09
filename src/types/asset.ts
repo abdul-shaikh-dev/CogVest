@@ -1,4 +1,4 @@
-export type AssetClass = "crypto" | "stock" | "etf" | "cash";
+export type AssetClass = "crypto" | "debt" | "stock" | "etf" | "cash";
 
 export type Currency = "INR" | "USD";
 

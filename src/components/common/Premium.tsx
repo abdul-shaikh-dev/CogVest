@@ -55,7 +55,8 @@ const assetClassConfig: Record<
 > = {
   cash: { color: colors.cashBlue, icon: "wallet-outline", label: "Cash" },
   crypto: { color: colors.cryptoAmber, icon: "logo-bitcoin", label: "Crypto" },
-  etf: { color: colors.blue, icon: "shield-outline", label: "Debt" },
+  debt: { color: colors.blue, icon: "shield-outline", label: "Debt" },
+  etf: { color: colors.blue, icon: "pie-chart-outline", label: "ETF" },
   neutral: { color: colors.text.secondary, icon: "analytics-outline", label: "Info" },
   stock: { color: colors.primary, icon: "trending-up-outline", label: "Equity" },
 };
