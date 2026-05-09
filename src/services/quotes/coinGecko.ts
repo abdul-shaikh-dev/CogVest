@@ -30,7 +30,8 @@ export async function fetchCoinGeckoQuote({
   now = defaultNow,
 }: QuoteProviderInput): Promise<QuoteResult> {
   try {
-    const response = await fetcher(buildCoinGeckoSimplePriceUrl(asset.ticker));
+    const quoteSourceId = asset.quoteSourceId ?? asset.ticker;
+    const response = await fetcher(buildCoinGeckoSimplePriceUrl(quoteSourceId));
 
     if (!response.ok) {
       return {
@@ -40,7 +41,7 @@ export async function fetchCoinGeckoQuote({
     }
 
     const payload = (await response.json()) as CoinGeckoSimplePriceResponse;
-    const coinPrice = payload[asset.ticker];
+    const coinPrice = payload[quoteSourceId];
     const price = coinPrice?.inr;
 
     if (typeof price !== "number") {

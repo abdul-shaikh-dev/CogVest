@@ -6,7 +6,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { Asset, Trade } from "@/src/types";
 
-const asset: Asset = {
+const rawAsset: Asset = {
   assetClass: "stock",
   currency: "INR",
   exchange: "NSE",
@@ -14,6 +14,13 @@ const asset: Asset = {
   name: "Reliance Industries",
   symbol: "RELIANCE",
   ticker: "RELIANCE.NS",
+};
+
+const asset: Asset = {
+  ...rawAsset,
+  instrumentType: "stock",
+  quoteSourceId: "RELIANCE.NS",
+  sectorType: "financialServices",
 };
 
 const buyTrade: Trade = {
@@ -29,7 +36,7 @@ const buyTrade: Trade = {
 describe("useHoldings", () => {
   it("derives holdings from raw trades and cached quotes", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    store.getState().addAsset(asset);
+    store.getState().addAsset(rawAsset);
     store.getState().addTrade(buyTrade);
     store.getState().upsertQuote({
       asOf: "2026-04-20T10:00:00.000Z",
@@ -57,7 +64,7 @@ describe("useHoldings", () => {
 
   it("refreshes quotes and persists the updated values into the store", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    store.getState().addAsset(asset);
+    store.getState().addAsset(rawAsset);
     store.getState().addTrade(buyTrade);
     store.getState().upsertQuote({
       asOf: "2026-04-20T10:00:00.000Z",

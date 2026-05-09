@@ -30,7 +30,9 @@ export async function fetchYahooQuote({
   now = defaultNow,
 }: QuoteProviderInput): Promise<QuoteResult> {
   try {
-    const response = await fetcher(buildYahooChartUrl(asset.ticker));
+    const response = await fetcher(
+      buildYahooChartUrl(asset.quoteSourceId ?? asset.ticker),
+    );
 
     if (!response.ok) {
       return {

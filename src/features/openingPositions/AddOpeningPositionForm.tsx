@@ -14,6 +14,7 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
+import { getDefaultAssetMetadata } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -22,7 +23,9 @@ import type {
   Asset,
   AssetClass,
   ConvictionScore,
+  InstrumentType,
   OpeningPosition,
+  SectorType,
 } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -60,6 +63,9 @@ export function AddOpeningPositionForm({
   const [assetName, setAssetName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [ticker, setTicker] = useState("");
+  const [instrumentType, setInstrumentType] = useState<InstrumentType>("stock");
+  const [sectorType, setSectorType] = useState<SectorType>("financialServices");
+  const [quoteSourceId, setQuoteSourceId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [averageCostPrice, setAverageCostPrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
@@ -105,6 +111,9 @@ export function AddOpeningPositionForm({
     setSelectedAssetId(asset.id);
     setAssetClass(asset.assetClass);
     setAssetName(asset.name);
+    setInstrumentType(asset.instrumentType ?? getDefaultAssetMetadata(asset.assetClass).instrumentType);
+    setQuoteSourceId(asset.quoteSourceId ?? asset.ticker);
+    setSectorType(asset.sectorType ?? getDefaultAssetMetadata(asset.assetClass).sectorType);
     setSymbol(asset.symbol);
     setTicker(asset.ticker);
     if (quote) {
@@ -119,10 +128,23 @@ export function AddOpeningPositionForm({
       currency: "INR",
       exchange: assetClass === "crypto" ? "CRYPTO" : "NSE",
       id,
+      instrumentType,
       name: assetName.trim(),
+      quoteSourceId: quoteSourceId.trim().toUpperCase() || ticker.trim().toUpperCase(),
+      sectorType,
       symbol: symbol.trim().toUpperCase(),
       ticker: ticker.trim().toUpperCase(),
     };
+  }
+
+  function updateAssetClass(nextAssetClass: AssetClass) {
+    const defaults = getDefaultAssetMetadata(nextAssetClass);
+
+    setAssetClass(nextAssetClass);
+    setInstrumentType(defaults.instrumentType);
+    setSectorType(defaults.sectorType);
+    clearSelectedAsset();
+    resetReview();
   }
 
   function handleReview() {
@@ -134,8 +156,11 @@ export function AddOpeningPositionForm({
       conviction,
       currentPrice,
       date,
+      instrumentType,
       notes,
+      quoteSourceId,
       quantity,
+      sectorType,
       symbol,
       ticker,
     });
@@ -229,11 +254,7 @@ export function AddOpeningPositionForm({
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
                 key={currentClass}
-                onPress={() => {
-                  setAssetClass(currentClass);
-                  clearSelectedAsset();
-                  resetReview();
-                }}
+                onPress={() => updateAssetClass(currentClass)}
                 style={({ pressed }) => [
                   styles.classChip,
                   isSelected && styles.classChipActive,
@@ -295,6 +316,47 @@ export function AddOpeningPositionForm({
             />
           </View>
         </View>
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <FormTextField
+              error={errors.instrumentType}
+              label="Instrument type"
+              onChangeText={(value) => {
+                setInstrumentType(value as InstrumentType);
+                clearSelectedAsset();
+                resetReview();
+              }}
+              placeholder="stock"
+              testID="instrument-type-input"
+              value={instrumentType}
+            />
+          </View>
+          <View style={styles.flex}>
+            <FormTextField
+              error={errors.sectorType}
+              label="Sector type"
+              onChangeText={(value) => {
+                setSectorType(value as SectorType);
+                clearSelectedAsset();
+                resetReview();
+              }}
+              placeholder="financialServices"
+              testID="sector-type-input"
+              value={sectorType}
+            />
+          </View>
+        </View>
+        <FormTextField
+          label="Quote source ID"
+          onChangeText={(value) => {
+            setQuoteSourceId(value);
+            clearSelectedAsset();
+            resetReview();
+          }}
+          placeholder="RELIANCE.NS"
+          testID="quote-source-id-input"
+          value={quoteSourceId}
+        />
       </PremiumCard>
 
       <PremiumCard>

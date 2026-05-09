@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
+import { normalizeAssetMetadata } from "@/src/domain/assets";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
@@ -22,7 +23,7 @@ export {
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
-export const portfolioSchemaVersion = 2;
+export const portfolioSchemaVersion = 3;
 
 export type RawPortfolioSnapshot = {
   assets: Asset[];
@@ -86,12 +87,15 @@ function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
     portfolioStorageKey,
   );
 
-  if (!stored || ![1, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)) {
+  if (
+    !stored ||
+    ![1, 2, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
+  ) {
     return createEmptyPortfolioSnapshot();
   }
 
   return {
-    assets: stored.assets ?? [],
+    assets: (stored.assets ?? []).map(normalizeAssetMetadata),
     cashEntries: stored.cashEntries ?? [],
     openingPositions: stored.openingPositions ?? [],
     preferences: {
@@ -140,7 +144,9 @@ export function createPortfolioStore({
   return createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
     addAsset: (asset) => {
-      set((state) => ({ assets: [...state.assets, asset] }));
+      set((state) => ({
+        assets: [...state.assets, normalizeAssetMetadata(asset)],
+      }));
       persistPortfolio(storage, get());
     },
     addCashEntry: (cashEntry) => {
@@ -192,9 +198,11 @@ export function createPortfolioStore({
     },
     schemaVersion: portfolioSchemaVersion,
     updateAsset: (asset) => {
+      const normalizedAsset = normalizeAssetMetadata(asset);
+
       set((state) => ({
         assets: state.assets.map((currentAsset) =>
-          currentAsset.id === asset.id ? asset : currentAsset,
+          currentAsset.id === asset.id ? normalizedAsset : currentAsset,
         ),
       }));
       persistPortfolio(storage, get());

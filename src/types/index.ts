@@ -1,4 +1,11 @@
-export type { Asset, AssetClass, AssetExchange, Currency } from "./asset";
+export type {
+  Asset,
+  AssetClass,
+  AssetExchange,
+  Currency,
+  InstrumentType,
+  SectorType,
+} from "./asset";
 export type { CashEntry, CashEntryType } from "./cash";
 export type { Holding } from "./holding";
 export type { OpeningPosition } from "./openingPosition";
