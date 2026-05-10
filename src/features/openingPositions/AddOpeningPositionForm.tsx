@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -17,6 +17,16 @@ import { FormTextField } from "@/src/components/forms";
 import { getDefaultAssetMetadata } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
+import {
+  searchAssetLookupResults as defaultSearchAssetLookupResults,
+  type AssetLookupResult,
+  type AssetLookupSearchResult,
+} from "@/src/services/assetLookup";
+import {
+  resolveQuote as defaultResolveQuote,
+  type QuoteResult,
+  type ResolveQuoteInput,
+} from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type {
@@ -32,6 +42,10 @@ import { createId } from "@/src/utils";
 import { validateOpeningPositionForm } from "./openingPositionForm";
 
 type AddOpeningPositionFormProps = {
+  resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
+  searchAssetLookupResults?: (input: {
+    query: string;
+  }) => Promise<AssetLookupSearchResult>;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -55,9 +69,16 @@ function formatSignedINR(value: number) {
 }
 
 export function AddOpeningPositionForm({
+  resolveQuote = defaultResolveQuote,
+  searchAssetLookupResults = defaultSearchAssetLookupResults,
   store = getPortfolioStore(),
 }: AddOpeningPositionFormProps) {
   const snapshot = usePortfolioSnapshot(store);
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
+  const [isLookupSearching, setIsLookupSearching] = useState(false);
+  const [lookupStatus, setLookupStatus] = useState("");
+  const [quoteStatus, setQuoteStatus] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>("stock");
   const [assetName, setAssetName] = useState("");
@@ -99,6 +120,64 @@ export function AddOpeningPositionForm({
     setSuccessMessage("");
   }
 
+  useEffect(() => {
+    const trimmedQuery = lookupQuery.trim();
+
+    if (trimmedQuery.length === 0) {
+      setLookupResults([]);
+      setLookupStatus("");
+      setIsLookupSearching(false);
+      return undefined;
+    }
+
+    if (trimmedQuery.length < 2) {
+      setLookupResults([]);
+      setLookupStatus("Type at least 2 characters to search.");
+      setIsLookupSearching(false);
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    setIsLookupSearching(true);
+    setLookupStatus("Searching public asset directories...");
+
+    const timeout = setTimeout(async () => {
+      try {
+        const result = await searchAssetLookupResults({ query: trimmedQuery });
+
+        if (isCancelled) {
+          return;
+        }
+
+        setLookupResults(result.results);
+        setLookupStatus(
+          result.results.length > 0
+            ? "Select a result to autofill asset details."
+            : "No public result found. You can enter details manually.",
+        );
+
+        if (result.failures.length > 0 && result.results.length === 0) {
+          setLookupStatus("Lookup unavailable. You can enter details manually.");
+        }
+      } catch {
+        if (!isCancelled) {
+          setLookupResults([]);
+          setLookupStatus("Lookup unavailable. You can enter details manually.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLookupSearching(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [lookupQuery, searchAssetLookupResults]);
+
   function clearSelectedAsset() {
     if (selectedAssetId) {
       setSelectedAssetId("");
@@ -137,6 +216,45 @@ export function AddOpeningPositionForm({
       symbol: symbol.trim().toUpperCase(),
       ticker: assetClass === "crypto" ? trimmedTicker : trimmedTicker.toUpperCase(),
     };
+  }
+
+  function buildLookupAsset(result: AssetLookupResult): Asset {
+    return {
+      assetClass: result.assetClass,
+      currency: result.currency,
+      exchange: result.exchange,
+      id: createId("asset"),
+      instrumentType: result.instrumentType,
+      name: result.name,
+      quoteSourceId: result.quoteSourceId,
+      sectorType: result.sectorType,
+      symbol: result.symbol,
+      ticker: result.ticker,
+    };
+  }
+
+  async function selectLookupResult(result: AssetLookupResult) {
+    setSelectedAssetId("");
+    setAssetClass(result.assetClass);
+    setAssetName(result.name);
+    setInstrumentType(result.instrumentType);
+    setQuoteSourceId(result.quoteSourceId);
+    setSectorType(result.sectorType);
+    setSymbol(result.symbol);
+    setTicker(result.ticker);
+    setQuoteStatus("Fetching live current price...");
+    resetReview();
+
+    const quoteResult = await resolveQuote({ asset: buildLookupAsset(result) });
+
+    if (quoteResult.ok) {
+      setCurrentPrice(quoteResult.quote.price.toString());
+      setQuoteStatus(`Live price autofilled from ${result.sourceLabel}.`);
+      return;
+    }
+
+    setCurrentPrice("");
+    setQuoteStatus("Live price unavailable. Enter current price manually.");
   }
 
   function updateAssetClass(nextAssetClass: AssetClass) {
@@ -247,6 +365,55 @@ export function AddOpeningPositionForm({
 
       <PremiumCard>
         <SectionHeader title="Asset" />
+        <FormTextField
+          label="Search asset"
+          onChangeText={(value) => {
+            setLookupQuery(value);
+            setQuoteStatus("");
+          }}
+          placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
+          testID="asset-lookup-input"
+          value={lookupQuery}
+        />
+        {lookupStatus ? (
+          <AppText color="secondary" variant="caption">
+            {isLookupSearching ? "Searching..." : lookupStatus}
+          </AppText>
+        ) : null}
+        {lookupResults.length > 0 ? (
+          <View style={styles.lookupResults}>
+            {lookupResults.map((result) => (
+              <Pressable
+                accessibilityRole="button"
+                key={result.id}
+                onPress={() => {
+                  void selectLookupResult(result);
+                }}
+                style={({ pressed }) => [
+                  styles.lookupResult,
+                  pressed && styles.pressed,
+                ]}
+                testID={`asset-lookup-result-${result.id}`}
+              >
+                <CategoryIcon assetClass={result.assetClass} size={18} />
+                <View style={styles.lookupResultCopy}>
+                  <AppText weight="bold">{result.name}</AppText>
+                  <AppText color="secondary" variant="caption">
+                    {result.symbol} • {result.ticker} • {result.sourceLabel}
+                  </AppText>
+                </View>
+                <AppText color="secondary" variant="caption" weight="bold">
+                  {assetClassLabel(result.assetClass)}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        {quoteStatus ? (
+          <AppText color="secondary" variant="caption">
+            {quoteStatus}
+          </AppText>
+        ) : null}
         <View style={styles.classRow}>
           {assetClasses.map((currentClass) => {
             const isSelected = assetClass === currentClass;
@@ -620,6 +787,21 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  lookupResult: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  lookupResultCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  lookupResults: {
+    gap: spacing.sm,
   },
   negativeText: {
     color: colors.loss,
