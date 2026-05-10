@@ -10,6 +10,7 @@ Android Emulator, not a physical Android phone.
 - [ ] `npm run doctor` reports 17/17 checks passing.
 - [ ] `npm run android:doctor` reports adb and emulator readiness.
 - [ ] `npm run android:smoke -- --strict` finds `com.abdulshaikh.cogvest`.
+- [ ] `docs/testing/excel-parity-checklist.md` is completed or every failed row has a linked defect.
 
 ## Local APK Gate
 
@@ -27,6 +28,8 @@ Android Emulator, not a physical Android phone.
 - [ ] Invalid trade data shows validation errors.
 - [ ] Cash can be added.
 - [ ] Cash balance appears on Dashboard.
+- [ ] Monthly Progress can save and update month-end snapshots.
+- [ ] Monthly Progress shows monthly gain, gain %, monthly investment, savings rate, and asset split.
 - [ ] Value masking can be toggled from Settings.
 - [ ] Masked state hides wealth values but not quantities or percentages.
 - [ ] Quote refresh or fallback state is visible where holdings exist.
@@ -47,6 +50,7 @@ Android version:
 APK source:
 Installed package:
 Commands run:
+Excel parity checklist:
 Maestro status:
 Result:
 Defects logged:

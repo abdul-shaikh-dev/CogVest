@@ -2,7 +2,8 @@
 
 V1 verification is PC-only. A physical Android phone is not required. The
 canonical feature matrix is `docs/testing/v1-core-flow-test-matrix.md`, and the
-release checklist is `docs/testing/v1-pc-verification-checklist.md`.
+release checklist is `docs/testing/v1-pc-verification-checklist.md`. Excel
+tracker parity is gated by `docs/testing/excel-parity-checklist.md`.
 
 ## Automated Tests
 
@@ -18,6 +19,9 @@ Run before release gate:
 ```bash
 npm run test:v1:pc
 ```
+
+After the command passes, complete `docs/testing/excel-parity-checklist.md` on
+Android Emulator or log defects for failed rows.
 
 ## Unit Tests
 
@@ -39,9 +43,11 @@ Cover:
 - Empty Dashboard.
 - Empty Holdings.
 - Add Holding validation messages.
+- Add Holding opening-position flow.
 - Conviction selector select/deselect.
 - MaskedValue display.
 - Cash add/withdraw rows.
+- Monthly Progress snapshot save/update.
 
 ## Android Emulator QA
 
@@ -55,6 +61,8 @@ Cover:
 - Restart app and confirm MMKV persistence.
 - Pull-to-refresh quotes.
 - Confirm no backend/auth/cloud.
+- Complete the Excel parity questions in
+  `docs/testing/excel-parity-checklist.md`.
 
 ## E2E Scope
 

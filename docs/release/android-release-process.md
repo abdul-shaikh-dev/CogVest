@@ -59,6 +59,7 @@ V1 dev-complete requires:
 - local APK builds on the developer PC
 - local APK installs on Android Emulator
 - core V1 flows pass through `docs/testing/v1-core-flow-test-matrix.md`
+- Excel parity passes through `docs/testing/excel-parity-checklist.md`
 - defects are logged with `docs/testing/v1-defect-report-template.md`
 
 V1 release-candidate requires:
