@@ -65,6 +65,8 @@ describe("HoldingsScreen", () => {
     expect(getByText("Reliance Industries")).toBeTruthy();
     expect(getByText("RELIANCE")).toBeTruthy();
     expect(getByText("Qty 2")).toBeTruthy();
+    expect(getByText("Invested ₹200.00")).toBeTruthy();
+    expect(getByText("Initial 100.00%")).toBeTruthy();
     expect(getByText("Avg ₹100.00")).toBeTruthy();
     expect(getAllByText("₹250.00").length).toBeGreaterThan(0);
     expect(getByText("+₹50.00")).toBeTruthy();

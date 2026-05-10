@@ -9,6 +9,7 @@ import { AppText, MaskedValue } from "../common";
 
 type HoldingCardProps = {
   allocationPct?: number;
+  initialAllocationPct?: number;
   holding: Holding;
   masked?: boolean;
 };
@@ -25,6 +26,7 @@ function formatPnLAmount(holding: Holding) {
 
 export function HoldingCard({
   allocationPct,
+  initialAllocationPct,
   holding,
   masked = false,
 }: HoldingCardProps) {
@@ -76,6 +78,14 @@ export function HoldingCard({
 
       <View style={styles.metrics}>
         <AppText color="secondary">Qty {formatQuantity(holding.totalUnits)}</AppText>
+        <AppText color="secondary">
+          Invested {formatINR(holding.totalInvested)}
+        </AppText>
+        {initialAllocationPct !== undefined ? (
+          <AppText color="secondary">
+            Initial {formatPercentage(initialAllocationPct).replace("+", "")}
+          </AppText>
+        ) : null}
         <AppText color="secondary">
           Avg {formatINR(holding.averageCostPrice)}
         </AppText>
