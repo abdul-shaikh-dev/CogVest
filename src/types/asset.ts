@@ -11,8 +11,11 @@ export type InstrumentType =
   | "debt"
   | "etf"
   | "fixedDeposit"
+  | "liquidFund"
   | "mutualFund"
   | "other"
+  | "ppf"
+  | "arbitrageFund"
   | "stock";
 
 export type SectorType =

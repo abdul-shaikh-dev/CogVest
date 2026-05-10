@@ -100,6 +100,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Asset name"), "Sovereign Gold Bond");
     fireEvent.changeText(getByLabelText("Symbol"), "SGB");
     fireEvent.changeText(getByLabelText("Ticker"), "SGB");
+    fireEvent.changeText(getByLabelText("Instrument type"), "ppf");
     fireEvent.changeText(getByLabelText("Quantity"), "10");
     fireEvent.changeText(getByLabelText("Average cost"), "5300");
     fireEvent.changeText(getByLabelText("Current price"), "5711");
@@ -113,6 +114,41 @@ describe("AddOpeningPositionForm", () => {
     });
 
     expect(store.getState().assets[0]?.assetClass).toBe("debt");
+    expect(store.getState().assets[0]?.instrumentType).toBe("ppf");
+    expect(store.getState().assets[0]?.sectorType).toBe("fixedIncome");
     expect(store.getState().trades).toEqual([]);
+  });
+
+  it("creates a crypto opening position with a case-sensitive quote source", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    fireEvent.press(getByTestId("asset-class-crypto"));
+    fireEvent.changeText(getByLabelText("Asset name"), "Bitcoin");
+    fireEvent.changeText(getByLabelText("Symbol"), "BTC");
+    fireEvent.changeText(getByLabelText("Ticker"), "bitcoin");
+    fireEvent.changeText(getByLabelText("Quote source ID"), "bitcoin");
+    fireEvent.changeText(getByLabelText("Quantity"), "0.05");
+    fireEvent.changeText(getByLabelText("Average cost"), "5000000");
+    fireEvent.changeText(getByLabelText("Current price"), "5800000");
+    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+
+    fireEvent.press(getByText("Review Holding"));
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions).toHaveLength(1);
+    });
+
+    expect(store.getState().assets[0]).toMatchObject({
+      assetClass: "crypto",
+      exchange: "CRYPTO",
+      instrumentType: "crypto",
+      quoteSourceId: "bitcoin",
+      sectorType: "digitalAsset",
+      ticker: "bitcoin",
+    });
   });
 });

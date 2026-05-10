@@ -16,6 +16,20 @@ export async function resolveQuote({
   manualPrice,
   now,
 }: ResolveQuoteInput): Promise<QuoteResult> {
+  if (asset.assetClass === "debt") {
+    if (manualPrice !== undefined) {
+      return {
+        ok: true,
+        quote: createManualQuote({ asset, now, price: manualPrice }),
+      };
+    }
+
+    return {
+      error: "Debt assets require a manual current price.",
+      ok: false,
+    };
+  }
+
   const result =
     asset.assetClass === "crypto"
       ? await fetchCoinGeckoQuote({ asset, fetcher, now })

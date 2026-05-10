@@ -123,6 +123,8 @@ export function AddOpeningPositionForm({
   }
 
   function buildManualAsset(id: string): Asset {
+    const trimmedTicker = ticker.trim();
+
     return {
       assetClass,
       currency: "INR",
@@ -130,10 +132,10 @@ export function AddOpeningPositionForm({
       id,
       instrumentType,
       name: assetName.trim(),
-      quoteSourceId: quoteSourceId.trim().toUpperCase() || ticker.trim().toUpperCase(),
+      quoteSourceId: quoteSourceId.trim() || trimmedTicker,
       sectorType,
       symbol: symbol.trim().toUpperCase(),
-      ticker: ticker.trim().toUpperCase(),
+      ticker: assetClass === "crypto" ? trimmedTicker : trimmedTicker.toUpperCase(),
     };
   }
 

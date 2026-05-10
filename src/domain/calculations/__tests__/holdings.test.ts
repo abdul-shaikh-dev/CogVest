@@ -34,6 +34,17 @@ const bitcoin: Asset = {
   ticker: "bitcoin",
 };
 
+const ppf: Asset = {
+  assetClass: "debt",
+  currency: "INR",
+  id: "asset-ppf",
+  instrumentType: "ppf",
+  name: "Public Provident Fund",
+  sectorType: "fixedIncome",
+  symbol: "PPF",
+  ticker: "PPF",
+};
+
 function trade(overrides: Partial<Trade>): Trade {
   return {
     assetId: reliance.id,
@@ -213,6 +224,63 @@ describe("holding calculations", () => {
     expect(holding.totalInvested).toBe(6000);
     expect(holding.currentValue).toBe(9000);
   });
+
+  it("derives debt holdings from manual opening-position prices", () => {
+    const holdings = calculateHoldings({
+      assets: [ppf],
+      openingPositions: [
+        openingPosition({
+          assetId: ppf.id,
+          averageCostPrice: 1,
+          currentPrice: 1.08,
+          quantity: 150000,
+        }),
+      ],
+      quoteCache: {},
+      trades: [],
+    });
+
+    expect(holdings[0]).toMatchObject({
+      asset: ppf,
+      averageCostPrice: 1,
+      currentPrice: 1.08,
+      currentValue: 162000,
+      totalInvested: 150000,
+      totalUnits: 150000,
+      unrealisedPnL: 12000,
+    });
+  });
+
+  it("derives crypto holdings in INR from quote cache", () => {
+    const holdings = calculateHoldings({
+      assets: [bitcoin],
+      openingPositions: [
+        openingPosition({
+          assetId: bitcoin.id,
+          averageCostPrice: 5000000,
+          currentPrice: 5700000,
+          quantity: 0.05,
+        }),
+      ],
+      quoteCache: {
+        [bitcoin.id]: {
+          assetId: bitcoin.id,
+          asOf: "2026-05-10T00:00:00.000Z",
+          currency: "INR",
+          price: 5800000,
+          source: "coingecko",
+        },
+      },
+      trades: [],
+    });
+
+    expect(holdings[0]).toMatchObject({
+      currentPrice: 5800000,
+      currentValue: 290000,
+      totalInvested: 250000,
+      unrealisedPnL: 40000,
+    });
+  });
 });
 
 describe("portfolio calculations", () => {
@@ -285,16 +353,29 @@ describe("portfolio calculations", () => {
         }),
       ],
     });
+    const debtHolding = calculateHolding({
+      asset: ppf,
+      currentPrice: 1,
+      openingPositions: [
+        openingPosition({
+          assetId: ppf.id,
+          averageCostPrice: 1,
+          quantity: 3800,
+        }),
+      ],
+      trades: [],
+    });
 
     const allocation = calculateAllocation({
       cashBalance: 3800,
-      holdings: [stockHolding, cryptoHolding],
+      holdings: [stockHolding, cryptoHolding, debtHolding],
     });
 
     expect(allocation).toEqual([
-      { assetClass: "crypto", percentage: 50, value: 5000 },
-      { assetClass: "cash", percentage: 38, value: 3800 },
-      { assetClass: "stock", percentage: 12, value: 1200 },
+      { assetClass: "crypto", percentage: 36.23, value: 5000 },
+      { assetClass: "debt", percentage: 27.54, value: 3800 },
+      { assetClass: "cash", percentage: 27.54, value: 3800 },
+      { assetClass: "stock", percentage: 8.7, value: 1200 },
     ]);
   });
 

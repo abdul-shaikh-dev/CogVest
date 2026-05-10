@@ -106,6 +106,8 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
   }
 
   function buildManualAsset(): Asset {
+    const trimmedTicker = ticker.trim();
+
     return {
       assetClass: "stock",
       currency: "INR",
@@ -113,10 +115,10 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       id: createId("asset"),
       instrumentType,
       name: assetName.trim(),
-      quoteSourceId: quoteSourceId.trim().toUpperCase() || ticker.trim().toUpperCase(),
+      quoteSourceId: quoteSourceId.trim() || trimmedTicker,
       sectorType,
       symbol: symbol.trim().toUpperCase(),
-      ticker: ticker.trim().toUpperCase(),
+      ticker: trimmedTicker.toUpperCase(),
     };
   }
 
