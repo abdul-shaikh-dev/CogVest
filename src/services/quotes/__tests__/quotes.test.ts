@@ -26,6 +26,18 @@ const niftyBees: Asset = {
   ticker: "NIFTYBEES.NS",
 };
 
+const ppf: Asset = {
+  assetClass: "debt",
+  currency: "INR",
+  id: "asset-ppf",
+  instrumentType: "ppf",
+  name: "Public Provident Fund",
+  quoteSourceId: "PPF",
+  sectorType: "fixedIncome",
+  symbol: "PPF",
+  ticker: "PPF",
+};
+
 const bitcoin: Asset = {
   assetClass: "crypto",
   currency: "INR",
@@ -213,6 +225,48 @@ describe("quote resolver", () => {
 
     expect(result.ok).toBe(true);
     expect(result.ok && result.quote.source).toBe("coingecko");
+  });
+
+  it("uses manual fallback directly for debt assets", async () => {
+    const fetcher = jest.fn();
+
+    const result = await resolveQuote({
+      asset: ppf,
+      fetcher,
+      manualPrice: 1,
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: true,
+      quote: {
+        assetId: ppf.id,
+        asOf: "2026-04-26T10:00:00.000Z",
+        currency: "INR",
+        price: 1,
+        source: "manual",
+      },
+    });
+  });
+
+  it("keeps crypto manual fallback when CoinGecko fails", async () => {
+    const result = await resolveQuote({
+      asset: bitcoin,
+      fetcher: jest.fn().mockResolvedValue(response({}, false)),
+      manualPrice: 5700000,
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      fallbackQuote: {
+        assetId: bitcoin.id,
+        currency: "INR",
+        price: 5700000,
+        source: "manual",
+      },
+      ok: false,
+    });
   });
 
   it("uses manual fallback when provider fetch fails", async () => {

@@ -109,4 +109,72 @@ describe("useDashboard", () => {
       requiredTradeCount: 5,
     });
   });
+
+  it("includes debt and crypto opening positions in consolidated allocation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const debtAsset: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "asset-ppf",
+      instrumentType: "ppf",
+      name: "Public Provident Fund",
+      sectorType: "fixedIncome",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    const cryptoAsset: Asset = {
+      assetClass: "crypto",
+      currency: "INR",
+      exchange: "CRYPTO",
+      id: "asset-btc",
+      instrumentType: "crypto",
+      name: "Bitcoin",
+      quoteSourceId: "bitcoin",
+      sectorType: "digitalAsset",
+      symbol: "BTC",
+      ticker: "bitcoin",
+    };
+
+    store.getState().addAsset(debtAsset);
+    store.getState().addAsset(cryptoAsset);
+    store.getState().addOpeningPosition({
+      assetId: debtAsset.id,
+      averageCostPrice: 950,
+      currentPrice: 1000,
+      date: "2026-04-20",
+      id: "opening-ppf",
+      quantity: 100,
+    });
+    store.getState().addOpeningPosition({
+      assetId: cryptoAsset.id,
+      averageCostPrice: 5000000,
+      currentPrice: 5800000,
+      date: "2026-04-20",
+      id: "opening-btc",
+      quantity: 0.02,
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: cryptoAsset.id,
+      currency: "INR",
+      price: 6000000,
+      source: "coingecko",
+    });
+    store.getState().addCashEntry({
+      amount: 30000,
+      date: "2026-04-22",
+      id: "cash-1",
+      label: "Broker cash",
+      type: "addition",
+    });
+
+    const { result } = renderHook(() => useDashboard({ store }));
+
+    expect(result.current.totalValue).toBe(250000);
+    expect(result.current.allocation).toEqual([
+      { assetClass: "crypto", percentage: 48, value: 120000 },
+      { assetClass: "debt", percentage: 40, value: 100000 },
+      { assetClass: "cash", percentage: 12, value: 30000 },
+    ]);
+  });
 });

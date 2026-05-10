@@ -136,8 +136,8 @@ export function validateOpeningPositionForm(
       instrumentType: values.instrumentType as InstrumentType,
       notes: values.notes?.trim() || undefined,
       quoteSourceId:
-        values.quoteSourceId?.trim().toUpperCase() ||
-        values.ticker.trim().toUpperCase(),
+        values.quoteSourceId?.trim() ||
+        values.ticker.trim(),
       quantity: quantity as number,
       sectorType: values.sectorType as SectorType,
       symbol: values.symbol.trim().toUpperCase(),

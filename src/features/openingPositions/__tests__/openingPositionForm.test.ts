@@ -29,7 +29,7 @@ describe("validateOpeningPositionForm", () => {
         date: "2026-04-15",
         instrumentType: "stock",
         notes: "Core holding",
-        quoteSourceId: "RELIANCE-CUSTOM",
+        quoteSourceId: "reliance-custom",
         quantity: 25,
         sectorType: "energy",
         symbol: "RELIANCE",

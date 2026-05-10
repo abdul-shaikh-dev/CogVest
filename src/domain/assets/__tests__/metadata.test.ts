@@ -39,12 +39,12 @@ describe("asset metadata", () => {
     expect(
       normalizeAssetMetadata({
         ...baseAsset,
-        instrumentType: "mutualFund",
+        instrumentType: "ppf",
         quoteSourceId: "custom-source",
         sectorType: "technology",
       }),
     ).toMatchObject({
-      instrumentType: "mutualFund",
+      instrumentType: "ppf",
       quoteSourceId: "custom-source",
       sectorType: "technology",
     });
