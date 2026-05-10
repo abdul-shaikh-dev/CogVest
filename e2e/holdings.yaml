@@ -2,7 +2,13 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "dashboard-screen"
 - openLink: "cogvest:///add-holding"
+- assertVisible:
+    id: "add-holding-screen"
+- assertVisible:
+    id: "add-holding-phase-asset"
 - tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
@@ -12,28 +18,39 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "ticker-input"
 - inputText: "RELIANCE.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- assertVisible:
+    id: "add-holding-phase-class"
+- tapOn:
+    id: "continue-position-button"
+- assertVisible:
+    id: "add-holding-phase-position"
 - tapOn:
     id: "quantity-input"
 - inputText: "2"
 - tapOn:
+    id: "average-cost-input"
+- inputText: "90"
+- tapOn:
     id: "price-input"
 - inputText: "100"
 - hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- assertVisible:
+    id: "add-holding-phase-review"
+- assertVisible:
+    id: "derived-preview"
 - scrollUntilVisible:
     element:
-      id: "review-trade-button"
+      id: "save-holding-button"
     direction: DOWN
 - tapOn:
-    id: "review-trade-button"
-- assertVisible: "Derived preview"
-- scrollUntilVisible:
-    element:
-      id: "save-trade-button"
-    direction: DOWN
-- tapOn:
-    id: "save-trade-button"
-- tapOn:
-    id: "tab-holdings"
+    id: "save-holding-button"
+- assertVisible: "Opening position saved."
+- openLink: "cogvest:///holdings"
 - assertVisible:
     id: "holdings-screen"
 - assertVisible: "Reliance Industries"

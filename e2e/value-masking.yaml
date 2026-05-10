@@ -2,8 +2,12 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "dashboard-screen"
 - stopApp
 - openLink: "cogvest:///settings"
+- assertVisible:
+    id: "settings-screen"
 - assertVisible: "Value masking"
 - tapOn:
     id: "value-mask-toggle"

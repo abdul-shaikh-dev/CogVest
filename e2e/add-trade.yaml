@@ -2,6 +2,8 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "dashboard-screen"
 - openLink: "cogvest:///add-holding"
 - assertVisible:
     id: "add-holding-screen"
@@ -15,9 +17,6 @@ appId: com.abdulshaikh.cogvest
 - inputText: "RELIANCE"
 - tapOn:
     id: "ticker-input"
-- inputText: "RELIANCE.NS"
-- tapOn:
-    id: "quote-source-id-input"
 - inputText: "RELIANCE.NS"
 - hideKeyboard
 - tapOn:
