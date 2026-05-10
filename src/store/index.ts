@@ -6,6 +6,7 @@ import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
   Asset,
   CashEntry,
+  MonthlySnapshot,
   OpeningPosition,
   Preferences,
   Quote,
@@ -23,11 +24,12 @@ export {
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
-export const portfolioSchemaVersion = 3;
+export const portfolioSchemaVersion = 4;
 
 export type RawPortfolioSnapshot = {
   assets: Asset[];
   cashEntries: CashEntry[];
+  monthlySnapshots: MonthlySnapshot[];
   openingPositions: OpeningPosition[];
   preferences: Preferences;
   schemaVersion: typeof portfolioSchemaVersion;
@@ -37,16 +39,19 @@ export type RawPortfolioSnapshot = {
 export type PortfolioStoreState = RawPortfolioSnapshot & {
   addAsset: (asset: Asset) => void;
   addCashEntry: (cashEntry: CashEntry) => void;
+  addMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
   removeCashEntry: (cashEntryId: string) => void;
+  removeMonthlySnapshot: (monthlySnapshotId: string) => void;
   removeOpeningPosition: (openingPositionId: string) => void;
   removeTrade: (tradeId: string) => void;
   updateAsset: (asset: Asset) => void;
   updateCashEntry: (cashEntry: CashEntry) => void;
+  updateMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
   updateTrade: (trade: Trade) => void;
@@ -69,6 +74,7 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
   return {
     assets: [],
     cashEntries: [],
+    monthlySnapshots: [],
     openingPositions: [],
     preferences: createDefaultPreferences(),
     schemaVersion: portfolioSchemaVersion,
@@ -89,7 +95,7 @@ function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
 
   if (
     !stored ||
-    ![1, 2, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
+    ![1, 2, 3, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
   ) {
     return createEmptyPortfolioSnapshot();
   }
@@ -97,6 +103,7 @@ function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
   return {
     assets: (stored.assets ?? []).map(normalizeAssetMetadata),
     cashEntries: stored.cashEntries ?? [],
+    monthlySnapshots: stored.monthlySnapshots ?? [],
     openingPositions: stored.openingPositions ?? [],
     preferences: {
       ...createDefaultPreferences(),
@@ -117,6 +124,7 @@ function selectRawSnapshot(
   return {
     assets: state.assets,
     cashEntries: state.cashEntries,
+    monthlySnapshots: state.monthlySnapshots,
     openingPositions: state.openingPositions,
     preferences: state.preferences,
     schemaVersion: portfolioSchemaVersion,
@@ -153,6 +161,12 @@ export function createPortfolioStore({
       set((state) => ({ cashEntries: [...state.cashEntries, cashEntry] }));
       persistPortfolio(storage, get());
     },
+    addMonthlySnapshot: (monthlySnapshot) => {
+      set((state) => ({
+        monthlySnapshots: [...state.monthlySnapshots, monthlySnapshot],
+      }));
+      persistPortfolio(storage, get());
+    },
     addOpeningPosition: (openingPosition) => {
       set((state) => ({
         openingPositions: [...state.openingPositions, openingPosition],
@@ -178,6 +192,14 @@ export function createPortfolioStore({
       set((state) => ({
         cashEntries: state.cashEntries.filter(
           (cashEntry) => cashEntry.id !== cashEntryId,
+        ),
+      }));
+      persistPortfolio(storage, get());
+    },
+    removeMonthlySnapshot: (monthlySnapshotId) => {
+      set((state) => ({
+        monthlySnapshots: state.monthlySnapshots.filter(
+          (monthlySnapshot) => monthlySnapshot.id !== monthlySnapshotId,
         ),
       }));
       persistPortfolio(storage, get());
@@ -211,6 +233,16 @@ export function createPortfolioStore({
       set((state) => ({
         cashEntries: state.cashEntries.map((currentEntry) =>
           currentEntry.id === cashEntry.id ? cashEntry : currentEntry,
+        ),
+      }));
+      persistPortfolio(storage, get());
+    },
+    updateMonthlySnapshot: (monthlySnapshot) => {
+      set((state) => ({
+        monthlySnapshots: state.monthlySnapshots.map((currentSnapshot) =>
+          currentSnapshot.id === monthlySnapshot.id
+            ? monthlySnapshot
+            : currentSnapshot,
         ),
       }));
       persistPortfolio(storage, get());

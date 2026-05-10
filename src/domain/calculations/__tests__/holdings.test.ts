@@ -5,6 +5,7 @@ import {
   calculateHolding,
   calculateHoldings,
   calculateInstrumentAllocation,
+  calculateMonthlyProgressSummaries,
   calculatePortfolioDayChange,
   calculatePortfolioRollupTotals,
   calculatePortfolioTotal,
@@ -13,6 +14,7 @@ import {
   getConvictionReadiness,
 } from "@/src/domain/calculations";
 import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
+import type { MonthlySnapshot } from "@/src/types";
 
 const reliance: Asset = {
   assetClass: "stock",
@@ -467,6 +469,67 @@ describe("portfolio calculations", () => {
       totalCurrentValue: 3500,
       totalInvested: 2900,
     });
+  });
+
+  it("derives monthly progression summaries from persisted snapshots", () => {
+    const snapshots: MonthlySnapshot[] = [
+      {
+        cashValue: 120000,
+        cryptoValue: 40000,
+        debtValue: 300000,
+        equityValue: 800000,
+        id: "snapshot-2026-04",
+        investedValue: 1000000,
+        month: "2026-04",
+        monthlyExpense: 30000,
+        monthlyInvestment: 50000,
+        notes: "April close",
+        portfolioValue: 1260000,
+        salary: 150000,
+      },
+      {
+        cashValue: 140000,
+        cryptoValue: 45000,
+        debtValue: 320000,
+        equityValue: 880000,
+        id: "snapshot-2026-05",
+        investedValue: 1060000,
+        month: "2026-05",
+        monthlyExpense: 40000,
+        monthlyInvestment: 60000,
+        portfolioValue: 1385000,
+        salary: 160000,
+      },
+    ];
+
+    expect(calculateMonthlyProgressSummaries(snapshots)).toEqual([
+      {
+        assetSnapshot: [
+          { assetClass: "stock", percentage: 63.54, value: 880000 },
+          { assetClass: "debt", percentage: 23.1, value: 320000 },
+          { assetClass: "cash", percentage: 10.11, value: 140000 },
+          { assetClass: "crypto", percentage: 3.25, value: 45000 },
+        ],
+        expenseRate: 25,
+        monthlyGain: 125000,
+        monthlyGainPct: 9.92,
+        savingsRate: 37.5,
+        snapshot: snapshots[1],
+      },
+      {
+        assetSnapshot: [
+          { assetClass: "stock", percentage: 63.49, value: 800000 },
+          { assetClass: "debt", percentage: 23.81, value: 300000 },
+          { assetClass: "cash", percentage: 9.52, value: 120000 },
+          { assetClass: "crypto", percentage: 3.17, value: 40000 },
+        ],
+        expenseRate: 20,
+        monthlyGain: 0,
+        monthlyGainPct: 0,
+        savingsRate: 33.33,
+        snapshot: snapshots[0],
+      },
+    ]);
   });
 });
 

@@ -6,6 +6,7 @@ import {
 } from "@/src/store";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
+import type { MonthlySnapshot } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -55,6 +56,21 @@ const quote: Quote = {
   source: "yahoo",
 };
 
+const monthlySnapshot: MonthlySnapshot = {
+  cashValue: 120000,
+  cryptoValue: 40000,
+  debtValue: 300000,
+  equityValue: 800000,
+  id: "snapshot-2026-05",
+  investedValue: 1060000,
+  month: "2026-05",
+  monthlyExpense: 40000,
+  monthlyInvestment: 60000,
+  notes: "May close",
+  portfolioValue: 1385000,
+  salary: 160000,
+};
+
 describe("portfolio store", () => {
   it("starts with empty raw data and V1 preferences", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -63,6 +79,7 @@ describe("portfolio store", () => {
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
+    expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().preferences).toEqual(createDefaultPreferences());
   });
 
@@ -73,12 +90,14 @@ describe("portfolio store", () => {
     store.getState().addOpeningPosition(openingPosition);
     store.getState().addTrade(trade);
     store.getState().addCashEntry(cashEntry);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
     store.getState().updatePreferences({ maskWealthValues: true });
 
     expect(store.getState().assets).toEqual([asset]);
     expect(store.getState().openingPositions).toEqual([openingPosition]);
     expect(store.getState().trades).toEqual([trade]);
     expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
     expect(store.getState().preferences.maskWealthValues).toBe(true);
 
     store.getState().updateOpeningPosition({
@@ -88,15 +107,24 @@ describe("portfolio store", () => {
 
     expect(store.getState().openingPositions[0]?.quantity).toBe(30);
 
+    store.getState().updateMonthlySnapshot({
+      ...monthlySnapshot,
+      monthlyInvestment: 70000,
+    });
+
+    expect(store.getState().monthlySnapshots[0]?.monthlyInvestment).toBe(70000);
+
     store.getState().removeOpeningPosition(openingPosition.id);
     store.getState().removeTrade(trade.id);
     store.getState().removeCashEntry(cashEntry.id);
+    store.getState().removeMonthlySnapshot(monthlySnapshot.id);
     store.getState().removeAsset(asset.id);
 
     expect(store.getState().assets).toEqual([]);
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
+    expect(store.getState().monthlySnapshots).toEqual([]);
   });
 
   it("persists only raw portfolio data under the portfolio key", () => {
@@ -107,20 +135,23 @@ describe("portfolio store", () => {
     store.getState().addOpeningPosition(openingPosition);
     store.getState().addTrade(trade);
     store.getState().addCashEntry(cashEntry);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
 
     const persisted = storage.getItem(portfolioStorageKey);
 
     expect(persisted).toEqual({
       assets: [asset],
       cashEntries: [cashEntry],
+      monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 3,
+      schemaVersion: 4,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
     expect(persisted).not.toHaveProperty("allocation");
     expect(persisted).not.toHaveProperty("dashboardTotal");
+    expect(persisted).not.toHaveProperty("monthlyProgressSummaries");
   });
 
   it("persists quotes separately from the main raw portfolio snapshot", () => {
@@ -141,9 +172,10 @@ describe("portfolio store", () => {
     storage.setItem(portfolioStorageKey, {
       assets: [asset],
       cashEntries: [cashEntry],
+      monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: { ...createDefaultPreferences(), maskWealthValues: true },
-      schemaVersion: 3,
+      schemaVersion: 4,
       trades: [trade],
     });
     storage.setItem(quoteCacheStorageKey, {
@@ -156,6 +188,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([openingPosition]);
     expect(store.getState().trades).toEqual([trade]);
     expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
     expect(store.getState().preferences.maskWealthValues).toBe(true);
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
   });
@@ -174,8 +207,9 @@ describe("portfolio store", () => {
 
     expect(store.getState().assets).toEqual([asset]);
     expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(3);
+    expect(store.getState().schemaVersion).toBe(4);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -210,6 +244,23 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(3);
+    expect(store.getState().schemaVersion).toBe(4);
+  });
+
+  it("migrates V3 snapshots by defaulting monthly snapshots", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [asset],
+      cashEntries: [cashEntry],
+      openingPositions: [openingPosition],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 3,
+      trades: [trade],
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().monthlySnapshots).toEqual([]);
+    expect(store.getState().schemaVersion).toBe(4);
   });
 });

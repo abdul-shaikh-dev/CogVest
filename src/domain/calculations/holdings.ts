@@ -3,6 +3,7 @@ import type {
   AssetClass,
   CashEntry,
   Holding,
+  MonthlySnapshot,
   OpeningPosition,
   QuoteCache,
   Trade,
@@ -55,6 +56,21 @@ export type PortfolioRollupTotals = {
   pnlPct: number;
   totalCurrentValue: number;
   totalInvested: number;
+};
+
+export type MonthlyAssetSnapshotItem = {
+  assetClass: AssetClass;
+  percentage: number;
+  value: number;
+};
+
+export type MonthlyProgressSummary = {
+  assetSnapshot: MonthlyAssetSnapshotItem[];
+  expenseRate: number | null;
+  monthlyGain: number;
+  monthlyGainPct: number;
+  savingsRate: number | null;
+  snapshot: MonthlySnapshot;
 };
 
 export type PortfolioDayChange = {
@@ -324,6 +340,60 @@ export function calculatePortfolioRollupTotals(
     totalCurrentValue: holdingsCurrentValue + cashBalance,
     totalInvested,
   };
+}
+
+export function calculateMonthlyProgressSummaries(
+  snapshots: MonthlySnapshot[],
+): MonthlyProgressSummary[] {
+  const chronological = [...snapshots].sort((left, right) =>
+    left.month.localeCompare(right.month),
+  );
+
+  return chronological
+    .map((snapshot, index) => {
+      const previous = chronological[index - 1];
+      const monthlyGain = previous
+        ? snapshot.portfolioValue - previous.portfolioValue
+        : 0;
+      const assetTotal =
+        snapshot.equityValue +
+        snapshot.debtValue +
+        snapshot.cryptoValue +
+        snapshot.cashValue;
+      const assetValues: Array<Pick<MonthlyAssetSnapshotItem, "assetClass" | "value">> = [
+        { assetClass: "stock", value: snapshot.equityValue },
+        { assetClass: "debt", value: snapshot.debtValue },
+        { assetClass: "crypto", value: snapshot.cryptoValue },
+        { assetClass: "cash", value: snapshot.cashValue },
+      ];
+      const assetSnapshot: MonthlyAssetSnapshotItem[] = assetValues
+        .filter((item) => item.value > 0)
+        .map((item) => ({
+          ...item,
+          percentage:
+            assetTotal === 0 ? 0 : round((item.value / assetTotal) * 100),
+        }))
+        .sort((left, right) => right.value - left.value);
+
+      return {
+        assetSnapshot,
+        expenseRate:
+          snapshot.salary === 0 || snapshot.monthlyExpense === undefined
+            ? null
+            : round((snapshot.monthlyExpense / snapshot.salary) * 100),
+        monthlyGain,
+        monthlyGainPct:
+          previous && previous.portfolioValue !== 0
+            ? round((monthlyGain / previous.portfolioValue) * 100)
+            : 0,
+        savingsRate:
+          snapshot.salary === 0
+            ? null
+            : round((snapshot.monthlyInvestment / snapshot.salary) * 100),
+        snapshot,
+      };
+    })
+    .sort((left, right) => right.snapshot.month.localeCompare(left.snapshot.month));
 }
 
 export function calculateMetadataAllocation(
