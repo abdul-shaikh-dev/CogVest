@@ -7,6 +7,10 @@ physical-phone manual acceptance with repeatable checks that run on the
 developer PC, Android Emulator, adb, Jest, React Native Testing Library, and
 optional Maestro.
 
+Excel tracker parity is verified through
+`docs/testing/excel-parity-checklist.md`. V1 core-flow verification is not
+complete until that checklist passes or failed rows have linked defects.
+
 Default PR CI must stay lightweight. Emulator, APK install, and Maestro checks
 are local verification gates, not required pull-request checks.
 
@@ -43,6 +47,8 @@ approved.
 | Holdings derivation | `src/features/holdings/__tests__/HoldingsScreen.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | `e2e/holdings.yaml` asserts holdings after Add Holding | Holding row shows symbol, quantity, value |
 | Quote refresh and fallback | `src/services/quotes/__tests__/quotes.test.ts`, `src/services/quotes/__tests__/useQuoteRefresh.test.tsx`, Holdings tests | Manual emulator pull-to-refresh or Refresh Quotes action where network is available | Failures keep manual prices visible |
 | Cash tracking | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | `e2e/cash.yaml` adds cash by stable IDs | Cash balance and cash history update |
+| Monthly Progress snapshots | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts`, `src/store/__tests__/portfolioStore.test.ts` | Manual emulator flow records two month-end snapshots | Progress shows monthly gain, gain %, investment, savings rate, expense rate if tracked, and asset split |
+| Excel parity gate | `docs/testing/excel-parity-checklist.md` plus #61-#65 tests | Manual PC-only flow in the checklist | Every parity question passes or has a `[V1 QA]` defect |
 | Value masking | `src/features/settings/__tests__/SettingsScreen.test.tsx`, dashboard/holdings/cash masked-value tests | `e2e/value-masking.yaml` opens `cogvest://settings` and toggles `value-mask-toggle` | Wealth values mask; quantities and percentages remain visible |
 | Persistence after close/reopen | `src/store/__tests__/portfolioStore.test.ts`, storage tests | `e2e/persistence.yaml` saves data, stops app, relaunches, and verifies data remains | State remains after app restart |
 | No backend/auth/cloud | Smoke tests and release review | Manual repo inspection before release | No backend, auth, analytics, cloud sync, or push notification feature is added |
@@ -80,6 +86,8 @@ Every failed core flow must become a GitHub issue with:
 - Actual result.
 - Evidence: screenshot, UI tree, logcat excerpt, or test output.
 - Link to the failed matrix row.
+- Link to the failed `docs/testing/excel-parity-checklist.md` row if the
+  defect blocks Excel parity.
 
 ## Uncovered Or Manual-Only Items
 

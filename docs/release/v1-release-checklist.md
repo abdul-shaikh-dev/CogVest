@@ -8,6 +8,7 @@
 - [ ] Local APK builds successfully on the developer PC.
 - [ ] Local APK installs on Android Emulator.
 - [ ] Core V1 flows pass through `docs/testing/v1-core-flow-test-matrix.md`.
+- [ ] Excel parity passes through `docs/testing/excel-parity-checklist.md`, or failed rows have linked `[V1 QA]` defects.
 - [ ] Defects are logged with `docs/testing/v1-defect-report-template.md`.
 - [ ] No backend/auth/cloud was added.
 - [ ] Secrets are not committed.
@@ -38,7 +39,8 @@ Record production EAS build URL during release-candidate verification.
 ## Manual QA Notes
 
 Record emulator model, Android version, APK source, and any issues found during
-PC-based APK testing.
+PC-based APK testing. Include whether `docs/testing/excel-parity-checklist.md`
+passed.
 
 ## Verification Runs
 

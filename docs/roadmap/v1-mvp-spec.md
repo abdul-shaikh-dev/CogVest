@@ -110,11 +110,15 @@ Do not persist holdings, allocation, dashboard totals, or insights.
 - App launches on Android Emulator.
 - Local APK builds and installs on Android Emulator.
 - Core V1 matrix passes or defects are logged.
+- Excel parity checklist passes through `docs/testing/excel-parity-checklist.md`
+  or defects are logged.
 
 ## Release Gate
 
 Dev-complete gate:
-- `npm run test:v1:pc`, Android Emulator app launch, local APK build/install, and `docs/testing/v1-core-flow-test-matrix.md`.
+- `npm run test:v1:pc`, Android Emulator app launch, local APK build/install,
+  `docs/testing/v1-core-flow-test-matrix.md`, and
+  `docs/testing/excel-parity-checklist.md`.
 
 Release-candidate gate:
 - production AAB builds, EAS build URL recorded, Play Console internal testing upload ready/manual.
@@ -139,5 +143,5 @@ Portfolio values, quantities, trades, notes, and conviction stay local. Quote AP
 
 - Yahoo/CoinGecko informal API reliability.
 - Real-time quote source limits.
-- Monthly Progress depends on persisted monthly snapshots; missing snapshot support must be logged against the Excel parity issues.
+- Excel parity failures must be logged before V1 dev-complete.
 - Export/import deferred creates local-device data loss risk.
