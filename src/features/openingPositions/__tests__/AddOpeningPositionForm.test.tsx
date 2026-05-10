@@ -1,7 +1,8 @@
 import * as Haptics from "expo-haptics";
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
+import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
@@ -15,6 +16,10 @@ jest.mock("expo-haptics", () => ({
 describe("AddOpeningPositionForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("creates a manual asset and persists a reviewed opening position", async () => {
@@ -150,5 +155,126 @@ describe("AddOpeningPositionForm", () => {
       sectorType: "digitalAsset",
       ticker: "bitcoin",
     });
+  });
+
+  it("autofills asset metadata and current price from a selected lookup result", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockImplementation(({ asset }) =>
+      Promise.resolve({
+        ok: true,
+        quote: {
+          assetId: asset.id,
+          asOf: "2026-05-10T10:00:00.000Z",
+          currency: "INR",
+          price: 1678.25,
+          source: "yahoo",
+        },
+      }),
+    );
+    const { getByLabelText, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => {
+      expect(getByText("HDFC Bank Limited")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("HDFC Bank Limited"));
+
+    await waitFor(() => {
+      expect(getByLabelText("Asset name")).toHaveProp(
+        "value",
+        "HDFC Bank Limited",
+      );
+      expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
+    });
+    expect(getByLabelText("Symbol")).toHaveProp("value", "HDFCBANK");
+    expect(getByLabelText("Ticker")).toHaveProp("value", "HDFCBANK.NS");
+    expect(getByLabelText("Quote source ID")).toHaveProp(
+      "value",
+      "HDFCBANK.NS",
+    );
+    expect(getByText("Live price autofilled from Yahoo Finance.")).toBeTruthy();
+  });
+
+  it("keeps manual price fallback available when selected lookup quote fails", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "crypto",
+      currency: "INR",
+      exchange: "CRYPTO",
+      id: "coingecko:bitcoin",
+      instrumentType: "crypto",
+      name: "Bitcoin",
+      provider: "coingecko",
+      quoteSourceId: "bitcoin",
+      sectorType: "digitalAsset",
+      sourceLabel: "CoinGecko",
+      symbol: "BTC",
+      ticker: "bitcoin",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      error: "CoinGecko quote response did not include an INR price.",
+      ok: false,
+    });
+    const { getByLabelText, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => {
+      expect(getByText("Bitcoin")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Bitcoin"));
+
+    await waitFor(() => {
+      expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");
+      expect(
+        getByText("Live price unavailable. Enter current price manually."),
+      ).toBeTruthy();
+    });
+    expect(getByLabelText("Current price")).toHaveProp("value", "");
   });
 });
