@@ -34,6 +34,29 @@ export type MetadataAllocationItem = {
   value: number;
 };
 
+export type ConsolidatedHoldingRow = {
+  asset: Asset;
+  assetClass: AssetClass;
+  currentAllocationPct: number;
+  currentValue: number;
+  initialAllocationPct: number;
+  instrumentType?: Asset["instrumentType"];
+  investedValue: number;
+  pnl: number;
+  pnlPct: number;
+  sectorType?: Asset["sectorType"];
+  units: number;
+};
+
+export type PortfolioRollupTotals = {
+  cashBalance: number;
+  holdingsCurrentValue: number;
+  pnl: number;
+  pnlPct: number;
+  totalCurrentValue: number;
+  totalInvested: number;
+};
+
 export type PortfolioDayChange = {
   absolute: number;
   percentage: number;
@@ -242,6 +265,65 @@ export function calculateAllocation({
       value,
     }))
     .sort((left, right) => right.value - left.value);
+}
+
+export function calculateConsolidatedHoldingRows(
+  holdings: Holding[],
+): ConsolidatedHoldingRow[] {
+  const totalInvested = holdings.reduce(
+    (total, holding) => total + holding.totalInvested,
+    0,
+  );
+  const totalCurrentValue = holdings.reduce(
+    (total, holding) => total + holding.currentValue,
+    0,
+  );
+
+  return holdings
+    .map((holding) => ({
+      asset: holding.asset,
+      assetClass: holding.asset.assetClass,
+      currentAllocationPct:
+        totalCurrentValue === 0
+          ? 0
+          : round((holding.currentValue / totalCurrentValue) * 100),
+      currentValue: holding.currentValue,
+      initialAllocationPct:
+        totalInvested === 0
+          ? 0
+          : round((holding.totalInvested / totalInvested) * 100),
+      instrumentType: holding.asset.instrumentType,
+      investedValue: holding.totalInvested,
+      pnl: holding.unrealisedPnL,
+      pnlPct: round(holding.unrealisedPnLPct),
+      sectorType: holding.asset.sectorType,
+      units: holding.totalUnits,
+    }))
+    .sort((left, right) => right.currentValue - left.currentValue);
+}
+
+export function calculatePortfolioRollupTotals(
+  rows: ConsolidatedHoldingRow[],
+  cashBalance = 0,
+): PortfolioRollupTotals {
+  const totalInvested = rows.reduce(
+    (total, row) => total + row.investedValue,
+    0,
+  );
+  const holdingsCurrentValue = rows.reduce(
+    (total, row) => total + row.currentValue,
+    0,
+  );
+  const pnl = holdingsCurrentValue - totalInvested;
+
+  return {
+    cashBalance,
+    holdingsCurrentValue,
+    pnl,
+    pnlPct: totalInvested === 0 ? 0 : round((pnl / totalInvested) * 100),
+    totalCurrentValue: holdingsCurrentValue + cashBalance,
+    totalInvested,
+  };
 }
 
 export function calculateMetadataAllocation(

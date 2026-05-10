@@ -1,10 +1,12 @@
 import {
   calculateAllocation,
   calculateCashBalance,
+  calculateConsolidatedHoldingRows,
   calculateHolding,
   calculateHoldings,
   calculateInstrumentAllocation,
   calculatePortfolioDayChange,
+  calculatePortfolioRollupTotals,
   calculatePortfolioTotal,
   calculateSectorAllocation,
   daysHeld,
@@ -406,6 +408,65 @@ describe("portfolio calculations", () => {
       { label: "digitalAsset", percentage: 80.65, value: 5000 },
       { label: "energy", percentage: 19.35, value: 1200 },
     ]);
+  });
+
+  it("derives consolidated rows and rollup totals without persisting them", () => {
+    const stockHolding = calculateHolding({
+      asset: reliance,
+      currentPrice: 120,
+      trades: [trade({ quantity: 10, totalValue: 1000 })],
+    });
+    const debtHolding = calculateHolding({
+      asset: ppf,
+      currentPrice: 1000,
+      openingPositions: [
+        openingPosition({
+          assetId: ppf.id,
+          averageCostPrice: 950,
+          quantity: 2,
+        }),
+      ],
+      trades: [],
+    });
+
+    const rows = calculateConsolidatedHoldingRows([stockHolding, debtHolding]);
+
+    expect(rows).toEqual([
+      {
+        asset: ppf,
+        assetClass: "debt",
+        currentAllocationPct: 62.5,
+        currentValue: 2000,
+        initialAllocationPct: 65.52,
+        instrumentType: "ppf",
+        investedValue: 1900,
+        pnl: 100,
+        pnlPct: 5.26,
+        sectorType: "fixedIncome",
+        units: 2,
+      },
+      {
+        asset: reliance,
+        assetClass: "stock",
+        currentAllocationPct: 37.5,
+        currentValue: 1200,
+        initialAllocationPct: 34.48,
+        instrumentType: "stock",
+        investedValue: 1000,
+        pnl: 200,
+        pnlPct: 20,
+        sectorType: "energy",
+        units: 10,
+      },
+    ]);
+    expect(calculatePortfolioRollupTotals(rows, 300)).toEqual({
+      cashBalance: 300,
+      holdingsCurrentValue: 3200,
+      pnl: 300,
+      pnlPct: 10.34,
+      totalCurrentValue: 3500,
+      totalInvested: 2900,
+    });
   });
 });
 

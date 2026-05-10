@@ -1,7 +1,13 @@
 import { useState, useSyncExternalStore } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
-import { calculateHoldings } from "@/src/domain/calculations";
+import {
+  calculateConsolidatedHoldingRows,
+  calculateHoldings,
+  calculatePortfolioRollupTotals,
+  type ConsolidatedHoldingRow,
+  type PortfolioRollupTotals,
+} from "@/src/domain/calculations";
 import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
@@ -26,6 +32,8 @@ export type UseHoldingsResult = {
   isRefreshing: boolean;
   maskWealthValues: boolean;
   refresh: () => Promise<QuoteRefreshResult>;
+  rollupRows: ConsolidatedHoldingRow[];
+  rollupTotals: PortfolioRollupTotals;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -72,6 +80,8 @@ export function useHoldings({
     }),
     snapshot.quoteCache,
   );
+  const rollupRows = calculateConsolidatedHoldingRows(holdings);
+  const rollupTotals = calculatePortfolioRollupTotals(rollupRows);
 
   async function refresh() {
     setIsRefreshing(true);
@@ -101,5 +111,7 @@ export function useHoldings({
     isRefreshing,
     maskWealthValues: snapshot.preferences.maskWealthValues,
     refresh,
+    rollupRows,
+    rollupTotals,
   };
 }

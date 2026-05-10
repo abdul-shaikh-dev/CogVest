@@ -34,18 +34,22 @@ export function HoldingsScreen({
   refreshQuotes,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
-  const { failures, holdings, isRefreshing, maskWealthValues, refresh } = useHoldings({
+  const {
+    failures,
+    holdings,
+    isRefreshing,
+    maskWealthValues,
+    refresh,
+    rollupRows,
+    rollupTotals,
+  } = useHoldings({
     refreshQuotes,
     store,
   });
-  const totalCurrentValue = holdings.reduce(
-    (total, holding) => total + holding.currentValue,
-    0,
-  );
-  const totalInvested = holdings.reduce(
-    (total, holding) => total + holding.totalInvested,
-    0,
-  );
+
+  function getRollupRow(assetId: string) {
+    return rollupRows.find((row) => row.asset.id === assetId);
+  }
 
   return (
     <ScreenContainer
@@ -81,17 +85,21 @@ export function HoldingsScreen({
               {
                 label: "Current",
                 masked: maskWealthValues,
-                value: formatINR(totalCurrentValue),
+                value: formatINR(rollupTotals.holdingsCurrentValue),
               },
               {
                 label: "Invested",
                 masked: maskWealthValues,
-                value: formatINR(totalInvested),
+                value: formatINR(rollupTotals.totalInvested),
               },
               {
                 label: "P&L",
                 masked: maskWealthValues,
-                value: formatINR(totalCurrentValue - totalInvested),
+                value: formatINR(rollupTotals.pnl),
+              },
+              {
+                label: "P&L %",
+                value: `${rollupTotals.pnlPct.toFixed(2)}%`,
               },
             ]}
           />
@@ -137,11 +145,12 @@ export function HoldingsScreen({
               <HoldingCard
                 key={holding.asset.id}
                 allocationPct={
-                  totalCurrentValue === 0
-                    ? 0
-                    : (holding.currentValue / totalCurrentValue) * 100
+                  getRollupRow(holding.asset.id)?.currentAllocationPct ?? 0
                 }
                 holding={holding}
+                initialAllocationPct={
+                  getRollupRow(holding.asset.id)?.initialAllocationPct ?? 0
+                }
                 masked={maskWealthValues}
               />
             ))}

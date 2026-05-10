@@ -60,6 +60,22 @@ describe("useHoldings", () => {
       unrealisedPnL: 50,
       unrealisedPnLPct: 25,
     });
+    expect(result.current.rollupTotals).toEqual({
+      cashBalance: 0,
+      holdingsCurrentValue: 250,
+      pnl: 50,
+      pnlPct: 25,
+      totalCurrentValue: 250,
+      totalInvested: 200,
+    });
+    expect(result.current.rollupRows[0]).toMatchObject({
+      currentAllocationPct: 100,
+      currentValue: 250,
+      initialAllocationPct: 100,
+      investedValue: 200,
+      pnl: 50,
+      pnlPct: 25,
+    });
   });
 
   it("refreshes quotes and persists the updated values into the store", async () => {

@@ -80,6 +80,14 @@ describe("useDashboard", () => {
     const { result } = renderHook(() => useDashboard({ store }));
 
     expect(result.current.totalValue).toBe(550);
+    expect(result.current.rollupTotals).toEqual({
+      cashBalance: 50,
+      holdingsCurrentValue: 500,
+      pnl: 200,
+      pnlPct: 66.67,
+      totalCurrentValue: 550,
+      totalInvested: 300,
+    });
     expect(result.current.cashBalance).toBe(50);
     expect(result.current.dayChange).toEqual({
       absolute: 16.75,
@@ -108,6 +116,26 @@ describe("useDashboard", () => {
       ratedTradeCount: 1,
       requiredTradeCount: 5,
     });
+    expect(result.current.rollupRows).toMatchObject([
+      {
+        asset: stockAsset,
+        currentAllocationPct: 60,
+        currentValue: 300,
+        initialAllocationPct: 66.67,
+        investedValue: 200,
+        pnl: 100,
+        pnlPct: 50,
+      },
+      {
+        asset: etfAsset,
+        currentAllocationPct: 40,
+        currentValue: 200,
+        initialAllocationPct: 33.33,
+        investedValue: 100,
+        pnl: 100,
+        pnlPct: 100,
+      },
+    ]);
   });
 
   it("includes debt and crypto opening positions in consolidated allocation", () => {
@@ -175,6 +203,14 @@ describe("useDashboard", () => {
       { assetClass: "crypto", percentage: 48, value: 120000 },
       { assetClass: "debt", percentage: 40, value: 100000 },
       { assetClass: "cash", percentage: 12, value: 30000 },
+    ]);
+    expect(result.current.instrumentAllocation).toEqual([
+      { label: "crypto", percentage: 54.55, value: 120000 },
+      { label: "ppf", percentage: 45.45, value: 100000 },
+    ]);
+    expect(result.current.sectorAllocation).toEqual([
+      { label: "digitalAsset", percentage: 54.55, value: 120000 },
+      { label: "fixedIncome", percentage: 45.45, value: 100000 },
     ]);
   });
 });

@@ -4,13 +4,20 @@ import type { StoreApi } from "zustand/vanilla";
 import {
   calculateAllocation,
   calculateCashBalance,
+  calculateConsolidatedHoldingRows,
   calculateHoldings,
+  calculateInstrumentAllocation,
   calculatePortfolioDayChange,
+  calculatePortfolioRollupTotals,
   calculatePortfolioTotal,
+  calculateSectorAllocation,
   getConvictionReadiness,
   type AllocationItem,
+  type ConsolidatedHoldingRow,
   type ConvictionReadiness,
+  type MetadataAllocationItem,
   type PortfolioDayChange,
+  type PortfolioRollupTotals,
 } from "@/src/domain/calculations";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Holding } from "@/src/types";
@@ -25,8 +32,12 @@ export type DashboardState = {
   convictionReadiness: ConvictionReadiness;
   dayChange: PortfolioDayChange;
   holdings: Holding[];
+  instrumentAllocation: MetadataAllocationItem[];
   latestQuoteAsOf?: string;
   maskWealthValues: boolean;
+  rollupRows: ConsolidatedHoldingRow[];
+  rollupTotals: PortfolioRollupTotals;
+  sectorAllocation: MetadataAllocationItem[];
   totalValue: number;
 };
 
@@ -70,6 +81,8 @@ export function useDashboard({
     snapshot.quoteCache,
   );
   const cashBalance = calculateCashBalance(snapshot.cashEntries);
+  const rollupRows = calculateConsolidatedHoldingRows(holdings);
+  const rollupTotals = calculatePortfolioRollupTotals(rollupRows, cashBalance);
 
   return {
     allocation: calculateAllocation({
@@ -84,8 +97,12 @@ export function useDashboard({
     ),
     dayChange: calculatePortfolioDayChange(holdings),
     holdings,
+    instrumentAllocation: calculateInstrumentAllocation(holdings),
     latestQuoteAsOf: getLatestQuoteAsOf(holdings),
     maskWealthValues: snapshot.preferences.maskWealthValues,
+    rollupRows,
+    rollupTotals,
+    sectorAllocation: calculateSectorAllocation(holdings),
     totalValue: calculatePortfolioTotal(holdings, snapshot.cashEntries),
   };
 }
