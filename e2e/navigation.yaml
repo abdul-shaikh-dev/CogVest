@@ -21,6 +21,6 @@ appId: com.abdulshaikh.cogvest
     id: "settings-screen"
 - openLink: "cogvest:///add-holding"
 - assertVisible:
-    id: "add-trade-screen"
-- assertVisible:
     id: "add-holding-screen"
+- assertVisible:
+    id: "add-holding-phase-asset"
