@@ -1,0 +1,50 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- tapOn: "Add Holding"
+- assertVisible:
+    id: "add-holding-screen"
+- assertVisible:
+    id: "add-holding-phase-asset"
+- tapOn:
+    id: "asset-lookup-input"
+- eraseText: 50
+- inputText: "btc-usd"
+- hideKeyboard
+- assertVisible: "Bitcoin USD"
+- assertVisible:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-class-button"
+- assertVisible:
+    id: "add-holding-phase-class"
+- tapOn:
+    id: "continue-position-button"
+- assertVisible:
+    id: "add-holding-phase-position"
+- tapOn:
+    id: "quantity-input"
+- inputText: "1"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- tapOn:
+    id: "price-input"
+- inputText: "110"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- assertVisible:
+    id: "add-holding-phase-review"
+- assertVisible:
+    id: "derived-preview"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible: "Opening position saved."

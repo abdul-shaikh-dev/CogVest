@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -310,6 +310,24 @@ export function AddOpeningPositionForm({
     };
   }, [lookupQuery, searchAssetLookupResults]);
 
+  useEffect(() => {
+    const normalizedQuery = lookupQuery.trim().toLowerCase();
+
+    if (!normalizedQuery || lookupResults.length === 0) {
+      return;
+    }
+
+    const exactResult = lookupResults.find((result) =>
+      [result.symbol, result.ticker, result.quoteSourceId].some(
+        (value) => value.toLowerCase() === normalizedQuery,
+      ),
+    );
+
+    if (exactResult) {
+      void selectLookupResult(exactResult);
+    }
+  }, [lookupQuery, lookupResults]);
+
   function clearSelectedAsset() {
     if (selectedAssetId) {
       setSelectedAssetId("");
@@ -374,6 +392,9 @@ export function AddOpeningPositionForm({
     setSectorType(result.sectorType);
     setSymbol(result.symbol);
     setTicker(result.ticker);
+    setLookupQuery("");
+    setLookupResults([]);
+    setLookupStatus("");
     setQuoteStatus("Fetching live current price...");
     resetReview();
 
@@ -387,6 +408,31 @@ export function AddOpeningPositionForm({
 
     setCurrentPrice("");
     setQuoteStatus("Live price unavailable. Enter current price manually.");
+  }
+
+  function getPreferredLookupResult() {
+    const normalizedQuery = lookupQuery.trim().toLowerCase();
+
+    return (
+      lookupResults.find((result) =>
+        [result.symbol, result.ticker, result.quoteSourceId].some(
+          (value) => value.toLowerCase() === normalizedQuery,
+        ),
+      ) ??
+      lookupResults.find((result) => result.name.toLowerCase() === normalizedQuery) ??
+      lookupResults.find((result) =>
+        result.name.toLowerCase().startsWith(normalizedQuery),
+      ) ??
+      lookupResults[0]
+    );
+  }
+
+  function selectPreferredLookupResult() {
+    const result = getPreferredLookupResult();
+
+    if (result) {
+      void selectLookupResult(result);
+    }
   }
 
   function updateAssetClass(nextAssetClass: AssetClass) {
@@ -553,7 +599,9 @@ export function AddOpeningPositionForm({
             setLookupQuery(value);
             setQuoteStatus("");
           }}
+          onSubmitEditing={selectPreferredLookupResult}
           placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
+          returnKeyType="search"
           testID="asset-lookup-input"
           value={lookupQuery}
         />
@@ -565,16 +613,14 @@ export function AddOpeningPositionForm({
         {lookupResults.length > 0 ? (
           <View style={styles.lookupResults}>
             {lookupResults.map((result) => (
-              <Pressable
+              <TouchableOpacity
                 accessibilityRole="button"
+                activeOpacity={0.74}
                 key={result.id}
                 onPress={() => {
                   void selectLookupResult(result);
                 }}
-                style={({ pressed }) => [
-                  styles.lookupResult,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.lookupResult}
                 testID={`asset-lookup-result-${result.id}`}
               >
                 <CategoryIcon assetClass={result.assetClass} size={18} />
@@ -587,7 +633,7 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" variant="caption" weight="bold">
                   {assetClassLabel(result.assetClass)}
                 </AppText>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         ) : null}

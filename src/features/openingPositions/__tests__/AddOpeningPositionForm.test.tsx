@@ -360,17 +360,14 @@ describe("AddOpeningPositionForm", () => {
     });
 
     await waitFor(() => {
-      expect(getByText("Bitcoin")).toBeTruthy();
-    });
-
-    fireEvent.press(getByText("Bitcoin"));
-
-    await waitFor(() => {
       expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");
       expect(
         getByText("Live price unavailable. Enter current price manually."),
       ).toBeTruthy();
     });
+    expect(getByLabelText("Symbol")).toHaveProp("value", "BTC");
+    expect(getByLabelText("Ticker")).toHaveProp("value", "bitcoin");
+    expect(getByLabelText("Quote source ID")).toHaveProp("value", "bitcoin");
     fireEvent.press(getByText("Continue to classification"));
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "");

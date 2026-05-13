@@ -6,6 +6,7 @@ const defaultFlows = [
   "e2e/smoke-launch.yaml",
   "e2e/navigation.yaml",
   "e2e/add-trade.yaml",
+  "e2e/add-holding-lookup.yaml",
   "e2e/holdings.yaml",
   "e2e/cash.yaml",
   "e2e/value-masking.yaml",

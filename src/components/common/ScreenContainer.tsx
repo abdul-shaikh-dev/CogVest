@@ -28,6 +28,7 @@ export function ScreenContainer({
       <SafeAreaView style={styles.safe} testID={testID}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="always"
           refreshControl={refreshControl}
           style={styles.scroll}
         >

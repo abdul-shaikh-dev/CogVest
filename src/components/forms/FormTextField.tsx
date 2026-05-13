@@ -1,4 +1,4 @@
-import type { KeyboardTypeOptions } from "react-native";
+import type { KeyboardTypeOptions, ReturnKeyTypeOptions } from "react-native";
 import { StyleSheet, TextInput, View } from "react-native";
 
 import { AppText } from "@/src/components/common";
@@ -10,7 +10,9 @@ type FormTextFieldProps = {
   label: string;
   multiline?: boolean;
   onChangeText: (value: string) => void;
+  onSubmitEditing?: () => void;
   placeholder?: string;
+  returnKeyType?: ReturnKeyTypeOptions;
   testID?: string;
   value: string;
 };
@@ -21,7 +23,9 @@ export function FormTextField({
   label,
   multiline = false,
   onChangeText,
+  onSubmitEditing,
   placeholder,
+  returnKeyType,
   testID,
   value,
 }: FormTextFieldProps) {
@@ -35,8 +39,10 @@ export function FormTextField({
         keyboardType={keyboardType}
         multiline={multiline}
         onChangeText={onChangeText}
+        onSubmitEditing={onSubmitEditing}
         placeholder={placeholder}
         placeholderTextColor={colors.text.muted}
+        returnKeyType={returnKeyType}
         style={[styles.input, multiline && styles.multiline, error && styles.invalid]}
         testID={testID}
         value={value}
