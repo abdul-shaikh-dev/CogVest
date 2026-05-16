@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react-native";
+import { act, renderHook } from "@testing-library/react-native";
 
 import { useDashboard } from "@/src/features/dashboard/useDashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -212,5 +212,101 @@ describe("useDashboard", () => {
       { label: "digitalAsset", percentage: 54.55, value: 120000 },
       { label: "fixedIncome", percentage: 45.45, value: 100000 },
     ]);
+  });
+
+  it("derives current-month investment, cash change, and savings rate", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addTrade({
+      ...buyStock,
+      date: "2026-05-05",
+      totalValue: 200,
+    });
+    store.getState().addTrade({
+      ...buyEtf,
+      assetId: stockAsset.id,
+      date: "2026-04-21",
+      id: "trade-old",
+      totalValue: 1000,
+    });
+    store.getState().addCashEntry({
+      amount: 1000,
+      date: "2026-05-01",
+      id: "cash-addition",
+      label: "Salary",
+      type: "addition",
+    });
+    store.getState().addCashEntry({
+      amount: 250,
+      date: "2026-05-10",
+      id: "cash-withdrawal",
+      label: "Transfer",
+      type: "withdrawal",
+    });
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 50,
+      currentPrice: 60,
+      date: "2026-05-12",
+      id: "opening-current-month",
+      quantity: 4,
+    });
+
+    const { result } = renderHook(() =>
+      useDashboard({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
+    );
+
+    expect(result.current.monthlyMetrics).toEqual({
+      cashAdded: 1000,
+      cashChange: 750,
+      investment: 400,
+      savingsRate: 40,
+    });
+  });
+
+  it("toggles value masking through the dashboard hook", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { result } = renderHook(() => useDashboard({ store }));
+
+    expect(result.current.maskWealthValues).toBe(false);
+
+    act(() => {
+      result.current.toggleMaskWealthValues();
+    });
+
+    expect(store.getState().preferences.maskWealthValues).toBe(true);
+  });
+
+  it("refreshes quotes and persists refreshed quote cache", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    const refreshQuotes = jest.fn().mockResolvedValue({
+      failures: [],
+      quoteCache: {
+        [stockAsset.id]: {
+          asOf: "2026-05-16T10:00:00.000Z",
+          assetId: stockAsset.id,
+          currency: "INR",
+          price: 175,
+          source: "yahoo",
+        },
+      },
+    });
+    const { result } = renderHook(() =>
+      useDashboard({ refreshQuotes, store }),
+    );
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(refreshQuotes).toHaveBeenCalledWith({
+      assets: [expect.objectContaining(stockAsset)],
+      manualPrices: {},
+    });
+    expect(store.getState().quoteCache[stockAsset.id]).toMatchObject({
+      price: 175,
+      source: "yahoo",
+    });
   });
 });
