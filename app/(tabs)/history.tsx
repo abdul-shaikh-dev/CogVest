@@ -1,5 +1,0 @@
-import { ProgressScreen } from "@/src/features/progress";
-
-export default function HistoryScreen() {
-  return <ProgressScreen />;
-}
