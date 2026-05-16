@@ -1,12 +1,17 @@
 import { useSyncExternalStore } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
-import { calculateCashBalance } from "@/src/domain/calculations";
+import {
+  calculateCashBalance,
+  calculateCashMonthlyMetrics,
+  type CashMonthlyMetrics,
+} from "@/src/domain/calculations";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { CashEntry, CashEntryType } from "@/src/types";
 import { createId } from "@/src/utils";
 
 type UseCashInput = {
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -23,6 +28,7 @@ export type UseCashResult = {
   balance: number;
   entries: CashEntry[];
   maskWealthValues: boolean;
+  monthlyMetrics: CashMonthlyMetrics;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -36,6 +42,7 @@ function sortCashEntries(entries: CashEntry[]) {
 }
 
 export function useCash({
+  now = new Date(),
   store = getPortfolioStore(),
 }: UseCashInput = {}): UseCashResult {
   const snapshot = usePortfolioSnapshot(store);
@@ -57,5 +64,11 @@ export function useCash({
     balance: calculateCashBalance(snapshot.cashEntries),
     entries: sortCashEntries(snapshot.cashEntries),
     maskWealthValues: snapshot.preferences.maskWealthValues,
+    monthlyMetrics: calculateCashMonthlyMetrics({
+      cashEntries: snapshot.cashEntries,
+      now,
+      openingPositions: snapshot.openingPositions,
+      trades: snapshot.trades,
+    }),
   };
 }

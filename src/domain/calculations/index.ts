@@ -1,6 +1,7 @@
 export {
   calculateAllocation,
   calculateCashBalance,
+  calculateCashMonthlyMetrics,
   calculateConsolidatedHoldingRows,
   calculateHolding,
   calculateHoldings,
@@ -16,6 +17,7 @@ export {
 } from "./holdings";
 export type {
   AllocationItem,
+  CashMonthlyMetrics,
   ConsolidatedHoldingRow,
   ConvictionReadiness,
   MonthlyAssetSnapshotItem,

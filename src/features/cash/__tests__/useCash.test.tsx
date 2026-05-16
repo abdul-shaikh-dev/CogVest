@@ -77,4 +77,81 @@ describe("useCash", () => {
       type: "addition",
     });
   });
+
+  it("derives monthly cash metrics from stored cash and investment records", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      id: "asset-reliance",
+      name: "Reliance Industries",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+    store.getState().addCashEntry({
+      amount: 100000,
+      date: "2026-05-01",
+      id: "cash-salary",
+      label: "Salary",
+      type: "addition",
+    });
+    store.getState().addCashEntry({
+      amount: 20000,
+      date: "2026-05-10",
+      id: "cash-transfer",
+      label: "SIP transfer",
+      type: "withdrawal",
+    });
+    store.getState().addTrade({
+      assetId: "asset-reliance",
+      date: "2026-05-10",
+      id: "trade-buy",
+      pricePerUnit: 100,
+      quantity: 200,
+      totalValue: 20000,
+      type: "buy",
+    });
+
+    const { result } = renderHook(() =>
+      useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
+    );
+
+    expect(result.current.monthlyMetrics).toEqual({
+      added: 100000,
+      available: 80000,
+      invested: 20000,
+      savingsRate: 20,
+    });
+  });
+
+  it("marks savings rate unavailable when current-month added cash is missing", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      id: "asset-reliance",
+      name: "Reliance Industries",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+    store.getState().addTrade({
+      assetId: "asset-reliance",
+      date: "2026-05-10",
+      id: "trade-buy",
+      pricePerUnit: 100,
+      quantity: 200,
+      totalValue: 20000,
+      type: "buy",
+    });
+
+    const { result } = renderHook(() =>
+      useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
+    );
+
+    expect(result.current.monthlyMetrics).toMatchObject({
+      added: 0,
+      invested: 20000,
+      savingsRate: null,
+    });
+  });
 });

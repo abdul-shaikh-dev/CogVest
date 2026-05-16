@@ -73,6 +73,13 @@ export type MonthlyProgressSummary = {
   snapshot: MonthlySnapshot;
 };
 
+export type CashMonthlyMetrics = {
+  added: number;
+  available: number;
+  invested: number;
+  savingsRate: number | null;
+};
+
 export type PortfolioDayChange = {
   absolute: number;
   percentage: number;
@@ -209,6 +216,49 @@ export function calculateCashBalance(cashEntries: CashEntry[]) {
 
     return balance + entry.amount;
   }, 0);
+}
+
+function isSameMonth(isoDate: string, now: Date) {
+  const date = new Date(isoDate);
+
+  return (
+    date.getUTCFullYear() === now.getUTCFullYear() &&
+    date.getUTCMonth() === now.getUTCMonth()
+  );
+}
+
+export function calculateCashMonthlyMetrics({
+  cashEntries,
+  now = new Date(),
+  openingPositions,
+  trades,
+}: {
+  cashEntries: CashEntry[];
+  now?: Date;
+  openingPositions: OpeningPosition[];
+  trades: Trade[];
+}): CashMonthlyMetrics {
+  const added = cashEntries
+    .filter((entry) => entry.type === "addition" && isSameMonth(entry.date, now))
+    .reduce((total, entry) => total + entry.amount, 0);
+  const tradeInvested = trades
+    .filter((trade) => trade.type === "buy" && isSameMonth(trade.date, now))
+    .reduce((total, trade) => total + trade.totalValue, 0);
+  const openingInvested = openingPositions
+    .filter((position) => isSameMonth(position.date, now))
+    .reduce(
+      (total, position) =>
+        total + position.quantity * position.averageCostPrice,
+      0,
+    );
+  const invested = tradeInvested + openingInvested;
+
+  return {
+    added,
+    available: calculateCashBalance(cashEntries),
+    invested,
+    savingsRate: added > 0 ? round((invested / added) * 100) : null,
+  };
 }
 
 export function calculatePortfolioTotal(
