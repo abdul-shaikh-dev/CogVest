@@ -132,4 +132,29 @@ describe("useHoldings", () => {
       lastUpdated: "2026-04-21T10:00:00.000Z",
     });
   });
+
+  it("exposes quote status metadata and value-mask toggle", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(rawAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-20T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 125,
+      source: "manual",
+    });
+
+    const { result } = renderHook(() => useHoldings({ store }));
+
+    expect(result.current.latestQuoteAsOf).toBe("2026-04-20T10:00:00.000Z");
+    expect(result.current.manualFallbackCount).toBe(1);
+    expect(result.current.maskWealthValues).toBe(false);
+
+    act(() => {
+      result.current.toggleMaskWealthValues();
+    });
+
+    expect(store.getState().preferences.maskWealthValues).toBe(true);
+  });
 });
