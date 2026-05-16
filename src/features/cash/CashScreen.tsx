@@ -24,10 +24,12 @@ import type { CashEntryType } from "@/src/types";
 import { useCash } from "./useCash";
 
 type CashScreenProps = {
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
 
 type FieldErrors = Partial<Record<"amount" | "date" | "label", string>>;
+type CashEntryMode = CashEntryType | "transfer";
 
 function validateCashEntry({
   amount,
@@ -64,9 +66,45 @@ function validateCashEntry({
   };
 }
 
-export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
-  const { addEntry, balance, entries, maskWealthValues } = useCash({ store });
-  const [type, setType] = useState<CashEntryType>("addition");
+function getStoredEntryType(mode: CashEntryMode): CashEntryType {
+  return mode === "addition" ? "addition" : "withdrawal";
+}
+
+function getCashEntryModeLabel(mode: CashEntryMode) {
+  if (mode === "addition") {
+    return "Deposit";
+  }
+
+  if (mode === "transfer") {
+    return "Investment Transfer";
+  }
+
+  return "Withdraw";
+}
+
+function getCashEntryPlaceholder(mode: CashEntryMode) {
+  if (mode === "addition") {
+    return "Broker cash";
+  }
+
+  if (mode === "transfer") {
+    return "SIP transfer";
+  }
+
+  return "Withdrawal";
+}
+
+function formatSavingsRate(savingsRate: number | null) {
+  return savingsRate === null ? "Not enough data" : `${savingsRate.toFixed(2)}%`;
+}
+
+export function CashScreen({
+  now,
+  store = getPortfolioStore(),
+}: CashScreenProps) {
+  const { addEntry, balance, entries, maskWealthValues, monthlyMetrics } =
+    useCash({ now, store });
+  const [mode, setMode] = useState<CashEntryMode>("addition");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [date, setDate] = useState("");
@@ -98,7 +136,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
       date: date.trim(),
       label: label.trim(),
       notes,
-      type,
+      type: getStoredEntryType(mode),
     });
     resetForm();
   }
@@ -119,41 +157,58 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
         <MetricGroup
           metrics={[
             {
-              label: "Entries",
-              value: entries.length.toString(),
+              label: "Added",
+              masked: maskWealthValues,
+              value: formatINR(monthlyMetrics.added),
+            },
+            {
+              label: "Invested",
+              masked: maskWealthValues,
+              value: formatINR(monthlyMetrics.invested),
             },
             {
               label: "Available",
               masked: maskWealthValues,
-              value: formatINR(balance),
+              value: formatINR(monthlyMetrics.available),
             },
             {
               label: "Savings",
-              value: "Not enough data",
+              value: formatSavingsRate(monthlyMetrics.savingsRate),
             },
           ]}
         />
 
+        {maskWealthValues ? (
+          <PremiumCard>
+            <SectionHeader title="Masked preview" />
+            <MaskedValue masked value={formatINR(balance)} />
+            <AppText color="secondary" variant="caption">
+              Value masking hides cash values using the same preview pattern as
+              portfolio totals.
+            </AppText>
+          </PremiumCard>
+        ) : null}
+
         <View style={styles.segmentedControl}>
-          {(["addition", "withdrawal"] as const).map((entryType) => (
+          {(["addition", "withdrawal", "transfer"] as const).map((entryMode) => (
             <Pressable
               accessibilityRole="button"
-              key={entryType}
+              key={entryMode}
               onPress={() => {
-                setType(entryType);
+                setMode(entryMode);
                 setErrors({});
               }}
               style={({ pressed }) => [
                 styles.segment,
-                type === entryType && styles.segmentActive,
+                mode === entryMode && styles.segmentActive,
                 pressed && styles.pressed,
               ]}
             >
               <AppText
-                color={type === entryType ? "inverse" : "secondary"}
+                color={mode === entryMode ? "inverse" : "secondary"}
                 weight="bold"
               >
-                {entryType === "addition" ? "Deposit" : "Withdraw"}
+                {getCashEntryModeLabel(entryMode)}
               </AppText>
             </Pressable>
           ))}
@@ -174,7 +229,7 @@ export function CashScreen({ store = getPortfolioStore() }: CashScreenProps) {
             error={errors.label}
             label="Label"
             onChangeText={setLabel}
-            placeholder={type === "addition" ? "Broker cash" : "Withdrawal"}
+            placeholder={getCashEntryPlaceholder(mode)}
             testID="cash-label-input"
             value={label}
           />

@@ -49,6 +49,64 @@ describe("CashScreen", () => {
     });
   });
 
+  it("records an investment transfer as a withdrawal and shows monthly metrics", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      id: "asset-reliance",
+      name: "Reliance Industries",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+    store.getState().addCashEntry({
+      amount: 100000,
+      date: "2026-05-01",
+      id: "cash-salary",
+      label: "Salary",
+      type: "addition",
+    });
+    store.getState().addTrade({
+      assetId: "asset-reliance",
+      date: "2026-05-10",
+      id: "trade-buy",
+      pricePerUnit: 100,
+      quantity: 200,
+      totalValue: 20000,
+      type: "buy",
+    });
+
+    const { getAllByText, getByLabelText, getByText } = render(
+      <CashScreen
+        now={new Date("2026-05-16T00:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Added")).toBeTruthy();
+    expect(getByText("Invested")).toBeTruthy();
+    expect(getByText("Available")).toBeTruthy();
+    expect(getByText("Savings")).toBeTruthy();
+    expect(getByText("20.00%")).toBeTruthy();
+
+    fireEvent.press(getByText("Investment Transfer"));
+    fireEvent.changeText(getByLabelText("Amount"), "20000");
+    fireEvent.changeText(getByLabelText("Label"), "SIP transfer");
+    fireEvent.changeText(getByLabelText("Date"), "2026-05-11");
+    fireEvent.press(getByText("Save Cash Entry"));
+
+    await waitFor(() => {
+      expect(getAllByText("₹80,000.00").length).toBeGreaterThan(0);
+      expect(getByText("SIP transfer")).toBeTruthy();
+      expect(getByText("-₹20,000.00")).toBeTruthy();
+    });
+    expect(store.getState().cashEntries.at(-1)).toMatchObject({
+      amount: 20000,
+      label: "SIP transfer",
+      type: "withdrawal",
+    });
+  });
+
   it("shows validation errors for invalid cash entries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByText } = render(<CashScreen store={store} />);
@@ -76,6 +134,7 @@ describe("CashScreen", () => {
     );
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(getByText("Masked preview")).toBeTruthy();
     expect(getByText("Broker cash")).toBeTruthy();
     expect(queryByText("₹1,000.00")).toBeNull();
   });
