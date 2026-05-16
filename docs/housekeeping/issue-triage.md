@@ -60,7 +60,8 @@ Suggested acceptance criteria:
 - Refresh icon triggers quote refresh or is removed.
 - Tests cover the chosen behavior.
 
-Status: Created as https://github.com/abdul-shaikh-dev/CogVest/issues/75
+Status: Verified and closed after Dashboard value masking and quote refresh
+actions were wired and covered by tests.
 
 ### #76 [V1] Normalize Progress route naming
 
@@ -77,7 +78,9 @@ Suggested acceptance criteria:
 - Maestro navigation continues to target stable `tab-progress` and
   `progress-screen` IDs.
 
-Status: Created as https://github.com/abdul-shaikh-dev/CogVest/issues/76
+Status: Implemented by normalizing the tab route to
+`app/(tabs)/progress.tsx`, preserving `tab-progress` and `progress-screen`, and
+removing the duplicate root `app/progress.tsx` route.
 
 ## Issue Creation Status
 

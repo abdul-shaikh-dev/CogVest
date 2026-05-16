@@ -30,7 +30,7 @@ lightweight asset lookup/autofill, and complete V1 E2E verification.
 | Holdings | `app/(tabs)/holdings.tsx` | `src/features/holdings` | Implemented. Shows derived holdings, filters, refresh, quote failures, invested/current/P&L/allocation details. |
 | Add Holding | `app/add-holding.tsx` | `src/features/trades` | Implemented as an Add Holding UI backed by trade/opening-entry storage. Supports buy/sell, manual asset creation, review, save, conviction, and manual quote upsert. |
 | Cash | `app/(tabs)/cash.tsx` | `src/features/cash` | Implemented. Supports additions and withdrawals, balance, recent ledger, masking. |
-| Monthly Progress | `app/(tabs)/history.tsx` and `app/progress.tsx` | `src/features/progress` | Partial. Current-month derived summary exists; persistent monthly snapshots are not implemented. |
+| Monthly Progress | `app/(tabs)/progress.tsx` | `src/features/progress` | Partial. Current-month derived summary exists; persistent monthly snapshots are not implemented. Route naming normalized by #76. |
 | Settings | `app/(tabs)/settings.tsx` | `src/features/settings` | Implemented. Supports local-first status and value masking toggle. |
 
 ## Implemented Data and Domain Areas

@@ -9,7 +9,7 @@ type TabIconName = keyof typeof Ionicons.glyphMap;
 const tabIcons: Record<string, TabIconName> = {
   dashboard: "home-outline",
   holdings: "pie-chart-outline",
-  history: "analytics-outline",
+  progress: "analytics-outline",
   cash: "wallet-outline",
   settings: "settings-outline",
 };
@@ -54,7 +54,7 @@ export default function TabLayout() {
         options={{ tabBarButtonTestID: "tab-holdings", title: "Holdings" }}
       />
       <Tabs.Screen
-        name="history"
+        name="progress"
         options={{ tabBarButtonTestID: "tab-progress", title: "Progress" }}
       />
       <Tabs.Screen

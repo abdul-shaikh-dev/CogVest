@@ -46,30 +46,20 @@ Android PC verification requirements.
 - Impact: #65 is not complete and the Excel `Progression` sheet is not yet
   replaced.
 
-### Important: Dashboard action icons appear interactive but have no behavior
+### Resolved: Dashboard action icons appear interactive but have no behavior
 
-- Evidence: `src/features/dashboard/DashboardScreen.tsx` renders value-visibility
-  and refresh `IconButton`s without `onPress`.
-- Evidence: `src/components/common/Premium.tsx` always renders `IconButton` as a
-  button-like `Pressable`.
-- Impact: Users can tap visible controls that do nothing. This should either be
-  wired to masking/quote refresh or rendered as non-interactive status affordance.
+- Later update: #75 was verified and closed after `DashboardScreen` wired
+  value masking and quote refresh actions with test coverage.
 
-### Important: Settings exposes unavailable or non-functional controls
+### Resolved: Settings exposes unavailable or non-functional controls
 
-- Evidence: `src/features/settings/SettingsScreen.tsx` should be reviewed before
-  V1 dev-complete for any rows that look toggleable but are only static.
-- Impact: Settings is supposed to build local-first trust. Unsupported controls
-  should be explicitly marked unavailable, locked, or informational.
+- Later update: #83 aligned Settings rows with real controls, real status, and
+  explicit V1-deferred states.
 
-### Moderate: Route naming is inconsistent for Progress
+### Resolved: Route naming is inconsistent for Progress
 
-- Evidence: `app/(tabs)/history.tsx` renders `ProgressScreen`, while the tab title
-  and test ID are `Progress`.
-- Evidence: `app/progress.tsx` also renders `ProgressScreen` outside the tab
-  group.
-- Impact: The UI says Progress, but the tab route remains `history`. This can
-  confuse E2E, docs, deep links, and future implementation work.
+- Later update: #76 normalized the tab route to `app/(tabs)/progress.tsx` and
+  removed the duplicate root `app/progress.tsx` route.
 
 ### Moderate: Add Holding still stores trade-shaped records
 
