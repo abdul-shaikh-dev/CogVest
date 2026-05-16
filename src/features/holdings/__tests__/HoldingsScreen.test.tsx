@@ -71,8 +71,71 @@ describe("HoldingsScreen", () => {
     expect(getAllByText("₹250.00").length).toBeGreaterThan(0);
     expect(getByText("+₹50.00")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
+    expect(getByText("Drift")).toBeTruthy();
+    expect(getByText("Not enough data")).toBeTruthy();
+    expect(getByText("Quotes updated 20 Apr 2026 • 0 manual fallback")).toBeTruthy();
     expect(getByText("Updated 20 Apr 2026")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
+  });
+
+  it("wires header Add Holding and value masking actions", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    const onAddTrade = jest.fn();
+
+    const { getByLabelText } = render(
+      <HoldingsScreen store={store} onAddTrade={onAddTrade} />,
+    );
+
+    fireEvent.press(getByLabelText("Add Holding"));
+    expect(onAddTrade).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByLabelText("Mask values"));
+    expect(store.getState().preferences.maskWealthValues).toBe(true);
+  });
+
+  it("filters visible holdings by search text and asset-class chips", () => {
+    const debtAsset: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "asset-ppf",
+      instrumentType: "ppf",
+      name: "Public Provident Fund",
+      sectorType: "fixedIncome",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset(debtAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addOpeningPosition({
+      assetId: debtAsset.id,
+      averageCostPrice: 1000,
+      currentPrice: 1100,
+      date: "2026-04-20",
+      id: "opening-ppf",
+      quantity: 2,
+    });
+
+    const { getByLabelText, getByTestId, getByText, queryByText } = render(
+      <HoldingsScreen store={store} />,
+    );
+
+    expect(getByText("Reliance Industries")).toBeTruthy();
+    expect(getByText("Public Provident Fund")).toBeTruthy();
+
+    fireEvent.press(getByTestId("holdings-filter-debt"));
+    expect(queryByText("Reliance Industries")).toBeNull();
+    expect(getByText("Public Provident Fund")).toBeTruthy();
+
+    fireEvent.press(getByTestId("holdings-filter-all"));
+    fireEvent.press(getByLabelText("Search holdings"));
+    fireEvent.changeText(getByLabelText("Search holdings input"), "reliance");
+
+    expect(getByText("Reliance Industries")).toBeTruthy();
+    expect(queryByText("Public Provident Fund")).toBeNull();
   });
 
   it("refreshes holdings quotes from the screen action", async () => {
