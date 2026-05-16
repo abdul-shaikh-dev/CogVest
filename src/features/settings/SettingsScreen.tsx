@@ -22,7 +22,9 @@ type SettingsScreenProps = {
 export function SettingsScreen({
   store = getPortfolioStore(),
 }: SettingsScreenProps) {
-  const { maskWealthValues, toggleMaskWealthValues } = useSettings({ store });
+  const { maskWealthValues, quoteStatus, toggleMaskWealthValues } = useSettings({
+    store,
+  });
 
   async function handleToggleMasking() {
     toggleMaskWealthValues();
@@ -73,9 +75,27 @@ export function SettingsScreen({
           <SectionHeader title="Privacy" />
           <GroupedListRow
             icon="lock-closed-outline"
-            title="Local-first privacy"
-            meta="No backend, auth, analytics, or cloud sync is enabled in V1."
+            title="Local storage active"
+            meta="Portfolio data stays on this Android device."
             value="Active"
+          />
+          <GroupedListRow
+            icon="person-circle-outline"
+            title="No account"
+            meta="CogVest V1 has no sign-in or remote profile."
+            value="Local"
+          />
+          <GroupedListRow
+            icon="cloud-offline-outline"
+            title="No cloud sync"
+            meta="No portfolio data is sent to a backend."
+            value="Off"
+          />
+          <GroupedListRow
+            icon="analytics-outline"
+            title="No analytics"
+            meta="No product telemetry is enabled in V1."
+            value="Off"
           />
           <GroupedListRow
             icon="phone-portrait-outline"
@@ -88,14 +108,27 @@ export function SettingsScreen({
           <SectionHeader title="Quotes" />
           <GroupedListRow
             icon="refresh-outline"
-            title="Quote refresh"
-            meta="Dashboard and Holdings refresh current quotes on demand."
-            value="Manual fallback"
+            title="Latest quote refresh"
+            meta={`${quoteStatus.quoteCount} cached quote${
+              quoteStatus.quoteCount === 1 ? "" : "s"
+            } from holdings and opening positions.`}
+            value={quoteStatus.latestQuoteLabel}
+          />
+          <GroupedListRow
+            icon="pulse-outline"
+            title="Provider status"
+            meta={`${quoteStatus.liveQuoteCount} live quote${
+              quoteStatus.liveQuoteCount === 1 ? "" : "s"
+            } cached.`}
+            value={quoteStatus.providerStatus}
           />
           <GroupedListRow
             icon="cloud-offline-outline"
-            title="Provider fallback"
+            title="Manual fallback"
             meta="Manual prices remain available when quote APIs fail."
+            value={`${quoteStatus.manualFallbackCount} manual quote${
+              quoteStatus.manualFallbackCount === 1 ? "" : "s"
+            }`}
           />
         </PremiumCard>
 
@@ -108,7 +141,12 @@ export function SettingsScreen({
 
         <PremiumCard>
           <SectionHeader title="Display & App Info" />
-          <GroupedListRow title="Density" value="Standard (V1)" />
+          <GroupedListRow
+            icon="resize-outline"
+            title="Density changes"
+            meta="Standard density is fixed for V1."
+            value="V1 locked"
+          />
           <GroupedListRow title="App version 1.0.0" value="Preview" />
         </PremiumCard>
 
@@ -118,7 +156,8 @@ export function SettingsScreen({
             destructive
             icon="trash-outline"
             title="Clear local data"
-            meta="Destructive action. Keep disabled until implemented."
+            meta="Disabled until a confirmation flow is implemented."
+            value="Deferred"
           />
         </PremiumCard>
       </View>
