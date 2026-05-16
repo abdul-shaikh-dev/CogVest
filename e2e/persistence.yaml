@@ -2,23 +2,33 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "dashboard-screen"
 - tapOn:
     id: "tab-cash"
 - tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
+- hideKeyboard
 - tapOn:
     id: "cash-label-input"
 - inputText: "Broker cash"
+- hideKeyboard
 - tapOn:
     id: "cash-date-input"
 - inputText: "2026-04-20"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
 - tapOn:
     id: "save-cash-entry-button"
 - assertVisible: "Broker cash"
 - stopApp
 - launchApp
+- assertVisible:
+    id: "dashboard-screen"
 - tapOn:
     id: "tab-cash"
 - assertVisible: "Broker cash"

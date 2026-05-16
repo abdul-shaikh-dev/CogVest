@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -50,9 +50,21 @@ type AddOpeningPositionFormProps = {
 };
 
 type FieldErrors = Partial<Record<string, string>>;
+type AddHoldingPhase = "asset" | "class" | "position" | "review";
+
+type PhaseConfig = {
+  key: AddHoldingPhase;
+  label: string;
+};
 
 const assetClasses: AssetClass[] = ["stock", "etf", "debt", "crypto"];
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
+const phases: PhaseConfig[] = [
+  { key: "asset", label: "Asset" },
+  { key: "class", label: "Class" },
+  { key: "position", label: "Position" },
+  { key: "review", label: "Review" },
+];
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -74,6 +86,7 @@ export function AddOpeningPositionForm({
   store = getPortfolioStore(),
 }: AddOpeningPositionFormProps) {
   const snapshot = usePortfolioSnapshot(store);
+  const [currentPhase, setCurrentPhase] = useState<AddHoldingPhase>("asset");
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
   const [isLookupSearching, setIsLookupSearching] = useState(false);
@@ -118,6 +131,125 @@ export function AddOpeningPositionForm({
     setReviewAsset(undefined);
     setReviewOpeningPosition(undefined);
     setSuccessMessage("");
+  }
+
+  function getPhaseIndex(phase: AddHoldingPhase) {
+    return phases.findIndex((item) => item.key === phase);
+  }
+
+  function moveToPhase(phase: AddHoldingPhase) {
+    setCurrentPhase(phase);
+    setSuccessMessage("");
+  }
+
+  function validateAssetPhase() {
+    const phaseErrors: FieldErrors = {};
+
+    if (assetName.trim().length === 0) {
+      phaseErrors.assetName = "Asset name is required.";
+    }
+
+    if (symbol.trim().length === 0) {
+      phaseErrors.symbol = "Symbol is required.";
+    }
+
+    if (ticker.trim().length === 0) {
+      phaseErrors.ticker = "Ticker is required.";
+    }
+
+    setErrors(phaseErrors);
+    return Object.keys(phaseErrors).length === 0;
+  }
+
+  function validateClassPhase() {
+    const result = validateOpeningPositionForm({
+      assetClass,
+      assetName: assetName || "Phase validation asset",
+      averageCostPrice: averageCostPrice || "1",
+      conviction,
+      currentPrice: currentPrice || "1",
+      date,
+      instrumentType,
+      notes,
+      quoteSourceId,
+      quantity: quantity || "1",
+      sectorType,
+      symbol: symbol || "PHASE",
+      ticker: ticker || "PHASE.NS",
+    });
+
+    const phaseErrors: FieldErrors = {};
+
+    if (!result.isValid) {
+      if (result.errors.instrumentType) {
+        phaseErrors.instrumentType = result.errors.instrumentType;
+      }
+      if (result.errors.sectorType) {
+        phaseErrors.sectorType = result.errors.sectorType;
+      }
+    }
+
+    setErrors(phaseErrors);
+    return Object.keys(phaseErrors).length === 0;
+  }
+
+  function validatePositionPhase() {
+    const result = validateOpeningPositionForm({
+      assetClass,
+      assetName: assetName || "Phase validation asset",
+      averageCostPrice,
+      conviction,
+      currentPrice,
+      date,
+      instrumentType: instrumentType || "stock",
+      notes,
+      quoteSourceId,
+      quantity,
+      sectorType: sectorType || "financialServices",
+      symbol: symbol || "PHASE",
+      ticker: ticker || "PHASE.NS",
+    });
+
+    const phaseErrors: FieldErrors = {};
+
+    if (!result.isValid) {
+      if (result.errors.quantity) {
+        phaseErrors.quantity = result.errors.quantity;
+      }
+      if (result.errors.averageCostPrice) {
+        phaseErrors.averageCostPrice = result.errors.averageCostPrice;
+      }
+      if (result.errors.currentPrice) {
+        phaseErrors.currentPrice = result.errors.currentPrice;
+      }
+      if (result.errors.date) {
+        phaseErrors.date = result.errors.date;
+      }
+      if (result.errors.conviction) {
+        phaseErrors.conviction = result.errors.conviction;
+      }
+    }
+
+    setErrors(phaseErrors);
+    return Object.keys(phaseErrors).length === 0;
+  }
+
+  function continueFromAsset() {
+    if (validateAssetPhase()) {
+      moveToPhase("class");
+    }
+  }
+
+  function continueFromClass() {
+    if (validateClassPhase()) {
+      moveToPhase("position");
+    }
+  }
+
+  function continueFromPosition() {
+    if (validatePositionPhase()) {
+      handleReview();
+    }
   }
 
   useEffect(() => {
@@ -177,6 +309,24 @@ export function AddOpeningPositionForm({
       clearTimeout(timeout);
     };
   }, [lookupQuery, searchAssetLookupResults]);
+
+  useEffect(() => {
+    const normalizedQuery = lookupQuery.trim().toLowerCase();
+
+    if (!normalizedQuery || lookupResults.length === 0) {
+      return;
+    }
+
+    const exactResult = lookupResults.find((result) =>
+      [result.symbol, result.ticker, result.quoteSourceId].some(
+        (value) => value.toLowerCase() === normalizedQuery,
+      ),
+    );
+
+    if (exactResult) {
+      void selectLookupResult(exactResult);
+    }
+  }, [lookupQuery, lookupResults]);
 
   function clearSelectedAsset() {
     if (selectedAssetId) {
@@ -242,6 +392,9 @@ export function AddOpeningPositionForm({
     setSectorType(result.sectorType);
     setSymbol(result.symbol);
     setTicker(result.ticker);
+    setLookupQuery("");
+    setLookupResults([]);
+    setLookupStatus("");
     setQuoteStatus("Fetching live current price...");
     resetReview();
 
@@ -255,6 +408,31 @@ export function AddOpeningPositionForm({
 
     setCurrentPrice("");
     setQuoteStatus("Live price unavailable. Enter current price manually.");
+  }
+
+  function getPreferredLookupResult() {
+    const normalizedQuery = lookupQuery.trim().toLowerCase();
+
+    return (
+      lookupResults.find((result) =>
+        [result.symbol, result.ticker, result.quoteSourceId].some(
+          (value) => value.toLowerCase() === normalizedQuery,
+        ),
+      ) ??
+      lookupResults.find((result) => result.name.toLowerCase() === normalizedQuery) ??
+      lookupResults.find((result) =>
+        result.name.toLowerCase().startsWith(normalizedQuery),
+      ) ??
+      lookupResults[0]
+    );
+  }
+
+  function selectPreferredLookupResult() {
+    const result = getPreferredLookupResult();
+
+    if (result) {
+      void selectLookupResult(result);
+    }
   }
 
   function updateAssetClass(nextAssetClass: AssetClass) {
@@ -305,6 +483,7 @@ export function AddOpeningPositionForm({
       notes: result.value.notes,
       quantity: result.value.quantity,
     });
+    setCurrentPhase("review");
   }
 
   async function handleConfirm() {
@@ -329,11 +508,59 @@ export function AddOpeningPositionForm({
     setReviewOpeningPosition(undefined);
   }
 
+  function renderStepper() {
+    const currentIndex = getPhaseIndex(currentPhase);
+
+    return (
+      <View style={styles.stepper}>
+        {phases.map((phase, index) => {
+          const isActive = phase.key === currentPhase;
+          const isComplete = index < currentIndex;
+          const isDisabled = index > currentIndex;
+
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isDisabled, selected: isActive }}
+              disabled={isDisabled}
+              key={phase.key}
+              onPress={() => moveToPhase(phase.key)}
+              style={({ pressed }) => [
+                styles.stepItem,
+                isActive && styles.stepItemActive,
+                isComplete && styles.stepItemComplete,
+                isDisabled && styles.stepItemDisabled,
+                pressed && styles.pressed,
+              ]}
+              testID={`add-holding-step-${phase.key}`}
+            >
+              <View
+                style={[
+                  styles.stepDot,
+                  isActive && styles.stepDotActive,
+                  isComplete && styles.stepDotComplete,
+                ]}
+              />
+              <AppText
+                color={isActive || isComplete ? "primary" : "secondary"}
+                variant="caption"
+                weight="bold"
+              >
+                {phase.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
     <ScreenContainer scroll testID="add-holding-screen">
       <ScreenHeader title="Add Holding" subtitle="Opening position • local only" />
+      {renderStepper()}
 
-      {snapshot.assets.length > 0 ? (
+      {currentPhase === "asset" && snapshot.assets.length > 0 ? (
         <PremiumCard>
           <AppText color="secondary" variant="caption" weight="medium">
             Existing assets
@@ -363,7 +590,8 @@ export function AddOpeningPositionForm({
         </PremiumCard>
       ) : null}
 
-      <PremiumCard>
+      {currentPhase === "asset" ? (
+      <PremiumCard testID="add-holding-phase-asset">
         <SectionHeader title="Asset" />
         <FormTextField
           label="Search asset"
@@ -371,7 +599,9 @@ export function AddOpeningPositionForm({
             setLookupQuery(value);
             setQuoteStatus("");
           }}
+          onSubmitEditing={selectPreferredLookupResult}
           placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
+          returnKeyType="search"
           testID="asset-lookup-input"
           value={lookupQuery}
         />
@@ -383,16 +613,14 @@ export function AddOpeningPositionForm({
         {lookupResults.length > 0 ? (
           <View style={styles.lookupResults}>
             {lookupResults.map((result) => (
-              <Pressable
+              <TouchableOpacity
                 accessibilityRole="button"
+                activeOpacity={0.74}
                 key={result.id}
                 onPress={() => {
                   void selectLookupResult(result);
                 }}
-                style={({ pressed }) => [
-                  styles.lookupResult,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.lookupResult}
                 testID={`asset-lookup-result-${result.id}`}
               >
                 <CategoryIcon assetClass={result.assetClass} size={18} />
@@ -405,7 +633,7 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" variant="caption" weight="bold">
                   {assetClassLabel(result.assetClass)}
                 </AppText>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         ) : null}
@@ -414,35 +642,6 @@ export function AddOpeningPositionForm({
             {quoteStatus}
           </AppText>
         ) : null}
-        <View style={styles.classRow}>
-          {assetClasses.map((currentClass) => {
-            const isSelected = assetClass === currentClass;
-
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
-                key={currentClass}
-                onPress={() => updateAssetClass(currentClass)}
-                style={({ pressed }) => [
-                  styles.classChip,
-                  isSelected && styles.classChipActive,
-                  pressed && styles.pressed,
-                ]}
-                testID={`asset-class-${currentClass}`}
-              >
-                <CategoryIcon assetClass={currentClass} size={16} />
-                <AppText
-                  color={isSelected ? "primary" : "secondary"}
-                  variant="caption"
-                  weight="bold"
-                >
-                  {assetClassLabel(currentClass)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
         <FormTextField
           error={errors.assetName}
           label="Asset name"
@@ -485,6 +684,61 @@ export function AddOpeningPositionForm({
             />
           </View>
         </View>
+        <FormTextField
+          label="Quote source ID"
+          onChangeText={(value) => {
+            setQuoteSourceId(value);
+            clearSelectedAsset();
+            resetReview();
+          }}
+          placeholder="RELIANCE.NS"
+          testID="quote-source-id-input"
+          value={quoteSourceId}
+        />
+      </PremiumCard>
+      ) : null}
+
+      {currentPhase === "class" ? (
+      <PremiumCard testID="add-holding-phase-class">
+        <SectionHeader title="Classification" />
+        <View style={styles.summaryCard}>
+          <CategoryIcon assetClass={assetClass} size={20} />
+          <View style={styles.summaryCopy}>
+            <AppText weight="bold">{assetName || "Asset not named"}</AppText>
+            <AppText color="secondary" variant="caption">
+              {symbol || "Symbol"} • {ticker || "Ticker"}
+            </AppText>
+          </View>
+        </View>
+        <View style={styles.classRow}>
+          {assetClasses.map((currentClass) => {
+            const isSelected = assetClass === currentClass;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                key={currentClass}
+                onPress={() => updateAssetClass(currentClass)}
+                style={({ pressed }) => [
+                  styles.classChip,
+                  isSelected && styles.classChipActive,
+                  pressed && styles.pressed,
+                ]}
+                testID={`asset-class-${currentClass}`}
+              >
+                <CategoryIcon assetClass={currentClass} size={16} />
+                <AppText
+                  color={isSelected ? "primary" : "secondary"}
+                  variant="caption"
+                  weight="bold"
+                >
+                  {assetClassLabel(currentClass)}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
@@ -515,20 +769,11 @@ export function AddOpeningPositionForm({
             />
           </View>
         </View>
-        <FormTextField
-          label="Quote source ID"
-          onChangeText={(value) => {
-            setQuoteSourceId(value);
-            clearSelectedAsset();
-            resetReview();
-          }}
-          placeholder="RELIANCE.NS"
-          testID="quote-source-id-input"
-          value={quoteSourceId}
-        />
       </PremiumCard>
+      ) : null}
 
-      <PremiumCard>
+      {currentPhase === "position" ? (
+      <PremiumCard testID="add-holding-phase-position">
         <SectionHeader title="Position Details" />
         <View style={styles.row}>
           <View style={styles.flex}>
@@ -642,10 +887,21 @@ export function AddOpeningPositionForm({
           value={notes}
         />
       </PremiumCard>
+      ) : null}
 
-      {previewHolding ? (
-        <PremiumCard elevated testID="derived-preview">
+      {currentPhase === "review" && previewHolding ? (
+        <PremiumCard elevated testID="add-holding-phase-review">
           <SectionHeader title="Derived Preview" />
+          <View testID="derived-preview">
+          <View style={styles.summaryCard}>
+            <CategoryIcon assetClass={reviewAsset!.assetClass} size={20} />
+            <View style={styles.summaryCopy}>
+              <AppText weight="bold">{reviewAsset!.name}</AppText>
+              <AppText color="secondary" variant="caption">
+                {reviewAsset!.symbol} • {assetClassLabel(reviewAsset!.assetClass)}
+              </AppText>
+            </View>
+          </View>
           <View style={styles.previewGrid}>
             <View style={styles.previewCell}>
               <AppText color="secondary" variant="caption">
@@ -694,6 +950,7 @@ export function AddOpeningPositionForm({
               </AppText>
             </View>
           </View>
+          </View>
         </PremiumCard>
       ) : null}
 
@@ -704,18 +961,59 @@ export function AddOpeningPositionForm({
       ) : null}
 
       <View style={styles.actions}>
-        <AppButton
-          onPress={handleReview}
-          testID="review-holding-button"
-          title="Review Holding"
-        />
-        <AppButton
-          disabled={!reviewOpeningPosition}
-          onPress={handleConfirm}
-          testID="save-holding-button"
-          title="Save Holding"
-          variant="secondary"
-        />
+        {currentPhase === "asset" ? (
+          <AppButton
+            onPress={continueFromAsset}
+            testID="continue-class-button"
+            title="Continue to classification"
+          />
+        ) : null}
+        {currentPhase === "class" ? (
+          <>
+            <AppButton
+              onPress={continueFromClass}
+              testID="continue-position-button"
+              title="Continue to position"
+            />
+            <AppButton
+              onPress={() => moveToPhase("asset")}
+              testID="back-button"
+              title="Back"
+              variant="secondary"
+            />
+          </>
+        ) : null}
+        {currentPhase === "position" ? (
+          <>
+            <AppButton
+              onPress={continueFromPosition}
+              testID="review-holding-button"
+              title="Review Holding"
+            />
+            <AppButton
+              onPress={() => moveToPhase("class")}
+              testID="back-button"
+              title="Back"
+              variant="secondary"
+            />
+          </>
+        ) : null}
+        {currentPhase === "review" ? (
+          <>
+            <AppButton
+              disabled={!reviewOpeningPosition}
+              onPress={handleConfirm}
+              testID="save-holding-button"
+              title="Save Holding"
+            />
+            <AppButton
+              onPress={() => moveToPhase("position")}
+              testID="back-button"
+              title="Back"
+              variant="secondary"
+            />
+          </>
+        ) : null}
       </View>
     </ScreenContainer>
   );
@@ -827,5 +1125,53 @@ const styles = StyleSheet.create({
   },
   successText: {
     color: colors.profit,
+  },
+  stepDot: {
+    backgroundColor: colors.text.muted,
+    borderRadius: 999,
+    height: 8,
+    width: 8,
+  },
+  stepDotActive: {
+    backgroundColor: colors.profit,
+  },
+  stepDotComplete: {
+    backgroundColor: colors.primary,
+  },
+  stepItem: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.pill,
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: spacing.xs,
+  },
+  stepItemActive: {
+    backgroundColor: "rgba(52,199,89,0.16)",
+  },
+  stepItemComplete: {
+    backgroundColor: "rgba(46,125,82,0.14)",
+  },
+  stepItemDisabled: {
+    opacity: 0.62,
+  },
+  stepper: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  summaryCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  summaryCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
 });

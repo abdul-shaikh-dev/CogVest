@@ -4,21 +4,19 @@ appId: com.abdulshaikh.cogvest
     clearState: true
 - assertVisible:
     id: "dashboard-screen"
-- openLink: "cogvest:///add-holding"
+- tapOn: "Add Holding"
 - assertVisible:
     id: "add-holding-screen"
 - assertVisible:
     id: "add-holding-phase-asset"
 - tapOn:
-    id: "asset-input"
-- inputText: "Reliance Industries"
-- tapOn:
-    id: "symbol-input"
-- inputText: "RELIANCE"
-- tapOn:
-    id: "ticker-input"
-- inputText: "RELIANCE.NS"
+    id: "asset-lookup-input"
+- eraseText: 50
+- inputText: "btc-usd"
 - hideKeyboard
+- assertVisible: "Bitcoin USD"
+- assertVisible:
+    id: "continue-class-button"
 - tapOn:
     id: "continue-class-button"
 - assertVisible:
@@ -29,16 +27,14 @@ appId: com.abdulshaikh.cogvest
     id: "add-holding-phase-position"
 - tapOn:
     id: "quantity-input"
-- inputText: "2"
+- inputText: "1"
 - tapOn:
     id: "average-cost-input"
-- inputText: "90"
+- inputText: "100"
 - tapOn:
     id: "price-input"
-- inputText: "100"
+- inputText: "110"
 - hideKeyboard
-- tapOn:
-    id: "conviction-4"
 - tapOn:
     id: "review-holding-button"
 - assertVisible:
