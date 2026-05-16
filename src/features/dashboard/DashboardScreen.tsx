@@ -17,13 +17,19 @@ import {
   CategoryIcon,
 } from "@/src/components/common";
 import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
+import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
 
 import { useDashboard } from "./useDashboard";
 
+type RefreshQuotes = (
+  input: RefreshQuotesInput,
+) => Promise<QuoteRefreshResult>;
+
 type DashboardScreenProps = {
   onAddTrade?: () => void;
+  refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -39,9 +45,10 @@ function formatUnsignedPercentage(value: number) {
 
 export function DashboardScreen({
   onAddTrade,
+  refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
-  const dashboard = useDashboard({ store });
+  const dashboard = useDashboard({ refreshQuotes, store });
   const hasAllocation = dashboard.allocation.length > 0;
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
   const totalInvested = dashboard.rollupTotals.totalInvested;
@@ -49,6 +56,12 @@ export function DashboardScreen({
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
   const sectorSnapshot = dashboard.sectorAllocation.slice(0, 3);
   const instrumentSnapshot = dashboard.instrumentAllocation.slice(0, 3);
+  const quoteStatus = getQuoteStatus({
+    isRefreshing: dashboard.isRefreshing,
+    latestQuoteAsOf: dashboard.latestQuoteAsOf,
+    latestQuoteSource: dashboard.latestQuoteSource,
+    quoteFailures: dashboard.quoteFailures.length,
+  });
 
   return (
     <ScreenContainer scroll testID="dashboard-screen">
@@ -58,8 +71,22 @@ export function DashboardScreen({
           subtitle="Local portfolio • latest snapshot"
           action={
             <>
-              <IconButton accessibilityLabel="Toggle value visibility" icon="eye-outline" />
-              <IconButton accessibilityLabel="Refresh quotes" icon="refresh-outline" />
+              <IconButton
+                accessibilityLabel={
+                  dashboard.maskWealthValues ? "Show values" : "Mask values"
+                }
+                icon={dashboard.maskWealthValues ? "eye-off-outline" : "eye-outline"}
+                onPress={dashboard.toggleMaskWealthValues}
+                testID="dashboard-mask-toggle"
+              />
+              <IconButton
+                accessibilityLabel="Refresh quotes"
+                icon="refresh-outline"
+                onPress={() => {
+                  void dashboard.refresh();
+                }}
+                testID="dashboard-refresh-quotes"
+              />
             </>
           }
         />
@@ -93,6 +120,14 @@ export function DashboardScreen({
             },
           ]}
         />
+
+        {onAddTrade && hasAllocation ? (
+          <AppButton
+            title="Add Holding"
+            testID="add-trade-button"
+            onPress={onAddTrade}
+          />
+        ) : null}
 
         {sectorSnapshot.length > 0 || instrumentSnapshot.length > 0 ? (
           <PremiumCard>
@@ -142,14 +177,6 @@ export function DashboardScreen({
           </PremiumCard>
         ) : null}
 
-        {onAddTrade && hasAllocation ? (
-          <AppButton
-            title="Add Holding"
-            testID="add-trade-button"
-            onPress={onAddTrade}
-          />
-        ) : null}
-
         {hasAllocation ? (
           <PremiumCard>
             <SectionHeader title="Allocation" actionLabel="View details" />
@@ -192,16 +219,19 @@ export function DashboardScreen({
               {
                 label: "Invested",
                 masked: dashboard.maskWealthValues,
-                value: formatINR(totalInvested),
+                value: formatINR(dashboard.monthlyMetrics.investment),
               },
               {
-                label: "Cash balance",
+                label: "Savings",
+                value:
+                  dashboard.monthlyMetrics.savingsRate === null
+                    ? "Not enough data"
+                    : formatPercentage(dashboard.monthlyMetrics.savingsRate),
+              },
+              {
+                label: "Cash change",
                 masked: dashboard.maskWealthValues,
-                value: formatINR(dashboard.cashBalance),
-              },
-              {
-                label: "Holdings",
-                value: dashboard.holdings.length.toString(),
+                value: formatSignedINR(dashboard.monthlyMetrics.cashChange),
               },
             ]}
           />
@@ -209,11 +239,7 @@ export function DashboardScreen({
 
         <PremiumCard>
           <SectionHeader title="Quote Status" />
-          <AppText color="secondary">
-            {dashboard.latestQuoteAsOf
-              ? `Quotes updated ${formatDate(dashboard.latestQuoteAsOf)}`
-              : "Quotes will appear after your first priced holding."}
-          </AppText>
+          <AppText color="secondary">{quoteStatus}</AppText>
         </PremiumCard>
 
         <PremiumCard>
@@ -234,6 +260,35 @@ export function DashboardScreen({
       </View>
     </ScreenContainer>
   );
+}
+
+function getQuoteStatus({
+  isRefreshing,
+  latestQuoteAsOf,
+  latestQuoteSource,
+  quoteFailures,
+}: {
+  isRefreshing: boolean;
+  latestQuoteAsOf?: string;
+  latestQuoteSource?: string;
+  quoteFailures: number;
+}) {
+  if (isRefreshing) {
+    return "Refreshing quotes...";
+  }
+
+  if (quoteFailures > 0) {
+    return "Some quotes could not refresh. Manual fallback ready.";
+  }
+
+  if (!latestQuoteAsOf) {
+    return "Quotes will appear after your first priced holding.";
+  }
+
+  const mode =
+    latestQuoteSource === "manual" ? "Manual fallback ready" : "Live refresh available";
+
+  return `Quotes updated ${formatDate(latestQuoteAsOf)} • ${mode}`;
 }
 
 const styles = StyleSheet.create({
