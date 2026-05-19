@@ -2,8 +2,8 @@
 
 Date: 2026-05-06
 
-Status: historical issue-triage snapshot. #72 was later addressed by PR #78,
-and later issues #79-#84 were created after this report.
+Status: historical issue-triage snapshot. For current V1 Excel parity closeout
+evidence, see `docs/testing/excel-parity-verification-2026-05-19.md`.
 
 ## Repository State
 
@@ -17,13 +17,13 @@ and later issues #79-#84 were created after this report.
 | Issue | State | Recommendation |
 | --- | --- | --- |
 | #72 Android release APK bottom navigation bug | Historical: later addressed by PR #78 | Re-run Maestro before treating this as current. |
-| #60 Excel tracker parity MVP | Open | Keep open. Parent cannot close until #61-#66 are complete and verified. |
-| #61 Opening positions | Open | Keep open. Current Add Holding is partial but does not satisfy all acceptance criteria. |
-| #62 Asset metadata | Open | Keep open and do next after #72. Required for debt/sector/instrument parity. |
-| #63 Debt and crypto parity | Open | Keep open. Crypto is partial; debt is missing as first-class category. |
-| #64 Consolidated rollups | Open | Keep open. Core totals exist; richer rollups/allocation details remain. |
-| #65 Monthly progression snapshots | Open | Keep open. Current Progress screen does not persist monthly snapshots. |
-| #66 Excel parity gate docs/tests | Open | Keep open. Existing docs do not yet provide the full parity checklist. |
+| #60 Excel tracker parity MVP | Closeout PR pending | See `docs/testing/excel-parity-verification-2026-05-19.md`. |
+| #61 Opening positions | Closed | Implemented by V1 opening-position work. |
+| #62 Asset metadata | Closed | Implemented by V1 metadata work. |
+| #63 Debt and crypto parity | Closed | Implemented by V1 debt/crypto parity work. |
+| #64 Consolidated rollups | Closed | Implemented by V1 consolidated rollup work. |
+| #65 Monthly progression snapshots | Closed | Implemented by V1 monthly snapshot work. |
+| #66 Excel parity gate docs/tests | Closed | Implemented through `docs/testing/excel-parity-checklist.md`. |
 | #17-#21 V2 issues | Open | Leave open as future placeholders. Do not expand until V1 parity is validated. |
 | #22-#26 V3 issues | Open | Leave open as future placeholders. Do not expand until V1/V2 are validated. |
 

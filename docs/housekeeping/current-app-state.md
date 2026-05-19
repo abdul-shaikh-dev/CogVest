@@ -3,6 +3,8 @@
 Date: 2026-05-06
 
 Status: historical review snapshot, updated by later housekeeping where noted.
+For current V1 Excel parity closeout evidence, see
+`docs/testing/excel-parity-verification-2026-05-19.md`.
 
 Base commit reviewed: `bcbeeed Merge pull request #73 from abdul-shaikh-dev/docs/superpowers-workflow-agents`
 
@@ -18,9 +20,10 @@ CogVest has a working V1 app shell with local-first portfolio data, derived
 holdings, dashboard summaries, cash tracking, quote refresh plumbing, value
 masking, Android PC harness scripts, and Maestro flows.
 
-It is not yet Excel-parity complete. The biggest product gaps are the
-Excel-style metadata model, first-class debt support, monthly snapshots,
-lightweight asset lookup/autofill, and complete V1 E2E verification.
+Later V1 work closed the Excel parity slices for metadata, debt/crypto support,
+monthly snapshots, asset lookup/autofill, rollups, and the parity gate. Treat
+the detailed findings below as historical unless they are still reproduced on
+current `main`.
 
 ## Implemented Screens
 
@@ -30,7 +33,7 @@ lightweight asset lookup/autofill, and complete V1 E2E verification.
 | Holdings | `app/(tabs)/holdings.tsx` | `src/features/holdings` | Implemented. Shows derived holdings, filters, refresh, quote failures, invested/current/P&L/allocation details. |
 | Add Holding | `app/add-holding.tsx` | `src/features/trades` | Implemented as an Add Holding UI backed by trade/opening-entry storage. Supports buy/sell, manual asset creation, review, save, conviction, and manual quote upsert. |
 | Cash | `app/(tabs)/cash.tsx` | `src/features/cash` | Implemented. Supports additions and withdrawals, balance, recent ledger, masking. |
-| Monthly Progress | `app/(tabs)/progress.tsx` | `src/features/progress` | Partial. Current-month derived summary exists; persistent monthly snapshots are not implemented. Route naming normalized by #76. |
+| Monthly Progress | `app/(tabs)/progress.tsx` | `src/features/progress` | Implemented for V1 snapshots and route naming; see #65 and #76 closeout. |
 | Settings | `app/(tabs)/settings.tsx` | `src/features/settings` | Implemented. Supports local-first status and value masking toggle. |
 
 ## Implemented Data and Domain Areas
@@ -41,45 +44,42 @@ lightweight asset lookup/autofill, and complete V1 E2E verification.
 | Derived holdings | `src/domain/calculations/holdings.ts` derives holdings from assets, trades, and quotes. | Implemented. |
 | Cash balance | `calculateCashBalance` and `useCash` derive balance from cash entries. | Implemented. |
 | Portfolio total | `calculatePortfolioTotal` combines holdings current value and cash. | Implemented. |
-| Allocation | `calculateAllocation` groups by current `AssetClass`. | Partial: groups stock/etf/crypto/cash, but no first-class debt class. |
+| Allocation | `calculateAllocation` groups by current `AssetClass`. | Implemented for V1 equity/debt/crypto/cash parity. |
 | Quote refresh | `src/services/quotes/quoteResolver.ts` supports Yahoo/CoinGecko and manual fallback. | Implemented for supported asset classes. |
 | Value masking | Settings preference flows into Dashboard, Holdings, Cash, and Progress. | Implemented in core value displays. |
 | Conviction | Optional conviction is accepted on Add Holding and dashboard readiness is derived. | Lightweight V1 state implemented. |
-| Monthly snapshots | No persisted monthly snapshot model found. | Missing; issue #65 remains open. |
+| Monthly snapshots | `src/store/index.ts` persists monthly snapshots and `calculateMonthlyProgressSummaries` derives summaries. | Implemented by #65. |
 
 ## Excel Parity Gate Status
 
 | Question from #60 | Current status | Evidence / gap |
 | --- | --- | --- |
-| What do I own? | Partial | Holdings screen derives current holdings from stored assets/trades. Opening position entry exists, but asset metadata is narrow. |
-| How much did I invest? | Partial | Dashboard/Holdings derive invested value. Needs consolidated rollup hardening under #64. |
-| What is it worth now? | Partial | Current value derives from quote cache/manual quote. Live/manual fallback exists, but unsupported/debt instruments need better handling. |
-| What is my P&L and P&L %? | Partial | Holding and dashboard P&L exist. Consolidated tests/rollup issue #64 remains open. |
-| How is my portfolio allocated? | Partial | Asset-class allocation exists. No sector/instrument allocation; debt class missing. |
-| How much is in equity, debt, crypto, and cash? | Partial | Equity/crypto/cash can be represented. Debt is not first-class; `etf` is currently labelled as Debt in UI config. |
-| What changed this month? | Partial | Progress screen derives current-month investment/cash, but no monthly snapshot model or monthly gain persistence. |
-| How much did I invest this month? | Partial | Progress screen derives current-month buy totals from trades. |
-| What is my savings/investment rate? | Partial | Progress screen computes investment/cash-added percentage if cash was added. Salary/expense rate fields are missing. |
-| Can I continue daily tracking without opening Excel? | Not yet | Core data entry exists, but #61-#66 and #72 block the parity gate. |
+| What do I own? | Pass in closeout evidence | Holdings and Add Holding opening-position flow cover stored assets and quantities. |
+| How much did I invest? | Pass in closeout evidence | Dashboard, Holdings, Monthly Progress, and calculations tests cover invested values. |
+| What is it worth now? | Pass in closeout evidence | Quote/manual prices drive Dashboard and Holdings current values. |
+| What is my P&L and P&L %? | Pass in closeout evidence | Dashboard, Holdings, and calculations tests cover P&L amount and percentage. |
+| How is my portfolio allocated? | Pass in closeout evidence | Dashboard/Holdings allocation and rollups are covered by #64 and later UI alignment. |
+| How much is in equity, debt, crypto, and cash? | Pass in closeout evidence | Asset metadata, debt/crypto parity, cash, and Progress snapshots are covered. |
+| What changed this month? | Pass in closeout evidence | Monthly Progress snapshots cover monthly gain and gain %. |
+| How much did I invest this month? | Pass in closeout evidence | Monthly Progress and Cash Ledger metrics cover monthly investment context. |
+| What is my savings/investment rate? | Pass in closeout evidence | Monthly Progress and Cash Ledger metrics cover savings/investment rate context. |
+| Can I continue daily tracking without opening Excel? | Pass in closeout evidence | #61-#66 are closed and `docs/testing/excel-parity-verification-2026-05-19.md` records the V1 PC gate. |
 
 ## GitHub Issue Alignment
 
 | Issue | Review result |
 | --- | --- |
-| #60 Excel tracker parity MVP | Keep open. Parent issue is not complete. |
-| #61 Opening positions | Partial. Add Holding can create a holding, but it is still trade-shaped and lacks required metadata/current-position semantics. |
-| #62 Asset metadata | Not complete. Asset model lacks instrument type, sector type, quote source identifier, and debt category. |
-| #63 Debt and crypto parity | Partial. Crypto path exists; debt path is missing as a first-class category. |
-| #64 Consolidated rollups | Partial. Totals/allocation exist but sector/instrument grouping and allocation details are missing. |
-| #65 Monthly snapshots | Not complete. Current progress screen is derived-current-month only. |
-| #66 Excel parity gate docs/tests | Not complete. Existing testing docs mention V1 flows but do not provide a full Excel parity checklist. |
+| #60 Excel tracker parity MVP | Closeout PR pending. See `docs/testing/excel-parity-verification-2026-05-19.md`. |
+| #61 Opening positions | Closed. |
+| #62 Asset metadata | Closed. |
+| #63 Debt and crypto parity | Closed. |
+| #64 Consolidated rollups | Closed. |
+| #65 Monthly snapshots | Closed. |
+| #66 Excel parity gate docs/tests | Closed. |
 | #72 Android release APK navigation | Historical finding. Addressed by PR #78; re-run Maestro before relying on current status. |
 
 ## Next Recommended Order
 
-1. Implement #62 before expanding the UI further; metadata is the base for #63 and #64.
-2. Implement #84 so Add Holding can lookup/autofill common asset metadata and prices.
-3. Implement #61/#79 with explicit multi-phase opening-position semantics after the metadata model is settled.
-4. Implement #63 and #64 together or back-to-back because debt support and rollups share the same model boundary.
-5. Implement #65 monthly snapshots.
-6. Complete #66 and then evaluate #60 for closure.
+1. Merge the #60 closeout evidence PR if CI passes.
+2. Re-run local release/APK verification before V1 dev-complete.
+3. Keep V2/V3 issues as future placeholders until V1 closeout is accepted.

@@ -5,6 +5,8 @@
 This is the V1 Excel tracker parity gate. V1 is not dev-complete until this
 checklist passes or every failed row has a linked defect.
 
+Current closeout evidence: `docs/testing/excel-parity-verification-2026-05-19.md`.
+
 CogVest should replace the useful tracking concepts from `Portfolio.xlsm`
 without recreating Excel as a spreadsheet UI. The app should stay mobile-first,
 calm, local-first, and aligned with `DESIGN.md`.
