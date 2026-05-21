@@ -2,6 +2,19 @@
 
 Static browser mockup for the CogVest V1 premium design pass.
 
+## Refined Baseline
+
+Issue #102 refines this preview after the May 21, 2026 CogVest mockup review.
+The preview keeps the approved V1 flow coverage while adopting:
+
+- quieter portfolio-first Dashboard hierarchy
+- compact Holdings cards with quantity, average cost, current price, P&L,
+  allocation context, and quote state
+- Holdings filter counts, stale-price reference, and Add Holding header action
+- focused Cash Ledger and empty cash state treatment
+- local-first trust treatment in Settings
+- explicit Progress copy that keeps historical charting out of V1 scope
+
 ## Scope
 
 - Dashboard
@@ -11,7 +24,8 @@ Static browser mockup for the CogVest V1 premium design pass.
 - Cash Ledger
 - Settings
 - V1 States
-- Empty portfolio, quote lookup, provider error, manual price fallback, and no-snapshot state frame
+- Empty portfolio, empty cash ledger, quote lookup, provider error, manual price
+  fallback, and no-snapshot state frame
 
 This is a design preview only. It does not modify the Expo app.
 
