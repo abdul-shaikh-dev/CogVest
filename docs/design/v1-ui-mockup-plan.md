@@ -1,8 +1,9 @@
 # V1 UI Mockup Plan
 
 > Status: historical V1 visual planning reference. For current V1 UI work, use
-> `DESIGN.md` and `docs/design/figma/issue-69-v1-screens/code.js` as the
-> source of truth. This document remains only for early context.
+> `DESIGN.md`, `docs/design/figma/issue-69-v1-screens/code.js`, and the active
+> design-baseline revision spec under `docs/superpowers/specs/` as the source of
+> truth. This document remains only for early context.
 
 Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 
