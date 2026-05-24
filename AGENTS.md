@@ -77,7 +77,9 @@ into behaviour insights and Minimal Mode.
 - Current V1 Figma source is
   `docs/design/figma/issue-69-v1-screens/code.js`: main tabs are Dashboard,
   Holdings, Progress, Cash, Settings; Add Holding is a secondary screen.
-- Use docs/design/v1-ui-mockup-plan.md and the Figma file for V1 UI context.
+- Current accepted V1 screen contract is `docs/design/v1-screen-baseline.md`.
+- Use the HTML preview in `docs/design/issue-86-premium-preview/index.html`,
+  `docs/design/v1-screen-baseline.md`, and the Figma file for V1 UI context.
 
 ## Release Gates
 - V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,

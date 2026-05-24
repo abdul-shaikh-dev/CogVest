@@ -12,6 +12,19 @@ than a standard finance dashboard.
 Every UI task must follow this document unless the issue explicitly says
 otherwise.
 
+## Current V1 Screen Baseline
+
+The accepted V1 screen contract lives in `docs/design/v1-screen-baseline.md`.
+The current repo design assets are:
+
+- HTML preview: `docs/design/issue-86-premium-preview/index.html`
+- Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
+
+Future UI work on Dashboard, Holdings, Add Holding, Progress, Cash, or Settings
+must preserve that baseline unless the issue explicitly updates the baseline.
+If the design changes, update the baseline doc, preview, and Figma generator
+together or log the drift.
+
 ## 1. Visual Theme & Atmosphere
 
 CogVest should feel like a private portfolio room, not a trading floor.

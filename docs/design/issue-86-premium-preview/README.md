@@ -2,6 +2,8 @@
 
 Static browser mockup for the CogVest V1 premium design pass.
 
+Canonical screen contract: `docs/design/v1-screen-baseline.md`.
+
 ## Refined Baseline
 
 Issue #102 refines this preview after the May 21, 2026 CogVest mockup review.
@@ -14,6 +16,9 @@ The preview keeps the approved V1 flow coverage while adopting:
 - focused Cash Ledger and empty cash state treatment
 - local-first trust treatment in Settings
 - explicit Progress copy that keeps historical charting out of V1 scope
+- two Progress graph treatments: portfolio value vs invested value, and assets
+  vs months with cash excluded
+- explicit Add Holding search selection; search must not auto-pick a result
 
 ## Scope
 
@@ -28,6 +33,9 @@ The preview keeps the approved V1 flow coverage while adopting:
   fallback, and no-snapshot state frame
 
 This is a design preview only. It does not modify the Expo app.
+
+Preview data is illustrative only. Production screens must use persisted local
+records and domain-derived values, or show empty states.
 
 ## Run
 

@@ -3,6 +3,8 @@
 This folder contains a deterministic Figma development plugin that creates
 editable V1 screen frames for issue #86 and the refined Issue #102 baseline.
 
+Canonical screen contract: `docs/design/v1-screen-baseline.md`.
+
 ## Why This Exists
 
 Generated PNG mockups are useful for exploration, but they are unstable design
@@ -22,6 +24,10 @@ Issue #102 aligns the generated frames with the May 21, 2026 V1 mockup review:
   historical charting.
 - Cash Ledger, Settings, and V1 States carry the local-first trust and empty
   state treatment needed for later implementation work.
+- Add Holding search requires explicit user selection before autofill.
+- Monthly Progress uses two graph directions: portfolio value vs invested value,
+  and assets vs months with cash excluded. Production must not fake chart
+  history when stored snapshots are missing.
 
 ## How To Run
 
@@ -58,3 +64,5 @@ The plugin creates nine editable Android frames:
   empty cash ledger, and no monthly snapshot references.
 - Use these frames as the stable source for later Figma refinements.
 - Keep `DESIGN.md` as the product design contract.
+- Keep `docs/design/v1-screen-baseline.md` aligned with any accepted Figma
+  changes.

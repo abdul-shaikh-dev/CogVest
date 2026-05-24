@@ -22,7 +22,7 @@ from this audit.
 | --- | --- | --- |
 | `docs/cogvest-codex-prompts.md` | Historical / stale | Contains old all-in prompts with V1 Minimal Mode and LTCG instructions. Conflicts with current V1 boundaries. |
 | `docs/cogvest-master-spec.md` | Broad product spec | Valuable product context, but contains Minimal Mode, LTCG, and older screen language that should not be interpreted as V1 implementation scope. |
-| `docs/design/v1-ui-mockup-plan.md` | Historical visual reference | Updated during #74 cleanup to point current V1 work to `DESIGN.md` and Figma issue #69 files. |
+| `docs/design/v1-ui-mockup-plan.md` | Historical visual reference | Current V1 work now points to `DESIGN.md`, `docs/design/v1-screen-baseline.md`, the HTML preview, and Figma issue #69 files. |
 | `docs/design/v2-ui-mockup-plan.md` | Future reference | Fine for V2, but should not drive current V1 work. |
 | `docs/design/v3-ui-mockup-plan.md` | Future reference | Fine for V3, but should not drive current V1 work. |
 | `docs/cogvest_standard_mode.png` | Historical mockup | Older visual direction. Current Figma/code.js and `DESIGN.md` should override it. |
@@ -37,7 +37,7 @@ from this audit.
 | History vs Progress | `AGENTS.md` says V1 language should prefer Progress | Rename stale references from History/Progression to Progress/Monthly Progress where applicable. |
 | Minimal Mode in V1 docs | `AGENTS.md` excludes Minimal Mode from V1 | Mark older Minimal Mode docs as V2-only or historical. |
 | LTCG in V1 docs | `AGENTS.md` excludes LTCG UI/tax badges from V1 | Mark LTCG docs/prompts as V2/V3-only and keep V1 tests asserting no LTCG UI. |
-| Old visual mockups vs Figma | `DESIGN.md` and `docs/design/figma/issue-69-v1-screens/code.js` | Add a short note in older mockup docs saying they are superseded by current Figma V1 screens. |
+| Old visual mockups vs current baseline | `DESIGN.md`, `docs/design/v1-screen-baseline.md`, the HTML preview, and `docs/design/figma/issue-69-v1-screens/code.js` | Older mockups are superseded by the accepted V1 screen baseline. |
 | Android APK testing | `AGENTS.md` and `docs/testing/android-pc-test-harness.md` | Add local release APK build notes discovered during #72 reproduction if not already documented. |
 
 ## Recommended Doc Tasks

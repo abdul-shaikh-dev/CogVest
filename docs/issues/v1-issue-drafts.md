@@ -4,6 +4,10 @@
 > source of truth. User-facing V1 language should now prefer Add Holding,
 > Dashboard, Holdings, Progress, Cash, and Settings; internal code may still use
 > trade terminology until refactored.
+>
+> Current V1 UI work should use `docs/design/v1-screen-baseline.md`,
+> `docs/design/issue-86-premium-preview/index.html`, and
+> `docs/design/figma/issue-69-v1-screens/code.js`, not the early drafts below.
 
 Milestone: CogVest V1 MVP
 
@@ -28,7 +32,9 @@ Create the Android-first Expo foundation for CogVest.
 - Files: `app/_layout.tsx`, `app/(tabs)/_layout.tsx`, tab placeholders, `package.json`, `tsconfig.json`, `jest.config.js`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
+- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 
 ### Acceptance Criteria
@@ -66,7 +72,7 @@ Provide reusable UI primitives before screens are built.
 - Files: `src/theme/*`, `src/components/common/*`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Tokens match CogVest design rules.
@@ -216,7 +222,7 @@ Trade validation must be correct before the UI writes local data.
 - Files: `src/domain/validators/trade.ts`, `src/features/trades/tradeForm.ts`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Invalid inputs return actionable errors.
@@ -253,7 +259,7 @@ Fast Add Holding entry is the core V1 workflow.
 - Files: `app/(tabs)/add-trade.tsx`, `src/components/forms/*`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 - Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 
 ### Acceptance Criteria
@@ -292,7 +298,7 @@ Holdings are the primary proof that trades are being derived correctly.
 - Files: `src/features/holdings/useHoldings.ts`, `src/components/cards/HoldingCard.tsx`, `app/(tabs)/holdings.tsx`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Holdings derive from trades and quotes.
@@ -332,7 +338,7 @@ Dashboard gives the at-a-glance portfolio view.
 - Files: `src/features/dashboard/useDashboard.ts`, dashboard cards, `app/(tabs)/dashboard.tsx`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Total equals holdings plus cash.
@@ -369,7 +375,7 @@ Cash is part of total portfolio value.
 - Files: `app/(tabs)/cash.tsx`, `src/features/cash/useCash.ts`, `src/components/cards/CashEntryRow.tsx`.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Cash total is additions minus withdrawals.
@@ -405,7 +411,7 @@ Users need privacy controls for portfolio values.
 - Files: `app/settings.tsx`, preference hooks, value renderers.
 
 ### Design Reference
-- `docs/design/v1-ui-mockup-plan.md`
+- `docs/design/v1-screen-baseline.md`
 
 ### Acceptance Criteria
 - Wealth values mask globally.

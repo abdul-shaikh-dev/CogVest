@@ -22,6 +22,8 @@ The repo remains the stable design source. The external HTML mockup is an input
 reference; revised repo docs, preview assets, and Figma/plugin output must carry
 the final V1 baseline forward.
 
+Accepted screen contract: `docs/design/v1-screen-baseline.md`.
+
 ## Design Direction
 
 Adopt from the refined mockup:
@@ -34,6 +36,8 @@ Adopt from the refined mockup:
 - local-first trust copy and grouped controls in Settings
 - focused Cash Ledger entry and empty-state treatment
 - first-class loading and stale/manual quote states
+- two Monthly Progress graph treatments: total portfolio value vs invested
+  value, and asset values vs months with cash excluded
 
 Keep the CogVest direction from `DESIGN.md`:
 
@@ -57,6 +61,9 @@ Keep the lookup-first multi-phase flow from the current design baseline:
 Manual ticker/current-price entry remains fallback behavior, not the primary
 perceived path.
 
+Search results must not auto-select. The user must choose a result before
+autofill changes asset fields.
+
 ### Progress
 
 The refined line-chart treatment is useful visual research, but historical
@@ -71,6 +78,14 @@ V1 Monthly Progress stays focused on:
 
 If later V1 work uses a chart-like placeholder, it must not fake stored history
 or reopen V3 historical chart scope.
+
+The accepted visual direction uses two chart areas:
+
+- total portfolio value vs invested value across months
+- asset values vs months, excluding cash
+
+Charts must use stored monthly snapshots or clearly show an empty/no-snapshot
+state. Do not fake stored history or reopen V3 historical chart scope.
 
 ### Portfolio Context
 
@@ -87,6 +102,7 @@ change must update `DESIGN.md` before downstream UI implementation depends on it
 
 - `docs/design/issue-86-premium-preview/`
 - `docs/design/figma/issue-69-v1-screens/`
+- `docs/design/v1-screen-baseline.md`
 - current Figma Issue #86 V1 screens
 - related V1 design guidance that points future UI work at a source of truth
 
@@ -126,4 +142,5 @@ The revised V1 baseline must represent:
   into V1 by accident.
 - Any palette-token change is recorded in `DESIGN.md` before implementation uses
   it.
-
+- `docs/design/v1-screen-baseline.md`, the HTML preview, and Figma generator
+  agree on the accepted screen semantics.

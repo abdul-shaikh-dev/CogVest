@@ -21,8 +21,10 @@
   matching the refined repo preview instead of the older Issue #86 baseline.
 - Modify `docs/design/figma/issue-69-v1-screens/README.md` to explain the new
   design baseline and exact Figma output coverage.
-- Optionally modify `docs/design/v1-ui-mockup-plan.md` only if the active source
-  guidance needs to point more precisely at the revised assets.
+- Add/modify `docs/design/v1-screen-baseline.md` as the canonical accepted
+  screen contract.
+- Modify `DESIGN.md`, `AGENTS.md`, and `docs/design/v1-ui-mockup-plan.md` so
+  future agents and UI issues point to the same baseline.
 
 ### Task 1: Reconcile Browser Preview Direction
 
@@ -197,12 +199,52 @@ git diff --check
 Expected: Figma generator JavaScript parses and docs diff has no whitespace
 errors.
 
-### Task 3: Spec Review And Publish
+### Task 3: Document The Accepted Baseline
+
+**Files:**
+- Add: `docs/design/v1-screen-baseline.md`
+- Modify: `DESIGN.md`
+- Modify: `AGENTS.md`
+- Modify: `docs/design/v1-ui-mockup-plan.md`
+- Modify: `docs/superpowers/specs/2026-05-21-issue-102-design-baseline-revision.md`
+
+- [ ] **Step 1: Record the accepted screen contract**
+
+Capture:
+
+- Dashboard portfolio-first hierarchy.
+- Holdings durable-position cards and per-holding allocation.
+- Add Holding explicit search selection before autofill.
+- Monthly Progress two-graph direction: portfolio vs invested, and assets vs
+  months excluding cash.
+- Cash Ledger and Settings local-first treatment.
+- Production data rule: stored local records or empty states, never fake chart
+  history.
+
+- [ ] **Step 2: Point future work at the baseline**
+
+Update docs so future UI work reads:
+
+- `docs/design/v1-screen-baseline.md`
+- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/figma/issue-69-v1-screens/code.js`
+- `DESIGN.md`
+
+Expected: older `v1-ui-mockup-plan.md` remains historical and no longer reads as
+the active design contract.
+
+- [ ] **Step 3: Update GitHub issue #102**
+
+Use the accepted spec body as the issue body so GitHub points to the same
+baseline as the repo.
+
+### Task 4: Spec Review And Publish
 
 **Files:**
 - Review: `docs/superpowers/specs/2026-05-21-issue-102-design-baseline-revision.md`
 - Review: `docs/design/issue-86-premium-preview/index.html`
 - Review: `docs/design/figma/issue-69-v1-screens/code.js`
+- Review: `docs/design/v1-screen-baseline.md`
 
 - [ ] **Step 1: Review the diff against the spec**
 
@@ -250,4 +292,3 @@ git push
 
 Expected: PR for the Issue #102 branch includes the spec, plan, and revised
 design assets with a closing reference for #102.
-
