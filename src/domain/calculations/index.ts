@@ -1,4 +1,11 @@
 export {
+  buildMonthlyProgressChartData,
+} from "./monthlyProgressCharts";
+export type {
+  MonthlyProgressChartData,
+  MonthlyProgressChartSeries,
+} from "./monthlyProgressCharts";
+export {
   calculateAllocation,
   calculateCashBalance,
   calculateCashMonthlyMetrics,
