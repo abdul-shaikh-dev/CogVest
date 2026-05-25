@@ -321,6 +321,79 @@ describe("AddOpeningPositionForm", () => {
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
   });
 
+  it("does not autofill exact lookup matches before explicit selection", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "crypto",
+      currency: "INR",
+      exchange: "CRYPTO",
+      id: "coingecko:bitcoin",
+      instrumentType: "crypto",
+      name: "Bitcoin",
+      provider: "coingecko",
+      quoteSourceId: "bitcoin",
+      sectorType: "digitalAsset",
+      sourceLabel: "CoinGecko",
+      symbol: "BTC",
+      ticker: "bitcoin",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 5800000,
+        source: "coingecko",
+      },
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => {
+      expect(getByText("Bitcoin")).toBeTruthy();
+    });
+
+    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+    expect(getByLabelText("Symbol")).toHaveProp("value", "");
+    expect(getByLabelText("Ticker")).toHaveProp("value", "");
+    expect(getByLabelText("Quote source ID")).toHaveProp("value", "");
+    expect(resolveQuote).not.toHaveBeenCalled();
+
+    fireEvent(getByLabelText("Search asset"), "submitEditing");
+
+    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+    expect(getByLabelText("Symbol")).toHaveProp("value", "");
+    expect(getByLabelText("Ticker")).toHaveProp("value", "");
+    expect(getByLabelText("Quote source ID")).toHaveProp("value", "");
+    expect(resolveQuote).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId("asset-lookup-result-coingecko:bitcoin"));
+
+    await waitFor(() => {
+      expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");
+    });
+    expect(getByLabelText("Symbol")).toHaveProp("value", "BTC");
+    expect(getByLabelText("Ticker")).toHaveProp("value", "bitcoin");
+    expect(getByLabelText("Quote source ID")).toHaveProp("value", "bitcoin");
+    expect(resolveQuote).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps manual price fallback available when selected lookup quote fails", async () => {
     jest.useFakeTimers();
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -358,6 +431,13 @@ describe("AddOpeningPositionForm", () => {
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
+
+    await waitFor(() => {
+      expect(getByText("Bitcoin")).toBeTruthy();
+    });
+    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+
+    fireEvent.press(getByText("Bitcoin"));
 
     await waitFor(() => {
       expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");

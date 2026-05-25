@@ -310,24 +310,6 @@ export function AddOpeningPositionForm({
     };
   }, [lookupQuery, searchAssetLookupResults]);
 
-  useEffect(() => {
-    const normalizedQuery = lookupQuery.trim().toLowerCase();
-
-    if (!normalizedQuery || lookupResults.length === 0) {
-      return;
-    }
-
-    const exactResult = lookupResults.find((result) =>
-      [result.symbol, result.ticker, result.quoteSourceId].some(
-        (value) => value.toLowerCase() === normalizedQuery,
-      ),
-    );
-
-    if (exactResult) {
-      void selectLookupResult(exactResult);
-    }
-  }, [lookupQuery, lookupResults]);
-
   function clearSelectedAsset() {
     if (selectedAssetId) {
       setSelectedAssetId("");
@@ -408,31 +390,6 @@ export function AddOpeningPositionForm({
 
     setCurrentPrice("");
     setQuoteStatus("Live price unavailable. Enter current price manually.");
-  }
-
-  function getPreferredLookupResult() {
-    const normalizedQuery = lookupQuery.trim().toLowerCase();
-
-    return (
-      lookupResults.find((result) =>
-        [result.symbol, result.ticker, result.quoteSourceId].some(
-          (value) => value.toLowerCase() === normalizedQuery,
-        ),
-      ) ??
-      lookupResults.find((result) => result.name.toLowerCase() === normalizedQuery) ??
-      lookupResults.find((result) =>
-        result.name.toLowerCase().startsWith(normalizedQuery),
-      ) ??
-      lookupResults[0]
-    );
-  }
-
-  function selectPreferredLookupResult() {
-    const result = getPreferredLookupResult();
-
-    if (result) {
-      void selectLookupResult(result);
-    }
   }
 
   function updateAssetClass(nextAssetClass: AssetClass) {
@@ -599,7 +556,6 @@ export function AddOpeningPositionForm({
             setLookupQuery(value);
             setQuoteStatus("");
           }}
-          onSubmitEditing={selectPreferredLookupResult}
           placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
           returnKeyType="search"
           testID="asset-lookup-input"
@@ -631,7 +587,7 @@ export function AddOpeningPositionForm({
                   </AppText>
                 </View>
                 <AppText color="secondary" variant="caption" weight="bold">
-                  {assetClassLabel(result.assetClass)}
+                  Select
                 </AppText>
               </TouchableOpacity>
             ))}
