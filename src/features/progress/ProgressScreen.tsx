@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
 import { StyleSheet, View } from "react-native";
+import Svg, { Circle, Polyline } from "react-native-svg";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -16,11 +17,13 @@ import {
   assetClassLabel,
 } from "@/src/components/common";
 import {
+  buildMonthlyProgressChartData,
   calculateAllocation,
   calculateCashBalance,
   calculateHoldings,
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
+  type MonthlyProgressChartSeries,
 } from "@/src/domain/calculations";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -101,6 +104,183 @@ const requiredNumberFields: Array<keyof SnapshotFormValues> = [
   "monthlyInvestment",
   "salary",
 ];
+
+const chartWidth = 280;
+const chartHeight = 132;
+const chartPadding = 12;
+
+function getSeriesColor(label: string) {
+  switch (label) {
+    case "Portfolio":
+      return colors.text.primary;
+    case "Invested":
+      return colors.profit;
+    case "Equity":
+      return colors.primary;
+    case "Debt":
+      return colors.blue;
+    case "Crypto":
+      return colors.cryptoAmber;
+    default:
+      return colors.text.secondary;
+  }
+}
+
+function getSeriesPoints(series: MonthlyProgressChartSeries[], index: number) {
+  const values = series.flatMap((item) => item.values);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const range = maxValue - minValue || 1;
+  const pointCount = series[index]?.values.length ?? 0;
+  const usableWidth = chartWidth - chartPadding * 2;
+  const usableHeight = chartHeight - chartPadding * 2;
+
+  return (series[index]?.values ?? [])
+    .map((value, valueIndex) => {
+      const x =
+        pointCount === 1
+          ? chartWidth / 2
+          : chartPadding + (usableWidth * valueIndex) / (pointCount - 1);
+      const y =
+        chartPadding + usableHeight - ((value - minValue) / range) * usableHeight;
+
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
+function TrendLegend({
+  series,
+  testIDPrefix,
+}: {
+  series: MonthlyProgressChartSeries[];
+  testIDPrefix: string;
+}) {
+  return (
+    <View style={styles.chartLegend}>
+      {series.map((item) => (
+        <View
+          key={item.label}
+          style={styles.legendItem}
+          testID={`${testIDPrefix}-${item.label}`}
+        >
+          <View
+            style={[
+              styles.legendDot,
+              { backgroundColor: getSeriesColor(item.label) },
+            ]}
+          />
+          <AppText color="secondary" variant="caption" weight="medium">
+            {item.label}
+          </AppText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TrendChart({
+  monthLabels,
+  series,
+  testIDPrefix,
+}: {
+  monthLabels: string[];
+  series: MonthlyProgressChartSeries[];
+  testIDPrefix: string;
+}) {
+  return (
+    <View style={styles.chartBlock}>
+      <View style={styles.svgWrap}>
+        <Svg height={chartHeight} width="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+          {series.map((item, index) => (
+            <Polyline
+              key={item.label}
+              fill="none"
+              points={getSeriesPoints(series, index)}
+              stroke={getSeriesColor(item.label)}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={3}
+            />
+          ))}
+          {series.map((item, seriesIndex) =>
+            item.values.map((_, pointIndex) => {
+              const [x, y] = getSeriesPoints(series, seriesIndex)
+                .split(" ")
+                [pointIndex].split(",");
+
+              return (
+                <Circle
+                  key={`${item.label}-${pointIndex}`}
+                  cx={Number(x)}
+                  cy={Number(y)}
+                  fill={colors.surface.card}
+                  r={3}
+                  stroke={getSeriesColor(item.label)}
+                  strokeWidth={2}
+                />
+              );
+            }),
+          )}
+        </Svg>
+      </View>
+      <View style={styles.monthAxis}>
+        {monthLabels.map((month) => (
+          <AppText key={month} color="secondary" variant="caption">
+            {month}
+          </AppText>
+        ))}
+      </View>
+      <TrendLegend series={series} testIDPrefix={testIDPrefix} />
+    </View>
+  );
+}
+
+function ProgressTrendCards({
+  assetSeries,
+  hasEnoughHistory,
+  monthLabels,
+  portfolioSeries,
+}: {
+  assetSeries: MonthlyProgressChartSeries[];
+  hasEnoughHistory: boolean;
+  monthLabels: string[];
+  portfolioSeries: MonthlyProgressChartSeries[];
+}) {
+  if (!hasEnoughHistory) {
+    return (
+      <PremiumCard>
+        <SectionHeader title="Trend history is still building" />
+        <View style={styles.chartPlaceholder}>
+          <AppText color="secondary" align="center">
+            Record at least 2 monthly snapshots to compare portfolio and asset trends.
+          </AppText>
+        </View>
+      </PremiumCard>
+    );
+  }
+
+  return (
+    <>
+      <PremiumCard>
+        <SectionHeader title="Portfolio vs Invested" />
+        <TrendChart
+          monthLabels={monthLabels}
+          series={portfolioSeries}
+          testIDPrefix="portfolio-trend"
+        />
+      </PremiumCard>
+      <PremiumCard>
+        <SectionHeader title="Assets vs Months" />
+        <TrendChart
+          monthLabels={monthLabels}
+          series={assetSeries}
+          testIDPrefix="asset-trend"
+        />
+      </PremiumCard>
+    </>
+  );
+}
 
 function parseNumberField(
   values: SnapshotFormValues,
@@ -204,6 +384,7 @@ export function ProgressScreen({
     snapshot.monthlySnapshots,
   );
   const latestSummary = monthlySummaries[0];
+  const chartData = buildMonthlyProgressChartData(snapshot.monthlySnapshots);
 
   function setField(field: keyof SnapshotFormValues, value: string) {
     setFormValues((currentValues) => ({
@@ -289,6 +470,13 @@ export function ProgressScreen({
               ]}
             />
 
+            <ProgressTrendCards
+              assetSeries={chartData.assetSeries}
+              hasEnoughHistory={chartData.hasEnoughHistory}
+              monthLabels={chartData.monthLabels}
+              portfolioSeries={chartData.portfolioSeries}
+            />
+
             <PremiumCard>
               <SectionHeader title="Asset class snapshot" />
               {latestSummary.assetSnapshot.map((item) => (
@@ -368,14 +556,12 @@ export function ProgressScreen({
               </AppText>
             </PremiumCard>
 
-            <PremiumCard>
-              <SectionHeader title="Progress trend" />
-              <View style={styles.chartPlaceholder}>
-                <AppText color="secondary" align="center">
-                  Trend appears after monthly records are available.
-                </AppText>
-              </View>
-            </PremiumCard>
+            <ProgressTrendCards
+              assetSeries={chartData.assetSeries}
+              hasEnoughHistory={chartData.hasEnoughHistory}
+              monthLabels={chartData.monthLabels}
+              portfolioSeries={chartData.portfolioSeries}
+            />
 
             <PremiumCard>
               <SectionHeader title="Asset class snapshot" />
@@ -541,6 +727,14 @@ const styles = StyleSheet.create({
     minHeight: 120,
     padding: spacing.md,
   },
+  chartBlock: {
+    gap: spacing.sm,
+  },
+  chartLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
@@ -548,6 +742,20 @@ const styles = StyleSheet.create({
   },
   fieldGrid: {
     gap: spacing.cardInner,
+  },
+  legendDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  legendItem: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  monthAxis: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   snapshotCopy: {
     flex: 1,
@@ -558,5 +766,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.cardInner,
     justifyContent: "space-between",
+  },
+  svgWrap: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: 18,
+    overflow: "hidden",
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
   },
 });

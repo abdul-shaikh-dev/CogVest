@@ -95,6 +95,39 @@ describe("ProgressScreen", () => {
     expect(getByText("May close")).toBeTruthy();
   });
 
+  it("shows an insufficient chart-history state until two snapshots exist", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByText } = render(<ProgressScreen store={store} />);
+
+    expect(getByText("Trend history is still building")).toBeTruthy();
+    expect(
+      getByText("Record at least 2 monthly snapshots to compare portfolio and asset trends."),
+    ).toBeTruthy();
+  });
+
+  it("renders stored-snapshot portfolio and asset graphs without cash in asset trends", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+
+    const { getAllByText, getByTestId, getByText, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    expect(getByText("Portfolio vs Invested")).toBeTruthy();
+    expect(getByText("Assets vs Months")).toBeTruthy();
+    expect(getAllByText("Apr 2026").length).toBeGreaterThanOrEqual(2);
+    expect(getAllByText("May 2026").length).toBeGreaterThanOrEqual(2);
+    expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
+    expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
+    expect(getByTestId("asset-trend-Equity")).toBeTruthy();
+    expect(getByTestId("asset-trend-Debt")).toBeTruthy();
+    expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
+    expect(queryByTestId("asset-trend-Cash")).toBeNull();
+  });
+
   it("updates an existing month instead of creating duplicate snapshots", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
