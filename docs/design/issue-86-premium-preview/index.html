@@ -191,6 +191,35 @@
         font-size: 13px;
       }
 
+      .context-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 24px;
+        margin-bottom: 12px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--secondary);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .context-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .context-badge::after {
+        content: "⌄";
+        margin-left: 1px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
       .actions {
         display: flex;
         gap: 10px;
@@ -231,8 +260,22 @@
       }
 
       .hero {
+        position: relative;
+        overflow: hidden;
         padding: 20px;
         margin-bottom: 20px;
+        border: 1px solid var(--separator);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -30px -54px auto;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(52, 199, 89, 0.14), transparent 66%);
+        pointer-events: none;
       }
 
       .label {
@@ -243,10 +286,32 @@
 
       .hero-value {
         margin: 8px 0 8px;
-        font-size: 44px;
+        font-size: 48px;
         line-height: 0.95;
         font-weight: 850;
         letter-spacing: -0.07em;
+      }
+
+      .hero-value sup {
+        font-size: 20px;
+        font-weight: 550;
+        letter-spacing: 0;
+        color: var(--secondary);
+        vertical-align: super;
+      }
+
+      .hero-value small {
+        font-size: 22px;
+        font-weight: 550;
+        letter-spacing: -0.03em;
+        color: var(--secondary);
+      }
+
+      .hero-caption {
+        margin: 10px 0 0;
+        color: var(--secondary);
+        font-size: 11px;
+        line-height: 1.35;
       }
 
       .gain-pill {
@@ -258,6 +323,17 @@
         color: var(--green);
         font-size: 13px;
         font-weight: 800;
+      }
+
+      .today-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+        color: var(--green);
+        font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
       }
 
       .metric-grid {
@@ -284,6 +360,45 @@
         margin-top: 5px;
         font-size: 15px;
         letter-spacing: -0.03em;
+      }
+
+      .quote-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: -8px 0 18px;
+        padding: 10px 12px;
+        border-radius: 15px;
+        background: var(--surface);
+        color: var(--secondary);
+        font-size: 11px;
+      }
+
+      .quote-card strong {
+        color: var(--green);
+        font-size: 11px;
+      }
+
+      .allocation-bar {
+        display: flex;
+        gap: 1px;
+        height: 5px;
+        margin: 2px 0 12px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--elevated);
+      }
+
+      .allocation-segment {
+        height: 100%;
+      }
+
+      .allocation-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        flex: 0 0 auto;
       }
 
       .section {
@@ -428,6 +543,10 @@
         margin-top: 14px;
       }
 
+      .month-card .mini-metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
       .mini-metrics div + div {
         border-left: 1px solid var(--separator);
         padding-left: 12px;
@@ -464,9 +583,20 @@
       }
 
       .quote-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
         margin: 10px 0 12px;
         color: var(--secondary);
         font-size: 12px;
+      }
+
+      .quote-line strong,
+      .quote-state {
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 800;
       }
 
       .chips {
@@ -496,6 +626,13 @@
         color: var(--text);
       }
 
+      .chip small {
+        margin-left: 4px;
+        color: currentColor;
+        font-size: 10px;
+        opacity: 0.64;
+      }
+
       .holding {
         min-height: 74px;
       }
@@ -504,6 +641,103 @@
         display: flex;
         gap: 9px;
         white-space: nowrap;
+      }
+
+      .holding-card {
+        display: block;
+        width: 100%;
+        margin: 0 0 10px;
+        padding: 0;
+        border: 0;
+        color: inherit;
+        background: transparent;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .holding-card:last-child {
+        margin-bottom: 0;
+      }
+
+      .holding-card .surface {
+        display: block;
+        position: relative;
+        overflow: hidden;
+        padding: 14px;
+        border-radius: 20px;
+      }
+
+      .holding-card .surface::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: currentColor;
+        opacity: 0.9;
+      }
+
+      .holding-head,
+      .holding-fields {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .holding-head {
+        align-items: flex-start;
+      }
+
+      .holding-name {
+        font-size: 14px;
+        font-weight: 850;
+        letter-spacing: -0.03em;
+      }
+
+      .holding-value {
+        text-align: right;
+        font-size: 15px;
+        font-weight: 850;
+      }
+
+      .holding-fields {
+        margin-top: 12px;
+        padding-top: 11px;
+        border-top: 1px solid var(--separator);
+      }
+
+      .holding-fields div {
+        min-width: 0;
+      }
+
+      .holding-fields span {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .holding-fields strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--text);
+        font-size: 11px;
+      }
+
+      .holding-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 9px;
+        color: var(--amber);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .holding-negative .surface {
+        background: linear-gradient(180deg, rgba(255, 69, 58, 0.08), var(--surface));
       }
 
       .search-card {
@@ -548,6 +782,43 @@
       .result.selected {
         background: rgba(52, 199, 89, 0.1);
         outline: 1px solid rgba(52, 199, 89, 0.22);
+      }
+
+      .result.pending {
+        background: rgba(255, 255, 255, 0.03);
+        outline: 1px solid var(--separator);
+      }
+
+      .select-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(52, 199, 89, 0.12);
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .selection-note {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px;
+        border: 1px dashed var(--separator);
+        border-radius: 16px;
+        color: var(--secondary);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .selection-note strong {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--text);
+        font-size: 13px;
       }
 
       .group .result {
@@ -653,28 +924,121 @@
         letter-spacing: -0.03em;
       }
 
+      .form-field.prefill strong {
+        color: var(--secondary);
+      }
+
+      .form-field .auto {
+        color: var(--green);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
       .trend-graph {
         width: 100%;
-        height: 160px;
-        margin-top: 16px;
+        height: 118px;
+        margin-top: 12px;
         color: var(--secondary);
+        overflow: visible;
+      }
+
+      .chart-card {
+        padding: 13px;
+        border: 1px solid var(--separator);
+        border-radius: 16px;
+      }
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+
+      .chart-kicker {
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .chart-value {
+        font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .chart-delta {
+        margin-top: 2px;
+        color: var(--green);
+        font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        font-size: 10px;
+      }
+
+      .chart-range {
+        display: flex;
+        gap: 4px;
+      }
+
+      .range-chip {
+        border-radius: 8px;
+        padding: 4px 7px;
+        background: var(--elevated);
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .range-chip.active {
+        background: var(--green-soft);
+        color: var(--green);
+        outline: 1px solid rgba(52, 199, 89, 0.22);
+      }
+
+      .chart-axis {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
+        padding: 0 2px;
+        color: var(--muted);
+        font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        font-size: 8px;
+      }
+
+      .chart-hint {
+        margin: 10px 0 0;
+        padding-top: 10px;
+        border-top: 1px solid var(--separator);
+        color: var(--muted);
+        text-align: center;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .chart-hint em {
+        color: var(--green);
+        font-style: normal;
       }
 
       .trend-grid {
         stroke: var(--separator);
-        stroke-width: 1;
+        stroke-width: 0.8;
       }
 
       .trend-line {
         fill: none;
-        stroke-width: 2.4;
+        stroke-width: 2.2;
         stroke-linecap: round;
         stroke-linejoin: round;
       }
 
       .trend-portfolio {
-        stroke: var(--text);
-        stroke-width: 4;
+        stroke: var(--green);
+        stroke-width: 3.2;
       }
 
       .trend-invested {
@@ -684,13 +1048,13 @@
       }
 
       .trend-equity {
-        stroke: #7c83ff;
-        color: #7c83ff;
+        stroke: var(--green);
+        color: var(--green);
       }
 
       .trend-debt {
-        stroke: #62c99a;
-        color: #62c99a;
+        stroke: var(--blue);
+        color: var(--blue);
       }
 
       .trend-crypto {
@@ -715,7 +1079,7 @@
 
       .trend-area {
         fill: url("#portfolioFade");
-        opacity: 0.26;
+        opacity: 0.32;
       }
 
       .trend-axis {
@@ -732,6 +1096,7 @@
       .trend-legend {
         display: flex;
         gap: 12px;
+        justify-content: center;
         margin-top: 10px;
         color: var(--secondary);
         font-size: 11px;
@@ -771,6 +1136,37 @@
         stroke-linejoin: round;
       }
 
+      .trust-banner {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding: 15px;
+        border-radius: var(--radius-md);
+        background: rgba(52, 199, 89, 0.08);
+      }
+
+      .trust-banner .glyph {
+        background: rgba(52, 199, 89, 0.12);
+      }
+
+      .trust-banner p,
+      .empty-panel p {
+        margin: 5px 0 0;
+        color: var(--secondary);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .empty-panel {
+        padding: 18px;
+        text-align: center;
+      }
+
+      .empty-panel .empty-illustration {
+        margin: 0 auto 12px;
+      }
+
       .cta-row {
         position: sticky;
         bottom: 0;
@@ -797,6 +1193,12 @@
 
       .primary.full-width {
         width: 100%;
+      }
+
+      .primary.disabled {
+        pointer-events: none;
+        background: var(--elevated);
+        color: var(--muted);
       }
 
       .secondary-action {
@@ -993,10 +1395,11 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
                 <div>
                   <h2 class="title">Dashboard</h2>
-                  <p class="subtitle">Local portfolio · 9 May 2026</p>
+                  <p class="subtitle">19 May 2026</p>
                 </div>
                 <div class="actions">
                   <button class="icon-button" type="button" aria-label="Mask portfolio values"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -1005,32 +1408,36 @@
               </header>
 
               <section class="surface hero">
-                <div class="label">Portfolio value</div>
-                <div class="hero-value">₹18.42L</div>
-                <span class="gain-pill">+₹3.10L · +20.2%</span>
+                <div class="label">Portfolio Value</div>
+                <div class="hero-value"><sup>₹</sup>27.92<small>L</small></div>
+                <div class="today-line">▲ +₹37.4K · +1.36% today</div>
+                <p class="hero-caption">Premium UI outside. Excel-grade tracking logic inside.</p>
                 <div class="metric-grid">
-                  <div class="metric"><span class="label">Invested</span><strong>₹15.32L</strong></div>
-                  <div class="metric"><span class="label">P&L</span><strong class="positive">+₹3.10L</strong></div>
-                  <div class="metric"><span class="label">Quotes</span><strong>2m ago</strong></div>
+                  <div class="metric"><span class="label">Invested</span><strong>₹15.95L</strong></div>
+                  <div class="metric"><span class="label">P&L</span><strong class="positive">+₹11.97L</strong><span class="row-meta">since first buy</span></div>
+                  <div class="metric"><span class="label">Return</span><strong class="positive">+75.1%</strong><span class="row-meta">all time</span></div>
                 </div>
               </section>
 
+              <div class="quote-card"><span>Quotes refreshed 2m ago · 1 manual fallback</span><strong>Refresh</strong></div>
+
               <section class="section">
-                <div class="section-head"><span class="section-title">Allocation</span><button class="section-action" type="button">View details</button></div>
+                <div class="section-head"><span class="section-title">Allocation</span><button class="section-action" type="button">Holdings →</button></div>
                 <div class="group">
-                  <div class="row"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">Equity</div><div class="progress-line equity"><span style="width:68%"></span></div></div><div class="row-value">68%<div class="row-meta">₹12.71L</div></div></div>
-                  <div class="row"><span class="glyph debt"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></span><div class="row-main"><div class="row-title">Debt</div><div class="progress-line debt"><span style="width:15%"></span></div></div><div class="row-value">15%<div class="row-meta">₹2.76L</div></div></div>
-                  <div class="row"><span class="glyph crypto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.2 9h4.1a2 2 0 0 1 0 4H9.2M9.2 13h4.8a2 2 0 0 1 0 4H9.2"/></svg></span><div class="row-main"><div class="row-title">Crypto</div><div class="progress-line crypto"><span style="width:7%"></span></div></div><div class="row-value">7%<div class="row-meta">₹1.29L</div></div></div>
-                  <div class="row"><span class="glyph cash"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></span><div class="row-main"><div class="row-title">Cash</div><div class="progress-line cash"><span style="width:10%"></span></div></div><div class="row-value">10%<div class="row-meta">₹1.65L</div></div></div>
+                  <div class="allocation-bar" aria-hidden="true">
+                    <span class="allocation-segment" style="width:53.31%;background:var(--amber)"></span>
+                    <span class="allocation-segment" style="width:46.69%;background:var(--green)"></span>
+                  </div>
+                  <div class="row"><span class="allocation-dot" style="background:var(--amber)"></span><div class="row-main"><div class="row-title">Crypto</div><div class="row-meta">Digital assets</div></div><div class="row-value">53.31%<div class="row-meta">₹14.89L</div></div></div>
+                  <div class="row"><span class="allocation-dot" style="background:var(--green)"></span><div class="row-main"><div class="row-title">Equity</div><div class="row-meta">Stocks and ETFs</div></div><div class="row-value">46.69%<div class="row-meta">₹13.04L</div></div></div>
                 </div>
               </section>
 
               <section class="surface month-card">
                 <div class="section-head"><span class="section-title">This month</span><button class="section-action" type="button">May 2026</button></div>
                 <div class="mini-metrics">
-                  <div><span class="label">Invested</span><strong>₹1.20L</strong></div>
-                  <div><span class="label">Savings</span><strong>42%</strong></div>
-                  <div><span class="label">Cash</span><strong class="positive">+₹70K</strong></div>
+                  <div><span class="label">Invested</span><strong>₹14.62L</strong></div>
+                  <div><span class="label">Cash change</span><strong>₹0</strong></div>
                 </div>
               </section>
 
@@ -1053,32 +1460,46 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
-                <div><h2 class="title">Holdings</h2><p class="subtitle">24 positions · local data</p></div>
+                <div><h2 class="title">Holdings</h2><p class="subtitle">3 positions · local data</p></div>
                 <div class="actions">
                   <button class="icon-button" type="button" aria-label="Add holding"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
                   <button class="icon-button" type="button" aria-label="Search holdings"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg></button>
+                  <button class="icon-button" type="button" aria-label="Mask holding values"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </div>
               </header>
 
               <section class="surface summary">
                 <div class="metric-grid">
-                  <div class="metric"><span class="label">Current</span><strong>₹12.48L</strong></div>
-                  <div class="metric"><span class="label">Invested</span><strong>₹11.05L</strong></div>
-                  <div class="metric"><span class="label">P&L</span><strong class="positive">+₹1.42L</strong></div>
-                  <div class="metric"><span class="label">Drift</span><strong style="color:var(--amber)">3.2%</strong></div>
+                  <div class="metric"><span class="label">Current</span><strong>₹27.92L</strong></div>
+                  <div class="metric"><span class="label">Invested</span><strong>₹15.95L</strong></div>
+                  <div class="metric"><span class="label">P&L</span><strong class="positive">+₹11.97L</strong></div>
+                  <div class="metric"><span class="label">Return</span><strong class="positive">+75.1%</strong></div>
                 </div>
               </section>
-              <div class="quote-line">Quotes updated 2m ago · 1 manual price</div>
-              <div class="chips" aria-label="Holding filters"><button class="chip active" type="button">All</button><button class="chip" type="button">Equity</button><button class="chip" type="button">Debt</button><button class="chip" type="button">Crypto</button><button class="chip" type="button">Cash</button></div>
+              <div class="quote-line"><span>Quotes updated 2m ago · 1 manual price</span><strong>Refresh</strong></div>
+              <div class="chips" aria-label="Holding filters"><button class="chip active" type="button">All <small>3</small></button><button class="chip" type="button">Equity <small>2</small></button><button class="chip" type="button">Crypto <small>1</small></button><button class="chip" type="button">Debt <small>0</small></button><button class="chip" type="button">Cash <small>0</small></button></div>
 
-              <section class="group">
-                <button class="row holding result" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">HDFC Bank</div><div class="row-meta">Equity · Financial Services</div><div class="row-meta"><span>Invested ₹1.64L</span><span>14.6%</span><span>Live</span></div></div><div class="row-value">₹1.83L<div class="row-sub">+₹18.6K</div></div></button>
-                <button class="row holding result" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">Nifty 50 ETF</div><div class="row-meta">Equity · Index Fund</div><div class="row-meta"><span>Invested ₹44.2K</span><span>4.1%</span><span>Live</span></div></div><div class="row-value">₹50.7K<div class="row-sub">+₹6.5K</div></div></button>
-                <button class="row holding result" type="button"><span class="glyph debt"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></span><div class="row-main"><div class="row-title">Sovereign Gold Bond</div><div class="row-meta">Debt · Government Bond</div><div class="row-meta"><span>Invested ₹53.0K</span><span>4.6%</span><span>Manual</span></div></div><div class="row-value">₹57.1K<div class="row-sub">+₹4.1K</div></div></button>
-                <button class="row holding result" type="button"><span class="glyph crypto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.2 9h4.1a2 2 0 0 1 0 4H9.2M9.2 13h4.8a2 2 0 0 1 0 4H9.2"/></svg></span><div class="row-main"><div class="row-title">Bitcoin</div><div class="row-meta">Crypto · Manual price</div><div class="row-meta"><span>Invested ₹11.05L</span><span>11.1%</span><span>Manual</span></div></div><div class="row-value">₹13.90L<div class="row-sub">+₹2.85L</div></div></button>
-                <button class="row holding result" type="button"><span class="glyph debt"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></span><div class="row-main"><div class="row-title">Liquid Fund</div><div class="row-meta">Debt · Overnight</div><div class="row-meta"><span>Invested ₹2.50L</span><span>2.0%</span><span>Manual</span></div></div><div class="row-value">₹2.50L<div class="row-sub">+₹250</div></div></button>
-              </section>
+              <button class="holding-card equity" type="button">
+                <span class="surface">
+                  <span class="holding-head"><span><span class="holding-name">Reliance Industries</span><span class="row-meta">RELIANCE · Equity · 5.31% allocation</span></span><span class="holding-value">₹1.48L<span class="row-sub">+11.71%</span></span></span>
+                  <span class="holding-fields"><span><span>Qty</span><strong>112</strong></span><span><span>Avg</span><strong>₹1,184</strong></span><span><span>LTP</span><strong>₹1,322</strong></span><span><span>P&L</span><strong>+₹15.5K</strong></span></span>
+                </span>
+              </button>
+              <button class="holding-card equity holding-negative" type="button">
+                <span class="surface">
+                  <span class="holding-head"><span><span class="holding-name">Nippon Nifty IT ETF</span><span class="row-meta">ITBEES · Equity · 41.38% allocation</span></span><span class="holding-value">₹11.56L<span class="row-sub negative">-13.90%</span></span></span>
+                  <span class="holding-fields"><span><span>Qty</span><strong>35,612</strong></span><span><span>Avg</span><strong>₹37.69</strong></span><span><span>LTP</span><strong>₹32.45</strong></span><span><span>P&L</span><strong>-₹1.87L</strong></span></span>
+                  <span class="holding-note">Price may be stale · last seen 17 May</span>
+                </span>
+              </button>
+              <button class="holding-card crypto" type="button">
+                <span class="surface">
+                  <span class="holding-head"><span><span class="holding-name">Bitcoin</span><span class="row-meta">BTC · Crypto · 53.31% allocation</span></span><span class="holding-value">₹14.89L<span class="row-sub">+1,140%</span></span></span>
+                  <span class="holding-fields"><span><span>Qty</span><strong>0.2000</strong></span><span><span>Avg</span><strong>₹6.0L</strong></span><span><span>LTP</span><strong>₹74.4L</strong></span><span><span>P&L</span><strong>+₹13.7L</strong></span></span>
+                </span>
+              </button>
             </div>
             <div class="nav">
               <button class="nav-item" type="button"><svg viewBox="0 0 24 24"><path d="M3 10.8 12 3l9 7.8V21h-6v-6H9v6H3z"/></svg><span>Dashboard</span></button>
@@ -1094,6 +1515,7 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
                 <div><h2 class="title">Add Holding</h2><p class="subtitle">Opening position · local only</p></div>
                 <div class="actions"><button class="icon-button" type="button" aria-label="Open Add Holding help"><svg viewBox="0 0 24 24"><path d="M9.5 9a2.8 2.8 0 1 1 4.9 1.8c-.9.8-1.9 1.3-1.9 3.2"/><path d="M12 18h.01"/></svg></button></div>
@@ -1105,22 +1527,24 @@
 
               <section class="surface search-card">
                 <div class="section-title">Find asset</div>
-                <div class="search-input" style="margin-top:12px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>Search name or symbol</div>
-                <p class="helper">Only search text is sent to quote providers.</p>
-                <button class="row result selected" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">HDFC Bank</div><div class="row-meta">HDFCBANK.NS · NSE · INR · Equity</div></div><div class="row-value">₹1,678.25<div class="tag">Live</div></div></button>
-                <button class="row result" type="button"><span class="glyph crypto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.2 9h4.1a2 2 0 0 1 0 4H9.2M9.2 13h4.8a2 2 0 0 1 0 4H9.2"/></svg></span><div class="row-main"><div class="row-title">Bitcoin</div><div class="row-meta">bitcoin · CoinGecko · INR</div></div><div class="row-value">₹92.10L<div class="tag">Live</div></div></button>
+                <div class="search-input" style="margin-top:12px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>hdfc bank</div>
+                <p class="helper">Search returns possible matches. CogVest should not auto-pick an asset.</p>
+                <button class="row result pending" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">HDFC Bank</div><div class="row-meta">HDFCBANK.NS · NSE · INR · Equity</div><div class="row-meta">LTP ₹1,678.25 · Live</div></div><div class="select-pill">Select</div></button>
+                <button class="row result pending" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">HDFC Life</div><div class="row-meta">HDFCLIFE.NS · NSE · INR · Equity</div><div class="row-meta">LTP ₹642.10 · Live</div></div><div class="select-pill">Select</div></button>
+                <button class="row result pending" type="button"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">HDFC Nifty 50 ETF</div><div class="row-meta">HDFCNIFETF.NS · NSE · INR · ETF</div><div class="row-meta">LTP ₹235.45 · Live</div></div><div class="select-pill">Select</div></button>
               </section>
 
               <section class="surface data-card">
-                <div class="section-title">Selected result</div>
-                <div class="data-row"><span>Asset</span><strong>HDFC Bank</strong></div>
-                <div class="data-row"><span>Ticker</span><strong>HDFCBANK.NS</strong></div>
-                <div class="data-row"><span>Next</span><strong>Position details</strong></div>
-                <p class="helper">Classification, quantity, price source, derived preview, and review are separate Figma states.</p>
+                <div class="section-title">Selection required</div>
+                <div class="selection-note">
+                  <span class="glyph"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg></span>
+                  <div><strong>No asset selected yet</strong>Tap Select on the exact instrument before CogVest opens classification and position details.</div>
+                </div>
+                <p class="helper">Manual entry remains available when the provider cannot find the asset.</p>
               </section>
 
               <div class="cta-row">
-                <button class="primary" type="button">Continue to position</button>
+                <button class="primary" type="button">Select asset first</button>
                 <button class="secondary-action" type="button">Enter manually</button>
               </div>
             </div>
@@ -1138,8 +1562,9 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
-                <div><h2 class="title">Monthly Progress</h2><p class="subtitle">May 2026 snapshot</p></div>
+                <div><h2 class="title">Progress</h2><p class="subtitle">May 2026</p></div>
                 <div class="actions"><button class="icon-button" type="button" aria-label="Mask progress values"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
               </header>
 
@@ -1147,81 +1572,93 @@
 
               <section class="surface summary">
                 <div class="metric-grid">
-                  <div class="metric"><span class="label">Portfolio</span><strong>₹19.87L</strong></div>
-                  <div class="metric"><span class="label">Invested</span><strong>₹1.40L</strong></div>
-                  <div class="metric"><span class="label">Cash</span><strong>₹3.25L</strong></div>
-                  <div class="metric"><span class="label">Savings</span><strong>34%</strong></div>
+                  <div class="metric"><span class="label">Portfolio</span><strong>₹27.92L</strong></div>
+                  <div class="metric"><span class="label">Invested</span><strong>₹14.62L</strong></div>
+                  <div class="metric"><span class="label">Cash</span><strong>₹0</strong></div>
+                  <div class="metric"><span class="label">Savings</span><strong>66%</strong></div>
                 </div>
               </section>
 
-              <section class="surface data-card">
-                <div class="section-title">Portfolio vs invested</div>
-                <svg class="trend-graph" viewBox="0 0 320 160" role="img" aria-label="Portfolio value versus invested value by month">
+              <section class="surface chart-card">
+                <div class="chart-header">
+                  <div>
+                    <div class="chart-kicker">Portfolio Growth</div>
+                    <div class="chart-value">₹27.92L</div>
+                    <div class="chart-delta">▲ +₹19.92L since Oct 2025</div>
+                  </div>
+                  <div class="chart-range"><span class="range-chip">3M</span><span class="range-chip active">8M</span><span class="range-chip">1Y</span></div>
+                </div>
+                <svg class="trend-graph" viewBox="0 0 290 100" role="img" aria-label="Portfolio value versus invested value by month">
                   <defs>
                     <linearGradient id="portfolioFade" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#f5f5f7"/>
-                      <stop offset="100%" stop-color="#f5f5f7" stop-opacity="0"/>
+                      <stop offset="0%" stop-color="#34c759" stop-opacity="0.3"/>
+                      <stop offset="100%" stop-color="#34c759" stop-opacity="0.02"/>
                     </linearGradient>
                   </defs>
-                  <path class="trend-grid" d="M32 24H306M32 58H306M32 92H306M32 126H306"/>
-                  <path class="trend-area" d="M34 104 C60 96 78 108 100 82 C122 58 144 72 166 64 C190 56 208 88 230 38 C252 10 274 64 306 26 L306 132 L34 132Z"/>
-                  <path class="trend-line trend-portfolio" d="M34 104 C60 96 78 108 100 82 C122 58 144 72 166 64 C190 56 208 88 230 38 C252 10 274 64 306 26"/>
-                  <path class="trend-line trend-invested" d="M34 118 C72 116 92 112 120 108 C152 104 180 100 210 94 C246 88 276 82 306 76"/>
-                  <circle class="trend-point trend-portfolio" cx="100" cy="82" r="3.5"/>
-                  <circle class="trend-point trend-portfolio" cx="230" cy="38" r="3.5"/>
-                  <circle class="trend-point trend-portfolio" cx="306" cy="26" r="3.5"/>
-                  <circle class="trend-point trend-invested" cx="306" cy="76" r="3"/>
-                  <text class="trend-axis" x="4" y="28">20L</text>
-                  <text class="trend-axis" x="5" y="95">10L</text>
-                  <text class="trend-axis" x="13" y="130">0</text>
-                  <text class="trend-axis" x="34" y="152">Dec</text>
-                  <text class="trend-axis" x="138" y="152">Mar</text>
-                  <text class="trend-axis" x="282" y="152">May</text>
+                  <path class="trend-grid" d="M0 25H290M0 50H290M0 75H290"/>
+                  <path class="trend-area" d="M0 90 C14 87 27 83 41 81 C55 79 68 77 82 75 C97 72 110 67 124 64 C138 61 151 55 165 52 C179 49 193 41 207 39 C221 37 234 27 248 24 C262 21 276 8 290 5 L290 95 L0 95Z"/>
+                  <path class="trend-line trend-portfolio" d="M0 90 C14 87 27 83 41 81 C55 79 68 77 82 75 C97 72 110 67 124 64 C138 61 151 55 165 52 C179 49 193 41 207 39 C221 37 234 27 248 24 C262 21 276 8 290 5"/>
+                  <path class="trend-line trend-invested" d="M0 91 C41 88 82 84 124 78 C165 72 207 66 248 58 C268 54 282 51 290 50"/>
+                  <circle class="trend-point trend-portfolio" cx="290" cy="5" r="4"/>
+                  <circle class="trend-point trend-portfolio" cx="290" cy="5" r="8" opacity="0.18"/>
+                  <circle class="trend-point trend-portfolio" cx="290" cy="5" r="12" opacity="0.08"/>
+                  <circle class="trend-point trend-invested" cx="290" cy="50" r="3"/>
+                  <rect x="236" y="2" width="48" height="17" rx="5" fill="#1c1c1e" stroke="#34c759" stroke-opacity="0.38"/>
+                  <text x="260" y="14" text-anchor="middle" font-family="JetBrains Mono, SF Mono, Consolas, monospace" font-size="8" fill="#34c759">₹27.92L</text>
                 </svg>
+                <div class="chart-axis"><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span style="color:var(--green)">May</span></div>
                 <div class="trend-legend" aria-label="Portfolio trend legend"><span class="legend-portfolio"><i></i>Total value</span><span class="legend-invested"><i></i>Invested</span></div>
-                <p class="helper">X-axis shows months. Y-axis shows amount in INR.</p>
+                <p class="chart-hint">Save your first snapshot to <em>populate live data</em>. V1 must not fake stored history.</p>
               </section>
 
-              <section class="surface data-card">
-                <div class="section-title">Assets vs months</div>
-                <svg class="trend-graph" viewBox="0 0 320 160" role="img" aria-label="Asset value trends by month excluding cash">
-                  <path class="trend-grid" d="M32 24H306M32 58H306M32 92H306M32 126H306"/>
-                  <path class="trend-line trend-equity" d="M34 98 C58 90 78 106 100 78 C124 52 144 68 166 60 C190 52 210 84 230 38 C252 18 276 58 306 36"/>
-                  <path class="trend-line trend-debt" d="M34 126 C60 122 78 124 100 116 C128 108 150 112 176 102 C206 92 236 98 262 86 C282 78 294 84 306 76"/>
-                  <path class="trend-line trend-crypto" d="M34 138 C58 132 78 144 102 122 C124 102 140 134 164 112 C188 86 206 126 230 108 C258 78 282 118 306 96"/>
-                  <circle class="trend-point trend-equity" cx="306" cy="36" r="3.5"/>
-                  <circle class="trend-point trend-debt" cx="306" cy="76" r="3.5"/>
-                  <circle class="trend-point trend-crypto" cx="306" cy="96" r="3.5"/>
-                  <text class="axis-label trend-equity" x="250" y="32">₹12.45L</text>
-                  <text class="axis-label trend-debt" x="254" y="72">₹3.22L</text>
-                  <text class="axis-label trend-crypto" x="254" y="92">₹1.20L</text>
-                  <text class="trend-axis" x="4" y="28">15L</text>
-                  <text class="trend-axis" x="5" y="95">7.5L</text>
-                  <text class="trend-axis" x="13" y="130">0</text>
-                  <text class="trend-axis" x="34" y="152">Dec</text>
-                  <text class="trend-axis" x="138" y="152">Mar</text>
-                  <text class="trend-axis" x="282" y="152">May</text>
+              <section class="surface chart-card">
+                <div class="chart-header">
+                  <div>
+                    <div class="chart-kicker">Assets vs months</div>
+                    <div class="chart-value">Crypto leads</div>
+                    <div class="chart-delta">Cash excluded · tracked separately</div>
+                  </div>
+                  <div class="chart-range"><span class="range-chip">3M</span><span class="range-chip active">8M</span><span class="range-chip">1Y</span></div>
+                </div>
+                <svg class="trend-graph" viewBox="0 0 290 100" role="img" aria-label="Asset value trends by month excluding cash">
+                  <path class="trend-grid" d="M0 25H290M0 50H290M0 75H290"/>
+                  <path class="trend-line trend-crypto" d="M0 92 C14 88 27 84 41 78 C55 70 68 62 82 58 C97 54 110 44 124 40 C138 36 151 30 165 28 C179 26 193 20 207 18 C221 16 234 13 248 11 C262 9 276 7 290 5"/>
+                  <path class="trend-line trend-equity" d="M0 88 C14 85 27 82 41 79 C55 76 68 73 82 70 C97 67 110 63 124 60 C138 56 151 52 165 48 C179 44 193 40 207 36 C221 32 234 28 248 24 C262 21 276 18 290 15"/>
+                  <path class="trend-line trend-debt" d="M0 94 C41 93 82 92 124 91 C165 90 207 89 248 88 C268 87 282 86 290 86"/>
+                  <circle class="trend-point trend-crypto" cx="0" cy="92" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="41" cy="78" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="82" cy="58" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="124" cy="40" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="165" cy="28" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="207" cy="18" r="2" opacity="0.42"/><circle class="trend-point trend-crypto" cx="248" cy="11" r="2" opacity="0.42"/>
+                  <circle class="trend-point trend-equity" cx="0" cy="88" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="41" cy="79" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="82" cy="70" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="124" cy="60" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="165" cy="48" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="207" cy="36" r="2" opacity="0.42"/><circle class="trend-point trend-equity" cx="248" cy="24" r="2" opacity="0.42"/>
+                  <circle class="trend-point trend-debt" cx="0" cy="94" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="41" cy="93" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="82" cy="92" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="124" cy="91" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="165" cy="90" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="207" cy="89" r="2" opacity="0.35"/><circle class="trend-point trend-debt" cx="248" cy="88" r="2" opacity="0.35"/>
+                  <circle class="trend-point trend-crypto" cx="290" cy="5" r="4"/><circle class="trend-point trend-crypto" cx="290" cy="5" r="8" opacity="0.16"/><circle class="trend-point trend-crypto" cx="290" cy="5" r="12" opacity="0.07"/>
+                  <circle class="trend-point trend-equity" cx="290" cy="15" r="3.5"/><circle class="trend-point trend-equity" cx="290" cy="15" r="8" opacity="0.12"/>
+                  <circle class="trend-point trend-debt" cx="290" cy="86" r="3"/>
+                  <rect x="232" y="2" width="52" height="17" rx="5" fill="#1c1c1e" stroke="#ff9f0a" stroke-opacity="0.38"/>
+                  <text x="258" y="14" text-anchor="middle" font-family="JetBrains Mono, SF Mono, Consolas, monospace" font-size="8" fill="#ff9f0a">₹14.89L</text>
+                  <rect x="232" y="22" width="52" height="17" rx="5" fill="#1c1c1e" stroke="#34c759" stroke-opacity="0.34"/>
+                  <text x="258" y="34" text-anchor="middle" font-family="JetBrains Mono, SF Mono, Consolas, monospace" font-size="8" fill="#34c759">₹13.04L</text>
                 </svg>
+                <div class="chart-axis"><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span style="color:var(--green)">May</span></div>
                 <div class="trend-legend" aria-label="Asset trend legend"><span class="trend-equity"><i></i>Equity</span><span class="trend-debt"><i></i>Debt</span><span class="trend-crypto"><i></i>Crypto</span></div>
-                <p class="helper">Cash is excluded from this asset graph and tracked separately in Cash Ledger.</p>
+                <p class="chart-hint">Use saved monthly snapshots only. The graph is a design target, not fake production data.</p>
               </section>
 
               <section class="section">
-                <div class="section-head"><span class="section-title">What changed?</span><button class="section-action" type="button">Details</button></div>
+                <div class="section-head"><span class="section-title">What changed this month?</span><button class="section-action" type="button">Details</button></div>
                 <div class="group">
-                  <div class="row"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">Equity</div><div class="row-meta">Market value and contributions</div></div><div class="row-value">+₹58K</div></div>
-                  <div class="row"><span class="glyph debt"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></span><div class="row-main"><div class="row-title">Debt</div><div class="row-meta">Stable allocation</div></div><div class="row-value">+₹12K</div></div>
-                  <div class="row"><span class="glyph crypto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.2 9h4.1a2 2 0 0 1 0 4H9.2M9.2 13h4.8a2 2 0 0 1 0 4H9.2"/></svg></span><div class="row-main"><div class="row-title">Crypto</div><div class="row-meta">Manual price movement</div></div><div class="row-value negative">-₹8.5K</div></div>
-                  <div class="row"><span class="glyph cash"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></span><div class="row-main"><div class="row-title">Cash</div><div class="row-meta">Net cash change</div></div><div class="row-value">+₹70K</div></div>
+                  <div class="row"><div class="row-main"><div class="row-title">Monthly investment</div><div class="row-meta">User-entered snapshot field</div></div><div class="row-value">₹14.62L</div></div>
+                  <div class="row"><div class="row-main"><div class="row-title">Cash added</div><div class="row-meta">Cash ledger contribution</div></div><div class="row-value">₹0</div></div>
+                  <div class="row"><div class="row-main"><div class="row-title">Expense rate</div><div class="row-meta">Not tracked in V1 yet</div></div><div class="row-value">—</div></div>
                 </div>
               </section>
 
               <section class="surface data-card">
-                <div class="section-title">Closing snapshot</div>
-                <div class="data-row"><span>Equity</span><strong>₹12.45L · 62.6%</strong></div>
-                <div class="data-row"><span>Debt</span><strong>₹3.22L · 16.2%</strong></div>
-                <div class="data-row"><span>Crypto</span><strong>₹1.20L · 6.0%</strong></div>
-                <div class="data-row"><span>Cash</span><strong>₹3.25L · 16.3%</strong></div>
+                <div class="section-title">Record Snapshot · May 2026</div>
+                <div class="form-grid">
+                  <div class="form-field prefill"><label>Portfolio Value <span class="auto">· auto-filled</span></label><strong>₹27.92L</strong></div>
+                  <div class="form-field prefill"><label>Invested <span class="auto">· auto-filled</span></label><strong>₹15.95L</strong></div>
+                  <div class="form-field"><label>Monthly Investment</label><strong>e.g. ₹60,000</strong></div>
+                  <div class="form-field"><label>Salary</label><strong>e.g. ₹1,60,000</strong></div>
+                </div>
+                <button class="primary full-width" type="button">Save Monthly Snapshot</button>
               </section>
             </div>
             <div class="nav">
@@ -1238,6 +1675,7 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
                 <div><h2 class="title">Cash Ledger</h2><p class="subtitle">Manual ledger · local only</p></div>
                 <div class="actions"><button class="icon-button" type="button" aria-label="Add cash entry"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="icon-button" type="button" aria-label="Mask cash values"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
@@ -1245,12 +1683,11 @@
 
               <section class="surface hero">
                 <div class="label">Cash balance</div>
-                <div class="hero-value">₹1,65,600</div>
-                <span class="gain-pill">Available · ₹1.20L</span>
+                <div class="hero-value"><sup>₹</sup>0.00</div>
                 <div class="metric-grid">
-                  <div class="metric"><span class="label">Added</span><strong>₹70K</strong></div>
-                  <div class="metric"><span class="label">Invested</span><strong>₹45K</strong></div>
-                  <div class="metric"><span class="label">Savings</span><strong>32.8%</strong></div>
+                  <div class="metric"><span class="label">Invested</span><strong>₹14.62L</strong></div>
+                  <div class="metric"><span class="label">Available</span><strong>₹0.00</strong></div>
+                  <div class="metric"><span class="label">Savings</span><strong>—</strong></div>
                 </div>
               </section>
 
@@ -1258,20 +1695,18 @@
                 <div class="section-title">Add cash entry</div>
                 <div class="chips" aria-label="Cash entry type"><button class="chip active" type="button">Deposit</button><button class="chip" type="button">Withdraw</button><button class="chip" type="button">Transfer</button></div>
                 <div class="form-grid">
-                  <div class="form-field"><label>Amount (INR)</label><strong>₹0</strong></div>
-                  <div class="form-field"><label>Date</label><strong>09 May 2026</strong></div>
-                  <div class="form-field full"><label>Note</label><strong>Salary, SIP transfer, emergency fund</strong></div>
+                  <div class="form-field"><label>Amount (INR)</label><strong>Enter amount</strong></div>
+                  <div class="form-field"><label>Date</label><strong>19 May 2026</strong></div>
+                  <div class="form-field"><label>Label</label><strong>e.g. Salary</strong></div>
+                  <div class="form-field full"><label>Note</label><strong>Optional note</strong></div>
                 </div>
                 <button class="primary full-width" type="button">Save entry</button>
               </section>
 
-              <section class="section">
-                <div class="section-head"><span class="section-title">Recent cash ledger</span><button class="section-action" type="button">View all</button></div>
-                <div class="group">
-                  <div class="row"><span class="glyph cash"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></span><div class="row-main"><div class="row-title">Salary added</div><div class="row-meta">Cash deposit</div></div><div class="row-value positive">+₹70K</div></div>
-                  <div class="row"><span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M4 15l5-5 4 4 7-8"/><path d="M14 6h6v6"/></svg></span><div class="row-main"><div class="row-title">SIP transfer</div><div class="row-meta">Index Fund</div></div><div class="row-value">-₹15K</div></div>
-                  <div class="row"><span class="glyph cash"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></span><div class="row-main"><div class="row-title">Emergency fund top-up</div><div class="row-meta">Cash reserve</div></div><div class="row-value positive">+₹10K</div></div>
-                </div>
+              <section class="surface empty-panel">
+                <div class="empty-illustration"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></div>
+                <div class="section-title">No cash entries yet</div>
+                <p>Add broker or bank cash to include it in your total portfolio value.</p>
               </section>
             </div>
             <div class="nav">
@@ -1288,42 +1723,39 @@
           <div class="phone">
             <div class="status"><span>10:42</span><span class="status-icons"><i class="status-dot"></i><i class="status-dot"></i>100%</span></div>
             <div class="content">
+              <div class="context-badge">Local portfolio</div>
               <header class="header-row">
-                <div><h2 class="title">Settings</h2><p class="subtitle">Local-first controls</p></div>
+                <div><h2 class="title">Settings</h2><p class="subtitle">v1.0.0 Preview</p></div>
                 <div class="actions"><button class="icon-button" type="button" aria-label="About CogVest"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button></div>
               </header>
 
-              <div class="section-label">Privacy</div>
+              <section class="trust-banner">
+                <span class="glyph equity"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="M9.5 12.5 11 14l3.5-4"/></svg></span>
+                <div><div class="row-title">Your data never leaves this device</div><p>No account. No cloud sync. No analytics. Everything is stored locally on your Android device only.</p></div>
+              </section>
+
+              <div class="section-label">Display</div>
               <section class="group">
-                <div class="row"><span class="glyph debt"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="M9.5 12.5 11 14l3.5-4"/></svg></span><div class="row-main"><div class="row-title">Privacy</div><div class="row-meta">Local storage active · No account · No cloud</div></div><div class="row-value positive">On</div></div>
-                <div class="row"><span class="glyph"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="row-main"><div class="row-title">Value masking</div><div class="row-meta">Hide sensitive values on screen</div></div><div class="row-value">Ready</div></div>
+                <div class="row"><span class="glyph"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="row-main"><div class="row-title">Value masking</div><div class="row-meta">Hide INR amounts in shared spaces</div></div><div class="row-value">Off</div></div>
               </section>
 
               <div class="section-label">Quotes</div>
               <section class="group">
-                <div class="row"><span class="glyph cash"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M18 12a6 6 0 0 0-10.2-4.2L4 11m16 2-3.8 3.2A6 6 0 0 1 6 12"/></svg></span><div class="row-main"><div class="row-title">Quotes</div><div class="row-meta">Every 15 min · Manual fallback on</div></div><div class="row-value positive">OK</div></div>
+                <div class="row"><div class="row-main"><div class="row-title">Last refreshed</div><div class="row-meta">3 cached positions</div></div><div class="row-value positive">19 May 2026</div></div>
+                <div class="row"><div class="row-main"><div class="row-title">Provider status</div></div><div class="row-value positive">Live</div></div>
+                <div class="row"><div class="row-main"><div class="row-title">Manual fallback</div><div class="row-meta">Prices used when APIs fail</div></div><div class="row-value">0 saved</div></div>
               </section>
 
               <div class="section-label">Currency</div>
-              <section class="surface data-card">
-                <div class="section-title">Currency</div>
-                <div class="data-row"><span>Base currency</span><strong>INR</strong></div>
-                <div class="data-row"><span>Foreign summary</span><strong>On</strong></div>
-                <div class="data-row"><span>USD and crypto fallback</span><strong>On</strong></div>
-              </section>
-
-              <div class="section-label">Display</div>
-              <section class="surface data-card">
-                <div class="section-title">Display and app info</div>
-                <div class="data-row"><span>Density</span><strong>Standard V1</strong></div>
-                <div class="data-row"><span>Minimal Mode</span><strong>V2 locked</strong></div>
-                <div class="data-row"><span>App version</span><strong>1.0.0 preview</strong></div>
+              <section class="group">
+                <div class="row"><div class="row-main"><div class="row-title">Base currency</div></div><div class="row-value">INR ₹</div></div>
+                <div class="row"><div class="row-main"><div class="row-title">Foreign asset summary</div><div class="row-meta">Show USD holdings in INR</div></div><div class="row-value positive">On</div></div>
+                <div class="row"><div class="row-main"><div class="row-title">USD and crypto fallback</div><div class="row-meta">Use fallback if live rate fails</div></div><div class="row-value positive">On</div></div>
               </section>
 
               <div class="section-label">Data</div>
-              <section class="surface data-card">
-                <div class="section-title negative">Data</div>
-                <div class="data-row"><span>Clear local data</span><strong class="negative">Destructive</strong></div>
+              <section class="group">
+                <div class="row" style="opacity:.35;pointer-events:none"><div class="row-main"><div class="row-title negative">Clear local data</div><div class="row-meta">Coming in a future update</div></div><div class="row-value">—</div></div>
               </section>
             </div>
             <div class="nav">
@@ -1362,6 +1794,12 @@
                 <div class="section-title negative">Provider unavailable</div>
                 <p class="helper">Could not fetch a live quote. Continue manually and CogVest will mark the price source.</p>
                 <button class="secondary-action" type="button">Enter price manually</button>
+              </section>
+
+              <section class="surface empty-panel">
+                <div class="empty-illustration"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 7l11-3 2 3"/><path d="M15 13h5"/></svg></div>
+                <div class="section-title">Empty cash ledger</div>
+                <p>Add broker or bank cash when it should count toward portfolio value.</p>
               </section>
 
               <section class="surface data-card">

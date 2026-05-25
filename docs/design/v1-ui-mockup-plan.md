@@ -1,8 +1,10 @@
 # V1 UI Mockup Plan
 
 > Status: historical V1 visual planning reference. For current V1 UI work, use
-> `DESIGN.md` and `docs/design/figma/issue-69-v1-screens/code.js` as the
-> source of truth. This document remains only for early context.
+> `DESIGN.md`, `docs/design/v1-screen-baseline.md`,
+> `docs/design/issue-86-premium-preview/index.html`, and
+> `docs/design/figma/issue-69-v1-screens/code.js` as the source of truth. This
+> document remains only for early context.
 
 Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 
@@ -21,11 +23,17 @@ Show total `₹0.00`, no allocation, and a strong `Add Holding` CTA. Empty copy 
 
 ### Filled Dashboard
 
-Show portfolio value, allocation summary, quote freshness, monthly context, basic conviction nudge, and Add Holding CTA. Do not show Minimal Mode or LTCG.
+Show portfolio value, invested value, P&L, return, allocation summary, quote
+freshness, monthly context, and calm conviction/insight context. Do not show
+Minimal Mode or LTCG.
 
 ### Add Holding
 
-Use the multi-phase Figma direction: Asset, Classification, Position, Review. Include asset lookup/autofill where available, manual fallback, quantity, average/current price, date, optional conviction, optional note, and review before save.
+Use the multi-phase baseline: search, explicit asset selection, classification,
+position, derived preview, review. The search result must not auto-select; the
+user chooses the asset before autofill. Include manual fallback, quantity,
+average/current price, date, optional conviction, optional note, and review
+before save.
 
 ### Holdings Empty
 
@@ -33,7 +41,16 @@ Show empty card with “No holdings yet” and CTA to Add Holding.
 
 ### Holdings Filled
 
-Holding card rows: asset name/symbol, quantity, average cost, current value, unrealised P&L, quote freshness. No LTCG badge in V1.
+Holding card rows: asset name/symbol, asset class metadata, current value,
+invested value, allocation, quantity, average cost, current price, unrealised
+P&L, quote freshness, and stale/manual state where relevant. No LTCG badge in
+V1.
+
+### Monthly Progress
+
+Use two stored-snapshot-driven graph areas when data exists: total portfolio
+value vs invested value, and assets vs months excluding cash. If no snapshots
+exist, show a clear no-snapshot state. Do not fake production chart history.
 
 ### Cash Empty/Filled
 

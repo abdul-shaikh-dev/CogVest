@@ -249,6 +249,17 @@ async function main() {
     return width;
   }
 
+  function contextBadge(parent, label, x, y, w = 104) {
+    rect(parent, x, y, w, 24, C.surface, 999);
+    const dot = figma.createEllipse();
+    parent.appendChild(dot);
+    dot.x = x + 10;
+    dot.y = y + 9;
+    dot.resize(6, 6);
+    dot.fills = [paint(C.green)];
+    text(parent, label, x + 23, y + 6, 10.5, C.secondary, "Semi Bold", w - 30);
+  }
+
   function row(parent, x, y, w, type, title, meta, value, sub = null, valueColor = C.text, allocation = null) {
     rect(parent, x, y, w, 72, C.surface, 18);
     glyph(parent, x + 12, y + 19, type, 34);
@@ -257,6 +268,22 @@ async function main() {
     text(parent, value, x + w - 112, y + 15, 14, valueColor, "Bold", 96, "RIGHT");
     if (sub) text(parent, sub, x + w - 112, y + 35, 10.5, sub.startsWith("-") ? C.negative : C.green, "Semi Bold", 96, "RIGHT");
     if (allocation) text(parent, allocation, x + w - 112, y + 53, 9.5, C.secondary, "Regular", 96, "RIGHT");
+  }
+
+  function holdingDetailRow(parent, x, y, w, type, title, meta, value, pnl, fields, note = null) {
+    rect(parent, x, y, w, note ? 118 : 104, C.surface, 20);
+    rect(parent, x, y, 3, note ? 118 : 104, assetMeta[type].color, 999);
+    text(parent, title, x + 14, y + 15, 14, C.text, "Bold", 170);
+    text(parent, meta, x + 14, y + 37, 10.5, C.secondary, "Regular", 210);
+    text(parent, value, x + w - 112, y + 15, 14, C.text, "Bold", 96, "RIGHT");
+    text(parent, pnl, x + w - 112, y + 36, 10.5, pnl.startsWith("-") ? C.negative : C.green, "Semi Bold", 96, "RIGHT");
+    line(parent, x + 14, y + 62, w - 28, 0.3);
+    fields.forEach((field, i) => {
+      const xx = x + 14 + i * 78;
+      text(parent, field.label.toUpperCase(), xx, y + 73, 8.5, C.muted, "Bold", 66);
+      text(parent, field.value, xx, y + 87, 10.5, C.text, "Semi Bold", 68);
+    });
+    if (note) text(parent, note, x + 14, y + 103, 10.5, C.amber, "Semi Bold", w - 28);
   }
 
   function groupedRows(parent, x, y, rows) {
@@ -332,7 +359,7 @@ async function main() {
 
   function pageTitle() {
     text(page, "CogVest Issue 86 Premium V1 Screens", 24, 24, 30, C.text, "Bold", 900);
-    text(page, "Generated from docs/design/issue-86-premium-preview. Main tabs: Dashboard, Holdings, Progress, Cash, Settings. Add Holding is a secondary flow.", 24, 64, 13, C.secondary, "Regular", 980);
+    text(page, "Issue #102 refined baseline from the repo preview. Main tabs stay Dashboard, Holdings, Progress, Cash, Settings; Add Holding stays secondary and lookup-first.", 24, 64, 13, C.secondary, "Regular", 1100);
   }
 
   stage = "draw canvas";
@@ -343,13 +370,15 @@ async function main() {
   // Dashboard
   stage = "draw dashboard";
   const dashboard = screen("Dashboard", 24);
-  header(dashboard, "Dashboard", "Local portfolio · 9 May 2026", ["refresh", "eye"]);
+  contextBadge(dashboard, "Local portfolio", PAD, 42);
+  header(dashboard, "Dashboard", "9 May 2026 snapshot", ["refresh", "eye"]);
   card(dashboard, PAD, 144, CONTENT_W, 134);
   text(dashboard, "Portfolio value", 38, 166, 12, C.secondary, "Semi Bold", 120);
   text(dashboard, "₹18.42L", 38, 190, 42, C.text, "Bold", 180);
   chip(dashboard, "+₹3.10L · +20.2%", 38, 238, true, 124);
   metric(dashboard, "Invested", "₹15.32L", 188, 178, 72);
   metric(dashboard, "P&L", "+₹3.10L", 268, 178, 72, C.green);
+  text(dashboard, "since first buy", 268, 214, 9.5, C.secondary, "Regular", 72);
   metric(dashboard, "Quotes", "2m ago", 268, 232, 72);
   sectionTitle(dashboard, "Allocation", PAD, 302, "View details");
   groupedRows(dashboard, PAD, 330, [
@@ -372,6 +401,7 @@ async function main() {
   // Holdings
   stage = "draw holdings";
   const holdings = screen("Holdings", 448);
+  contextBadge(holdings, "Local portfolio", PAD, 42);
   header(holdings, "Holdings", "24 positions · local data", ["plus", "search"]);
   metricStrip(holdings, PAD, 144, [
     { label: "Current", value: "₹12.48L" },
@@ -380,17 +410,29 @@ async function main() {
     { label: "Drift", value: "3.2%", color: C.amber },
   ]);
   text(holdings, "Quotes updated 2m ago · 1 manual price", PAD, 246, 12, C.secondary, "Regular", 240);
+  text(holdings, "Refresh", 286, 246, 11, C.green, "Bold", 52, "RIGHT");
   let chipX = PAD;
-  ["All", "Equity", "Debt", "Crypto", "Cash"].forEach((c, i) => {
+  ["All 5", "Equity 2", "Debt 2", "Crypto 1", "Cash 0"].forEach((c, i) => {
     chipX += chip(holdings, c, chipX, 272, i === 0) + 8;
   });
-  [
-    ["equity", "HDFC Bank", "Equity · Financial Services", "₹1.83L", "+₹18.6K", "14.6% allocation"],
-    ["equity", "Nifty 50 ETF", "Equity · Index Fund", "₹50.7K", "+₹6.5K", "4.1% allocation"],
-    ["debt", "Sovereign Gold Bond", "Debt · Government Bond · Manual", "₹57.1K", "+₹4.1K", "4.6% allocation"],
-    ["crypto", "Bitcoin", "Crypto · Manual price", "₹13.90L", "+₹2.85L", "11.1% allocation"],
-    ["debt", "Liquid Fund", "Debt · Overnight", "₹2.50L", "+₹250", "2.0% allocation"],
-  ].forEach((r, i) => row(holdings, PAD, 326 + i * 82, CONTENT_W, r[0], r[1], r[2], r[3], r[4], C.text, r[5]));
+  holdingDetailRow(holdings, PAD, 326, CONTENT_W, "equity", "HDFC Bank", "HDFCBANK · Equity · 14.6% allocation", "₹1.83L", "+₹18.6K", [
+    { label: "Qty", value: "112" },
+    { label: "Avg", value: "₹1,450" },
+    { label: "LTP", value: "₹1,678" },
+    { label: "Quote", value: "Live" },
+  ]);
+  holdingDetailRow(holdings, PAD, 440, CONTENT_W, "equity", "Nifty IT ETF", "ITBEES · Equity · 41.3% allocation", "₹11.56L", "-₹1.87L", [
+    { label: "Qty", value: "35,612" },
+    { label: "Avg", value: "₹37.69" },
+    { label: "LTP", value: "₹32.45" },
+    { label: "Quote", value: "Stale" },
+  ], "Price may be stale · last seen 17 May");
+  holdingDetailRow(holdings, PAD, 568, CONTENT_W, "crypto", "Bitcoin", "BTC · Crypto · 11.1% allocation", "₹13.90L", "+₹2.85L", [
+    { label: "Qty", value: "0.2000" },
+    { label: "Avg", value: "₹6.0L" },
+    { label: "LTP", value: "₹74.4L" },
+    { label: "Quote", value: "Manual" },
+  ]);
   nav(holdings, "Holdings");
 
   // Add Holding - Asset Lookup
@@ -495,6 +537,7 @@ async function main() {
     { label: "Total value", color: C.text },
     { label: "Invested", color: C.investedLine },
   ]);
+  text(progress, "Monthly snapshots populate this view over time; V1 does not fake stored history.", 38, 518, 10.5, C.secondary, "Regular", 294);
   card(progress, PAD, 552, CONTENT_W, 238);
   sectionTitle(progress, "Assets vs months", 38, 572);
   assetGraph(progress, 36, 598);
@@ -536,32 +579,30 @@ async function main() {
   stage = "draw settings";
   const settings = screen("Settings", 2992);
   header(settings, "Settings", "Local-first controls", ["info"]);
-  sectionLabel(settings, "Privacy", PAD, 144);
-  groupedRows(settings, PAD, 166, [
+  card(settings, PAD, 144, CONTENT_W, 78, 18);
+  glyph(settings, 38, 162, "equity", 34);
+  text(settings, "Your data stays on this device", 84, 160, 13.5, C.text, "Bold", 220);
+  text(settings, "No account · No cloud sync · No analytics in V1.", 84, 184, 10.5, C.secondary, "Regular", 230);
+  sectionLabel(settings, "Privacy", PAD, 244);
+  groupedRows(settings, PAD, 266, [
     { type: "debt", title: "Privacy", meta: "Local storage active · No account · No cloud", value: "On", color: C.green },
     { type: "neutral", title: "Value masking", meta: "Hide sensitive values on screen", value: "Ready" },
   ]);
-  sectionLabel(settings, "Quotes", PAD, 300);
-  groupedRows(settings, PAD, 322, [
+  sectionLabel(settings, "Quotes", PAD, 400);
+  groupedRows(settings, PAD, 422, [
     { type: "cash", title: "Quotes", meta: "Every 15 min · Manual fallback on", value: "OK", color: C.green },
   ]);
-  sectionLabel(settings, "Currency", PAD, 396);
-  card(settings, PAD, 418, CONTENT_W, 106);
-  sectionTitle(settings, "Currency", 38, 438);
-  metric(settings, "Base currency", "INR", 38, 474, 90);
-  metric(settings, "Foreign summary", "On", 150, 474, 90);
-  metric(settings, "Fallback", "On", 264, 474, 74);
-  sectionLabel(settings, "Display", PAD, 546);
-  card(settings, PAD, 568, CONTENT_W, 122);
-  sectionTitle(settings, "Display and app info", 38, 588);
-  groupedRows(settings, 38, 622, [
+  sectionLabel(settings, "Currency", PAD, 496);
+  card(settings, PAD, 518, CONTENT_W, 106);
+  sectionTitle(settings, "Currency", 38, 538);
+  metric(settings, "Base currency", "INR", 38, 574, 90);
+  metric(settings, "Foreign summary", "On", 150, 574, 90);
+  metric(settings, "Fallback", "On", 264, 574, 74);
+  sectionLabel(settings, "Display", PAD, 646);
+  card(settings, PAD, 668, CONTENT_W, 72);
+  groupedRows(settings, 38, 675, [
     { type: "neutral", title: "Density", meta: "Standard V1", value: "" },
-    { type: "neutral", title: "Minimal Mode", meta: "V2 locked", value: "" },
   ]);
-  sectionLabel(settings, "Data", PAD, 710);
-  card(settings, PAD, 732, CONTENT_W, 48);
-  text(settings, "Clear local data", 38, 748, 13, C.negative, "Semi Bold", 140);
-  text(settings, "Destructive", 255, 748, 12, C.negative, "Regular", 80, "RIGHT");
   nav(settings, "Settings");
 
   // V1 States
@@ -583,9 +624,13 @@ async function main() {
   sectionTitle(states, "Provider unavailable", 38, 466);
   text(states, "Could not fetch a live quote. Continue manually and CogVest will mark the price source.", 38, 496, 12, C.secondary, "Regular", 280);
   text(states, "Enter price manually", 38, 530, 12, C.green, "Semi Bold", 160);
-  card(states, PAD, 582, CONTENT_W, 92);
-  sectionTitle(states, "No monthly snapshots", 38, 604);
-  text(states, "Monthly Progress becomes useful after the first saved snapshot. Keep the chart area calm.", 38, 634, 12, C.secondary, "Regular", 280);
+  card(states, PAD, 582, CONTENT_W, 74);
+  glyph(states, 38, 602, "cash", 34);
+  sectionTitle(states, "Empty cash ledger", 84, 598);
+  text(states, "Add broker or bank cash when it should count toward portfolio value.", 84, 626, 10.5, C.secondary, "Regular", 220);
+  card(states, PAD, 674, CONTENT_W, 92);
+  sectionTitle(states, "No monthly snapshots", 38, 696);
+  text(states, "Monthly Progress becomes useful after the first saved snapshot. Keep the chart area calm.", 38, 726, 12, C.secondary, "Regular", 280);
 
   stage = "zoom to screens";
   figma.viewport.scrollAndZoomIntoView([dashboard, holdings, addAsset, addPosition, addReview, progress, cash, settings, states]);
