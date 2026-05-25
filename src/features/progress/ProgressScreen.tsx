@@ -1,4 +1,3 @@
-import { useState, useSyncExternalStore } from "react";
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle, Polyline } from "react-native-svg";
 import type { StoreApi } from "zustand/vanilla";
@@ -16,29 +15,16 @@ import {
   SectionHeader,
   assetClassLabel,
 } from "@/src/components/common";
-import {
-  buildMonthlyProgressChartData,
-  calculateAllocation,
-  calculateCashBalance,
-  calculateHoldings,
-  calculateMonthlyProgressSummaries,
-  calculatePortfolioTotal,
-  type MonthlyProgressChartSeries,
-} from "@/src/domain/calculations";
+import type { MonthlyProgressChartSeries } from "@/src/domain/calculations";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, spacing } from "@/src/theme";
-import type { MonthlySnapshot } from "@/src/types";
-import { createId } from "@/src/utils";
 import { FormTextField } from "@/src/components/forms";
+import { useProgress } from "./useProgress";
 
 type ProgressScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
-
-function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
-}
 
 function getMonthLabel(date = new Date()) {
   return new Intl.DateTimeFormat("en-IN", {
@@ -58,52 +44,11 @@ function formatMonth(month: string) {
   }).format(new Date(Date.UTC(Number(year), monthIndex, 1)));
 }
 
-function isCurrentMonth(isoDate: string, now = new Date()) {
-  const date = new Date(isoDate);
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
-  );
-}
-
 function formatSignedINR(value: number) {
   const amount = formatINR(value);
 
   return value > 0 ? `+${amount}` : amount;
 }
-
-function emptyFormValues() {
-  const now = new Date();
-
-  return {
-    cashValue: "",
-    cryptoValue: "",
-    debtValue: "",
-    equityValue: "",
-    investedValue: "",
-    month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
-    monthlyExpense: "",
-    monthlyInvestment: "",
-    notes: "",
-    portfolioValue: "",
-    salary: "",
-  };
-}
-
-type SnapshotFormValues = ReturnType<typeof emptyFormValues>;
-type SnapshotFormErrors = Partial<Record<keyof SnapshotFormValues, string>>;
-
-const requiredNumberFields: Array<keyof SnapshotFormValues> = [
-  "portfolioValue",
-  "investedValue",
-  "equityValue",
-  "debtValue",
-  "cryptoValue",
-  "cashValue",
-  "monthlyInvestment",
-  "salary",
-];
 
 const chartWidth = 280;
 const chartHeight = 132;
@@ -282,145 +227,10 @@ function ProgressTrendCards({
   );
 }
 
-function parseNumberField(
-  values: SnapshotFormValues,
-  field: keyof SnapshotFormValues,
-  errors: SnapshotFormErrors,
-) {
-  const value = values[field].trim();
-  const parsedValue = value.length > 0 ? Number(value) : Number.NaN;
-
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-    errors[field] = "Enter a valid amount.";
-  }
-
-  return parsedValue;
-}
-
-function validateSnapshotForm(values: SnapshotFormValues) {
-  const errors: SnapshotFormErrors = {};
-
-  if (!/^\d{4}-\d{2}$/.test(values.month.trim())) {
-    errors.month = "Use YYYY-MM.";
-  }
-
-  const parsedValues = Object.fromEntries(
-    requiredNumberFields.map((field) => [
-      field,
-      parseNumberField(values, field, errors),
-    ]),
-  ) as Record<(typeof requiredNumberFields)[number], number>;
-  const trimmedExpense = values.monthlyExpense.trim();
-  const monthlyExpense =
-    trimmedExpense.length === 0 ? undefined : Number(trimmedExpense);
-
-  if (
-    monthlyExpense !== undefined &&
-    (!Number.isFinite(monthlyExpense) || monthlyExpense < 0)
-  ) {
-    errors.monthlyExpense = "Enter a valid amount.";
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { errors, snapshot: null };
-  }
-
-  return {
-    errors,
-    snapshot: {
-      cashValue: parsedValues.cashValue,
-      cryptoValue: parsedValues.cryptoValue,
-      debtValue: parsedValues.debtValue,
-      equityValue: parsedValues.equityValue,
-      id: createId("snapshot"),
-      investedValue: parsedValues.investedValue,
-      month: values.month.trim(),
-      monthlyExpense,
-      monthlyInvestment: parsedValues.monthlyInvestment,
-      notes: values.notes.trim() || undefined,
-      portfolioValue: parsedValues.portfolioValue,
-      salary: parsedValues.salary,
-    } satisfies MonthlySnapshot,
-  };
-}
-
 export function ProgressScreen({
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
-  const snapshot = usePortfolioSnapshot(store);
-  const [formValues, setFormValues] = useState(emptyFormValues);
-  const [errors, setErrors] = useState<SnapshotFormErrors>({});
-  const holdings = calculateHoldings({
-    assets: snapshot.assets,
-    openingPositions: snapshot.openingPositions,
-    quoteCache: snapshot.quoteCache,
-    trades: snapshot.trades,
-  });
-  const cashBalance = calculateCashBalance(snapshot.cashEntries);
-  const portfolioValue = calculatePortfolioTotal(holdings, snapshot.cashEntries);
-  const totalInvested = holdings.reduce(
-    (total, holding) => total + holding.totalInvested,
-    0,
-  );
-  const monthlyTradeInvestment = snapshot.trades
-    .filter((trade) => trade.type === "buy" && isCurrentMonth(trade.date))
-    .reduce((total, trade) => total + trade.totalValue, 0);
-  const monthlyOpeningInvestment = snapshot.openingPositions
-    .filter((position) => isCurrentMonth(position.date))
-    .reduce(
-      (total, position) =>
-        total + position.quantity * position.averageCostPrice,
-      0,
-    );
-  const monthlyInvestment = monthlyTradeInvestment + monthlyOpeningInvestment;
-  const monthlyCashAdded = snapshot.cashEntries
-    .filter((entry) => entry.type === "addition" && isCurrentMonth(entry.date))
-    .reduce((total, entry) => total + entry.amount, 0);
-  const savingsRate =
-    monthlyCashAdded === 0 ? 0 : (monthlyInvestment / monthlyCashAdded) * 100;
-  const allocation = calculateAllocation({ cashBalance, holdings });
-  const hasData = holdings.length > 0 || snapshot.cashEntries.length > 0;
-  const monthlySummaries = calculateMonthlyProgressSummaries(
-    snapshot.monthlySnapshots,
-  );
-  const latestSummary = monthlySummaries[0];
-  const chartData = buildMonthlyProgressChartData(snapshot.monthlySnapshots);
-
-  function setField(field: keyof SnapshotFormValues, value: string) {
-    setFormValues((currentValues) => ({
-      ...currentValues,
-      [field]: value,
-    }));
-    setErrors((currentErrors) => ({
-      ...currentErrors,
-      [field]: undefined,
-    }));
-  }
-
-  function saveSnapshot() {
-    const result = validateSnapshotForm(formValues);
-
-    if (!result.snapshot) {
-      setErrors(result.errors);
-      return;
-    }
-
-    const existingSnapshot = snapshot.monthlySnapshots.find(
-      (monthlySnapshot) => monthlySnapshot.month === result.snapshot.month,
-    );
-
-    if (existingSnapshot) {
-      store.getState().updateMonthlySnapshot({
-        ...result.snapshot,
-        id: existingSnapshot.id,
-      });
-    } else {
-      store.getState().addMonthlySnapshot(result.snapshot);
-    }
-
-    setFormValues(emptyFormValues());
-    setErrors({});
-  }
+  const progress = useProgress({ store });
 
   return (
     <ScreenContainer scroll testID="progress-screen">
@@ -428,58 +238,58 @@ export function ProgressScreen({
         <ScreenHeader
           title="Monthly Progress"
           subtitle={
-            latestSummary
-              ? `${formatMonth(latestSummary.snapshot.month)} snapshot`
+            progress.latestSummary
+              ? `${formatMonth(progress.latestSummary.snapshot.month)} snapshot`
               : getMonthLabel()
           }
         />
 
-        {latestSummary ? (
+        {progress.latestSummary ? (
           <>
             <HeroMetric
               label="Portfolio value"
-              masked={snapshot.preferences.maskWealthValues}
+              masked={progress.preferences.maskWealthValues}
               subValue={`${formatSignedINR(
-                latestSummary.monthlyGain,
-              )} (${formatPercentage(latestSummary.monthlyGainPct)})`}
-              subValueTone={latestSummary.monthlyGain >= 0 ? "positive" : "negative"}
-              value={formatINR(latestSummary.snapshot.portfolioValue)}
+                progress.latestSummary.monthlyGain,
+              )} (${formatPercentage(progress.latestSummary.monthlyGainPct)})`}
+              subValueTone={progress.latestSummary.monthlyGain >= 0 ? "positive" : "negative"}
+              value={formatINR(progress.latestSummary.snapshot.portfolioValue)}
             />
 
             <MetricGroup
               metrics={[
                 {
                   label: "Invested",
-                  masked: snapshot.preferences.maskWealthValues,
-                  value: formatINR(latestSummary.snapshot.monthlyInvestment),
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatINR(progress.latestSummary.snapshot.monthlyInvestment),
                 },
                 {
                   label: "Savings",
                   value:
-                    latestSummary.savingsRate === null
+                    progress.latestSummary.savingsRate === null
                       ? "Not enough data"
-                      : formatPercentage(latestSummary.savingsRate),
+                      : formatPercentage(progress.latestSummary.savingsRate),
                 },
                 {
                   label: "Expense",
                   value:
-                    latestSummary.expenseRate === null
+                    progress.latestSummary.expenseRate === null
                       ? "Not enough data"
-                      : formatPercentage(latestSummary.expenseRate),
+                      : formatPercentage(progress.latestSummary.expenseRate),
                 },
               ]}
             />
 
             <ProgressTrendCards
-              assetSeries={chartData.assetSeries}
-              hasEnoughHistory={chartData.hasEnoughHistory}
-              monthLabels={chartData.monthLabels}
-              portfolioSeries={chartData.portfolioSeries}
+              assetSeries={progress.chartData.assetSeries}
+              hasEnoughHistory={progress.chartData.hasEnoughHistory}
+              monthLabels={progress.chartData.monthLabels}
+              portfolioSeries={progress.chartData.portfolioSeries}
             />
 
             <PremiumCard>
               <SectionHeader title="Asset class snapshot" />
-              {latestSummary.assetSnapshot.map((item) => (
+              {progress.latestSummary.assetSnapshot.map((item) => (
                 <View key={item.assetClass} style={styles.assetRow}>
                   <View style={styles.assetIdentity}>
                     <CategoryIcon assetClass={item.assetClass} />
@@ -497,7 +307,7 @@ export function ProgressScreen({
 
             <PremiumCard>
               <SectionHeader title="Recent snapshots" />
-              {monthlySummaries.map((summary) => (
+              {progress.monthlySummaries.map((summary) => (
                 <View key={summary.snapshot.id} style={styles.snapshotRow}>
                   <View style={styles.snapshotCopy}>
                     <AppText weight="bold">{formatMonth(summary.snapshot.month)}</AppText>
@@ -517,28 +327,28 @@ export function ProgressScreen({
               ))}
             </PremiumCard>
           </>
-        ) : hasData ? (
+        ) : progress.hasData ? (
           <>
             <MetricGroup
               metrics={[
                 {
                   label: "Portfolio",
-                  masked: snapshot.preferences.maskWealthValues,
-                  value: formatINR(portfolioValue),
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatINR(progress.portfolioValue),
                 },
                 {
                   label: "Invested",
-                  masked: snapshot.preferences.maskWealthValues,
-                  value: formatINR(totalInvested),
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatINR(progress.totalInvested),
                 },
                 {
                   label: "Cash",
-                  masked: snapshot.preferences.maskWealthValues,
-                  value: formatINR(cashBalance),
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatINR(progress.cashBalance),
                 },
                 {
                   label: "Savings",
-                  value: monthlyCashAdded === 0 ? "Not enough data" : formatPercentage(savingsRate),
+                  value: progress.monthlyCashAdded === 0 ? "Not enough data" : formatPercentage(progress.savingsRate),
                 },
               ]}
             />
@@ -546,10 +356,10 @@ export function ProgressScreen({
             <PremiumCard>
               <SectionHeader title="What changed this month?" />
               <AppText color="secondary">
-                Monthly investment: {formatINR(monthlyInvestment)}
+                Monthly investment: {formatINR(progress.monthlyInvestment)}
               </AppText>
               <AppText color="secondary">
-                Cash added: {formatINR(monthlyCashAdded)}
+                Cash added: {formatINR(progress.monthlyCashAdded)}
               </AppText>
               <AppText color="secondary">
                 Expense rate needs explicit expense tracking and is not shown in V1.
@@ -557,15 +367,15 @@ export function ProgressScreen({
             </PremiumCard>
 
             <ProgressTrendCards
-              assetSeries={chartData.assetSeries}
-              hasEnoughHistory={chartData.hasEnoughHistory}
-              monthLabels={chartData.monthLabels}
-              portfolioSeries={chartData.portfolioSeries}
+              assetSeries={progress.chartData.assetSeries}
+              hasEnoughHistory={progress.chartData.hasEnoughHistory}
+              monthLabels={progress.chartData.monthLabels}
+              portfolioSeries={progress.chartData.portfolioSeries}
             />
 
             <PremiumCard>
               <SectionHeader title="Asset class snapshot" />
-              {allocation.map((item) => (
+              {progress.allocation.map((item) => (
                 <View key={item.assetClass} style={styles.assetRow}>
                   <View style={styles.assetIdentity}>
                     <CategoryIcon assetClass={item.assetClass} />
@@ -591,111 +401,111 @@ export function ProgressScreen({
         <PremiumCard>
           <SectionHeader title="Record monthly snapshot" />
           <FormTextField
-            error={errors.month}
+            error={progress.errors.month}
             label="Month"
-            onChangeText={(value) => setField("month", value)}
+            onChangeText={(value) => progress.setField("month", value)}
             placeholder="YYYY-MM"
             testID="snapshot-month-input"
-            value={formValues.month}
+            value={progress.formValues.month}
           />
           <FormTextField
-            error={errors.portfolioValue}
+            error={progress.errors.portfolioValue}
             keyboardType="decimal-pad"
             label="Portfolio value"
-            onChangeText={(value) => setField("portfolioValue", value)}
+            onChangeText={(value) => progress.setField("portfolioValue", value)}
             placeholder="1385000"
             testID="snapshot-portfolio-input"
-            value={formValues.portfolioValue}
+            value={progress.formValues.portfolioValue}
           />
           <FormTextField
-            error={errors.investedValue}
+            error={progress.errors.investedValue}
             keyboardType="decimal-pad"
             label="Invested value"
-            onChangeText={(value) => setField("investedValue", value)}
+            onChangeText={(value) => progress.setField("investedValue", value)}
             placeholder="1060000"
             testID="snapshot-invested-input"
-            value={formValues.investedValue}
+            value={progress.formValues.investedValue}
           />
           <View style={styles.fieldGrid}>
             <FormTextField
-              error={errors.equityValue}
+              error={progress.errors.equityValue}
               keyboardType="decimal-pad"
               label="Equity"
-              onChangeText={(value) => setField("equityValue", value)}
+              onChangeText={(value) => progress.setField("equityValue", value)}
               placeholder="880000"
               testID="snapshot-equity-input"
-              value={formValues.equityValue}
+              value={progress.formValues.equityValue}
             />
             <FormTextField
-              error={errors.debtValue}
+              error={progress.errors.debtValue}
               keyboardType="decimal-pad"
               label="Debt"
-              onChangeText={(value) => setField("debtValue", value)}
+              onChangeText={(value) => progress.setField("debtValue", value)}
               placeholder="320000"
               testID="snapshot-debt-input"
-              value={formValues.debtValue}
+              value={progress.formValues.debtValue}
             />
           </View>
           <View style={styles.fieldGrid}>
             <FormTextField
-              error={errors.cryptoValue}
+              error={progress.errors.cryptoValue}
               keyboardType="decimal-pad"
               label="Crypto"
-              onChangeText={(value) => setField("cryptoValue", value)}
+              onChangeText={(value) => progress.setField("cryptoValue", value)}
               placeholder="45000"
               testID="snapshot-crypto-input"
-              value={formValues.cryptoValue}
+              value={progress.formValues.cryptoValue}
             />
             <FormTextField
-              error={errors.cashValue}
+              error={progress.errors.cashValue}
               keyboardType="decimal-pad"
               label="Cash"
-              onChangeText={(value) => setField("cashValue", value)}
+              onChangeText={(value) => progress.setField("cashValue", value)}
               placeholder="140000"
               testID="snapshot-cash-input"
-              value={formValues.cashValue}
+              value={progress.formValues.cashValue}
             />
           </View>
           <View style={styles.fieldGrid}>
             <FormTextField
-              error={errors.monthlyInvestment}
+              error={progress.errors.monthlyInvestment}
               keyboardType="decimal-pad"
               label="Monthly investment"
-              onChangeText={(value) => setField("monthlyInvestment", value)}
+              onChangeText={(value) => progress.setField("monthlyInvestment", value)}
               placeholder="60000"
               testID="snapshot-investment-input"
-              value={formValues.monthlyInvestment}
+              value={progress.formValues.monthlyInvestment}
             />
             <FormTextField
-              error={errors.salary}
+              error={progress.errors.salary}
               keyboardType="decimal-pad"
               label="Salary"
-              onChangeText={(value) => setField("salary", value)}
+              onChangeText={(value) => progress.setField("salary", value)}
               placeholder="160000"
               testID="snapshot-salary-input"
-              value={formValues.salary}
+              value={progress.formValues.salary}
             />
           </View>
           <FormTextField
-            error={errors.monthlyExpense}
+            error={progress.errors.monthlyExpense}
             keyboardType="decimal-pad"
             label="Monthly expense"
-            onChangeText={(value) => setField("monthlyExpense", value)}
+            onChangeText={(value) => progress.setField("monthlyExpense", value)}
             placeholder="Optional"
             testID="snapshot-expense-input"
-            value={formValues.monthlyExpense}
+            value={progress.formValues.monthlyExpense}
           />
           <FormTextField
             label="Notes"
             multiline
-            onChangeText={(value) => setField("notes", value)}
+            onChangeText={(value) => progress.setField("notes", value)}
             placeholder="Optional month-end note"
-            value={formValues.notes}
+            value={progress.formValues.notes}
           />
           <AppButton
             title="Save Monthly Snapshot"
             testID="save-monthly-snapshot-button"
-            onPress={saveSnapshot}
+            onPress={progress.saveSnapshot}
           />
         </PremiumCard>
       </View>
