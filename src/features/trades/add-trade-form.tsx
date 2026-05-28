@@ -1,5 +1,3 @@
-import * as Haptics from "expo-haptics";
-import { useMemo, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -12,219 +10,19 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
-import {
-  getDefaultAssetMetadata,
-  isInstrumentType,
-  isSectorType,
-} from "@/src/domain/assets";
-import { validateTradeForm } from "@/src/features/trades/tradeForm";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type {
-  Asset,
-  ConvictionScore,
-  InstrumentType,
-  SectorType,
-  Trade,
-  TradeType,
-} from "@/src/types";
-import { createId } from "@/src/utils";
+import type { ConvictionScore, InstrumentType, SectorType } from "@/src/types";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { useAddTrade } from "./useAddTrade";
 
 type AddTradeFormProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
-type FieldErrors = Partial<Record<string, string>>;
-
-const manualAssetId = "__manual_asset__";
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
-}
-
 export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps) {
-  const snapshot = usePortfolioSnapshot(store);
-  const [type, setType] = useState<TradeType>("buy");
-  const [selectedAssetId, setSelectedAssetId] = useState("");
-  const [assetName, setAssetName] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [ticker, setTicker] = useState("");
-  const [instrumentType, setInstrumentType] = useState<InstrumentType>("stock");
-  const [sectorType, setSectorType] = useState<SectorType>("financialServices");
-  const [quoteSourceId, setQuoteSourceId] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [pricePerUnit, setPricePerUnit] = useState("");
-  const [fees, setFees] = useState("");
-  const [date, setDate] = useState(todayInputValue());
-  const [conviction, setConviction] = useState("");
-  const [notes, setNotes] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [reviewTrade, setReviewTrade] = useState<Trade | undefined>();
-  const [reviewAsset, setReviewAsset] = useState<Asset | undefined>();
-  const [successMessage, setSuccessMessage] = useState("");
-
-  const selectedAsset = useMemo(
-    () => snapshot.assets.find((asset) => asset.id === selectedAssetId),
-    [selectedAssetId, snapshot.assets],
-  );
-  const isManualAsset = !selectedAsset;
-
-  function resetReview() {
-    setReviewTrade(undefined);
-    setReviewAsset(undefined);
-    setSuccessMessage("");
-  }
-
-  function updateType(nextType: TradeType) {
-    setType(nextType);
-    resetReview();
-  }
-
-  function selectAsset(asset: Asset) {
-    const quote = snapshot.quoteCache[asset.id];
-
-    setSelectedAssetId(asset.id);
-    setAssetName(asset.name);
-    setInstrumentType(
-      asset.instrumentType ?? getDefaultAssetMetadata(asset.assetClass).instrumentType,
-    );
-    setQuoteSourceId(asset.quoteSourceId ?? asset.ticker);
-    setSectorType(
-      asset.sectorType ?? getDefaultAssetMetadata(asset.assetClass).sectorType,
-    );
-    setSymbol(asset.symbol);
-    setTicker(asset.ticker);
-    if (quote) {
-      setPricePerUnit(quote.price.toString());
-    }
-    resetReview();
-  }
-
-  function buildManualAsset(): Asset {
-    const trimmedTicker = ticker.trim();
-
-    return {
-      assetClass: "stock",
-      currency: "INR",
-      exchange: "NSE",
-      id: createId("asset"),
-      instrumentType,
-      name: assetName.trim(),
-      quoteSourceId: quoteSourceId.trim() || trimmedTicker,
-      sectorType,
-      symbol: symbol.trim().toUpperCase(),
-      ticker: trimmedTicker.toUpperCase(),
-    };
-  }
-
-  function validateManualAsset() {
-    const nextErrors: FieldErrors = {};
-
-    if (isManualAsset && assetName.trim().length === 0) {
-      nextErrors.assetName = "Asset name is required.";
-    }
-
-    if (isManualAsset && symbol.trim().length === 0) {
-      nextErrors.symbol = "Symbol is required.";
-    }
-
-    if (isManualAsset && ticker.trim().length === 0) {
-      nextErrors.ticker = "Ticker is required.";
-    }
-
-    if (isManualAsset && !isInstrumentType(instrumentType)) {
-      nextErrors.instrumentType = "Instrument type is not supported.";
-    }
-
-    if (isManualAsset && !isSectorType(sectorType)) {
-      nextErrors.sectorType = "Sector type is not supported.";
-    }
-
-    if (type === "sell" && isManualAsset) {
-      nextErrors.assetName = "Select an existing holding to sell.";
-    }
-
-    return nextErrors;
-  }
-
-  function handleReview() {
-    resetReview();
-    const manualErrors = validateManualAsset();
-    const formAssetId = selectedAsset?.id ?? manualAssetId;
-    const result = validateTradeForm(
-      {
-        assetId: formAssetId,
-        conviction,
-        date,
-        pricePerUnit,
-        quantity,
-        type,
-      },
-      snapshot.trades,
-    );
-
-    if (!result.isValid || Object.keys(manualErrors).length > 0) {
-      setErrors({
-        ...manualErrors,
-        ...result.isValid ? {} : result.errors,
-      });
-      return;
-    }
-
-    const asset = selectedAsset ?? buildManualAsset();
-    const feeValue = fees.trim().length > 0 ? Number(fees) : 0;
-
-    if (!Number.isFinite(feeValue) || feeValue < 0) {
-      setErrors({ fees: "Fees must be zero or greater." });
-      return;
-    }
-
-    const grossValue = result.value.quantity * result.value.pricePerUnit;
-    const totalValue =
-      result.value.type === "buy" ? grossValue + feeValue : grossValue - feeValue;
-
-    setErrors({});
-    setReviewAsset(asset);
-    setReviewTrade({
-      assetId: asset.id,
-      conviction: result.value.conviction as ConvictionScore | undefined,
-      date: result.value.date,
-      fees: feeValue || undefined,
-      id: createId("trade"),
-      notes: notes.trim() || undefined,
-      pricePerUnit: result.value.pricePerUnit,
-      quantity: result.value.quantity,
-      totalValue,
-      type: result.value.type,
-    });
-  }
-
-  async function handleConfirm() {
-    if (!reviewTrade || !reviewAsset) {
-      return;
-    }
-
-    if (!selectedAsset) {
-      store.getState().addAsset(reviewAsset);
-    }
-
-    store.getState().addTrade(reviewTrade);
-    store.getState().upsertQuote({
-      asOf: new Date().toISOString(),
-      assetId: reviewAsset.id,
-      currency: "INR",
-      price: reviewTrade.pricePerUnit,
-      source: "manual",
-    });
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSuccessMessage("Holding saved.");
-    setReviewTrade(undefined);
-  }
+  const trade = useAddTrade({ store });
 
   return (
     <ScreenContainer scroll testID="add-trade-screen">
@@ -240,15 +38,15 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
           <Pressable
             accessibilityRole="button"
             key={tradeType}
-            onPress={() => updateType(tradeType)}
+            onPress={() => trade.updateType(tradeType)}
             style={({ pressed }) => [
               styles.segment,
-              type === tradeType && styles.segmentActive,
+              trade.type === tradeType && styles.segmentActive,
               pressed && styles.pressed,
             ]}
           >
             <AppText
-              color={type === tradeType ? "inverse" : "secondary"}
+              color={trade.type === tradeType ? "inverse" : "secondary"}
               weight="bold"
             >
               {tradeType === "buy" ? "Buy" : "Sell"}
@@ -257,19 +55,19 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
         ))}
       </View>
 
-      {snapshot.assets.length > 0 ? (
+      {trade.snapshot.assets.length > 0 ? (
         <PremiumCard>
           <AppText color="secondary" variant="caption" weight="medium">
             Existing assets
           </AppText>
           <View style={styles.assetGrid}>
-            {snapshot.assets.map((asset) => (
+            {trade.snapshot.assets.map((asset) => (
               <Pressable
                 key={asset.id}
-                onPress={() => selectAsset(asset)}
+                onPress={() => trade.selectAsset(asset)}
                 style={({ pressed }) => [
                   styles.assetChip,
-                  selectedAssetId === asset.id && styles.assetChipActive,
+                  trade.selectedAssetId === asset.id && styles.assetChipActive,
                   pressed && styles.pressed,
                 ]}
               >
@@ -286,87 +84,81 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
       <PremiumCard>
         <SectionHeader title="Asset" />
         <FormTextField
-          error={errors.assetName}
+          error={trade.errors.assetName}
           label="Asset name"
           onChangeText={(value) => {
-            setAssetName(value);
-            setSelectedAssetId("");
-            resetReview();
+            trade.setAssetName(value);
+            trade.clearSelectedAsset();
           }}
           placeholder="Reliance Industries"
           testID="asset-input"
-          value={assetName}
+          value={trade.assetName}
         />
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.symbol}
+              error={trade.errors.symbol}
               label="Symbol"
               onChangeText={(value) => {
-                setSymbol(value);
-                setSelectedAssetId("");
-                resetReview();
+                trade.setSymbol(value);
+                trade.clearSelectedAsset();
               }}
               placeholder="RELIANCE"
               testID="symbol-input"
-              value={symbol}
+              value={trade.symbol}
             />
           </View>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.ticker}
+              error={trade.errors.ticker}
               label="Ticker"
               onChangeText={(value) => {
-                setTicker(value);
-                setSelectedAssetId("");
-                resetReview();
+                trade.setTicker(value);
+                trade.clearSelectedAsset();
               }}
               placeholder="RELIANCE.NS"
               testID="ticker-input"
-              value={ticker}
+              value={trade.ticker}
             />
           </View>
         </View>
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.instrumentType}
+              error={trade.errors.instrumentType}
               label="Instrument type"
               onChangeText={(value) => {
-                setInstrumentType(value as InstrumentType);
-                setSelectedAssetId("");
-                resetReview();
+                trade.setInstrumentType(value as InstrumentType);
+                trade.clearSelectedAsset();
               }}
               placeholder="stock"
               testID="instrument-type-input"
-              value={instrumentType}
+              value={trade.instrumentType}
             />
           </View>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.sectorType}
+              error={trade.errors.sectorType}
               label="Sector type"
               onChangeText={(value) => {
-                setSectorType(value as SectorType);
-                setSelectedAssetId("");
-                resetReview();
+                trade.setSectorType(value as SectorType);
+                trade.clearSelectedAsset();
               }}
               placeholder="financialServices"
               testID="sector-type-input"
-              value={sectorType}
+              value={trade.sectorType}
             />
           </View>
         </View>
         <FormTextField
           label="Quote source ID"
           onChangeText={(value) => {
-            setQuoteSourceId(value);
-            setSelectedAssetId("");
-            resetReview();
+            trade.setQuoteSourceId(value);
+            trade.clearSelectedAsset();
           }}
           placeholder="RELIANCE.NS"
           testID="quote-source-id-input"
-          value={quoteSourceId}
+          value={trade.quoteSourceId}
         />
       </PremiumCard>
 
@@ -375,57 +167,53 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.quantity}
+              error={trade.errors.quantity}
               keyboardType="decimal-pad"
               label="Quantity"
               onChangeText={(value) => {
-                setQuantity(value);
-                resetReview();
+                trade.setQuantity(value);
               }}
               placeholder="2"
               testID="quantity-input"
-              value={quantity}
+              value={trade.quantity}
             />
           </View>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.pricePerUnit}
+              error={trade.errors.pricePerUnit}
               keyboardType="decimal-pad"
               label="Price per unit"
               onChangeText={(value) => {
-                setPricePerUnit(value);
-                resetReview();
+                trade.setPricePerUnit(value);
               }}
               placeholder="100"
               testID="price-input"
-              value={pricePerUnit}
+              value={trade.pricePerUnit}
             />
           </View>
         </View>
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.fees}
+              error={trade.errors.fees}
               keyboardType="decimal-pad"
               label="Fees"
               onChangeText={(value) => {
-                setFees(value);
-                resetReview();
+                trade.setFees(value);
               }}
               placeholder="0"
-              value={fees}
+              value={trade.fees}
             />
           </View>
           <View style={styles.flex}>
             <FormTextField
-              error={errors.date}
+              error={trade.errors.date}
               label="Trade date"
               onChangeText={(value) => {
-                setDate(value);
-                resetReview();
+                trade.setDate(value);
               }}
               placeholder="YYYY-MM-DD"
-              value={date}
+              value={trade.date}
             />
           </View>
         </View>
@@ -436,7 +224,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
           <View style={styles.convictionRow}>
             {convictionScores.map((score) => {
               const scoreValue = score.toString();
-              const isSelected = conviction === scoreValue;
+              const isSelected = trade.conviction === scoreValue;
 
               return (
                 <Pressable
@@ -445,8 +233,7 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
                   accessibilityState={{ selected: isSelected }}
                   key={score}
                   onPress={() => {
-                    setConviction(isSelected ? "" : scoreValue);
-                    resetReview();
+                    trade.setConviction(isSelected ? "" : scoreValue);
                   }}
                   style={({ pressed }) => [
                     styles.convictionChip,
@@ -465,9 +252,9 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
               );
             })}
           </View>
-          {errors.conviction ? (
+          {trade.errors.conviction ? (
             <AppText selectable style={styles.errorText} variant="caption">
-              {errors.conviction}
+              {trade.errors.conviction}
             </AppText>
           ) : null}
         </View>
@@ -475,32 +262,31 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
           label="Note"
           multiline
           onChangeText={(value) => {
-            setNotes(value);
-            resetReview();
+            trade.setNotes(value);
           }}
           placeholder="Optional note"
-          value={notes}
+          value={trade.notes}
         />
       </PremiumCard>
 
-      {reviewTrade && reviewAsset ? (
+      {trade.reviewTrade && trade.reviewAsset ? (
         <PremiumCard elevated>
           <AppText variant="body" weight="bold">
             Derived preview
           </AppText>
           <AppText color="secondary">
-            {reviewAsset.symbol} · {reviewTrade.quantity} units @ ₹
-            {reviewTrade.pricePerUnit.toFixed(2)}
+            {trade.reviewAsset.symbol} · {trade.reviewTrade.quantity} units @ ₹
+            {trade.reviewTrade.pricePerUnit.toFixed(2)}
           </AppText>
           <AppText selectable weight="bold">
-            Total: ₹{reviewTrade.totalValue.toFixed(2)}
+            Total: ₹{trade.reviewTrade.totalValue.toFixed(2)}
           </AppText>
         </PremiumCard>
       ) : null}
 
-      {successMessage ? (
+      {trade.successMessage ? (
         <AppText selectable style={styles.successText}>
-          {successMessage}
+          {trade.successMessage}
         </AppText>
       ) : null}
 
@@ -508,13 +294,13 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
         <AppButton
           title="Review Holding"
           testID="review-trade-button"
-          onPress={handleReview}
+          onPress={trade.handleReview}
         />
         <AppButton
-          disabled={!reviewTrade}
+          disabled={!trade.reviewTrade}
           testID="save-trade-button"
           title="Save Holding"
-          onPress={handleConfirm}
+          onPress={trade.handleConfirm}
           variant="secondary"
         />
       </View>
