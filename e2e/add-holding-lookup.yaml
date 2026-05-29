@@ -15,6 +15,12 @@ appId: com.abdulshaikh.cogvest
 - inputText: "btc-usd"
 - hideKeyboard
 - assertVisible: "Bitcoin USD"
+- tapOn: "Select"
+- assertVisible: "BTC-USD"
+- scrollUntilVisible:
+    element:
+      id: "continue-class-button"
+    direction: DOWN
 - assertVisible:
     id: "continue-class-button"
 - tapOn:
