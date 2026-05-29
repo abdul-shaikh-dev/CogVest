@@ -16,7 +16,7 @@ import {
   assetClassLabel,
 } from "@/src/components/common";
 import type { MonthlyProgressChartSeries } from "@/src/domain/calculations";
-import { formatINR, formatPercentage } from "@/src/domain/formatters";
+import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, spacing } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
@@ -261,7 +261,9 @@ export function ProgressScreen({
                 {
                   label: "Invested",
                   masked: progress.preferences.maskWealthValues,
-                  value: formatINR(progress.latestSummary.snapshot.monthlyInvestment),
+                  value: formatCompactINR(
+                    progress.latestSummary.snapshot.monthlyInvestment,
+                  ),
                 },
                 {
                   label: "Savings",
@@ -334,17 +336,17 @@ export function ProgressScreen({
                 {
                   label: "Portfolio",
                   masked: progress.preferences.maskWealthValues,
-                  value: formatINR(progress.portfolioValue),
+                  value: formatCompactINR(progress.portfolioValue),
                 },
                 {
                   label: "Invested",
                   masked: progress.preferences.maskWealthValues,
-                  value: formatINR(progress.totalInvested),
+                  value: formatCompactINR(progress.totalInvested),
                 },
                 {
                   label: "Cash",
                   masked: progress.preferences.maskWealthValues,
-                  value: formatINR(progress.cashBalance),
+                  value: formatCompactINR(progress.cashBalance),
                 },
                 {
                   label: "Savings",

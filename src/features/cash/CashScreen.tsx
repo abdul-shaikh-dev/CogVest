@@ -16,7 +16,7 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
-import { formatINR } from "@/src/domain/formatters";
+import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { CashEntryType } from "@/src/types";
@@ -159,17 +159,17 @@ export function CashScreen({
             {
               label: "Added",
               masked: maskWealthValues,
-              value: formatINR(monthlyMetrics.added),
+              value: formatCompactINR(monthlyMetrics.added),
             },
             {
               label: "Invested",
               masked: maskWealthValues,
-              value: formatINR(monthlyMetrics.invested),
+              value: formatCompactINR(monthlyMetrics.invested),
             },
             {
               label: "Available",
               masked: maskWealthValues,
-              value: formatINR(monthlyMetrics.available),
+              value: formatCompactINR(monthlyMetrics.available),
             },
             {
               label: "Savings",

@@ -1,1 +1,6 @@
-export { formatDate, formatINR, formatPercentage } from "./formatters";
+export {
+  formatCompactINR,
+  formatDate,
+  formatINR,
+  formatPercentage,
+} from "./formatters";

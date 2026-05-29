@@ -9,6 +9,30 @@ export function formatINR(value: number) {
   return `${sign}₹${formatted}`;
 }
 
+function trimTrailingZeros(value: string) {
+  return value.replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
+}
+
+export function formatCompactINR(value: number) {
+  const sign = value < 0 ? "-" : "";
+  const absoluteValue = Math.abs(value);
+
+  if (absoluteValue < 1000) {
+    return `${sign}₹${Math.round(absoluteValue)}`;
+  }
+
+  const compactScales = [
+    { suffix: "Cr", value: 10000000 },
+    { suffix: "L", value: 100000 },
+    { suffix: "K", value: 1000 },
+  ];
+  const scale = compactScales.find((item) => absoluteValue >= item.value);
+  const scaledValue = absoluteValue / (scale?.value ?? 1);
+  const rounded = scaledValue.toFixed(2);
+
+  return `${sign}₹${trimTrailingZeros(rounded)}${scale?.suffix ?? ""}`;
+}
+
 export function formatPercentage(value: number) {
   const sign = value > 0 ? "+" : "";
 

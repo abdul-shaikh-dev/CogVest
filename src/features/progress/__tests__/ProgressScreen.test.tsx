@@ -87,7 +87,7 @@ describe("ProgressScreen", () => {
 
     expect(getAllByText("₹13,85,000.00").length).toBeGreaterThan(0);
     expect(getByText("+₹1,25,000.00 (+9.92%)")).toBeTruthy();
-    expect(getByText("₹60,000.00")).toBeTruthy();
+    expect(getByText("₹60K")).toBeTruthy();
     expect(getByText("+37.50%")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
     expect(getAllByText("Equity").length).toBeGreaterThan(0);

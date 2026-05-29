@@ -1,7 +1,12 @@
 import { StyleSheet, View } from "react-native";
 
 import { CategoryIcon, PremiumCard, assetClassLabel } from "@/src/components/common";
-import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
+import {
+  formatCompactINR,
+  formatDate,
+  formatINR,
+  formatPercentage,
+} from "@/src/domain/formatters";
 import { colors, spacing } from "@/src/theme";
 import type { Holding } from "@/src/types";
 
@@ -19,7 +24,7 @@ function formatQuantity(value: number) {
 }
 
 function formatPnLAmount(holding: Holding) {
-  const amount = formatINR(holding.unrealisedPnL);
+  const amount = formatCompactINR(holding.unrealisedPnL);
 
   return `${holding.unrealisedPnL > 0 ? "+" : ""}${amount}`;
 }
@@ -54,14 +59,20 @@ export function HoldingCard({
         <View style={styles.valueBlock}>
           <MaskedValue
             align="right"
+            adjustsFontSizeToFit
             masked={masked}
-            value={formatINR(holding.currentValue)}
+            minimumFontScale={0.8}
+            numberOfLines={1}
+            value={formatCompactINR(holding.currentValue)}
             weight="bold"
           />
           <View style={styles.pnlLine}>
             <MaskedValue
               align="right"
+              adjustsFontSizeToFit
               masked={masked}
+              minimumFontScale={0.8}
+              numberOfLines={1}
               style={isProfit ? styles.profit : styles.loss}
               value={formatPnLAmount(holding)}
             />
@@ -79,7 +90,7 @@ export function HoldingCard({
       <View style={styles.metrics}>
         <AppText color="secondary">Qty {formatQuantity(holding.totalUnits)}</AppText>
         <AppText color="secondary">
-          Invested {formatINR(holding.totalInvested)}
+          Invested {formatCompactINR(holding.totalInvested)}
         </AppText>
         {initialAllocationPct !== undefined ? (
           <AppText color="secondary">
@@ -87,10 +98,10 @@ export function HoldingCard({
           </AppText>
         ) : null}
         <AppText color="secondary">
-          Avg {formatINR(holding.averageCostPrice)}
+          Avg {formatCompactINR(holding.averageCostPrice)}
         </AppText>
         <AppText color="secondary">
-          Current {formatINR(holding.currentPrice)}
+          Current {formatCompactINR(holding.currentPrice)}
         </AppText>
         {allocationPct !== undefined ? (
           <AppText color="secondary">
