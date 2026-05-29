@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Text } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
@@ -137,6 +138,45 @@ describe("DashboardScreen", () => {
     expect(queryByText(/Minimal Mode/i)).toBeNull();
   });
 
+  it("keeps portfolio rollups below the primary dashboard decision sections", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade({ ...buyTrade, conviction: 4 });
+    store.getState().addCashEntry({
+      amount: 50,
+      date: "2026-04-22",
+      id: "cash-1",
+      label: "Broker cash",
+      type: "addition",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+
+    const screen = render(<DashboardScreen store={store} />);
+    const textNodes = screen.UNSAFE_getAllByType(Text)
+      .map((node) => textContent(node.props.children))
+      .filter(Boolean);
+
+    const allocationIndex = indexOfText(textNodes, "Allocation");
+    const thisMonthIndex = indexOfText(textNodes, "This Month");
+    const quoteStatusIndex = indexOfText(textNodes, "Quote Status");
+    const convictionIndex = indexOfText(
+      textNodes,
+      "Conviction data needs more trades",
+    );
+    const rollupsIndex = indexOfText(textNodes, "Portfolio Rollups");
+
+    expect(rollupsIndex).toBeGreaterThan(allocationIndex);
+    expect(rollupsIndex).toBeGreaterThan(thisMonthIndex);
+    expect(rollupsIndex).toBeGreaterThan(quoteStatusIndex);
+    expect(rollupsIndex).toBeGreaterThan(convictionIndex);
+  });
+
   it("masks wealth values when value masking is enabled", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
@@ -158,3 +198,22 @@ describe("DashboardScreen", () => {
     expect(getAllByText("100.00%").length).toBeGreaterThan(0);
   });
 });
+
+function textContent(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(textContent).join("");
+  }
+
+  return "";
+}
+
+function indexOfText(textNodes: string[], expectedText: string) {
+  const index = textNodes.indexOf(expectedText);
+  expect(index).toBeGreaterThanOrEqual(0);
+
+  return index;
+}
