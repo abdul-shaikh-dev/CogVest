@@ -14,7 +14,7 @@ import {
   ScreenHeader,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
-import { formatDate, formatINR } from "@/src/domain/formatters";
+import { formatCompactINR, formatDate } from "@/src/domain/formatters";
 import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, spacing } from "@/src/theme";
@@ -70,6 +70,12 @@ export function HoldingsScreen({
     latestQuoteAsOf,
     manualFallbackCount,
   });
+
+  function formatSignedCompactINR(value: number) {
+    const amount = formatCompactINR(value);
+
+    return value > 0 ? `+${amount}` : amount;
+  }
 
   function getRollupRow(assetId: string) {
     return rollupRows.find((row) => row.asset.id === assetId);
@@ -139,17 +145,17 @@ export function HoldingsScreen({
               {
                 label: "Current",
                 masked: maskWealthValues,
-                value: formatINR(rollupTotals.holdingsCurrentValue),
+                value: formatCompactINR(rollupTotals.holdingsCurrentValue),
               },
               {
                 label: "Invested",
                 masked: maskWealthValues,
-                value: formatINR(rollupTotals.totalInvested),
+                value: formatCompactINR(rollupTotals.totalInvested),
               },
               {
                 label: "P&L",
                 masked: maskWealthValues,
-                value: formatINR(rollupTotals.pnl),
+                value: formatSignedCompactINR(rollupTotals.pnl),
               },
               {
                 label: "Drift",

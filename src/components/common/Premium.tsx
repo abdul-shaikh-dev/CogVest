@@ -159,8 +159,11 @@ export function MetricGroup({ metrics, testID }: MetricGroupProps) {
             {metric.label}
           </AppText>
           <MaskedValue
+            adjustsFontSizeToFit
             color={metric.color ?? "primary"}
             masked={metric.masked}
+            minimumFontScale={0.75}
+            numberOfLines={1}
             value={metric.value}
             weight="bold"
           />

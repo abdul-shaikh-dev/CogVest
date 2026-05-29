@@ -16,7 +16,12 @@ import {
   assetClassLabel,
   CategoryIcon,
 } from "@/src/components/common";
-import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
+import {
+  formatCompactINR,
+  formatDate,
+  formatINR,
+  formatPercentage,
+} from "@/src/domain/formatters";
 import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
@@ -35,6 +40,12 @@ type DashboardScreenProps = {
 
 function formatSignedINR(value: number) {
   const amount = formatINR(value);
+
+  return value > 0 ? `+${amount}` : amount;
+}
+
+function formatSignedCompactINR(value: number) {
+  const amount = formatCompactINR(value);
 
   return value > 0 ? `+${amount}` : amount;
 }
@@ -106,13 +117,13 @@ export function DashboardScreen({
             {
               label: "Invested",
               masked: dashboard.maskWealthValues,
-              value: formatINR(totalInvested),
+              value: formatCompactINR(totalInvested),
             },
             {
               color: totalPnL >= 0 ? "primary" : "primary",
               label: "P&L",
               masked: dashboard.maskWealthValues,
-              value: formatSignedINR(totalPnL),
+              value: formatSignedCompactINR(totalPnL),
             },
             {
               label: "P&L %",
@@ -219,7 +230,7 @@ export function DashboardScreen({
               {
                 label: "Invested",
                 masked: dashboard.maskWealthValues,
-                value: formatINR(dashboard.monthlyMetrics.investment),
+                value: formatCompactINR(dashboard.monthlyMetrics.investment),
               },
               {
                 label: "Savings",
@@ -231,7 +242,7 @@ export function DashboardScreen({
               {
                 label: "Cash change",
                 masked: dashboard.maskWealthValues,
-                value: formatSignedINR(dashboard.monthlyMetrics.cashChange),
+                value: formatSignedCompactINR(dashboard.monthlyMetrics.cashChange),
               },
             ]}
           />
