@@ -140,54 +140,6 @@ export function DashboardScreen({
           />
         ) : null}
 
-        {sectorSnapshot.length > 0 || instrumentSnapshot.length > 0 ? (
-          <PremiumCard>
-            <SectionHeader title="Portfolio Rollups" />
-            {sectorSnapshot.length > 0 ? (
-              <View style={styles.rollupGroup}>
-                <AppText color="secondary" variant="caption" weight="medium">
-                  Top sectors
-                </AppText>
-                {sectorSnapshot.map((item) => (
-                  <View key={item.label} style={styles.rollupRow}>
-                    <AppText weight="bold">{item.label}</AppText>
-                    <MaskedValue
-                      align="right"
-                      color="secondary"
-                      masked={dashboard.maskWealthValues}
-                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
-                        item.percentage,
-                      )}`}
-                      variant="caption"
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            {instrumentSnapshot.length > 0 ? (
-              <View style={styles.rollupGroup}>
-                <AppText color="secondary" variant="caption" weight="medium">
-                  Top instruments
-                </AppText>
-                {instrumentSnapshot.map((item) => (
-                  <View key={item.label} style={styles.rollupRow}>
-                    <AppText weight="bold">{item.label}</AppText>
-                    <MaskedValue
-                      align="right"
-                      color="secondary"
-                      masked={dashboard.maskWealthValues}
-                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
-                        item.percentage,
-                      )}`}
-                      variant="caption"
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </PremiumCard>
-        ) : null}
-
         {hasAllocation ? (
           <PremiumCard>
             <SectionHeader title="Allocation" actionLabel="View details" />
@@ -267,6 +219,54 @@ export function DashboardScreen({
             conviction optional, but useful.
           </AppText>
         </PremiumCard>
+
+        {sectorSnapshot.length > 0 || instrumentSnapshot.length > 0 ? (
+          <PremiumCard>
+            <SectionHeader title="Portfolio Rollups" />
+            {sectorSnapshot.length > 0 ? (
+              <View style={styles.rollupGroup}>
+                <AppText color="secondary" variant="caption" weight="medium">
+                  Top sectors
+                </AppText>
+                {sectorSnapshot.map((item) => (
+                  <View key={item.label} style={styles.rollupRow}>
+                    <AppText weight="bold">{item.label}</AppText>
+                    <MaskedValue
+                      align="right"
+                      color="secondary"
+                      masked={dashboard.maskWealthValues}
+                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
+                        item.percentage,
+                      )}`}
+                      variant="caption"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {instrumentSnapshot.length > 0 ? (
+              <View style={styles.rollupGroup}>
+                <AppText color="secondary" variant="caption" weight="medium">
+                  Top instruments
+                </AppText>
+                {instrumentSnapshot.map((item) => (
+                  <View key={item.label} style={styles.rollupRow}>
+                    <AppText weight="bold">{item.label}</AppText>
+                    <MaskedValue
+                      align="right"
+                      color="secondary"
+                      masked={dashboard.maskWealthValues}
+                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
+                        item.percentage,
+                      )}`}
+                      variant="caption"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </PremiumCard>
+        ) : null}
 
       </View>
     </ScreenContainer>
