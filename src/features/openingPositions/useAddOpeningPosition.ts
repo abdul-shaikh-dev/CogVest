@@ -31,6 +31,7 @@ export type AddHoldingPhase = "asset" | "class" | "position" | "review";
 export type FieldErrors = Partial<Record<string, string>>;
 
 export type AddOpeningPositionControllerInput = {
+  initialVisualQaState?: "review";
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
@@ -56,35 +57,82 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
 }
 
 export function useAddOpeningPosition({
+  initialVisualQaState,
   resolveQuote = defaultResolveQuote,
   searchAssetLookupResults = defaultSearchAssetLookupResults,
   store = getPortfolioStore(),
 }: AddOpeningPositionControllerInput = {}) {
   const snapshot = usePortfolioSnapshot(store);
-  const [currentPhase, setCurrentPhase] = useState<AddHoldingPhase>("asset");
+  const initialReviewAsset: Asset | undefined =
+    initialVisualQaState === "review"
+      ? {
+          assetClass: "stock",
+          currency: "INR",
+          exchange: "NSE",
+          id: "visual-qa-review-asset",
+          instrumentType: "stock",
+          name: "HDFC Bank",
+          quoteSourceId: "HDFCBANK.NS",
+          sectorType: "financialServices",
+          symbol: "HDFCBANK",
+          ticker: "HDFCBANK.NS",
+        }
+      : undefined;
+  const initialReviewPosition: OpeningPosition | undefined =
+    initialVisualQaState === "review"
+      ? {
+          assetId: "visual-qa-review-asset",
+          averageCostPrice: 1450,
+          conviction: 4,
+          currentPrice: 1678.25,
+          date: "2024-04-15T00:00:00.000Z",
+          id: "visual-qa-review-opening",
+          notes: "Visual QA derived preview",
+          quantity: 25,
+        }
+      : undefined;
+  const [currentPhase, setCurrentPhase] = useState<AddHoldingPhase>(
+    initialVisualQaState === "review" ? "review" : "asset",
+  );
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
   const [isLookupSearching, setIsLookupSearching] = useState(false);
   const [lookupStatus, setLookupStatus] = useState("");
   const [quoteStatus, setQuoteStatus] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
-  const [assetClass, setAssetClass] = useState<AssetClass>("stock");
-  const [assetName, setAssetName] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [ticker, setTicker] = useState("");
+  const [assetClass, setAssetClass] = useState<AssetClass>(
+    initialReviewAsset?.assetClass ?? "stock",
+  );
+  const [assetName, setAssetName] = useState(initialReviewAsset?.name ?? "");
+  const [symbol, setSymbol] = useState(initialReviewAsset?.symbol ?? "");
+  const [ticker, setTicker] = useState(initialReviewAsset?.ticker ?? "");
   const [instrumentType, setInstrumentType] = useState<InstrumentType>("stock");
   const [sectorType, setSectorType] = useState<SectorType>("financialServices");
-  const [quoteSourceId, setQuoteSourceId] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [averageCostPrice, setAverageCostPrice] = useState("");
-  const [currentPrice, setCurrentPrice] = useState("");
-  const [date, setDate] = useState(todayInputValue());
-  const [conviction, setConviction] = useState("");
-  const [notes, setNotes] = useState("");
+  const [quoteSourceId, setQuoteSourceId] = useState(
+    initialReviewAsset?.quoteSourceId ?? "",
+  );
+  const [quantity, setQuantity] = useState(
+    initialReviewPosition?.quantity.toString() ?? "",
+  );
+  const [averageCostPrice, setAverageCostPrice] = useState(
+    initialReviewPosition?.averageCostPrice.toString() ?? "",
+  );
+  const [currentPrice, setCurrentPrice] = useState(
+    initialReviewPosition?.currentPrice?.toString() ?? "",
+  );
+  const [date, setDate] = useState(
+    initialReviewPosition?.date.slice(0, 10) ?? todayInputValue(),
+  );
+  const [conviction, setConviction] = useState(
+    initialReviewPosition?.conviction?.toString() ?? "",
+  );
+  const [notes, setNotes] = useState(initialReviewPosition?.notes ?? "");
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [reviewAsset, setReviewAsset] = useState<Asset | undefined>();
+  const [reviewAsset, setReviewAsset] = useState<Asset | undefined>(
+    initialReviewAsset,
+  );
   const [reviewOpeningPosition, setReviewOpeningPosition] =
-    useState<OpeningPosition | undefined>();
+    useState<OpeningPosition | undefined>(initialReviewPosition);
   const [successMessage, setSuccessMessage] = useState("");
 
   const selectedAsset = useMemo(
