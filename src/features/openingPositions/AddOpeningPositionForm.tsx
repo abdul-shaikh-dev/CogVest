@@ -38,11 +38,13 @@ function formatSignedINR(value: number) {
 }
 
 export function AddOpeningPositionForm({
+  initialVisualQaState,
   resolveQuote,
   searchAssetLookupResults,
   store,
 }: AddOpeningPositionFormProps) {
   const holding = useAddOpeningPosition({
+    initialVisualQaState,
     resolveQuote,
     searchAssetLookupResults,
     store,

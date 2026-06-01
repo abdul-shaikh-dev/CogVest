@@ -73,7 +73,12 @@ describe("RootLayout", () => {
     const layout = RootLayout();
 
     expect(collectScreenNames(layout)).toEqual(
-      expect.arrayContaining(["(tabs)", "settings", "add-holding"]),
+      expect.arrayContaining([
+        "(tabs)",
+        "settings",
+        "add-holding",
+        "visual-qa-seed",
+      ]),
     );
   });
 });
