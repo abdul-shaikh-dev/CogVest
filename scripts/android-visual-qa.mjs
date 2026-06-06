@@ -81,6 +81,40 @@ function dumpUi() {
   return runAdb(["exec-out", "uiautomator", "dump", "/dev/tty"]);
 }
 
+function hasUiMarker(xml, marker) {
+  return xml.toLowerCase().includes(marker.toLowerCase());
+}
+
+function waitForUiMarkers(markers, options = {}) {
+  const timeoutMs = options.timeoutMs ?? 15000;
+  const startedAt = Date.now();
+  let latestXml = "";
+
+  while (Date.now() - startedAt < timeoutMs) {
+    latestXml = dumpUi();
+
+    if (latestXml.includes("Process system isn") || latestXml.includes("Close app")) {
+      throw new Error("Android system ANR dialog is visible; visual QA capture is invalid.");
+    }
+
+    const missing = markers.filter((marker) => !hasUiMarker(latestXml, marker));
+    if (missing.length === 0) {
+      return latestXml;
+    }
+
+    sleep(500);
+  }
+
+  throw new Error(
+    `Timed out waiting for UI markers: ${markers.join(", ")}`,
+  );
+}
+
+function captureWhenReady(name, markers) {
+  waitForUiMarkers(markers);
+  capture(name);
+}
+
 function tapNodeContaining(needle, fallback) {
   const xml = dumpUi();
   const nodePattern = new RegExp(
@@ -105,6 +139,11 @@ function typeText(text) {
   runAdb(["shell", "input", "text", text.replaceAll(" ", "%s")]);
 }
 
+function scrollDown() {
+  runAdb(["shell", "input", "swipe", "540", "1850", "540", "850", "650"]);
+  sleep(900);
+}
+
 function prepareArtifactDir() {
   if (existsSync(artifactDir)) {
     rmSync(artifactDir, { force: true, recursive: true });
@@ -117,34 +156,36 @@ try {
   prepareArtifactDir();
 
   openDeepLink(`visual-qa-seed?token=${visualQaToken}`);
-  sleep(3200);
+  waitForUiMarkers(["Visual QA portfolio seeded."], { timeoutMs: 25000 });
   openDeepLink("dashboard");
-  capture("dashboard");
+  captureWhenReady("dashboard", ["Dashboard", "Portfolio value"]);
 
   openDeepLink("holdings");
-  capture("holdings");
+  captureWhenReady("holdings", ["Holdings", "HDFC Bank"]);
 
   openDeepLink("add-holding");
-  capture("add-holding-initial");
+  captureWhenReady("add-holding-initial", ["Add Holding", "Search asset"]);
 
   openDeepLink(`add-holding?visualQaState=lookup&token=${visualQaToken}`);
+  waitForUiMarkers(["Add Holding", "Search asset"]);
   tapNodeContaining("asset-lookup-input", { x: 260, y: 360 });
   typeText("HDFC");
   runAdb(["shell", "input", "keyevent", "111"]);
-  sleep(2200);
-  capture("add-holding-lookup");
+  captureWhenReady("add-holding-lookup", ["HDFC Bank", "HDFCBANK.NS"]);
 
   openDeepLink(`add-holding?visualQaState=review&token=${visualQaToken}`);
-  capture("add-holding-review");
+  captureWhenReady("add-holding-review", ["Add Holding", "Derived preview"]);
 
   openDeepLink("cash");
-  capture("cash");
+  captureWhenReady("cash", ["Cash Ledger", "Cash balance"]);
 
   openDeepLink("progress");
-  capture("progress");
+  captureWhenReady("progress", ["Monthly Progress", "Portfolio vs Invested"]);
+  scrollDown();
+  captureWhenReady("progress-assets-chart", ["Assets vs Months", "Equity", "Debt", "Crypto"]);
 
   openDeepLink("settings");
-  capture("settings");
+  captureWhenReady("settings", ["Settings", "Local-first controls"]);
 
   console.log("DONE Android seeded visual QA screenshots captured");
 } catch (error) {

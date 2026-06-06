@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 
 import { AppText, ScreenContainer } from "@/src/components/common";
 import { getPortfolioStore } from "@/src/store";
@@ -9,9 +9,9 @@ import {
 } from "@/src/testing/visualQaSeed";
 
 export default function VisualQaSeedRoute() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ token?: string }>();
   const canSeed = canUseVisualQaHarness(params.token);
+  const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
     if (!canSeed) {
@@ -19,8 +19,8 @@ export default function VisualQaSeedRoute() {
     }
 
     seedVisualQaPortfolio(getPortfolioStore());
-    router.replace("/(tabs)/dashboard");
-  }, [canSeed, router]);
+    setSeeded(true);
+  }, [canSeed]);
 
   if (!canSeed) {
     return (
@@ -35,7 +35,9 @@ export default function VisualQaSeedRoute() {
 
   return (
     <ScreenContainer testID="visual-qa-seed-screen">
-      <AppText weight="bold">Seeding visual QA portfolio...</AppText>
+      <AppText weight="bold">
+        {seeded ? "Visual QA portfolio seeded." : "Seeding visual QA portfolio..."}
+      </AppText>
     </ScreenContainer>
   );
 }
