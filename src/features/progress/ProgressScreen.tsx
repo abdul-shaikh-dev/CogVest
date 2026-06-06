@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import Svg, { Circle, Polyline } from "react-native-svg";
+import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -50,9 +50,9 @@ function formatSignedINR(value: number) {
   return value > 0 ? `+${amount}` : amount;
 }
 
-const chartWidth = 280;
-const chartHeight = 132;
-const chartPadding = 12;
+const chartHeight = 154;
+const chartWidth = 240;
+const chartYAxisWidth = 42;
 
 function getSeriesColor(label: string) {
   switch (label) {
@@ -71,27 +71,32 @@ function getSeriesColor(label: string) {
   }
 }
 
-function getSeriesPoints(series: MonthlyProgressChartSeries[], index: number) {
-  const values = series.flatMap((item) => item.values);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const range = maxValue - minValue || 1;
-  const pointCount = series[index]?.values.length ?? 0;
-  const usableWidth = chartWidth - chartPadding * 2;
-  const usableHeight = chartHeight - chartPadding * 2;
+function getLastValue(series: MonthlyProgressChartSeries) {
+  return series.values.at(-1) ?? 0;
+}
 
-  return (series[index]?.values ?? [])
-    .map((value, valueIndex) => {
-      const x =
-        pointCount === 1
-          ? chartWidth / 2
-          : chartPadding + (usableWidth * valueIndex) / (pointCount - 1);
-      const y =
-        chartPadding + usableHeight - ((value - minValue) / range) * usableHeight;
+function getChartMaxValue(series: MonthlyProgressChartSeries[]) {
+  const maxValue = Math.max(...series.flatMap((item) => item.values), 1);
+  const magnitude = 10 ** Math.floor(Math.log10(maxValue));
+  const normalized = maxValue / magnitude;
+  const niceMultiplier = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
 
-      return `${x},${y}`;
-    })
-    .join(" ");
+  return niceMultiplier * magnitude;
+}
+
+function toGiftedChartData(series: MonthlyProgressChartSeries, monthLabels: string[]) {
+  return series.values.map((value, index) => ({
+    label: monthLabels[index]?.replace(" 2026", "") ?? "",
+    value,
+  }));
+}
+
+function getChartSpacing(pointCount: number) {
+  if (pointCount <= 1) {
+    return chartWidth / 2;
+  }
+
+  return Math.max(42, (chartWidth - 30) / (pointCount - 1));
 }
 
 function TrendLegend({
@@ -133,41 +138,108 @@ function TrendChart({
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
 }) {
+  const maxValue = getChartMaxValue(series);
+  const isPortfolioChart = testIDPrefix === "portfolio-trend";
+  const pointCount = series[0]?.values.length ?? 0;
+  const spacingValue = getChartSpacing(pointCount);
+
   return (
     <View style={styles.chartBlock}>
-      <View style={styles.svgWrap}>
-        <Svg height={chartHeight} width="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-          {series.map((item, index) => (
-            <Polyline
-              key={item.label}
-              fill="none"
-              points={getSeriesPoints(series, index)}
-              stroke={getSeriesColor(item.label)}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={3}
-            />
-          ))}
-          {series.map((item, seriesIndex) =>
-            item.values.map((_, pointIndex) => {
-              const [x, y] = getSeriesPoints(series, seriesIndex)
-                .split(" ")
-                [pointIndex].split(",");
-
-              return (
-                <Circle
-                  key={`${item.label}-${pointIndex}`}
-                  cx={Number(x)}
-                  cy={Number(y)}
-                  fill={colors.surface.card}
-                  r={3}
-                  stroke={getSeriesColor(item.label)}
-                  strokeWidth={2}
-                />
-              );
-            }),
-          )}
-        </Svg>
+      <View style={styles.chartHead}>
+        {series.map((item) => (
+          <View key={item.label} style={styles.chartStat}>
+            <AppText color="secondary" variant="caption">
+              {item.label}
+            </AppText>
+            <AppText weight="bold">{formatCompactINR(getLastValue(item))}</AppText>
+          </View>
+        ))}
+      </View>
+      <View style={styles.chartSurface} testID={`${testIDPrefix}-chart`}>
+        {isPortfolioChart ? (
+          <LineChart
+            adjustToWidth
+            areaChart
+            color1={getSeriesColor(series[0]?.label ?? "")}
+            color2={getSeriesColor(series[1]?.label ?? "")}
+            curved
+            data={toGiftedChartData(series[0], monthLabels)}
+            data2={toGiftedChartData(series[1], monthLabels)}
+            dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
+            dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
+            dataPointsRadius1={3}
+            dataPointsRadius2={3}
+            disableScroll
+            endFillColor="rgba(52,199,89,0)"
+            endOpacity={0}
+            endSpacing={12}
+            formatYLabel={(label) => formatCompactINR(Number(label))}
+            height={chartHeight}
+            hideOrigin
+            initialSpacing={10}
+            intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
+            isAnimated
+            maxValue={maxValue}
+            noOfSections={3}
+            pointerConfig={{
+              activatePointersOnLongPress: true,
+              pointerColor: colors.profit,
+              pointerStripColor: colors.border.subtle,
+            }}
+            rulesColor={colors.border.subtle}
+            rulesType="dashed"
+            spacing={spacingValue}
+            startFillColor="rgba(52,199,89,0.18)"
+            startOpacity={0.18}
+            thickness1={3}
+            thickness2={3}
+            width={chartWidth}
+            xAxisColor={colors.border.subtle}
+            xAxisLabelTextStyle={styles.axisText}
+            xAxisThickness={1}
+            yAxisColor="transparent"
+            yAxisLabelWidth={chartYAxisWidth}
+            yAxisTextStyle={styles.axisText}
+            yAxisThickness={0}
+          />
+        ) : (
+          <LineChart
+            adjustToWidth
+            curved
+            dataSet={series.map((item) => ({
+              color: getSeriesColor(item.label),
+              data: toGiftedChartData(item, monthLabels),
+              dataPointsColor: getSeriesColor(item.label),
+              dataPointsRadius: 3,
+              thickness: 3,
+            }))}
+            disableScroll
+            endSpacing={12}
+            formatYLabel={(label) => formatCompactINR(Number(label))}
+            height={chartHeight}
+            hideOrigin
+            initialSpacing={10}
+            isAnimated
+            maxValue={maxValue}
+            noOfSections={3}
+            pointerConfig={{
+              activatePointersOnLongPress: true,
+              pointerColor: colors.text.secondary,
+              pointerStripColor: colors.border.subtle,
+            }}
+            rulesColor={colors.border.subtle}
+            rulesType="dashed"
+            spacing={spacingValue}
+            width={chartWidth}
+            xAxisColor={colors.border.subtle}
+            xAxisLabelTextStyle={styles.axisText}
+            xAxisThickness={1}
+            yAxisColor="transparent"
+            yAxisLabelWidth={chartYAxisWidth}
+            yAxisTextStyle={styles.axisText}
+            yAxisThickness={0}
+          />
+        )}
       </View>
       <View style={styles.monthAxis}>
         {monthLabels.map((month) => (
@@ -208,7 +280,7 @@ function ProgressTrendCards({
   return (
     <>
       <PremiumCard>
-        <SectionHeader title="Portfolio vs Invested" />
+        <SectionHeader title="Portfolio vs Invested" actionLabel="Value gap" />
         <TrendChart
           monthLabels={monthLabels}
           series={portfolioSeries}
@@ -216,7 +288,7 @@ function ProgressTrendCards({
         />
       </PremiumCard>
       <PremiumCard>
-        <SectionHeader title="Assets vs Months" />
+        <SectionHeader title="Assets vs Months" actionLabel="Ex cash" />
         <TrendChart
           monthLabels={monthLabels}
           series={assetSeries}
@@ -540,7 +612,18 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   chartBlock: {
+    gap: spacing.cardInner,
+  },
+  chartHead: {
+    flexDirection: "row",
     gap: spacing.sm,
+  },
+  chartStat: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: 16,
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
   chartLegend: {
     flexDirection: "row",
@@ -579,11 +662,19 @@ const styles = StyleSheet.create({
     gap: spacing.cardInner,
     justifyContent: "space-between",
   },
-  svgWrap: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 18,
+  chartSurface: {
+    backgroundColor: "#111113",
+    borderColor: colors.border.subtle,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingLeft: spacing.xs,
+    paddingRight: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  axisText: {
+    color: colors.text.secondary,
+    fontSize: 11,
   },
 });

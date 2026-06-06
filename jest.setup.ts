@@ -9,3 +9,12 @@ jest.mock("@expo/vector-icons", () => {
       React.createElement(Text, { accessibilityElementsHidden: true }, name),
   };
 });
+
+jest.mock("react-native-gifted-charts", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+
+  return {
+    LineChart: () => React.createElement(View, { testID: "gifted-line-chart" }),
+  };
+});

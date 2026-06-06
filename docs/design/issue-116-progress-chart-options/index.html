@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CogVest Issue 116 - Private Ledger v2</title>
+    <style>
+      :root {
+        --bg: #050506;
+        --ink: #ffffff;
+        --soft: #a0a0a7;
+        --muted: #666872;
+        --panel: #19191b;
+        --panel-2: #242427;
+        --panel-3: #101012;
+        --glass: rgba(31, 31, 34, 0.72);
+        --line: rgba(255, 255, 255, 0.105);
+        --line-soft: rgba(255, 255, 255, 0.055);
+        --green: #2e7d52;
+        --gain: #34c759;
+        --blue: #64a4ff;
+        --amber: #ffd35a;
+        --red: #ff453a;
+        --radius-xl: 34px;
+        --radius-lg: 27px;
+        --radius-md: 18px;
+        --font: "Aptos Display", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 12% 7%, rgba(46, 125, 82, 0.2), transparent 30%),
+          radial-gradient(circle at 86% 16%, rgba(100, 164, 255, 0.09), transparent 32%),
+          linear-gradient(180deg, #080809, #000 68%);
+        color: var(--ink);
+        font-family: var(--font);
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      body::before {
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.024) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+        background-size: 52px 52px;
+        content: "";
+        inset: 0;
+        mask-image: linear-gradient(to bottom, black, transparent 72%);
+        pointer-events: none;
+        position: fixed;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1540px;
+        padding: 44px 28px 82px;
+        position: relative;
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.58fr);
+        gap: 34px;
+        margin: 0 auto 34px;
+        max-width: 1160px;
+      }
+
+      .kicker {
+        color: var(--gain);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(42px, 6vw, 82px);
+        letter-spacing: -0.075em;
+        line-height: 0.92;
+        margin: 10px 0 0;
+        max-width: 880px;
+      }
+
+      .brief {
+        align-self: end;
+        border-left: 1px solid var(--line);
+        color: var(--soft);
+        font-size: 16px;
+        line-height: 1.55;
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      .directions {
+        display: grid;
+        gap: 28px;
+        grid-template-columns: repeat(3, minmax(330px, 1fr));
+      }
+
+      .direction {
+        background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 42px;
+        padding: 16px;
+      }
+
+      .phone {
+        aspect-ratio: 390 / 844;
+        background: #000;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 34px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .screen {
+        height: 100%;
+        overflow: hidden;
+        padding: 23px 18px 94px;
+        position: relative;
+      }
+
+      .status {
+        align-items: center;
+        display: flex;
+        font-size: 13px;
+        justify-content: space-between;
+        margin-bottom: 22px;
+      }
+
+      .battery {
+        border: 2px solid currentColor;
+        border-radius: 4px;
+        display: inline-block;
+        height: 11px;
+        margin-left: 7px;
+        position: relative;
+        width: 27px;
+      }
+
+      .battery::before {
+        background: currentColor;
+        border-radius: 2px;
+        content: "";
+        height: 5px;
+        left: 3px;
+        position: absolute;
+        top: 1px;
+        width: 18px;
+      }
+
+      .title {
+        display: grid;
+        gap: 7px;
+      }
+
+      .title h2 {
+        font-size: 34px;
+        letter-spacing: -0.055em;
+        line-height: 0.96;
+        margin: 0;
+      }
+
+      .title p {
+        color: var(--soft);
+        font-size: 15px;
+        margin: 0;
+      }
+
+      .hero-strip {
+        align-items: end;
+        border-bottom: 1px solid var(--line);
+        border-top: 1px solid var(--line);
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr auto;
+        margin: 20px 0 15px;
+        padding: 16px 0;
+      }
+
+      .label {
+        color: var(--soft);
+        display: block;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .hero-value {
+        display: block;
+        font-size: 36px;
+        font-weight: 880;
+        letter-spacing: -0.075em;
+        line-height: 0.95;
+        margin-top: 7px;
+      }
+
+      .gain-pill {
+        background: rgba(52, 199, 89, 0.16);
+        border: 1px solid rgba(52, 199, 89, 0.16);
+        border-radius: 999px;
+        color: var(--gain);
+        font-size: 13px;
+        font-weight: 850;
+        padding: 8px 10px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .statement {
+        background: var(--panel);
+        border-radius: var(--radius-lg);
+        margin-bottom: 13px;
+        padding: 15px;
+      }
+
+      .statement-head {
+        align-items: start;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .statement-head h3 {
+        font-size: 20px;
+        letter-spacing: -0.05em;
+        line-height: 1.05;
+        margin: 0 0 4px;
+      }
+
+      .statement-head p {
+        color: var(--soft);
+        font-size: 12px;
+        line-height: 1.3;
+        margin: 0;
+      }
+
+      .head-value {
+        color: var(--gain);
+        font-size: 13px;
+        font-weight: 850;
+        text-align: right;
+      }
+
+      .chart-wrap {
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.006)),
+          var(--panel-2);
+        border: 1px solid rgba(255,255,255,0.045);
+        border-radius: 22px;
+        height: 164px;
+        overflow: hidden;
+        padding: 7px 8px 4px;
+        position: relative;
+      }
+
+      .chart-wrap.tall {
+        height: 184px;
+      }
+
+      svg {
+        display: block;
+        height: 100%;
+        overflow: visible;
+        width: 100%;
+      }
+
+      .grid-line {
+        stroke: rgba(255,255,255,0.07);
+        stroke-width: 1;
+      }
+
+      .axis-text {
+        fill: var(--muted);
+        font-size: 10px;
+        font-weight: 760;
+      }
+
+      .line {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 4.5;
+      }
+
+      .fine-line {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3.8;
+      }
+
+      .area {
+        opacity: 0.16;
+      }
+
+      .point {
+        fill: var(--panel-2);
+        stroke-width: 4;
+      }
+
+      .callout-box {
+        fill: rgba(0,0,0,0.42);
+        stroke: rgba(255,255,255,0.12);
+        stroke-width: 1;
+      }
+
+      .callout-text {
+        fill: #fff;
+        font-size: 10.5px;
+        font-weight: 850;
+      }
+
+      .end-label {
+        font-size: 10.5px;
+        font-weight: 850;
+      }
+
+      .chart-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: 10px;
+      }
+
+      .legend-item {
+        align-items: center;
+        color: var(--soft);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 760;
+        gap: 6px;
+      }
+
+      .dot {
+        border-radius: 999px;
+        display: inline-block;
+        height: 8px;
+        width: 8px;
+      }
+
+      .micro-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(4, 1fr);
+        margin-top: 11px;
+      }
+
+      .micro {
+        background: rgba(255,255,255,0.045);
+        border-radius: 16px;
+        min-width: 0;
+        padding: 9px 8px;
+      }
+
+      .micro strong {
+        display: block;
+        font-size: 13px;
+        letter-spacing: -0.035em;
+        margin-top: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav {
+        align-items: center;
+        background: rgba(25,25,27,0.94);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        height: 82px;
+        left: 0;
+        padding: 10px 12px 16px;
+        position: absolute;
+        right: 0;
+      }
+
+      .nav span {
+        color: var(--soft);
+        display: grid;
+        font-size: 11px;
+        font-weight: 750;
+        gap: 5px;
+        justify-items: center;
+      }
+
+      .nav i {
+        border: 2px solid currentColor;
+        border-radius: 8px;
+        display: block;
+        height: 21px;
+        width: 21px;
+      }
+
+      .nav .active {
+        color: var(--green);
+      }
+
+      .note {
+        color: var(--soft);
+        font-size: 13px;
+        line-height: 1.45;
+        margin: 14px 8px 0;
+      }
+
+      .note strong {
+        color: var(--ink);
+      }
+
+      .option-b .chart-wrap {
+        background: #111113;
+        border-color: rgba(255,255,255,0.09);
+        height: 174px;
+      }
+
+      .option-a .chart-wrap {
+        background: #111113;
+        border-color: rgba(255,255,255,0.09);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+      }
+
+      .option-b .statement {
+        background:
+          linear-gradient(145deg, rgba(255,255,255,0.055), rgba(255,255,255,0.012)),
+          #171719;
+      }
+
+      .option-c .screen {
+        padding-left: 17px;
+        padding-right: 17px;
+      }
+
+      .option-c .statement {
+        padding: 13px;
+      }
+
+      .option-c .chart-wrap {
+        height: 142px;
+      }
+
+      .option-c .chart-wrap.tall {
+        height: 154px;
+      }
+
+      .option-c .hero-strip {
+        margin-top: 17px;
+        padding-block: 14px;
+      }
+
+      .option-c .hero-value {
+        font-size: 32px;
+      }
+
+      @media (max-width: 1180px) {
+        .intro,
+        .directions {
+          grid-template-columns: 1fr;
+        }
+
+        .directions {
+          margin: 0 auto;
+          max-width: 470px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="intro">
+        <div>
+          <div class="kicker">Issue #116 · Private Ledger v2</div>
+          <h1>Richer charts, still quiet enough for long-term investing.</h1>
+        </div>
+        <p class="brief">
+          These mocks assume Victory Native/Skia implementation: proper INR scale labels,
+          month axis, end-of-line labels, current month callouts, and cash excluded from the asset graph.
+        </p>
+      </header>
+
+      <section class="directions">
+        <article class="direction option-a">
+          <div class="phone">
+            <div class="screen">
+              <div class="status"><span>10:42</span><span>100% <i class="battery"></i></span></div>
+              <div class="title">
+                <h2>Monthly Progress</h2>
+                <p>May 2026 statement</p>
+              </div>
+              <section class="hero-strip">
+                <div>
+                  <span class="label">Portfolio value</span>
+                  <strong class="hero-value">₹19.87L</strong>
+                </div>
+                <div class="gain-pill">+₹1.18L<br />+6.31%</div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Portfolio vs Invested</h3>
+                    <p>Actual value against capital deployed.</p>
+                  </div>
+                  <div class="head-value">May<br />₹19.87L</div>
+                </div>
+                <div class="chart-wrap tall">
+                  <svg viewBox="0 0 328 184" role="img" aria-label="Portfolio value versus invested value line chart">
+                    <defs>
+                      <linearGradient id="valueGapA" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0" stop-color="#34c759" stop-opacity="0.22" />
+                        <stop offset="0.72" stop-color="#34c759" stop-opacity="0.05" />
+                        <stop offset="1" stop-color="#34c759" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <line class="grid-line" x1="42" x2="310" y1="26" y2="26" />
+                    <line class="grid-line" x1="42" x2="310" y1="72" y2="72" />
+                    <line class="grid-line" x1="42" x2="310" y1="118" y2="118" />
+                    <text class="axis-text" x="4" y="30">₹20L</text>
+                    <text class="axis-text" x="4" y="76">₹17L</text>
+                    <text class="axis-text" x="4" y="122">₹14L</text>
+                    <path d="M48 120 C 105 94, 145 62, 178 56 S 254 38, 292 28 L292 88 C254 100, 214 108, 178 114 S106 133,48 145 Z" fill="url(#valueGapA)" />
+                    <path class="line" d="M48 120 C 105 94, 145 62, 178 56 S 254 38, 292 28" stroke="#ffffff" />
+                    <path class="line" d="M48 145 C 106 133, 145 121, 178 114 S 254 100, 292 88" stroke="#34c759" />
+                    <circle class="point" cx="48" cy="120" r="5" stroke="#fff" /><circle class="point" cx="178" cy="56" r="5" stroke="#fff" /><circle class="point" cx="292" cy="28" r="5" stroke="#fff" />
+                    <circle class="point" cx="48" cy="145" r="5" stroke="#34c759" /><circle class="point" cx="178" cy="114" r="5" stroke="#34c759" /><circle class="point" cx="292" cy="88" r="5" stroke="#34c759" />
+                    <rect class="callout-box" x="198" y="8" width="106" height="30" rx="15" />
+                    <text class="callout-text" x="209" y="27">May +₹1.18L</text>
+                    <text class="end-label" x="246" y="58" fill="#fff">Portfolio</text>
+                    <text class="end-label" x="250" y="107" fill="#34c759">Invested</text>
+                    <text class="axis-text" x="44" y="174">Mar</text>
+                    <text class="axis-text" x="166" y="174">Apr</text>
+                    <text class="axis-text" x="284" y="174">May</text>
+                  </svg>
+                </div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Assets vs Months</h3>
+                    <p>Equity, debt, crypto. Cash stays out.</p>
+                  </div>
+                  <div class="head-value">ex cash</div>
+                </div>
+                <div class="chart-wrap">
+                  <svg viewBox="0 0 328 164" role="img" aria-label="Asset class trend chart excluding cash">
+                    <line class="grid-line" x1="42" x2="308" y1="28" y2="28" />
+                    <line class="grid-line" x1="42" x2="308" y1="78" y2="78" />
+                    <line class="grid-line" x1="42" x2="308" y1="126" y2="126" />
+                    <text class="axis-text" x="5" y="32">₹12L</text>
+                    <text class="axis-text" x="10" y="82">₹6L</text>
+                    <text class="axis-text" x="10" y="130">₹1L</text>
+                    <path class="fine-line" d="M48 82 C 104 72, 142 60, 178 55 S 252 40, 292 32" stroke="#2e7d52" />
+                    <path class="fine-line" d="M48 108 C 112 101, 144 94, 178 90 S 250 82, 292 78" stroke="#64a4ff" />
+                    <path class="fine-line" d="M48 134 C 110 130, 146 122, 178 116 S 248 101, 292 92" stroke="#ffd35a" />
+                    <circle class="point" cx="292" cy="32" r="4" stroke="#2e7d52" />
+                    <circle class="point" cx="292" cy="78" r="4" stroke="#64a4ff" />
+                    <circle class="point" cx="292" cy="92" r="4" stroke="#ffd35a" />
+                    <text class="end-label" x="218" y="28" fill="#2e7d52">Equity ₹12.45L</text>
+                    <text class="end-label" x="222" y="74" fill="#64a4ff">Debt ₹3.22L</text>
+                    <text class="end-label" x="208" y="106" fill="#ffd35a">Crypto ₹1.20L</text>
+                    <text class="axis-text" x="44" y="154">Mar</text>
+                    <text class="axis-text" x="166" y="154">Apr</text>
+                    <text class="axis-text" x="284" y="154">May</text>
+                  </svg>
+                </div>
+                <div class="micro-grid">
+                  <div class="micro"><span class="label">Equity</span><strong>62.6%</strong></div>
+                  <div class="micro"><span class="label">Debt</span><strong>16.2%</strong></div>
+                  <div class="micro"><span class="label">Crypto</span><strong>6.0%</strong></div>
+                  <div class="micro"><span class="label">Cash</span><strong>16.3%</strong></div>
+                </div>
+              </section>
+              <nav class="nav"><span><i></i>Dashboard</span><span><i></i>Holdings</span><span class="active"><i></i>Progress</span><span><i></i>Cash</span><span><i></i>Settings</span></nav>
+            </div>
+          </div>
+          <p class="note"><strong>A. Annotated Ledger Pro.</strong> Recommended. Same calm information model, now with modern material depth and a stronger chart presence.</p>
+        </article>
+
+        <article class="direction option-b">
+          <div class="phone">
+            <div class="screen">
+              <div class="status"><span>10:42</span><span>100% <i class="battery"></i></span></div>
+              <div class="title">
+                <h2>Monthly Progress</h2>
+                <p>May 2026 chart focus</p>
+              </div>
+              <section class="hero-strip">
+                <div>
+                  <span class="label">Portfolio value</span>
+                  <strong class="hero-value">₹19.87L</strong>
+                </div>
+                <div class="gain-pill">+₹1.18L<br />+6.31%</div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Portfolio vs Invested</h3>
+                    <p>Month-end trajectory with live delta.</p>
+                  </div>
+                  <div class="head-value">₹5.87L<br />gap</div>
+                </div>
+                <div class="chart-wrap tall">
+                  <svg viewBox="0 0 328 184">
+                    <defs>
+                      <linearGradient id="gapFillB" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0" stop-color="#34c759" stop-opacity="0.22" />
+                        <stop offset="1" stop-color="#34c759" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <line class="grid-line" x1="40" x2="310" y1="30" y2="30" />
+                    <line class="grid-line" x1="40" x2="310" y1="82" y2="82" />
+                    <line class="grid-line" x1="40" x2="310" y1="134" y2="134" />
+                    <text class="axis-text" x="5" y="34">₹20L</text>
+                    <text class="axis-text" x="5" y="86">₹16L</text>
+                    <text class="axis-text" x="5" y="138">₹12L</text>
+                    <path d="M48 122 C 102 95, 144 64, 178 56 S 252 40, 292 30 L292 90 C252 100, 210 110, 178 116 S102 134,48 146 Z" fill="url(#gapFillB)" />
+                    <path class="line" d="M48 122 C 102 95, 144 64, 178 56 S 252 40, 292 30" stroke="#fff" />
+                    <path class="line" d="M48 146 C 105 134, 144 124, 178 116 S 252 101, 292 90" stroke="#34c759" />
+                    <rect class="callout-box" x="190" y="52" width="110" height="32" rx="16" />
+                    <text class="callout-text" x="201" y="72">Value gap ₹5.87L</text>
+                    <text class="end-label" x="238" y="27" fill="#fff">₹19.87L</text>
+                    <text class="end-label" x="238" y="106" fill="#34c759">₹14.0L</text>
+                    <text class="axis-text" x="44" y="174">Mar</text>
+                    <text class="axis-text" x="166" y="174">Apr</text>
+                    <text class="axis-text" x="284" y="174">May</text>
+                  </svg>
+                </div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Assets vs Months</h3>
+                    <p>Current allocation drift by class.</p>
+                  </div>
+                  <div class="head-value">3 series</div>
+                </div>
+                <div class="chart-wrap">
+                  <svg viewBox="0 0 328 164">
+                    <line class="grid-line" x1="40" x2="308" y1="30" y2="30" />
+                    <line class="grid-line" x1="40" x2="308" y1="82" y2="82" />
+                    <line class="grid-line" x1="40" x2="308" y1="132" y2="132" />
+                    <path class="fine-line" d="M48 80 C 104 70, 142 58, 178 54 S 252 41, 292 32" stroke="#2e7d52" />
+                    <path class="fine-line" d="M48 106 C 112 100, 144 94, 178 89 S 250 82, 292 78" stroke="#64a4ff" />
+                    <path class="fine-line" d="M48 136 C 110 130, 146 123, 178 116 S 248 101, 292 92" stroke="#ffd35a" />
+                    <rect class="callout-box" x="190" y="16" width="110" height="31" rx="15" />
+                    <text class="callout-text" x="202" y="36">Equity leads</text>
+                    <text class="end-label" x="230" y="68" fill="#2e7d52">62.6%</text>
+                    <text class="end-label" x="230" y="95" fill="#64a4ff">16.2%</text>
+                    <text class="end-label" x="230" y="118" fill="#ffd35a">6.0%</text>
+                    <text class="axis-text" x="44" y="154">Mar</text>
+                    <text class="axis-text" x="166" y="154">Apr</text>
+                    <text class="axis-text" x="284" y="154">May</text>
+                  </svg>
+                </div>
+                <div class="chart-meta">
+                  <span class="legend-item"><i class="dot" style="background:#2e7d52"></i>Equity</span>
+                  <span class="legend-item"><i class="dot" style="background:#64a4ff"></i>Debt</span>
+                  <span class="legend-item"><i class="dot" style="background:#ffd35a"></i>Crypto</span>
+                </div>
+              </section>
+              <nav class="nav"><span><i></i>Dashboard</span><span><i></i>Holdings</span><span class="active"><i></i>Progress</span><span><i></i>Cash</span><span><i></i>Settings</span></nav>
+            </div>
+          </div>
+          <p class="note"><strong>B. Value Gap.</strong> Strongest story. The filled gap between portfolio and invested is useful, but slightly more assertive.</p>
+        </article>
+
+        <article class="direction option-c">
+          <div class="phone">
+            <div class="screen">
+              <div class="status"><span>10:42</span><span>100% <i class="battery"></i></span></div>
+              <div class="title">
+                <h2>Monthly Progress</h2>
+                <p>May 2026 compact QA</p>
+              </div>
+              <section class="hero-strip">
+                <div>
+                  <span class="label">Portfolio value</span>
+                  <strong class="hero-value">₹19.87L</strong>
+                </div>
+                <div class="gain-pill">+₹1.18L<br />+6.31%</div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Portfolio vs Invested</h3>
+                    <p>Readable at screenshot scale.</p>
+                  </div>
+                  <div class="head-value">May</div>
+                </div>
+                <div class="chart-wrap tall">
+                  <svg viewBox="0 0 328 154">
+                    <line class="grid-line" x1="42" x2="310" y1="30" y2="30" />
+                    <line class="grid-line" x1="42" x2="310" y1="78" y2="78" />
+                    <text class="axis-text" x="4" y="34">₹20L</text>
+                    <text class="axis-text" x="4" y="82">₹16L</text>
+                    <path class="line" d="M48 102 C 105 80, 145 58, 178 52 S 254 38, 292 30" stroke="#fff" />
+                    <path class="line" d="M48 128 C 106 118, 145 108, 178 101 S 254 91, 292 82" stroke="#34c759" />
+                    <text class="end-label" x="226" y="29" fill="#fff">Portfolio</text>
+                    <text class="end-label" x="226" y="101" fill="#34c759">Invested</text>
+                    <text class="axis-text" x="44" y="145">Mar</text>
+                    <text class="axis-text" x="166" y="145">Apr</text>
+                    <text class="axis-text" x="284" y="145">May</text>
+                  </svg>
+                </div>
+              </section>
+
+              <section class="statement">
+                <div class="statement-head">
+                  <div>
+                    <h3>Assets vs Months</h3>
+                    <p>Compact, labelled, no cash.</p>
+                  </div>
+                  <div class="head-value">ex cash</div>
+                </div>
+                <div class="chart-wrap">
+                  <svg viewBox="0 0 328 142">
+                    <line class="grid-line" x1="42" x2="310" y1="32" y2="32" />
+                    <line class="grid-line" x1="42" x2="310" y1="92" y2="92" />
+                    <path class="fine-line" d="M48 72 C 104 64, 142 56, 178 52 S 252 41, 292 34" stroke="#2e7d52" />
+                    <path class="fine-line" d="M48 96 C 112 91, 144 86, 178 82 S 250 77, 292 74" stroke="#64a4ff" />
+                    <path class="fine-line" d="M48 122 C 110 117, 146 110, 178 104 S 248 92, 292 84" stroke="#ffd35a" />
+                    <text class="end-label" x="226" y="36" fill="#2e7d52">Equity</text>
+                    <text class="end-label" x="226" y="78" fill="#64a4ff">Debt</text>
+                    <text class="end-label" x="226" y="102" fill="#ffd35a">Crypto</text>
+                    <text class="axis-text" x="44" y="134">Mar</text>
+                    <text class="axis-text" x="166" y="134">Apr</text>
+                    <text class="axis-text" x="284" y="134">May</text>
+                  </svg>
+                </div>
+                <div class="micro-grid">
+                  <div class="micro"><span class="label">Equity</span><strong>62.6%</strong></div>
+                  <div class="micro"><span class="label">Debt</span><strong>16.2%</strong></div>
+                  <div class="micro"><span class="label">Crypto</span><strong>6.0%</strong></div>
+                  <div class="micro"><span class="label">Cash</span><strong>16.3%</strong></div>
+                </div>
+              </section>
+              <nav class="nav"><span><i></i>Dashboard</span><span><i></i>Holdings</span><span class="active"><i></i>Progress</span><span><i></i>Cash</span><span><i></i>Settings</span></nav>
+            </div>
+          </div>
+          <p class="note"><strong>C. Compact Ledger.</strong> Safest for Pixel 8 fit. Less dramatic, but easiest to implement without crowding.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
