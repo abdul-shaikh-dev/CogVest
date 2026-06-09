@@ -21,7 +21,15 @@ describe("seedVisualQaPortfolio", () => {
     expect(state.openingPositions.some((position) => position.conviction)).toBe(
       true,
     );
-    expect(state.monthlySnapshots).toHaveLength(3);
+    expect(state.monthlySnapshots).toHaveLength(6);
+    expect(state.monthlySnapshots.map((snapshot) => snapshot.month)).toEqual([
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+    ]);
     expect(Object.values(state.quoteCache).map((quote) => quote.source)).toEqual([
       "yahoo",
       "yahoo",
@@ -50,6 +58,6 @@ describe("seedVisualQaPortfolio", () => {
     expect(state.cashEntries.map((entry) => entry.id)).not.toContain("old-cash");
     expect(state.assets).toHaveLength(4);
     expect(state.cashEntries).toHaveLength(4);
-    expect(state.monthlySnapshots).toHaveLength(3);
+    expect(state.monthlySnapshots).toHaveLength(6);
   });
 });
