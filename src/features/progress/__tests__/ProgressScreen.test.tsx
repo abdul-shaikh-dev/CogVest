@@ -126,7 +126,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
-    const { getAllByText, getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
@@ -134,8 +134,7 @@ describe("ProgressScreen", () => {
     expect(getByText("Portfolio vs invested")).toBeTruthy();
     expect(getByText("Asset Trend")).toBeTruthy();
     expect(getByText("Equity, debt, crypto")).toBeTruthy();
-    expect(getAllByText("Apr 2026").length).toBeGreaterThanOrEqual(2);
-    expect(getAllByText("May 2026").length).toBeGreaterThanOrEqual(2);
+    expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
     expect(getByText("Crypto +12.50%")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
@@ -152,7 +151,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, getAllByText } = render(
+    const { getByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
@@ -168,7 +167,7 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("portfolio-monthly-chart-range-3M"));
     fireEvent.press(getByTestId("asset-monthly-chart-range-3M"));
 
-    expect(getAllByText("Mar 2026").length).toBeGreaterThanOrEqual(2);
+    expect(queryByText("Mar 2026")).toBeNull();
   });
 
   it("updates an existing month instead of creating duplicate snapshots", () => {

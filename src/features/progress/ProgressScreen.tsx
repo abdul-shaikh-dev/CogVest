@@ -109,9 +109,13 @@ function getYAxisLabels(series: MonthlyProgressChartSeries[]) {
   return [maxValue, maxValue / 2, 0].map((value) => formatCompactINR(value));
 }
 
+function formatChartAxisLabel(monthLabel: string) {
+  return monthLabel.split(" ")[0] ?? monthLabel;
+}
+
 function toGiftedChartData(series: MonthlyProgressChartSeries, monthLabels: string[]) {
   return series.values.map((value, index) => ({
-    label: monthLabels[index]?.replace(" 2026", "") ?? "",
+    label: formatChartAxisLabel(monthLabels[index] ?? ""),
     value,
   }));
 }
@@ -195,11 +199,11 @@ function TrendChart({
             disableScroll
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
-            endSpacing={12}
+            endSpacing={18}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={10}
+            initialSpacing={22}
             intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated
             maxValue={maxValue}
@@ -237,11 +241,11 @@ function TrendChart({
               thickness: 3,
             }))}
             disableScroll
-            endSpacing={12}
+            endSpacing={18}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={10}
+            initialSpacing={22}
             isAnimated
             maxValue={maxValue}
             noOfSections={3}
@@ -264,13 +268,6 @@ function TrendChart({
             />
           )}
         </View>
-      </View>
-      <View style={styles.monthAxis}>
-        {monthLabels.map((month) => (
-          <AppText key={month} color="secondary" variant="caption">
-            {month}
-          </AppText>
-        ))}
       </View>
       <TrendLegend series={series} testIDPrefix={testIDPrefix} />
     </View>
@@ -841,11 +838,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.xs,
-  },
-  monthAxis: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingLeft: 38,
   },
   rangeChip: {
     alignItems: "center",
