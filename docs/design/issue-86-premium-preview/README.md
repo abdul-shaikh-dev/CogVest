@@ -3,6 +3,7 @@
 Static browser mockup for the CogVest V1 premium design pass.
 
 Canonical screen contract: `docs/design/v1-screen-baseline.md`.
+Research baseline: `docs/design/v1-ux-research-baseline.md`.
 
 ## Refined Baseline
 
@@ -19,6 +20,11 @@ The preview keeps the approved V1 flow coverage while adopting:
 - two Progress graph treatments: portfolio value vs invested value, and assets
   vs months with cash excluded
 - explicit Add Holding search selection; search must not auto-pick a result
+
+The latest Progress direction renames the chart cards to `Value Gap` and
+`Asset Momentum`, adds a compact `Monthly Change Breakdown`, and keeps the
+month-end snapshot submitter as a CTA into a dedicated flow rather than a large
+embedded form.
 
 ## Scope
 

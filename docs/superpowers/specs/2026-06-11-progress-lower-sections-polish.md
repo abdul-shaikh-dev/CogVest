@@ -2,75 +2,95 @@
 
 ## Goal
 
-Improve the `Asset class snapshot` and `Recent snapshots` sections on Monthly
-Progress so the data feels premium, clear, and visually useful without adding
-new product scope.
+Refine the lower half of Monthly Progress so it supports the richer charts
+without duplicating them. The screen should feel like a compact monthly
+statement: charts explain trend, the lower section explains what changed, and a
+small CTA leads to month-end snapshot capture.
 
 ## Accepted Direction
 
-Use the Option B visual direction from the local brainstorm preview:
+Use the latest compact direction from the local preview:
 
-- Keep the existing `Value Trend` and `Asset Trend` chart cards above these
-  sections.
-- Redesign `Asset class snapshot` as a portfolio composition card with a visual
-  allocation treatment and compact legend.
-- Redesign `Recent snapshots` as a premium month-summary list.
-- Do not add a mini sparkline or extra chart inside `Recent snapshots`; the main
-  chart cards already own trend visualization.
+- Keep the `Value Gap` and `Asset Momentum` chart cards above this section.
+- Remove the separate `Asset class snapshot` card from the lower area; its
+  information is covered by `Asset Momentum` and the change breakdown.
+- Replace `Recent snapshots` as a plain list with `Monthly Change Breakdown`.
+- Allow selecting older months in the breakdown.
+- Show the selected month compared with the previous month.
+- Keep a compact `Month-end snapshot` CTA below the breakdown.
+- Do not add mini sparklines or extra charts below the main chart cards.
 
-## Asset Class Snapshot
+## Monthly Change Breakdown
 
-The section should feel more like a composition summary than a plain list.
+The section should answer:
 
-Required content:
-
-- Equity, Debt, Crypto, and Cash.
-- Current value for each class.
-- Allocation percentage for each class.
-- Clear color mapping that matches the Progress charts and CogVest design:
-  Equity green, Debt blue, Crypto amber, Cash cash-blue.
-
-Presentation rules:
-
-- Prefer a compact donut or composition visual with a clean legend.
-- Keep numbers readable and INR-first.
-- Avoid spreadsheet/table styling.
-- Do not make the card noisy or trading-app-like.
-
-## Recent Snapshots
-
-The section should summarize recent month-end records in a scannable, premium
-list.
+- What changed this month?
+- Which asset classes gained or lost value?
+- How did each class compare with the previous month?
+- Did allocation shift meaningfully?
 
 Required content:
 
-- Month label.
-- Portfolio value.
-- Monthly gain/loss.
-- Optional note when present.
-- Monthly investment may be included only if it improves clarity.
+- Selected month.
+- Previous month comparison.
+- Total portfolio change percentage and value delta.
+- Asset tiles for Equity, Debt, Crypto, and Cash where data exists.
+- Per-asset-class current value.
+- Per-asset-class previous value or delta.
+- Per-asset-class percentage change.
+- Allocation change where available.
 
 Presentation rules:
 
-- Feature the latest month slightly more strongly than older months.
-- Use clean rounded month rows/cards.
-- Use green/red for gain/loss, but do not rely on color alone.
-- Do not render another chart or sparkline in this section.
-- Keep the section calm and compact.
+- Prefer compact interactive month chips or a small selector.
+- Use percentage change as the primary scan label.
+- Keep INR values readable but secondary.
+- Use Equity green, Debt blue, Crypto amber, and Cash cash-blue consistently.
+- Use red only for negative movement.
+- Do not make the section look like a table.
+- Do not duplicate the main chart legend or render another trend graphic.
+
+## Monthly Story Copy
+
+Any explanatory copy must be deterministic and derived from snapshot data.
+
+Examples:
+
+- `Portfolio value increased 6.3% from Apr to May.`
+- `Equity led the month while crypto softened.`
+- `No previous snapshot available for comparison.`
+
+Do not generate AI-written financial advice in V1. The copy should describe the
+recorded data, not recommend investing actions.
+
+## Month-End Snapshot CTA
+
+The main Progress screen should include only a compact capture entry point.
+
+Required behavior:
+
+- Show whether the current month has a snapshot.
+- Offer `Record snapshot` or `Review snapshot` depending on state.
+- Link to the dedicated capture flow or bottom sheet owned by issue #125.
+- Do not embed a large snapshot form in the main Progress review screen.
 
 ## Out of Scope
 
-- No changes to monthly snapshot data model.
-- No new chart library work.
-- No new historical market charts.
+- No changes to monthly snapshot data model in this design-only spec.
+- No full snapshot derivation/capture automation; that belongs to issue #125.
+- No new historical market data.
 - No fake production data.
 - No changes to Add Holding, Dashboard, Holdings, Cash, or Settings.
 
 ## Acceptance Criteria
 
 - Existing Progress charts remain visible and unchanged in purpose.
-- `Asset class snapshot` is visually richer than the current row list.
-- `Recent snapshots` is more premium and readable than the current row list.
-- No duplicate trend visualization appears below the main charts.
+- The lower Progress section no longer duplicates asset trend or allocation
+  data in a separate static snapshot card.
+- `Monthly Change Breakdown` supports selecting older months.
+- The latest selected month clearly compares against the previous month.
+- Asset-class changes are percentage-first with readable INR context.
+- No mini sparkline or extra chart appears below the main chart cards.
+- Month-end snapshot capture is represented by a compact CTA only.
 - Existing Progress tests pass.
 - Typecheck passes.

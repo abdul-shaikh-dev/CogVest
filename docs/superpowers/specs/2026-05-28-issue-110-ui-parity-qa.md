@@ -11,6 +11,7 @@ Issue: https://github.com/abdul-shaikh-dev/CogVest/issues/110
 ## Baseline Sources
 
 - `docs/design/v1-screen-baseline.md`
+- `docs/design/v1-ux-research-baseline.md`
 - `docs/design/issue-86-premium-preview/index.html`
 - `docs/design/figma/issue-69-v1-screens/code.js`
 - `DESIGN.md`
@@ -70,8 +71,9 @@ For each V1 screen, compare the emulator UI against
 - Add Holding supports lookup, explicit selection, manual fallback,
   classification, position details, optional conviction/note, derived preview,
   and save.
-- Monthly Progress shows snapshot entry, portfolio vs invested chart, assets vs
-  months chart with cash excluded, asset class snapshot, and no-snapshot state.
+- Monthly Progress shows compact snapshot entry, `Value Gap` chart, `Asset
+  Momentum` chart with cash excluded, `Monthly Change Breakdown`, and
+  no-snapshot state.
 - Cash Ledger shows balance, added/invested/available/savings context, deposit,
   withdrawal, investment transfer, and recent ledger or empty state.
 - Settings clearly communicates local-first privacy, value masking, quote
@@ -118,7 +120,8 @@ static verification moving.
 - Drift is fixed or documented as an accepted V1 compromise.
 - Settings does not present unsupported rows as working actions.
 - Add Holding remains explicit-selection-first.
-- Progress keeps the two accepted V1 chart treatments.
+- Progress keeps the two accepted V1 chart treatments and does not duplicate
+  asset snapshot data below the charts.
 - Static verification passes.
 - Android emulator smoke/navigation QA is run or a concrete blocker is logged.
 - No V1 scope boundaries are violated.
