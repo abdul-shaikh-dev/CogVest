@@ -37,7 +37,7 @@ into behaviour insights and Minimal Mode.
 - MMKV for persistence
 - Zustand for state management
 - React Native Reanimated for animations
-- Victory Native for charts
+- `react-native-gifted-charts` for current V1 Monthly Progress charts.
 - React Hook Form + Zod for forms
 
 ## Rules
@@ -78,8 +78,9 @@ into behaviour insights and Minimal Mode.
   `docs/design/figma/issue-69-v1-screens/code.js`: main tabs are Dashboard,
   Holdings, Progress, Cash, Settings; Add Holding is a secondary screen.
 - Current accepted V1 screen contract is `docs/design/v1-screen-baseline.md`.
-- Use the HTML preview in `docs/design/issue-86-premium-preview/index.html`,
-  `docs/design/v1-screen-baseline.md`, and the Figma file for V1 UI context.
+- Use `docs/design/v1-research-preview/index.html`,
+  `docs/design/v1-screen-baseline.md`, `docs/design/v1-ux-research-baseline.md`,
+  and the Figma file for V1 UI context.
 
 ## Release Gates
 - V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,

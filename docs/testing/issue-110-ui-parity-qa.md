@@ -5,7 +5,8 @@ Issue: https://github.com/abdul-shaikh-dev/CogVest/issues/110
 ## Baseline
 
 - `docs/design/v1-screen-baseline.md`
-- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/v1-research-preview/index.html`
+- `docs/design/v1-ux-research-baseline.md`
 - `docs/design/figma/issue-69-v1-screens/code.js`
 
 ## Commands

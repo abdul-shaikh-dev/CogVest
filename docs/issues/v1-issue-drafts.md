@@ -6,7 +6,8 @@
 > trade terminology until refactored.
 >
 > Current V1 UI work should use `docs/design/v1-screen-baseline.md`,
-> `docs/design/issue-86-premium-preview/index.html`, and
+> `docs/design/v1-ux-research-baseline.md`,
+> `docs/design/v1-research-preview/index.html`, and
 > `docs/design/figma/issue-69-v1-screens/code.js`, not the early drafts below.
 
 Milestone: CogVest V1 MVP
@@ -33,7 +34,7 @@ Create the Android-first Expo foundation for CogVest.
 
 ### Design Reference
 - `docs/design/v1-screen-baseline.md`
-- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/v1-research-preview/index.html`
 - `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
 

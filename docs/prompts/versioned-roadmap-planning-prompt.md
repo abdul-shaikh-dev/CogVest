@@ -137,7 +137,9 @@ docs/roadmap/
 - v3-codex-prompts.md
 
 docs/design/
-- v1-ui-mockup-plan.md
+- v1-screen-baseline.md
+- v1-ux-research-baseline.md
+- v1-research-preview/
 - v2-ui-mockup-plan.md
 - v3-ui-mockup-plan.md
 
@@ -609,7 +611,9 @@ Do not block roadmap work.
 
 Create detailed fallback design docs:
 
-docs/design/v1-ui-mockup-plan.md
+docs/design/v1-screen-baseline.md
+docs/design/v1-ux-research-baseline.md
+docs/design/v1-research-preview/
 docs/design/v2-ui-mockup-plan.md
 docs/design/v3-ui-mockup-plan.md
 

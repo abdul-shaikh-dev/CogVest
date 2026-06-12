@@ -6,7 +6,7 @@ This harness seeds a deterministic V1 portfolio on the Android Emulator and
 captures screenshots for screen-to-mock comparison against:
 
 - `docs/design/v1-screen-baseline.md`
-- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/v1-research-preview/index.html`
 - Figma V1 UI concepts
 
 It is local-only. It does not require a physical phone, EAS cloud builds, or
@@ -189,11 +189,11 @@ adb -s emulator-5554 exec-out screencap -p > .expo\progress-asset-trend-seeded.p
 
 Expected Progress evidence:
 
-- Value Trend chart renders Portfolio vs Invested.
-- Value Trend has y-axis INR labels, x-axis month labels, and chart-local
+- Value Gap chart renders Portfolio vs Invested.
+- Value Gap has y-axis INR labels, x-axis month labels, and chart-local
   `3M`, `6M`, `1Y`, `All` chips.
-- Asset Trend chart renders Equity, Debt, and Crypto lines with cash excluded.
-- Asset Trend has y-axis INR labels, x-axis month labels, chart-local timeframe
+- Asset Momentum chart renders Equity, Debt, and Crypto lines with cash excluded.
+- Asset Momentum has y-axis INR labels, x-axis month labels, chart-local timeframe
   chips, a legend, and per-asset insight rows.
 
 ### 6. Clean Local Build Cache
@@ -238,7 +238,7 @@ Check:
 - Holdings populated row layout
 - Add Holding initial, lookup selection, and review states
 - Cash Ledger hero, metrics, entry form, and ledger rows
-- Monthly Progress portfolio/invested and asset trend charts
+- Monthly Progress `Value Gap` and `Asset Momentum` charts
 - Settings local-first trust sections
 
 Log any mismatch as a focused GitHub issue with screenshot evidence.

@@ -24,7 +24,9 @@
 ### Task 2: Figma Design Output
 
 **Files:**
-- Create/update: `docs/design/v1-ui-mockup-plan.md`
+- Create/update: `docs/design/v1-screen-baseline.md`
+- Create/update: `docs/design/v1-ux-research-baseline.md`
+- Create/update: `docs/design/v1-research-preview/`
 - Create/update: `docs/design/v2-ui-mockup-plan.md`
 - Create/update: `docs/design/v3-ui-mockup-plan.md`
 

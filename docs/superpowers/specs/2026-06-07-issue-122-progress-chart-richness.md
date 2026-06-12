@@ -5,8 +5,8 @@
 - GitHub issue: #122, `[V1] Make Monthly Progress charts richer and more useful`
 - Future follow-up: #129, `[Future] Add custom date-range filtering for Monthly Progress charts`
 - Design baseline: `docs/design/v1-screen-baseline.md`
-- Chart exploration: `docs/design/issue-116-progress-chart-options/index.html`
-- Final chart preview: `docs/design/issue-122-chart-richness-options/option-b-final.html`
+- Current V1 research preview: `docs/design/v1-research-preview/index.html`
+- Current V1 research preview notes: `docs/design/v1-research-preview/README.md`
 - Design rules: `DESIGN.md`
 - App-wide UX research baseline: `docs/design/v1-ux-research-baseline.md`
 
@@ -203,8 +203,9 @@ Visual treatment:
 
 ## Interaction
 
-Use `react-native-gifted-charts` line-chart and long-press pointer support as a
-progressive enhancement if it works reliably on Android.
+Use the current `react-native-gifted-charts` line-chart implementation and
+long-press pointer support as a progressive enhancement if it works reliably on
+Android.
 
 Requirements:
 

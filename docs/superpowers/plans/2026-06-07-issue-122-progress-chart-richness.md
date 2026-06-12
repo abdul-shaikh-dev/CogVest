@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make Monthly Progress charts richer and more useful for V1 by implementing the agreed final Option B preview: `Value Trend` and `Asset Trend` cards with chart-local timeframe presets, signed percentage headline pills, readable axes, useful top metrics, and stored-snapshot-only data.
+**Goal:** Make Monthly Progress charts richer and more useful for V1 by implementing the agreed research preview direction: `Value Gap` and `Asset Momentum` cards with chart-local timeframe presets, signed percentage headline pills, readable axes, useful top metrics, and stored-snapshot-only data.
 
 **Architecture:** Extend the monthly progress chart domain selector first, then pass derived chart state through `useProgress`, then update `ProgressScreen` presentation components. Keep all calculations in `src/domain/`; keep React components focused on rendering and UI state.
 
@@ -167,8 +167,8 @@ needed in Task 4.
 
 - [ ] Edit `src/features/progress/ProgressScreen.tsx`.
 - [ ] Destructure `chartRange` and `setChartRange` from `useProgress`.
-- [ ] Use `docs/design/issue-122-chart-richness-options/option-b-final.html` as
-  the implementation reference.
+- [ ] Use `docs/design/v1-research-preview/index.html` and
+  `docs/design/v1-research-preview/README.md` as the implementation reference.
 - [ ] Add the top metric row:
   - `Portfolio`
   - `Monthly gain`
@@ -184,8 +184,8 @@ needed in Task 4.
   - `Show 1Y monthly progress charts`
   - `Show all monthly progress charts`
 - [ ] Implement the first chart card as:
-  - title: `Value Trend`
-  - subtitle: `Portfolio vs invested`
+  - title: `Value Gap`
+  - subtitle: `Portfolio value against invested capital`
   - headline pill: signed value-gap percentage, for example `+15.8%`
   - white line: portfolio value
   - green line: invested value
@@ -193,8 +193,8 @@ needed in Task 4.
   - y-axis value labels
   - x-axis month labels
 - [ ] Implement the second chart card as:
-  - title: `Asset Trend`
-  - subtitle: `Equity, debt, crypto`
+  - title: `Asset Momentum`
+  - subtitle: `Absolute value trend - cash excluded`
   - headline pill: largest asset percentage movement, for example `Equity +4.9%`
   - green line: equity
   - blue line: debt
@@ -202,7 +202,7 @@ needed in Task 4.
   - subtle per-series area/glow fill under the lines
   - y-axis value labels
   - x-axis month labels
-- [ ] Update the `Asset Trend` rows to show:
+- [ ] Update the `Asset Momentum` rows to show:
   - latest value per asset class
   - latest monthly delta per asset class
   - latest percentage movement per asset class
@@ -211,7 +211,7 @@ needed in Task 4.
     or `share -0.8%`
 - [ ] Do not add the exploratory `Largest move` banner. The top metrics and
   asset chart headline pill are enough.
-- [ ] Do not add the redundant mini row under the `Value Trend` chart.
+- [ ] Do not add the redundant mini row under the `Value Gap` chart.
 - [ ] Keep the chart visual direction calm:
   - no dense legends
   - no fake decorative data
@@ -246,9 +246,9 @@ Expected result: typecheck passes.
   timeframe chips.
 - [ ] Add test that tapping a `3M` chip changes visible month/insight context for
   that chart card.
-- [ ] Add test that `Value Trend` renders signed value-gap percentage and
+- [ ] Add test that `Value Gap` renders signed value-gap percentage and
   `Value move` from stored snapshots.
-- [ ] Add test that `Asset Trend` renders largest percentage movement and asset
+- [ ] Add test that `Asset Momentum` renders largest percentage movement and asset
   rows with exact INR movement plus allocation share shift.
 - [ ] Add test coverage for y-axis value labels and x-axis month labels.
 - [ ] Keep existing empty and insufficient-history tests.
@@ -322,9 +322,9 @@ npm run visual-qa:android
 
 - [ ] Confirm visual evidence for:
   - Monthly Progress populated state.
-  - `Value Trend` chart with signed value-gap percentage, y-axis labels, month
+  - `Value Gap` chart with signed value-gap percentage, y-axis labels, month
     labels, and chart-local timeframe chips.
-  - `Asset Trend` chart with Equity, Debt, Crypto lines, subtle fill/glow,
+  - `Asset Momentum` chart with Equity, Debt, Crypto lines, subtle fill/glow,
     y-axis labels, month labels, chart-local timeframe chips, and percentage
     movement headline.
   - No chart crash during basic interaction.

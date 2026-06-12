@@ -4,7 +4,6 @@ This is the accepted V1 screen contract for CogVest UI implementation work.
 Use it with `DESIGN.md` and the current design assets:
 
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`
-- HTML preview: `docs/design/issue-86-premium-preview/index.html`
 - Research preview: `docs/design/v1-research-preview/index.html`
 - Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma file: `https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d`
