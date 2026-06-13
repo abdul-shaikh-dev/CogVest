@@ -3,16 +3,10 @@
 ## Source References
 
 - Master spec: `docs/cogvest-master-spec.md`
-- Historical full prompt set: `docs/cogvest-codex-prompts.md` (reference only; current V1 scope is this roadmap plus `AGENTS.md`)
-- Planning prompt: `docs/prompts/versioned-roadmap-planning-prompt.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
 - V1 research preview: `docs/design/v1-research-preview/index.html`
 - V1 Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
-- Historical visual references: older generated mockups and prompt-era previews
-  are superseded for V1 by `DESIGN.md`, `docs/design/v1-screen-baseline.md`,
-  `docs/design/v1-ux-research-baseline.md`, and
-  `docs/design/v1-research-preview/index.html`.
 
 ## Version Strategy
 

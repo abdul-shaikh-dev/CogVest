@@ -54,8 +54,7 @@ passed.
 - `npx eas-cli build --platform android --profile preview --non-interactive`: blocked before build start because no Expo account login or `EXPO_TOKEN` is available.
 - `adb devices`: blocked because `adb` is not installed or not on `PATH` in this environment.
 
-Superseded physical-device notes:
+Current device policy:
 
-- The old physical-phone preview APK gate was superseded by issue #54.
-- V1 dev-complete verification should use the PC/emulator matrix in `docs/testing/`.
+- V1 dev-complete verification uses the PC/emulator matrix in `docs/testing/`.
 - EAS preview builds remain optional unless explicitly requested.
