@@ -6,7 +6,9 @@
 
 **Architecture:** Extend the monthly progress chart domain selector first, then pass derived chart state through `useProgress`, then update `ProgressScreen` presentation components. Keep all calculations in `src/domain/`; keep React components focused on rendering and UI state.
 
-**Tech Stack:** React Native, Expo SDK 54, TypeScript, Expo Router, Zustand, Jest, React Native Testing Library, react-native-gifted-charts.
+**Tech Stack:** React Native, Expo SDK 54, TypeScript, Expo Router, Zustand,
+Jest, React Native Testing Library, `react-native-gifted-charts`. Do not use
+Victory Native for the V1 Monthly Progress charts.
 
 ---
 
@@ -191,7 +193,7 @@ needed in Task 4.
   - green line: invested value
   - subtle area/glow fill under the lines
   - y-axis value labels
-  - x-axis month labels
+  - sparse chart-native x-axis month labels: first, middle, latest
 - [ ] Implement the second chart card as:
   - title: `Asset Momentum`
   - subtitle: `Absolute value trend - cash excluded`
@@ -201,7 +203,7 @@ needed in Task 4.
   - amber line: crypto
   - subtle per-series area/glow fill under the lines
   - y-axis value labels
-  - x-axis month labels
+  - sparse chart-native x-axis month labels: first, middle, latest
 - [ ] Update the `Asset Momentum` rows to show:
   - latest value per asset class
   - latest monthly delta per asset class
@@ -240,7 +242,16 @@ Expected result: typecheck passes.
 ## Task 5: Update Progress Screen Tests
 
 - [ ] Edit `src/features/progress/__tests__/ProgressScreen.test.tsx`.
-- [ ] Add or update seeded monthly snapshots so tests cover at least six months.
+- [ ] Add or update seeded monthly snapshots so tests cover seven months. This
+  keeps `All` available while making the default selected range `6M`, matching
+  the research preview.
+- [ ] Keep the seeded chart data calm and preview-like:
+  - latest portfolio around `₹19.87L`
+  - monthly gain around `+₹58K`
+  - monthly investment around `₹45K`
+  - value move around `+₹13K`
+  - value gap around `+15.5%`
+  - asset headline led by Equity around `+4.9%`, not an extreme crypto spike
 - [ ] Add test for timeframe chips rendering.
 - [ ] Add test that each chart card has its own `3M`, `6M`, `1Y`, `All`
   timeframe chips.
@@ -250,7 +261,7 @@ Expected result: typecheck passes.
   `Value move` from stored snapshots.
 - [ ] Add test that `Asset Momentum` renders largest percentage movement and asset
   rows with exact INR movement plus allocation share shift.
-- [ ] Add test coverage for y-axis value labels and x-axis month labels.
+- [ ] Add test coverage for y-axis value labels and sparse x-axis month labels.
 - [ ] Keep existing empty and insufficient-history tests.
 
 Verification command:
@@ -356,6 +367,8 @@ Closes #122
   - `npm test`
   - `npm run doctor`
   - Android visual QA result or documented reason not run
+  - explicit comparison against `docs/design/v1-research-preview/index.html`
+    for chart copy, selected range, x-axis label density, and calm seed data
 
 Expected result: a focused PR is ready for review and will auto-close issue #122
 when merged.

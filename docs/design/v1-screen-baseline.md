@@ -163,6 +163,10 @@ Accepted chart direction:
 - cash is excluded from the asset-trend graph and tracked separately in Cash
 - charts must use stored monthly snapshots or a clear empty/no-snapshot state
 - each chart card owns its own timeframe controls
+- use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
+  Native for these charts
+- x-axis labels should be sparse and chart-native, matching the research preview
+  rhythm: first month, middle month, and latest month for longer ranges
 - `Monthly Change Breakdown` compares the selected month with the previous month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface

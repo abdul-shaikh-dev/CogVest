@@ -190,11 +190,17 @@ adb -s emulator-5554 exec-out screencap -p > .expo\progress-asset-trend-seeded.p
 Expected Progress evidence:
 
 - Value Gap chart renders Portfolio vs Invested.
-- Value Gap has y-axis INR labels, x-axis month labels, and chart-local
-  `3M`, `6M`, `1Y`, `All` chips.
+- Value Gap has y-axis INR labels, sparse chart-native x-axis month labels
+  similar to the research preview (`Dec`, `Mar`, `May` for the seeded 6M
+  window), and chart-local `3M`, `6M`, `1Y`, `All` chips.
 - Asset Momentum chart renders Equity, Debt, and Crypto lines with cash excluded.
-- Asset Momentum has y-axis INR labels, x-axis month labels, chart-local timeframe
-  chips, a legend, and per-asset insight rows.
+- Asset Momentum has y-axis INR labels, sparse chart-native x-axis month labels,
+  chart-local timeframe chips, a legend, and per-asset insight rows.
+- Seeded Progress defaults to the `6M` range while keeping `All` available.
+- Seeded chart data should stay calm and preview-like: latest Progress values
+  should be around Portfolio `₹19.87L`, Monthly gain `+₹58K`, Monthly
+  investment `₹45K`, Value move `+₹13K`, Value Gap around `+15.5%`, and Asset
+  Momentum led by Equity around `+4.9%`.
 
 ### 6. Clean Local Build Cache
 
@@ -227,7 +233,8 @@ The visual QA seed includes:
 - Cash ledger additions and withdrawals
 - Yahoo, CoinGecko, and manual quote metadata
 - Optional conviction on one opening position
-- Six monthly snapshots so Progress charts render across the `All` range
+- Seven monthly snapshots so Progress defaults to the latest `6M` range while
+  still allowing the `All` range
 
 ## Compare
 

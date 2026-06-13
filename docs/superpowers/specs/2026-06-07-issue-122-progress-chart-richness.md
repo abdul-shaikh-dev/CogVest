@@ -73,7 +73,9 @@ The agreed final visual direction is:
 - Chart 2 headline pill: the clearest recent asset percentage movement, for
   example `Equity +4.9%` or `Crypto -0.8%`.
 - Each chart card owns its own `3M`, `6M`, `1Y`, and `All` timeframe selector.
-- Both charts show y-axis value labels and x-axis month labels.
+- Both charts show y-axis value labels and sparse chart-native x-axis month
+  labels. For longer ranges, show first, middle, and latest month labels instead
+  of every month.
 - Do not include the separate `Largest move` driver banner from the exploratory
   preview.
 - Do not include the redundant mini row under the portfolio chart; the top
@@ -203,9 +205,9 @@ Visual treatment:
 
 ## Interaction
 
-Use the current `react-native-gifted-charts` line-chart implementation and
-long-press pointer support as a progressive enhancement if it works reliably on
-Android.
+Use the current `react-native-gifted-charts` line-chart implementation. Do not
+use Victory Native for the V1 Monthly Progress charts. Long-press pointer
+support is a progressive enhancement if it works reliably on Android.
 
 Requirements:
 
@@ -245,7 +247,8 @@ The Monthly Progress screen should include:
   values with the previous month without duplicating the chart data.
 - A compact month-end snapshot CTA only; the full snapshot capture flow belongs
   to issue #125.
-- Y-axis value labels and x-axis month labels for both charts.
+- Y-axis value labels and sparse chart-native x-axis month labels for both
+  charts.
 - Calm typography, premium spacing, and low-noise labels.
 - Accessible labels for range chips and chart cards.
 

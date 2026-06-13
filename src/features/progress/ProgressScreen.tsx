@@ -115,13 +115,26 @@ function formatChartAxisLabel(monthLabel: string) {
   return monthLabel.split(" ")[0] ?? monthLabel;
 }
 
+function shouldShowAxisLabel(index: number, total: number) {
+  if (total <= 3) {
+    return true;
+  }
+
+  return index === 0 || index === Math.floor((total - 1) / 2) || index === total - 1;
+}
+
 function toGiftedChartData(
   series: MonthlyProgressChartSeries,
   monthLabels: string[],
   showAxisLabels = true,
 ) {
+  const total = series.values.length;
+
   return series.values.map((value, index) => ({
-    label: showAxisLabels ? formatChartAxisLabel(monthLabels[index] ?? "") : "",
+    label:
+      showAxisLabels && shouldShowAxisLabel(index, total)
+        ? formatChartAxisLabel(monthLabels[index] ?? "")
+        : "",
     value,
   }));
 }
