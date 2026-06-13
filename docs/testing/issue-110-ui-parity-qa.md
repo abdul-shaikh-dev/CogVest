@@ -5,7 +5,8 @@ Issue: https://github.com/abdul-shaikh-dev/CogVest/issues/110
 ## Baseline
 
 - `docs/design/v1-screen-baseline.md`
-- `docs/design/issue-86-premium-preview/index.html`
+- `docs/design/v1-research-preview/index.html`
+- `docs/design/v1-ux-research-baseline.md`
 - `docs/design/figma/issue-69-v1-screens/code.js`
 
 ## Commands
@@ -21,7 +22,7 @@ Issue: https://github.com/abdul-shaikh-dev/CogVest/issues/110
 | `npm run android:smoke -- --strict` | Pass | App package found on emulator. |
 | `npm run maestro:check` | Pass | Java, adb, emulator, Maestro `2.5.1`, and app package found. |
 | `npm run maestro:test` | Pass | All flows passed after updating stale lookup flow: smoke-launch, navigation, add-trade/manual Add Holding, add-holding-lookup, holdings, cash, value-masking, persistence. |
-| `rg -n "ScreenHeader\|HeroMetric\|MetricGroup\|SectionHeader\|EmptyState\|testID\|Add Trade\|Add Holding\|Progression\|Monthly Progress\|Clear local data\|Deferred\|auto\|Select\|portfolioSeries\|assetSeries\|cashValue\|manual fallback\|quote" src/features src/components/cards app docs/design/v1-screen-baseline.md` | Pass | Static scan confirmed implemented screen structure, V1 labels, explicit lookup selection copy/tests, deferred Settings copy, quote/manual fallback copy, and Progress chart series wiring. |
+| `rg -n "ScreenHeader\|HeroMetric\|MetricGroup\|SectionHeader\|EmptyState\|testID\|Add Holding\|Monthly Progress\|Clear local data\|Deferred\|auto\|Select\|portfolioSeries\|assetSeries\|cashValue\|manual fallback\|quote" src/features src/components/cards app docs/design/v1-screen-baseline.md` | Pass | Static scan confirmed implemented screen structure, V1 labels, explicit lookup selection copy/tests, deferred Settings copy, quote/manual fallback copy, and Progress chart series wiring. |
 
 ## Screen Review
 

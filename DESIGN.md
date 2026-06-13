@@ -15,15 +15,19 @@ otherwise.
 ## Current V1 Screen Baseline
 
 The accepted V1 screen contract lives in `docs/design/v1-screen-baseline.md`.
+The current app-wide research baseline lives in
+`docs/design/v1-ux-research-baseline.md`.
 The current repo design assets are:
 
-- HTML preview: `docs/design/issue-86-premium-preview/index.html`
+- Research preview: `docs/design/v1-research-preview/index.html`
+- UX research baseline: `docs/design/v1-ux-research-baseline.md`
+- Screen contract: `docs/design/v1-screen-baseline.md`
 - Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
 
 Future UI work on Dashboard, Holdings, Add Holding, Progress, Cash, or Settings
-must preserve that baseline unless the issue explicitly updates the baseline.
-If the design changes, update the baseline doc, preview, and Figma generator
-together or log the drift.
+must preserve those baselines unless the issue explicitly updates them. If the
+design changes, update the baseline doc, preview, and Figma generator together
+or log the drift.
 
 ## 1. Visual Theme & Atmosphere
 
@@ -168,6 +172,7 @@ CogVest layouts should be readable at a glance and calm under repeated use.
 
 Rules:
 
+- Follow the screen model: answer first, evidence second, action last.
 - Lead with the most important portfolio state.
 - Place actions near the context they affect.
 - Keep screens vertically scannable.
@@ -176,6 +181,8 @@ Rules:
 - Use whitespace as a privacy and calmness tool.
 - Avoid noisy dashboards.
 - Avoid a trading-app layout with flashing prices, market tickers, or dense watchlists.
+- Keep analysis screens separate from data-capture screens unless the capture
+  action is a compact CTA into a dedicated flow.
 
 Spacing:
 
@@ -289,8 +296,13 @@ Settings:
 Monthly Progress:
 
 - Monthly progression should feel like long-term tracking, not performance pressure.
-- Show trend, monthly contribution, cash, and savings context with restraint.
-- Avoid noisy historical charts in V1 unless explicitly scoped.
+- Treat Monthly Progress as a statement-summary screen.
+- Show `Value Gap`, `Asset Momentum`, monthly change, cash, and savings context
+  with restraint.
+- Keep chart timeframe controls inside their chart cards.
+- Do not embed a full snapshot-entry form in the main Progress screen; use a
+  compact CTA into the dedicated capture flow.
+- Avoid noisy historical charts beyond the stored monthly snapshot scope.
 
 Minimal Mode:
 

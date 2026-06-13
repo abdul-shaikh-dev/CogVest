@@ -12,6 +12,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
+- hideKeyboard
 - tapOn:
     id: "symbol-input"
 - inputText: "RELIANCE"

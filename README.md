@@ -6,7 +6,7 @@ quotes, Add Holding entry, derived holdings, cash tracking, value masking, and
 lightweight conviction capture.
 
 The app is built with Expo Router, TypeScript, Zustand, MMKV, React Hook Form,
-Zod, Reanimated, and Victory Native. There is no backend, auth, cloud sync,
+Zod, Reanimated, and `react-native-gifted-charts` for V1 charts. There is no backend, auth, cloud sync,
 analytics, or push notification dependency in V1.
 
 ## Current Phase
@@ -254,7 +254,8 @@ Domain rules:
 - Maestro E2E: `docs/testing/maestro-e2e.md`
 - Android release process: `docs/release/android-release-process.md`
 - V1 release checklist: `docs/release/v1-release-checklist.md`
-- V1 UI mockup plan: `docs/design/v1-ui-mockup-plan.md`
+- V1 screen baseline: `docs/design/v1-screen-baseline.md`
+- V1 research preview: `docs/design/v1-research-preview/index.html`
 
 ## Codex Workflow
 

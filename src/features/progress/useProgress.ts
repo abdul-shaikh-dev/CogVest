@@ -8,6 +8,8 @@ import {
   calculateHoldings,
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
+  getDefaultMonthlyChartRange,
+  type MonthlyChartRange,
 } from "@/src/domain/calculations";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { MonthlySnapshot } from "@/src/types";
@@ -128,6 +130,13 @@ export function useProgress({
   const snapshot = usePortfolioSnapshot(store);
   const [formValues, setFormValues] = useState(emptyProgressFormValues);
   const [errors, setErrors] = useState<ProgressFormErrors>({});
+  const [portfolioChartRange, setPortfolioChartRange] =
+    useState<MonthlyChartRange>(() =>
+      getDefaultMonthlyChartRange(snapshot.monthlySnapshots.length),
+    );
+  const [assetChartRange, setAssetChartRange] = useState<MonthlyChartRange>(() =>
+    getDefaultMonthlyChartRange(snapshot.monthlySnapshots.length),
+  );
   const holdings = calculateHoldings({
     assets: snapshot.assets,
     openingPositions: snapshot.openingPositions,
@@ -162,7 +171,14 @@ export function useProgress({
     snapshot.monthlySnapshots,
   );
   const latestSummary = monthlySummaries[0];
-  const chartData = buildMonthlyProgressChartData(snapshot.monthlySnapshots);
+  const portfolioChartData = buildMonthlyProgressChartData(
+    snapshot.monthlySnapshots,
+    portfolioChartRange,
+  );
+  const assetChartData = buildMonthlyProgressChartData(
+    snapshot.monthlySnapshots,
+    assetChartRange,
+  );
 
   function setField(field: keyof ProgressFormValues, value: string) {
     setFormValues((currentValues) => ({
@@ -203,7 +219,8 @@ export function useProgress({
   return {
     allocation,
     cashBalance,
-    chartData,
+    assetChartData,
+    assetChartRange,
     errors,
     formValues,
     hasData,
@@ -211,11 +228,15 @@ export function useProgress({
     monthlyCashAdded,
     monthlyInvestment,
     monthlySummaries,
+    portfolioChartData,
+    portfolioChartRange,
     portfolioValue,
     preferences: snapshot.preferences,
     saveSnapshot,
     savingsRate,
+    setAssetChartRange,
     setField,
+    setPortfolioChartRange,
     totalInvested,
   };
 }

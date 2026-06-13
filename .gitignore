@@ -22,6 +22,9 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
+# local preview server state
+.preview-server/
+
 # debug
 npm-debug.*
 yarn-debug.*

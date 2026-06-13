@@ -37,7 +37,7 @@ into behaviour insights and Minimal Mode.
 - MMKV for persistence
 - Zustand for state management
 - React Native Reanimated for animations
-- Victory Native for charts
+- `react-native-gifted-charts` for current V1 Monthly Progress charts.
 - React Hook Form + Zod for forms
 
 ## Rules
@@ -78,8 +78,9 @@ into behaviour insights and Minimal Mode.
   `docs/design/figma/issue-69-v1-screens/code.js`: main tabs are Dashboard,
   Holdings, Progress, Cash, Settings; Add Holding is a secondary screen.
 - Current accepted V1 screen contract is `docs/design/v1-screen-baseline.md`.
-- Use the HTML preview in `docs/design/issue-86-premium-preview/index.html`,
-  `docs/design/v1-screen-baseline.md`, and the Figma file for V1 UI context.
+- Use `docs/design/v1-research-preview/index.html`,
+  `docs/design/v1-screen-baseline.md`, `docs/design/v1-ux-research-baseline.md`,
+  and the Figma file for V1 UI context.
 
 ## Release Gates
 - V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,
@@ -122,10 +123,7 @@ into behaviour insights and Minimal Mode.
 - Full spec: docs/cogvest-master-spec.md
 - Version roadmap: docs/roadmap/cogvest-version-roadmap.md
 - V1 spec: docs/roadmap/v1-mvp-spec.md
-- V1 prompts: docs/roadmap/v1-codex-prompts.md
-- V1 issue drafts: docs/issues/v1-issue-drafts.md
 - V1 testing plan: docs/testing/v1-testing-plan.md
 - V1 PC verification matrix: docs/testing/v1-core-flow-test-matrix.md
 - Android release process: docs/release/android-release-process.md
-- Mockups: docs/cogvest_standard_mode.png, docs/cogvest_minimal_mode.png
 - Figma roadmap mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d

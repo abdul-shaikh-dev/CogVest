@@ -3,7 +3,8 @@
 This is the accepted V1 screen contract for CogVest UI implementation work.
 Use it with `DESIGN.md` and the current design assets:
 
-- HTML preview: `docs/design/issue-86-premium-preview/index.html`
+- UX research baseline: `docs/design/v1-ux-research-baseline.md`
+- Research preview: `docs/design/v1-research-preview/index.html`
 - Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma file: `https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d`
 
@@ -20,6 +21,8 @@ CogVest V1 should feel like a premium private investment ledger:
 - readable INR values with value masking support
 - local-first trust visible in the UI
 - green used only for active state, primary action, and positive financial state
+- statement-summary screens that answer first, show evidence second, and place
+  actions last
 
 Do not add Minimal Mode, LTCG UI, historical-chart scope, import/export,
 multi-portfolio behavior, auth, cloud sync, analytics, or trading-app visuals in
@@ -53,7 +56,7 @@ Baseline structure:
 - local portfolio header with mask and refresh actions
 - large `Portfolio Value` hero
 - total gain/loss context, invested value, P&L, and return
-- compact allocation card
+- compact allocation visual or summary card
 - monthly contribution/cash context
 - calm conviction/insight placeholder only when useful
 
@@ -62,7 +65,16 @@ daily movers, dense mini-widgets, and fake market history.
 
 ## Holdings
 
-Holdings replaces Excel rows with durable mobile position cards.
+Holdings replaces Excel rows with a durable position-review screen. It should
+not repeat Dashboard's portfolio-value hero.
+
+Holdings should answer:
+
+- What do I own?
+- Which positions dominate the portfolio?
+- Which holdings need review?
+- Which holdings moved most?
+- Is the portfolio concentrated?
 
 Each holding card should expose:
 
@@ -84,24 +96,45 @@ Rules:
 - keep Search and value masking available
 - do not use spreadsheet-style columns or editable grids
 - keep allocation visible for each holding and consistent with Dashboard totals
+- keep each row/card visually durable; holdings should not look like a quick
+  trade feed
+- lead with position-review insights such as largest position, needs review,
+  top mover, weakest holding, and exposure mix
+- do not lead with total holdings value unless the issue explicitly asks for a
+  portfolio-value variant
+- keep row hierarchy compact: asset/current value/P&L first; invested value,
+  allocation, and quote state second; quantity, average cost, current price,
+  sector, and notes can live in detail/expanded states
+- useful filters include `Needs review`, `High allocation`, `Manual price`,
+  `Gainers`, `Losers`, and asset classes
 
 ## Add Holding
 
-Add Holding is lookup-first and explicit-selection-first.
+Add Holding is assisted capture, not a trading ticket. It is lookup-first and
+explicit-selection-first.
 
 Required flow:
 
 1. Search for an asset by familiar name or symbol.
 2. Show result choices.
 3. Require the user to tap `Select` before fields are autofilled.
-4. Allow manual entry as fallback.
-5. Capture classification.
-6. Capture position details.
-7. Show derived preview.
-8. Review and save.
+4. Confirm provider metadata.
+5. Allow manual entry as fallback.
+6. Capture classification.
+7. Capture position details.
+8. Show derived preview.
+9. Review and save.
 
 The UI must not auto-pick the first search result. Manual ticker/current-price
 entry is a fallback, not the primary perceived path.
+Autofilled ticker, instrument type, sector, currency, and price source must be
+reviewable before save.
+
+The visual pattern should use progressive disclosure. Do not show the full
+search-result list, all metadata, all position fields, derived preview, and
+final review as one long expanded form. After selection, collapse search into a
+selected-asset summary and continue through metadata review, position details,
+derived preview, and `Review and save`.
 
 Required concepts:
 
@@ -125,10 +158,18 @@ The V1 screen title is `Monthly Progress`; the tab label can be `Progress`.
 
 Accepted chart direction:
 
-- first graph: total portfolio value vs invested value by month
-- second graph: asset values vs months
+- first graph: `Value Gap` - total portfolio value vs invested value by month
+- second graph: `Asset Momentum` - asset values vs months
 - cash is excluded from the asset-trend graph and tracked separately in Cash
 - charts must use stored monthly snapshots or a clear empty/no-snapshot state
+- each chart card owns its own timeframe controls
+- use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
+  Native for these charts
+- x-axis labels should be sparse and chart-native, matching the research preview
+  rhythm: first month, middle month, and latest month for longer ranges
+- `Monthly Change Breakdown` compares the selected month with the previous month
+- the main Progress screen includes only a compact month-end snapshot CTA; the
+  full snapshot capture flow belongs outside the main review surface
 
 Do not fake production chart history. If snapshots are missing, show a premium
 empty state and a clear path to record a snapshot.
@@ -146,12 +187,13 @@ Monthly Progress must preserve Excel parity concepts:
 - cash context
 - savings rate
 - expense rate if tracked
-- asset class snapshot
+- selected-month asset-class change and allocation context
 
 ## Cash Ledger
 
 Cash is part of portfolio tracking but should stay visually separate from
 asset-trend history.
+Cash should feel like deployable capital and cash movement, not a placeholder.
 
 Baseline structure:
 
@@ -179,6 +221,8 @@ Baseline groups:
 
 Do not show unsupported settings as if they work. V2/V3 features may be marked
 as locked or future only if they appear at all.
+Future controls should be hidden when they add clutter without helping local-
+first trust.
 
 ## Data Consistency Rules
 
@@ -188,6 +232,8 @@ as locked or future only if they appear at all.
   local data or empty states.
 - Persist raw user records. Derive portfolio values, P&L, allocation, and
   progression summaries.
+- Monthly messages and change summaries must be deterministic templates derived
+  from stored data, not AI-generated financial advice.
 - P&L must not be communicated only by color; include signs, labels, or text.
 - All INR wealth values must participate in value masking.
 

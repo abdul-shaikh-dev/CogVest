@@ -45,6 +45,8 @@ function ensureReady() {
 
   console.log(`PASS connected device: ${connectedDevice.split("\t")[0]}`);
   console.log(`PASS app package found: ${appId}`);
+  runAdb(["reverse", "tcp:8081", "tcp:8081"]);
+  console.log("PASS adb reverse configured: tcp:8081");
 }
 
 function openDeepLink(path) {
@@ -95,6 +97,12 @@ function waitForUiMarkers(markers, options = {}) {
 
     if (latestXml.includes("Process system isn") || latestXml.includes("Close app")) {
       throw new Error("Android system ANR dialog is visible; visual QA capture is invalid.");
+    }
+
+    if (latestXml.includes("Unable to load script")) {
+      throw new Error(
+        "Android app cannot load the Metro bundle. Start Metro with `npm run start:clear`, rebuild/install the debug app with `npm run android` if needed, then rerun visual QA.",
+      );
     }
 
     const missing = markers.filter((marker) => !hasUiMarker(latestXml, marker));
@@ -153,10 +161,10 @@ function prepareArtifactDir() {
 
 try {
   ensureReady();
-  prepareArtifactDir();
 
   openDeepLink(`visual-qa-seed?token=${visualQaToken}`);
   waitForUiMarkers(["Visual QA portfolio seeded."], { timeoutMs: 25000 });
+  prepareArtifactDir();
   openDeepLink("dashboard");
   captureWhenReady("dashboard", ["Dashboard", "Portfolio value"]);
 
@@ -180,9 +188,9 @@ try {
   captureWhenReady("cash", ["Cash Ledger", "Cash balance"]);
 
   openDeepLink("progress");
-  captureWhenReady("progress", ["Monthly Progress", "Portfolio vs Invested"]);
+  captureWhenReady("progress", ["Monthly Progress", "Value Gap"]);
   scrollDown();
-  captureWhenReady("progress-assets-chart", ["Assets vs Months", "Equity", "Debt", "Crypto"]);
+  captureWhenReady("progress-assets-chart", ["Asset Momentum", "Equity", "Debt", "Crypto"]);
 
   openDeepLink("settings");
   captureWhenReady("settings", ["Settings", "Local-first controls"]);

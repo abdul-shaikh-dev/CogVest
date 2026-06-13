@@ -15,7 +15,11 @@
     "test:v1:pc": "npm run test:verify && npm run android:doctor && npm run android:smoke -- --strict",
     "maestro:check": "node scripts/maestro-check.mjs",
     "maestro:test": "node scripts/maestro-run.mjs",
-    "visual-qa:android": "node scripts/android-visual-qa.mjs"
+    "visual-qa:android": "node scripts/android-visual-qa.mjs",
+    "preview:v1:research": "node scripts/preview-server.mjs serve",
+    "preview:v1:research:start": "node scripts/preview-server.mjs start",
+    "preview:v1:research:status": "node scripts/preview-server.mjs status",
+    "preview:v1:research:stop": "node scripts/preview-server.mjs stop"
   },
   "jest": {
     "preset": "jest-expo",
@@ -51,7 +55,6 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-worklets": "0.5.1",
-    "victory-native": "^41.20.2",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
