@@ -76,6 +76,8 @@ function formatUnsignedPercentage(value: number) {
 const chartHeight = 154;
 const chartWidth = 228;
 const chartYAxisWidth = 0;
+const chartInitialSpacing = 18;
+const chartEndSpacing = 36;
 
 function getSeriesColor(label: string) {
   switch (label) {
@@ -113,9 +115,13 @@ function formatChartAxisLabel(monthLabel: string) {
   return monthLabel.split(" ")[0] ?? monthLabel;
 }
 
-function toGiftedChartData(series: MonthlyProgressChartSeries, monthLabels: string[]) {
+function toGiftedChartData(
+  series: MonthlyProgressChartSeries,
+  monthLabels: string[],
+  showAxisLabels = true,
+) {
   return series.values.map((value, index) => ({
-    label: formatChartAxisLabel(monthLabels[index] ?? ""),
+    label: showAxisLabels ? formatChartAxisLabel(monthLabels[index] ?? "") : "",
     value,
   }));
 }
@@ -125,7 +131,10 @@ function getChartSpacing(pointCount: number) {
     return chartWidth / 2;
   }
 
-  return Math.max(42, (chartWidth - 30) / (pointCount - 1));
+  return Math.max(
+    30,
+    (chartWidth - chartInitialSpacing - chartEndSpacing) / (pointCount - 1),
+  );
 }
 
 function TrendLegend({
@@ -191,7 +200,7 @@ function TrendChart({
             color2={getSeriesColor(series[1]?.label ?? "")}
             curved
             data={toGiftedChartData(series[0], monthLabels)}
-            data2={toGiftedChartData(series[1], monthLabels)}
+            data2={toGiftedChartData(series[1], monthLabels, false)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
             dataPointsRadius1={3}
@@ -199,11 +208,11 @@ function TrendChart({
             disableScroll
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
-            endSpacing={18}
+            endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={22}
+            initialSpacing={chartInitialSpacing}
             intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated
             maxValue={maxValue}
@@ -233,19 +242,19 @@ function TrendChart({
             <LineChart
             adjustToWidth
             curved
-            dataSet={series.map((item) => ({
+            dataSet={series.map((item, index) => ({
               color: getSeriesColor(item.label),
-              data: toGiftedChartData(item, monthLabels),
+              data: toGiftedChartData(item, monthLabels, index === 0),
               dataPointsColor: getSeriesColor(item.label),
               dataPointsRadius: 3,
               thickness: 3,
             }))}
             disableScroll
-            endSpacing={18}
+            endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={22}
+            initialSpacing={chartInitialSpacing}
             isAnimated
             maxValue={maxValue}
             noOfSections={3}
@@ -437,8 +446,8 @@ function ProgressTrendCards({
               ? "positive"
               : "negative"
           }
-          subtitle="Portfolio vs invested"
-          title="Value Trend"
+          subtitle="Portfolio value against invested capital"
+          title="Value Gap"
         />
         <ChartRangeSelector
           onChange={onPortfolioRangeChange}
@@ -465,8 +474,8 @@ function ProgressTrendCards({
               ? "positive"
               : "negative"
           }
-          subtitle="Equity, debt, crypto"
-          title="Asset Trend"
+          subtitle="Absolute value trend - cash excluded"
+          title="Asset Momentum"
         />
         <ChartRangeSelector
           onChange={onAssetRangeChange}

@@ -121,7 +121,7 @@ describe("ProgressScreen", () => {
     ).toBeTruthy();
   });
 
-  it("renders final value and asset trend charts without cash in asset trends", () => {
+  it("renders value gap and asset momentum charts without cash in asset trends", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -130,10 +130,10 @@ describe("ProgressScreen", () => {
       <ProgressScreen store={store} />,
     );
 
-    expect(getByText("Value Trend")).toBeTruthy();
-    expect(getByText("Portfolio vs invested")).toBeTruthy();
-    expect(getByText("Asset Trend")).toBeTruthy();
-    expect(getByText("Equity, debt, crypto")).toBeTruthy();
+    expect(getByText("Value Gap")).toBeTruthy();
+    expect(getByText("Portfolio value against invested capital")).toBeTruthy();
+    expect(getByText("Asset Momentum")).toBeTruthy();
+    expect(getByText("Absolute value trend - cash excluded")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
     expect(getByText("Crypto +12.50%")).toBeTruthy();
