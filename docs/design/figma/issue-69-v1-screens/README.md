@@ -4,6 +4,7 @@ This folder contains a deterministic Figma development plugin that creates
 editable V1 screen frames for issue #86 and the refined Issue #102 baseline.
 
 Canonical screen contract: `docs/design/v1-screen-baseline.md`.
+Research baseline: `docs/design/v1-ux-research-baseline.md`.
 
 ## Why This Exists
 
@@ -25,9 +26,12 @@ Issue #102 aligns the generated frames with the May 21, 2026 V1 mockup review:
 - Cash Ledger, Settings, and V1 States carry the local-first trust and empty
   state treatment needed for later implementation work.
 - Add Holding search requires explicit user selection before autofill.
-- Monthly Progress uses two graph directions: portfolio value vs invested value,
-  and assets vs months with cash excluded. Production must not fake chart
-  history when stored snapshots are missing.
+- Monthly Progress uses the current `Value Gap` and `Asset Momentum` direction:
+  portfolio value vs invested value, and assets vs months with cash excluded.
+  Production must not fake chart history when stored snapshots are missing.
+- The latest Progress lower-section direction uses `Monthly Change Breakdown`
+  plus a compact month-end snapshot CTA. If accepted Figma frames drift from
+  this baseline, update `code.js` or explicitly log the drift.
 
 ## How To Run
 

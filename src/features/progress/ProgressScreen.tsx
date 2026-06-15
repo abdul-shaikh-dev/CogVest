@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -7,7 +7,6 @@ import {
   AppText,
   CategoryIcon,
   EmptyState,
-  HeroMetric,
   MetricGroup,
   PremiumCard,
   ScreenContainer,
@@ -16,6 +15,12 @@ import {
   assetClassLabel,
 } from "@/src/components/common";
 import type { MonthlyProgressChartSeries } from "@/src/domain/calculations";
+import {
+  MONTHLY_CHART_RANGES,
+  type AssetChartInsight,
+  type MonthlyChartRange,
+  type MonthlyProgressChartData,
+} from "@/src/domain/calculations";
 import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, spacing } from "@/src/theme";
@@ -50,9 +55,29 @@ function formatSignedINR(value: number) {
   return value > 0 ? `+${amount}` : amount;
 }
 
+function formatSignedCompactINR(value: number) {
+  const amount = formatCompactINR(Math.abs(value));
+
+  if (value > 0) {
+    return `+${amount}`;
+  }
+
+  if (value < 0) {
+    return `-${amount}`;
+  }
+
+  return amount;
+}
+
+function formatUnsignedPercentage(value: number) {
+  return formatPercentage(value).replace("+", "");
+}
+
 const chartHeight = 154;
-const chartWidth = 240;
-const chartYAxisWidth = 42;
+const chartWidth = 228;
+const chartYAxisWidth = 0;
+const chartInitialSpacing = 18;
+const chartEndSpacing = 36;
 
 function getSeriesColor(label: string) {
   switch (label) {
@@ -71,10 +96,6 @@ function getSeriesColor(label: string) {
   }
 }
 
-function getLastValue(series: MonthlyProgressChartSeries) {
-  return series.values.at(-1) ?? 0;
-}
-
 function getChartMaxValue(series: MonthlyProgressChartSeries[]) {
   const maxValue = Math.max(...series.flatMap((item) => item.values), 1);
   const magnitude = 10 ** Math.floor(Math.log10(maxValue));
@@ -84,9 +105,36 @@ function getChartMaxValue(series: MonthlyProgressChartSeries[]) {
   return niceMultiplier * magnitude;
 }
 
-function toGiftedChartData(series: MonthlyProgressChartSeries, monthLabels: string[]) {
+function getYAxisLabels(series: MonthlyProgressChartSeries[]) {
+  const maxValue = getChartMaxValue(series);
+
+  return [maxValue, maxValue / 2, 0].map((value) => formatCompactINR(value));
+}
+
+function formatChartAxisLabel(monthLabel: string) {
+  return monthLabel.split(" ")[0] ?? monthLabel;
+}
+
+function shouldShowAxisLabel(index: number, total: number) {
+  if (total <= 3) {
+    return true;
+  }
+
+  return index === 0 || index === Math.floor((total - 1) / 2) || index === total - 1;
+}
+
+function toGiftedChartData(
+  series: MonthlyProgressChartSeries,
+  monthLabels: string[],
+  showAxisLabels = true,
+) {
+  const total = series.values.length;
+
   return series.values.map((value, index) => ({
-    label: monthLabels[index]?.replace(" 2026", "") ?? "",
+    label:
+      showAxisLabels && shouldShowAxisLabel(index, total)
+        ? formatChartAxisLabel(monthLabels[index] ?? "")
+        : "",
     value,
   }));
 }
@@ -96,7 +144,10 @@ function getChartSpacing(pointCount: number) {
     return chartWidth / 2;
   }
 
-  return Math.max(42, (chartWidth - 30) / (pointCount - 1));
+  return Math.max(
+    30,
+    (chartWidth - chartInitialSpacing - chartEndSpacing) / (pointCount - 1),
+  );
 }
 
 function TrendLegend({
@@ -145,26 +196,24 @@ function TrendChart({
 
   return (
     <View style={styles.chartBlock}>
-      <View style={styles.chartHead}>
-        {series.map((item) => (
-          <View key={item.label} style={styles.chartStat}>
-            <AppText color="secondary" variant="caption">
-              {item.label}
+      <View style={styles.chartWithAxis}>
+        <View style={styles.yAxisLabels}>
+          {getYAxisLabels(series).map((label) => (
+            <AppText key={label} color="secondary" variant="caption">
+              {label}
             </AppText>
-            <AppText weight="bold">{formatCompactINR(getLastValue(item))}</AppText>
-          </View>
-        ))}
-      </View>
-      <View style={styles.chartSurface} testID={`${testIDPrefix}-chart`}>
-        {isPortfolioChart ? (
-          <LineChart
+          ))}
+        </View>
+        <View style={styles.chartSurface} testID={`${testIDPrefix}-chart`}>
+          {isPortfolioChart ? (
+            <LineChart
             adjustToWidth
             areaChart
             color1={getSeriesColor(series[0]?.label ?? "")}
             color2={getSeriesColor(series[1]?.label ?? "")}
             curved
             data={toGiftedChartData(series[0], monthLabels)}
-            data2={toGiftedChartData(series[1], monthLabels)}
+            data2={toGiftedChartData(series[1], monthLabels, false)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
             dataPointsRadius1={3}
@@ -172,11 +221,11 @@ function TrendChart({
             disableScroll
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
-            endSpacing={12}
+            endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={10}
+            initialSpacing={chartInitialSpacing}
             intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated
             maxValue={maxValue}
@@ -201,24 +250,24 @@ function TrendChart({
             yAxisLabelWidth={chartYAxisWidth}
             yAxisTextStyle={styles.axisText}
             yAxisThickness={0}
-          />
-        ) : (
-          <LineChart
+            />
+          ) : (
+            <LineChart
             adjustToWidth
             curved
-            dataSet={series.map((item) => ({
+            dataSet={series.map((item, index) => ({
               color: getSeriesColor(item.label),
-              data: toGiftedChartData(item, monthLabels),
+              data: toGiftedChartData(item, monthLabels, index === 0),
               dataPointsColor: getSeriesColor(item.label),
               dataPointsRadius: 3,
               thickness: 3,
             }))}
             disableScroll
-            endSpacing={12}
+            endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatCompactINR(Number(label))}
             height={chartHeight}
             hideOrigin
-            initialSpacing={10}
+            initialSpacing={chartInitialSpacing}
             isAnimated
             maxValue={maxValue}
             noOfSections={3}
@@ -238,33 +287,152 @@ function TrendChart({
             yAxisLabelWidth={chartYAxisWidth}
             yAxisTextStyle={styles.axisText}
             yAxisThickness={0}
-          />
-        )}
-      </View>
-      <View style={styles.monthAxis}>
-        {monthLabels.map((month) => (
-          <AppText key={month} color="secondary" variant="caption">
-            {month}
-          </AppText>
-        ))}
+            />
+          )}
+        </View>
       </View>
       <TrendLegend series={series} testIDPrefix={testIDPrefix} />
     </View>
   );
 }
 
-function ProgressTrendCards({
-  assetSeries,
-  hasEnoughHistory,
-  monthLabels,
-  portfolioSeries,
+function ChartRangeSelector({
+  onChange,
+  selectedRange,
+  testIDPrefix,
 }: {
-  assetSeries: MonthlyProgressChartSeries[];
-  hasEnoughHistory: boolean;
-  monthLabels: string[];
-  portfolioSeries: MonthlyProgressChartSeries[];
+  onChange: (range: MonthlyChartRange) => void;
+  selectedRange: MonthlyChartRange;
+  testIDPrefix: string;
 }) {
-  if (!hasEnoughHistory) {
+  return (
+    <View style={styles.rangeSelector}>
+      {MONTHLY_CHART_RANGES.map((range) => {
+        const isSelected = selectedRange === range;
+
+        return (
+          <Pressable
+            accessibilityLabel={`Show ${range} monthly progress charts`}
+            accessibilityRole="button"
+            key={range}
+            onPress={() => onChange(range)}
+            style={[
+              styles.rangeChip,
+              isSelected ? styles.rangeChipSelected : null,
+            ]}
+            testID={`${testIDPrefix}-${range}`}
+          >
+            <AppText
+              color={isSelected ? "inverse" : "secondary"}
+              variant="caption"
+              weight="bold"
+            >
+              {range}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function ChartCardHeader({
+  actionLabel,
+  actionTone = "positive",
+  subtitle,
+  title,
+}: {
+  actionLabel?: string;
+  actionTone?: "negative" | "positive";
+  subtitle: string;
+  title: string;
+}) {
+  return (
+    <View style={styles.chartCardHeader}>
+      <View style={styles.snapshotCopy}>
+        <AppText variant="title" weight="bold">
+          {title}
+        </AppText>
+        <AppText color="secondary" variant="caption">
+          {subtitle}
+        </AppText>
+      </View>
+      {actionLabel ? (
+        <View
+          style={[
+            styles.chartPill,
+            actionTone === "negative" ? styles.chartPillNegative : null,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            weight="bold"
+            style={
+              actionTone === "negative" ? styles.lossText : styles.gainText
+            }
+          >
+            {actionLabel}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function AssetInsightRows({ insights }: { insights: AssetChartInsight[] }) {
+  return (
+    <View style={styles.assetInsightGrid}>
+      {insights.map((item) => (
+        <View key={item.label} style={styles.assetInsightRow}>
+          <View style={styles.snapshotCopy}>
+            <AppText weight="bold">{item.label}</AppText>
+            <AppText color="secondary" variant="caption">
+              {`${formatUnsignedPercentage(item.allocationPct)} · share ${formatPercentage(
+                item.allocationShiftPct,
+              )}`}
+            </AppText>
+          </View>
+          <View style={styles.assetValue}>
+            <AppText
+              weight="bold"
+              style={item.latestDelta >= 0 ? styles.gainText : styles.lossText}
+            >
+              {formatSignedCompactINR(item.latestDelta)}
+            </AppText>
+            <AppText
+              variant="caption"
+              style={
+                item.latestDeltaPct >= 0 ? styles.gainText : styles.lossText
+              }
+            >
+              {formatPercentage(item.latestDeltaPct)}
+            </AppText>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ProgressTrendCards({
+  assetChartData,
+  assetChartRange,
+  onAssetRangeChange,
+  onPortfolioRangeChange,
+  portfolioChartData,
+  portfolioChartRange,
+}: {
+  assetChartData: MonthlyProgressChartData;
+  assetChartRange: MonthlyChartRange;
+  onAssetRangeChange: (range: MonthlyChartRange) => void;
+  onPortfolioRangeChange: (range: MonthlyChartRange) => void;
+  portfolioChartData: MonthlyProgressChartData;
+  portfolioChartRange: MonthlyChartRange;
+}) {
+  if (
+    !portfolioChartData.hasEnoughHistory &&
+    !assetChartData.hasEnoughHistory
+  ) {
     return (
       <PremiumCard>
         <SectionHeader title="Trend history is still building" />
@@ -280,20 +448,59 @@ function ProgressTrendCards({
   return (
     <>
       <PremiumCard>
-        <SectionHeader title="Portfolio vs Invested" actionLabel="Value gap" />
+        <ChartCardHeader
+          actionLabel={
+            portfolioChartData.portfolioInsight
+              ? formatPercentage(portfolioChartData.portfolioInsight.valueGapPct)
+              : undefined
+          }
+          actionTone={
+            (portfolioChartData.portfolioInsight?.valueGap ?? 0) >= 0
+              ? "positive"
+              : "negative"
+          }
+          subtitle="Portfolio value against invested capital"
+          title="Value Gap"
+        />
+        <ChartRangeSelector
+          onChange={onPortfolioRangeChange}
+          selectedRange={portfolioChartRange}
+          testIDPrefix="portfolio-monthly-chart-range"
+        />
         <TrendChart
-          monthLabels={monthLabels}
-          series={portfolioSeries}
+          monthLabels={portfolioChartData.monthLabels}
+          series={portfolioChartData.portfolioSeries}
           testIDPrefix="portfolio-trend"
         />
       </PremiumCard>
       <PremiumCard>
-        <SectionHeader title="Assets vs Months" actionLabel="Ex cash" />
+        <ChartCardHeader
+          actionLabel={
+            assetChartData.largestAssetMove
+              ? `${assetChartData.largestAssetMove.label} ${formatPercentage(
+                  assetChartData.largestAssetMove.latestDeltaPct,
+                )}`
+              : undefined
+          }
+          actionTone={
+            (assetChartData.largestAssetMove?.latestDeltaPct ?? 0) >= 0
+              ? "positive"
+              : "negative"
+          }
+          subtitle="Absolute value trend - cash excluded"
+          title="Asset Momentum"
+        />
+        <ChartRangeSelector
+          onChange={onAssetRangeChange}
+          selectedRange={assetChartRange}
+          testIDPrefix="asset-monthly-chart-range"
+        />
         <TrendChart
-          monthLabels={monthLabels}
-          series={assetSeries}
+          monthLabels={assetChartData.monthLabels}
+          series={assetChartData.assetSeries}
           testIDPrefix="asset-trend"
         />
+        <AssetInsightRows insights={assetChartData.assetInsights} />
       </PremiumCard>
     </>
   );
@@ -318,47 +525,44 @@ export function ProgressScreen({
 
         {progress.latestSummary ? (
           <>
-            <HeroMetric
-              label="Portfolio value"
-              masked={progress.preferences.maskWealthValues}
-              subValue={`${formatSignedINR(
-                progress.latestSummary.monthlyGain,
-              )} (${formatPercentage(progress.latestSummary.monthlyGainPct)})`}
-              subValueTone={progress.latestSummary.monthlyGain >= 0 ? "positive" : "negative"}
-              value={formatINR(progress.latestSummary.snapshot.portfolioValue)}
-            />
-
             <MetricGroup
               metrics={[
                 {
-                  label: "Invested",
+                  label: "Portfolio",
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatCompactINR(
+                    progress.latestSummary.snapshot.portfolioValue,
+                  ),
+                },
+                {
+                  label: "Monthly gain",
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatSignedCompactINR(progress.latestSummary.monthlyGain),
+                },
+                {
+                  label: "Monthly investment",
                   masked: progress.preferences.maskWealthValues,
                   value: formatCompactINR(
                     progress.latestSummary.snapshot.monthlyInvestment,
                   ),
                 },
                 {
-                  label: "Savings",
-                  value:
-                    progress.latestSummary.savingsRate === null
-                      ? "Not enough data"
-                      : formatPercentage(progress.latestSummary.savingsRate),
-                },
-                {
-                  label: "Expense",
-                  value:
-                    progress.latestSummary.expenseRate === null
-                      ? "Not enough data"
-                      : formatPercentage(progress.latestSummary.expenseRate),
+                  label: "Value move",
+                  masked: progress.preferences.maskWealthValues,
+                  value: formatSignedCompactINR(
+                    progress.portfolioChartData.portfolioInsight?.valueMove ?? 0,
+                  ),
                 },
               ]}
             />
 
             <ProgressTrendCards
-              assetSeries={progress.chartData.assetSeries}
-              hasEnoughHistory={progress.chartData.hasEnoughHistory}
-              monthLabels={progress.chartData.monthLabels}
-              portfolioSeries={progress.chartData.portfolioSeries}
+              assetChartData={progress.assetChartData}
+              assetChartRange={progress.assetChartRange}
+              onAssetRangeChange={progress.setAssetChartRange}
+              onPortfolioRangeChange={progress.setPortfolioChartRange}
+              portfolioChartData={progress.portfolioChartData}
+              portfolioChartRange={progress.portfolioChartRange}
             />
 
             <PremiumCard>
@@ -441,10 +645,12 @@ export function ProgressScreen({
             </PremiumCard>
 
             <ProgressTrendCards
-              assetSeries={progress.chartData.assetSeries}
-              hasEnoughHistory={progress.chartData.hasEnoughHistory}
-              monthLabels={progress.chartData.monthLabels}
-              portfolioSeries={progress.chartData.portfolioSeries}
+              assetChartData={progress.assetChartData}
+              assetChartRange={progress.assetChartRange}
+              onAssetRangeChange={progress.setAssetChartRange}
+              onPortfolioRangeChange={progress.setPortfolioChartRange}
+              portfolioChartData={progress.portfolioChartData}
+              portfolioChartRange={progress.portfolioChartRange}
             />
 
             <PremiumCard>
@@ -614,16 +820,23 @@ const styles = StyleSheet.create({
   chartBlock: {
     gap: spacing.cardInner,
   },
-  chartHead: {
+  chartCardHeader: {
+    alignItems: "flex-start",
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.cardInner,
+    justifyContent: "space-between",
   },
-  chartStat: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 16,
-    flex: 1,
-    gap: spacing.xs,
-    padding: spacing.sm,
+  chartPill: {
+    backgroundColor: "rgba(52,199,89,0.12)",
+    borderColor: "rgba(52,199,89,0.20)",
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  chartPillNegative: {
+    backgroundColor: "rgba(255,69,58,0.12)",
+    borderColor: "rgba(255,69,58,0.22)",
   },
   chartLegend: {
     flexDirection: "row",
@@ -648,9 +861,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
   },
-  monthAxis: {
+  rangeChip: {
+    alignItems: "center",
+    borderRadius: 999,
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  rangeChipSelected: {
+    backgroundColor: colors.primary,
+  },
+  rangeSelector: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: colors.border.subtle,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: spacing.xs,
+    padding: spacing.xs,
   },
   snapshotCopy: {
     flex: 1,
@@ -663,6 +890,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   chartSurface: {
+    flex: 1,
     backgroundColor: "#111113",
     borderColor: colors.border.subtle,
     borderRadius: 20,
@@ -676,5 +904,34 @@ const styles = StyleSheet.create({
   axisText: {
     color: colors.text.secondary,
     fontSize: 11,
+  },
+  chartWithAxis: {
+    alignItems: "stretch",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  yAxisLabels: {
+    justifyContent: "space-between",
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+    width: 30,
+  },
+  assetInsightGrid: {
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.cardInner,
+    paddingTop: spacing.cardInner,
+  },
+  assetInsightRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.cardInner,
+    justifyContent: "space-between",
+  },
+  gainText: {
+    color: colors.profit,
+  },
+  lossText: {
+    color: colors.loss,
   },
 });

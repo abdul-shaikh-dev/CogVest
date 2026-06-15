@@ -12,8 +12,9 @@ The user can add holdings quickly, see current holdings and portfolio value in I
 
 - App scaffold with Expo Router tabs.
 - Theme, typography, spacing, and reusable common components.
-- V1 screen baseline from `docs/design/v1-screen-baseline.md`, the HTML
-  preview, and the Figma generator.
+- V1 screen baseline from `docs/design/v1-screen-baseline.md`,
+  `docs/design/v1-ux-research-baseline.md`, the HTML previews, and the Figma
+  generator.
 - Domain types for assets, trades, cash, quotes, holdings, preferences.
 - Pure domain calculations for holdings, allocation, portfolio total, day change, formatters, and basic conviction readiness.
 - Zustand store with MMKV persistence for raw local data.
@@ -61,9 +62,17 @@ Key implementation rules:
 - Dashboard, Holdings, Progress, Cash, and Settings are the primary tabs.
 - Add Holding is a secondary flow launched from Dashboard/Holdings.
 - Add Holding search must require explicit user selection before autofill.
-- Holdings must show allocation context per holding without table-like density.
-- Monthly Progress uses stored snapshots for portfolio value vs invested value
-  and assets vs months; cash is excluded from the asset-trend graph.
+- Holdings must act as position review, not a repeated Dashboard value summary.
+  It should show largest position, needs-review state, movers, exposure mix,
+  and compact holding rows without table-like density.
+- Add Holding must use assisted-capture progressive disclosure: selected asset,
+  reviewable provider metadata, position details, derived preview, and
+  review-before-save.
+- Monthly Progress uses stored snapshots for `Value Gap` portfolio-vs-invested
+  and `Asset Momentum` asset-vs-months charts; cash is excluded from the
+  asset-trend graph.
+- Monthly Progress is a statement-summary screen. Keep full snapshot capture in
+  its own flow or bottom sheet, not as a large embedded form.
 - Production screens must not fake portfolio or chart history when data is
   missing.
 

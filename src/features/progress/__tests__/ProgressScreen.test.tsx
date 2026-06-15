@@ -34,6 +34,20 @@ const maySnapshot: MonthlySnapshot = {
   salary: 160000,
 };
 
+const marchSnapshot: MonthlySnapshot = {
+  cashValue: 150000,
+  cryptoValue: 110000,
+  debtValue: 305000,
+  equityValue: 910000,
+  id: "snapshot-2026-03",
+  investedValue: 1295000,
+  month: "2026-03",
+  monthlyExpense: 54000,
+  monthlyInvestment: 50000,
+  portfolioValue: 1475000,
+  salary: 170000,
+};
+
 describe("ProgressScreen", () => {
   it("shows the no-snapshot state before monthly records exist", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -86,10 +100,10 @@ describe("ProgressScreen", () => {
     const { getAllByText, getByText } = render(<ProgressScreen store={store} />);
 
     expect(getAllByText("₹13,85,000.00").length).toBeGreaterThan(0);
-    expect(getByText("+₹1,25,000.00 (+9.92%)")).toBeTruthy();
+    expect(getByText("₹13.85L")).toBeTruthy();
+    expect(getByText("+₹1.25L")).toBeTruthy();
     expect(getByText("₹60K")).toBeTruthy();
-    expect(getByText("+37.50%")).toBeTruthy();
-    expect(getByText("+25.00%")).toBeTruthy();
+    expect(getByText("+₹65K")).toBeTruthy();
     expect(getAllByText("Equity").length).toBeGreaterThan(0);
     expect(getByText("₹8,80,000.00")).toBeTruthy();
     expect(getByText("May close")).toBeTruthy();
@@ -107,25 +121,53 @@ describe("ProgressScreen", () => {
     ).toBeTruthy();
   });
 
-  it("renders stored-snapshot portfolio and asset graphs without cash in asset trends", () => {
+  it("renders value gap and asset momentum charts without cash in asset trends", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
-    const { getAllByText, getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
-    expect(getByText("Portfolio vs Invested")).toBeTruthy();
-    expect(getByText("Assets vs Months")).toBeTruthy();
-    expect(getAllByText("Apr 2026").length).toBeGreaterThanOrEqual(2);
-    expect(getAllByText("May 2026").length).toBeGreaterThanOrEqual(2);
+    expect(getByText("Value Gap")).toBeTruthy();
+    expect(getByText("Portfolio value against invested capital")).toBeTruthy();
+    expect(getByText("Asset Momentum")).toBeTruthy();
+    expect(getByText("Absolute value trend - cash excluded")).toBeTruthy();
+    expect(queryByText("Apr 2026")).toBeNull();
+    expect(getByText("+30.66%")).toBeTruthy();
+    expect(getByText("Crypto +12.50%")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
     expect(getByTestId("asset-trend-Equity")).toBeTruthy();
     expect(getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
     expect(queryByTestId("asset-trend-Cash")).toBeNull();
+  });
+
+  it("renders chart-local timeframe chips and updates selected range", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByTestId, queryByText } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    expect(getByTestId("portfolio-monthly-chart-range-3M")).toBeTruthy();
+    expect(getByTestId("portfolio-monthly-chart-range-6M")).toBeTruthy();
+    expect(getByTestId("portfolio-monthly-chart-range-1Y")).toBeTruthy();
+    expect(getByTestId("portfolio-monthly-chart-range-All")).toBeTruthy();
+    expect(getByTestId("asset-monthly-chart-range-3M")).toBeTruthy();
+    expect(getByTestId("asset-monthly-chart-range-6M")).toBeTruthy();
+    expect(getByTestId("asset-monthly-chart-range-1Y")).toBeTruthy();
+    expect(getByTestId("asset-monthly-chart-range-All")).toBeTruthy();
+
+    fireEvent.press(getByTestId("portfolio-monthly-chart-range-3M"));
+    fireEvent.press(getByTestId("asset-monthly-chart-range-3M"));
+
+    expect(queryByText("Mar 2026")).toBeNull();
   });
 
   it("updates an existing month instead of creating duplicate snapshots", () => {

@@ -142,6 +142,11 @@ run `npm run android:smoke -- --strict`. If Gradle signing is not configured,
 use the local dev build path (`npm run android`) for emulator verification and
 record the release APK blocker as a defect.
 
+For seeded visual QA or chart inspection, use the seed-enabled bundled APK flow
+in `docs/testing/seeded-visual-qa.md`. That flow documents the
+`EXPO_PUBLIC_COGVEST_VISUAL_QA=1` build, visual QA deep link, emulator
+screenshot capture, and Windows Gradle/Kotlin fallback commands.
+
 ## Install a Preview APK
 
 APK files can be installed locally on an emulator:

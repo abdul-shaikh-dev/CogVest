@@ -5,9 +5,10 @@
 - GitHub issue: #122, `[V1] Make Monthly Progress charts richer and more useful`
 - Future follow-up: #129, `[Future] Add custom date-range filtering for Monthly Progress charts`
 - Design baseline: `docs/design/v1-screen-baseline.md`
-- Chart exploration: `docs/design/issue-116-progress-chart-options/index.html`
-- Final chart preview: `docs/design/issue-122-chart-richness-options/option-b-final.html`
+- Current V1 research preview: `docs/design/v1-research-preview/index.html`
+- Current V1 research preview notes: `docs/design/v1-research-preview/README.md`
 - Design rules: `DESIGN.md`
+- App-wide UX research baseline: `docs/design/v1-ux-research-baseline.md`
 
 ## Problem
 
@@ -46,9 +47,9 @@ useful, not decorative.
 
 ## Product Direction
 
-The chart section should optimize for trend diagnosis using the final Option B
-direction from the preview phase: Option C's useful information density, reduced
-into a calmer V1 screen.
+The chart section should optimize for trend diagnosis using the final refined
+Option B direction from the preview phase: Option C's useful information
+density, reduced into a calmer V1 statement-summary screen.
 
 The user should be able to look at Monthly Progress and quickly understand:
 
@@ -64,19 +65,23 @@ The agreed final visual direction is:
 
 - Top summary row: `Portfolio`, `Monthly gain`, `Monthly investment`, and
   `Value move`.
-- Chart 1 card title: `Value Trend`.
-- Chart 1 subtitle: `Portfolio vs invested`.
+- Chart 1 card title: `Value Gap`.
+- Chart 1 subtitle: `Portfolio value against invested capital`.
 - Chart 1 headline pill: a signed value-gap percentage, for example `+15.8%`.
-- Chart 2 card title: `Asset Trend`.
-- Chart 2 subtitle: `Equity, debt, crypto`.
-- Chart 2 headline pill: the largest asset percentage movement, for example
-  `Equity +4.9%`.
+- Chart 2 card title: `Asset Momentum`.
+- Chart 2 subtitle: `Absolute value trend - cash excluded`.
+- Chart 2 headline pill: the clearest recent asset percentage movement, for
+  example `Equity +4.9%` or `Crypto -0.8%`.
 - Each chart card owns its own `3M`, `6M`, `1Y`, and `All` timeframe selector.
-- Both charts show y-axis value labels and x-axis month labels.
+- Both charts show y-axis value labels and sparse chart-native x-axis month
+  labels. For longer ranges, show first, middle, and latest month labels instead
+  of every month.
 - Do not include the separate `Largest move` driver banner from the exploratory
   preview.
 - Do not include the redundant mini row under the portfolio chart; the top
   summary and chart pill already carry that information.
+- Keep deterministic explanatory copy near the charts. Do not generate
+  investment advice or AI-written market commentary in V1.
 
 ## Data Rules
 
@@ -117,16 +122,16 @@ honestly. Do not pad or fake missing months.
 
 Chart 1 title:
 
-`Value Trend`
+`Value Gap`
 
 Subtitle:
 
-`Portfolio vs invested`
+`Portfolio value against invested capital`
 
 Series:
 
-- Portfolio value: white line.
-- Invested value: CogVest green line.
+- Portfolio value: CogVest green line.
+- Invested value: subdued white/neutral line.
 
 Static insight context:
 
@@ -161,11 +166,11 @@ Visual treatment:
 
 Chart 2 title:
 
-`Asset Trend`
+`Asset Momentum`
 
 Subtitle:
 
-`Equity, debt, crypto`
+`Absolute value trend - cash excluded`
 
 Series:
 
@@ -200,8 +205,9 @@ Visual treatment:
 
 ## Interaction
 
-Use `react-native-gifted-charts` long-press pointer support as a progressive
-enhancement if it works reliably on Android.
+Use the current `react-native-gifted-charts` line-chart implementation. Do not
+use Victory Native for the V1 Monthly Progress charts. Long-press pointer
+support is a progressive enhancement if it works reliably on Android.
 
 Requirements:
 
@@ -237,7 +243,12 @@ The Monthly Progress screen should include:
   `Value move`.
 - A portfolio chart card with static insight context above or below the chart.
 - An asset chart card with static insight context above or below the chart.
-- Y-axis value labels and x-axis month labels for both charts.
+- A lower `Monthly Change Breakdown` section that compares selected month
+  values with the previous month without duplicating the chart data.
+- A compact month-end snapshot CTA only; the full snapshot capture flow belongs
+  to issue #125.
+- Y-axis value labels and sparse chart-native x-axis month labels for both
+  charts.
 - Calm typography, premium spacing, and low-noise labels.
 - Accessible labels for range chips and chart cards.
 
@@ -294,9 +305,9 @@ Capture or review Android visual evidence for:
 ## Acceptance Criteria
 
 - Monthly Progress has richer chart context while staying calm and premium.
-- `Value Trend` clearly shows portfolio vs invested, signed value-gap
+- `Value Gap` clearly shows portfolio vs invested, signed value-gap
   percentage, y-axis values, month labels, and value move context.
-- `Asset Trend` clearly shows Equity, Debt, and Crypto trends without cash,
+- `Asset Momentum` clearly shows Equity, Debt, and Crypto trends without cash,
   including largest percentage movement and exact INR movement rows.
 - Timeframe presets work and do not fake missing history.
 - Timeframe presets live inside each chart card.
@@ -305,3 +316,16 @@ Capture or review Android visual evidence for:
 - All chart values come from stored monthly snapshots.
 - Typecheck, tests, and Expo doctor pass or failures are documented.
 - Android visual QA is run when emulator access is available.
+
+## Known Gaps — Deferred (not in #122 scope)
+
+Identified 2026-06-13 during chart review. Out of scope for #122 and not owned by
+any current issue; recorded here for a future chart/polish issue:
+
+- Value masking does not extend to the chart y-axis. The axis labels call
+  `formatCompactINR` directly (`getYAxisLabels` / `formatYLabel` in
+  `ProgressScreen.tsx`), so INR magnitudes stay visible even when
+  `maskWealthValues` is on. The metric cards mask correctly; the chart axis does
+  not.
+- Chart animation (`isAnimated` on the gifted-charts `LineChart`) is not gated on
+  the OS reduced-motion setting, which DESIGN.md §7 requires.

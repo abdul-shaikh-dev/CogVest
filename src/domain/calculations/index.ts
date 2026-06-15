@@ -1,9 +1,14 @@
 export {
   buildMonthlyProgressChartData,
+  getDefaultMonthlyChartRange,
+  MONTHLY_CHART_RANGES,
 } from "./monthlyProgressCharts";
 export type {
+  AssetChartInsight,
+  MonthlyChartRange,
   MonthlyProgressChartData,
   MonthlyProgressChartSeries,
+  PortfolioChartInsight,
 } from "./monthlyProgressCharts";
 export {
   calculateAllocation,
