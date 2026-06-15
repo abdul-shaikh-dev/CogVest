@@ -316,3 +316,16 @@ Capture or review Android visual evidence for:
 - All chart values come from stored monthly snapshots.
 - Typecheck, tests, and Expo doctor pass or failures are documented.
 - Android visual QA is run when emulator access is available.
+
+## Known Gaps — Deferred (not in #122 scope)
+
+Identified 2026-06-13 during chart review. Out of scope for #122 and not owned by
+any current issue; recorded here for a future chart/polish issue:
+
+- Value masking does not extend to the chart y-axis. The axis labels call
+  `formatCompactINR` directly (`getYAxisLabels` / `formatYLabel` in
+  `ProgressScreen.tsx`), so INR magnitudes stay visible even when
+  `maskWealthValues` is on. The metric cards mask correctly; the chart axis does
+  not.
+- Chart animation (`isAnimated` on the gifted-charts `LineChart`) is not gated on
+  the OS reduced-motion setting, which DESIGN.md §7 requires.

@@ -39,7 +39,7 @@
           radial-gradient(circle at 84% 20%, rgba(10, 132, 255, 0.09), transparent 30rem),
           #050505;
         font-family:
-          "SF Pro Display", "Aptos", "Segoe UI", system-ui, sans-serif;
+          Roboto, "Segoe UI", system-ui, sans-serif;
       }
 
       .page {
@@ -187,7 +187,7 @@
         margin: 0 0 5px;
         font-size: 31px;
         line-height: 0.98;
-        letter-spacing: -0.055em;
+        letter-spacing: normal;
       }
 
       .subtitle {
@@ -222,7 +222,12 @@
       .card + .card,
       .grid + .card,
       .chips + .card,
-      .section-title + .card {
+      .section-title + .card,
+      .section-title + .list,
+      .selected-asset + .card,
+      .story + .card,
+      .list + .card,
+      .hero + .grid {
         margin-top: 12px;
       }
 
@@ -233,9 +238,7 @@
       }
 
       .hero.statement {
-        background:
-          radial-gradient(circle at 88% 12%, rgba(52, 199, 89, 0.12), transparent 7rem),
-          linear-gradient(180deg, #202022, #171719);
+        background: linear-gradient(180deg, #202022, #171719);
       }
 
       .kicker {
@@ -249,7 +252,7 @@
         margin: 0;
         font-size: 42px;
         line-height: 0.95;
-        letter-spacing: -0.07em;
+        letter-spacing: normal;
       }
 
       .hero-row,
@@ -314,7 +317,7 @@
         display: block;
         margin-top: 5px;
         font-size: 15px;
-        letter-spacing: -0.03em;
+        letter-spacing: normal;
       }
 
       .section-title {
@@ -327,7 +330,7 @@
       .section-title h2 {
         margin: 0;
         font-size: 18px;
-        letter-spacing: -0.035em;
+        letter-spacing: normal;
       }
 
       .section-title a {
@@ -500,16 +503,14 @@
       }
 
       .insight-card.accent {
-        background:
-          radial-gradient(circle at 88% 10%, rgba(52, 199, 89, 0.11), transparent 6rem),
-          var(--surface);
+        background: var(--surface);
       }
 
       .insight-card strong {
         display: block;
         margin-top: 8px;
         font-size: 20px;
-        letter-spacing: -0.045em;
+        letter-spacing: normal;
       }
 
       .insight-card .gain,
@@ -517,7 +518,7 @@
         display: block;
         margin-top: 8px;
         font-size: 20px;
-        letter-spacing: -0.045em;
+        letter-spacing: normal;
       }
 
       .exposure-card {
@@ -841,9 +842,7 @@
         gap: 12px;
         align-items: center;
         border-radius: var(--radius-xl);
-        background:
-          radial-gradient(circle at 92% 14%, rgba(52, 199, 89, 0.12), transparent 7rem),
-          var(--surface);
+        background: var(--surface);
         padding: 15px;
       }
 
@@ -944,9 +943,7 @@
 
       .story {
         border-radius: var(--radius-xl);
-        background:
-          radial-gradient(circle at 88% 18%, rgba(52, 199, 89, 0.16), transparent 8rem),
-          var(--surface);
+        background: var(--surface);
         padding: 16px;
       }
 
@@ -1177,7 +1174,7 @@
                   <p class="kicker">Portfolio value</p>
                   <h3 class="hero-value">₹19.87L</h3>
                   <div class="hero-row">
-                    <span class="pill">+15.8% ahead</span>
+                    <span class="pill">+15.5% ahead</span>
                     <span class="small-label">vs invested capital</span>
                   </div>
                   <div class="metric-grid">
@@ -1342,8 +1339,8 @@
                   <div class="mini-card"><span class="small-label">Value move</span><strong class="gain">+₹13K</strong></div>
                 </div>
                 <section class="chart-card" style="margin-top: 12px">
-                  <div class="chart-head"><div><h3>Value Gap</h3><p>Portfolio value against invested capital</p></div><div class="range"><span>3M</span><span class="on">6M</span><span>1Y</span></div></div>
-                  <span class="pill">+15.8%</span>
+                  <div class="chart-head"><div><h3>Value Gap</h3><p>Portfolio value against invested capital</p></div><div class="range"><span>3M</span><span class="on">6M</span><span>1Y</span><span>All</span></div></div>
+                  <span class="pill">+15.5%</span>
                   <svg class="chart" viewBox="0 0 320 132" role="img" aria-label="Portfolio and invested line chart">
                     <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#34c759" stop-opacity=".35"/><stop offset="1" stop-color="#34c759" stop-opacity="0"/></linearGradient></defs>
                     <path class="axis-line" d="M32 32 H306 M32 62 H306 M32 92 H306"/>
@@ -1356,7 +1353,7 @@
                   <div class="legend"><span><b style="color:var(--green)">●</b> Portfolio</span><span><b>●</b> Invested</span></div>
                 </section>
                 <section class="chart-card" style="margin-top: 12px">
-                  <div class="chart-head"><div><h3>Asset Momentum</h3><p>Absolute value trend - cash excluded</p></div><div class="range"><span>3M</span><span class="on">6M</span><span>1Y</span></div></div>
+                  <div class="chart-head"><div><h3>Asset Momentum</h3><p>Absolute value trend - cash excluded</p></div><div class="range"><span>3M</span><span class="on">6M</span><span>1Y</span><span>All</span></div></div>
                   <span class="pill">Equity +4.9%</span>
                   <svg class="chart" viewBox="0 0 320 132" role="img" aria-label="Asset class momentum line chart">
                     <path class="axis-line" d="M32 34 H306 M32 66 H306 M32 98 H306"/>
@@ -1395,15 +1392,15 @@
               <div class="content">
                 <div class="top"><div><h2 class="title">Cash Ledger</h2><p class="subtitle">Manual ledger - local only</p></div><span class="icon-btn add-icon"></span></div>
                 <section class="hero">
-                  <p class="kicker">Available cash</p>
-                  <h3 class="hero-value">₹1.20L</h3>
-                  <div class="hero-row"><span class="pill neutral">Cash balance ₹3.25L</span><span class="pill">32.8% saved</span></div>
+                  <p class="kicker">Cash balance</p>
+                  <h3 class="hero-value">₹3.25L</h3>
+                  <div class="hero-row"><span class="pill">+₹70K added</span><span class="small-label">net cash movement this month</span></div>
                 </section>
                 <div class="grid">
                   <div class="mini-card"><span class="small-label">Added</span><strong>₹70K</strong></div>
                   <div class="mini-card"><span class="small-label">Invested</span><strong>₹45K</strong></div>
-                  <div class="mini-card"><span class="small-label">Transferred</span><strong>₹15K</strong></div>
-                  <div class="mini-card"><span class="small-label">Reserve</span><strong>₹1.05L</strong></div>
+                  <div class="mini-card"><span class="small-label">Available</span><strong>₹1.20L</strong></div>
+                  <div class="mini-card"><span class="small-label">Savings</span><strong>32.8%</strong></div>
                 </div>
                 <div class="section-title"><h2>Recent movement</h2><a href="#">View all</a></div>
                 <div class="list">

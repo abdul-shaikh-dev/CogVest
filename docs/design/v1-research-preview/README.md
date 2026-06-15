@@ -199,3 +199,67 @@ Settings should reinforce local-first trust:
   - assisted-capture form sections
 - Keep all business calculations in `src/domain/`.
 - Use stored local records or honest empty states in production.
+
+## Implementation Sync — 2026-06-13
+
+This preview was checked against the live Expo app (`src/`). DESIGN.md remains
+the canonical reference for this preview.
+
+Aligned in the preview:
+
+- Replaced the iOS-first font stack (`"SF Pro Display"`) with an Android-first
+  stack (`Roboto`, then host fallbacks). The app loads no custom font and
+  renders in Roboto on Android (`AppText` sets no `fontFamily`).
+- Relaxed the aggressive negative heading tracking on in-screen type to
+  `normal`, matching the app's calm numerals (`AppText` base
+  `letterSpacing: 0.1`, no negative tracking).
+
+Logged drift — app-side items, NOT changed in this preview:
+
+- Brand/CTA green: this preview and DESIGN.md use Primary Green `#34C759` for
+  CTA, active tab, and selected state. The app currently implements those with
+  `colors.primary = #2E7D52` and reserves `#34C759` for gains only
+  (`src/theme/index.ts`). Code vs DESIGN.md conflict — resolve in the app.
+- Touch targets below the 48 dp minimum (DESIGN.md §10): `IconButton` is 42×42
+  (`src/components/common/Premium.tsx`), and the Progress range chips and
+  Holdings filter chips are ~32-40 dp.
+- Press feedback uses opacity, not a Material ripple/state layer.
+- `android.predictiveBackGestureEnabled: false` in `app.json`.
+
+## Issue Alignment — 2026-06-13
+
+Reviewed against the open V1 issues. The preview now reflects these explicit specs:
+
+- Progress (#122): chart range options are `3M / 6M / 1Y / All` with `6M`
+  default — added the previously-missing `All`. `Value Gap` headline corrected
+  from `+15.8%` to `+15.5%` to match #122's seeded target and the preview's own
+  figures (₹2.66L gain ÷ ₹17.21L invested = +15.5%). The Dashboard "ahead" pill
+  was updated to the same value for cross-screen consistency.
+- Cash Ledger (#126): the hero now leads with `Cash balance` and monthly cash
+  movement; metric tiles are `Added / Invested / Available / Savings`
+  (replacing `Transferred / Reserve`) to match the issue's required metrics.
+
+Confirmed already-aligned (no change needed):
+
+- Add Holding (#117): the issue ratifies the current `Step 3 of 5` selected-asset
+  mature state as the accepted preview.
+- Progress (#125): the preview already shows only a compact snapshot CTA, not
+  the full month-end entry form.
+- Holdings (#123) and Dashboard (#127): hierarchy already matches the baseline.
+
+Not covered by any V1 issue:
+
+- Settings has no dedicated V1 implementation issue; it is governed only by the
+  #132 baseline contract, so the Settings screen was left unchanged.
+
+## Visual Polish — 2026-06-13
+
+Owner-requested refinements to the preview baseline:
+
+- Removed the green top-right radial "glow" gradients from cards
+  (`.hero.statement`, `.insight-card.accent`, `.selected-asset`, `.story`) so
+  surfaces stay flat — consistent with DESIGN.md §2 (avoid saturated gradient
+  cards) and the flat surfaces in the app.
+- Fixed missing vertical gaps between non-card sibling blocks: Add Holding
+  (selected asset → card), Progress (breakdown → snapshot card), Cash
+  (hero → tiles, section title → list, list → card), Settings (list → card).
