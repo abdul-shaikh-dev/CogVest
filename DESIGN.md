@@ -76,6 +76,9 @@ Rules:
 
 - Green is an accent, not decoration.
 - Use green to signal brand, progress, selected state, and clear positive outcomes.
+- In code, use the semantic `primary` token for actions, active tabs, and
+  selected states; use the semantic `profit` token for financial gains. These
+  currently share `#34C759`, but they must not be treated as interchangeable.
 - Do not flood dashboards with green.
 - Avoid saturated gradient cards unless an issue explicitly asks for them.
 - Use `Positive` and `Negative` only for financial state, not generic ornament.

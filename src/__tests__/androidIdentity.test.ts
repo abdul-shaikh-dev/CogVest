@@ -16,6 +16,7 @@ describe("Android app identity", () => {
     expect(expo.android.package).toBe("com.abdulshaikh.cogvest");
     expect(expo.android.versionCode).toBeGreaterThanOrEqual(1);
     expect(Number.isInteger(expo.android.versionCode)).toBe(true);
+    expect(expo.android.predictiveBackGestureEnabled).toBe(true);
   });
 
   it("links the Expo project for EAS builds", () => {

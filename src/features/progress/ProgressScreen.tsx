@@ -12,7 +12,10 @@ import {
   ScreenContainer,
   ScreenHeader,
   SectionHeader,
+  androidRipple,
   assetClassLabel,
+  getPressedStateStyle,
+  minimumTouchTargetStyle,
 } from "@/src/components/common";
 import type { MonthlyProgressChartSeries } from "@/src/domain/calculations";
 import {
@@ -23,7 +26,7 @@ import {
 } from "@/src/domain/calculations";
 import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { colors, interaction, spacing } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 import { useProgress } from "./useProgress";
 
@@ -314,11 +317,18 @@ function ChartRangeSelector({
           <Pressable
             accessibilityLabel={`Show ${range} monthly progress charts`}
             accessibilityRole="button"
+            android_ripple={androidRipple(
+              isSelected
+                ? interaction.primaryRippleColor
+                : interaction.rippleColor,
+            )}
             key={range}
             onPress={() => onChange(range)}
-            style={[
+            style={({ pressed }) => [
               styles.rangeChip,
+              minimumTouchTargetStyle,
               isSelected ? styles.rangeChipSelected : null,
+              getPressedStateStyle({ pressed }),
             ]}
             testID={`${testIDPrefix}-${range}`}
           >
@@ -865,6 +875,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 999,
     flex: 1,
+    justifyContent: "center",
     paddingVertical: spacing.sm,
   },
   rangeChipSelected: {

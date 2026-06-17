@@ -1,15 +1,23 @@
-import { colors, radii, spacing } from "@/src/theme";
+import { colors, interaction, radii, spacing } from "@/src/theme";
 
 describe("theme tokens", () => {
   it("matches the V1 premium true-dark palette", () => {
     expect(colors.background).toBe("#000000");
     expect(colors.surface.card).toBe("#1C1C1E");
     expect(colors.surface.elevated).toBe("#2C2C2E");
-    expect(colors.primary).toBe("#2E7D52");
+    expect(colors.primary).toBe("#34C759");
+    expect(colors.deepGreen).toBe("#248A3D");
     expect(colors.profit).toBe("#34C759");
     expect(colors.text.primary).toBe("#FFFFFF");
     expect(colors.text.secondary).toBe("#8E8E93");
     expect(colors.border.subtle).toBe("rgba(255,255,255,0.10)");
+  });
+
+  it("captures Android interaction rules", () => {
+    expect(interaction.minimumTouchTarget).toBe(48);
+    expect(interaction.rippleColor).toBe("rgba(255,255,255,0.12)");
+    expect(interaction.primaryRippleColor).toBe("rgba(0,0,0,0.18)");
+    expect(interaction.stateLayerOpacity).toBe(0.12);
   });
 
   it("captures the V1 spacing and radius rules", () => {

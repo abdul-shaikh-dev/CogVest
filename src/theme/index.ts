@@ -4,8 +4,8 @@ export const colors = {
   blue: "#0A84FF",
   cashBlue: "#64D2FF",
   cryptoAmber: "#FFD60A",
-  deepGreen: "#0E6B4F",
-  primary: "#2E7D52",
+  deepGreen: "#248A3D",
+  primary: "#34C759",
   profit: "#34C759",
   loss: "#FF453A",
   warning: "#FF9F0A",
@@ -60,7 +60,11 @@ export const typography = {
 } as const;
 
 export const interaction = {
+  minimumTouchTarget: 48,
+  primaryRippleColor: "rgba(0,0,0,0.18)",
   pressedOpacity: 0.75,
+  rippleColor: "rgba(255,255,255,0.12)",
+  stateLayerOpacity: 0.12,
   disabledOpacity: 0.48,
 } as const;
 
