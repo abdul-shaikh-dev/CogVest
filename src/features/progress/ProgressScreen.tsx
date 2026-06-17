@@ -25,6 +25,7 @@ import {
   type MonthlyProgressChartData,
 } from "@/src/domain/calculations";
 import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
+import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, spacing } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
@@ -81,13 +82,14 @@ const chartWidth = 228;
 const chartYAxisWidth = 0;
 const chartInitialSpacing = 18;
 const chartEndSpacing = 36;
+const maskedChartValueLabel = "₹••••";
 
 function getSeriesColor(label: string) {
   switch (label) {
     case "Portfolio":
-      return colors.text.primary;
-    case "Invested":
       return colors.profit;
+    case "Invested":
+      return colors.text.primary;
     case "Equity":
       return colors.primary;
     case "Debt":
@@ -108,10 +110,20 @@ function getChartMaxValue(series: MonthlyProgressChartSeries[]) {
   return niceMultiplier * magnitude;
 }
 
-function getYAxisLabels(series: MonthlyProgressChartSeries[]) {
+function formatChartYLabel(value: number | string, masked: boolean) {
+  if (masked) {
+    return maskedChartValueLabel;
+  }
+
+  return formatCompactINR(Number(value));
+}
+
+function getYAxisLabels(series: MonthlyProgressChartSeries[], masked: boolean) {
   const maxValue = getChartMaxValue(series);
 
-  return [maxValue, maxValue / 2, 0].map((value) => formatCompactINR(value));
+  return [maxValue, maxValue / 2, 0].map((value) =>
+    formatChartYLabel(value, masked),
+  );
 }
 
 function formatChartAxisLabel(monthLabel: string) {
@@ -184,10 +196,14 @@ function TrendLegend({
 }
 
 function TrendChart({
+  isReducedMotionEnabled,
+  maskWealthValues,
   monthLabels,
   series,
   testIDPrefix,
 }: {
+  isReducedMotionEnabled: boolean;
+  maskWealthValues: boolean;
   monthLabels: string[];
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
@@ -201,8 +217,13 @@ function TrendChart({
     <View style={styles.chartBlock}>
       <View style={styles.chartWithAxis}>
         <View style={styles.yAxisLabels}>
-          {getYAxisLabels(series).map((label) => (
-            <AppText key={label} color="secondary" variant="caption">
+          {getYAxisLabels(series, maskWealthValues).map((label, index) => (
+            <AppText
+              key={`${label}-${index}`}
+              color="secondary"
+              testID={`${testIDPrefix}-y-axis-${index}`}
+              variant="caption"
+            >
               {label}
             </AppText>
           ))}
@@ -225,12 +246,12 @@ function TrendChart({
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
             endSpacing={chartEndSpacing}
-            formatYLabel={(label) => formatCompactINR(Number(label))}
+            formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
             intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
-            isAnimated
+            isAnimated={!isReducedMotionEnabled}
             maxValue={maxValue}
             noOfSections={3}
             pointerConfig={{
@@ -267,11 +288,11 @@ function TrendChart({
             }))}
             disableScroll
             endSpacing={chartEndSpacing}
-            formatYLabel={(label) => formatCompactINR(Number(label))}
+            formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
-            isAnimated
+            isAnimated={!isReducedMotionEnabled}
             maxValue={maxValue}
             noOfSections={3}
             pointerConfig={{
@@ -427,6 +448,8 @@ function AssetInsightRows({ insights }: { insights: AssetChartInsight[] }) {
 function ProgressTrendCards({
   assetChartData,
   assetChartRange,
+  isReducedMotionEnabled,
+  maskWealthValues,
   onAssetRangeChange,
   onPortfolioRangeChange,
   portfolioChartData,
@@ -434,6 +457,8 @@ function ProgressTrendCards({
 }: {
   assetChartData: MonthlyProgressChartData;
   assetChartRange: MonthlyChartRange;
+  isReducedMotionEnabled: boolean;
+  maskWealthValues: boolean;
   onAssetRangeChange: (range: MonthlyChartRange) => void;
   onPortfolioRangeChange: (range: MonthlyChartRange) => void;
   portfolioChartData: MonthlyProgressChartData;
@@ -478,6 +503,8 @@ function ProgressTrendCards({
           testIDPrefix="portfolio-monthly-chart-range"
         />
         <TrendChart
+          isReducedMotionEnabled={isReducedMotionEnabled}
+          maskWealthValues={maskWealthValues}
           monthLabels={portfolioChartData.monthLabels}
           series={portfolioChartData.portfolioSeries}
           testIDPrefix="portfolio-trend"
@@ -506,6 +533,8 @@ function ProgressTrendCards({
           testIDPrefix="asset-monthly-chart-range"
         />
         <TrendChart
+          isReducedMotionEnabled={isReducedMotionEnabled}
+          maskWealthValues={maskWealthValues}
           monthLabels={assetChartData.monthLabels}
           series={assetChartData.assetSeries}
           testIDPrefix="asset-trend"
@@ -520,6 +549,7 @@ export function ProgressScreen({
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
   const progress = useProgress({ store });
+  const isReducedMotionEnabled = useReducedMotionPreference();
 
   return (
     <ScreenContainer scroll testID="progress-screen">
@@ -569,6 +599,8 @@ export function ProgressScreen({
             <ProgressTrendCards
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
+              isReducedMotionEnabled={isReducedMotionEnabled}
+              maskWealthValues={progress.preferences.maskWealthValues}
               onAssetRangeChange={progress.setAssetChartRange}
               onPortfolioRangeChange={progress.setPortfolioChartRange}
               portfolioChartData={progress.portfolioChartData}
@@ -657,6 +689,8 @@ export function ProgressScreen({
             <ProgressTrendCards
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
+              isReducedMotionEnabled={isReducedMotionEnabled}
+              maskWealthValues={progress.preferences.maskWealthValues}
               onAssetRangeChange={progress.setAssetChartRange}
               onPortfolioRangeChange={progress.setPortfolioChartRange}
               portfolioChartData={progress.portfolioChartData}
