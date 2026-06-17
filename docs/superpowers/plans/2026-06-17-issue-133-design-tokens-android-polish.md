@@ -87,5 +87,5 @@
 - `npm run android:smoke`
 
 - [x] If emulator is unavailable, record the exact `adb`/smoke output instead of claiming emulator verification.
-- [ ] Commit with a focused message.
-- [ ] Push branch and open a PR with `Closes #133`.
+- [x] Commit with a focused message.
+- [x] Push branch and open a PR with `Closes #133`.
