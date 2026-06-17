@@ -60,5 +60,5 @@
 - `npm run android:smoke`
 
 - [x] Record exact output for emulator smoke.
-- [ ] Commit with a focused message.
-- [ ] Push branch and open a PR with `Closes #134`.
+- [x] Commit with a focused message.
+- [x] Push branch and open a PR with `Closes #134`.
