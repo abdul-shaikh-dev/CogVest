@@ -13,6 +13,11 @@ import type { AssetClass } from "@/src/types";
 
 import { AppText } from "./AppText";
 import { MaskedValue } from "./MaskedValue";
+import {
+  androidRipple,
+  getPressedStateStyle,
+  minimumTouchTargetStyle,
+} from "./pressableStyles";
 
 type PremiumCardProps = {
   children: ReactNode;
@@ -106,8 +111,13 @@ export function IconButton({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      android_ripple={androidRipple()}
       onPress={onPress}
-      style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.iconButton,
+        minimumTouchTargetStyle,
+        getPressedStateStyle({ pressed }),
+      ]}
       testID={testID}
     >
       <Ionicons color={colors.text.primary} name={icon} size={20} />
@@ -251,8 +261,12 @@ export function GroupedListRow({
     return (
       <Pressable
         accessibilityRole="button"
+        android_ripple={androidRipple()}
         onPress={onPress}
-        style={({ pressed }) => [styles.groupedRow, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.groupedRow,
+          getPressedStateStyle({ pressed }),
+        ]}
         testID={testID}
       >
         {content}
@@ -311,9 +325,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
     borderRadius: 14,
-    height: 42,
+    height: interaction.minimumTouchTarget,
     justifyContent: "center",
-    width: 42,
+    width: interaction.minimumTouchTarget,
   },
   metricCell: {
     flex: 1,
@@ -343,9 +357,6 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
-  },
-  pressed: {
-    opacity: interaction.pressedOpacity,
   },
   secondaryText: {
     color: colors.text.secondary,

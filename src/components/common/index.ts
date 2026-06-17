@@ -15,4 +15,9 @@ export {
   SectionHeader,
 } from "./Premium";
 export { PlaceholderScreen } from "./PlaceholderScreen";
+export {
+  androidRipple,
+  getPressedStateStyle,
+  minimumTouchTargetStyle,
+} from "./pressableStyles";
 export { ScreenContainer } from "./ScreenContainer";

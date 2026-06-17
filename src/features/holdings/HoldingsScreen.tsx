@@ -12,12 +12,15 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  androidRipple,
+  getPressedStateStyle,
+  minimumTouchTargetStyle,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatDate } from "@/src/domain/formatters";
 import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { colors, interaction, spacing } from "@/src/theme";
 import type { AssetClass, Holding } from "@/src/types";
 
 import { useHoldings } from "./useHoldings";
@@ -189,11 +192,18 @@ export function HoldingsScreen({
           {filters.map((filter) => (
             <Pressable
               accessibilityRole="button"
+              android_ripple={androidRipple(
+                selectedFilter === filter.key
+                  ? interaction.primaryRippleColor
+                  : interaction.rippleColor,
+              )}
               key={filter.key}
               onPress={() => setSelectedFilter(filter.key)}
-              style={[
+              style={({ pressed }) => [
                 styles.filterChip,
+                minimumTouchTargetStyle,
                 selectedFilter === filter.key && styles.filterChipActive,
+                getPressedStateStyle({ pressed }),
               ]}
               testID={`holdings-filter-${filter.key}`}
             >
@@ -335,8 +345,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterChip: {
+    alignItems: "center",
     backgroundColor: colors.surface.elevated,
     borderRadius: 999,
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

@@ -24,7 +24,7 @@
         "backgroundColor": "#1C1B1F"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "plugins": [
       "expo-router",

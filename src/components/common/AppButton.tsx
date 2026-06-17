@@ -10,6 +10,7 @@ import {
 import { colors, interaction, radii, spacing } from "@/src/theme";
 
 import { AppText } from "./AppText";
+import { androidRipple, getPressedStateStyle } from "./pressableStyles";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
@@ -27,15 +28,7 @@ export function getButtonInteractionStyle({
   disabled?: boolean;
   pressed: boolean;
 }) {
-  if (disabled) {
-    return styles.disabled;
-  }
-
-  if (pressed) {
-    return styles.pressed;
-  }
-
-  return undefined;
+  return getPressedStateStyle({ disabled, pressed });
 }
 
 export function AppButton({
@@ -53,6 +46,11 @@ export function AppButton({
   return (
     <Pressable
       {...props}
+      android_ripple={androidRipple(
+        variant === "primary"
+          ? interaction.primaryRippleColor
+          : interaction.rippleColor,
+      )}
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
@@ -73,21 +71,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.button,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.cardInner,
-  },
-  disabled: {
-    opacity: interaction.disabledOpacity,
   },
   ghost: {
     backgroundColor: "transparent",
   },
   primary: {
     backgroundColor: colors.primary,
-  },
-  pressed: {
-    opacity: interaction.pressedOpacity,
   },
   secondary: {
     backgroundColor: colors.surface.elevated,
