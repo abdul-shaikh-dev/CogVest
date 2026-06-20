@@ -33,7 +33,7 @@
 - Modify: `src/services/assetLookup/index.ts`
 - Modify: `src/services/assetLookup/__tests__/assetLookup.test.ts`
 
-- [ ] **Step 1: Add failing service expectations for metadata confidence**
+- [x] **Step 1: Add failing service expectations for metadata confidence**
 
 Update `src/services/assetLookup/__tests__/assetLookup.test.ts` so the Yahoo equity test expects stock instrument confidence but sector review-required:
 
@@ -73,7 +73,7 @@ sectorTypeConfidence: "inferred",
 metadataReviewMessage: "Provider details look ready. Confirm before saving.",
 ```
 
-- [ ] **Step 2: Run service tests and confirm they fail**
+- [x] **Step 2: Run service tests and confirm they fail**
 
 Run:
 
@@ -83,7 +83,7 @@ npm test -- --runInBand src/services/assetLookup/__tests__/assetLookup.test.ts
 
 Expected: tests fail because `AssetLookupResult` does not yet include confidence fields and Yahoo equity still maps `sectorType` to `financialServices`.
 
-- [ ] **Step 3: Implement metadata confidence fields**
+- [x] **Step 3: Implement metadata confidence fields**
 
 In `src/services/assetLookup/index.ts`, add:
 
@@ -130,7 +130,7 @@ metadataReviewMessage: "Provider details look ready. Confirm before saving.",
 sectorTypeConfidence: "inferred",
 ```
 
-- [ ] **Step 4: Run service tests and confirm they pass**
+- [x] **Step 4: Run service tests and confirm they pass**
 
 Run:
 
