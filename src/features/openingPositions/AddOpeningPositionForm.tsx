@@ -53,6 +53,7 @@ export function AddOpeningPositionForm({
     assetClass,
     assetName,
     averageCostPrice,
+    changeSelectedAsset,
     clearSelectedAsset,
     continueFromAsset,
     continueFromClass,
@@ -82,6 +83,7 @@ export function AddOpeningPositionForm({
     selectAsset,
     selectLookupResult,
     selectedAssetId,
+    selectedLookupResult,
     setAssetName,
     setAverageCostPrice,
     setConviction,
@@ -102,6 +104,12 @@ export function AddOpeningPositionForm({
     ticker,
     updateAssetClass,
   } = holding;
+  const hasSelectedAssetSummary = Boolean(selectedAssetId || selectedLookupResult);
+  const selectedAssetSourceLabel = selectedLookupResult
+    ? `${selectedLookupResult.sourceLabel} suggestion`
+    : selectedAssetId
+      ? "Existing asset"
+      : "";
 
   function renderStepper() {
     const currentIndex = getPhaseIndex(currentPhase);
@@ -188,49 +196,73 @@ export function AddOpeningPositionForm({
       {currentPhase === "asset" ? (
       <PremiumCard testID="add-holding-phase-asset">
         <SectionHeader title="Asset" />
-        <FormTextField
-          label="Search asset"
-          onChangeText={(value) => {
-            setLookupQuery(value);
-            setQuoteStatus("");
-          }}
-          placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
-          returnKeyType="search"
-          testID="asset-lookup-input"
-          value={lookupQuery}
-        />
-        {lookupStatus ? (
-          <AppText color="secondary" variant="caption">
-            {isLookupSearching ? "Searching..." : lookupStatus}
-          </AppText>
-        ) : null}
-        {lookupResults.length > 0 ? (
-          <View style={styles.lookupResults}>
-            {lookupResults.map((result) => (
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.74}
-                key={result.id}
-                onPress={() => {
-                  void selectLookupResult(result);
-                }}
-                style={styles.lookupResult}
-                testID={`asset-lookup-result-${result.id}`}
-              >
-                <CategoryIcon assetClass={result.assetClass} size={18} />
-                <View style={styles.lookupResultCopy}>
-                  <AppText weight="bold">{result.name}</AppText>
-                  <AppText color="secondary" variant="caption">
-                    {result.symbol} • {result.ticker} • {result.sourceLabel}
-                  </AppText>
-                </View>
-                <AppText color="secondary" variant="caption" weight="bold">
-                  Select
-                </AppText>
-              </TouchableOpacity>
-            ))}
+        {hasSelectedAssetSummary ? (
+          <View style={styles.selectedAssetSummary} testID="selected-asset-summary">
+            <CategoryIcon assetClass={assetClass} size={20} />
+            <View style={styles.summaryCopy}>
+              <AppText weight="bold">{assetName}</AppText>
+              <AppText color="secondary" variant="caption">
+                {symbol} • {ticker} • {selectedAssetSourceLabel}
+              </AppText>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.74}
+              onPress={changeSelectedAsset}
+              testID="selected-asset-change"
+            >
+              <AppText color="secondary" variant="caption" weight="bold">
+                Change
+              </AppText>
+            </TouchableOpacity>
           </View>
-        ) : null}
+        ) : (
+          <>
+            <FormTextField
+              label="Search asset"
+              onChangeText={(value) => {
+                setLookupQuery(value);
+                setQuoteStatus("");
+              }}
+              placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
+              returnKeyType="search"
+              testID="asset-lookup-input"
+              value={lookupQuery}
+            />
+            {lookupStatus ? (
+              <AppText color="secondary" variant="caption">
+                {isLookupSearching ? "Searching..." : lookupStatus}
+              </AppText>
+            ) : null}
+            {lookupResults.length > 0 ? (
+              <View style={styles.lookupResults} testID="asset-lookup-results">
+                {lookupResults.map((result) => (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    activeOpacity={0.74}
+                    key={result.id}
+                    onPress={() => {
+                      void selectLookupResult(result);
+                    }}
+                    style={styles.lookupResult}
+                    testID={`asset-lookup-result-${result.id}`}
+                  >
+                    <CategoryIcon assetClass={result.assetClass} size={18} />
+                    <View style={styles.lookupResultCopy}>
+                      <AppText weight="bold">{result.name}</AppText>
+                      <AppText color="secondary" variant="caption">
+                        {result.symbol} • {result.ticker} • {result.sourceLabel}
+                      </AppText>
+                    </View>
+                    <AppText color="secondary" variant="caption" weight="bold">
+                      Select
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </>
+        )}
         {quoteStatus ? (
           <AppText color="secondary" variant="caption">
             {quoteStatus}
@@ -294,7 +326,14 @@ export function AddOpeningPositionForm({
 
       {currentPhase === "class" ? (
       <PremiumCard testID="add-holding-phase-class">
-        <SectionHeader title="Classification" />
+        <SectionHeader title="Review metadata" />
+        <AppText
+          color="secondary"
+          testID="provider-metadata-review-copy"
+          variant="caption"
+        >
+          Provider details are suggestions. Review and edit them before saving.
+        </AppText>
         <View style={styles.summaryCard}>
           <CategoryIcon assetClass={assetClass} size={20} />
           <View style={styles.summaryCopy}>
@@ -582,7 +621,7 @@ export function AddOpeningPositionForm({
             <AppButton
               onPress={continueFromPosition}
               testID="review-holding-button"
-              title="Review Holding"
+              title="Review and save"
             />
             <AppButton
               onPress={() => moveToPhase("class")}
@@ -716,6 +755,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: spacing.sm,
+  },
+  selectedAssetSummary: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
   },
   successText: {
     color: colors.profit,

@@ -43,7 +43,7 @@ export const assetClasses: AssetClass[] = ["stock", "etf", "debt", "crypto"];
 export const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 export const phases: Array<{ key: AddHoldingPhase; label: string }> = [
   { key: "asset", label: "Asset" },
-  { key: "class", label: "Class" },
+  { key: "class", label: "Metadata" },
   { key: "position", label: "Position" },
   { key: "review", label: "Review" },
 ];
@@ -96,6 +96,8 @@ export function useAddOpeningPosition({
   );
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
+  const [selectedLookupResult, setSelectedLookupResult] =
+    useState<AssetLookupResult | undefined>();
   const [isLookupSearching, setIsLookupSearching] = useState(false);
   const [lookupStatus, setLookupStatus] = useState("");
   const [quoteStatus, setQuoteStatus] = useState("");
@@ -335,12 +337,26 @@ export function useAddOpeningPosition({
     if (selectedAssetId) {
       setSelectedAssetId("");
     }
+    if (selectedLookupResult) {
+      setSelectedLookupResult(undefined);
+    }
+  }
+
+  function changeSelectedAsset() {
+    setSelectedAssetId("");
+    setSelectedLookupResult(undefined);
+    setLookupQuery("");
+    setLookupResults([]);
+    setLookupStatus("");
+    setQuoteStatus("");
+    resetReview();
   }
 
   function selectAsset(asset: Asset) {
     const quote = snapshot.quoteCache[asset.id];
 
     setSelectedAssetId(asset.id);
+    setSelectedLookupResult(undefined);
     setAssetClass(asset.assetClass);
     setAssetName(asset.name);
     setInstrumentType(asset.instrumentType ?? getDefaultAssetMetadata(asset.assetClass).instrumentType);
@@ -388,6 +404,7 @@ export function useAddOpeningPosition({
 
   async function selectLookupResult(result: AssetLookupResult) {
     setSelectedAssetId("");
+    setSelectedLookupResult(result);
     setAssetClass(result.assetClass);
     setAssetName(result.name);
     setInstrumentType(result.instrumentType);
@@ -490,6 +507,7 @@ export function useAddOpeningPosition({
     assetClass,
     assetName,
     averageCostPrice,
+    changeSelectedAsset,
     clearSelectedAsset,
     continueFromAsset,
     continueFromClass,
@@ -520,6 +538,7 @@ export function useAddOpeningPosition({
     selectAsset,
     selectLookupResult,
     selectedAssetId,
+    selectedLookupResult,
     setAssetName,
     setAverageCostPrice,
     setConviction,

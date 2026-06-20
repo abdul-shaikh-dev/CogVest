@@ -52,7 +52,7 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("Ticker is required.")).toBeTruthy();
   });
 
-  it("moves through Asset, Class, Position, and Review phases", () => {
+  it("moves through Asset, Metadata, Position, and Review phases", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
@@ -65,6 +65,8 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByText("Continue to classification"));
 
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
+    expect(getByText("Review metadata")).toBeTruthy();
+    expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     expect(queryByTestId("add-holding-phase-asset")).toBeNull();
 
     fireEvent.press(getByText("Continue to position"));
@@ -74,7 +76,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
     fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
-    fireEvent.press(getByText("Review Holding"));
+    fireEvent.press(getByText("Review and save"));
 
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
     expect(getByTestId("derived-preview")).toBeTruthy();
@@ -144,7 +146,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Excel opening position");
 
-    fireEvent.press(getByText("Review Holding"));
+    fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
     expect(getByText("₹36,250.00")).toBeTruthy();
     expect(getByText("₹41,956.25")).toBeTruthy();
@@ -203,7 +205,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Current price"), "5711");
     fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
 
-    fireEvent.press(getByText("Review Holding"));
+    fireEvent.press(getByText("Review and save"));
     fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
@@ -234,7 +236,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Current price"), "5800000");
     fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
 
-    fireEvent.press(getByText("Review Holding"));
+    fireEvent.press(getByText("Review and save"));
     fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
@@ -284,7 +286,7 @@ describe("AddOpeningPositionForm", () => {
         },
       }),
     );
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -300,8 +302,9 @@ describe("AddOpeningPositionForm", () => {
     await waitFor(() => {
       expect(getByText("HDFC Bank Limited")).toBeTruthy();
     });
+    expect(getByTestId("asset-lookup-results")).toBeTruthy();
 
-    fireEvent.press(getByText("HDFC Bank Limited"));
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
 
     await waitFor(() => {
       expect(getByLabelText("Asset name")).toHaveProp(
@@ -309,6 +312,8 @@ describe("AddOpeningPositionForm", () => {
         "HDFC Bank Limited",
       );
     });
+    expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    expect(queryByTestId("asset-lookup-results")).toBeNull();
     expect(getByLabelText("Symbol")).toHaveProp("value", "HDFCBANK");
     expect(getByLabelText("Ticker")).toHaveProp("value", "HDFCBANK.NS");
     expect(getByLabelText("Quote source ID")).toHaveProp(
@@ -317,8 +322,70 @@ describe("AddOpeningPositionForm", () => {
     );
     expect(getByText("Live price autofilled from Yahoo Finance.")).toBeTruthy();
     fireEvent.press(getByText("Continue to classification"));
+    expect(getByText("Review metadata")).toBeTruthy();
+    expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
+  });
+
+  it("lets the user change a selected lookup asset before continuing", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { getByLabelText, getByTestId, queryByTestId } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => {
+      expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+
+    await waitFor(() => {
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("selected-asset-change"));
+
+    expect(queryByTestId("selected-asset-summary")).toBeNull();
+    expect(getByTestId("asset-lookup-input")).toBeTruthy();
   });
 
   it("does not autofill exact lookup matches before explicit selection", async () => {
