@@ -326,7 +326,7 @@ export function AddOpeningPositionForm({
 
       {currentPhase === "class" ? (
       <PremiumCard testID="add-holding-phase-class">
-        <SectionHeader title="Review metadata" />
+        <SectionHeader title="Confirm details" />
         <AppText
           color="secondary"
           testID="provider-metadata-review-copy"

@@ -44,7 +44,7 @@ The screen remains a progressive flow:
 The accepted design references mention a five-step mature state. For this issue,
 we will not split the save confirmation into a separate route or add fake
 intermediate behavior. Instead, the UI will make the current four persisted
-phases clearer while using copy such as `Review metadata` and `Position details`
+phases clearer while using copy such as `Confirm details` and `Position details`
 to match the intended journey. A future visual-only split can happen if the V1
 preview is revised.
 

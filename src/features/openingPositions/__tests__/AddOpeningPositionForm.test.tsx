@@ -65,7 +65,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByText("Continue to classification"));
 
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
-    expect(getByText("Review metadata")).toBeTruthy();
+    expect(getByText("Confirm details")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     expect(queryByTestId("add-holding-phase-asset")).toBeNull();
 
@@ -322,7 +322,7 @@ describe("AddOpeningPositionForm", () => {
     );
     expect(getByText("Live price autofilled from Yahoo Finance.")).toBeTruthy();
     fireEvent.press(getByText("Continue to classification"));
-    expect(getByText("Review metadata")).toBeTruthy();
+    expect(getByText("Confirm details")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
