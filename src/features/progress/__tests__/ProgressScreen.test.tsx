@@ -1,9 +1,15 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
 import { ProgressScreen } from "@/src/features/progress";
+import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { colors } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
+
+jest.mock("@/src/hooks", () => ({
+  useReducedMotionPreference: jest.fn(() => false),
+}));
 
 const aprilSnapshot: MonthlySnapshot = {
   cashValue: 120000,
@@ -49,6 +55,10 @@ const marchSnapshot: MonthlySnapshot = {
 };
 
 describe("ProgressScreen", () => {
+  beforeEach(() => {
+    jest.mocked(useReducedMotionPreference).mockReturnValue(false);
+  });
+
   it("shows the no-snapshot state before monthly records exist", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
@@ -126,9 +136,13 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
-    const { getByTestId, getByText, queryByTestId, queryByText } = render(
-      <ProgressScreen store={store} />,
-    );
+    const {
+      getAllByTestId,
+      getByTestId,
+      getByText,
+      queryByTestId,
+      queryByText,
+    } = render(<ProgressScreen store={store} />);
 
     expect(getByText("Value Gap")).toBeTruthy();
     expect(getByText("Portfolio value against invested capital")).toBeTruthy();
@@ -139,10 +153,49 @@ describe("ProgressScreen", () => {
     expect(getByText("Crypto +12.50%")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
+    const [portfolioChart] = getAllByTestId("gifted-line-chart");
+
+    expect(portfolioChart.props.color1).toBe(
+      colors.primary,
+    );
+    expect(portfolioChart.props.color2).toBe(
+      colors.text.primary,
+    );
     expect(getByTestId("asset-trend-Equity")).toBeTruthy();
     expect(getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
     expect(queryByTestId("asset-trend-Cash")).toBeNull();
+  });
+
+  it("masks chart axis and chart-native y labels when wealth masking is enabled", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().updatePreferences({ maskWealthValues: true });
+
+    const { getAllByTestId, getByTestId, getAllByText, queryByText } = render(
+      <ProgressScreen store={store} />,
+    );
+    const [portfolioChart] = getAllByTestId("gifted-line-chart");
+
+    expect(getByTestId("portfolio-trend-y-axis-0")).toHaveTextContent("₹••••");
+    expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
+    expect(queryByText("₹20L")).toBeNull();
+    expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
+  });
+
+  it("disables chart animation when reduced motion is enabled", () => {
+    jest.mocked(useReducedMotionPreference).mockReturnValue(true);
+
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+
+    const { getAllByTestId } = render(<ProgressScreen store={store} />);
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart");
+
+    expect(portfolioChart.props.isAnimated).toBe(false);
+    expect(assetChart.props.isAnimated).toBe(false);
   });
 
   it("renders chart-local timeframe chips and updates selected range", () => {

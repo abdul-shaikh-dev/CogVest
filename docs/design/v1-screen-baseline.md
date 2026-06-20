@@ -159,9 +159,11 @@ The V1 screen title is `Monthly Progress`; the tab label can be `Progress`.
 Accepted chart direction:
 
 - first graph: `Value Gap` - total portfolio value vs invested value by month
+- `Value Gap` color contract: Portfolio line is green; Invested line is white
 - second graph: `Asset Momentum` - asset values vs months
 - cash is excluded from the asset-trend graph and tracked separately in Cash
 - charts must use stored monthly snapshots or a clear empty/no-snapshot state
+- chart y-axis labels and chart-native value labels must obey value masking
 - each chart card owns its own timeframe controls
 - use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
   Native for these charts
