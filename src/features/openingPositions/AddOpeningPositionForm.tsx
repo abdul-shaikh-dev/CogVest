@@ -54,6 +54,7 @@ export function AddOpeningPositionForm({
     assetName,
     averageCostPrice,
     changeSelectedAsset,
+    clearSavedAssetSelection,
     clearSelectedAsset,
     continueFromAsset,
     continueFromClass,
@@ -66,10 +67,12 @@ export function AddOpeningPositionForm({
     getPhaseIndex,
     handleConfirm,
     instrumentType,
+    instrumentTypeConfidence,
     isLookupSearching,
     lookupQuery,
     lookupResults,
     lookupStatus,
+    metadataReviewMessage,
     moveToPhase,
     notes,
     previewHolding,
@@ -80,6 +83,7 @@ export function AddOpeningPositionForm({
     reviewAsset,
     reviewOpeningPosition,
     sectorType,
+    sectorTypeConfidence,
     selectAsset,
     selectLookupResult,
     selectedAssetId,
@@ -332,7 +336,7 @@ export function AddOpeningPositionForm({
           testID="provider-metadata-review-copy"
           variant="caption"
         >
-          Provider details are suggestions. Review and edit them before saving.
+          Suggested details. Confirm anything marked for review.
         </AppText>
         <View style={styles.summaryCard}>
           <CategoryIcon assetClass={assetClass} size={20} />
@@ -343,6 +347,9 @@ export function AddOpeningPositionForm({
             </AppText>
           </View>
         </View>
+        <AppText color="secondary" testID="metadata-review-message" variant="caption">
+          {metadataReviewMessage}
+        </AppText>
         <View style={styles.classRow}>
           {assetClasses.map((currentClass) => {
             const isSelected = assetClass === currentClass;
@@ -379,13 +386,22 @@ export function AddOpeningPositionForm({
               label="Instrument type"
               onChangeText={(value) => {
                 setInstrumentType(value as InstrumentType);
-                clearSelectedAsset();
+                clearSavedAssetSelection();
                 resetReview();
               }}
               placeholder="stock"
               testID="instrument-type-input"
               value={instrumentType}
             />
+            {instrumentTypeConfidence === "reviewRequired" ? (
+              <AppText
+                color="secondary"
+                testID="instrument-type-review-hint"
+                variant="caption"
+              >
+                Review instrument type before saving.
+              </AppText>
+            ) : null}
           </View>
           <View style={styles.flex}>
             <FormTextField
@@ -393,13 +409,22 @@ export function AddOpeningPositionForm({
               label="Sector type"
               onChangeText={(value) => {
                 setSectorType(value as SectorType);
-                clearSelectedAsset();
+                clearSavedAssetSelection();
                 resetReview();
               }}
               placeholder="financialServices"
               testID="sector-type-input"
               value={sectorType}
             />
+            {sectorTypeConfidence === "reviewRequired" ? (
+              <AppText
+                color="secondary"
+                testID="sector-type-review-hint"
+                variant="caption"
+              >
+                Review sector/type before saving.
+              </AppText>
+            ) : null}
           </View>
         </View>
       </PremiumCard>

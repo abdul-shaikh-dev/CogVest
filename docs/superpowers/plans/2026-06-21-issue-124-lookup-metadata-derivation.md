@@ -148,7 +148,7 @@ Expected: service tests pass.
 - Modify: `src/features/openingPositions/useAddOpeningPosition.ts`
 - Modify: `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`
 
-- [ ] **Step 1: Add failing form tests for review hints and selection retention**
+- [x] **Step 1: Add failing form tests for review hints and selection retention**
 
 In `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`, update lookup fixtures to include confidence fields.
 
@@ -225,7 +225,7 @@ fireEvent.press(getByText("Asset"));
 expect(getByTestId("selected-asset-summary")).toBeTruthy();
 ```
 
-- [ ] **Step 2: Run form tests and confirm they fail**
+- [x] **Step 2: Run form tests and confirm they fail**
 
 Run:
 
@@ -235,7 +235,7 @@ npm test -- --runInBand src/features/openingPositions/__tests__/AddOpeningPositi
 
 Expected: tests fail because review hint rendering and metadata-edit selection retention are not implemented yet.
 
-- [ ] **Step 3: Add controller metadata review state**
+- [x] **Step 3: Add controller metadata review state**
 
 In `src/features/openingPositions/useAddOpeningPosition.ts`, add:
 
@@ -272,7 +272,7 @@ metadataReviewMessage,
 sectorTypeConfidence,
 ```
 
-- [ ] **Step 4: Render review hints**
+- [x] **Step 4: Render review hints**
 
 In `src/features/openingPositions/AddOpeningPositionForm.tsx`, destructure the three new controller values.
 
@@ -309,7 +309,7 @@ Below each metadata field, render conditional hint text:
 
 If `AppText` does not support `warning`, use `color="secondary"` and rely on the text; do not introduce a new theme token in this task.
 
-- [ ] **Step 5: Run form tests and confirm they pass**
+- [x] **Step 5: Run form tests and confirm they pass**
 
 Run:
 
