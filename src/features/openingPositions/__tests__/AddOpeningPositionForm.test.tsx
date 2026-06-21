@@ -584,6 +584,85 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
   });
 
+  it("persists edited review-required sector metadata from a selected lookup result", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await waitFor(() => {
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Continue to classification"));
+    expect(getByLabelText("Sector type")).toHaveProp("value", "other");
+    fireEvent.changeText(getByLabelText("Sector type"), "financialServices");
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+
+    fireEvent.press(getByText("Review and save"));
+    expect(getByTestId("derived-preview")).toBeTruthy();
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(store.getState().assets).toHaveLength(1);
+      expect(store.getState().openingPositions).toHaveLength(1);
+    });
+
+    expect(store.getState().assets[0]).toMatchObject({
+      instrumentType: "stock",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+    });
+  });
+
   it("does not autofill exact lookup matches before explicit selection", async () => {
     jest.useFakeTimers();
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });

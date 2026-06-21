@@ -327,7 +327,7 @@ Expected: form tests pass.
 - Modify: `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`
 - Modify: `src/features/openingPositions/useAddOpeningPosition.ts`
 
-- [ ] **Step 1: Add or update save test for manual metadata override**
+- [x] **Step 1: Add or update save test for manual metadata override**
 
 Extend the lookup-selection test or add a new test that:
 
@@ -348,7 +348,7 @@ expect(store.getState().assets[0]).toMatchObject({
 });
 ```
 
-- [ ] **Step 2: Run the form test and confirm behavior**
+- [x] **Step 2: Run the form test and confirm behavior**
 
 Run:
 
@@ -358,7 +358,7 @@ npm test -- --runInBand src/features/openingPositions/__tests__/AddOpeningPositi
 
 Expected: passes after Task 2 changes. If it fails because metadata edits clear selection or review state, fix the controller so only asset identity edits clear selected lookup state.
 
-- [ ] **Step 3: Confirm e2e lookup flow IDs are still valid**
+- [x] **Step 3: Confirm e2e lookup flow IDs are still valid**
 
 Inspect `e2e/add-holding-lookup.yaml`.
 
