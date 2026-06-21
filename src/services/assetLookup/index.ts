@@ -12,16 +12,21 @@ import { getDefaultFetcher } from "@/src/services/quotes/utils";
 
 export type AssetLookupProvider = "coingecko" | "yahoo";
 
+export type AssetMetadataConfidence = "inferred" | "provider" | "reviewRequired";
+
 export type AssetLookupResult = {
   assetClass: AssetClass;
   currency: Currency;
   exchange?: AssetExchange;
   id: string;
   instrumentType: InstrumentType;
+  instrumentTypeConfidence: AssetMetadataConfidence;
+  metadataReviewMessage: string;
   name: string;
   provider: AssetLookupProvider;
   quoteSourceId: string;
   sectorType: SectorType;
+  sectorTypeConfidence: AssetMetadataConfidence;
   sourceLabel: string;
   symbol: string;
   ticker: string;
@@ -105,8 +110,12 @@ export function mapYahooQuoteToLookupResult(
     return undefined;
   }
 
-  const assetClass = inferYahooAssetClass(quote.quoteType);
+  const quoteType = quote.quoteType?.toUpperCase();
+  const isEtf = quoteType === "ETF";
+  const assetClass = inferYahooAssetClass(quoteType);
   const defaults = getDefaultAssetMetadata(assetClass);
+  const sectorType = isEtf ? defaults.sectorType : "other";
+  const sectorTypeConfidence = isEtf ? "inferred" : "reviewRequired";
 
   return {
     assetClass,
@@ -114,10 +123,15 @@ export function mapYahooQuoteToLookupResult(
     exchange: inferYahooExchange(ticker),
     id: `yahoo:${ticker}`,
     instrumentType: defaults.instrumentType,
+    instrumentTypeConfidence: "inferred",
+    metadataReviewMessage: isEtf
+      ? "Provider details look ready. Confirm before saving."
+      : "Sector needs review. Yahoo did not provide a sector.",
     name: quote.longname?.trim() || quote.shortname?.trim() || ticker,
     provider: "yahoo",
     quoteSourceId: ticker,
-    sectorType: defaults.sectorType,
+    sectorType,
+    sectorTypeConfidence,
     sourceLabel: "Yahoo Finance",
     symbol: normalizeYahooSymbol(ticker),
     ticker,
@@ -142,10 +156,13 @@ export function mapCoinGeckoCoinToLookupResult(
     exchange: "CRYPTO",
     id: `coingecko:${coinId}`,
     instrumentType: defaults.instrumentType,
+    instrumentTypeConfidence: "inferred",
+    metadataReviewMessage: "Provider details look ready. Confirm before saving.",
     name: coin.name?.trim() || symbol.toUpperCase(),
     provider: "coingecko",
     quoteSourceId: coinId,
     sectorType: defaults.sectorType,
+    sectorTypeConfidence: "inferred",
     sourceLabel: "CoinGecko",
     symbol: symbol.toUpperCase(),
     ticker: coinId,

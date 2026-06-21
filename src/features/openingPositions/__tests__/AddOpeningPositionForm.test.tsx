@@ -186,6 +186,64 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("Opening position saved.")).toBeTruthy();
   });
 
+  it("persists metadata edits after selecting an existing saved asset", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const savedAssetId = "asset-hdfc-bank";
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: savedAssetId,
+      instrumentType: "stock",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "other",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    fireEvent.press(getByText("HDFCBANK"));
+    expect(getByTestId("selected-asset-summary")).toBeTruthy();
+
+    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.changeText(getByLabelText("Sector type"), "technology");
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+
+    fireEvent.press(getByText("Review and save"));
+    expect(getByTestId("derived-preview")).toBeTruthy();
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions).toHaveLength(1);
+    });
+
+    const savedPosition = store.getState().openingPositions[0];
+    const editedAsset = store
+      .getState()
+      .assets.find((asset) => asset.id === savedPosition?.assetId);
+
+    expect(store.getState().assets).toHaveLength(2);
+    expect(savedPosition?.assetId).not.toBe(savedAssetId);
+    expect(editedAsset).toMatchObject({
+      name: "HDFC Bank",
+      sectorType: "technology",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+    expect(
+      store.getState().assets.find((asset) => asset.id === savedAssetId),
+    ).toMatchObject({
+      sectorType: "other",
+    });
+  });
+
   it("creates a debt opening position without trade records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText } = render(
@@ -262,10 +320,13 @@ describe("AddOpeningPositionForm", () => {
       exchange: "NSE",
       id: "yahoo:HDFCBANK.NS",
       instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
       name: "HDFC Bank Limited",
       provider: "yahoo",
       quoteSourceId: "HDFCBANK.NS",
-      sectorType: "financialServices",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
       sourceLabel: "Yahoo Finance",
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
@@ -337,10 +398,13 @@ describe("AddOpeningPositionForm", () => {
       exchange: "NSE",
       id: "yahoo:HDFCBANK.NS",
       instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
       name: "HDFC Bank Limited",
       provider: "yahoo",
       quoteSourceId: "HDFCBANK.NS",
-      sectorType: "financialServices",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
       sourceLabel: "Yahoo Finance",
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
@@ -388,6 +452,217 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("asset-lookup-input")).toBeTruthy();
   });
 
+  it("shows review-required metadata hints for low-confidence lookup fields", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "reviewRequired",
+      metadataReviewMessage:
+        "Instrument type and sector need review. Yahoo did not provide enough detail.",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await waitFor(() => {
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Continue to classification"));
+
+    expect(
+      getByText("Suggested details. Confirm anything marked for review."),
+    ).toBeTruthy();
+    expect(getByTestId("metadata-review-message")).toBeTruthy();
+    expect(
+      getByText(
+        "Instrument type and sector need review. Yahoo did not provide enough detail.",
+      ),
+    ).toBeTruthy();
+    expect(getByTestId("instrument-type-review-hint")).toBeTruthy();
+    expect(getByTestId("sector-type-review-hint")).toBeTruthy();
+    expect(getByLabelText("Sector type")).toHaveProp("value", "other");
+  });
+
+  it("keeps selected lookup summary after metadata edits", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await waitFor(() => {
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.changeText(getByLabelText("Sector type"), "financialServices");
+    fireEvent.press(getByText("Asset"));
+
+    expect(getByTestId("selected-asset-summary")).toBeTruthy();
+  });
+
+  it("persists edited review-required sector metadata from a selected lookup result", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const lookupResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [lookupResult],
+    });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: "asset-id",
+        asOf: "2026-05-10T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        resolveQuote={resolveQuote}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await waitFor(() => {
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Continue to classification"));
+    expect(getByLabelText("Sector type")).toHaveProp("value", "other");
+    fireEvent.changeText(getByLabelText("Sector type"), "financialServices");
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+
+    fireEvent.press(getByText("Review and save"));
+    expect(getByTestId("derived-preview")).toBeTruthy();
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(store.getState().assets).toHaveLength(1);
+      expect(store.getState().openingPositions).toHaveLength(1);
+    });
+
+    expect(store.getState().assets[0]).toMatchObject({
+      instrumentType: "stock",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+    });
+  });
+
   it("does not autofill exact lookup matches before explicit selection", async () => {
     jest.useFakeTimers();
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -397,10 +672,13 @@ describe("AddOpeningPositionForm", () => {
       exchange: "CRYPTO",
       id: "coingecko:bitcoin",
       instrumentType: "crypto",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Provider details look ready. Confirm before saving.",
       name: "Bitcoin",
       provider: "coingecko",
       quoteSourceId: "bitcoin",
       sectorType: "digitalAsset",
+      sectorTypeConfidence: "inferred",
       sourceLabel: "CoinGecko",
       symbol: "BTC",
       ticker: "bitcoin",
@@ -470,10 +748,13 @@ describe("AddOpeningPositionForm", () => {
       exchange: "CRYPTO",
       id: "coingecko:bitcoin",
       instrumentType: "crypto",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Provider details look ready. Confirm before saving.",
       name: "Bitcoin",
       provider: "coingecko",
       quoteSourceId: "bitcoin",
       sectorType: "digitalAsset",
+      sectorTypeConfidence: "inferred",
       sourceLabel: "CoinGecko",
       symbol: "BTC",
       ticker: "bitcoin",
