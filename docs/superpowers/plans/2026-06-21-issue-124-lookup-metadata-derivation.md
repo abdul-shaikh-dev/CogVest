@@ -438,7 +438,7 @@ Expected: exit 0 or failures logged with defects.
 **Files:**
 - Modify: `docs/superpowers/plans/2026-06-21-issue-124-lookup-metadata-derivation.md`
 
-- [ ] **Step 1: Review diff**
+- [x] **Step 1: Review diff**
 
 Run:
 
@@ -450,7 +450,7 @@ git status --short --branch
 
 Expected: only #124 files changed; no whitespace errors.
 
-- [ ] **Step 2: Commit implementation**
+- [x] **Step 2: Commit implementation**
 
 Run:
 
@@ -459,7 +459,7 @@ git add src/services/assetLookup src/features/openingPositions docs/superpowers/
 git commit -m "Derive Add Holding metadata with review hints"
 ```
 
-- [ ] **Step 3: Push branch**
+- [x] **Step 3: Push branch**
 
 Run:
 
@@ -467,7 +467,7 @@ Run:
 git push -u origin v1/issue-124-lookup-metadata-derivation
 ```
 
-- [ ] **Step 4: Create PR**
+- [x] **Step 4: Create PR**
 
 Create PR title:
 
