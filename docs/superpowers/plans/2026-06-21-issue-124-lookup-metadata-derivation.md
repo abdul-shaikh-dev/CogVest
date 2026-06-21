@@ -371,7 +371,7 @@ Expected: no changes needed if it still taps `asset-lookup-result-*`, `continue-
 **Files:**
 - No code changes unless verification finds defects.
 
-- [ ] **Step 1: Typecheck**
+- [x] **Step 1: Typecheck**
 
 Run:
 
@@ -381,7 +381,7 @@ npm run typecheck
 
 Expected: exit 0.
 
-- [ ] **Step 2: Focused lookup/form tests**
+- [x] **Step 2: Focused lookup/form tests**
 
 Run:
 
@@ -391,7 +391,7 @@ npm test -- --runInBand src/services/assetLookup/__tests__/assetLookup.test.ts s
 
 Expected: both suites pass.
 
-- [ ] **Step 3: Full Jest**
+- [x] **Step 3: Full Jest**
 
 Run:
 
@@ -401,7 +401,7 @@ npm test -- --runInBand
 
 Expected: all suites pass.
 
-- [ ] **Step 4: Expo doctor**
+- [x] **Step 4: Expo doctor**
 
 Run:
 
@@ -411,7 +411,7 @@ npm run doctor
 
 Expected: Expo doctor passes or warnings are documented.
 
-- [ ] **Step 5: Android smoke**
+- [x] **Step 5: Android smoke**
 
 Run:
 
@@ -421,7 +421,7 @@ npm run android:smoke
 
 Expected: emulator and `com.abdulshaikh.cogvest` package status is printed. If the emulator is unavailable, document the exact reason.
 
-- [ ] **Step 6: V1 PC gate**
+- [x] **Step 6: V1 PC gate**
 
 Run:
 
