@@ -197,7 +197,7 @@ describe("AddOpeningPositionForm", () => {
       instrumentType: "stock",
       name: "HDFC Bank",
       quoteSourceId: "HDFCBANK.NS",
-      sectorType: "financialServices",
+      sectorType: "other",
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
     });
@@ -240,7 +240,7 @@ describe("AddOpeningPositionForm", () => {
     expect(
       store.getState().assets.find((asset) => asset.id === savedAssetId),
     ).toMatchObject({
-      sectorType: "financialServices",
+      sectorType: "other",
     });
   });
 

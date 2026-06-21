@@ -298,7 +298,7 @@ export const visualQaAssetLookupResults: AssetLookupResult[] = [
     name: "HDFC Bank",
     provider: "yahoo",
     quoteSourceId: "HDFCBANK.NS",
-    sectorType: "financialServices",
+    sectorType: "other",
     sectorTypeConfidence: "reviewRequired",
     sourceLabel: "Visual QA seed",
     symbol: "HDFCBANK",
