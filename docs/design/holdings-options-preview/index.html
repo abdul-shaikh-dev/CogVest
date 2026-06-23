@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CogVest Holdings Options</title>
+    <style>
+      :root {
+        --bg: #000000;
+        --ink: #f5f5f7;
+        --muted: #98989d;
+        --quiet: #636366;
+        --line: rgba(255, 255, 255, 0.1);
+        --surface: #1c1c1e;
+        --surface-2: #242426;
+        --surface-3: #2c2c2e;
+        --green: #34c759;
+        --deep-green: #248a3d;
+        --blue: #0a84ff;
+        --cash: #64d2ff;
+        --amber: #ffd60a;
+        --red: #ff453a;
+        --phone-w: 390px;
+        --phone-h: 844px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 10% 0%, rgba(52, 199, 89, 0.08), transparent 32%),
+          radial-gradient(circle at 90% 12%, rgba(10, 132, 255, 0.06), transparent 30%),
+          #030303;
+        color: var(--ink);
+        font-family: "Aptos", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      }
+
+      .page {
+        padding: 28px;
+      }
+
+      .header {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) minmax(260px, 440px);
+        gap: 28px;
+        align-items: end;
+        max-width: 1800px;
+        margin: 0 auto 28px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 780px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 38px;
+        line-height: 0.96;
+        letter-spacing: -0.025em;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .guide {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(28, 28, 30, 0.72);
+        padding: 16px;
+      }
+
+      .guide strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .chooser {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .choice-btn {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 9px 12px;
+      }
+
+      .choice-btn.active {
+        border-color: transparent;
+        background: var(--green);
+        color: #06140b;
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(330px, var(--phone-w)));
+        gap: 24px;
+        align-items: start;
+        justify-content: center;
+      }
+
+      .option {
+        display: grid;
+        gap: 10px;
+      }
+
+      .option-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .option-label span {
+        color: var(--green);
+        font-size: 11px;
+      }
+
+      .phone-shell {
+        width: var(--phone-w);
+        height: var(--phone-h);
+        padding: 9px;
+        border-radius: 44px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015));
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.5);
+      }
+
+      .phone {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 36px;
+        background: var(--bg);
+      }
+
+      .status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 19px 20px 0;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .content {
+        display: grid;
+        gap: 11px;
+        padding: 30px 20px 34px;
+      }
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .title {
+        font-size: 30px;
+        line-height: 1;
+        letter-spacing: -0.035em;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .icon-btn {
+        display: grid;
+        place-items: center;
+        width: 39px;
+        height: 39px;
+        border-radius: 14px;
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .card {
+        border-radius: 18px;
+        background: var(--surface);
+        padding: 14px;
+      }
+
+      .soft-card {
+        border-radius: 16px;
+        background: var(--surface-2);
+        padding: 12px;
+      }
+
+      .kicker {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        line-height: 1.2;
+      }
+
+      .value {
+        color: var(--ink);
+        font-size: 17px;
+        font-weight: 900;
+        letter-spacing: -0.025em;
+        line-height: 1.05;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 10.5px;
+        line-height: 1.35;
+      }
+
+      .gain {
+        color: var(--green);
+      }
+
+      .loss {
+        color: var(--red);
+      }
+
+      .warning {
+        color: #ffb340;
+      }
+
+      .review-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .review-card {
+        min-height: 76px;
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 12px;
+      }
+
+      .review-card.primary {
+        background: linear-gradient(145deg, rgba(52, 199, 89, 0.17), var(--surface) 62%);
+      }
+
+      .review-card strong {
+        display: block;
+        margin-top: 6px;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      .score {
+        text-align: right;
+      }
+
+      .score strong {
+        display: block;
+        font-size: 26px;
+        line-height: 1;
+      }
+
+      .mix-track {
+        display: flex;
+        height: 10px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 12px 0 10px;
+      }
+
+      .mix-track span {
+        display: block;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .chip {
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        padding: 8px 10px;
+      }
+
+      .chip.active {
+        border-color: transparent;
+        background: var(--green);
+        color: #06140b;
+      }
+
+      .chip.loss-chip {
+        color: var(--red);
+      }
+
+      .chip.warning-chip {
+        color: #ffb340;
+      }
+
+      .chip.manual-chip {
+        color: var(--amber);
+      }
+
+      .rows {
+        display: grid;
+        gap: 9px;
+      }
+
+      .list-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-top: 2px;
+      }
+
+      .list-header strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .holding-row {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 11px;
+        align-items: start;
+        border-radius: 16px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 58%),
+          var(--surface);
+        padding: 11px;
+      }
+
+      .holding-row.featured {
+        background:
+          radial-gradient(circle at 0% 0%, rgba(52, 199, 89, 0.14), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 58%),
+          var(--surface);
+      }
+
+      .holding-row.compact {
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        align-items: center;
+        min-height: 75px;
+      }
+
+      .holding-row.compact .row-copy {
+        align-self: center;
+      }
+
+      .icon {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        background: rgba(52, 199, 89, 0.16);
+        color: var(--green);
+      }
+
+      .icon svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .icon svg .fill-mark {
+        fill: currentColor;
+        stroke: none;
+      }
+
+      .icon svg .thin-mark {
+        stroke-width: 1.6;
+      }
+
+      .icon.blue {
+        background: rgba(10, 132, 255, 0.16);
+        color: var(--blue);
+      }
+
+      .icon.amber {
+        background: rgba(255, 214, 10, 0.14);
+        color: var(--amber);
+      }
+
+      .row-copy {
+        min-width: 0;
+      }
+
+      .row-topline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .row-copy h3 {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 14.5px;
+        letter-spacing: -0.012em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .row-subtitle {
+        margin-top: 3px;
+      }
+
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .facts span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 9.8px;
+        font-weight: 850;
+      }
+
+      .facts span::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--quiet);
+      }
+
+      .facts .live::before {
+        background: var(--green);
+      }
+
+      .facts .manual::before {
+        background: var(--amber);
+      }
+
+      .right {
+        text-align: right;
+      }
+
+      .right strong {
+        display: block;
+        color: var(--ink);
+        font-size: 15px;
+      }
+
+      .right span {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .expand-cue {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        color: var(--quiet);
+        font-size: 16px;
+        font-weight: 900;
+        margin-left: 3px;
+      }
+
+      .position-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 9px;
+      }
+
+      .position-strip span {
+        min-width: 0;
+      }
+
+      .position-strip b {
+        display: block;
+        color: var(--ink);
+        font-size: 10.5px;
+        line-height: 1.15;
+      }
+
+      .allocation-rail {
+        height: 4px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        margin-top: 9px;
+      }
+
+      .allocation-rail i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--green);
+      }
+
+      .allocation-rail i.blue {
+        background: var(--blue);
+      }
+
+      .allocation-rail i.amber {
+        background: var(--amber);
+      }
+
+      .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9px;
+      }
+
+      .queue {
+        display: grid;
+        gap: 9px;
+      }
+
+      .queue-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .queue-row:last-child {
+        border-bottom: 0;
+      }
+
+      .badge {
+        border-radius: 999px;
+        background: var(--surface-3);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        padding: 6px 8px;
+      }
+
+      .mini-chart {
+        display: grid;
+        gap: 8px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: 54px 1fr auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .bar {
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .bar i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--green);
+      }
+
+      .bar i.blue {
+        background: var(--blue);
+      }
+
+      .bar i.amber {
+        background: var(--amber);
+      }
+
+      .note-box {
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        gap: 10px;
+        align-items: center;
+        border-radius: 16px;
+        background: rgba(52, 199, 89, 0.1);
+        padding: 12px;
+      }
+
+      .recommended {
+        outline: 1px solid rgba(52, 199, 89, 0.34);
+        outline-offset: 6px;
+        border-radius: 48px;
+      }
+
+      .exposure-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 11px;
+      }
+
+      .exposure-item {
+        min-width: 0;
+      }
+
+      .exposure-label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .asset-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--green);
+      }
+
+      .asset-dot.blue {
+        background: var(--blue);
+      }
+
+      .asset-dot.amber {
+        background: var(--amber);
+      }
+
+      .exposure-item strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--ink);
+        font-size: 14px;
+        letter-spacing: -0.02em;
+      }
+
+      @media (max-width: 1680px) {
+        .options {
+          grid-template-columns: repeat(2, minmax(330px, var(--phone-w)));
+        }
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          padding: 18px;
+        }
+
+        .header {
+          grid-template-columns: 1fr;
+        }
+
+        .options {
+          grid-template-columns: 1fr;
+        }
+
+        .phone-shell {
+          width: min(var(--phone-w), calc(100vw - 36px));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <div>
+          <h1>Holdings should feel like position review, not another dashboard.</h1>
+          <p class="subtitle" style="margin-top: 12px; max-width: 720px">
+            Single recommended hybrid for issue #123. Steer this target directly: more compact, more visual, less analytical, stronger rows, different top section.
+          </p>
+        </div>
+        <aside class="guide">
+          <strong>How to judge</strong>
+          <p class="subtitle">
+            Dashboard owns total portfolio value. Holdings should answer:
+            what dominates, what needs review, how exposed am I, and which
+            positions deserve attention.
+          </p>
+          <div class="chooser" aria-label="Current target"><button class="choice-btn active" data-choice="H">Recommended Hybrid</button></div>
+        </aside>
+      </header>
+
+      <section class="options">
+        <article class="option recommended" id="option-h">
+          <div class="option-label">Recommended Hybrid <span>Compact rows + tap-to-expand detail</span></div>
+          <div class="phone-shell">
+            <div class="phone">
+              <div class="status"><span>10:42</span><span>100%</span></div>
+              <div class="content">
+                <div class="top">
+                  <div>
+                    <h2 class="title">Holdings</h2>
+                    <p class="subtitle">24 positions - quotes updated 2m ago</p>
+                  </div>
+                  <div class="actions"><span class="icon-btn">⌕</span><span class="icon-btn">+</span></div>
+                </div>
+
+                <section class="review-grid">
+                  <div class="review-card primary">
+                    <p class="kicker">Dominant position</p>
+                    <strong class="value">HDFC Bank</strong>
+                    <p class="small">14.6% allocation, below review limit</p>
+                  </div>
+                  <div class="review-card">
+                    <p class="kicker">Best return</p>
+                    <strong class="value gain">Bitcoin +19.6%</strong>
+                    <p class="small">Strongest unrealized return</p>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="split">
+                    <div>
+                      <p class="kicker">Exposure mix</p>
+                      <strong class="value">Equity-led, not over-concentrated</strong>
+                      <p class="small">Top 3 holdings are 31% of portfolio. Crypto was the weakest class this month.</p>
+                    </div>
+                    <div class="score"><span class="small">Top 3</span><strong>31%</strong></div>
+                  </div>
+                  <div class="mix-track"><span style="width: 68%; background: var(--green)"></span><span style="width: 18%; background: var(--blue)"></span><span style="width: 14%; background: var(--amber)"></span></div>
+                  <div class="exposure-summary">
+                    <div class="exposure-item"><div class="exposure-label"><span class="asset-dot"></span><p class="kicker">Equity</p></div><strong>68%</strong><p class="small">18 positions</p></div>
+                    <div class="exposure-item"><div class="exposure-label"><span class="asset-dot blue"></span><p class="kicker">Debt</p></div><strong>18%</strong><p class="small">4 positions</p></div>
+                    <div class="exposure-item"><div class="exposure-label"><span class="asset-dot amber"></span><p class="kicker">Crypto</p></div><strong>14%</strong><p class="small">2 positions</p></div>
+                  </div>
+                </section>
+
+                <div class="chips"><span class="chip active">All 24</span><span class="chip">Winners 18</span><span class="chip loss-chip">Losers 2</span><span class="chip warning-chip">High alloc. 3</span></div>
+
+                <div class="list-header"><strong>Positions</strong><span class="small">Tap a holding to expand</span></div>
+                <section class="rows">
+                  <div class="holding-row compact"><span class="icon" aria-label="Equity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l4-5 4 3 6-8" /><path d="M16 7h2v2" /><path class="thin-mark" d="M4 20h16" /></svg></span><div class="row-copy"><div class="row-topline"><div><h3>HDFC Bank</h3><p class="small row-subtitle">Equity - Financial Services</p><div class="facts"><span>Invested ₹1.64L</span><span>Alloc. 14.6%</span></div></div><div class="right"><strong>₹1.83L</strong><span class="gain">+11.3%</span></div></div></div><span class="expand-cue">⌄</span></div>
+                  <div class="holding-row compact"><span class="icon" aria-label="Equity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l4-5 4 3 6-8" /><path d="M16 7h2v2" /><path class="thin-mark" d="M4 20h16" /></svg></span><div class="row-copy"><div class="row-topline"><div><h3>Nifty 50 ETF</h3><p class="small row-subtitle">Equity - Index Fund</p><div class="facts"><span>Invested ₹44.2K</span><span>Alloc. 4.1%</span></div></div><div class="right"><strong>₹50.7K</strong><span class="gain">+14.5%</span></div></div></div><span class="expand-cue">⌄</span></div>
+                  <div class="holding-row compact"><span class="icon blue" aria-label="Debt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-2.7 7.9-7 10-4.3-2.1-7-5.5-7-10V6l7-3Z" /><path d="M9 12h6" /><path d="M10 15h4" /></svg></span><div class="row-copy"><div class="row-topline"><div><h3>Sovereign Gold Bond</h3><p class="small row-subtitle">Debt - Government Bond</p><div class="facts"><span>Invested ₹52.9K</span><span>Alloc. 4.6%</span></div></div><div class="right"><strong>₹57.1K</strong><span class="gain">+7.9%</span></div></div></div><span class="expand-cue">⌄</span></div>
+                  <div class="holding-row compact"><span class="icon amber" aria-label="Crypto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M8.5 12h7" /><path d="M12 8.5v7" /><path d="M9.8 9.8l4.4 4.4" /><path d="M14.2 9.8l-4.4 4.4" /></svg></span><div class="row-copy"><div class="row-topline"><div><h3>Bitcoin</h3><p class="small row-subtitle">Crypto - Coin</p><div class="facts"><span>Invested ₹1.16L</span><span>Alloc. 11.1%</span></div></div><div class="right"><strong>₹1.39L</strong><span class="gain">+19.6%</span></div></div></div><span class="expand-cue">⌄</span></div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </section>
+    </main>
+
+    <script>
+      const buttons = document.querySelectorAll(".choice-btn");
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          buttons.forEach((item) => item.classList.toggle("active", item === button));
+          document.querySelector(`#option-${button.dataset.choice.toLowerCase()}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center",
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
+
+
