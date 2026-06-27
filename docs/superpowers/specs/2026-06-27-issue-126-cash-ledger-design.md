@@ -14,14 +14,17 @@ Cash Ledger owns cash movement only:
 
 - Deposit: money enters the portfolio cash pool.
 - Withdraw: money leaves the portfolio cash pool.
-- Invest / Investment Transfer: deployable cash moves into investments and
-  reduces available cash.
+- Linked investment transfer rows: deployable cash moved into investments by
+  Add Holding / future transaction flows and reduces available cash.
 
 Cash Ledger does not perform asset sell, redemption, or partial-exit logic.
 Those flows belong to Holdings / asset transaction work and are tracked by
 GitHub issue #146. If a sale or redemption produces cash before #146 exists in
 the app, the user may manually record the cash as a Deposit, but Cash Ledger
 must not imply that it sold the asset.
+
+Cash Ledger should not expose `Invest` as a primary manual action. That wording
+is ambiguous because users expect investing to create or update a holding.
 
 ## Chosen UX Direction
 
@@ -31,9 +34,9 @@ Use the "deployable capital" framing:
 - Subtitle: `Deployable capital - local only` or `Manual ledger - local only`
   if the app wants to keep the existing baseline wording.
 - Hero value: deployable cash first.
-- Secondary context: total cash balance and current-month investment transfer.
-- Monthly movement card: added, invested/transferred, and kept as cash.
-- Quick entry: `Deposit`, `Withdraw`, `Invest`.
+- Secondary context: total cash balance and current-month linked transfer.
+- Monthly movement card: added, linked/transferred to investments, and kept as cash.
+- Quick entry: `Deposit`, `Withdraw`.
 - Recent movement: rows explain what happened, not just the amount.
 
 The screen should answer three questions quickly:
@@ -44,18 +47,21 @@ The screen should answer three questions quickly:
 
 ## Data Semantics
 
-For V1, keep persisted cash entry semantics simple:
+For V1, keep manual cash-entry semantics simple:
 
 - `Deposit` maps to `CashEntryType = "addition"`.
 - `Withdraw` maps to `CashEntryType = "withdrawal"`.
-- `Invest` / `Investment Transfer` maps to `CashEntryType = "withdrawal"` with
-  UI copy and metadata indicating investment transfer.
 
 If the current `CashEntry` type cannot distinguish a normal withdrawal from an
-investment transfer, the implementation should add the smallest durable field
-needed to preserve that meaning, for example `category:
-"deposit" | "withdrawal" | "investment_transfer"`, while keeping balance math
-based on the existing addition/withdrawal direction.
+investment-linked cash outflow, the implementation should add the smallest
+durable field needed to preserve that meaning, for example `category:
+"deposit" | "withdrawal" | "linked_investment_transfer"`, while keeping balance
+math based on the existing addition/withdrawal direction.
+
+Linked investment transfer rows should be produced by Add Holding / transaction
+flows when the app can confidently connect a cash deduction to an investment
+entry. If that connection does not exist yet, show this as planned/empty linked
+state rather than asking the user to press an ambiguous `Invest` button.
 
 Do not introduce tax lots, LTCG, brokerage settlement, or asset-sale behavior in
 this issue.
@@ -75,7 +81,7 @@ Lead with `Deployable cash`.
 Secondary context:
 
 - Total cash balance.
-- Current month investment transfer amount.
+- Current month linked investment-transfer amount.
 - Calm text such as `₹45K moved into investments this month`.
 
 All values must use INR formatting and value masking.
@@ -85,7 +91,7 @@ All values must use INR formatting and value masking.
 Show current-month cash movement as a compact evidence card:
 
 - Added.
-- Invested / transferred.
+- Linked transfers to investments.
 - Kept as cash or available.
 - Savings/investment rate when computable.
 
@@ -98,16 +104,13 @@ Entry modes:
 
 - `Deposit`
 - `Withdraw`
-- `Invest`
 
 Mode copy:
 
 - Deposit: "Add money that is available for future investment."
 - Withdraw: "Record money leaving the portfolio cash pool."
-- Invest: "Move deployable cash into an investment."
-
-The `Invest` action should clearly reduce cash. In implementation, its saved
-row may still use withdrawal math.
+Investment transfers should appear below as linked cash movement rows, not as a
+primary mode in the cash entry control.
 
 ### Recent Movement
 
@@ -122,7 +125,7 @@ Rows should include:
 Examples:
 
 - `Salary added` / `Increased deployable cash`
-- `SIP transfer` / `Moved cash into investments`
+- `SIP transfer` / `Linked from Add Holding - moved cash into investments`
 - `Emergency reserve` / `Kept as cash reserve`
 
 Rows should remain calm, compact, and scannable.
@@ -151,9 +154,9 @@ The empty state should teach the screen:
 Static/unit:
 
 - Cash balance still derives from additions minus withdrawals.
-- Investment transfer reduces deployable cash.
-- Monthly cash movement derives current-month added, invested/transferred, kept
-  cash, and savings/investment rate.
+- Linked investment transfer reduces deployable cash when present.
+- Monthly cash movement derives current-month added, linked transfers, kept cash,
+  and savings/investment rate.
 - Value masking hides cash values.
 - Empty state remains useful.
 
@@ -162,18 +165,19 @@ Manual/emulator:
 - Cash Ledger loads.
 - Deposit entry saves and increases cash.
 - Withdraw entry saves and reduces cash.
-- Invest entry saves and reduces cash with investment-transfer copy.
+- Linked investment-transfer row reduces cash when generated by an investment
+  entry flow.
 - Recent movement rows explain the source/use of cash.
 - Masking hides hero, metrics, and row amounts.
 
 ## Acceptance Criteria Mapping
 
 - Clear identity: screen leads with deployable cash.
-- Useful V1 behavior: monthly cash movement explains added, invested, and kept
-  cash.
-- Deposit/withdraw/invest supported: quick entry modes are explicit.
-- Investment transfer behavior: reduces deployable cash and is labeled as an
-  investment transfer.
+- Useful V1 behavior: monthly cash movement explains added, linked transfers,
+  and kept cash.
+- Deposit/withdraw supported: quick entry modes are explicit.
+- Investment transfer behavior: appears as linked cash movement, not a primary
+  Cash Ledger action.
 - Empty state: explains how to start without implying missing setup.
 - Tests: cover calculations and UI behavior.
 - Android evidence: populated and empty ledger states should be captured when

@@ -292,6 +292,10 @@
         color: white;
       }
 
+      .mode-tabs.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
       .entry-card {
         display: grid;
         gap: 12px;
@@ -548,7 +552,8 @@
           <p>
             Goal: make Cash feel like deployable capital and monthly money
             movement, not a placeholder. These are visual/product directions
-            only; V1 can still store investment transfer as withdrawal semantics.
+            only; investment transfer appears as a linked ledger row from
+            Add Holding / transaction flows, not as a primary Cash action.
           </p>
         </div>
         <div class="badge">V1 preview · Android-first · local only</div>
@@ -587,13 +592,12 @@
                 </div>
                 <div class="metric-row">
                   <div class="metric"><small>Added</small><strong>₹70K</strong></div>
-                  <div class="metric"><small>Invested</small><strong>₹45K</strong></div>
+                  <div class="metric"><small>Linked transfer</small><strong>₹45K</strong></div>
                   <div class="metric"><small>Savings</small><strong>32.8%</strong></div>
                 </div>
-                <div class="mode-tabs">
+                <div class="mode-tabs two">
                   <button class="active">Deposit</button>
                   <button>Withdraw</button>
-                  <button>Transfer</button>
                 </div>
                 <div class="card entry-card">
                   <header>
@@ -605,7 +609,7 @@
                   <div class="field-grid">
                     <div class="field"><span>Amount</span><strong>₹0</strong></div>
                     <div class="field"><span>Date</span><strong>09 May</strong></div>
-                    <div class="field full"><span>Label</span><strong>Salary, SIP transfer</strong></div>
+                    <div class="field full"><span>Label</span><strong>Salary, broker cash</strong></div>
                   </div>
                   <button class="save">Save entry</button>
                 </div>
@@ -618,7 +622,7 @@
                   </div>
                   <div class="ledger-row">
                     <div class="glyph">↗</div>
-                    <div><div class="ledger-title">SIP transfer</div><div class="ledger-meta">Investment transfer · 05 May</div></div>
+                    <div><div class="ledger-title">SIP transfer</div><div class="ledger-meta">Linked from Add Holding · 05 May</div></div>
                     <div class="amount minus">−₹15K</div>
                   </div>
                 </div>
@@ -667,18 +671,17 @@
                       <div class="bar"><span></span><span></span><span></span></div>
                       <div class="legend">
                         <span><i style="background:var(--green)"></i>Added ₹70K</span>
-                        <span><i style="background:var(--blue)"></i>Invested ₹45K</span>
+                        <span><i style="background:var(--blue)"></i>Linked transfers ₹45K</span>
                         <span><i style="background:var(--orange)"></i>Kept ₹25K</span>
                       </div>
                     </div>
                     <div class="pill active">32.8% saved</div>
                   </div>
                 </div>
-                <div class="section-head"><h3>Quick entry</h3><span>Audit trail</span></div>
-                <div class="mode-tabs">
+                <div class="section-head"><h3>Quick entry</h3><span>Cash only</span></div>
+                <div class="mode-tabs two">
                   <button class="active" data-mode="deposit">Deposit</button>
                   <button data-mode="withdraw">Withdraw</button>
-                  <button data-mode="transfer">Invest</button>
                 </div>
                 <div class="card entry-card" id="recommended-entry">
                   <header>
@@ -704,7 +707,7 @@
                   </div>
                   <div class="ledger-row">
                     <div class="glyph" style="color:var(--blue)">↗</div>
-                    <div><div class="ledger-title">SIP transfer</div><div class="ledger-meta">Moved cash into investments · 05 May</div></div>
+                    <div><div class="ledger-title">SIP transfer</div><div class="ledger-meta">Linked from Add Holding · moved cash into investments</div></div>
                     <div class="amount minus">−₹15K</div>
                   </div>
                   <div class="ledger-row">
@@ -768,12 +771,12 @@
                   </div>
                   <div class="ledger-row">
                     <div class="glyph">↗</div>
-                    <div><div class="ledger-title">Index fund SIP</div><div class="ledger-meta">Investment transfer · Reduces cash</div></div>
+                    <div><div class="ledger-title">Index fund SIP</div><div class="ledger-meta">Linked from Add Holding · reduces cash</div></div>
                     <div class="amount minus">−₹15K</div>
                   </div>
                   <div class="ledger-row">
                     <div class="glyph">↗</div>
-                    <div><div class="ledger-title">Large cap SIP</div><div class="ledger-meta">Investment transfer · Reduces cash</div></div>
+                    <div><div class="ledger-title">Large cap SIP</div><div class="ledger-meta">Linked from Add Holding · reduces cash</div></div>
                     <div class="amount minus">−₹30K</div>
                   </div>
                   <div class="ledger-row">
@@ -786,13 +789,12 @@
                   <header>
                     <div>
                       <h3>Record next movement</h3>
-                      <p>Choose Deposit, Withdraw, or Invest when cash changes.</p>
+                      <p>Choose Deposit or Withdraw for manual cash changes.</p>
                     </div>
                   </header>
-                  <div class="mode-tabs">
+                  <div class="mode-tabs two">
                     <button class="active">Deposit</button>
                     <button>Withdraw</button>
-                    <button>Invest</button>
                   </div>
                   <button class="save">Add movement</button>
                 </div>
@@ -823,14 +825,6 @@
           amount: "₹5,000",
           label: "Bank withdrawal",
           save: "Save withdrawal",
-        },
-        transfer: {
-          title: "Investment transfer",
-          body: "Move deployable cash into an investment. Stored as cash outflow in V1.",
-          pill: "Reduces cash",
-          amount: "₹15,000",
-          label: "SIP transfer",
-          save: "Save transfer",
         },
       };
 
