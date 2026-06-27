@@ -81,7 +81,7 @@ describe("CashScreen", () => {
     const { getByText, queryByText } = render(
       <CashScreen
         now={new Date("2026-05-16T00:00:00.000Z")}
-      store={store}
+        store={store}
       />,
     );
 
