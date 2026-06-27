@@ -49,7 +49,7 @@ describe("CashScreen", () => {
     });
   });
 
-  it("records an investment transfer as a withdrawal and shows monthly metrics", async () => {
+  it("shows invested as derived evidence without exposing a manual Invest action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -76,35 +76,20 @@ describe("CashScreen", () => {
       type: "buy",
     });
 
-    const { getAllByText, getByLabelText, getByText } = render(
+    const { getByText, queryByText } = render(
       <CashScreen
         now={new Date("2026-05-16T00:00:00.000Z")}
-        store={store}
+      store={store}
       />,
     );
 
-    expect(getByText("Added")).toBeTruthy();
+    expect(getByText("Deployable cash")).toBeTruthy();
     expect(getByText("Invested")).toBeTruthy();
-    expect(getByText("Available")).toBeTruthy();
-    expect(getByText("Savings")).toBeTruthy();
-    expect(getByText("20.00%")).toBeTruthy();
-
-    fireEvent.press(getByText("Investment Transfer"));
-    fireEvent.changeText(getByLabelText("Amount"), "20000");
-    fireEvent.changeText(getByLabelText("Label"), "SIP transfer");
-    fireEvent.changeText(getByLabelText("Date"), "2026-05-11");
-    fireEvent.press(getByText("Save Cash Entry"));
-
-    await waitFor(() => {
-      expect(getAllByText("₹80,000.00").length).toBeGreaterThan(0);
-      expect(getByText("SIP transfer")).toBeTruthy();
-      expect(getByText("-₹20,000.00")).toBeTruthy();
-    });
-    expect(store.getState().cashEntries.at(-1)).toMatchObject({
-      amount: 20000,
-      label: "SIP transfer",
-      type: "withdrawal",
-    });
+    expect(getByText("₹20K moved into investments this month")).toBeTruthy();
+    expect(getByText("Deposit")).toBeTruthy();
+    expect(getByText("Withdraw")).toBeTruthy();
+    expect(queryByText("Invest")).toBeNull();
+    expect(queryByText("Investment Transfer")).toBeNull();
   });
 
   it("shows validation errors for invalid cash entries", () => {

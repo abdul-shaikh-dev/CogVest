@@ -29,7 +29,7 @@ type CashScreenProps = {
 };
 
 type FieldErrors = Partial<Record<"amount" | "date" | "label", string>>;
-type CashEntryMode = CashEntryType | "transfer";
+type CashEntryMode = CashEntryType;
 
 function validateCashEntry({
   amount,
@@ -66,32 +66,12 @@ function validateCashEntry({
   };
 }
 
-function getStoredEntryType(mode: CashEntryMode): CashEntryType {
-  return mode === "addition" ? "addition" : "withdrawal";
-}
-
 function getCashEntryModeLabel(mode: CashEntryMode) {
-  if (mode === "addition") {
-    return "Deposit";
-  }
-
-  if (mode === "transfer") {
-    return "Investment Transfer";
-  }
-
-  return "Withdraw";
+  return mode === "addition" ? "Deposit" : "Withdraw";
 }
 
 function getCashEntryPlaceholder(mode: CashEntryMode) {
-  if (mode === "addition") {
-    return "Broker cash";
-  }
-
-  if (mode === "transfer") {
-    return "SIP transfer";
-  }
-
-  return "Withdrawal";
+  return mode === "addition" ? "Broker cash" : "Withdrawal";
 }
 
 function formatSavingsRate(savingsRate: number | null) {
@@ -102,8 +82,15 @@ export function CashScreen({
   now,
   store = getPortfolioStore(),
 }: CashScreenProps) {
-  const { addEntry, balance, entries, maskWealthValues, monthlyMetrics } =
-    useCash({ now, store });
+  const {
+    addEntry,
+    balance,
+    entries,
+    manualEntryModes,
+    maskWealthValues,
+    monthlyMetrics,
+    monthlyMovementSummary,
+  } = useCash({ now, store });
   const [mode, setMode] = useState<CashEntryMode>("addition");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
@@ -136,7 +123,7 @@ export function CashScreen({
       date: date.trim(),
       label: label.trim(),
       notes,
-      type: getStoredEntryType(mode),
+      type: mode,
     });
     resetForm();
   }
@@ -144,13 +131,13 @@ export function CashScreen({
   return (
     <ScreenContainer scroll testID="cash-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Cash Ledger" subtitle="Manual ledger • local only" />
+        <ScreenHeader title="Cash Ledger" subtitle="Deployable capital • local only" />
 
         <HeroMetric
-          label="Cash balance"
+          label="Deployable cash"
           masked={maskWealthValues}
           value={formatINR(balance)}
-          subValue="Included in total allocation"
+          subValue={`Balance ${formatCompactINR(balance)}`}
           subValueTone="secondary"
         />
 
@@ -167,9 +154,11 @@ export function CashScreen({
               value: formatCompactINR(monthlyMetrics.invested),
             },
             {
-              label: "Available",
+              label: "Kept",
               masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.available),
+              value: formatCompactINR(
+                Math.max(0, monthlyMetrics.added - monthlyMetrics.invested),
+              ),
             },
             {
               label: "Savings",
@@ -189,8 +178,13 @@ export function CashScreen({
           </PremiumCard>
         ) : null}
 
+        <PremiumCard style={styles.movementCard}>
+          <SectionHeader title="This month" />
+          <AppText color="secondary">{monthlyMovementSummary}</AppText>
+        </PremiumCard>
+
         <View style={styles.segmentedControl}>
-          {(["addition", "withdrawal", "transfer"] as const).map((entryMode) => (
+          {manualEntryModes.map((entryMode) => (
             <Pressable
               accessibilityRole="button"
               key={entryMode}
@@ -285,6 +279,9 @@ const styles = StyleSheet.create({
   },
   history: {
     gap: spacing.cardGap,
+  },
+  movementCard: {
+    gap: spacing.sm,
   },
   pressed: {
     opacity: interaction.pressedOpacity,
