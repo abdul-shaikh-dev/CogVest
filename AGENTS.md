@@ -49,10 +49,21 @@ into behaviour insights and Minimal Mode.
   `superpowers:verification-before-completion` before claiming completion.
 - For bugs, use `superpowers:systematic-debugging` before fixing. For major
   changes, use `superpowers:requesting-code-review` before merge readiness.
-- When subagents or model routing are available, follow Superpowers model
-  selection guidance: use smaller/fast models for narrow mechanical tasks,
-  standard models for integration/debugging, and the most capable model for
-  product/design judgment, architecture, difficult bugs, and final reviews.
+- Be deliberate about model cost. Do not use the strongest/premium model for
+  every step when subagents or model routing are available.
+- Use smaller/fast models for repo search, file inventory, issue/doc summaries,
+  mechanical edits, straightforward test updates, command output summaries, and
+  first-pass diff checks.
+- Use standard models for normal implementation, integration debugging,
+  refactors across a few files, test-failure diagnosis, and Android harness
+  coordination.
+- Reserve the strongest model only for product/design judgment, architecture
+  decisions, difficult bugs after initial evidence is gathered, security-risk
+  decisions, final spec/plan review, final code review, and merge-readiness
+  calls.
+- Before dispatching subagents, state the intended model tier per task when the
+  tooling supports it. If model routing is unavailable in the current session,
+  explicitly say so and keep the premium-model work bounded.
 - Functional components with hooks only. No class components.
 - Persist raw data, derive everything else.
 - All amounts in INR (Indian Rupees ₹).
