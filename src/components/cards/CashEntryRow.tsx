@@ -16,6 +16,12 @@ function formatCashAmount(entry: CashEntry) {
   return entry.type === "addition" ? `+${amount}` : `-${amount}`;
 }
 
+function getCashEntryMovement(entry: CashEntry) {
+  return entry.type === "addition"
+    ? "Increased deployable cash"
+    : "Reduced deployable cash";
+}
+
 export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
   const isAddition = entry.type === "addition";
 
@@ -23,6 +29,9 @@ export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
     <PremiumCard style={styles.row}>
       <View style={styles.details}>
         <AppText weight="bold">{entry.label}</AppText>
+        <AppText color="secondary" variant="caption">
+          {getCashEntryMovement(entry)}
+        </AppText>
         <AppText color="secondary" variant="caption">
           {formatDate(entry.date)}
         </AppText>

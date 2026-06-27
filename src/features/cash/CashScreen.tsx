@@ -251,8 +251,8 @@ export function CashScreen({
 
         {entries.length === 0 ? (
           <EmptyState
-            message="Add available broker or bank cash to include it in portfolio value."
-            title="No cash entries yet"
+            message="Add broker or bank cash only when it should count toward portfolio value."
+            title="No cash movement yet"
           />
         ) : (
           <View style={styles.history}>

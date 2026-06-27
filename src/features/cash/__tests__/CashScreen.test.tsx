@@ -17,8 +17,8 @@ describe("CashScreen", () => {
     expect(getByTestId("cash-date-input")).toBeTruthy();
     expect(getByTestId("save-cash-entry-button")).toBeTruthy();
     expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
-    expect(getByText("No cash entries yet")).toBeTruthy();
-    expect(getByText("Add available broker or bank cash to include it in portfolio value.")).toBeTruthy();
+    expect(getByText("No cash movement yet")).toBeTruthy();
+    expect(getByText("Add broker or bank cash only when it should count toward portfolio value.")).toBeTruthy();
   });
 
   it("adds and withdraws cash and shows history rows", async () => {
@@ -33,6 +33,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
       expect(getByText("Broker cash")).toBeTruthy();
+      expect(getByText("Increased deployable cash")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
     });
 
@@ -45,6 +46,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
       expect(getByText("Emergency withdrawal")).toBeTruthy();
+      expect(getByText("Reduced deployable cash")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
     });
   });
