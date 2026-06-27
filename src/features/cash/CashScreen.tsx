@@ -154,7 +154,7 @@ export function CashScreen({
           label="Deployable cash"
           masked={maskWealthValues}
           value={formatINR(balance)}
-          subValue={`Balance ${formatCompactINR(balance)}`}
+          subValue="Included in portfolio"
           subValueTone="secondary"
         />
 
@@ -195,10 +195,14 @@ export function CashScreen({
           </PremiumCard>
         ) : null}
 
-        <PremiumCard style={styles.movementCard}>
-          <SectionHeader title="This month" />
-          <AppText color="secondary">{monthlyMovementSummary}</AppText>
-        </PremiumCard>
+        <View style={styles.monthlyInsight}>
+          <AppText weight="bold">This month</AppText>
+          <AppText color="secondary" style={styles.monthlyInsightText}>
+            {monthlyMovementSummary === "No investment cash movement this month"
+              ? "No movement yet"
+              : monthlyMovementSummary}
+          </AppText>
+        </View>
 
         <View style={styles.segmentedControl}>
           {manualEntryModes.map((entryMode) => (
@@ -217,7 +221,8 @@ export function CashScreen({
               ]}
             >
               <AppText
-                color={mode === entryMode ? "inverse" : "secondary"}
+                color={mode === entryMode ? "primary" : "secondary"}
+                style={mode === entryMode && styles.segmentActiveText}
                 weight="bold"
               >
                 {getCashEntryModeLabel(entryMode)}
@@ -244,15 +249,29 @@ export function CashScreen({
               </AppText>
             </View>
           </View>
-          <FormTextField
-            error={errors.amount}
-            keyboardType="decimal-pad"
-            label="Amount"
-            onChangeText={setAmount}
-            placeholder="1000"
-            testID="cash-amount-input"
-            value={amount}
-          />
+          <View style={styles.formRow}>
+            <View style={styles.formRowField}>
+              <FormTextField
+                error={errors.amount}
+                keyboardType="decimal-pad"
+                label="Amount"
+                onChangeText={setAmount}
+                placeholder="1000"
+                testID="cash-amount-input"
+                value={amount}
+              />
+            </View>
+            <View style={styles.formRowField}>
+              <FormTextField
+                error={errors.date}
+                label="Date"
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                testID="cash-date-input"
+                value={date}
+              />
+            </View>
+          </View>
           <FormTextField
             error={errors.label}
             label="Label"
@@ -261,13 +280,10 @@ export function CashScreen({
             testID="cash-label-input"
             value={label}
           />
-          <FormTextField
-            error={errors.date}
-            label="Date"
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            testID="cash-date-input"
-            value={date}
+          <AppButton
+            title={modeCopy.saveLabel}
+            testID="save-cash-entry-button"
+            onPress={submit}
           />
           <FormTextField
             label="Notes"
@@ -275,11 +291,6 @@ export function CashScreen({
             onChangeText={setNotes}
             placeholder="Optional note"
             value={notes}
-          />
-          <AppButton
-            title={modeCopy.saveLabel}
-            testID="save-cash-entry-button"
-            onPress={submit}
           />
         </PremiumCard>
 
@@ -331,27 +342,49 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  formRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  formRowField: {
+    flex: 1,
+  },
   history: {
     gap: spacing.cardGap,
   },
-  movementCard: {
-    gap: spacing.sm,
+  monthlyInsight: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  monthlyInsightText: {
+    flex: 1,
+    textAlign: "right",
   },
   pressed: {
     opacity: interaction.pressedOpacity,
   },
   segment: {
     alignItems: "center",
-    borderRadius: radii.pill,
+    borderRadius: radii.button,
     flex: 1,
-    paddingVertical: spacing.cardInner,
+    paddingVertical: spacing.sm,
   },
   segmentActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface.elevated,
+  },
+  segmentActiveText: {
+    color: colors.primary,
   },
   segmentedControl: {
     backgroundColor: colors.surface.card,
-    borderRadius: radii.pill,
+    borderRadius: radii.card,
     flexDirection: "row",
     padding: spacing.xs,
   },

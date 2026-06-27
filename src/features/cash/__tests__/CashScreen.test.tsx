@@ -55,6 +55,9 @@ describe("CashScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByText, queryByText } = render(<CashScreen store={store} />);
 
+    expect(getByText("Included in portfolio")).toBeTruthy();
+    expect(queryByText("Balance ₹0")).toBeNull();
+    expect(getByText("No movement yet")).toBeTruthy();
     expect(getByText("Deposit cash")).toBeTruthy();
     expect(getByText("Add money that is available for future investment.")).toBeTruthy();
     expect(getByText("Adds balance")).toBeTruthy();
