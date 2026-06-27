@@ -34,8 +34,8 @@ Use the "deployable capital" framing:
 - Subtitle: `Deployable capital - local only` or `Manual ledger - local only`
   if the app wants to keep the existing baseline wording.
 - Hero value: deployable cash first.
-- Secondary context: total cash balance and current-month linked transfer.
-- Monthly movement card: added, linked/transferred to investments, and kept as cash.
+- Secondary context: total cash balance and current-month invested amount.
+- Monthly movement card: added, invested, and kept as cash.
 - Quick entry: `Deposit`, `Withdraw`.
 - Recent movement: rows explain what happened, not just the amount.
 
@@ -81,7 +81,7 @@ Lead with `Deployable cash`.
 Secondary context:
 
 - Total cash balance.
-- Current month linked investment-transfer amount.
+- Current month invested amount.
 - Calm text such as `₹45K moved into investments this month`.
 
 All values must use INR formatting and value masking.
@@ -91,7 +91,7 @@ All values must use INR formatting and value masking.
 Show current-month cash movement as a compact evidence card:
 
 - Added.
-- Linked transfers to investments.
+- Invested.
 - Kept as cash or available.
 - Savings/investment rate when computable.
 
@@ -155,7 +155,7 @@ Static/unit:
 
 - Cash balance still derives from additions minus withdrawals.
 - Linked investment transfer reduces deployable cash when present.
-- Monthly cash movement derives current-month added, linked transfers, kept cash,
+- Monthly cash movement derives current-month added, invested, kept cash,
   and savings/investment rate.
 - Value masking hides cash values.
 - Empty state remains useful.
@@ -173,8 +173,8 @@ Manual/emulator:
 ## Acceptance Criteria Mapping
 
 - Clear identity: screen leads with deployable cash.
-- Useful V1 behavior: monthly cash movement explains added, linked transfers,
-  and kept cash.
+- Useful V1 behavior: monthly cash movement explains added, invested, and kept
+  cash.
 - Deposit/withdraw supported: quick entry modes are explicit.
 - Investment transfer behavior: appears as linked cash movement, not a primary
   Cash Ledger action.
