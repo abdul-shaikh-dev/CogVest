@@ -23,12 +23,12 @@ describe("CashScreen", () => {
 
   it("adds and withdraws cash and shows history rows", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getAllByText, getByLabelText, getByText } = render(<CashScreen store={store} />);
+    const { getAllByText, getByLabelText, getByTestId, getByText } = render(<CashScreen store={store} />);
 
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "Broker cash");
     fireEvent.changeText(getByLabelText("Date"), "2026-04-20");
-    fireEvent.press(getByText("Save Cash Entry"));
+    fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
@@ -41,7 +41,7 @@ describe("CashScreen", () => {
     fireEvent.changeText(getByLabelText("Amount"), "250");
     fireEvent.changeText(getByLabelText("Label"), "Emergency withdrawal");
     fireEvent.changeText(getByLabelText("Date"), "2026-04-21");
-    fireEvent.press(getByText("Save Cash Entry"));
+    fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
@@ -49,6 +49,25 @@ describe("CashScreen", () => {
       expect(getByText("Reduced deployable cash")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
     });
+  });
+
+  it("changes the cash entry form copy when switching between deposit and withdraw", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByText, queryByText } = render(<CashScreen store={store} />);
+
+    expect(getByText("Deposit cash")).toBeTruthy();
+    expect(getByText("Add money that is available for future investment.")).toBeTruthy();
+    expect(getByText("Adds balance")).toBeTruthy();
+    expect(getByText("Save deposit")).toBeTruthy();
+    expect(queryByText("Save Cash Entry")).toBeNull();
+
+    fireEvent.press(getByText("Withdraw"));
+
+    expect(getByText("Withdraw cash")).toBeTruthy();
+    expect(getByText("Record money leaving the portfolio cash pool.")).toBeTruthy();
+    expect(getByText("Reduces balance")).toBeTruthy();
+    expect(getByText("Save withdrawal")).toBeTruthy();
+    expect(queryByText("Deposit cash")).toBeNull();
   });
 
   it("shows invested as derived evidence without exposing a manual Invest action", () => {
@@ -96,9 +115,9 @@ describe("CashScreen", () => {
 
   it("shows validation errors for invalid cash entries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText } = render(<CashScreen store={store} />);
+    const { getByTestId, getByText } = render(<CashScreen store={store} />);
 
-    fireEvent.press(getByText("Save Cash Entry"));
+    fireEvent.press(getByTestId("save-cash-entry-button"));
 
     expect(getByText("Amount must be a valid number.")).toBeTruthy();
     expect(getByText("Label is required.")).toBeTruthy();

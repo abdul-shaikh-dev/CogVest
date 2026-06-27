@@ -74,6 +74,22 @@ function getCashEntryPlaceholder(mode: CashEntryMode) {
   return mode === "addition" ? "Broker cash" : "Withdrawal";
 }
 
+function getCashEntryModeCopy(mode: CashEntryMode) {
+  return mode === "addition"
+    ? {
+        balanceImpact: "Adds balance",
+        description: "Add money that is available for future investment.",
+        saveLabel: "Save deposit",
+        title: "Deposit cash",
+      }
+    : {
+        balanceImpact: "Reduces balance",
+        description: "Record money leaving the portfolio cash pool.",
+        saveLabel: "Save withdrawal",
+        title: "Withdraw cash",
+      };
+}
+
 function formatSavingsRate(savingsRate: number | null) {
   return savingsRate === null ? "Not enough data" : `${savingsRate.toFixed(2)}%`;
 }
@@ -97,6 +113,7 @@ export function CashScreen({
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const modeCopy = getCashEntryModeCopy(mode);
 
   function resetForm() {
     setAmount("");
@@ -187,6 +204,7 @@ export function CashScreen({
           {manualEntryModes.map((entryMode) => (
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ selected: mode === entryMode }}
               key={entryMode}
               onPress={() => {
                 setMode(entryMode);
@@ -209,7 +227,23 @@ export function CashScreen({
         </View>
 
         <PremiumCard>
-          <SectionHeader title="Add cash entry" />
+          <View style={styles.entryHeader}>
+            <View style={styles.entryHeaderCopy}>
+              <SectionHeader title={modeCopy.title} />
+              <AppText color="secondary" variant="caption">
+                {modeCopy.description}
+              </AppText>
+            </View>
+            <View style={styles.balancePill}>
+              <AppText
+                style={styles.balancePillText}
+                variant="caption"
+                weight="bold"
+              >
+                {modeCopy.balanceImpact}
+              </AppText>
+            </View>
+          </View>
           <FormTextField
             error={errors.amount}
             keyboardType="decimal-pad"
@@ -243,7 +277,7 @@ export function CashScreen({
             value={notes}
           />
           <AppButton
-            title="Save Cash Entry"
+            title={modeCopy.saveLabel}
             testID="save-cash-entry-button"
             onPress={submit}
           />
@@ -276,6 +310,26 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  balancePill: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  balancePillText: {
+    color: colors.profit,
+  },
+  entryHeader: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+  },
+  entryHeaderCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
   history: {
     gap: spacing.cardGap,
