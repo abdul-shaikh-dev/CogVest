@@ -12,6 +12,7 @@ import {
 } from "@/src/components/common";
 import { getButtonInteractionStyle } from "@/src/components/common/AppButton";
 import { colors, interaction } from "@/src/theme";
+import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
   it("renders AppText with CogVest text colors", () => {
@@ -107,5 +108,20 @@ describe("common UI primitives", () => {
     expect(getByText("No holdings yet")).toBeTruthy();
     expect(getByText("Holdings are created from confirmed trades.")).toBeTruthy();
     expect(getByText("Add Trade")).toBeTruthy();
+  });
+
+  it("uses readable secondary text for form placeholders", () => {
+    const { getByPlaceholderText } = render(
+      <FormTextField
+        label="Amount"
+        placeholder="1000"
+        value=""
+        onChangeText={jest.fn()}
+      />,
+    );
+
+    expect(getByPlaceholderText("1000").props.placeholderTextColor).toBe(
+      colors.text.secondary,
+    );
   });
 });

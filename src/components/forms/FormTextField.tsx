@@ -41,7 +41,7 @@ export function FormTextField({
         onChangeText={onChangeText}
         onSubmitEditing={onSubmitEditing}
         placeholder={placeholder}
-        placeholderTextColor={colors.text.muted}
+        placeholderTextColor={colors.text.secondary}
         returnKeyType={returnKeyType}
         style={[styles.input, multiline && styles.multiline, error && styles.invalid]}
         testID={testID}

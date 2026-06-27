@@ -29,7 +29,7 @@ type CashScreenProps = {
 };
 
 type FieldErrors = Partial<Record<"amount" | "date" | "label", string>>;
-type CashEntryMode = CashEntryType | "transfer";
+type CashEntryMode = CashEntryType;
 
 function validateCashEntry({
   amount,
@@ -66,32 +66,28 @@ function validateCashEntry({
   };
 }
 
-function getStoredEntryType(mode: CashEntryMode): CashEntryType {
-  return mode === "addition" ? "addition" : "withdrawal";
-}
-
 function getCashEntryModeLabel(mode: CashEntryMode) {
-  if (mode === "addition") {
-    return "Deposit";
-  }
-
-  if (mode === "transfer") {
-    return "Investment Transfer";
-  }
-
-  return "Withdraw";
+  return mode === "addition" ? "Deposit" : "Withdraw";
 }
 
 function getCashEntryPlaceholder(mode: CashEntryMode) {
-  if (mode === "addition") {
-    return "Broker cash";
-  }
+  return mode === "addition" ? "Broker cash" : "Withdrawal";
+}
 
-  if (mode === "transfer") {
-    return "SIP transfer";
-  }
-
-  return "Withdrawal";
+function getCashEntryModeCopy(mode: CashEntryMode) {
+  return mode === "addition"
+    ? {
+        balanceImpact: "Adds balance",
+        description: "Add money that is available for future investment.",
+        saveLabel: "Save deposit",
+        title: "Deposit cash",
+      }
+    : {
+        balanceImpact: "Reduces balance",
+        description: "Record money leaving the portfolio cash pool.",
+        saveLabel: "Save withdrawal",
+        title: "Withdraw cash",
+      };
 }
 
 function formatSavingsRate(savingsRate: number | null) {
@@ -102,14 +98,22 @@ export function CashScreen({
   now,
   store = getPortfolioStore(),
 }: CashScreenProps) {
-  const { addEntry, balance, entries, maskWealthValues, monthlyMetrics } =
-    useCash({ now, store });
+  const {
+    addEntry,
+    balance,
+    entries,
+    manualEntryModes,
+    maskWealthValues,
+    monthlyMetrics,
+    monthlyMovementSummary,
+  } = useCash({ now, store });
   const [mode, setMode] = useState<CashEntryMode>("addition");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const modeCopy = getCashEntryModeCopy(mode);
 
   function resetForm() {
     setAmount("");
@@ -136,7 +140,7 @@ export function CashScreen({
       date: date.trim(),
       label: label.trim(),
       notes,
-      type: getStoredEntryType(mode),
+      type: mode,
     });
     resetForm();
   }
@@ -144,13 +148,13 @@ export function CashScreen({
   return (
     <ScreenContainer scroll testID="cash-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Cash Ledger" subtitle="Manual ledger • local only" />
+        <ScreenHeader title="Cash Ledger" subtitle="Deployable capital • local only" />
 
         <HeroMetric
-          label="Cash balance"
+          label="Deployable cash"
           masked={maskWealthValues}
           value={formatINR(balance)}
-          subValue="Included in total allocation"
+          subValue="Included in portfolio"
           subValueTone="secondary"
         />
 
@@ -167,9 +171,11 @@ export function CashScreen({
               value: formatCompactINR(monthlyMetrics.invested),
             },
             {
-              label: "Available",
+              label: "Kept",
               masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.available),
+              value: formatCompactINR(
+                Math.max(0, monthlyMetrics.added - monthlyMetrics.invested),
+              ),
             },
             {
               label: "Savings",
@@ -189,10 +195,20 @@ export function CashScreen({
           </PremiumCard>
         ) : null}
 
+        <View style={styles.monthlyInsight}>
+          <AppText weight="bold">This month</AppText>
+          <AppText color="secondary" style={styles.monthlyInsightText}>
+            {monthlyMovementSummary === "No investment cash movement this month"
+              ? "No movement yet"
+              : monthlyMovementSummary}
+          </AppText>
+        </View>
+
         <View style={styles.segmentedControl}>
-          {(["addition", "withdrawal", "transfer"] as const).map((entryMode) => (
+          {manualEntryModes.map((entryMode) => (
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ selected: mode === entryMode }}
               key={entryMode}
               onPress={() => {
                 setMode(entryMode);
@@ -205,7 +221,8 @@ export function CashScreen({
               ]}
             >
               <AppText
-                color={mode === entryMode ? "inverse" : "secondary"}
+                color={mode === entryMode ? "primary" : "secondary"}
+                style={mode === entryMode && styles.segmentActiveText}
                 weight="bold"
               >
                 {getCashEntryModeLabel(entryMode)}
@@ -215,16 +232,46 @@ export function CashScreen({
         </View>
 
         <PremiumCard>
-          <SectionHeader title="Add cash entry" />
-          <FormTextField
-            error={errors.amount}
-            keyboardType="decimal-pad"
-            label="Amount"
-            onChangeText={setAmount}
-            placeholder="1000"
-            testID="cash-amount-input"
-            value={amount}
-          />
+          <View style={styles.entryHeader}>
+            <View style={styles.entryHeaderCopy}>
+              <SectionHeader title={modeCopy.title} />
+              <AppText color="secondary" variant="caption">
+                {modeCopy.description}
+              </AppText>
+            </View>
+            <View style={styles.balancePill}>
+              <AppText
+                style={styles.balancePillText}
+                variant="caption"
+                weight="bold"
+              >
+                {modeCopy.balanceImpact}
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.formRow}>
+            <View style={styles.formRowField}>
+              <FormTextField
+                error={errors.amount}
+                keyboardType="decimal-pad"
+                label="Amount"
+                onChangeText={setAmount}
+                placeholder="1000"
+                testID="cash-amount-input"
+                value={amount}
+              />
+            </View>
+            <View style={styles.formRowField}>
+              <FormTextField
+                error={errors.date}
+                label="Date"
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                testID="cash-date-input"
+                value={date}
+              />
+            </View>
+          </View>
           <FormTextField
             error={errors.label}
             label="Label"
@@ -233,13 +280,10 @@ export function CashScreen({
             testID="cash-label-input"
             value={label}
           />
-          <FormTextField
-            error={errors.date}
-            label="Date"
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            testID="cash-date-input"
-            value={date}
+          <AppButton
+            title={modeCopy.saveLabel}
+            testID="save-cash-entry-button"
+            onPress={submit}
           />
           <FormTextField
             label="Notes"
@@ -248,17 +292,12 @@ export function CashScreen({
             placeholder="Optional note"
             value={notes}
           />
-          <AppButton
-            title="Save Cash Entry"
-            testID="save-cash-entry-button"
-            onPress={submit}
-          />
         </PremiumCard>
 
         {entries.length === 0 ? (
           <EmptyState
-            message="Add available broker or bank cash to include it in portfolio value."
-            title="No cash entries yet"
+            message="Add broker or bank cash only when it should count toward portfolio value."
+            title="No cash movement yet"
           />
         ) : (
           <View style={styles.history}>
@@ -283,24 +322,69 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
   },
+  balancePill: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  balancePillText: {
+    color: colors.profit,
+  },
+  entryHeader: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+  },
+  entryHeaderCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  formRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  formRowField: {
+    flex: 1,
+  },
   history: {
     gap: spacing.cardGap,
+  },
+  monthlyInsight: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  monthlyInsightText: {
+    flex: 1,
+    textAlign: "right",
   },
   pressed: {
     opacity: interaction.pressedOpacity,
   },
   segment: {
     alignItems: "center",
-    borderRadius: radii.pill,
+    borderRadius: radii.button,
     flex: 1,
-    paddingVertical: spacing.cardInner,
+    paddingVertical: spacing.sm,
   },
   segmentActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface.elevated,
+  },
+  segmentActiveText: {
+    color: colors.primary,
   },
   segmentedControl: {
     backgroundColor: colors.surface.card,
-    borderRadius: radii.pill,
+    borderRadius: radii.card,
     flexDirection: "row",
     padding: spacing.xs,
   },
