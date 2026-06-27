@@ -49,6 +49,10 @@ into behaviour insights and Minimal Mode.
   `superpowers:verification-before-completion` before claiming completion.
 - For bugs, use `superpowers:systematic-debugging` before fixing. For major
   changes, use `superpowers:requesting-code-review` before merge readiness.
+- When subagents or model routing are available, follow Superpowers model
+  selection guidance: use smaller/fast models for narrow mechanical tasks,
+  standard models for integration/debugging, and the most capable model for
+  product/design judgment, architecture, difficult bugs, and final reviews.
 - Functional components with hooks only. No class components.
 - Persist raw data, derive everything else.
 - All amounts in INR (Indian Rupees ₹).
