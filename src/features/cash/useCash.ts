@@ -6,6 +6,7 @@ import {
   calculateCashMonthlyMetrics,
   type CashMonthlyMetrics,
 } from "@/src/domain/calculations";
+import { formatCompactINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { CashEntry, CashEntryType } from "@/src/types";
 import { createId } from "@/src/utils";
@@ -23,12 +24,16 @@ type AddCashEntryInput = {
   type: CashEntryType;
 };
 
+export type ManualCashEntryMode = "addition" | "withdrawal";
+
 export type UseCashResult = {
   addEntry: (entry: AddCashEntryInput) => CashEntry;
   balance: number;
   entries: CashEntry[];
+  manualEntryModes: ManualCashEntryMode[];
   maskWealthValues: boolean;
   monthlyMetrics: CashMonthlyMetrics;
+  monthlyMovementSummary: string;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -46,6 +51,12 @@ export function useCash({
   store = getPortfolioStore(),
 }: UseCashInput = {}): UseCashResult {
   const snapshot = usePortfolioSnapshot(store);
+  const monthlyMetrics = calculateCashMonthlyMetrics({
+    cashEntries: snapshot.cashEntries,
+    now,
+    openingPositions: snapshot.openingPositions,
+    trades: snapshot.trades,
+  });
 
   function addEntry(input: AddCashEntryInput) {
     const entry: CashEntry = {
@@ -63,12 +74,12 @@ export function useCash({
     addEntry,
     balance: calculateCashBalance(snapshot.cashEntries),
     entries: sortCashEntries(snapshot.cashEntries),
+    manualEntryModes: ["addition", "withdrawal"],
     maskWealthValues: snapshot.preferences.maskWealthValues,
-    monthlyMetrics: calculateCashMonthlyMetrics({
-      cashEntries: snapshot.cashEntries,
-      now,
-      openingPositions: snapshot.openingPositions,
-      trades: snapshot.trades,
-    }),
+    monthlyMetrics,
+    monthlyMovementSummary:
+      monthlyMetrics.invested > 0
+        ? `${formatCompactINR(monthlyMetrics.invested)} moved into investments this month`
+        : "No investment cash movement this month",
   };
 }

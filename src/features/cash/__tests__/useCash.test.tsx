@@ -124,6 +124,48 @@ describe("useCash", () => {
     });
   });
 
+  it("keeps manual cash actions to deposit and withdrawal while deriving invested from investment records", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      id: "asset-hdfc",
+      name: "HDFC Bank",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+    store.getState().addCashEntry({
+      amount: 70000,
+      date: "2026-05-03",
+      id: "cash-salary",
+      label: "Salary added",
+      type: "addition",
+    });
+    store.getState().addTrade({
+      assetId: "asset-hdfc",
+      date: "2026-05-05",
+      id: "trade-buy",
+      pricePerUnit: 1500,
+      quantity: 10,
+      totalValue: 15000,
+      type: "buy",
+    });
+
+    const { result } = renderHook(() =>
+      useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
+    );
+
+    expect(result.current.manualEntryModes).toEqual(["addition", "withdrawal"]);
+    expect(result.current.monthlyMetrics).toMatchObject({
+      added: 70000,
+      available: 70000,
+      invested: 15000,
+    });
+    expect(result.current.monthlyMovementSummary).toBe(
+      "₹15K moved into investments this month",
+    );
+  });
+
   it("marks savings rate unavailable when current-month added cash is missing", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
