@@ -16,6 +16,16 @@ const asset: Asset = {
   ticker: "RELIANCE.NS",
 };
 
+const etfAsset: Asset = {
+  assetClass: "etf",
+  currency: "INR",
+  exchange: "NSE",
+  id: "asset-niftybees",
+  name: "Nifty 50 ETF",
+  symbol: "NIFTYBEES",
+  ticker: "NIFTYBEES.NS",
+};
+
 const buyTrade: Trade = {
   assetId: asset.id,
   date: "2026-04-20",
@@ -23,6 +33,16 @@ const buyTrade: Trade = {
   pricePerUnit: 100,
   quantity: 2,
   totalValue: 200,
+  type: "buy",
+};
+
+const etfBuyTrade: Trade = {
+  assetId: etfAsset.id,
+  date: "2026-04-20",
+  id: "trade-etf-buy",
+  pricePerUnit: 100,
+  quantity: 1,
+  totalValue: 100,
   type: "buy",
 };
 
@@ -145,7 +165,9 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText, queryByText } = render(<DashboardScreen store={store} />);
+    const { getByText, queryByTestId, queryByText } = render(
+      <DashboardScreen store={store} />,
+    );
 
     expect(getByText("₹330.00")).toBeTruthy();
     expect(getByText("Portfolio value")).toBeTruthy();
@@ -166,10 +188,39 @@ describe("DashboardScreen", () => {
     expect(queryByText("Quote Status")).toBeNull();
     expect(queryByText("Portfolio Rollups")).toBeNull();
     expect(queryByText("View details")).toBeNull();
+    expect(queryByTestId("add-trade-button")).toBeNull();
     expect(getByText("Conviction data needs more trades")).toBeTruthy();
     expect(getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
+  });
+
+  it("groups stock and ETF allocation into one Equity row for Dashboard display", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset(etfAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addTrade(etfBuyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: etfAsset.id,
+      currency: "INR",
+      price: 120,
+      source: "yahoo",
+    });
+
+    const { getAllByText, getByTestId } = render(<DashboardScreen store={store} />);
+
+    expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
+    expect(getAllByText("Equity")).toHaveLength(1);
+    expect(getAllByText("100.00% · ₹420")).toHaveLength(1);
   });
 
   it("keeps portfolio answer, allocation, quotes, and next review in the accepted order", () => {
