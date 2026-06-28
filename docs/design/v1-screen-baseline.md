@@ -5,11 +5,17 @@ Use it with `DESIGN.md` and the current design assets:
 
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`
 - Research preview: `docs/design/v1-research-preview/index.html`
+- Dashboard issue #127 preview:
+  `docs/design/screens/dashboard/issue-127/index.html`
 - Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
 - Figma file: `https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d`
 
 The external mockup used during review is not a future dependency. The repo
 assets above carry the accepted baseline forward.
+
+When a single screen has a newer tracked preview under `docs/design/screens/`,
+that screen-specific preview supersedes the matching section inside the older
+all-screen research preview.
 
 ## Product Direction
 
@@ -56,12 +62,26 @@ Baseline structure:
 - local portfolio header with mask and refresh actions
 - large `Portfolio Value` hero
 - total gain/loss context, invested value, P&L, and return
-- compact allocation visual or summary card
-- monthly contribution/cash context
-- calm conviction/insight placeholder only when useful
+- compact visual allocation card with an `Open Holdings` action
+- calm quote freshness card labelled `Quotes updated`
+- compact next useful review action, such as `Open Progress` for month-end
+  snapshot review when applicable
 
 The dashboard must not become a trading terminal. Avoid ticker feeds, noisy
 daily movers, dense mini-widgets, and fake market history.
+
+Issue #127 refinement:
+
+- The current accepted Dashboard design is
+  `docs/design/screens/dashboard/issue-127/index.html`.
+- Portfolio rollups belong near the top-level answer, not buried below every
+  secondary card.
+- Allocation must be visual and compact rather than row-heavy.
+- Vague actions such as `Open` are not allowed. Dashboard actions must be wired
+  to a real destination or removed.
+- `Open Holdings` opens Holdings. `Open Progress` opens Progress.
+- Use 20px cards, restrained green, Android/system typography, and calm quote
+  copy.
 
 ## Holdings
 

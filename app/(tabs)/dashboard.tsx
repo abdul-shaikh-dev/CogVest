@@ -8,6 +8,12 @@ export default function DashboardScreen() {
       onAddTrade={() => {
         router.push("/add-holding");
       }}
+      onOpenHoldings={() => {
+        router.navigate("/(tabs)/holdings");
+      }}
+      onOpenProgress={() => {
+        router.navigate("/(tabs)/progress");
+      }}
     />
   );
 }

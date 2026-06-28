@@ -1,5 +1,4 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { Text } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
@@ -17,6 +16,16 @@ const asset: Asset = {
   ticker: "RELIANCE.NS",
 };
 
+const etfAsset: Asset = {
+  assetClass: "etf",
+  currency: "INR",
+  exchange: "NSE",
+  id: "asset-niftybees",
+  name: "Nifty 50 ETF",
+  symbol: "NIFTYBEES",
+  ticker: "NIFTYBEES.NS",
+};
+
 const buyTrade: Trade = {
   assetId: asset.id,
   date: "2026-04-20",
@@ -24,6 +33,16 @@ const buyTrade: Trade = {
   pricePerUnit: 100,
   quantity: 2,
   totalValue: 200,
+  type: "buy",
+};
+
+const etfBuyTrade: Trade = {
+  assetId: etfAsset.id,
+  date: "2026-04-20",
+  id: "trade-etf-buy",
+  pricePerUnit: 100,
+  quantity: 1,
+  totalValue: 100,
   type: "buy",
 };
 
@@ -83,9 +102,40 @@ describe("DashboardScreen", () => {
     await waitFor(() => {
       expect(refreshQuotes).toHaveBeenCalledTimes(1);
     });
+    expect(getByText("Quotes updated")).toBeTruthy();
     expect(
-      getByText("Quotes updated 16 May 2026 • Live refresh available"),
+      getByText("16 May 2026 • Live refresh available"),
     ).toBeTruthy();
+  });
+
+  it("wires Dashboard allocation and progress actions", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onOpenHoldings = jest.fn();
+    const onOpenProgress = jest.fn();
+
+    store.getState().addAsset(asset);
+    store.getState().addTrade({ ...buyTrade, conviction: 4 });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+
+    const { getByTestId } = render(
+      <DashboardScreen
+        onOpenHoldings={onOpenHoldings}
+        onOpenProgress={onOpenProgress}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("dashboard-open-holdings"));
+    fireEvent.press(getByTestId("dashboard-open-progress"));
+
+    expect(onOpenHoldings).toHaveBeenCalledTimes(1);
+    expect(onOpenProgress).toHaveBeenCalledTimes(1);
   });
 
   it("shows portfolio totals, allocation, quote freshness, monthly metrics, and conviction guidance", () => {
@@ -115,30 +165,65 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText, queryByText } = render(<DashboardScreen store={store} />);
+    const { getByText, queryByTestId, queryByText } = render(
+      <DashboardScreen store={store} />,
+    );
 
     expect(getByText("₹330.00")).toBeTruthy();
-    expect(getByText("Portfolio Rollups")).toBeTruthy();
-    expect(getByText("Top sectors")).toBeTruthy();
-    expect(getByText("Top instruments")).toBeTruthy();
+    expect(getByText("Portfolio value")).toBeTruthy();
     expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+    expect(getByText("Allocation")).toBeTruthy();
     expect(getByText("Equity")).toBeTruthy();
-    expect(getByText("90.91%")).toBeTruthy();
+    expect(getByText("Open Holdings")).toBeTruthy();
     expect(getByText("Cash")).toBeTruthy();
-    expect(getByText("9.09%")).toBeTruthy();
-    expect(getByText("Quotes updated 22 Apr 2026 • Live refresh available")).toBeTruthy();
+    expect(getByText("Quotes updated")).toBeTruthy();
+    expect(getByText("22 Apr 2026 • Live refresh available")).toBeTruthy();
+    expect(getByText("Record monthly snapshot")).toBeTruthy();
+    expect(getByText("Open Progress")).toBeTruthy();
     expect(getByText("This Month")).toBeTruthy();
     expect(getByText("Cash change")).toBeTruthy();
     expect(getByText("Not enough data")).toBeTruthy();
     expect(queryByText("Cash balance")).toBeNull();
     expect(queryByText("Holdings")).toBeNull();
+    expect(queryByText("Quote Status")).toBeNull();
+    expect(queryByText("Portfolio Rollups")).toBeNull();
+    expect(queryByText("View details")).toBeNull();
+    expect(queryByTestId("add-trade-button")).toBeNull();
     expect(getByText("Conviction data needs more trades")).toBeTruthy();
     expect(getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
   });
 
-  it("keeps portfolio rollups below the primary dashboard decision sections", () => {
+  it("groups stock and ETF allocation into one Equity row for Dashboard display", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset(etfAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addTrade(etfBuyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: etfAsset.id,
+      currency: "INR",
+      price: 120,
+      source: "yahoo",
+    });
+
+    const { getAllByText, getByTestId } = render(<DashboardScreen store={store} />);
+
+    expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
+    expect(getAllByText("Equity")).toHaveLength(1);
+    expect(getAllByText("100.00% · ₹420")).toHaveLength(1);
+  });
+
+  it("keeps portfolio answer, allocation, quotes, and next review in the accepted order", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade({ ...buyTrade, conviction: 4 });
@@ -158,23 +243,18 @@ describe("DashboardScreen", () => {
     });
 
     const screen = render(<DashboardScreen store={store} />);
-    const textNodes = screen.UNSAFE_getAllByType(Text)
-      .map((node) => textContent(node.props.children))
-      .filter(Boolean);
+    const testIds = collectTestIds(screen.toJSON());
 
-    const allocationIndex = indexOfText(textNodes, "Allocation");
-    const thisMonthIndex = indexOfText(textNodes, "This Month");
-    const quoteStatusIndex = indexOfText(textNodes, "Quote Status");
-    const convictionIndex = indexOfText(
-      textNodes,
-      "Conviction data needs more trades",
-    );
-    const rollupsIndex = indexOfText(textNodes, "Portfolio Rollups");
+    const heroIndex = indexOfText(testIds, "dashboard-portfolio-hero");
+    const metricsIndex = indexOfText(testIds, "dashboard-top-metrics");
+    const allocationIndex = indexOfText(testIds, "dashboard-allocation-card");
+    const quotesIndex = indexOfText(testIds, "dashboard-quote-card");
+    const reviewIndex = indexOfText(testIds, "dashboard-next-review-card");
 
-    expect(rollupsIndex).toBeGreaterThan(allocationIndex);
-    expect(rollupsIndex).toBeGreaterThan(thisMonthIndex);
-    expect(rollupsIndex).toBeGreaterThan(quoteStatusIndex);
-    expect(rollupsIndex).toBeGreaterThan(convictionIndex);
+    expect(metricsIndex).toBeGreaterThan(heroIndex);
+    expect(allocationIndex).toBeGreaterThan(metricsIndex);
+    expect(quotesIndex).toBeGreaterThan(allocationIndex);
+    expect(reviewIndex).toBeGreaterThan(quotesIndex);
   });
 
   it("masks wealth values when value masking is enabled", () => {
@@ -195,20 +275,27 @@ describe("DashboardScreen", () => {
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("₹300.00")).toBeNull();
     expect(queryByText("+₹100.00")).toBeNull();
-    expect(getAllByText("100.00%").length).toBeGreaterThan(0);
+    expect(getAllByText("+50.00%").length).toBeGreaterThan(0);
   });
 });
 
-function textContent(value: unknown): string {
-  if (typeof value === "string" || typeof value === "number") {
-    return String(value);
+function collectTestIds(node: unknown): string[] {
+  if (!node || typeof node !== "object") {
+    return [];
   }
 
-  if (Array.isArray(value)) {
-    return value.map(textContent).join("");
+  if (Array.isArray(node)) {
+    return node.flatMap(collectTestIds);
   }
 
-  return "";
+  const candidate = node as {
+    children?: unknown;
+    props?: { testID?: unknown };
+  };
+  const ownTestId =
+    typeof candidate.props?.testID === "string" ? [candidate.props.testID] : [];
+
+  return [...ownTestId, ...collectTestIds(candidate.children)];
 }
 
 function indexOfText(textNodes: string[], expectedText: string) {

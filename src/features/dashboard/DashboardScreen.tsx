@@ -1,11 +1,15 @@
-import { StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type DimensionValue,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
   AppButton,
   AppText,
   EmptyState,
-  HeroMetric,
   IconButton,
   MetricGroup,
   MaskedValue,
@@ -24,7 +28,8 @@ import {
 } from "@/src/domain/formatters";
 import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { spacing } from "@/src/theme";
+import { colors, radii, spacing } from "@/src/theme";
+import type { AssetClass } from "@/src/types";
 
 import { useDashboard } from "./useDashboard";
 
@@ -34,6 +39,8 @@ type RefreshQuotes = (
 
 type DashboardScreenProps = {
   onAddTrade?: () => void;
+  onOpenHoldings?: () => void;
+  onOpenProgress?: () => void;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -54,19 +61,92 @@ function formatUnsignedPercentage(value: number) {
   return formatPercentage(value).replace("+", "");
 }
 
+type DisplayAllocationClass = "cash" | "crypto" | "debt" | "equity";
+
+type DisplayAllocationItem = {
+  assetClass: DisplayAllocationClass;
+  percentage: number;
+  value: number;
+};
+
+function toDisplayAllocation(
+  allocation: Array<{
+    assetClass: AssetClass;
+    percentage: number;
+    value: number;
+  }>,
+): DisplayAllocationItem[] {
+  const values: Record<DisplayAllocationClass, number> = {
+    cash: 0,
+    crypto: 0,
+    debt: 0,
+    equity: 0,
+  };
+
+  for (const item of allocation) {
+    const displayClass =
+      item.assetClass === "stock" || item.assetClass === "etf"
+        ? "equity"
+        : item.assetClass;
+    values[displayClass] += item.value;
+  }
+
+  const totalValue = Object.values(values).reduce((total, value) => total + value, 0);
+
+  return (["equity", "debt", "crypto", "cash"] as const)
+    .map((assetClass) => ({
+      assetClass,
+      percentage:
+        totalValue > 0
+          ? Number(((values[assetClass] / totalValue) * 100).toFixed(2))
+          : 0,
+      value: values[assetClass],
+    }))
+    .filter((item) => item.value > 0);
+}
+
+function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
+  if (assetClass === "equity") {
+    return "Equity";
+  }
+
+  return assetClassLabel(assetClass);
+}
+
+function getAllocationColor(assetClass: DisplayAllocationClass) {
+  if (assetClass === "cash") {
+    return colors.cashBlue;
+  }
+
+  if (assetClass === "crypto") {
+    return colors.cryptoAmber;
+  }
+
+  if (assetClass === "debt") {
+    return colors.blue;
+  }
+
+  return colors.primary;
+}
+
+function getAllocationWidth(percentage: number): DimensionValue {
+  return `${Math.min(100, Math.max(0, percentage))}%`;
+}
+
 export function DashboardScreen({
   onAddTrade,
+  onOpenHoldings,
+  onOpenProgress,
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
   const dashboard = useDashboard({ refreshQuotes, store });
-  const hasAllocation = dashboard.allocation.length > 0;
+  const displayAllocation = toDisplayAllocation(dashboard.allocation);
+  const hasAllocation = displayAllocation.length > 0;
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
   const totalInvested = dashboard.rollupTotals.totalInvested;
   const totalPnL = dashboard.rollupTotals.pnl;
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
-  const sectorSnapshot = dashboard.sectorAllocation.slice(0, 3);
-  const instrumentSnapshot = dashboard.instrumentAllocation.slice(0, 3);
   const quoteStatus = getQuoteStatus({
     isRefreshing: dashboard.isRefreshing,
     latestQuoteAsOf: dashboard.latestQuoteAsOf,
@@ -102,68 +182,141 @@ export function DashboardScreen({
           }
         />
 
-        <HeroMetric
-          label="Portfolio Value"
-          masked={dashboard.maskWealthValues}
-          value={formatINR(dashboard.totalValue)}
-          subValue={`${dayChangeAmount} (${formatPercentage(
-            dashboard.dayChange.percentage,
-          )}) today`}
-          subValueTone={dashboard.dayChange.absolute >= 0 ? "positive" : "negative"}
-        />
-
-        <MetricGroup
-          metrics={[
-            {
-              label: "Invested",
-              masked: dashboard.maskWealthValues,
-              value: formatCompactINR(totalInvested),
-            },
-            {
-              color: totalPnL >= 0 ? "primary" : "primary",
-              label: "P&L",
-              masked: dashboard.maskWealthValues,
-              value: formatSignedCompactINR(totalPnL),
-            },
-            {
-              label: "P&L %",
-              value: formatPercentage(totalPnLPct),
-            },
-          ]}
-        />
-
-        {onAddTrade && hasAllocation ? (
-          <AppButton
-            title="Add Holding"
-            testID="add-trade-button"
-            onPress={onAddTrade}
+        <PremiumCard elevated style={styles.heroCard} testID="dashboard-portfolio-hero">
+          <AppText color="secondary" variant="caption" weight="bold">
+            Portfolio value
+          </AppText>
+          <MaskedValue
+            adjustsFontSizeToFit
+            masked={dashboard.maskWealthValues}
+            minimumFontScale={0.74}
+            numberOfLines={1}
+            style={styles.heroValue}
+            value={formatINR(dashboard.totalValue)}
+            weight="bold"
           />
-        ) : null}
+          <View style={styles.heroContextRow}>
+            <View
+              style={[
+                styles.metricPill,
+                dashboard.dayChange.absolute < 0 && styles.negativePill,
+              ]}
+            >
+              <AppText
+                style={
+                  dashboard.dayChange.absolute >= 0
+                    ? styles.positiveText
+                    : styles.negativeText
+                }
+                variant="caption"
+                weight="bold"
+              >
+                {dayChangeAmount} ({formatPercentage(dashboard.dayChange.percentage)})
+                {" today"}
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.heroMetrics} testID="dashboard-top-metrics">
+            <View style={styles.heroMetricCell}>
+              <AppText color="secondary" variant="caption">
+                Invested
+              </AppText>
+              <MaskedValue
+                masked={dashboard.maskWealthValues}
+                value={formatCompactINR(totalInvested)}
+                weight="bold"
+              />
+            </View>
+            <View style={styles.heroMetricCell}>
+              <AppText color="secondary" variant="caption">
+                P&L
+              </AppText>
+              <MaskedValue
+                masked={dashboard.maskWealthValues}
+                style={totalPnL >= 0 ? styles.positiveText : styles.negativeText}
+                value={formatSignedCompactINR(totalPnL)}
+                weight="bold"
+              />
+            </View>
+            <View style={styles.heroMetricCell}>
+              <AppText color="secondary" variant="caption">
+                P&L %
+              </AppText>
+              <AppText
+                style={totalPnLPct >= 0 ? styles.positiveText : styles.negativeText}
+                weight="bold"
+              >
+                {formatPercentage(totalPnLPct)}
+              </AppText>
+            </View>
+          </View>
+        </PremiumCard>
 
         {hasAllocation ? (
-          <PremiumCard>
-            <SectionHeader title="Allocation" actionLabel="View details" />
-            {dashboard.allocation.map((item) => (
-              <View key={item.assetClass} style={styles.allocationRow}>
-                <View style={styles.allocationIdentity}>
-                  <CategoryIcon assetClass={item.assetClass} />
-                  <View style={styles.allocationCopy}>
-                    <AppText weight="bold">
-                      {assetClassLabel(item.assetClass)}
-                    </AppText>
-                    <MaskedValue
-                      color="secondary"
-                      masked={dashboard.maskWealthValues}
-                      value={formatINR(item.value)}
-                      variant="caption"
-                    />
-                  </View>
-                </View>
-                <AppText weight="bold">
-                  {formatUnsignedPercentage(item.percentage)}
+          <PremiumCard testID="dashboard-allocation-card">
+            <View style={styles.allocationHeader}>
+              <AppText variant="title" weight="bold">
+                Allocation
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenHoldings}
+                style={styles.inlineAction}
+                testID="dashboard-open-holdings"
+              >
+                <AppText style={styles.brandText} variant="caption" weight="bold">
+                  Open Holdings
                 </AppText>
+              </Pressable>
+            </View>
+            <View style={styles.allocationSummary}>
+              <View
+                style={styles.allocationVisual}
+                testID="dashboard-allocation-visual"
+              >
+                {displayAllocation.map((item) => (
+                  <View
+                    key={item.assetClass}
+                    style={[
+                      styles.allocationSegment,
+                      {
+                        backgroundColor: getAllocationColor(item.assetClass),
+                        width: getAllocationWidth(item.percentage),
+                      },
+                    ]}
+                  />
+                ))}
               </View>
-            ))}
+            </View>
+            <View style={styles.allocationLegend}>
+              {displayAllocation.map((item) => (
+                <View key={item.assetClass} style={styles.allocationLegendRow}>
+                  <View style={styles.allocationLegendLabel}>
+                    <View
+                      style={[
+                        styles.allocationDot,
+                        { backgroundColor: getAllocationColor(item.assetClass) },
+                      ]}
+                    />
+                    <AppText color="secondary" variant="caption">
+                      {getDisplayAllocationLabel(item.assetClass)}
+                    </AppText>
+                  </View>
+                  <MaskedValue
+                    align="right"
+                    adjustsFontSizeToFit
+                    masked={dashboard.maskWealthValues}
+                    minimumFontScale={0.75}
+                    numberOfLines={1}
+                    style={styles.allocationLegendValue}
+                    value={`${formatUnsignedPercentage(item.percentage)} · ${formatCompactINR(
+                      item.value,
+                    )}`}
+                    variant="caption"
+                  />
+                </View>
+              ))}
+            </View>
           </PremiumCard>
         ) : (
           <EmptyState
@@ -174,6 +327,40 @@ export function DashboardScreen({
             onAction={onAddTrade}
           />
         )}
+
+        <PremiumCard testID="dashboard-quote-card">
+          <View style={styles.infoCardRow}>
+            <CategoryIcon assetClass="neutral" />
+            <View style={styles.infoCardCopy}>
+              <AppText weight="bold">Quotes updated</AppText>
+              <AppText color="secondary" variant="caption">
+                {quoteStatus}
+              </AppText>
+            </View>
+          </View>
+        </PremiumCard>
+
+        <PremiumCard testID="dashboard-next-review-card">
+          <View style={styles.reviewCardRow}>
+            <CategoryIcon assetClass="neutral" />
+            <View style={styles.infoCardCopy}>
+              <AppText weight="bold">Record monthly snapshot</AppText>
+              <AppText color="secondary" variant="caption">
+                Review this month in Progress when month-end data is ready.
+              </AppText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onOpenProgress}
+              style={styles.inlineAction}
+              testID="dashboard-open-progress"
+            >
+              <AppText style={styles.brandText} variant="caption" weight="bold">
+                Open Progress
+              </AppText>
+            </Pressable>
+          </View>
+        </PremiumCard>
 
         <PremiumCard>
           <SectionHeader title="This Month" />
@@ -201,11 +388,6 @@ export function DashboardScreen({
         </PremiumCard>
 
         <PremiumCard>
-          <SectionHeader title="Quote Status" />
-          <AppText color="secondary">{quoteStatus}</AppText>
-        </PremiumCard>
-
-        <PremiumCard>
           <SectionHeader
             title={
               dashboard.convictionReadiness.isReady
@@ -219,55 +401,6 @@ export function DashboardScreen({
             conviction optional, but useful.
           </AppText>
         </PremiumCard>
-
-        {sectorSnapshot.length > 0 || instrumentSnapshot.length > 0 ? (
-          <PremiumCard>
-            <SectionHeader title="Portfolio Rollups" />
-            {sectorSnapshot.length > 0 ? (
-              <View style={styles.rollupGroup}>
-                <AppText color="secondary" variant="caption" weight="medium">
-                  Top sectors
-                </AppText>
-                {sectorSnapshot.map((item) => (
-                  <View key={item.label} style={styles.rollupRow}>
-                    <AppText weight="bold">{item.label}</AppText>
-                    <MaskedValue
-                      align="right"
-                      color="secondary"
-                      masked={dashboard.maskWealthValues}
-                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
-                        item.percentage,
-                      )}`}
-                      variant="caption"
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            {instrumentSnapshot.length > 0 ? (
-              <View style={styles.rollupGroup}>
-                <AppText color="secondary" variant="caption" weight="medium">
-                  Top instruments
-                </AppText>
-                {instrumentSnapshot.map((item) => (
-                  <View key={item.label} style={styles.rollupRow}>
-                    <AppText weight="bold">{item.label}</AppText>
-                    <MaskedValue
-                      align="right"
-                      color="secondary"
-                      masked={dashboard.maskWealthValues}
-                      value={`${formatINR(item.value)} · ${formatUnsignedPercentage(
-                        item.percentage,
-                      )}`}
-                      variant="caption"
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </PremiumCard>
-        ) : null}
-
       </View>
     </ScreenContainer>
   );
@@ -299,37 +432,112 @@ function getQuoteStatus({
   const mode =
     latestQuoteSource === "manual" ? "Manual fallback ready" : "Live refresh available";
 
-  return `Quotes updated ${formatDate(latestQuoteAsOf)} • ${mode}`;
+  return `${formatDate(latestQuoteAsOf)} • ${mode}`;
 }
 
 const styles = StyleSheet.create({
-  allocationCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  allocationIdentity: {
-    alignItems: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: spacing.cardInner,
-  },
-  allocationRow: {
+  allocationHeader: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  allocationDot: {
+    borderRadius: radii.pill,
+    height: 9,
+    width: 9,
+  },
+  allocationLegend: {
+    gap: spacing.sm,
+  },
+  allocationLegendLabel: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  allocationLegendRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  allocationLegendValue: {
+    flexShrink: 1,
+  },
+  allocationSegment: {
+    minWidth: 2,
+  },
+  allocationSummary: {
+    gap: spacing.sm,
+  },
+  allocationVisual: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    height: 12,
+    overflow: "hidden",
+  },
+  brandText: {
+    color: colors.primary,
   },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
   },
-  rollupGroup: {
-    gap: spacing.sm,
+  heroCard: {
+    gap: spacing.cardInner,
   },
-  rollupRow: {
+  heroContextRow: {
     alignItems: "center",
     flexDirection: "row",
+  },
+  heroMetricCell: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  heroMetrics: {
+    flexDirection: "row",
     gap: spacing.md,
-    justifyContent: "space-between",
+  },
+  heroValue: {
+    fontSize: 38,
+    lineHeight: 44,
+  },
+  infoCardCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  infoCardRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.cardInner,
+  },
+  reviewCardRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.cardInner,
+  },
+  inlineAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  metricPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(52,199,89,0.12)",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  negativePill: {
+    backgroundColor: "rgba(255,69,58,0.12)",
+  },
+  negativeText: {
+    color: colors.loss,
+  },
+  positiveText: {
+    color: colors.profit,
   },
 });
