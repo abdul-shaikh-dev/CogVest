@@ -160,6 +160,7 @@ export function useAddTrade({
         type,
       },
       snapshot.trades,
+      snapshot.openingPositions,
     );
 
     if (!result.isValid || Object.keys(manualErrors).length > 0) {

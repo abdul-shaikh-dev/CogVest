@@ -116,6 +116,23 @@ describe("CashScreen", () => {
     expect(queryByText("Investment Transfer")).toBeNull();
   });
 
+  it("shows asset exit proceeds as linked cash movement", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({
+      amount: 8400,
+      date: "2026-05-20",
+      id: "cash-proceeds",
+      label: "HDFC Bank redemption proceeds",
+      type: "addition",
+    });
+
+    const { getByText } = render(<CashScreen store={store} />);
+
+    expect(getByText("HDFC Bank redemption proceeds")).toBeTruthy();
+    expect(getByText("Added from asset exit")).toBeTruthy();
+    expect(getByText("+₹8,400.00")).toBeTruthy();
+  });
+
   it("shows validation errors for invalid cash entries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText } = render(<CashScreen store={store} />);
