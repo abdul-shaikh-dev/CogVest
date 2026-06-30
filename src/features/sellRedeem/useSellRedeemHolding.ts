@@ -27,6 +27,7 @@ type SaveResult =
 
 export type UseSellRedeemHoldingResult = {
   availableUnits: number;
+  canSave: boolean;
   cashAmount: string;
   cashLabel: string;
   date: string;
@@ -107,8 +108,34 @@ export function useSellRedeemHolding({
   const quantityValue = parseNumber(quantity);
   const sellPriceValue = parseNumber(sellPrice);
   const feeValue = parseOptionalNumber(fees);
+  const quantityValidationMessage = useMemo(() => {
+    if (!holding || !Number.isFinite(quantityValue) || quantityValue <= 0) {
+      return undefined;
+    }
+
+    const assetTrades = snapshot.trades.filter((trade) => trade.assetId === assetId);
+    const assetOpeningPositions = snapshot.openingPositions.filter(
+      (position) => position.assetId === assetId,
+    );
+    const sellQuantityResult = validateSellQuantity(
+      assetTrades,
+      quantityValue,
+      assetOpeningPositions,
+    );
+
+    return sellQuantityResult.isValid ? undefined : sellQuantityResult.message;
+  }, [
+    assetId,
+    holding,
+    quantityValue,
+    snapshot.openingPositions,
+    snapshot.trades,
+  ]);
   const preview =
-    holding && Number.isFinite(quantityValue) && Number.isFinite(sellPriceValue)
+    holding &&
+    Number.isFinite(quantityValue) &&
+    Number.isFinite(sellPriceValue) &&
+    !quantityValidationMessage
       ? calculateSellRedeemPreview({
           availableUnits,
           currentPrice: holding.currentPrice,
@@ -136,6 +163,12 @@ export function useSellRedeemHolding({
     }
   }, [cashAmountWasEdited, preview]);
 
+  useEffect(() => {
+    if (!preview && !cashAmountWasEdited) {
+      setCashAmount("");
+    }
+  }, [cashAmountWasEdited, preview]);
+
   function updateCashAmount(value: string) {
     setCashAmountWasEdited(true);
     setCashAmount(value);
@@ -153,20 +186,8 @@ export function useSellRedeemHolding({
       nextErrors.quantity = "Quantity must be a valid number.";
     } else if (quantityValue <= 0) {
       nextErrors.quantity = "Quantity must be greater than zero.";
-    } else {
-      const assetTrades = snapshot.trades.filter((trade) => trade.assetId === assetId);
-      const assetOpeningPositions = snapshot.openingPositions.filter(
-        (position) => position.assetId === assetId,
-      );
-      const sellQuantityResult = validateSellQuantity(
-        assetTrades,
-        quantityValue,
-        assetOpeningPositions,
-      );
-
-      if (!sellQuantityResult.isValid) {
-        nextErrors.quantity = sellQuantityResult.message;
-      }
+    } else if (quantityValidationMessage) {
+      nextErrors.quantity = quantityValidationMessage;
     }
 
     if (!Number.isFinite(sellPriceValue)) {
@@ -214,6 +235,13 @@ export function useSellRedeemHolding({
 
     return nextErrors;
   }
+
+  const displayErrors = {
+    ...errors,
+    quantity: errors.quantity ?? quantityValidationMessage,
+  };
+  const canSave =
+    Boolean(preview) && Object.keys(validate()).length === 0;
 
   function save(): SaveResult {
     setSuccessMessage("");
@@ -267,10 +295,11 @@ export function useSellRedeemHolding({
 
   return {
     availableUnits,
+    canSave,
     cashAmount,
     cashLabel,
     date,
-    errors,
+    errors: displayErrors,
     fees,
     holding,
     linkCashEntry,

@@ -42,9 +42,9 @@ function seedStore() {
 }
 
 describe("SellRedeemScreen", () => {
-  it("renders the selected holding and default linked cash movement", () => {
+  it("renders the selected holding and waits to show linked cash fields until proceeds are valid", () => {
     const store = seedStore();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByTestId } = render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
@@ -54,7 +54,8 @@ describe("SellRedeemScreen", () => {
     expect(getByText("Available units")).toBeTruthy();
     expect(getByText("25")).toBeTruthy();
     expect(getByText("Add proceeds to Cash Ledger")).toBeTruthy();
-    expect(getByTestId("sell-redeem-cash-amount-input")).toBeTruthy();
+    expect(getByText("Cash entry appears after the exit proceeds are valid.")).toBeTruthy();
+    expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
   });
 
   it("updates preview and saves the linked proceeds", async () => {
@@ -106,6 +107,20 @@ describe("SellRedeemScreen", () => {
 
     expect(store.getState().trades).toHaveLength(1);
     expect(store.getState().cashEntries).toEqual([]);
+  });
+
+  it("blocks overselling before save and keeps cash fields hidden", () => {
+    const store = seedStore();
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <SellRedeemScreen assetId={asset.id} store={store} />,
+    );
+
+    fireEvent.changeText(getByLabelText("Quantity"), "26");
+    fireEvent.changeText(getByLabelText("Sell price"), "1700");
+
+    expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
+    expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
+    expect(getByTestId("sell-redeem-save-button")).toBeDisabled();
   });
 
   it("shows an empty state when the holding is missing", () => {

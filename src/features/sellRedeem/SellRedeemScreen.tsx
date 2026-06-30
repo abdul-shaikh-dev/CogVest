@@ -160,10 +160,9 @@ export function SellRedeemScreen({
             placeholder="Optional note"
             value={flow.notes}
           />
-        </PremiumCard>
 
-        <PremiumCard>
-          <SectionHeader title="Proceeds preview" />
+          <View style={styles.previewPanel}>
+            <SectionHeader title="Proceeds preview" />
           {flow.preview ? (
             <View style={styles.previewGrid}>
               <PreviewValue label="Gross proceeds" value={formatINR(flow.preview.grossProceeds)} />
@@ -184,9 +183,10 @@ export function SellRedeemScreen({
             </View>
           ) : (
             <AppText color="secondary" variant="caption">
-              Enter quantity and sell price to preview proceeds.
+              Enter a valid quantity and sell price to preview proceeds.
             </AppText>
           )}
+          </View>
         </PremiumCard>
 
         <PremiumCard>
@@ -217,7 +217,7 @@ export function SellRedeemScreen({
           </Pressable>
 
           {flow.linkCashEntry ? (
-            <>
+            flow.preview ? (
               <View style={styles.formRow}>
                 <View style={styles.formField}>
                   <FormTextField
@@ -241,7 +241,11 @@ export function SellRedeemScreen({
                   />
                 </View>
               </View>
-            </>
+            ) : (
+              <AppText color="secondary" variant="caption">
+                Cash entry appears after the exit proceeds are valid.
+              </AppText>
+            )
           ) : null}
         </PremiumCard>
 
@@ -252,6 +256,7 @@ export function SellRedeemScreen({
         ) : null}
 
         <AppButton
+          disabled={!flow.canSave}
           title="Save sell / redeem"
           testID="sell-redeem-save-button"
           onPress={save}
@@ -336,6 +341,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.md,
+  },
+  previewPanel: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
+    gap: spacing.sm,
+    padding: spacing.cardInner,
   },
   previewValue: {
     flexBasis: "45%",
