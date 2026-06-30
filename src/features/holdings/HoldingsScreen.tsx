@@ -4,6 +4,7 @@ import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
+  AppButton,
   AppText,
   CategoryIcon,
   EmptyState,
@@ -44,6 +45,7 @@ type RefreshQuotes = (
 
 type HoldingsScreenProps = {
   onAddTrade?: () => void;
+  onSellRedeem?: (assetId: string) => void;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -63,6 +65,7 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 
 export function HoldingsScreen({
   onAddTrade,
+  onSellRedeem,
   refreshQuotes,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
@@ -206,6 +209,7 @@ export function HoldingsScreen({
                     item={item}
                     key={item.holding.asset.id}
                     masked={maskWealthValues}
+                    onSellRedeem={onSellRedeem}
                     onPress={() =>
                       setExpandedAssetId((current) =>
                         current === item.holding.asset.id
@@ -376,11 +380,13 @@ function HoldingRow({
   item,
   masked,
   onPress,
+  onSellRedeem,
 }: {
   expanded: boolean;
   item: HoldingReviewItem;
   masked: boolean;
   onPress: () => void;
+  onSellRedeem?: (assetId: string) => void;
 }) {
   const { holding } = item;
   const positive = holding.unrealisedPnL >= 0;
@@ -504,6 +510,15 @@ function HoldingRow({
                 : "Local position price"}
             </AppText>
           </View>
+
+          {onSellRedeem ? (
+            <AppButton
+              title="Sell / redeem"
+              variant="secondary"
+              testID={`holding-sell-redeem-${holding.asset.id}`}
+              onPress={() => onSellRedeem(holding.asset.id)}
+            />
+          ) : null}
         </View>
       ) : null}
     </Pressable>

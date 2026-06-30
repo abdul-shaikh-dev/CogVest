@@ -1,5 +1,5 @@
 import { validateSellQuantity, validateTradeInput } from "@/src/domain/validators";
-import type { Trade } from "@/src/types";
+import type { OpeningPosition, Trade } from "@/src/types";
 
 const existingBuy: Trade = {
   assetId: "asset-1",
@@ -9,6 +9,15 @@ const existingBuy: Trade = {
   quantity: 5,
   totalValue: 500,
   type: "buy",
+};
+
+const existingOpeningPosition: OpeningPosition = {
+  assetId: "asset-1",
+  averageCostPrice: 100,
+  currentPrice: 120,
+  date: "2026-04-01T00:00:00.000Z",
+  id: "opening-1",
+  quantity: 10,
 };
 
 describe("trade validators", () => {
@@ -22,6 +31,33 @@ describe("trade validators", () => {
   it("rejects sell quantity above available units", () => {
     expect(validateSellQuantity([existingBuy], 6)).toEqual({
       availableQuantity: 5,
+      isValid: false,
+      message: "Sell quantity exceeds available units.",
+    });
+  });
+
+  it("includes opening positions when validating sell quantity", () => {
+    expect(validateSellQuantity([], 7, [existingOpeningPosition])).toEqual({
+      availableQuantity: 10,
+      isValid: true,
+    });
+  });
+
+  it("subtracts prior sells from opening positions when validating sell quantity", () => {
+    const priorSell: Trade = {
+      ...existingBuy,
+      id: "trade-sell",
+      quantity: 3,
+      totalValue: 360,
+      type: "sell",
+    };
+
+    expect(validateSellQuantity([priorSell], 7, [existingOpeningPosition])).toEqual({
+      availableQuantity: 7,
+      isValid: true,
+    });
+    expect(validateSellQuantity([priorSell], 8, [existingOpeningPosition])).toEqual({
+      availableQuantity: 7,
       isValid: false,
       message: "Sell quantity exceeds available units.",
     });

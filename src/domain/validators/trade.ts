@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Trade, TradeType } from "@/src/types";
+import type { OpeningPosition, Trade, TradeType } from "@/src/types";
 
 type ValidationResult =
   | { isValid: true }
@@ -53,21 +53,30 @@ export function createTradeInputSchema(now = new Date()) {
 
 export const tradeInputSchema = createTradeInputSchema();
 
-export function getAvailableQuantity(trades: Trade[]) {
+export function getAvailableQuantity(
+  trades: Trade[],
+  openingPositions: OpeningPosition[] = [],
+) {
+  const openingQuantity = openingPositions.reduce(
+    (quantity, position) => quantity + position.quantity,
+    0,
+  );
+
   return trades.reduce((quantity, trade) => {
     if (trade.type === "sell") {
       return quantity - trade.quantity;
     }
 
     return quantity + trade.quantity;
-  }, 0);
+  }, openingQuantity);
 }
 
 export function validateSellQuantity(
   trades: Trade[],
   sellQuantity: number,
+  openingPositions: OpeningPosition[] = [],
 ): SellQuantityResult {
-  const availableQuantity = getAvailableQuantity(trades);
+  const availableQuantity = getAvailableQuantity(trades, openingPositions);
 
   if (sellQuantity > availableQuantity) {
     return {

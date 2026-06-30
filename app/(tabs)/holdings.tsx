@@ -8,6 +8,9 @@ export default function HoldingsScreen() {
       onAddTrade={() => {
         router.push("/add-holding");
       }}
+      onSellRedeem={(assetId) => {
+        router.push({ pathname: "/sell-redeem", params: { assetId } });
+      }}
     />
   );
 }
