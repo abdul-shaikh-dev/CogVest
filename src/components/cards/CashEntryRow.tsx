@@ -16,7 +16,15 @@ function formatCashAmount(entry: CashEntry) {
   return entry.type === "addition" ? `+${amount}` : `-${amount}`;
 }
 
+function isAssetExitProceeds(entry: CashEntry) {
+  return /sale proceeds|redemption proceeds/i.test(entry.label);
+}
+
 function getCashEntryMovement(entry: CashEntry) {
+  if (entry.type === "addition" && isAssetExitProceeds(entry)) {
+    return "Added from asset exit";
+  }
+
   return entry.type === "addition"
     ? "Increased deployable cash"
     : "Reduced deployable cash";

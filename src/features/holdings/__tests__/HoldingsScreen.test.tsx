@@ -172,6 +172,19 @@ describe("HoldingsScreen", () => {
     expect(getByTestId(`holding-expanded-${debtAsset.id}`)).toBeTruthy();
   });
 
+  it("exposes a Sell / redeem action from expanded holding details", () => {
+    const store = seedMixedHoldings();
+    const onSellRedeem = jest.fn();
+    const { getByTestId } = render(
+      <HoldingsScreen store={store} onSellRedeem={onSellRedeem} />,
+    );
+
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(getByTestId(`holding-sell-redeem-${asset.id}`));
+
+    expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
+  });
+
   it("wires header Add Holding and value masking actions", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

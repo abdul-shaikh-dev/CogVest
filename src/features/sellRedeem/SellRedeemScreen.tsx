@@ -1,0 +1,371 @@
+import { Pressable, StyleSheet, View } from "react-native";
+import type { StoreApi } from "zustand/vanilla";
+
+import {
+  AppButton,
+  AppText,
+  CategoryIcon,
+  EmptyState,
+  MaskedValue,
+  MetricGroup,
+  PremiumCard,
+  ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
+  assetClassLabel,
+  getPressedStateStyle,
+} from "@/src/components/common";
+import { FormTextField } from "@/src/components/forms";
+import { formatCompactINR, formatINR } from "@/src/domain/formatters";
+import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { colors, radii, spacing } from "@/src/theme";
+
+import { useSellRedeemHolding } from "./useSellRedeemHolding";
+
+type SellRedeemScreenProps = {
+  assetId: string;
+  onSaved?: () => void;
+  store?: StoreApi<PortfolioStoreState>;
+};
+
+function formatUnits(value: number) {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(4).replace(/0+$/, "");
+}
+
+function quantityPlaceholder(availableUnits: number) {
+  return availableUnits > 0 ? `Max ${formatUnits(availableUnits)}` : "0";
+}
+
+export function SellRedeemScreen({
+  assetId,
+  onSaved,
+  store = getPortfolioStore(),
+}: SellRedeemScreenProps) {
+  const flow = useSellRedeemHolding({ assetId, store });
+
+  if (!flow.holding) {
+    return (
+      <ScreenContainer scroll testID="sell-redeem-screen">
+        <View style={styles.content}>
+          <ScreenHeader title="Sell / redeem" subtitle="Record exit • local only" />
+          <EmptyState
+            message="Open Holdings and choose an active position to sell or redeem."
+            title="Holding not found"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const { holding } = flow;
+
+  function save() {
+    const result = flow.save();
+
+    if (result.isValid) {
+      onSaved?.();
+    }
+  }
+
+  return (
+    <ScreenContainer scroll testID="sell-redeem-screen">
+      <View style={styles.content}>
+        <ScreenHeader title="Sell / redeem" subtitle="Record exit • local only" />
+
+        <PremiumCard style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.assetIcon}>
+              <CategoryIcon assetClass={holding.asset.assetClass} size={24} />
+            </View>
+            <View style={styles.assetCopy}>
+              <AppText variant="title" weight="bold">
+                {holding.asset.name}
+              </AppText>
+              <AppText color="secondary">
+                {holding.asset.symbol} • {assetClassLabel(holding.asset.assetClass)}
+              </AppText>
+            </View>
+          </View>
+          <MetricGroup
+            metrics={[
+              {
+                label: "Available units",
+                value: formatUnits(flow.availableUnits),
+              },
+              {
+                label: "Current price",
+                value: formatCompactINR(holding.currentPrice),
+              },
+              {
+                label: "Current value",
+                masked: false,
+                value: formatCompactINR(holding.currentValue),
+              },
+            ]}
+          />
+        </PremiumCard>
+
+        <PremiumCard>
+          <SectionHeader title="Exit details" />
+          <AppText color="secondary" variant="caption">
+            This reduces the holding and can add proceeds to deployable cash.
+          </AppText>
+          <View style={styles.formRow}>
+            <View style={styles.formField}>
+              <FormTextField
+                error={flow.errors.quantity}
+                keyboardType="decimal-pad"
+                label="Quantity"
+                onChangeText={flow.setQuantity}
+                placeholder={quantityPlaceholder(flow.availableUnits)}
+                testID="sell-redeem-quantity-input"
+                value={flow.quantity}
+              />
+            </View>
+            <View style={styles.formField}>
+              <FormTextField
+                error={flow.errors.sellPrice}
+                keyboardType="decimal-pad"
+                label="Sell price"
+                onChangeText={flow.setSellPrice}
+                placeholder="1700"
+                testID="sell-redeem-price-input"
+                value={flow.sellPrice}
+              />
+            </View>
+          </View>
+          <View style={styles.formRow}>
+            <View style={styles.formField}>
+              <FormTextField
+                error={flow.errors.fees}
+                keyboardType="decimal-pad"
+                label="Fees"
+                onChangeText={flow.setFees}
+                placeholder="0"
+                testID="sell-redeem-fees-input"
+                value={flow.fees}
+              />
+            </View>
+            <View style={styles.formField}>
+              <FormTextField
+                error={flow.errors.date}
+                label="Date"
+                onChangeText={flow.setDate}
+                placeholder="YYYY-MM-DD"
+                testID="sell-redeem-date-input"
+                value={flow.date}
+              />
+            </View>
+          </View>
+          <FormTextField
+            label="Notes"
+            multiline
+            onChangeText={flow.setNotes}
+            placeholder="Optional note"
+            value={flow.notes}
+          />
+
+          <View style={styles.previewPanel}>
+            <SectionHeader title="Proceeds preview" />
+          {flow.preview ? (
+            <View style={styles.previewGrid}>
+              <PreviewValue label="Gross proceeds" value={formatINR(flow.preview.grossProceeds)} />
+              <PreviewValue label="Fees" value={formatINR(flow.preview.fees)} />
+              <PreviewValue
+                emphasized
+                label="Net proceeds"
+                value={formatINR(flow.preview.netProceeds)}
+              />
+              <PreviewValue
+                label="Remaining units"
+                value={formatUnits(flow.preview.remainingUnits)}
+              />
+              <PreviewValue
+                label="Remaining value"
+                value={formatINR(flow.preview.remainingValue)}
+              />
+            </View>
+          ) : (
+            <AppText color="secondary" variant="caption">
+              Enter a valid quantity and sell price to preview proceeds.
+            </AppText>
+          )}
+          </View>
+        </PremiumCard>
+
+        <PremiumCard>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: flow.linkCashEntry }}
+            onPress={() => flow.setLinkCashEntry(!flow.linkCashEntry)}
+            style={({ pressed }) => [
+              styles.cashToggle,
+              getPressedStateStyle({ pressed }),
+            ]}
+            testID="sell-redeem-link-cash-toggle"
+          >
+            <View
+              style={[
+                styles.checkbox,
+                flow.linkCashEntry && styles.checkboxActive,
+              ]}
+            >
+              {flow.linkCashEntry ? <View style={styles.checkboxDot} /> : null}
+            </View>
+            <View style={styles.assetCopy}>
+              <AppText weight="bold">Add proceeds to Cash Ledger</AppText>
+              <AppText color="secondary" variant="caption">
+                Keeps deployable cash aligned with this asset exit.
+              </AppText>
+            </View>
+          </Pressable>
+
+          {flow.linkCashEntry ? (
+            flow.preview ? (
+              <View style={styles.formRow}>
+                <View style={styles.formField}>
+                  <FormTextField
+                    error={flow.errors.cashAmount}
+                    keyboardType="decimal-pad"
+                    label="Cash amount"
+                    onChangeText={flow.setCashAmount}
+                    placeholder="8400"
+                    testID="sell-redeem-cash-amount-input"
+                    value={flow.cashAmount}
+                  />
+                </View>
+                <View style={styles.formField}>
+                  <FormTextField
+                    error={flow.errors.cashLabel}
+                    label="Cash label"
+                    onChangeText={flow.setCashLabel}
+                    placeholder="Redemption proceeds"
+                    testID="sell-redeem-cash-label-input"
+                    value={flow.cashLabel}
+                  />
+                </View>
+              </View>
+            ) : (
+              <AppText color="secondary" variant="caption">
+                Cash entry appears after the exit proceeds are valid.
+              </AppText>
+            )
+          ) : null}
+        </PremiumCard>
+
+        {flow.successMessage ? (
+          <AppText style={styles.successText} weight="bold">
+            {flow.successMessage}
+          </AppText>
+        ) : null}
+
+        <AppButton
+          disabled={!flow.canSave}
+          title="Save sell / redeem"
+          testID="sell-redeem-save-button"
+          onPress={save}
+        />
+      </View>
+    </ScreenContainer>
+  );
+}
+
+function PreviewValue({
+  emphasized,
+  label,
+  value,
+}: {
+  emphasized?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.previewValue}>
+      <AppText color="secondary" variant="caption">
+        {label}
+      </AppText>
+      <MaskedValue
+        masked={false}
+        value={value}
+        variant={emphasized ? "title" : "body"}
+        weight="bold"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  assetCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  assetIcon: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  cashToggle: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  checkbox: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    height: 28,
+    justifyContent: "center",
+    width: 28,
+  },
+  checkboxActive: {
+    backgroundColor: colors.primary,
+  },
+  checkboxDot: {
+    backgroundColor: colors.text.inverse,
+    borderRadius: radii.pill,
+    height: 8,
+    width: 8,
+  },
+  content: {
+    gap: spacing.cardGap,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  formField: {
+    flex: 1,
+  },
+  formRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  previewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  previewPanel: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
+    gap: spacing.sm,
+    padding: spacing.cardInner,
+  },
+  previewValue: {
+    flexBasis: "45%",
+    flexGrow: 1,
+    gap: spacing.xs,
+  },
+  successText: {
+    color: colors.profit,
+  },
+  summaryCard: {
+    gap: spacing.md,
+  },
+  summaryRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+});

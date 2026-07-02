@@ -6,7 +6,7 @@ import {
   tradeTypeSchema,
   validateSellQuantity,
 } from "@/src/domain/validators";
-import type { Trade, TradeType } from "@/src/types";
+import type { OpeningPosition, Trade, TradeType } from "@/src/types";
 
 export type TradeFormValues = {
   assetId: string;
@@ -126,8 +126,15 @@ export const tradeFormSchema = createTradeFormSchema();
 export function validateTradeForm(
   values: TradeFormValues,
   existingTrades: Trade[],
-  now = new Date(),
+  nowOrOpeningPositions: Date | OpeningPosition[] = new Date(),
+  maybeNow = new Date(),
 ): TradeFormValidationResult {
+  const openingPositions = Array.isArray(nowOrOpeningPositions)
+    ? nowOrOpeningPositions
+    : [];
+  const now = Array.isArray(nowOrOpeningPositions)
+    ? maybeNow
+    : nowOrOpeningPositions;
   const result = createTradeFormSchema(now).safeParse(values);
 
   if (!result.success) {
@@ -143,7 +150,14 @@ export function validateTradeForm(
     const assetTrades = existingTrades.filter(
       (trade) => trade.assetId === value.assetId,
     );
-    const sellQuantityResult = validateSellQuantity(assetTrades, value.quantity);
+    const assetOpeningPositions = openingPositions.filter(
+      (position) => position.assetId === value.assetId,
+    );
+    const sellQuantityResult = validateSellQuantity(
+      assetTrades,
+      value.quantity,
+      assetOpeningPositions,
+    );
 
     if (!sellQuantityResult.isValid) {
       return {

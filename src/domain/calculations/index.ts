@@ -38,3 +38,11 @@ export type {
   PortfolioRollupTotals,
   PortfolioDayChange,
 } from "./holdings";
+export {
+  calculateSellRedeemPreview,
+  validateSellRedeemFees,
+} from "./sellRedeem";
+export type {
+  SellRedeemPreview,
+  SellRedeemPreviewInput,
+} from "./sellRedeem";
