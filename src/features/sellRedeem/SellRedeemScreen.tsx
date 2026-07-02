@@ -32,6 +32,10 @@ function formatUnits(value: number) {
   return Number.isInteger(value) ? value.toString() : value.toFixed(4).replace(/0+$/, "");
 }
 
+function quantityPlaceholder(availableUnits: number) {
+  return availableUnits > 0 ? `Max ${formatUnits(availableUnits)}` : "0";
+}
+
 export function SellRedeemScreen({
   assetId,
   onSaved,
@@ -113,7 +117,7 @@ export function SellRedeemScreen({
                 keyboardType="decimal-pad"
                 label="Quantity"
                 onChangeText={flow.setQuantity}
-                placeholder="5"
+                placeholder={quantityPlaceholder(flow.availableUnits)}
                 testID="sell-redeem-quantity-input"
                 value={flow.quantity}
               />

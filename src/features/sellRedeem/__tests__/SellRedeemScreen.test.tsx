@@ -44,7 +44,7 @@ function seedStore() {
 describe("SellRedeemScreen", () => {
   it("renders the selected holding and waits to show linked cash fields until proceeds are valid", () => {
     const store = seedStore();
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByPlaceholderText, getByTestId, getByText, queryByTestId } = render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
@@ -53,6 +53,7 @@ describe("SellRedeemScreen", () => {
     expect(getByText("HDFC Bank")).toBeTruthy();
     expect(getByText("Available units")).toBeTruthy();
     expect(getByText("25")).toBeTruthy();
+    expect(getByPlaceholderText("Max 25")).toBeTruthy();
     expect(getByText("Add proceeds to Cash Ledger")).toBeTruthy();
     expect(getByText("Cash entry appears after the exit proceeds are valid.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
