@@ -27,6 +27,11 @@ type CoinGeckoHistoricalRangeResponse = {
   prices?: Array<[number, number]>;
 };
 
+type HistoricalClosePoint = {
+  close: number;
+  timestamp: number;
+};
+
 export function getMonthEndDateUtc(targetMonth: string) {
   const [year, month] = targetMonth.split("-").map(Number);
 
@@ -101,12 +106,13 @@ export async function fetchYahooHistoricalPrice({
         close: closes[index],
         timestamp,
       }))
-      .filter(
-        (point) =>
+      .filter((point): point is HistoricalClosePoint => {
+        return (
           point.timestamp <= monthEndSeconds &&
           typeof point.close === "number" &&
-          Number.isFinite(point.close),
-      )
+          Number.isFinite(point.close)
+        );
+      })
       .at(-1);
 
     if (!latestClose) {
