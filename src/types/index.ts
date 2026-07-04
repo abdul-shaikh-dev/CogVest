@@ -14,6 +14,7 @@ export type {
 } from "./monthlySnapshot";
 export type { OpeningPosition } from "./openingPosition";
 export type { ChartRange, Preferences } from "./preferences";
+export { historicalQuoteCacheKey } from "./quote";
 export type {
   HistoricalPriceBasis,
   HistoricalQuote,

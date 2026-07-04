@@ -15,6 +15,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import { historicalQuoteCacheKey } from "@/src/types";
 
 export {
   selectAssetById,
@@ -30,9 +31,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const portfolioSchemaVersion = 4;
 
-export function historicalQuoteCacheKey(assetId: string, asOfMonth: string) {
-  return `${assetId}:${asOfMonth}`;
-}
+export { historicalQuoteCacheKey };
 
 export type RawPortfolioSnapshot = {
   assets: Asset[];

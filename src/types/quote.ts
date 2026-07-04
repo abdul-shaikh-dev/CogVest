@@ -29,5 +29,9 @@ export type HistoricalQuote = {
   source: QuoteSource;
 };
 
+export function historicalQuoteCacheKey(assetId: string, asOfMonth: string) {
+  return `${assetId}:${asOfMonth}`;
+}
+
 export type QuoteCache = Record<string, Quote>;
 export type HistoricalQuoteCache = Record<string, HistoricalQuote>;

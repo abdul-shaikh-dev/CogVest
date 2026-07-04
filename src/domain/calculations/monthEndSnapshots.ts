@@ -1,4 +1,3 @@
-import { historicalQuoteCacheKey } from "@/src/store";
 import type {
   Asset,
   CashEntry,
@@ -9,6 +8,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import { historicalQuoteCacheKey } from "@/src/types";
 
 import {
   calculateCashBalance,
@@ -60,8 +60,12 @@ function getMonthEndDate(targetMonth: string) {
   return new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
 }
 
+function getUtcMonthKey(isoDate: string) {
+  return formatMonth(new Date(isoDate));
+}
+
 function isWithinMonth(isoDate: string, targetMonth: string) {
-  return isoDate.slice(0, 7) === targetMonth;
+  return getUtcMonthKey(isoDate) === targetMonth;
 }
 
 function isOnOrBefore(isoDate: string, maxDate: Date) {
@@ -267,7 +271,7 @@ export function buildGeneratedMonthEndSnapshot({
     };
   }
 
-  const heldAssets = assets.filter((asset) => {
+  const relevantAssets = assets.filter((asset) => {
     const hasOpeningPosition = monthOpeningPositions.some(
       (position) => position.assetId === asset.id,
     );
@@ -275,28 +279,32 @@ export function buildGeneratedMonthEndSnapshot({
 
     return hasOpeningPosition || hasTrade;
   });
-  const pricedAssets = heldAssets.map((asset) => ({
-    asset,
-    selection: selectAssetPrice({
-      asset,
-      historicalQuotes,
-      openingPositions: monthOpeningPositions.filter(
-        (position) => position.assetId === asset.id,
-      ),
-      quoteCache,
-      targetMonth,
-    }),
-  }));
-  const snapshotQuoteCache = pricedAssets.reduce<QuoteCache>((cache, item) => {
-    if (item.selection.price === undefined) {
+  const priceSelectionsByAssetId = new Map(
+    relevantAssets.map((asset) => [
+      asset.id,
+      selectAssetPrice({
+        asset,
+        historicalQuotes,
+        openingPositions: monthOpeningPositions.filter(
+          (position) => position.assetId === asset.id,
+        ),
+        quoteCache,
+        targetMonth,
+      }),
+    ]),
+  );
+  const snapshotQuoteCache = relevantAssets.reduce<QuoteCache>((cache, asset) => {
+    const selection = priceSelectionsByAssetId.get(asset.id);
+
+    if (!selection || selection.price === undefined) {
       return cache;
     }
 
-    cache[item.asset.id] = {
-      assetId: item.asset.id,
+    cache[asset.id] = {
+      assetId: asset.id,
       asOf: now.toISOString(),
-      currency: item.asset.currency,
-      price: item.selection.price,
+      currency: asset.currency,
+      price: selection.price,
       source: "manual",
     };
 
@@ -308,6 +316,13 @@ export function buildGeneratedMonthEndSnapshot({
     quoteCache: snapshotQuoteCache,
     trades: monthTrades,
   });
+  const pricedAssets = holdings.map((holding) => ({
+    asset: holding.asset,
+    selection:
+      priceSelectionsByAssetId.get(holding.asset.id) ?? {
+        basis: "unavailable" as const,
+      },
+  }));
   const cashValue = calculateCashBalance(monthCashEntries);
   const equityValue = holdings.reduce((total, holding) => {
     if (

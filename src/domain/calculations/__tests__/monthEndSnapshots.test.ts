@@ -2,7 +2,7 @@ import {
   buildGeneratedMonthEndSnapshot,
   getPreviousCompletedMonth,
 } from "@/src/domain/calculations";
-import { historicalQuoteCacheKey } from "@/src/store";
+import { historicalQuoteCacheKey } from "@/src/types";
 import type {
   Asset,
   CashEntry,
@@ -250,6 +250,60 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     });
   });
 
+  it("ignores liquidated assets when summarising generated metadata and warnings", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [stockAsset, etfAsset],
+        historicalQuotes: {
+          [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: {
+            assetId: stockAsset.id,
+            asOfMonth: "2026-07",
+            basis: "historical-close",
+            currency: "INR",
+            fetchedAt: "2026-08-01T00:00:00.000Z",
+            price: 250,
+            source: "yahoo",
+          },
+        },
+        openingPositions: [
+          openingPosition({
+            assetId: stockAsset.id,
+            currentPrice: 175,
+            quantity: 10,
+          }),
+        ],
+        trades: [
+          trade({
+            assetId: etfAsset.id,
+            date: "2026-07-01T00:00:00.000Z",
+            id: "buy-etf-liquidated",
+            pricePerUnit: 100,
+            quantity: 2,
+            totalValue: 200,
+            type: "buy",
+          }),
+          trade({
+            assetId: etfAsset.id,
+            date: "2026-07-20T00:00:00.000Z",
+            id: "sell-etf-liquidated",
+            pricePerUnit: 110,
+            quantity: 2,
+            totalValue: 220,
+            type: "sell",
+          }),
+        ],
+      }),
+    );
+
+    expect(result.status).toBe("created");
+    expect(result.warnings).toEqual([]);
+    expect(result.snapshot?.generated).toMatchObject({
+      priceBasis: "historical-close",
+      warnings: [],
+    });
+    expect(result.snapshot?.equityValue).toBe(2500);
+  });
+
   it("summarises generated metadata and warnings for each pricing basis", () => {
     const now = new Date("2026-08-15T10:00:00.000Z");
     const targetMonth = "2026-07";
@@ -483,5 +537,38 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.snapshot?.investedValue).toBeCloseTo(52386.666666666664);
     expect(result.snapshot?.portfolioValue).toBe(65500);
     expect(result.snapshot?.salary).toBe(0);
+  });
+
+  it("classifies monthly investment dates by parsed UTC month instead of string prefixes", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [stockAsset],
+        historicalQuotes: {
+          [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: {
+            assetId: stockAsset.id,
+            asOfMonth: "2026-07",
+            basis: "historical-close",
+            currency: "INR",
+            fetchedAt: "2026-08-01T00:00:00.000Z",
+            price: 250,
+            source: "yahoo",
+          },
+        },
+        openingPositions: [
+          openingPosition({
+            assetId: stockAsset.id,
+            averageCostPrice: 100,
+            date: "2026-08-01T00:30:00+05:30",
+            id: "opening-utc-july",
+            quantity: 10,
+          }),
+        ],
+      }),
+    );
+
+    expect(result.status).toBe("created");
+    expect(result.snapshot?.month).toBe("2026-07");
+    expect(result.snapshot?.monthlyInvestment).toBe(1000);
+    expect(result.snapshot?.equityValue).toBe(2500);
   });
 });
