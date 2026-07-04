@@ -78,6 +78,15 @@ describe("historical Yahoo quote service", () => {
     expect(url).toContain("period2=1785542400");
   });
 
+  it.each(["2026-00", "2026-13", "2026-07-extra"])(
+    "rejects invalid target month %s for Yahoo URL building",
+    (targetMonth) => {
+      expect(() =>
+        buildYahooHistoricalChartUrl("RELIANCE.NS", targetMonth),
+      ).toThrow("Invalid target month. Expected YYYY-MM with month 01-12.");
+    },
+  );
+
   it("maps the latest finite close on or before month end", async () => {
     const fetcher = jest.fn().mockResolvedValue(
       response({
@@ -119,6 +128,41 @@ describe("historical Yahoo quote service", () => {
     });
   });
 
+  it("ignores malformed and unsorted Yahoo timestamps and picks the latest valid close", async () => {
+    const fetcher = jest.fn().mockResolvedValue(
+      response({
+        chart: {
+          result: [
+            {
+              indicators: {
+                quote: [
+                  {
+                    close: [2800, 2910, 2750, 3000],
+                  },
+                ],
+              },
+              timestamp: ["bad", 1785542399, 1785369600, 1785542400],
+            },
+          ],
+        },
+      }),
+    );
+
+    const result = await fetchYahooHistoricalPrice({
+      asset: reliance,
+      fetcher,
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      quote: expect.objectContaining({
+        price: 2910,
+        source: "yahoo",
+      }),
+    });
+  });
+
   it("returns ok false when the response is not ok", async () => {
     const result = await fetchYahooHistoricalPrice({
       asset: reliance,
@@ -128,6 +172,53 @@ describe("historical Yahoo quote service", () => {
 
     expect(result).toEqual({
       error: "Yahoo historical price request failed with status 500.",
+      ok: false,
+    });
+  });
+
+  it.each(["2026-00", "2026-13", "2026-07-extra"])(
+    "returns ok false for invalid Yahoo target month %s",
+    async (targetMonth) => {
+      const result = await fetchYahooHistoricalPrice({
+        asset: reliance,
+        fetcher: jest.fn(),
+        targetMonth,
+      });
+
+      expect(result).toEqual({
+        error:
+          "Yahoo historical price request failed: Invalid target month. Expected YYYY-MM with month 01-12.",
+        ok: false,
+      });
+    },
+  );
+
+  it("returns a provider-qualified error when Yahoo fetch throws", async () => {
+    const result = await fetchYahooHistoricalPrice({
+      asset: reliance,
+      fetcher: jest.fn().mockRejectedValue(new Error("network down")),
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      error: "Yahoo historical price request failed: network down",
+      ok: false,
+    });
+  });
+
+  it("returns a provider-qualified error when Yahoo json parsing throws", async () => {
+    const result = await fetchYahooHistoricalPrice({
+      asset: reliance,
+      fetcher: jest.fn().mockResolvedValue({
+        json: jest.fn().mockRejectedValue(new Error("bad json")),
+        ok: true,
+        status: 200,
+      } as unknown as Response),
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      error: "Yahoo historical price request failed: bad json",
       ok: false,
     });
   });
@@ -175,6 +266,15 @@ describe("historical CoinGecko quote service", () => {
     expect(url).toContain("to=1785542400");
   });
 
+  it.each(["2026-00", "2026-13", "2026-07-extra"])(
+    "rejects invalid target month %s for CoinGecko URL building",
+    (targetMonth) => {
+      expect(() =>
+        buildCoinGeckoHistoricalRangeUrl("bitcoin", targetMonth),
+      ).toThrow("Invalid target month. Expected YYYY-MM with month 01-12.");
+    },
+  );
+
   it("maps the latest price point on or before month end", async () => {
     const fetcher = jest.fn().mockResolvedValue(
         response({
@@ -207,6 +307,34 @@ describe("historical CoinGecko quote service", () => {
     });
   });
 
+  it("ignores malformed and unsorted CoinGecko points and picks the latest valid price", async () => {
+    const fetcher = jest.fn().mockResolvedValue(
+      response({
+        prices: [
+          ["bad", 6000000],
+          [1785456000000, 5680000.129],
+          [1785542400000, 5900000],
+          [1785542399000, 5800000.555],
+          [1785369600000],
+        ],
+      }),
+    );
+
+    const result = await fetchCoinGeckoHistoricalPrice({
+      asset: bitcoin,
+      fetcher,
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      quote: expect.objectContaining({
+        price: 5800000.56,
+        source: "coingecko",
+      }),
+    });
+  });
+
   it("returns ok false on provider failure", async () => {
     const result = await fetchCoinGeckoHistoricalPrice({
       asset: bitcoin,
@@ -216,6 +344,53 @@ describe("historical CoinGecko quote service", () => {
 
     expect(result).toEqual({
       error: "CoinGecko historical price request failed with status 500.",
+      ok: false,
+    });
+  });
+
+  it.each(["2026-00", "2026-13", "2026-07-extra"])(
+    "returns ok false for invalid CoinGecko target month %s",
+    async (targetMonth) => {
+      const result = await fetchCoinGeckoHistoricalPrice({
+        asset: bitcoin,
+        fetcher: jest.fn(),
+        targetMonth,
+      });
+
+      expect(result).toEqual({
+        error:
+          "CoinGecko historical price request failed: Invalid target month. Expected YYYY-MM with month 01-12.",
+        ok: false,
+      });
+    },
+  );
+
+  it("returns a provider-qualified error when CoinGecko fetch throws", async () => {
+    const result = await fetchCoinGeckoHistoricalPrice({
+      asset: bitcoin,
+      fetcher: jest.fn().mockRejectedValue(new Error("network down")),
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      error: "CoinGecko historical price request failed: network down",
+      ok: false,
+    });
+  });
+
+  it("returns a provider-qualified error when CoinGecko json parsing throws", async () => {
+    const result = await fetchCoinGeckoHistoricalPrice({
+      asset: bitcoin,
+      fetcher: jest.fn().mockResolvedValue({
+        json: jest.fn().mockRejectedValue(new Error("bad json")),
+        ok: true,
+        status: 200,
+      } as unknown as Response),
+      targetMonth: "2026-07",
+    });
+
+    expect(result).toEqual({
+      error: "CoinGecko historical price request failed: bad json",
       ok: false,
     });
   });
@@ -321,4 +496,21 @@ describe("historical quote resolver", () => {
       ok: false,
     });
   });
+
+  it.each(["2026-00", "2026-13", "2026-07-extra"])(
+    "returns ok false for invalid target month through resolver %s",
+    async (targetMonth) => {
+      const result = await resolveHistoricalPrice({
+        asset: reliance,
+        fetcher: jest.fn(),
+        targetMonth,
+      });
+
+      expect(result).toEqual({
+        error:
+          "Yahoo historical price request failed: Invalid target month. Expected YYYY-MM with month 01-12.",
+        ok: false,
+      });
+    },
+  );
 });

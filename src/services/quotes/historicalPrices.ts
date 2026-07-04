@@ -32,8 +32,37 @@ type HistoricalClosePoint = {
   timestamp: number;
 };
 
+type CoinGeckoHistoricalPricePoint = {
+  price: number;
+  timestampMs: number;
+};
+
+const invalidTargetMonthMessage =
+  "Invalid target month. Expected YYYY-MM with month 01-12.";
+
+function validateTargetMonth(targetMonth: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(targetMonth);
+
+  if (!match) {
+    throw new Error(invalidTargetMonthMessage);
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error(invalidTargetMonthMessage);
+  }
+
+  return { month, year };
+}
+
+function getErrorMessage(prefix: string, error: unknown) {
+  return `${prefix}: ${error instanceof Error ? error.message : "Unexpected error."}`;
+}
+
 export function getMonthEndDateUtc(targetMonth: string) {
-  const [year, month] = targetMonth.split("-").map(Number);
+  const { month, year } = validateTargetMonth(targetMonth);
 
   return new Date(Date.UTC(year, month, 0, 23, 59, 59));
 }
@@ -108,12 +137,20 @@ export async function fetchYahooHistoricalPrice({
       }))
       .filter((point): point is HistoricalClosePoint => {
         return (
+          typeof point.timestamp === "number" &&
+          Number.isFinite(point.timestamp) &&
           point.timestamp <= monthEndSeconds &&
           typeof point.close === "number" &&
           Number.isFinite(point.close)
         );
       })
-      .at(-1);
+      .reduce<HistoricalClosePoint | undefined>((latestPoint, point) => {
+        if (!latestPoint || point.timestamp > latestPoint.timestamp) {
+          return point;
+        }
+
+        return latestPoint;
+      }, undefined);
 
     if (!latestClose) {
       return {
@@ -136,10 +173,7 @@ export async function fetchYahooHistoricalPrice({
     };
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Yahoo historical price request failed.",
+      error: getErrorMessage("Yahoo historical price request failed", error),
       ok: false,
     };
   }
@@ -167,14 +201,25 @@ export async function fetchCoinGeckoHistoricalPrice({
     const payload = (await response.json()) as CoinGeckoHistoricalRangeResponse;
     const monthEndMs = getMonthEndDateUtc(targetMonth).getTime();
     const latestPrice = (Array.isArray(payload.prices) ? payload.prices : [])
-      .filter(
-        (point) =>
+      .filter((point): point is [number, number] => {
+        return (
           Array.isArray(point) &&
-          point[0] <= monthEndMs &&
+          point.length === 2 &&
+          typeof point[0] === "number" &&
+          Number.isFinite(point[0]) &&
           typeof point[1] === "number" &&
-          Number.isFinite(point[1]),
-      )
-      .at(-1);
+          Number.isFinite(point[1]) &&
+          point[0] <= monthEndMs
+        );
+      })
+      .map(([timestampMs, price]) => ({ price, timestampMs }))
+      .reduce<CoinGeckoHistoricalPricePoint | undefined>((latestPoint, point) => {
+        if (!latestPoint || point.timestampMs > latestPoint.timestampMs) {
+          return point;
+        }
+
+        return latestPoint;
+      }, undefined);
 
     if (!latestPrice) {
       return {
@@ -191,16 +236,13 @@ export async function fetchCoinGeckoHistoricalPrice({
         basis: "historical-close",
         currency: "INR",
         fetchedAt: now(),
-        price: roundQuoteNumber(latestPrice[1]),
+        price: roundQuoteNumber(latestPrice.price),
         source: "coingecko",
       },
     };
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "CoinGecko historical price request failed.",
+      error: getErrorMessage("CoinGecko historical price request failed", error),
       ok: false,
     };
   }
