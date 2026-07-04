@@ -74,8 +74,9 @@ export async function fetchYahooHistoricalPrice({
   targetMonth,
 }: HistoricalPriceProviderInput): Promise<HistoricalPriceResult> {
   try {
+    const providerId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(
-      buildYahooHistoricalChartUrl(asset.quoteSourceId ?? asset.ticker, targetMonth),
+      buildYahooHistoricalChartUrl(providerId, targetMonth),
     );
 
     if (!response.ok) {
@@ -86,10 +87,14 @@ export async function fetchYahooHistoricalPrice({
     }
 
     const payload = (await response.json()) as YahooHistoricalChartResponse;
-    const result = payload.chart?.result?.[0];
+    const result = Array.isArray(payload.chart?.result)
+      ? payload.chart.result[0]
+      : undefined;
     const timestamps = result?.timestamp ?? [];
     const closes = result?.indicators?.quote?.[0]?.close ?? [];
-    const monthEndSeconds = Math.floor(getMonthEndDateUtc(targetMonth).getTime() / 1000);
+    const monthEndSeconds = Math.floor(
+      getMonthEndDateUtc(targetMonth).getTime() / 1000,
+    );
 
     const latestClose = timestamps
       .map((timestamp, index) => ({
@@ -141,11 +146,9 @@ export async function fetchCoinGeckoHistoricalPrice({
   targetMonth,
 }: HistoricalPriceProviderInput): Promise<HistoricalPriceResult> {
   try {
+    const providerId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(
-      buildCoinGeckoHistoricalRangeUrl(
-        asset.quoteSourceId ?? asset.ticker,
-        targetMonth,
-      ),
+      buildCoinGeckoHistoricalRangeUrl(providerId, targetMonth),
     );
 
     if (!response.ok) {
@@ -157,9 +160,10 @@ export async function fetchCoinGeckoHistoricalPrice({
 
     const payload = (await response.json()) as CoinGeckoHistoricalRangeResponse;
     const monthEndMs = getMonthEndDateUtc(targetMonth).getTime();
-    const latestPrice = (payload.prices ?? [])
+    const latestPrice = (Array.isArray(payload.prices) ? payload.prices : [])
       .filter(
         (point) =>
+          Array.isArray(point) &&
           point[0] <= monthEndMs &&
           typeof point[1] === "number" &&
           Number.isFinite(point[1]),
