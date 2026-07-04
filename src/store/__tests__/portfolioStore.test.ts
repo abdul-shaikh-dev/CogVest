@@ -195,6 +195,23 @@ describe("portfolio store", () => {
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
   });
 
+  it("defaults historical quote cache to empty when no storage key exists", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [asset],
+      cashEntries: [cashEntry],
+      monthlySnapshots: [monthlySnapshot],
+      openingPositions: [openingPosition],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 4,
+      trades: [trade],
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().historicalQuoteCache).toEqual({});
+  });
+
   it("persists generated monthly snapshot metadata and historical quotes", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });

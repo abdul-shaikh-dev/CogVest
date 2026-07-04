@@ -1,11 +1,8 @@
+import type { HistoricalPriceBasis } from "./quote";
+
 export type MonthlySnapshotGenerationMetadata = {
   generatedAt: string;
-  priceBasis:
-    | "historical-close"
-    | "mixed"
-    | "latest-local-fallback"
-    | "manual-fallback"
-    | "unavailable";
+  priceBasis: HistoricalPriceBasis | "mixed";
   source: "auto" | "manual";
   warnings: string[];
 };

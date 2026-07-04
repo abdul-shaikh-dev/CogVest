@@ -6,6 +6,8 @@ import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
   Asset,
   CashEntry,
+  HistoricalQuote,
+  HistoricalQuoteCache,
   MonthlySnapshot,
   OpeningPosition,
   Preferences,
@@ -13,7 +15,6 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
-import type { HistoricalQuote, HistoricalQuoteCache } from "@/src/types/quote";
 
 export {
   selectAssetById,

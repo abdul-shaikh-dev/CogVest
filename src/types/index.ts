@@ -8,8 +8,18 @@ export type {
 } from "./asset";
 export type { CashEntry, CashEntryType } from "./cash";
 export type { Holding } from "./holding";
-export type { MonthlySnapshot } from "./monthlySnapshot";
+export type {
+  MonthlySnapshot,
+  MonthlySnapshotGenerationMetadata,
+} from "./monthlySnapshot";
 export type { OpeningPosition } from "./openingPosition";
 export type { ChartRange, Preferences } from "./preferences";
-export type { Quote, QuoteCache, QuoteSource } from "./quote";
+export type {
+  HistoricalPriceBasis,
+  HistoricalQuote,
+  HistoricalQuoteCache,
+  Quote,
+  QuoteCache,
+  QuoteSource,
+} from "./quote";
 export type { ConvictionScore, Trade, TradeType } from "./trade";
