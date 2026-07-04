@@ -1,6 +1,8 @@
 import {
   createPortfolioStore,
   createDefaultPreferences,
+  historicalQuoteCacheKey,
+  historicalQuoteCacheStorageKey,
   portfolioStorageKey,
   quoteCacheStorageKey,
 } from "@/src/store";
@@ -191,6 +193,68 @@ describe("portfolio store", () => {
     expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
     expect(store.getState().preferences.maskWealthValues).toBe(true);
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
+  });
+
+  it("persists generated monthly snapshot metadata and historical quotes", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+
+    store.getState().addMonthlySnapshot({
+      cashValue: 50000,
+      cryptoValue: 100000,
+      debtValue: 200000,
+      equityValue: 700000,
+      generated: {
+        generatedAt: "2026-08-01T04:00:00.000Z",
+        priceBasis: "mixed",
+        source: "auto",
+        warnings: ["1 asset used latest local fallback"],
+      },
+      id: "snapshot-2026-07",
+      investedValue: 900000,
+      month: "2026-07",
+      monthlyInvestment: 45000,
+      portfolioValue: 1050000,
+      salary: 0,
+    });
+    store.getState().upsertHistoricalQuote({
+      assetId: "asset-reliance",
+      asOfMonth: "2026-07",
+      basis: "historical-close",
+      currency: "INR",
+      fetchedAt: "2026-08-01T04:00:00.000Z",
+      price: 2910,
+      source: "yahoo",
+    });
+
+    const rehydrated = createPortfolioStore({ storage });
+
+    expect(rehydrated.getState().monthlySnapshots[0]?.generated).toMatchObject({
+      priceBasis: "mixed",
+      source: "auto",
+    });
+    expect(
+      rehydrated.getState().historicalQuoteCache[
+        historicalQuoteCacheKey("asset-reliance", "2026-07")
+      ],
+    ).toMatchObject({
+      basis: "historical-close",
+      price: 2910,
+    });
+    expect(storage.getItem(portfolioStorageKey)).not.toHaveProperty(
+      "historicalQuoteCache",
+    );
+    expect(storage.getItem(historicalQuoteCacheStorageKey)).toEqual({
+      [historicalQuoteCacheKey("asset-reliance", "2026-07")]: {
+        assetId: "asset-reliance",
+        asOfMonth: "2026-07",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-01T04:00:00.000Z",
+        price: 2910,
+        source: "yahoo",
+      },
+    });
   });
 
   it("migrates V1 persisted snapshots by adding empty opening positions", () => {

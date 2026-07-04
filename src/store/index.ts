@@ -13,6 +13,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import type { HistoricalQuote, HistoricalQuoteCache } from "@/src/types/quote";
 
 export {
   selectAssetById,
@@ -24,7 +25,13 @@ export {
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
+export const historicalQuoteCacheStorageKey =
+  "cogvest:v1:historical-quote-cache";
 export const portfolioSchemaVersion = 4;
+
+export function historicalQuoteCacheKey(assetId: string, asOfMonth: string) {
+  return `${assetId}:${asOfMonth}`;
+}
 
 export type RawPortfolioSnapshot = {
   assets: Asset[];
@@ -43,6 +50,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
+  historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
   removeCashEntry: (cashEntryId: string) => void;
@@ -55,6 +63,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
   updateTrade: (trade: Trade) => void;
+  upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
   upsertQuote: (quote: Quote) => void;
 };
 
@@ -118,6 +127,14 @@ function readQuoteCache(storage: JsonStorage): QuoteCache {
   return storage.getItem<QuoteCache & JsonValue>(quoteCacheStorageKey) ?? {};
 }
 
+function readHistoricalQuoteCache(storage: JsonStorage): HistoricalQuoteCache {
+  return (
+    storage.getItem<HistoricalQuoteCache & JsonValue>(
+      historicalQuoteCacheStorageKey,
+    ) ?? {}
+  );
+}
+
 function selectRawSnapshot(
   state: PortfolioStoreState,
 ): RawPortfolioSnapshot {
@@ -143,11 +160,22 @@ function persistQuoteCache(storage: JsonStorage, quoteCache: QuoteCache) {
   storage.setItem(quoteCacheStorageKey, quoteCache as JsonValue);
 }
 
+function persistHistoricalQuoteCache(
+  storage: JsonStorage,
+  historicalQuoteCache: HistoricalQuoteCache,
+) {
+  storage.setItem(
+    historicalQuoteCacheStorageKey,
+    historicalQuoteCache as JsonValue,
+  );
+}
+
 export function createPortfolioStore({
   storage = createMmkvJsonStorage(),
 }: CreatePortfolioStoreOptions = {}): StoreApi<PortfolioStoreState> {
   const snapshot = readPortfolioSnapshot(storage);
   const quoteCache = readQuoteCache(storage);
+  const historicalQuoteCache = readHistoricalQuoteCache(storage);
 
   return createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
@@ -181,6 +209,7 @@ export function createPortfolioStore({
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
     },
+    historicalQuoteCache,
     quoteCache,
     removeAsset: (assetId) => {
       set((state) => ({
@@ -273,6 +302,18 @@ export function createPortfolioStore({
         ),
       }));
       persistPortfolio(storage, get());
+    },
+    upsertHistoricalQuote: (historicalQuote) => {
+      set((state) => ({
+        historicalQuoteCache: {
+          ...state.historicalQuoteCache,
+          [historicalQuoteCacheKey(
+            historicalQuote.assetId,
+            historicalQuote.asOfMonth,
+          )]: historicalQuote,
+        },
+      }));
+      persistHistoricalQuoteCache(storage, get().historicalQuoteCache);
     },
     upsertQuote: (quote) => {
       set((state) => ({
