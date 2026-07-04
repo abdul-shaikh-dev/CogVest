@@ -2,8 +2,20 @@ export {
   buildCoinGeckoSimplePriceUrl,
   fetchCoinGeckoQuote,
 } from "./coinGecko";
+export {
+  buildCoinGeckoHistoricalRangeUrl,
+  buildYahooHistoricalChartUrl,
+  fetchCoinGeckoHistoricalPrice,
+  fetchYahooHistoricalPrice,
+  getMonthEndDateUtc,
+  resolveHistoricalPrice,
+} from "./historicalPrices";
 export { refreshQuotes, resolveQuote } from "./quoteResolver";
 export type {
+  HistoricalPriceFailure,
+  HistoricalPriceProviderInput,
+  HistoricalPriceResult,
+  HistoricalPriceSuccess,
   QuoteFailure,
   QuoteFetcher,
   QuoteProviderInput,
