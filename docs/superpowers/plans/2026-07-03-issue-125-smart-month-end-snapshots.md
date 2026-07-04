@@ -42,7 +42,7 @@
 - Modify: `src/store/index.ts`
 - Test: `src/store/__tests__/portfolioStore.test.ts`
 
-- [ ] **Step 1: Write failing storage/type tests**
+- [x] **Step 1: Write failing storage/type tests**
 
 Add a test proving historical quotes persist separately from the raw portfolio snapshot and generated metadata survives monthly snapshot persistence.
 
@@ -102,7 +102,7 @@ npm test -- src/store/__tests__/portfolioStore.test.ts
 
 Expected: FAIL because `generated`, `historicalQuoteCache`, and `upsertHistoricalQuote` do not exist.
 
-- [ ] **Step 2: Extend quote/monthly snapshot types**
+- [x] **Step 2: Extend quote/monthly snapshot types**
 
 Add these types in `src/types/quote.ts`:
 
@@ -145,7 +145,7 @@ export type MonthlySnapshotGenerationMetadata = {
 
 Then add `generated?: MonthlySnapshotGenerationMetadata` to `MonthlySnapshot`.
 
-- [ ] **Step 3: Extend the store with historical quote cache**
+- [x] **Step 3: Extend the store with historical quote cache**
 
 In `src/store/index.ts`, add `historicalQuoteCacheStorageKey`, state field, action, read/write helpers, and a stable cache key:
 
@@ -167,7 +167,7 @@ upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
 
 Persist historical quote cache separately from `portfolioStorageKey`, mirroring `quoteCache`.
 
-- [ ] **Step 4: Run storage tests**
+- [x] **Step 4: Run storage tests**
 
 Run:
 
@@ -177,7 +177,7 @@ npm test -- src/store/__tests__/portfolioStore.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/types/quote.ts src/types/monthlySnapshot.ts src/store/index.ts src/store/__tests__/portfolioStore.test.ts
@@ -195,7 +195,7 @@ git commit -m "Add generated snapshot metadata storage"
 - Modify: `src/services/quotes/index.ts`
 - Test: `src/services/quotes/__tests__/historicalPrices.test.ts`
 
-- [ ] **Step 1: Write failing provider tests**
+- [x] **Step 1: Write failing provider tests**
 
 Create tests covering Yahoo historical close, CoinGecko history/range, cached fallback shape, and failure result.
 
@@ -260,7 +260,7 @@ npm test -- src/services/quotes/__tests__/historicalPrices.test.ts
 
 Expected: FAIL because the file/functions do not exist.
 
-- [ ] **Step 2: Add historical service types**
+- [x] **Step 2: Add historical service types**
 
 Add in `src/services/quotes/types.ts`:
 
@@ -287,7 +287,7 @@ export type HistoricalPriceProviderInput = {
 };
 ```
 
-- [ ] **Step 3: Implement provider URL helpers and parsers**
+- [x] **Step 3: Implement provider URL helpers and parsers**
 
 Create `src/services/quotes/historicalPrices.ts` with:
 
@@ -391,7 +391,7 @@ export function buildCoinGeckoHistoricalRangeUrl(coinId: string, targetMonth: st
 Then add `fetchCoinGeckoHistoricalPrice` that picks the last price point at or
 before month end.
 
-- [ ] **Step 4: Add resolver with unsupported/manual fallback signal**
+- [x] **Step 4: Add resolver with unsupported/manual fallback signal**
 
 Add:
 
@@ -412,7 +412,7 @@ export async function resolveHistoricalPrice(
 }
 ```
 
-- [ ] **Step 5: Export functions and run tests**
+- [x] **Step 5: Export functions and run tests**
 
 Modify `src/services/quotes/index.ts` to export historical helpers and types.
 
@@ -424,7 +424,7 @@ npm test -- src/services/quotes/__tests__/historicalPrices.test.ts src/services/
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/services/quotes src/types/quote.ts
