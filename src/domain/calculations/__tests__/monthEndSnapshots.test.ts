@@ -174,6 +174,35 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     ]);
   });
 
+  it("returns insufficient-data when all data is after the target month", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [stockAsset],
+        cashEntries: [
+          cashEntry({
+            date: "2026-08-05T00:00:00.000Z",
+          }),
+        ],
+        openingPositions: [
+          openingPosition({
+            date: "2026-08-10T00:00:00.000Z",
+          }),
+        ],
+        trades: [
+          trade({
+            date: "2026-08-11T00:00:00.000Z",
+          }),
+        ],
+      }),
+    );
+
+    expect(result.status).toBe("insufficient-data");
+    expect(result.snapshot).toBeNull();
+    expect(result.warnings).toEqual([
+      "No holdings, trades, or cash entries were available to derive for target month 2026-07.",
+    ]);
+  });
+
   it("prefers historical quotes over latest local quotes and manual opening prices", () => {
     const result = buildGeneratedMonthEndSnapshot(
       buildInput({

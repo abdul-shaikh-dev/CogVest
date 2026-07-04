@@ -252,6 +252,21 @@ export function buildGeneratedMonthEndSnapshot({
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
   );
+
+  if (
+    monthOpeningPositions.length === 0 &&
+    monthTrades.length === 0 &&
+    monthCashEntries.length === 0
+  ) {
+    return {
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        `No holdings, trades, or cash entries were available to derive for target month ${targetMonth}.`,
+      ],
+    };
+  }
+
   const heldAssets = assets.filter((asset) => {
     const hasOpeningPosition = monthOpeningPositions.some(
       (position) => position.assetId === asset.id,
