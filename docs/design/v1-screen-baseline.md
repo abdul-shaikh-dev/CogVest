@@ -235,10 +235,11 @@ Settings should build trust.
 
 Baseline groups:
 
-- Privacy: local storage, no account, no cloud, no analytics
-- Display: value masking status and mask preview
-- Quotes: refresh status, provider status, manual fallback status
-- Currency: INR base and foreign/crypto fallback settings
+- Local-first summary: local storage, account not required, cloud sync off,
+  analytics off
+- Value masking: real toggle/control plus mask preview
+- Quotes: refresh status, quote source, manual fallback status
+- Currency & App: INR base currency and Android preview/version context
 - Data: destructive or future data actions separated from normal settings
 
 Do not show unsupported settings as if they work. V2/V3 features may be marked
