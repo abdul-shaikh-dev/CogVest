@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
@@ -28,10 +29,12 @@ import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/form
 import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, spacing } from "@/src/theme";
+import type { MonthlySnapshot } from "@/src/types";
 import { FormTextField } from "@/src/components/forms";
-import { useProgress } from "./useProgress";
+import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
 type ProgressScreenProps = {
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -545,11 +548,76 @@ function ProgressTrendCards({
   );
 }
 
+function SnapshotStatusCard({
+  onReview,
+  status,
+}: {
+  onReview: () => void;
+  status: ProgressSnapshotAutomationStatus;
+}) {
+  return (
+    <PremiumCard testID="month-end-snapshot-status-card">
+      <SectionHeader title="Month-end snapshot" />
+      <AppText color="secondary">{status.message}</AppText>
+      {status.warnings.map((warning) => (
+        <AppText color="secondary" key={warning} variant="caption">
+          {warning}
+        </AppText>
+      ))}
+      <AppButton title="Review snapshot" onPress={onReview} />
+    </PremiumCard>
+  );
+}
+
+function setSnapshotFormFields({
+  progress,
+  snapshot,
+}: {
+  progress: ReturnType<typeof useProgress>;
+  snapshot: MonthlySnapshot;
+}) {
+  progress.setField("month", snapshot.month);
+  progress.setField("portfolioValue", String(snapshot.portfolioValue));
+  progress.setField("investedValue", String(snapshot.investedValue));
+  progress.setField("equityValue", String(snapshot.equityValue));
+  progress.setField("debtValue", String(snapshot.debtValue));
+  progress.setField("cryptoValue", String(snapshot.cryptoValue));
+  progress.setField("cashValue", String(snapshot.cashValue));
+  progress.setField("monthlyInvestment", String(snapshot.monthlyInvestment));
+  progress.setField("salary", String(snapshot.salary));
+  progress.setField("monthlyExpense", String(snapshot.monthlyExpense ?? ""));
+  progress.setField("notes", snapshot.notes ?? "");
+}
+
 export function ProgressScreen({
+  now,
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
-  const progress = useProgress({ store });
+  const progress = useProgress({ now, store });
   const isReducedMotionEnabled = useReducedMotionPreference();
+  const hasRunAutomationRef = useRef(false);
+  const [isReviewingSnapshot, setIsReviewingSnapshot] = useState(false);
+
+  useEffect(() => {
+    if (hasRunAutomationRef.current) {
+      return;
+    }
+
+    hasRunAutomationRef.current = true;
+    void progress.ensureMonthEndSnapshot();
+  }, [progress]);
+
+  function reviewSnapshot() {
+    const reviewSnapshot =
+      progress.snapshotAutomationStatus.snapshot ??
+      progress.latestSummary?.snapshot;
+
+    if (reviewSnapshot) {
+      setSnapshotFormFields({ progress, snapshot: reviewSnapshot });
+    }
+
+    setIsReviewingSnapshot(true);
+  }
 
   return (
     <ScreenContainer scroll testID="progress-screen">
@@ -561,6 +629,10 @@ export function ProgressScreen({
               ? `${formatMonth(progress.latestSummary.snapshot.month)} snapshot`
               : getMonthLabel()
           }
+        />
+        <SnapshotStatusCard
+          onReview={reviewSnapshot}
+          status={progress.snapshotAutomationStatus}
         />
 
         {progress.latestSummary ? (
@@ -722,6 +794,7 @@ export function ProgressScreen({
           />
         )}
 
+        {isReviewingSnapshot ? (
         <PremiumCard>
           <SectionHeader title="Record monthly snapshot" />
           <FormTextField
@@ -832,6 +905,7 @@ export function ProgressScreen({
             onPress={progress.saveSnapshot}
           />
         </PremiumCard>
+        ) : null}
       </View>
     </ScreenContainer>
   );

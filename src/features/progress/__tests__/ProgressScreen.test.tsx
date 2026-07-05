@@ -5,7 +5,7 @@ import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
-import type { MonthlySnapshot } from "@/src/types";
+import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition } from "@/src/types";
 
 jest.mock("@/src/hooks", () => ({
   useReducedMotionPreference: jest.fn(() => false),
@@ -54,6 +54,37 @@ const marchSnapshot: MonthlySnapshot = {
   salary: 170000,
 };
 
+const stockAsset: Asset = {
+  assetClass: "stock",
+  currency: "INR",
+  id: "asset-hdfc",
+  name: "HDFC Bank",
+  symbol: "HDFCBANK",
+  ticker: "HDFCBANK.NS",
+};
+
+function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
+  const openingPosition: OpeningPosition = {
+    assetId: stockAsset.id,
+    averageCostPrice: 1450,
+    currentPrice: 1678.25,
+    date: "2026-07-15T00:00:00.000Z",
+    id: "opening-hdfc",
+    quantity: 10,
+  };
+  const cashEntry: CashEntry = {
+    amount: 70000,
+    date: "2026-07-01T00:00:00.000Z",
+    id: "cash-salary",
+    label: "Salary added",
+    type: "addition",
+  };
+
+  store.getState().addAsset(stockAsset);
+  store.getState().addOpeningPosition(openingPosition);
+  store.getState().addCashEntry(cashEntry);
+}
+
 describe("ProgressScreen", () => {
   beforeEach(() => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(false);
@@ -70,10 +101,27 @@ describe("ProgressScreen", () => {
     ).toBeTruthy();
   });
 
+  it("shows compact snapshot automation status instead of the manual form", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+
+    const { findByText, queryByTestId } = render(
+      <ProgressScreen
+        now={new Date("2026-08-02T10:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(await findByText("Month-end snapshot")).toBeTruthy();
+    expect(queryByTestId("month-end-snapshot-status-card")).toBeTruthy();
+    expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
+  });
+
   it("saves a monthly snapshot from the screen form", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
 
+    fireEvent.press(getByText("Review snapshot"));
     fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
     fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1385000");
     fireEvent.changeText(getByTestId("snapshot-invested-input"), "1060000");
@@ -228,6 +276,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(maySnapshot);
     const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
 
+    fireEvent.press(getByText("Review snapshot"));
     fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
     fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
     fireEvent.changeText(getByTestId("snapshot-invested-input"), "1070000");
