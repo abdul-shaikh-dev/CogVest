@@ -43,9 +43,17 @@ Out of scope:
 
 ### Preview Server
 
-`npm run preview:v1:research:start` must start the static preview and
-`npm run preview:v1:research:status` must confirm it is running. The served URL
-is `http://127.0.0.1:4175`.
+The static preview must serve `http://127.0.0.1:4175` with HTTP 200.
+
+Preferred path:
+
+- `npm run preview:v1:research:start`
+- `npm run preview:v1:research:status`
+
+Managed Codex shells on Windows may terminate detached child processes launched
+through `npm`. If that happens, use a top-level foreground process such as
+`node scripts/preview-server.mjs serve` through `Start-Process`, then verify the
+URL with `Invoke-WebRequest`.
 
 If the server cannot start, fix only the preview server harness or document the
 exact blocker.
@@ -106,7 +114,9 @@ issues.
 
 ## Acceptance Criteria
 
-- Preview server starts and status command confirms it.
+- Preview server serves `http://127.0.0.1:4175` with HTTP 200; if background
+  status cannot be used in the managed shell, the foreground/top-level process
+  evidence is recorded.
 - Seeded Android visual QA runs or a precise blocker is documented.
 - Screenshot evidence exists for all V1 screens listed above.
 - `docs/design/v1-screen-baseline.md` has no obvious stale contradiction with

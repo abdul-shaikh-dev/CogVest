@@ -70,7 +70,7 @@ npm run preview:v1:research:stop
 
 Expected: command exits successfully even if no server is running.
 
-- [ ] **Step 2: Start preview server**
+- [ ] **Step 2: Try background preview server**
 
 Run:
 
@@ -80,7 +80,7 @@ npm run preview:v1:research:start
 
 Expected: preview server starts for `http://127.0.0.1:4175`.
 
-- [ ] **Step 3: Check status**
+- [ ] **Step 3: Check background status**
 
 Run:
 
@@ -90,7 +90,18 @@ npm run preview:v1:research:status
 
 Expected: status reports a running server and the preview URL.
 
-- [ ] **Step 4: Smoke the URL**
+- [ ] **Step 4: If background mode is killed by the managed Windows shell, start a top-level foreground server**
+
+Run only if Step 2 or Step 3 fails because the child process exits immediately:
+
+```powershell
+$p = Start-Process -FilePath node -ArgumentList 'scripts/preview-server.mjs','serve' -WorkingDirectory (Get-Location) -PassThru -WindowStyle Hidden
+Start-Sleep -Seconds 2
+```
+
+Expected: a top-level Node process serves the preview.
+
+- [ ] **Step 5: Smoke the URL**
 
 Run:
 
@@ -99,6 +110,16 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4175 | Select-Object StatusC
 ```
 
 Expected: status code is `200`.
+
+- [ ] **Step 6: Stop fallback process if one was started**
+
+Run only if Step 4 was used:
+
+```powershell
+Stop-Process -Id $p.Id
+```
+
+Expected: the fallback preview server stops cleanly after verification.
 
 ## Task 3: Refresh Android Build If Needed
 
