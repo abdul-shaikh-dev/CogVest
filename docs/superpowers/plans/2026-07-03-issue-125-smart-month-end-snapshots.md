@@ -584,7 +584,7 @@ git commit -m "Add generated month-end snapshot calculation"
 - Create: `src/features/progress/useMonthEndSnapshotAutomation.ts`
 - Test: `src/features/progress/__tests__/useProgress.test.tsx`
 
-- [ ] **Step 1: Write failing hook tests**
+- [x] **Step 1: Write failing hook tests**
 
 Replace the old manual-save-only test with tests for automatic generation.
 
@@ -628,7 +628,7 @@ npm test -- src/features/progress/__tests__/useProgress.test.tsx
 
 Expected: FAIL because `now` and `ensureMonthEndSnapshot` do not exist.
 
-- [ ] **Step 2: Extend `useProgress` input**
+- [x] **Step 2: Extend `useProgress` input**
 
 Add optional inputs:
 
@@ -642,7 +642,7 @@ type UseProgressInput = {
 
 Use `now ?? new Date()` for target-month calculations and tests.
 
-- [ ] **Step 3: Add `ensureMonthEndSnapshot`**
+- [x] **Step 3: Add `ensureMonthEndSnapshot`**
 
 Implement as an async function:
 
@@ -654,7 +654,7 @@ Implement as an async function:
 
 Do not trigger generation in render. Use an explicit function exposed from the hook first; the screen will call it from an effect in Task 5.
 
-- [ ] **Step 4: Add reusable automation hook**
+- [x] **Step 4: Add reusable automation hook**
 
 Create `src/features/progress/useMonthEndSnapshotAutomation.ts`:
 
@@ -692,11 +692,11 @@ export function useMonthEndSnapshotAutomation({
 }
 ```
 
-- [ ] **Step 5: Preserve manual edit capability**
+- [x] **Step 5: Preserve manual edit capability**
 
 Keep a renamed manual upsert function such as `saveSnapshotEdits()` for review/edit flows. It can reuse `validateProgressSnapshotForm` initially, but generated values should prefill fields when edit mode opens.
 
-- [ ] **Step 6: Run hook tests**
+- [x] **Step 6: Run hook tests**
 
 Run:
 
@@ -706,7 +706,7 @@ npm test -- src/features/progress/__tests__/useProgress.test.tsx
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add src/features/progress/useProgress.ts src/features/progress/useMonthEndSnapshotAutomation.ts src/features/progress/__tests__/useProgress.test.tsx
