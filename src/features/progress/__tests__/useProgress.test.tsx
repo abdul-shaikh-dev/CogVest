@@ -132,9 +132,22 @@ describe("useProgress", () => {
   it("runs month-end snapshot automation once from the reusable hook", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: stockAsset.id,
+        asOfMonth: "2026-07",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-02T10:00:00.000Z",
+        price: 1600,
+        source: "yahoo",
+      },
+    });
 
     renderHook(() =>
       useMonthEndSnapshotAutomation({
+        historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
         store,
       }),
@@ -144,5 +157,44 @@ describe("useProgress", () => {
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
     expect(store.getState().monthlySnapshots[0]?.month).toBe("2026-07");
+  });
+
+  it("uses fetched historical prices before latest local quote fallback", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    store.getState().upsertQuote({
+      assetId: stockAsset.id,
+      asOf: "2026-08-02T10:00:00.000Z",
+      currency: "INR",
+      price: 1800,
+      source: "yahoo",
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: stockAsset.id,
+        asOfMonth: "2026-07",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-02T10:00:00.000Z",
+        price: 1600,
+        source: "yahoo",
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
+    expect(store.getState().monthlySnapshots[0]?.equityValue).toBe(1600 * 10);
   });
 });

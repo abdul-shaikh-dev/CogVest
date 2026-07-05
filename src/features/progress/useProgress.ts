@@ -15,8 +15,9 @@ import {
   type GeneratedSnapshotStatus,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
+import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { MonthlySnapshot } from "@/src/types";
+import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
 import { createId } from "@/src/utils";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -62,6 +63,7 @@ export type ProgressSnapshotAutomationStatus = {
 };
 
 type UseProgressInput = {
+  historicalPriceFetcher?: typeof resolveHistoricalPrice;
   now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -151,7 +153,47 @@ function automationMessage(result: GeneratedMonthEndSnapshotResult) {
   return "Not enough portfolio data to generate the previous month snapshot yet.";
 }
 
+function getMonthEndDate(targetMonth: string) {
+  const [yearValue, monthValue] = targetMonth.split("-");
+  const year = Number(yearValue);
+  const monthIndex = Number(monthValue) - 1;
+
+  return new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+}
+
+function isOnOrBefore(isoDate: string, maxDate: Date) {
+  return new Date(isoDate).getTime() <= maxDate.getTime();
+}
+
+function needsHistoricalPrice({
+  assetId,
+  state,
+  targetMonth,
+}: {
+  assetId: string;
+  state: PortfolioStoreState;
+  targetMonth: string;
+}) {
+  const cacheKey = historicalQuoteCacheKey(assetId, targetMonth);
+
+  if (state.historicalQuoteCache[cacheKey]) {
+    return false;
+  }
+
+  const monthEnd = getMonthEndDate(targetMonth);
+  const hasOpeningPosition = state.openingPositions.some(
+    (position) =>
+      position.assetId === assetId && isOnOrBefore(position.date, monthEnd),
+  );
+  const hasTrade = state.trades.some(
+    (trade) => trade.assetId === assetId && isOnOrBefore(trade.date, monthEnd),
+  );
+
+  return hasOpeningPosition || hasTrade;
+}
+
 export function useProgress({
+  historicalPriceFetcher = resolveHistoricalPrice,
   now = new Date(),
   store = getPortfolioStore(),
 }: UseProgressInput = {}) {
@@ -254,16 +296,47 @@ export function useProgress({
 
   async function ensureMonthEndSnapshot() {
     const state = store.getState();
+    const targetMonth = getPreviousCompletedMonth(now);
+    const existingSnapshot = state.monthlySnapshots.some(
+      (monthlySnapshot) => monthlySnapshot.month === targetMonth,
+    );
+    const lookupWarnings: string[] = [];
+
+    if (!existingSnapshot) {
+      const quoteableAssets = state.assets.filter(
+        (asset) => asset.assetClass !== "cash" && asset.assetClass !== "debt",
+      );
+
+      for (const asset of quoteableAssets) {
+        if (!needsHistoricalPrice({ assetId: asset.id, state, targetMonth })) {
+          continue;
+        }
+
+        const historicalPriceResult = await historicalPriceFetcher({
+          asset,
+          targetMonth,
+        });
+
+        if (historicalPriceResult.ok) {
+          store.getState().upsertHistoricalQuote(historicalPriceResult.quote);
+        } else {
+          lookupWarnings.push(historicalPriceResult.error);
+        }
+      }
+    }
+
+    const refreshedState = store.getState();
     const result = buildGeneratedMonthEndSnapshot({
-      assets: state.assets,
-      cashEntries: state.cashEntries,
-      existingSnapshots: state.monthlySnapshots,
-      historicalQuotes: state.historicalQuoteCache,
+      assets: refreshedState.assets,
+      cashEntries: refreshedState.cashEntries,
+      existingSnapshots: refreshedState.monthlySnapshots,
+      historicalQuotes: refreshedState.historicalQuoteCache,
       now,
-      openingPositions: state.openingPositions,
-      quoteCache: state.quoteCache,
-      trades: state.trades,
+      openingPositions: refreshedState.openingPositions,
+      quoteCache: refreshedState.quoteCache,
+      trades: refreshedState.trades,
     });
+    const statusWarnings = [...result.warnings, ...lookupWarnings];
 
     if (result.status === "created" && result.snapshot) {
       store.getState().addMonthlySnapshot(result.snapshot);
@@ -274,10 +347,13 @@ export function useProgress({
       snapshot: result.snapshot,
       status: result.status,
       targetMonth: getPreviousCompletedMonth(now),
-      warnings: result.warnings,
+      warnings: statusWarnings,
     });
 
-    return result;
+    return {
+      ...result,
+      warnings: statusWarnings,
+    };
   }
 
   return {
