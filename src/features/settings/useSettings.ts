@@ -15,6 +15,8 @@ export type UseSettingsResult = {
   toggleMaskWealthValues: () => void;
 };
 
+export type SettingsQuoteSourceLabel = "Waiting" | "Live" | "Manual" | "Mixed";
+
 export type SettingsQuoteStatus = {
   latestQuoteAsOf: string | null;
   latestQuoteLabel: string;
@@ -22,6 +24,7 @@ export type SettingsQuoteStatus = {
   manualFallbackCount: number;
   providerStatus: "Live available" | "Manual only" | "Waiting for holdings";
   quoteCount: number;
+  quoteSourceLabel: SettingsQuoteSourceLabel;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -37,6 +40,30 @@ function getLatestQuote(quotes: Quote[]) {
     )[0];
 }
 
+function getQuoteSourceLabel({
+  liveQuoteCount,
+  manualFallbackCount,
+  quoteCount,
+}: {
+  liveQuoteCount: number;
+  manualFallbackCount: number;
+  quoteCount: number;
+}): SettingsQuoteSourceLabel {
+  if (quoteCount === 0) {
+    return "Waiting";
+  }
+
+  if (liveQuoteCount > 0 && manualFallbackCount > 0) {
+    return "Mixed";
+  }
+
+  if (liveQuoteCount > 0) {
+    return "Live";
+  }
+
+  return "Manual";
+}
+
 function deriveQuoteStatus(quoteCache: PortfolioStoreState["quoteCache"]) {
   const quotes = Object.values(quoteCache);
   const manualFallbackCount = quotes.filter(
@@ -50,6 +77,11 @@ function deriveQuoteStatus(quoteCache: PortfolioStoreState["quoteCache"]) {
       : liveQuoteCount > 0
         ? "Live available"
         : "Manual only";
+  const quoteSourceLabel = getQuoteSourceLabel({
+    liveQuoteCount,
+    manualFallbackCount,
+    quoteCount: quotes.length,
+  });
 
   return {
     latestQuoteAsOf: latestQuote?.asOf ?? null,
@@ -58,6 +90,7 @@ function deriveQuoteStatus(quoteCache: PortfolioStoreState["quoteCache"]) {
     manualFallbackCount,
     providerStatus,
     quoteCount: quotes.length,
+    quoteSourceLabel,
   } satisfies SettingsQuoteStatus;
 }
 
