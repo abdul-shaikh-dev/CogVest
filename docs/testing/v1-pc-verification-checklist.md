@@ -28,8 +28,10 @@ Android Emulator, not a physical Android phone.
 - [ ] Invalid trade data shows validation errors.
 - [ ] Cash can be added.
 - [ ] Cash balance appears on Dashboard.
-- [ ] Monthly Progress can save and update month-end snapshots.
-- [ ] Monthly Progress shows monthly gain, gain %, monthly investment, savings rate, and asset split.
+- [ ] Monthly Progress automatically generates the missing previous completed month snapshot after portfolio data exists.
+- [ ] Monthly Progress shows compact `Month-end snapshot` status by default.
+- [ ] `Review snapshot` opens the edit form for correction/manual override.
+- [ ] Monthly Progress shows monthly gain, gain %, monthly investment, savings rate where derivable, and asset split.
 - [ ] Value masking can be toggled from Settings.
 - [ ] Masked state hides wealth values but not quantities or percentages.
 - [ ] Quote refresh or fallback state is visible where holdings exist.

@@ -1,4 +1,13 @@
 export {
+  buildGeneratedMonthEndSnapshot,
+  getPreviousCompletedMonth,
+} from "./monthEndSnapshots";
+export type {
+  BuildGeneratedMonthEndSnapshotInput,
+  GeneratedMonthEndSnapshotResult,
+  GeneratedSnapshotStatus,
+} from "./monthEndSnapshots";
+export {
   buildMonthlyProgressChartData,
   getDefaultMonthlyChartRange,
   MONTHLY_CHART_RANGES,

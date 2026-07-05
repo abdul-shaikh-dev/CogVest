@@ -4,11 +4,20 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
+
+function MonthEndSnapshotAutomation() {
+  useMonthEndSnapshotAutomation();
+
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
+        <MonthEndSnapshotAutomation />
         <Stack
           screenOptions={{
             contentStyle: { backgroundColor: "#1C1B1F" },

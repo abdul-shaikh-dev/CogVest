@@ -1,4 +1,9 @@
-import type { Asset, Quote, QuoteCache } from "@/src/types";
+import type {
+  Asset,
+  HistoricalQuote,
+  Quote,
+  QuoteCache,
+} from "@/src/types";
 
 export type QuoteFetcher = (
   input: string,
@@ -20,10 +25,31 @@ export type QuoteFailure = {
 
 export type QuoteResult = QuoteSuccess | QuoteFailure;
 
+export type HistoricalPriceSuccess = {
+  ok: true;
+  quote: HistoricalQuote;
+};
+
+export type HistoricalPriceFailure = {
+  error: string;
+  ok: false;
+};
+
+export type HistoricalPriceResult =
+  | HistoricalPriceSuccess
+  | HistoricalPriceFailure;
+
 export type QuoteProviderInput = {
   asset: Asset;
   fetcher?: QuoteFetcher;
   now?: QuoteNow;
+};
+
+export type HistoricalPriceProviderInput = {
+  asset: Asset;
+  fetcher?: QuoteFetcher;
+  now?: QuoteNow;
+  targetMonth: string;
 };
 
 export type ResolveQuoteInput = QuoteProviderInput & {

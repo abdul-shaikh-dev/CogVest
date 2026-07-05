@@ -57,7 +57,7 @@ Do not add:
 | Asset metadata | Asset class, instrument type, sector type, quote source metadata | #62 | `src/domain/assets/__tests__/metadata.test.ts`, store migration tests | Add or inspect equity, debt, crypto, and cash-like records; metadata appears without spreadsheet columns. |
 | Debt / liquid / cash-like instruments | Debt and manual-price asset support | #63 | `src/services/quotes/__tests__/quotes.test.ts`, holdings calculation tests | Add a manual debt/liquid holding; app keeps manual price fallback and allocation. |
 | Consolidated `All` view | Dashboard/Holdings rollups and allocation details | #64 | dashboard, holdings, and calculation tests | Dashboard and Holdings answer invested/current/P&L/allocation without a grid. |
-| Monthly progress tracking | Monthly Progress snapshots | #65 | `src/features/progress/__tests__/ProgressScreen.test.tsx`, store persistence tests | Record two monthly snapshots; Progress shows gain, gain %, investment, savings rate, and asset split. |
+| Monthly progress tracking | Monthly Progress snapshots | #65 | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/features/progress/__tests__/useProgress.test.tsx`, store persistence tests | Missing previous-month snapshot is generated automatically; review/edit remains available; Progress shows gain, gain %, investment, savings rate where derivable, and asset split. |
 | Daily cash tracking | Cash Ledger | V1 cash flow | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | Add deposit/withdrawal; Dashboard and Cash reflect balance. |
 | Current quote or manual price | Live quote refresh plus manual fallback | V1 quote flow | quote service tests, holdings screen tests | Refresh quotes when network is available; failed quotes keep manual prices visible. |
 | Privacy while checking values | Value masking | V1 settings flow | Settings and masked-value tests | Toggle value masking; INR values hide while quantities and percentages remain readable. |
@@ -94,7 +94,8 @@ Then verify on Android Emulator:
 - Open Holdings and verify invested/current/P&L/P&L %/allocation.
 - Add cash deposit and withdrawal.
 - Open Dashboard and verify total current value, invested value, allocation, and quote status.
-- Open Monthly Progress and save two monthly snapshots.
+- Open Monthly Progress after seeded portfolio data and verify missing previous-month snapshot generation.
+- Use `Review snapshot` only when manual correction is needed.
 - Verify monthly gain, gain %, monthly investment, savings rate, and asset split.
 - Toggle value masking in Settings.
 - Close and reopen the app and verify local data remains.

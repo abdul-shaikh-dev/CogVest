@@ -6,6 +6,8 @@ export const yahooChartBaseUrl =
   "https://query1.finance.yahoo.com/v8/finance/chart";
 export const coinGeckoSimplePriceUrl =
   "https://api.coingecko.com/api/v3/simple/price";
+export const coinGeckoMarketChartBaseUrl =
+  "https://api.coingecko.com/api/v3/coins";
 
 export function defaultNow() {
   return new Date().toISOString();

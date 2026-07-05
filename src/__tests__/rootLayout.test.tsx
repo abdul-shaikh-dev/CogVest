@@ -1,7 +1,14 @@
 import React from "react";
+import { render } from "@testing-library/react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
+
 import RootLayout from "../../app/_layout";
+
+jest.mock("@/src/features/progress", () => ({
+  useMonthEndSnapshotAutomation: jest.fn(),
+}));
 
 jest.mock("expo-router", () => {
   const React = require("react");
@@ -80,5 +87,11 @@ describe("RootLayout", () => {
         "visual-qa-seed",
       ]),
     );
+  });
+
+  it("runs month-end snapshot automation on app launch", () => {
+    render(<RootLayout />);
+
+    expect(useMonthEndSnapshotAutomation).toHaveBeenCalledTimes(1);
   });
 });

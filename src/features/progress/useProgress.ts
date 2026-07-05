@@ -3,16 +3,21 @@ import type { StoreApi } from "zustand/vanilla";
 
 import {
   buildMonthlyProgressChartData,
+  buildGeneratedMonthEndSnapshot,
   calculateAllocation,
   calculateCashBalance,
   calculateHoldings,
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
   getDefaultMonthlyChartRange,
+  getPreviousCompletedMonth,
+  type GeneratedMonthEndSnapshotResult,
+  type GeneratedSnapshotStatus,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
+import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { MonthlySnapshot } from "@/src/types";
+import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
 import { createId } from "@/src/utils";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -48,6 +53,20 @@ export function emptyProgressFormValues() {
 
 export type ProgressFormValues = ReturnType<typeof emptyProgressFormValues>;
 export type ProgressFormErrors = Partial<Record<keyof ProgressFormValues, string>>;
+
+export type ProgressSnapshotAutomationStatus = {
+  message: string;
+  snapshot: MonthlySnapshot | null;
+  status: GeneratedSnapshotStatus | "idle";
+  targetMonth: string;
+  warnings: string[];
+};
+
+type UseProgressInput = {
+  historicalPriceFetcher?: typeof resolveHistoricalPrice;
+  now?: Date;
+  store?: StoreApi<PortfolioStoreState>;
+};
 
 const requiredNumberFields: Array<keyof ProgressFormValues> = [
   "portfolioValue",
@@ -122,14 +141,73 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
   };
 }
 
-export function useProgress({
-  store = getPortfolioStore(),
+function automationMessage(result: GeneratedMonthEndSnapshotResult) {
+  if (result.status === "created") {
+    return "Previous month snapshot generated automatically.";
+  }
+
+  if (result.status === "already-exists") {
+    return "Previous month snapshot is already recorded.";
+  }
+
+  return "Not enough portfolio data to generate the previous month snapshot yet.";
+}
+
+function getMonthEndDate(targetMonth: string) {
+  const [yearValue, monthValue] = targetMonth.split("-");
+  const year = Number(yearValue);
+  const monthIndex = Number(monthValue) - 1;
+
+  return new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+}
+
+function isOnOrBefore(isoDate: string, maxDate: Date) {
+  return new Date(isoDate).getTime() <= maxDate.getTime();
+}
+
+function needsHistoricalPrice({
+  assetId,
+  state,
+  targetMonth,
 }: {
-  store?: StoreApi<PortfolioStoreState>;
-} = {}) {
+  assetId: string;
+  state: PortfolioStoreState;
+  targetMonth: string;
+}) {
+  const cacheKey = historicalQuoteCacheKey(assetId, targetMonth);
+
+  if (state.historicalQuoteCache[cacheKey]) {
+    return false;
+  }
+
+  const monthEnd = getMonthEndDate(targetMonth);
+  const hasOpeningPosition = state.openingPositions.some(
+    (position) =>
+      position.assetId === assetId && isOnOrBefore(position.date, monthEnd),
+  );
+  const hasTrade = state.trades.some(
+    (trade) => trade.assetId === assetId && isOnOrBefore(trade.date, monthEnd),
+  );
+
+  return hasOpeningPosition || hasTrade;
+}
+
+export function useProgress({
+  historicalPriceFetcher = resolveHistoricalPrice,
+  now = new Date(),
+  store = getPortfolioStore(),
+}: UseProgressInput = {}) {
   const snapshot = usePortfolioSnapshot(store);
   const [formValues, setFormValues] = useState(emptyProgressFormValues);
   const [errors, setErrors] = useState<ProgressFormErrors>({});
+  const [snapshotAutomationStatus, setSnapshotAutomationStatus] =
+    useState<ProgressSnapshotAutomationStatus>(() => ({
+      message: "Month-end snapshot automation has not run yet.",
+      snapshot: null,
+      status: "idle",
+      targetMonth: getPreviousCompletedMonth(now),
+      warnings: [],
+    }));
   const [portfolioChartRange, setPortfolioChartRange] =
     useState<MonthlyChartRange>(() =>
       getDefaultMonthlyChartRange(snapshot.monthlySnapshots.length),
@@ -150,10 +228,10 @@ export function useProgress({
     0,
   );
   const monthlyTradeInvestment = snapshot.trades
-    .filter((trade) => trade.type === "buy" && isCurrentMonth(trade.date))
+    .filter((trade) => trade.type === "buy" && isCurrentMonth(trade.date, now))
     .reduce((total, trade) => total + trade.totalValue, 0);
   const monthlyOpeningInvestment = snapshot.openingPositions
-    .filter((position) => isCurrentMonth(position.date))
+    .filter((position) => isCurrentMonth(position.date, now))
     .reduce(
       (total, position) =>
         total + position.quantity * position.averageCostPrice,
@@ -161,7 +239,7 @@ export function useProgress({
     );
   const monthlyInvestment = monthlyTradeInvestment + monthlyOpeningInvestment;
   const monthlyCashAdded = snapshot.cashEntries
-    .filter((entry) => entry.type === "addition" && isCurrentMonth(entry.date))
+    .filter((entry) => entry.type === "addition" && isCurrentMonth(entry.date, now))
     .reduce((total, entry) => total + entry.amount, 0);
   const savingsRate =
     monthlyCashAdded === 0 ? 0 : (monthlyInvestment / monthlyCashAdded) * 100;
@@ -216,11 +294,74 @@ export function useProgress({
     setErrors({});
   }
 
+  async function ensureMonthEndSnapshot() {
+    const state = store.getState();
+    const targetMonth = getPreviousCompletedMonth(now);
+    const existingSnapshot = state.monthlySnapshots.some(
+      (monthlySnapshot) => monthlySnapshot.month === targetMonth,
+    );
+    const lookupWarnings: string[] = [];
+
+    if (!existingSnapshot) {
+      const quoteableAssets = state.assets.filter(
+        (asset) => asset.assetClass !== "cash" && asset.assetClass !== "debt",
+      );
+
+      for (const asset of quoteableAssets) {
+        if (!needsHistoricalPrice({ assetId: asset.id, state, targetMonth })) {
+          continue;
+        }
+
+        const historicalPriceResult = await historicalPriceFetcher({
+          asset,
+          targetMonth,
+        });
+
+        if (historicalPriceResult.ok) {
+          store.getState().upsertHistoricalQuote(historicalPriceResult.quote);
+        } else {
+          lookupWarnings.push(historicalPriceResult.error);
+        }
+      }
+    }
+
+    const refreshedState = store.getState();
+    const result = buildGeneratedMonthEndSnapshot({
+      assets: refreshedState.assets,
+      cashEntries: refreshedState.cashEntries,
+      existingSnapshots: refreshedState.monthlySnapshots,
+      historicalQuotes: refreshedState.historicalQuoteCache,
+      now,
+      openingPositions: refreshedState.openingPositions,
+      quoteCache: refreshedState.quoteCache,
+      trades: refreshedState.trades,
+    });
+    const statusWarnings = [...result.warnings, ...lookupWarnings];
+
+    if (result.status === "created" && result.snapshot) {
+      store.getState().addMonthlySnapshot(result.snapshot);
+    }
+
+    setSnapshotAutomationStatus({
+      message: automationMessage(result),
+      snapshot: result.snapshot,
+      status: result.status,
+      targetMonth: getPreviousCompletedMonth(now),
+      warnings: statusWarnings,
+    });
+
+    return {
+      ...result,
+      warnings: statusWarnings,
+    };
+  }
+
   return {
     allocation,
     cashBalance,
     assetChartData,
     assetChartRange,
+    ensureMonthEndSnapshot,
     errors,
     formValues,
     hasData,
@@ -233,10 +374,12 @@ export function useProgress({
     portfolioValue,
     preferences: snapshot.preferences,
     saveSnapshot,
+    saveSnapshotEdits: saveSnapshot,
     savingsRate,
     setAssetChartRange,
     setField,
     setPortfolioChartRange,
+    snapshotAutomationStatus,
     totalInvested,
   };
 }
