@@ -723,7 +723,7 @@ git commit -m "Auto-generate month-end snapshots in Progress"
 - Test: `src/features/progress/__tests__/ProgressScreen.test.tsx`
 - Test: `src/__tests__/rootLayout.test.tsx`
 
-- [ ] **Step 1: Write failing UI tests**
+- [x] **Step 1: Write failing UI tests**
 
 Update tests to expect compact automation status and absence of the giant manual
 form by default.
@@ -752,7 +752,7 @@ npm test -- src/features/progress/__tests__/ProgressScreen.test.tsx
 
 Expected: FAIL until the screen accepts `now` and replaces the manual form.
 
-- [ ] **Step 2: Run automation on app launch**
+- [x] **Step 2: Run automation on app launch**
 
 In `app/_layout.tsx`, add a small headless component inside `SafeAreaProvider`:
 
@@ -776,7 +776,7 @@ Update `src/__tests__/rootLayout.test.tsx` to mock
 `useMonthEndSnapshotAutomation` and assert it is called when `RootLayout`
 renders.
 
-- [ ] **Step 3: Call automation from Progress screen effect**
+- [x] **Step 3: Call automation from Progress screen effect**
 
 Import `useEffect` and call `progress.ensureMonthEndSnapshot()` once when the
 screen mounts or when the store state changes enough to make a missing snapshot
@@ -784,7 +784,7 @@ possible.
 
 Guard against repeated calls with hook-level idempotency and snapshot existence.
 
-- [ ] **Step 4: Add `SnapshotStatusCard` inside `ProgressScreen.tsx`**
+- [x] **Step 4: Add `SnapshotStatusCard` inside `ProgressScreen.tsx`**
 
 Add a compact card:
 
@@ -811,7 +811,7 @@ function SnapshotStatusCard({
 }
 ```
 
-- [ ] **Step 5: Hide manual fields by default**
+- [x] **Step 5: Hide manual fields by default**
 
 Remove the always-visible field list from the normal screen path. Render edit
 fields only when `isReviewingSnapshot === true`.
@@ -819,7 +819,7 @@ fields only when `isReviewingSnapshot === true`.
 The review form can initially reuse existing `FormTextField` components but it
 must be behind a `Review snapshot` action.
 
-- [ ] **Step 6: Run screen tests**
+- [x] **Step 6: Run screen tests**
 
 Run:
 
@@ -829,7 +829,7 @@ npm test -- src/features/progress/__tests__/ProgressScreen.test.tsx src/__tests_
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add app/_layout.tsx src/features/progress/ProgressScreen.tsx src/features/progress/__tests__/ProgressScreen.test.tsx src/__tests__/rootLayout.test.tsx
