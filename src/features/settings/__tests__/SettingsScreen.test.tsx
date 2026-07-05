@@ -16,26 +16,33 @@ describe("SettingsScreen", () => {
 
   it("shows privacy settings without V2 settings leaks and toggles value masking", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByText } = render(
-      <SettingsScreen store={store} />,
-    );
+    const {
+      getAllByText,
+      getByLabelText,
+      getByTestId,
+      getByText,
+      queryByText,
+    } = render(<SettingsScreen store={store} />);
 
     expect(getByTestId("value-mask-toggle")).toBeTruthy();
     expect(getByText("Settings")).toBeTruthy();
+    expect(getByText("Local only")).toBeTruthy();
+    expect(getByText("Your portfolio stays here")).toBeTruthy();
+    expect(getByText("Local storage")).toBeTruthy();
+    expect(getByText("Active")).toBeTruthy();
+    expect(getByText("Account")).toBeTruthy();
+    expect(getByText("Not required")).toBeTruthy();
+    expect(getByText("Cloud sync")).toBeTruthy();
+    expect(getAllByText("Off")).toHaveLength(2);
+    expect(getByText("Analytics")).toBeTruthy();
     expect(getByText("Value masking")).toBeTruthy();
-    expect(getByText("Values visible")).toBeTruthy();
-    expect(getByText("Local storage active")).toBeTruthy();
-    expect(getByText("No account")).toBeTruthy();
-    expect(getByText("No cloud sync")).toBeTruthy();
-    expect(getByText("No analytics")).toBeTruthy();
-    expect(getByText("App version 1.0.0")).toBeTruthy();
+    expect(getByText("Preview ₹••,•••")).toBeTruthy();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
     expect(queryByText(/LTCG/i)).toBeNull();
 
     fireEvent.press(getByLabelText("Toggle value masking"));
 
     expect(store.getState().preferences.maskWealthValues).toBe(true);
-    expect(getByText("Values masked")).toBeTruthy();
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
   });
 
@@ -56,17 +63,33 @@ describe("SettingsScreen", () => {
       source: "manual",
     });
 
-    const { getByText, queryByTestId } = render(<SettingsScreen store={store} />);
+    const { getByText, queryByTestId, queryByText } = render(
+      <SettingsScreen store={store} />,
+    );
 
     expect(getByText("Latest quote refresh")).toBeTruthy();
     expect(getByText("16 May 2026")).toBeTruthy();
-    expect(getByText("Provider status")).toBeTruthy();
-    expect(getByText("Live available")).toBeTruthy();
+    expect(getByText("Quote source")).toBeTruthy();
+    expect(queryByText("Provider status")).toBeNull();
+    expect(getByText("Mixed")).toBeTruthy();
     expect(getByText("Manual fallback")).toBeTruthy();
     expect(getByText("1 manual quote")).toBeTruthy();
-    expect(getByText("Density changes")).toBeTruthy();
-    expect(getByText("V1 locked")).toBeTruthy();
+    expect(getByText("Currency & App")).toBeTruthy();
+    expect(getByText("Base currency")).toBeTruthy();
+    expect(getByText("INR")).toBeTruthy();
+    expect(getByText("Version")).toBeTruthy();
+    expect(getByText("Preview")).toBeTruthy();
+    expect(queryByText("Foreign asset summary")).toBeNull();
+    expect(queryByText("USD & crypto fallback")).toBeNull();
+    expect(queryByText("Density changes")).toBeNull();
+    expect(queryByText(/Export/i)).toBeNull();
+    expect(queryByText("Backup")).toBeNull();
+    expect(queryByText(/Minimal Mode/i)).toBeNull();
+    expect(queryByText(/LTCG/i)).toBeNull();
     expect(getByText("Clear local data")).toBeTruthy();
+    expect(
+      getByText("Disabled until confirmation and backup guidance exist."),
+    ).toBeTruthy();
     expect(getByText("Deferred")).toBeTruthy();
     expect(queryByTestId("clear-local-data-button")).toBeNull();
   });

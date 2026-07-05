@@ -31,10 +31,30 @@ export function SettingsScreen({
     await Haptics.selectionAsync();
   }
 
+  const quoteSourceMeta =
+    quoteStatus.quoteSourceLabel === "Mixed"
+      ? "Some assets use live quotes; manual fallback stays ready."
+      : quoteStatus.quoteSourceLabel === "Live"
+        ? "Live quotes are available for cached assets."
+        : quoteStatus.quoteSourceLabel === "Manual"
+          ? "Cached prices are manual fallback values."
+          : "Add holdings or refresh quotes to see quote source status.";
+
   return (
     <ScreenContainer scroll testID="settings-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Settings" subtitle="Local-first controls" />
+        <ScreenHeader
+          action={
+            <View style={styles.localPill}>
+              <View style={styles.localDot} />
+              <AppText style={styles.localPillText} variant="caption" weight="bold">
+                Local only
+              </AppText>
+            </View>
+          }
+          title="Settings"
+          subtitle="Local-first controls"
+        />
 
         <Pressable
           accessibilityLabel="Toggle value masking"
@@ -60,6 +80,11 @@ export function SettingsScreen({
             <AppText color="secondary" variant="caption">
               Quantities, percentages, and per-unit prices stay visible.
             </AppText>
+            <View style={styles.maskPreview}>
+              <AppText color="secondary" variant="caption" weight="medium">
+                Preview ₹••,•••
+              </AppText>
+            </View>
           </View>
           <View style={[styles.switchTrack, maskWealthValues && styles.switchOn]}>
             <View
@@ -72,35 +97,40 @@ export function SettingsScreen({
         </Pressable>
 
         <PremiumCard>
-          <SectionHeader title="Privacy" />
+          <View style={styles.trustIntro}>
+            <View style={styles.trustCopy}>
+              <AppText variant="title" weight="bold">
+                Your portfolio stays here
+              </AppText>
+              <AppText color="secondary">
+                CogVest V1 is local-first by default. The key privacy guarantees
+                are visible at a glance.
+              </AppText>
+            </View>
+          </View>
           <GroupedListRow
-            icon="lock-closed-outline"
-            title="Local storage active"
-            meta="Portfolio data stays on this Android device."
+            icon="phone-portrait-outline"
+            title="Local storage"
+            meta="Portfolio records stay on this Android device."
             value="Active"
           />
           <GroupedListRow
             icon="person-circle-outline"
-            title="No account"
-            meta="CogVest V1 has no sign-in or remote profile."
-            value="Local"
+            title="Account"
+            meta="No sign-in or remote profile is required in V1."
+            value="Not required"
           />
           <GroupedListRow
             icon="cloud-offline-outline"
-            title="No cloud sync"
+            title="Cloud sync"
             meta="No portfolio data is sent to a backend."
             value="Off"
           />
           <GroupedListRow
             icon="analytics-outline"
-            title="No analytics"
+            title="Analytics"
             meta="No product telemetry is enabled in V1."
             value="Off"
-          />
-          <GroupedListRow
-            icon="phone-portrait-outline"
-            title={maskWealthValues ? "Values masked" : "Values visible"}
-            meta="This preference is stored locally on this device."
           />
         </PremiumCard>
 
@@ -116,11 +146,9 @@ export function SettingsScreen({
           />
           <GroupedListRow
             icon="pulse-outline"
-            title="Provider status"
-            meta={`${quoteStatus.liveQuoteCount} live quote${
-              quoteStatus.liveQuoteCount === 1 ? "" : "s"
-            } cached.`}
-            value={quoteStatus.providerStatus}
+            title="Quote source"
+            meta={quoteSourceMeta}
+            value={quoteStatus.quoteSourceLabel}
           />
           <GroupedListRow
             icon="cloud-offline-outline"
@@ -133,21 +161,19 @@ export function SettingsScreen({
         </PremiumCard>
 
         <PremiumCard>
-          <SectionHeader title="Currency" />
-          <GroupedListRow title="Base currency" value="INR" />
-          <GroupedListRow title="Foreign asset summary" value="On" />
-          <GroupedListRow title="USD & crypto fallback" value="On" />
-        </PremiumCard>
-
-        <PremiumCard>
-          <SectionHeader title="Display & App Info" />
+          <SectionHeader title="Currency & App" />
           <GroupedListRow
-            icon="resize-outline"
-            title="Density changes"
-            meta="Standard density is fixed for V1."
-            value="V1 locked"
+            icon="cash-outline"
+            title="Base currency"
+            meta="INR-first summaries across CogVest."
+            value="INR"
           />
-          <GroupedListRow title="App version 1.0.0" value="Preview" />
+          <GroupedListRow
+            icon="phone-portrait-outline"
+            title="Version"
+            meta="Android preview build for V1 testing."
+            value="Preview"
+          />
         </PremiumCard>
 
         <PremiumCard>
@@ -156,7 +182,7 @@ export function SettingsScreen({
             destructive
             icon="trash-outline"
             title="Clear local data"
-            meta="Disabled until a confirmation flow is implemented."
+            meta="Disabled until confirmation and backup guidance exist."
             value="Deferred"
           />
         </PremiumCard>
@@ -176,6 +202,31 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  localDot: {
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  localPill: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  localPillText: {
+    color: colors.primary,
+  },
+  maskPreview: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   pressed: {
     opacity: interaction.pressedOpacity,
@@ -207,5 +258,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  trustCopy: {
+    gap: spacing.xs,
+  },
+  trustIntro: {
+    paddingBottom: spacing.xs,
   },
 });
