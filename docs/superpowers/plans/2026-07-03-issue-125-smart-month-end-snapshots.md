@@ -938,7 +938,7 @@ git commit -m "Use historical prices for generated snapshots"
 - Modify: `docs/testing/v1-core-flow-test-matrix.md` if old manual snapshot expectations remain.
 - Modify: `docs/testing/v1-pc-verification-checklist.md` if snapshot verification steps need the new behavior.
 
-- [ ] **Step 1: Update testing docs**
+- [x] **Step 1: Update testing docs**
 
 Document the new expected behavior:
 
@@ -950,7 +950,7 @@ Document the new expected behavior:
 - Verify fallback status appears when historical provider lookup is unavailable.
 ```
 
-- [ ] **Step 2: Run focused tests**
+- [x] **Step 2: Run focused tests**
 
 Run:
 
@@ -960,7 +960,7 @@ npm test -- src/services/quotes/__tests__/historicalPrices.test.ts src/domain/ca
 
 Expected: PASS.
 
-- [ ] **Step 3: Run full V1 PC gate**
+- [x] **Step 3: Run full V1 PC gate**
 
 Run:
 
@@ -970,7 +970,7 @@ npm run test:v1:pc
 
 Expected: PASS. If it fails, record the failing command, failing test, and exact defect.
 
-- [ ] **Step 4: Install/run on emulator**
+- [x] **Step 4: Install/run on emulator**
 
 Run:
 
@@ -980,7 +980,7 @@ npm run android
 
 Expected: app installs on `emulator-5554` or the active Android emulator.
 
-- [ ] **Step 5: Capture Progress evidence**
+- [x] **Step 5: Capture Progress evidence**
 
 Use the visual QA seed route, then capture screenshots:
 
@@ -995,7 +995,7 @@ adb -s emulator-5554 pull /sdcard/cogvest-progress-smart-snapshot.png G:\tmp\cog
 Expected: Progress screen renders without a black screen and shows the compact
 snapshot status/review behavior.
 
-- [ ] **Step 6: Run final git diff review**
+- [x] **Step 6: Run final git diff review**
 
 Run:
 
@@ -1006,7 +1006,7 @@ git diff --check
 
 Expected: no whitespace errors; changes align with #125 only.
 
-- [ ] **Step 7: Commit verification/doc cleanup**
+- [x] **Step 7: Commit verification/doc cleanup**
 
 ```powershell
 git add docs/testing src
