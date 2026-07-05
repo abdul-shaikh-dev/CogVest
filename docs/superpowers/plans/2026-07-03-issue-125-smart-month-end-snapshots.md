@@ -440,7 +440,7 @@ git commit -m "Add historical price lookup service"
 - Modify: `src/domain/calculations/index.ts`
 - Test: `src/domain/calculations/__tests__/monthEndSnapshots.test.ts`
 
-- [ ] **Step 1: Write failing generator tests**
+- [x] **Step 1: Write failing generator tests**
 
 Create tests for target-month calculation, no-data skip, idempotency, and generated values.
 
@@ -491,7 +491,7 @@ npm test -- src/domain/calculations/__tests__/monthEndSnapshots.test.ts
 
 Expected: FAIL because generator file does not exist.
 
-- [ ] **Step 2: Implement target-month and result types**
+- [x] **Step 2: Implement target-month and result types**
 
 In `monthEndSnapshots.ts`, add:
 
@@ -510,7 +510,7 @@ export type GeneratedMonthEndSnapshotResult = {
 
 Add `getPreviousCompletedMonth(now: Date)` returning `YYYY-MM`.
 
-- [ ] **Step 3: Implement price selection**
+- [x] **Step 3: Implement price selection**
 
 Create a helper that prefers historical quotes, then latest local quotes, then
 opening-position manual current price:
@@ -547,7 +547,7 @@ function getSnapshotPrice({
 }
 ```
 
-- [ ] **Step 4: Implement generated snapshot calculation**
+- [x] **Step 4: Implement generated snapshot calculation**
 
 Use existing `calculateHoldings`, `calculateCashBalance`, `calculatePortfolioTotal`,
 and asset-class grouping. Monthly investment must filter buys/opening positions
@@ -556,7 +556,7 @@ whose date falls inside `targetMonth`.
 Set `salary: 0` and omit `monthlyExpense` by default because V1 cannot derive
 those reliably.
 
-- [ ] **Step 5: Export and run tests**
+- [x] **Step 5: Export and run tests**
 
 Modify `src/domain/calculations/index.ts`.
 
@@ -568,7 +568,7 @@ npm test -- src/domain/calculations/__tests__/monthEndSnapshots.test.ts src/doma
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/domain/calculations
