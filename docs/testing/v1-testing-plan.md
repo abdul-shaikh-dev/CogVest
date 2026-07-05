@@ -47,7 +47,8 @@ Cover:
 - Conviction selector select/deselect.
 - MaskedValue display.
 - Cash add/withdraw rows.
-- Monthly Progress snapshot save/update.
+- Monthly Progress auto-generates missing completed-month snapshots and keeps
+  manual correction behind `Review snapshot`.
 
 ## Android Emulator QA
 
@@ -60,6 +61,8 @@ Cover:
 - Toggle value masking.
 - Restart app and confirm MMKV persistence.
 - Pull-to-refresh quotes.
+- Open Monthly Progress after portfolio data exists and verify the compact
+  month-end snapshot status appears instead of a default manual form.
 - Confirm no backend/auth/cloud.
 - Complete the Excel parity questions in
   `docs/testing/excel-parity-checklist.md`.
