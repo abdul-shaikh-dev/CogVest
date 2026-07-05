@@ -845,7 +845,7 @@ git commit -m "Show compact month-end snapshot status"
 - Modify: `src/features/progress/__tests__/useProgress.test.tsx`
 - Modify: `src/services/quotes/__tests__/useQuoteRefresh.test.tsx` if quote-refresh touchpoint is added
 
-- [ ] **Step 1: Write failing historical integration test**
+- [x] **Step 1: Write failing historical integration test**
 
 Add a hook test where a historical fetcher returns prices and the generated
 snapshot uses those prices instead of latest quote cache.
@@ -898,7 +898,7 @@ npm test -- src/features/progress/__tests__/useProgress.test.tsx
 
 Expected: FAIL until historical fetch results are cached before generation.
 
-- [ ] **Step 2: Cache resolved historical quotes before generation**
+- [x] **Step 2: Cache resolved historical quotes before generation**
 
 Inside `ensureMonthEndSnapshot`, call the injected/default historical resolver
 for non-cash holdings with missing historical cache. Upsert successful quotes
@@ -906,14 +906,14 @@ before calling the pure generator.
 
 On failure, do not throw. Collect warnings and let the generator use latest/manual fallback.
 
-- [ ] **Step 3: Keep quote-refresh touchpoint out of the first implementation**
+- [x] **Step 3: Keep quote-refresh touchpoint out of the first implementation**
 
 Do not call snapshot generation from quote refresh in this task. App launch and
 Progress open are the required V1 triggers. Quote refresh improves current quote
 cache; the next app-launch or Progress-open automation pass can use those quotes
 or fetch historical prices directly.
 
-- [ ] **Step 4: Run integration tests**
+- [x] **Step 4: Run integration tests**
 
 Run:
 
@@ -923,7 +923,7 @@ npm test -- src/features/progress/__tests__/useProgress.test.tsx src/services/qu
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/features/progress/useProgress.ts src/features/progress/__tests__/useProgress.test.tsx
