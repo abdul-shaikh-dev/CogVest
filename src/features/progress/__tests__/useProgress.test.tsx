@@ -2,8 +2,41 @@ import { act, renderHook } from "@testing-library/react-native";
 
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import type { Asset, CashEntry, OpeningPosition } from "@/src/types";
 
+import { useMonthEndSnapshotAutomation } from "../useMonthEndSnapshotAutomation";
 import { useProgress } from "../useProgress";
+
+const stockAsset: Asset = {
+  assetClass: "stock",
+  currency: "INR",
+  id: "asset-hdfc",
+  name: "HDFC Bank",
+  symbol: "HDFCBANK",
+  ticker: "HDFCBANK.NS",
+};
+
+function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
+  const openingPosition: OpeningPosition = {
+    assetId: stockAsset.id,
+    averageCostPrice: 1450,
+    currentPrice: 1678.25,
+    date: "2026-07-15T00:00:00.000Z",
+    id: "opening-hdfc",
+    quantity: 10,
+  };
+  const cashEntry: CashEntry = {
+    amount: 70000,
+    date: "2026-07-01T00:00:00.000Z",
+    id: "cash-salary",
+    label: "Salary added",
+    type: "addition",
+  };
+
+  store.getState().addAsset(stockAsset);
+  store.getState().addOpeningPosition(openingPosition);
+  store.getState().addCashEntry(cashEntry);
+}
 
 describe("useProgress", () => {
   it("saves and updates monthly snapshots through the feature controller", () => {
@@ -56,5 +89,60 @@ describe("useProgress", () => {
       month: "2026-05",
       portfolioValue: 1400000,
     });
+  });
+
+  it("auto-generates the previous completed month snapshot once", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+
+    const { result } = renderHook(() =>
+      useProgress({
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(store.getState().monthlySnapshots[0]).toMatchObject({
+      generated: {
+        source: "auto",
+      },
+      month: "2026-07",
+    });
+    expect(result.current.snapshotAutomationStatus).toMatchObject({
+      status: "created",
+      targetMonth: "2026-07",
+    });
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(result.current.snapshotAutomationStatus).toMatchObject({
+      status: "already-exists",
+      targetMonth: "2026-07",
+    });
+  });
+
+  it("runs month-end snapshot automation once from the reusable hook", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+
+    renderHook(() =>
+      useMonthEndSnapshotAutomation({
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {});
+
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(store.getState().monthlySnapshots[0]?.month).toBe("2026-07");
   });
 });
