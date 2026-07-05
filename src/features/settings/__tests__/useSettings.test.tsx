@@ -34,7 +34,60 @@ describe("useSettings", () => {
       manualFallbackCount: 0,
       providerStatus: "Waiting for holdings",
       quoteCount: 0,
+      quoteSourceLabel: "Waiting",
     });
+  });
+
+  it("labels quote source as Live when only live quotes are cached", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().upsertQuote({
+      assetId: "asset-live",
+      asOf: "2026-05-15T10:00:00.000Z",
+      currency: "INR",
+      price: 100,
+      source: "yahoo",
+    });
+
+    const { result } = renderHook(() => useSettings({ store }));
+
+    expect(result.current.quoteStatus.quoteSourceLabel).toBe("Live");
+  });
+
+  it("labels quote source as Manual when only manual quotes are cached", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().upsertQuote({
+      assetId: "asset-manual",
+      asOf: "2026-05-15T10:00:00.000Z",
+      currency: "INR",
+      price: 100,
+      source: "manual",
+    });
+
+    const { result } = renderHook(() => useSettings({ store }));
+
+    expect(result.current.quoteStatus.quoteSourceLabel).toBe("Manual");
+  });
+
+  it("labels quote source as Mixed when live and manual quotes are cached", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().upsertQuote({
+      assetId: "asset-live",
+      asOf: "2026-05-15T10:00:00.000Z",
+      currency: "INR",
+      price: 100,
+      source: "yahoo",
+    });
+    store.getState().upsertQuote({
+      assetId: "asset-manual",
+      asOf: "2026-05-16T10:00:00.000Z",
+      currency: "INR",
+      price: 200,
+      source: "manual",
+    });
+
+    const { result } = renderHook(() => useSettings({ store }));
+
+    expect(result.current.quoteStatus.quoteSourceLabel).toBe("Mixed");
   });
 
   it("derives quote freshness and manual fallback status from stored quotes", () => {
@@ -63,6 +116,7 @@ describe("useSettings", () => {
       manualFallbackCount: 1,
       providerStatus: "Live available",
       quoteCount: 2,
+      quoteSourceLabel: "Mixed",
     });
   });
 });
