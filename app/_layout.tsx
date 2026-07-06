@@ -26,9 +26,9 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="add-holding" options={{ title: "Add Holding" }} />
+          <Stack.Screen name="add-holding" options={{ headerShown: false }} />
           <Stack.Screen name="sell-redeem" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ title: "Settings" }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
           <Stack.Screen
             name="visual-qa-seed"
             options={{ headerShown: false }}
