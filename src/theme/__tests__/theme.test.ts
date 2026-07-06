@@ -22,9 +22,9 @@ describe("theme tokens", () => {
 
   it("captures the V1 spacing and radius rules", () => {
     expect(spacing.screenHorizontal).toBe(16);
-    expect(spacing.cardGap).toBe(14);
-    expect(spacing.cardInner).toBe(16);
-    expect(radii.card).toBe(20);
-    expect(radii.button).toBe(16);
+    expect(spacing.cardGap).toBe(12);
+    expect(spacing.cardInner).toBe(14);
+    expect(radii.card).toBe(18);
+    expect(radii.button).toBe(14);
   });
 });

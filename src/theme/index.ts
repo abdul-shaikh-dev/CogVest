@@ -28,8 +28,8 @@ export const colors = {
 export const spacing = {
   xs: 4,
   sm: 8,
-  cardGap: 14,
-  cardInner: 16,
+  cardGap: 12,
+  cardInner: 14,
   md: 16,
   lg: 24,
   xl: 32,
@@ -37,20 +37,20 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  sm: 10,
-  card: 20,
-  button: 16,
-  sheet: 24,
+  sm: 8,
+  card: 18,
+  button: 14,
+  sheet: 22,
   pill: 999,
 } as const;
 
 export const typography = {
   sizes: {
     caption: 12,
-    body: 16,
-    title: 20,
-    largeTitle: 32,
-    hero: 42,
+    body: 15,
+    title: 19,
+    largeTitle: 30,
+    hero: 38,
   },
   weights: {
     regular: "400",

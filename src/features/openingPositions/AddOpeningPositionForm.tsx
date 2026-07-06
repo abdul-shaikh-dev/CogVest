@@ -240,6 +240,9 @@ export function AddOpeningPositionForm({
             ) : null}
             {lookupResults.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
+                <AppText color="secondary" variant="caption" weight="medium">
+                  Select a result
+                </AppText>
                 {lookupResults.map((result) => (
                   <TouchableOpacity
                     accessibilityRole="button"
@@ -272,59 +275,64 @@ export function AddOpeningPositionForm({
             {quoteStatus}
           </AppText>
         ) : null}
-        <FormTextField
-          error={errors.assetName}
-          label="Asset name"
-          onChangeText={(value) => {
-            setAssetName(value);
-            clearSelectedAsset();
-            resetReview();
-          }}
-          placeholder="Reliance Industries"
-          testID="asset-input"
-          value={assetName}
-        />
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <FormTextField
-              error={errors.symbol}
-              label="Symbol"
-              onChangeText={(value) => {
-                setSymbol(value);
-                clearSelectedAsset();
-                resetReview();
-              }}
-              placeholder="RELIANCE"
-              testID="symbol-input"
-              value={symbol}
-            />
+        <View style={styles.manualFields}>
+          <AppText color="secondary" variant="caption" weight="medium">
+            Manual fallback
+          </AppText>
+          <FormTextField
+            error={errors.assetName}
+            label="Asset name"
+            onChangeText={(value) => {
+              setAssetName(value);
+              clearSelectedAsset();
+              resetReview();
+            }}
+            placeholder="Reliance Industries"
+            testID="asset-input"
+            value={assetName}
+          />
+          <View style={styles.row}>
+            <View style={styles.flex}>
+              <FormTextField
+                error={errors.symbol}
+                label="Symbol"
+                onChangeText={(value) => {
+                  setSymbol(value);
+                  clearSelectedAsset();
+                  resetReview();
+                }}
+                placeholder="RELIANCE"
+                testID="symbol-input"
+                value={symbol}
+              />
+            </View>
+            <View style={styles.flex}>
+              <FormTextField
+                error={errors.ticker}
+                label="Ticker"
+                onChangeText={(value) => {
+                  setTicker(value);
+                  clearSelectedAsset();
+                  resetReview();
+                }}
+                placeholder="RELIANCE.NS"
+                testID="ticker-input"
+                value={ticker}
+              />
+            </View>
           </View>
-          <View style={styles.flex}>
-            <FormTextField
-              error={errors.ticker}
-              label="Ticker"
-              onChangeText={(value) => {
-                setTicker(value);
-                clearSelectedAsset();
-                resetReview();
-              }}
-              placeholder="RELIANCE.NS"
-              testID="ticker-input"
-              value={ticker}
-            />
-          </View>
+          <FormTextField
+            label="Quote source ID"
+            onChangeText={(value) => {
+              setQuoteSourceId(value);
+              clearSelectedAsset();
+              resetReview();
+            }}
+            placeholder="RELIANCE.NS"
+            testID="quote-source-id-input"
+            value={quoteSourceId}
+          />
         </View>
-        <FormTextField
-          label="Quote source ID"
-          onChangeText={(value) => {
-            setQuoteSourceId(value);
-            clearSelectedAsset();
-            resetReview();
-          }}
-          placeholder="RELIANCE.NS"
-          testID="quote-source-id-input"
-          value={quoteSourceId}
-        />
       </PremiumCard>
       ) : null}
 
@@ -685,10 +693,11 @@ const styles = StyleSheet.create({
   assetChip: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     width: "48%",
   },
   assetChipActive: {
@@ -710,7 +719,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   classChipActive: {
     backgroundColor: "rgba(46,125,82,0.24)",
@@ -726,7 +735,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     flex: 1,
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 40,
   },
   convictionChipActive: {
     backgroundColor: colors.primary,
@@ -746,18 +755,27 @@ const styles = StyleSheet.create({
   },
   lookupResult: {
     alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+    backgroundColor: colors.surface.card,
+    borderColor: colors.border.subtle,
+    borderRadius: radii.button,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   lookupResultCopy: {
     flex: 1,
     gap: spacing.xs,
   },
   lookupResults: {
+    gap: spacing.xs,
+  },
+  manualFields: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.card,
     gap: spacing.sm,
+    padding: spacing.md,
   },
   negativeText: {
     color: colors.loss,
@@ -769,13 +787,17 @@ const styles = StyleSheet.create({
     opacity: interaction.pressedOpacity,
   },
   previewCell: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
     gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     width: "48%",
   },
   previewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   row: {
     flexDirection: "row",
@@ -784,10 +806,11 @@ const styles = StyleSheet.create({
   selectedAssetSummary: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   successText: {
     color: colors.profit,
@@ -795,8 +818,8 @@ const styles = StyleSheet.create({
   stepDot: {
     backgroundColor: colors.text.muted,
     borderRadius: 999,
-    height: 8,
-    width: 8,
+    height: 6,
+    width: 6,
   },
   stepDotActive: {
     backgroundColor: colors.profit,
@@ -806,23 +829,23 @@ const styles = StyleSheet.create({
   },
   stepItem: {
     alignItems: "center",
-    backgroundColor: colors.surface.card,
+    backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
     flex: 1,
     flexDirection: "row",
     gap: spacing.xs,
     justifyContent: "center",
-    minHeight: 38,
+    minHeight: 34,
     paddingHorizontal: spacing.xs,
   },
   stepItemActive: {
-    backgroundColor: "rgba(52,199,89,0.16)",
+    backgroundColor: "rgba(52,199,89,0.12)",
   },
   stepItemComplete: {
-    backgroundColor: "rgba(46,125,82,0.14)",
+    backgroundColor: "rgba(46,125,82,0.1)",
   },
   stepItemDisabled: {
-    opacity: 0.62,
+    opacity: 0.5,
   },
   stepper: {
     flexDirection: "row",
@@ -831,10 +854,11 @@ const styles = StyleSheet.create({
   summaryCard: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   summaryCopy: {
     flex: 1,

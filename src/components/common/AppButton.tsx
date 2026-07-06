@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.cardInner,
+    paddingVertical: spacing.sm,
   },
   ghost: {
     backgroundColor: "transparent",

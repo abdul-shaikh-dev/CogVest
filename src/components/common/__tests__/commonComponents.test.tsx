@@ -76,10 +76,10 @@ describe("common UI primitives", () => {
     );
 
     expect(getByTestId("mask-toggle")).toHaveStyle({
-      height: interaction.minimumTouchTarget,
+      height: 46,
       minHeight: interaction.minimumTouchTarget,
       minWidth: interaction.minimumTouchTarget,
-      width: interaction.minimumTouchTarget,
+      width: 46,
     });
   });
 

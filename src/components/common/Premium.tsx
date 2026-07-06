@@ -288,21 +288,21 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.card,
-    gap: spacing.cardInner,
-    padding: spacing.md,
+    gap: spacing.sm,
+    padding: spacing.cardInner,
   },
   elevatedCard: {
     backgroundColor: colors.surface.elevated,
   },
   groupedCopy: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 2,
   },
   groupedRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.cardInner,
-    minHeight: 64,
+    gap: spacing.md,
+    minHeight: 58,
   },
   header: {
     alignItems: "center",
@@ -324,10 +324,10 @@ const styles = StyleSheet.create({
   iconButton: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
-    borderRadius: 14,
-    height: interaction.minimumTouchTarget,
+    borderRadius: 13,
+    height: 46,
     justifyContent: "center",
-    width: interaction.minimumTouchTarget,
+    width: 46,
   },
   metricCell: {
     flex: 1,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(52,199,89,0.12)",
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 3,
   },
   negativeText: {
     color: colors.loss,

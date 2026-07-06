@@ -57,7 +57,7 @@ describe("DashboardScreen", () => {
 
     expect(getByTestId("dashboard-screen")).toBeTruthy();
     expect(getByTestId("add-trade-button")).toBeTruthy();
-    expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
+    expect(getAllByText("₹0").length).toBeGreaterThan(0);
     expect(getByText("No allocation yet")).toBeTruthy();
     expect(
       getByText("Add your first portfolio entry to build holdings automatically."),
@@ -169,7 +169,7 @@ describe("DashboardScreen", () => {
       <DashboardScreen store={store} />,
     );
 
-    expect(getByText("₹330.00")).toBeTruthy();
+    expect(getByText("₹330")).toBeTruthy();
     expect(getByText("Portfolio value")).toBeTruthy();
     expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
     expect(getByText("Allocation")).toBeTruthy();

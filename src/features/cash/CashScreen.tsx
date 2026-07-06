@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   balancePillText: {
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   entryHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
     justifyContent: "space-between",
   },
   entryHeaderCopy: {
@@ -355,13 +355,13 @@ const styles = StyleSheet.create({
   monthlyInsight: {
     alignItems: "center",
     backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
     justifyContent: "space-between",
-    minHeight: 56,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.xs,
   },
   monthlyInsightText: {
     flex: 1,
@@ -374,7 +374,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.button,
     flex: 1,
-    paddingVertical: spacing.sm,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingVertical: spacing.xs,
   },
   segmentActive: {
     backgroundColor: colors.surface.elevated,
@@ -384,7 +386,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     flexDirection: "row",
     padding: spacing.xs,
   },
