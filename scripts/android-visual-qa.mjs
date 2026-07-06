@@ -169,7 +169,7 @@ try {
   captureWhenReady("dashboard", ["Dashboard", "Portfolio value"]);
 
   openDeepLink("holdings");
-  captureWhenReady("holdings", ["Holdings", "HDFC Bank"]);
+  captureWhenReady("holdings", ["Holdings", "Exposure mix"]);
 
   openDeepLink("add-holding");
   captureWhenReady("add-holding-initial", ["Add Holding", "Search asset"]);
@@ -185,14 +185,19 @@ try {
   captureWhenReady("add-holding-review", ["Add Holding", "Derived preview"]);
 
   openDeepLink("cash");
-  captureWhenReady("cash", ["Cash Ledger", "Cash balance"]);
+  captureWhenReady("cash", ["Cash Ledger", "Deployable cash"]);
 
   openDeepLink("progress");
   captureWhenReady("progress", ["Monthly Progress", "Value Gap"]);
   scrollDown();
-  captureWhenReady("progress-assets-chart", ["Asset Momentum", "Equity", "Debt", "Crypto"]);
+  captureWhenReady("progress-assets-chart", [
+    "Asset Momentum",
+    "Absolute value trend",
+  ]);
 
-  openDeepLink("settings");
+  openDeepLink("dashboard");
+  waitForUiMarkers(["Dashboard", "Portfolio value"]);
+  tapNodeContaining("tab-settings", { x: 1150, y: 2720 });
   captureWhenReady("settings", ["Settings", "Local-first controls"]);
 
   console.log("DONE Android seeded visual QA screenshots captured");

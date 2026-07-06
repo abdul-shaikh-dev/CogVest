@@ -48,6 +48,7 @@ Expected screenshots:
 - `add-holding-review.png`
 - `cash.png`
 - `progress.png`
+- `progress-assets-chart.png`
 - `settings.png`
 
 ## Manual Bundled APK Flow

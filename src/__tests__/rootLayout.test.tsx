@@ -50,6 +50,7 @@ jest.mock("react-native-gesture-handler", () => {
 type TestElement = React.ReactElement<{
   children?: React.ReactNode;
   name?: string;
+  options?: unknown;
   style?: unknown;
 }>;
 
@@ -66,6 +67,26 @@ function collectScreenNames(node: unknown): string[] {
   const childNames = React.Children.toArray(node.props.children).flatMap(collectScreenNames);
 
   return [...ownName, ...childNames];
+}
+
+function collectScreenOptions(node: unknown): Record<string, unknown> {
+  if (!isElement(node)) {
+    return {};
+  }
+
+  const ownOptions =
+    typeof node.props.name === "string"
+      ? { [node.props.name]: node.props.options }
+      : {};
+  const childOptions = React.Children.toArray(node.props.children).reduce(
+    (accumulator, child) => ({
+      ...accumulator,
+      ...collectScreenOptions(child),
+    }),
+    {},
+  );
+
+  return { ...ownOptions, ...childOptions };
 }
 
 describe("RootLayout", () => {
@@ -87,6 +108,14 @@ describe("RootLayout", () => {
         "visual-qa-seed",
       ]),
     );
+  });
+
+  it("lets app screens own their premium headers", () => {
+    const layout = RootLayout();
+    const screenOptions = collectScreenOptions(layout);
+
+    expect(screenOptions["add-holding"]).toEqual({ headerShown: false });
+    expect(screenOptions.settings).toEqual({ headerShown: false });
   });
 
   it("runs month-end snapshot automation on app launch", () => {
