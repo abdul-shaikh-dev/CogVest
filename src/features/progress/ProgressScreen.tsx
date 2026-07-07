@@ -564,7 +564,7 @@ function SnapshotStatusCard({
             {status.message}
           </AppText>
         </View>
-        <AppButton title="Review snapshot" onPress={onReview} />
+        <AppButton title="Review snapshot" onPress={onReview} variant="secondary" />
       </View>
       {status.warnings.map((warning) => (
         <AppText color="secondary" key={warning} variant="caption">

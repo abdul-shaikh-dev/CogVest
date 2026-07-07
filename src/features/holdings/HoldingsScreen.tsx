@@ -318,7 +318,7 @@ function ExposurePanel({
               <AppText variant="caption" weight="bold">
                 {segment.label} {segment.percentage.toFixed(0)}%
               </AppText>
-              <AppText color="secondary" numberOfLines={1} variant="caption">
+              <AppText color="secondary" variant="caption">
                 {segment.count} {segment.count === 1 ? "position" : "positions"}
               </AppText>
             </View>
@@ -727,7 +727,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   legendCopy: {
+    flex: 1,
     gap: 1,
+    minWidth: 0,
   },
   legendDot: {
     borderRadius: radii.pill,
@@ -737,11 +739,11 @@ const styles = StyleSheet.create({
   },
   legendItem: {
     alignItems: "flex-start",
-    flexBasis: "42%",
+    flexBasis: "46%",
     flexGrow: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    minWidth: 126,
+    minWidth: 144,
   },
   negativeText: {
     color: colors.loss,
