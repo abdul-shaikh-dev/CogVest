@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   },
   body: {
     fontSize: typography.sizes.body,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   caption: {
     fontSize: typography.sizes.caption,
@@ -57,14 +57,14 @@ const styles = StyleSheet.create({
   },
   hero: {
     fontSize: typography.sizes.hero,
-    lineHeight: 50,
+    lineHeight: 44,
   },
   largeTitle: {
     fontSize: typography.sizes.largeTitle,
-    lineHeight: 38,
+    lineHeight: 36,
   },
   title: {
     fontSize: typography.sizes.title,
-    lineHeight: 28,
+    lineHeight: 26,
   },
 });

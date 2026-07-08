@@ -62,11 +62,11 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+    borderRadius: radii.button,
     color: colors.text.primary,
     minHeight: 48,
-    paddingHorizontal: spacing.cardInner,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
   },
   invalid: {
     borderColor: colors.loss,

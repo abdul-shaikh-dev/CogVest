@@ -192,7 +192,7 @@ export function DashboardScreen({
             minimumFontScale={0.74}
             numberOfLines={1}
             style={styles.heroValue}
-            value={formatINR(dashboard.totalValue)}
+            value={formatCompactINR(dashboard.totalValue)}
             weight="bold"
           />
           <View style={styles.heroContextRow}>
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     width: 9,
   },
   allocationLegend: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   allocationLegendLabel: {
     alignItems: "center",
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
     flexDirection: "row",
-    height: 12,
+    height: 10,
     overflow: "hidden",
   },
   brandText: {
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   heroCard: {
-    gap: spacing.cardInner,
+    gap: spacing.sm,
   },
   heroContextRow: {
     alignItems: "center",
@@ -498,11 +498,11 @@ const styles = StyleSheet.create({
   },
   heroMetrics: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.cardInner,
   },
   heroValue: {
-    fontSize: 38,
-    lineHeight: 44,
+    fontSize: 36,
+    lineHeight: 40,
   },
   infoCardCopy: {
     flex: 1,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(52,199,89,0.12)",
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 3,
   },
   negativePill: {
     backgroundColor: "rgba(255,69,58,0.12)",

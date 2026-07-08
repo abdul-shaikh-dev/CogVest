@@ -557,14 +557,20 @@ function SnapshotStatusCard({
 }) {
   return (
     <PremiumCard testID="month-end-snapshot-status-card">
-      <SectionHeader title="Month-end snapshot" />
-      <AppText color="secondary">{status.message}</AppText>
+      <View style={styles.snapshotStatusHeader}>
+        <View style={styles.snapshotCopy}>
+          <SectionHeader title="Month-end snapshot" />
+          <AppText color="secondary" variant="caption">
+            {status.message}
+          </AppText>
+        </View>
+        <AppButton title="Review snapshot" onPress={onReview} variant="secondary" />
+      </View>
       {status.warnings.map((warning) => (
         <AppText color="secondary" key={warning} variant="caption">
           {warning}
         </AppText>
       ))}
-      <AppButton title="Review snapshot" onPress={onReview} />
     </PremiumCard>
   );
 }
@@ -936,12 +942,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   chartBlock: {
-    gap: spacing.cardInner,
+    gap: spacing.sm,
   },
   chartCardHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
-    gap: spacing.cardInner,
+    gap: spacing.sm,
     justifyContent: "space-between",
   },
   chartPill: {
@@ -967,7 +973,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   fieldGrid: {
-    gap: spacing.cardInner,
+    gap: spacing.sm,
   },
   legendDot: {
     borderRadius: 4,
@@ -984,7 +990,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flex: 1,
     justifyContent: "center",
-    paddingVertical: spacing.sm,
+    minHeight: 34,
+    paddingVertical: spacing.xs,
   },
   rangeChipSelected: {
     backgroundColor: colors.primary,
@@ -1002,6 +1009,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  snapshotStatusHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
   snapshotRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -1012,13 +1025,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#111113",
     borderColor: colors.border.subtle,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
     paddingLeft: spacing.xs,
     paddingRight: spacing.sm,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   axisText: {
     color: colors.text.secondary,
@@ -1031,20 +1044,20 @@ const styles = StyleSheet.create({
   },
   yAxisLabels: {
     justifyContent: "space-between",
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
     width: 30,
   },
   assetInsightGrid: {
     borderTopColor: colors.border.subtle,
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: spacing.cardInner,
-    paddingTop: spacing.cardInner,
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
   },
   assetInsightRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.cardInner,
+    gap: spacing.sm,
     justifyContent: "space-between",
   },
   gainText: {

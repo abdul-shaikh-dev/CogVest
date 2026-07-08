@@ -318,7 +318,7 @@ function ExposurePanel({
               <AppText variant="caption" weight="bold">
                 {segment.label} {segment.percentage.toFixed(0)}%
               </AppText>
-              <AppText color="secondary" numberOfLines={1} variant="caption">
+              <AppText color="secondary" variant="caption">
                 {segment.count} {segment.count === 1 ? "position" : "positions"}
               </AppText>
             </View>
@@ -634,14 +634,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
-    height: 42,
+    height: 38,
     justifyContent: "center",
-    width: 42,
+    width: 38,
   },
   compactMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingLeft: 54,
+    paddingLeft: 50,
   },
   compactRow: {
     alignItems: "center",
@@ -670,12 +670,13 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   exposureCard: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   exposureLegend: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.md,
+    columnGap: spacing.md,
+    rowGap: spacing.sm,
   },
   exposureRail: {
     borderRadius: radii.pill,
@@ -691,8 +692,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.card,
     borderRadius: radii.pill,
     justifyContent: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.xs,
   },
   filterChipActive: {
     backgroundColor: colors.deepGreen,
@@ -715,18 +716,20 @@ const styles = StyleSheet.create({
   insightCard: {
     flex: 1,
     gap: spacing.xs,
-    minHeight: 126,
+    minHeight: 102,
   },
   insightGrid: {
     flexDirection: "row",
     gap: spacing.sm,
   },
   insightTitle: {
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 17,
+    lineHeight: 22,
   },
   legendCopy: {
+    flex: 1,
     gap: 1,
+    minWidth: 0,
   },
   legendDot: {
     borderRadius: radii.pill,
@@ -736,11 +739,11 @@ const styles = StyleSheet.create({
   },
   legendItem: {
     alignItems: "flex-start",
-    flexBasis: "30%",
+    flexBasis: "46%",
     flexGrow: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    minWidth: 0,
+    minWidth: 144,
   },
   negativeText: {
     color: colors.loss,

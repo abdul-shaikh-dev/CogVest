@@ -195,8 +195,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.card,
-    gap: spacing.cardInner,
-    padding: spacing.md,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.sm,
   },
   content: {
     gap: spacing.cardGap,
@@ -236,9 +237,9 @@ const styles = StyleSheet.create({
   },
   switchThumb: {
     backgroundColor: colors.text.primary,
-    borderRadius: 10,
-    height: 20,
-    width: 20,
+    borderRadius: 9,
+    height: 18,
+    width: 18,
   },
   switchThumbOn: {
     alignSelf: "flex-end",
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     justifyContent: "center",
     padding: 3,
-    width: 48,
+    width: 44,
   },
   toggleCopy: {
     flex: 1,
@@ -257,6 +258,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     alignItems: "center",
     flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "space-between",
   },
   trustCopy: {
