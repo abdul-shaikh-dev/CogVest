@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
-import { ProgressScreen } from "@/src/features/progress";
+import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
@@ -97,7 +97,7 @@ describe("ProgressScreen", () => {
 
     expect(getByText("No monthly snapshots yet")).toBeTruthy();
     expect(
-      getByText("Record a month-end snapshot to track progress without Excel."),
+      getByText("Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."),
     ).toBeTruthy();
   });
 
@@ -117,11 +117,65 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
 
-  it("saves a monthly snapshot from the screen form", () => {
+  it("opens the dedicated snapshot review flow", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
+    const onReviewSnapshot = jest.fn();
+    const { getByText, queryByTestId } = render(
+      <ProgressScreen onReviewSnapshot={onReviewSnapshot} store={store} />,
+    );
 
     fireEvent.press(getByText("Review snapshot"));
+
+    expect(onReviewSnapshot).toHaveBeenCalledTimes(1);
+    expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
+  });
+  it("prefills the latest generated snapshot for optional correction", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByTestId, getByText } = render(
+      <ReviewSnapshotScreen
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Review Snapshot")).toBeTruthy();
+    expect(getByTestId("snapshot-month-input").props.value).toBe("2026-05");
+    expect(getByTestId("snapshot-portfolio-input").props.value).toBe("1385000");
+    expect(getByTestId("snapshot-notes-input").props.value).toBe("May close");
+  });
+
+  it("cancels a review without persisting field changes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    const onCancel = jest.fn();
+    const { getByTestId } = render(
+      <ReviewSnapshotScreen
+        onCancel={onCancel}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
+    fireEvent.press(getByTestId("cancel-snapshot-review-button"));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().monthlySnapshots[0]?.portfolioValue).toBe(1385000);
+  });
+  it("saves snapshot changes from the dedicated review screen", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onComplete = jest.fn();
+    const { getByTestId, getByText } = render(
+      <ReviewSnapshotScreen
+        onCancel={jest.fn()}
+        onComplete={onComplete}
+        store={store}
+      />,
+    );
+
     fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
     fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1385000");
     fireEvent.changeText(getByTestId("snapshot-invested-input"), "1060000");
@@ -132,7 +186,7 @@ describe("ProgressScreen", () => {
     fireEvent.changeText(getByTestId("snapshot-investment-input"), "60000");
     fireEvent.changeText(getByTestId("snapshot-salary-input"), "160000");
     fireEvent.changeText(getByTestId("snapshot-expense-input"), "40000");
-    fireEvent.press(getByText("Save Monthly Snapshot"));
+    fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
     expect(store.getState().monthlySnapshots[0]).toMatchObject({
@@ -147,9 +201,8 @@ describe("ProgressScreen", () => {
       portfolioValue: 1385000,
       salary: 160000,
     });
-    expect(getByText("May 2026")).toBeTruthy();
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
-
   it("renders persisted monthly gain, rates, and asset snapshot", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -274,9 +327,15 @@ describe("ProgressScreen", () => {
   it("updates an existing month instead of creating duplicate snapshots", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
-    const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
+    const onComplete = jest.fn();
+    const { getByTestId, getByText } = render(
+      <ReviewSnapshotScreen
+        onCancel={jest.fn()}
+        onComplete={onComplete}
+        store={store}
+      />,
+    );
 
-    fireEvent.press(getByText("Review snapshot"));
     fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
     fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
     fireEvent.changeText(getByTestId("snapshot-invested-input"), "1070000");
@@ -286,7 +345,7 @@ describe("ProgressScreen", () => {
     fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
     fireEvent.changeText(getByTestId("snapshot-investment-input"), "70000");
     fireEvent.changeText(getByTestId("snapshot-salary-input"), "160000");
-    fireEvent.press(getByText("Save Monthly Snapshot"));
+    fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
     expect(store.getState().monthlySnapshots[0]).toMatchObject({
@@ -295,5 +354,6 @@ describe("ProgressScreen", () => {
       monthlyInvestment: 70000,
       portfolioValue: 1400000,
     });
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });

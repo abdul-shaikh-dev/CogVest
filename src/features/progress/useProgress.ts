@@ -274,7 +274,7 @@ export function useProgress({
 
     if (!result.snapshot) {
       setErrors(result.errors);
-      return;
+      return false;
     }
 
     const existingSnapshot = snapshot.monthlySnapshots.find(
@@ -292,6 +292,7 @@ export function useProgress({
 
     setFormValues(emptyProgressFormValues());
     setErrors({});
+    return true;
   }
 
   async function ensureMonthEndSnapshot() {

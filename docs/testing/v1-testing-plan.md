@@ -48,7 +48,7 @@ Cover:
 - MaskedValue display.
 - Cash add/withdraw rows.
 - Monthly Progress auto-generates missing completed-month snapshots and keeps
-  manual correction behind `Review snapshot`.
+  manual correction in the dedicated `Review Snapshot` screen.
 
 ## Android Emulator QA
 
