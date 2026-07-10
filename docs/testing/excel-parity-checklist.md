@@ -95,7 +95,7 @@ Then verify on Android Emulator:
 - Add cash deposit and withdrawal.
 - Open Dashboard and verify total current value, invested value, allocation, and quote status.
 - Open Monthly Progress after seeded portfolio data and verify missing previous-month snapshot generation.
-- Use `Review snapshot` only when manual correction is needed.
+- Use `Review snapshot` only when manual correction is needed; it opens the dedicated Review Snapshot screen.
 - Verify monthly gain, gain %, monthly investment, savings rate, and asset split.
 - Toggle value masking in Settings.
 - Close and reopen the app and verify local data remains.

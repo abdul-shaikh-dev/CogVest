@@ -344,9 +344,9 @@ export function DashboardScreen({
           <View style={styles.reviewCardRow}>
             <CategoryIcon assetClass="neutral" />
             <View style={styles.infoCardCopy}>
-              <AppText weight="bold">Record monthly snapshot</AppText>
+              <AppText weight="bold">Review month-end snapshot</AppText>
               <AppText color="secondary" variant="caption">
-                Review this month in Progress when month-end data is ready.
+                Your snapshot is generated automatically. Review it in Progress only if a correction is needed.
               </AppText>
             </View>
             <Pressable

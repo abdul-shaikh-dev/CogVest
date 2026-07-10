@@ -178,7 +178,7 @@ describe("DashboardScreen", () => {
     expect(getByText("Cash")).toBeTruthy();
     expect(getByText("Quotes updated")).toBeTruthy();
     expect(getByText("22 Apr 2026 • Live refresh available")).toBeTruthy();
-    expect(getByText("Record monthly snapshot")).toBeTruthy();
+    expect(getByText("Review month-end snapshot")).toBeTruthy();
     expect(getByText("Open Progress")).toBeTruthy();
     expect(getByText("This Month")).toBeTruthy();
     expect(getByText("Cash change")).toBeTruthy();

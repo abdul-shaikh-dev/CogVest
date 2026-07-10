@@ -47,7 +47,7 @@ approved.
 | Holdings derivation | `src/features/holdings/__tests__/HoldingsScreen.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | `e2e/holdings.yaml` asserts holdings after Add Holding | Holding row shows symbol, quantity, value |
 | Quote refresh and fallback | `src/services/quotes/__tests__/quotes.test.ts`, `src/services/quotes/__tests__/useQuoteRefresh.test.tsx`, Holdings tests | Manual emulator pull-to-refresh or Refresh Quotes action where network is available | Failures keep manual prices visible |
 | Cash tracking | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | `e2e/cash.yaml` adds cash by stable IDs | Cash balance and cash history update |
-| Monthly Progress snapshots | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/features/progress/__tests__/useProgress.test.tsx`, `src/domain/calculations/__tests__/monthEndSnapshots.test.ts`, `src/store/__tests__/portfolioStore.test.ts` | Manual emulator flow opens Progress after seeded portfolio data and verifies the compact month-end snapshot status | Missing previous-month snapshot is generated automatically; review/edit stays available behind `Review snapshot`; Progress shows monthly gain, investment, savings rate where derivable, and asset split |
+| Monthly Progress snapshots | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/features/progress/__tests__/useProgress.test.tsx`, `src/domain/calculations/__tests__/monthEndSnapshots.test.ts`, `src/store/__tests__/portfolioStore.test.ts` | Manual emulator flow opens Progress after seeded portfolio data and verifies the compact month-end snapshot status | Missing previous-month snapshot is generated automatically; review/edit stays available in the dedicated `Review Snapshot` screen; Progress shows monthly gain, investment, savings rate where derivable, and asset split |
 | Excel parity gate | `docs/testing/excel-parity-checklist.md` plus #61-#65 tests | Manual PC-only flow in the checklist | Every parity question passes or has a `[V1 QA]` defect |
 | Value masking | `src/features/settings/__tests__/SettingsScreen.test.tsx`, dashboard/holdings/cash masked-value tests | `e2e/value-masking.yaml` opens `cogvest://settings` and toggles `value-mask-toggle` | Wealth values mask; quantities and percentages remain visible |
 | Persistence after close/reopen | `src/store/__tests__/portfolioStore.test.ts`, storage tests | `e2e/persistence.yaml` saves data, stops app, relaunches, and verifies data remains | State remains after app restart |
@@ -80,7 +80,7 @@ Maestro E2E not run: Maestro unavailable.
 - Open Progress after seeded portfolio data exists.
 - Verify the missing previous completed month snapshot is generated automatically.
 - Verify Progress shows the compact `Month-end snapshot` status card by default.
-- Verify `Review snapshot` reveals the edit form for correction/manual override.
+- Verify `Review snapshot` opens the dedicated Review Snapshot screen for correction/manual override.
 - Verify generated snapshots update Progress charts after enough monthly history exists.
 - Verify fallback/status text appears when historical provider lookup is unavailable and the app uses latest local or manual prices.
 

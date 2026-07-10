@@ -30,7 +30,7 @@ Android Emulator, not a physical Android phone.
 - [ ] Cash balance appears on Dashboard.
 - [ ] Monthly Progress automatically generates the missing previous completed month snapshot after portfolio data exists.
 - [ ] Monthly Progress shows compact `Month-end snapshot` status by default.
-- [ ] `Review snapshot` opens the edit form for correction/manual override.
+- [ ] `Review snapshot` opens the dedicated `Review Snapshot` screen for correction/manual override.
 - [ ] Monthly Progress shows monthly gain, gain %, monthly investment, savings rate where derivable, and asset split.
 - [ ] Value masking can be toggled from Settings.
 - [ ] Masked state hides wealth values but not quantities or percentages.

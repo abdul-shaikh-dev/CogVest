@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
@@ -29,12 +29,11 @@ import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/form
 import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, spacing } from "@/src/theme";
-import type { MonthlySnapshot } from "@/src/types";
-import { FormTextField } from "@/src/components/forms";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
 type ProgressScreenProps = {
   now?: Date;
+  onReviewSnapshot?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -575,34 +574,14 @@ function SnapshotStatusCard({
   );
 }
 
-function setSnapshotFormFields({
-  progress,
-  snapshot,
-}: {
-  progress: ReturnType<typeof useProgress>;
-  snapshot: MonthlySnapshot;
-}) {
-  progress.setField("month", snapshot.month);
-  progress.setField("portfolioValue", String(snapshot.portfolioValue));
-  progress.setField("investedValue", String(snapshot.investedValue));
-  progress.setField("equityValue", String(snapshot.equityValue));
-  progress.setField("debtValue", String(snapshot.debtValue));
-  progress.setField("cryptoValue", String(snapshot.cryptoValue));
-  progress.setField("cashValue", String(snapshot.cashValue));
-  progress.setField("monthlyInvestment", String(snapshot.monthlyInvestment));
-  progress.setField("salary", String(snapshot.salary));
-  progress.setField("monthlyExpense", String(snapshot.monthlyExpense ?? ""));
-  progress.setField("notes", snapshot.notes ?? "");
-}
-
 export function ProgressScreen({
   now,
+  onReviewSnapshot,
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
   const progress = useProgress({ now, store });
   const isReducedMotionEnabled = useReducedMotionPreference();
   const hasRunAutomationRef = useRef(false);
-  const [isReviewingSnapshot, setIsReviewingSnapshot] = useState(false);
 
   useEffect(() => {
     if (hasRunAutomationRef.current) {
@@ -614,15 +593,7 @@ export function ProgressScreen({
   }, [progress]);
 
   function reviewSnapshot() {
-    const reviewSnapshot =
-      progress.snapshotAutomationStatus.snapshot ??
-      progress.latestSummary?.snapshot;
-
-    if (reviewSnapshot) {
-      setSnapshotFormFields({ progress, snapshot: reviewSnapshot });
-    }
-
-    setIsReviewingSnapshot(true);
+    onReviewSnapshot?.();
   }
 
   return (
@@ -796,122 +767,10 @@ export function ProgressScreen({
         ) : (
           <EmptyState
             title="No monthly snapshots yet"
-            message="Record a month-end snapshot to track progress without Excel."
+            message="Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."
           />
         )}
 
-        {isReviewingSnapshot ? (
-        <PremiumCard>
-          <SectionHeader title="Record monthly snapshot" />
-          <FormTextField
-            error={progress.errors.month}
-            label="Month"
-            onChangeText={(value) => progress.setField("month", value)}
-            placeholder="YYYY-MM"
-            testID="snapshot-month-input"
-            value={progress.formValues.month}
-          />
-          <FormTextField
-            error={progress.errors.portfolioValue}
-            keyboardType="decimal-pad"
-            label="Portfolio value"
-            onChangeText={(value) => progress.setField("portfolioValue", value)}
-            placeholder="1385000"
-            testID="snapshot-portfolio-input"
-            value={progress.formValues.portfolioValue}
-          />
-          <FormTextField
-            error={progress.errors.investedValue}
-            keyboardType="decimal-pad"
-            label="Invested value"
-            onChangeText={(value) => progress.setField("investedValue", value)}
-            placeholder="1060000"
-            testID="snapshot-invested-input"
-            value={progress.formValues.investedValue}
-          />
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.equityValue}
-              keyboardType="decimal-pad"
-              label="Equity"
-              onChangeText={(value) => progress.setField("equityValue", value)}
-              placeholder="880000"
-              testID="snapshot-equity-input"
-              value={progress.formValues.equityValue}
-            />
-            <FormTextField
-              error={progress.errors.debtValue}
-              keyboardType="decimal-pad"
-              label="Debt"
-              onChangeText={(value) => progress.setField("debtValue", value)}
-              placeholder="320000"
-              testID="snapshot-debt-input"
-              value={progress.formValues.debtValue}
-            />
-          </View>
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.cryptoValue}
-              keyboardType="decimal-pad"
-              label="Crypto"
-              onChangeText={(value) => progress.setField("cryptoValue", value)}
-              placeholder="45000"
-              testID="snapshot-crypto-input"
-              value={progress.formValues.cryptoValue}
-            />
-            <FormTextField
-              error={progress.errors.cashValue}
-              keyboardType="decimal-pad"
-              label="Cash"
-              onChangeText={(value) => progress.setField("cashValue", value)}
-              placeholder="140000"
-              testID="snapshot-cash-input"
-              value={progress.formValues.cashValue}
-            />
-          </View>
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.monthlyInvestment}
-              keyboardType="decimal-pad"
-              label="Monthly investment"
-              onChangeText={(value) => progress.setField("monthlyInvestment", value)}
-              placeholder="60000"
-              testID="snapshot-investment-input"
-              value={progress.formValues.monthlyInvestment}
-            />
-            <FormTextField
-              error={progress.errors.salary}
-              keyboardType="decimal-pad"
-              label="Salary"
-              onChangeText={(value) => progress.setField("salary", value)}
-              placeholder="160000"
-              testID="snapshot-salary-input"
-              value={progress.formValues.salary}
-            />
-          </View>
-          <FormTextField
-            error={progress.errors.monthlyExpense}
-            keyboardType="decimal-pad"
-            label="Monthly expense"
-            onChangeText={(value) => progress.setField("monthlyExpense", value)}
-            placeholder="Optional"
-            testID="snapshot-expense-input"
-            value={progress.formValues.monthlyExpense}
-          />
-          <FormTextField
-            label="Notes"
-            multiline
-            onChangeText={(value) => progress.setField("notes", value)}
-            placeholder="Optional month-end note"
-            value={progress.formValues.notes}
-          />
-          <AppButton
-            title="Save Monthly Snapshot"
-            testID="save-monthly-snapshot-button"
-            onPress={progress.saveSnapshot}
-          />
-        </PremiumCard>
-        ) : null}
       </View>
     </ScreenContainer>
   );
@@ -971,9 +830,6 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
-  },
-  fieldGrid: {
-    gap: spacing.sm,
   },
   legendDot: {
     borderRadius: 4,
