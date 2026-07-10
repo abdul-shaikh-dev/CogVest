@@ -347,6 +347,222 @@ rounding drift.
 **Required direction:** Define precision and rounding rules at domain boundaries,
 prefer integer minor units for currency, and add invariant/property tests.
 
+## Focused Add Holding Review
+
+The follow-up Add Holding inspection found additional defects beyond the
+cross-cutting currency, quote, date, persistence, and duplicate-save findings
+above.
+
+### AH1. Provider-selected assets lose provider identity at save time
+
+The lookup result is used to populate the form and fetch a quote, but review/save
+does not persist the lookup asset. Unless an existing local asset was selected,
+`handleReview` rebuilds the asset through `buildManualAsset`. That path forces
+INR/NSE defaults and drops the provider exchange and currency.
+
+**Evidence:**
+
+- `src/features/openingPositions/useAddOpeningPosition.ts:416-450` constructs a
+  correct temporary provider asset for quote lookup.
+- `src/features/openingPositions/useAddOpeningPosition.ts:472-497` ignores
+  `selectedLookupResult` when constructing the reviewed asset.
+- `src/features/openingPositions/useAddOpeningPosition.ts:399-413` applies manual
+  INR/NSE defaults.
+
+This is the Add Holding entry point for critical finding C2.
+
+### AH2. A live autofilled quote is persisted as manual
+
+After Yahoo or CoinGecko successfully autofills current price, save always writes
+a new quote with `source: manual`, `currency: INR`, and the save timestamp. The
+provider source, provider timestamp, currency, and day-change fields are lost.
+Until the next successful refresh, Settings and holdings can claim the price was
+manual even though the user did not enter it.
+
+**Evidence:**
+
+- `src/features/openingPositions/useAddOpeningPosition.ts:450-455` receives the
+  provider quote but stores only its price in component state.
+- `src/features/openingPositions/useAddOpeningPosition.ts:522-529` recreates the
+  saved quote as manual.
+
+**Required direction:** Keep explicit price-source state and persist the original
+provider quote unless the user edits the price.
+
+### AH3. Editing an existing asset creates a duplicate asset
+
+Selecting an existing asset correctly reuses its ID only until instrument or
+sector metadata is edited. The edit handler clears `selectedAssetId`, and save
+then creates a new asset with a new ID. The original asset remains unchanged.
+This can create duplicate holding cards for the same ticker.
+
+The current test suite explicitly expects this behavior instead of catching it:
+
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:390-426` clears the
+  saved selection on metadata edits.
+- `src/features/openingPositions/useAddOpeningPosition.ts:495-520` creates a new
+  asset after the selection is cleared.
+- `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx:189`
+  names the case as persisting an edit but asserts that two assets exist and the
+  new position does not use the original ID.
+
+**Required direction:** Make the user choose between updating shared asset
+metadata and creating a distinct instrument. Ordinary metadata correction should
+update/reuse the existing asset.
+
+### AH4. Provider lookup can duplicate an already-saved asset
+
+Lookup results are not matched against existing assets by provider ID, quote
+source ID, exchange+ticker, or another canonical identity. Selecting Yahoo for
+an asset already present locally creates another asset record.
+
+**Evidence:**
+
+- `src/services/assetLookup/index.ts:120-138` creates provider identities.
+- `src/features/openingPositions/useAddOpeningPosition.ts:431-460` never checks
+  them against `snapshot.assets`.
+- `src/store/index.ts:182-187` appends assets without uniqueness enforcement.
+
+**Required direction:** Resolve lookup selections to canonical existing assets
+before creating new records.
+
+### AH5. Quote-response races can apply the wrong asset's price
+
+`selectLookupResult` has no request token, cancellation, or selected-result check
+after awaiting the provider. If the user selects asset A, changes selection, and
+selects asset B before A finishes, A's later response can overwrite B's current
+price and quote status. A delayed failure can also clear a price the user entered
+manually after selection.
+
+**Evidence:** `src/features/openingPositions/useAddOpeningPosition.ts:431-460`.
+
+**Required direction:** Associate each request with the selected provider ID,
+ignore stale completions, and abort obsolete requests where supported.
+
+### AH6. Switching assets carries stale position and price state
+
+Changing the selected asset does not clear quantity, average cost, current price,
+date, conviction, or notes. Selecting an existing asset with no cached quote also
+leaves the previous asset's current price intact because `selectAsset` only sets
+price when a quote exists. Editing name, symbol, ticker, quote-source ID, or asset
+class after a live lookup can retain the old asset's autofilled current price.
+
+**Evidence:**
+
+- `src/features/openingPositions/useAddOpeningPosition.ts:365-396` changes asset
+  identity without resetting position state and conditionally updates price.
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:282-334` clears the
+  selection on identity edits but not current price.
+- `src/features/openingPositions/useAddOpeningPosition.ts:462-469` changes class
+  without clearing the old quote-derived price.
+
+**Impact:** A valid-looking review can save one asset using another asset's
+price, quantity, cost, or notes.
+
+### AH7. The metadata UI exposes internal enum tokens
+
+Instrument and sector are free-text inputs that require exact internal values
+such as `financialServices`, `fixedDeposit`, and `digitalAsset`. Invalid spacing,
+capitalization, or user-friendly labels are rejected. There is no selector or
+explanation of allowed values.
+
+**Evidence:**
+
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:390-426`.
+- `src/domain/assets/metadata.ts:3-30` defines the accepted internal tokens.
+- `src/features/openingPositions/openingPositionForm.ts:105-110` rejects anything
+  outside those exact arrays.
+
+This makes the supposed assisted-capture step behave like editing a schema.
+
+### AH8. Manual stocks default to Financial Services
+
+The initial stock metadata defaults sector to `financialServices`. A user adding
+an energy, technology, healthcare, or consumer stock manually can continue
+without changing it, silently storing false sector data.
+
+**Evidence:**
+
+- `src/domain/assets/metadata.ts:54-57`.
+- `src/features/openingPositions/useAddOpeningPosition.ts:111-120` initializes
+  the form from that default.
+
+**Required direction:** Use `other`/unknown for manual stocks until the user or
+provider supplies a sector.
+
+### AH9. Review does not show the fields the user is committing
+
+The final review surface shows only asset name/class and derived invested,
+current, P&L, and P&L percentage. It omits ticker, exchange, currency, quantity,
+average cost, current price, acquisition date, instrument, sector, conviction,
+notes, and price source. Several of these are precisely the fields most likely
+to be wrong after lookup or state carryover.
+
+**Evidence:** `src/features/openingPositions/AddOpeningPositionForm.tsx:558-620`.
+
+**Required direction:** Show a compact confirmation summary of identity,
+classification, position inputs, source, and derived values before save.
+
+### AH10. Save is non-atomic and post-save haptics can mask success
+
+Add Holding separately writes the asset, opening position, and quote. A failure
+between writes leaves partial state. Persistence finishes before awaiting
+haptics; if haptics rejects, the data is already saved but the success state and
+save lock are not applied, encouraging retry and duplication.
+
+**Evidence:** `src/features/openingPositions/useAddOpeningPosition.ts:513-532`.
+
+**Required direction:** Persist the complete opening-position command atomically,
+disable save during execution, and treat haptics as a non-critical side effect.
+
+### AH11. Local date default is wrong during early IST hours
+
+The default acquisition date is derived with `new Date().toISOString()`, which is
+UTC. In India between midnight and 05:29, it defaults to the previous calendar
+day.
+
+**Evidence:** `src/features/openingPositions/useAddOpeningPosition.ts:51-53`.
+
+Use a local-calendar formatter rather than slicing a UTC timestamp.
+
+### AH12. Search and existing-asset lists do not scale
+
+Every existing asset is rendered before the search form, and every CoinGecko
+result is appended after Yahoo results without ranking, deduplication, grouping,
+or a display cap. Large portfolios or broad crypto searches can turn the first
+step into a long, noisy screen.
+
+**Evidence:**
+
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:170-198`.
+- `src/services/assetLookup/index.ts:227-251`.
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:241-270`.
+
+### AH13. The post-save state is a dead-end confirmation
+
+After save, the controller stays in the Review phase, removes the review
+position, and shows a success message. The preview disappears and Save becomes
+disabled, but there is no `View holding`, `Return to Holdings`, or `Add another`
+action. The user must infer that Android Back is the completion action.
+
+**Evidence:**
+
+- `src/features/openingPositions/useAddOpeningPosition.ts:530-533`.
+- `src/features/openingPositions/AddOpeningPositionForm.tsx:623-681`.
+
+### AH14. The lookup E2E proves completion, not correctness
+
+The Maestro flow finds `BTC-USD`, selects it, and saves, but never verifies the
+saved asset's currency, exchange, quote source, price, holding value, or absence
+of duplicates. It also enters `110` into an already-autofilled current-price
+field without first clearing that field, so the actual saved value may be an
+appended number.
+
+**Evidence:** `e2e/add-holding-lookup.yaml`.
+
+The flow passed on the emulator during this review, demonstrating that these
+semantic defects are invisible to the current E2E acceptance criteria.
+
 ## Dependency Audit
 
 `npm audit --json` reported:
