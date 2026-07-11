@@ -563,6 +563,196 @@ appended number.
 The flow passed on the emulator during this review, demonstrating that these
 semantic defects are invisible to the current E2E acceptance criteria.
 
+## Complete Remediation Matrix
+
+This matrix is the implementation contract for resolving every finding in this
+review. Each row should become either a focused GitHub issue or an explicit
+acceptance criterion in its owning issue. Findings should not be closed merely
+because the UI changed; the verification column must have evidence.
+
+### Critical Findings
+
+| ID | Required fix | Minimum verification |
+| --- | --- | --- |
+| C1 | Define typed cash movements and an atomic investment-funding command. A cash-funded buy reduces deployable cash exactly once; externally funded opening positions are explicitly marked and do not imply a cash outflow. | Accounting invariant tests prove that deposits, purchases, sales, withdrawals, and market movement conserve total wealth. Emulator flow verifies displayed cash and portfolio totals after a funded purchase. |
+| C2 | Preserve provider currency and exchange. Add an explicit FX conversion layer with source and timestamp, or reject unsupported foreign holdings in V1. Never aggregate a foreign numeric quote directly into INR totals. | USD lookup/save test retains USD; mixed-currency aggregation either converts using a fixture FX quote or returns a clear unsupported state. Maestro verifies the saved asset currency and displayed INR value. |
+| C3 | Store user-entered manual prices separately from provider quotes. On provider failure, preserve the cached quote's original source and timestamp and mark it stale instead of rebuilding it as fresh manual data. | Failure-after-success tests verify unchanged source/time, explicit stale state, and partial portfolio freshness. |
+| C4 | Replace debug release signing with a private release-keystore workflow. Keep credentials outside Git and inspect every distributed APK signature. | `apksigner verify --print-certs` shows the expected release certificate; release build fails clearly when signing secrets are absent. |
+
+### High-Severity Findings
+
+| ID | Required fix | Minimum verification |
+| --- | --- | --- |
+| H1 | Separate contribution, withdrawal, total value change, market movement, realized P&L, and unrealized P&L. Rename any metric that is not true gain. | Adding capital with unchanged prices produces zero market gain; contribution and value-change figures remain correct. |
+| H2 | Add cash-entry purpose/category so income, contribution, transfer, sale proceeds, and withdrawal are distinct. Calculate savings rate from typed income only. | Sale proceeds and broker transfers do not increase salary or savings rate; income fixtures do. |
+| H3 | Find every missing completed month from the earliest portfolio record through the previous completed month and generate in chronological order. | Tests backfill multiple consecutive gaps, skip existing months, and remain idempotent across repeated app launches. |
+| H4 | Persist per-asset historical-price confidence. Current/local fallback creates a provisional snapshot, not a finalized historical fact, and is retried later. | Historical failure produces a visible provisional state; a later successful lookup upgrades the same month without duplication. |
+| H5 | Do not persist salary as known zero. Derive salary only from typed income records or leave it unknown; omit dependent rates when unknown. | Generated snapshots distinguish unknown from zero and do not display false zero-income conclusions. |
+| H6 | Validate MMKV payloads at runtime, migrate explicitly, preserve corrupt raw data, and show a recoverable startup state instead of silently returning an empty portfolio. | Corrupt JSON, unknown schema, and failed migration fixtures retain recoverable data and never masquerade as a new empty portfolio. |
+| H7 | Add atomic store commands for linked financial operations, beginning with sell/redeem plus proceeds. Persist once and roll back or fail before mutation. | Fault injection between logical writes cannot create a trade without its required linked cash movement. |
+| H8 | Add command IDs, uniqueness constraints, and `isSaving` guards. Repeated taps must return the original result or be rejected. | Double-tap tests create exactly one asset, position, trade, cash entry, and quote. |
+| H9 | Introduce one strict local-calendar date parser. Reject impossible dates and inappropriate future dates, and ensure selectors ignore records not yet effective. | Tests cover leap years, `2026-02-30`, future dates, timezone boundaries, and midnight IST. |
+| H10 | Add review/edit/delete flows for cash entries, opening positions, trades, assets, and snapshots. Define cascade impact before asset deletion. | Correction tests recalculate every downstream total; destructive actions require confirmation and leave no orphan records. |
+
+### Medium-Severity Findings
+
+| ID | Required fix | Minimum verification |
+| --- | --- | --- |
+| M1 | Compute freshness per required holding and summarize the oldest/stale/missing state rather than selecting the newest quote. | One fresh and one stale asset reports partial/stale portfolio status. |
+| M2 | Add provider deadlines, request cancellation, bounded concurrency, and partial completion. | Fake timers prove a hung provider cannot block all assets indefinitely and successful assets still update. |
+| M3 | Map only explicitly supported Yahoo `quoteType` values. Reject or label mutual funds, indices, futures, and currencies until their domain handling exists. | Provider mapping table tests every supported and rejected quote type. |
+| M4 | Represent negative cash explicitly in allocation or surface it as a data-integrity/liability state instead of hiding it. | Negative-balance fixtures remain visible and allocation totals remain mathematically explainable. |
+| M5 | Decide the local-first privacy contract. Disable Android backup if records must remain only on the device; otherwise disclose backup accurately. Decide whether MMKV encryption is required. | Manifest test checks backup policy; privacy copy matches configuration; encrypted-storage migration is tested if adopted. |
+| M6 | Remove external-storage and overlay permissions unless a documented runtime dependency proves they are required. | Release manifest inspection contains only approved permissions and app smoke tests still pass. |
+| M7 | Establish preview and production versioning with monotonic `versionCode`, meaningful `versionName`, and build metadata. | Upgrade installation succeeds from the previous signed APK and version information is recorded in release evidence. |
+| M8 | Compile the destructive visual-QA route out of release builds or require a non-public development-only capability. Never permit it to overwrite real data silently. | Release deep-link test cannot seed; development seeding requires explicit confirmation and isolated test storage. |
+| M9 | Define money and quantity precision. Prefer integer minor units for currency and a decimal-safe representation for fractional quantities and weighted cost. | Property/invariant tests cover repeated fractional crypto operations, fees, and rounding boundaries. |
+
+### Add Holding Findings
+
+| ID | Required fix | Minimum verification |
+| --- | --- | --- |
+| AH1 | Carry the selected provider candidate through review/save and preserve provider identity, currency, exchange, ticker, and quote source. | Lookup-save test asserts the complete persisted asset, not only visible form text. |
+| AH2 | Track price value, provider, currency, timestamp, and `wasEdited`. Persist the original provider quote unless the user edits the value; then explicitly persist a manual quote. | Tests distinguish untouched autofill from user-edited price and verify Settings source labels. |
+| AH3 | Keep existing asset identity during metadata correction. Update/reuse the existing asset unless the user explicitly chooses to create a separate instrument. | Editing sector retains the same asset ID and asset count. |
+| AH4 | Resolve lookup candidates against existing assets by provider ID first and exchange+ticker fallback. Enforce the same uniqueness rule in the store. | Searching and selecting an existing HDFC or Bitcoin asset creates a new position but no duplicate asset. |
+| AH5 | Add request IDs or abort controllers and ignore quote completions that do not match the current selected candidate. | Deferred A/B quote tests complete in both orders and B always retains B's price/status. |
+| AH6 | Centralize `selectCandidate`, `changeAsset`, and `switchToManualEntry` transitions. Reset stale position and quote state according to an explicit policy. | Switching assets after completing position fields cannot retain the prior asset's price, quantity, cost, conviction, or notes. |
+| AH7 | Replace internal enum text fields with user-facing selectors. Automate reliable metadata and show selectors only for unknown/low-confidence fields. | UI never requires typing `financialServices`; selector labels map correctly to persisted enum values and remain accessible. |
+| AH8 | Leave manual stock sector unknown rather than defaulting to Financial Services. Do not silently normalize missing sector into a factual value. | Manual technology/energy stock starts unknown and can save without false Financial Services metadata. |
+| AH9 | Expand final review to show identity, classification, position inputs, quote source/time, optional behavior fields, and derived values, with Edit actions. | Component and visual tests assert every persisted field is visible or explicitly summarized before save. |
+| AH10 | Add one idempotent atomic `saveOpeningPosition` command. Disable Save while running and make haptics non-critical. | Storage and haptics failure tests prove no partial or duplicate save and accurate success messaging. |
+| AH11 | Generate the default acquisition date from the local calendar rather than UTC slicing. | Fake-clock tests around 00:00-05:29 IST produce the correct local date. |
+| AH12 | Rank exact/existing matches first, group providers, deduplicate, cap displayed results, and search/filter existing holdings instead of rendering an unbounded chip grid. | Search tests verify ranking/deduplication/caps; a large seeded portfolio remains usable on emulator. |
+| AH13 | Replace the dead-end state with `View holding`, `Add another`, and `Return to Holdings`; default to a clear completion path. | Maestro saves, opens the resulting holding, returns, and adds another without stale state. |
+| AH14 | Rewrite lookup E2E to clear autofilled fields before manual replacement and assert persisted ticker, currency, source, quantity, invested/current values, and duplicate absence. | Maestro fails when any semantic result is wrong, rather than passing on success copy alone. |
+
+## Approved Add Holding Metadata Contract
+
+The product decision is to minimize user input through API-derived metadata with
+confidence-aware fallback.
+
+### Derive automatically when confidence is high
+
+- asset class;
+- instrument type;
+- exchange;
+- currency;
+- symbol and ticker;
+- quote-provider ID;
+- current price and price source.
+
+Examples include Yahoo `EQUITY` to Stock, Yahoo `ETF` to ETF, `.NS` to NSE,
+`.BO` to BSE, and CoinGecko results to Crypto. Unsupported provider instrument
+types must be rejected or marked unsupported rather than coerced to Stock.
+
+### Keep optional and reviewable when confidence is lower
+
+- business sector and industry;
+- debt subtype;
+- ETF category;
+- crypto category or network.
+
+Yahoo's current search response does not reliably provide equity sector. Sector
+must therefore remain unknown unless a reliable enrichment response or the user
+supplies it. CoinGecko categories must not be treated as equity business sectors.
+
+### Confidence model
+
+```ts
+type MetadataConfidence = "provider" | "inferred" | "unknown";
+
+type DerivedMetadata<T> = {
+  confidence: MetadataConfidence;
+  value?: T;
+};
+```
+
+High-confidence fields should be applied automatically and collapsed into a
+readable summary. Unknown fields should not block saving. The UI may offer
+`Choose later` and an optional user-facing selector. Internal tokens such as
+`financialServices` must never be exposed as required text input.
+
+The normal journey should be:
+
+1. Search.
+2. Explicitly select a result.
+3. Review only unresolved metadata when necessary.
+4. Enter quantity and average cost.
+5. Review the complete record.
+6. Save atomically.
+
+## Stabilization Delivery Plan
+
+The remediation should be managed under one `V1 Adversarial Stabilization`
+milestone with focused issues and one implementation concern per PR.
+
+### Stage 0: Correctness contracts
+
+Before changing UI, write and approve contracts for:
+
+- cash and investment accounting;
+- contribution-adjusted performance;
+- canonical asset identity;
+- currency and FX support;
+- quote provenance/freshness;
+- snapshot confidence/backfill;
+- persistence recovery and atomicity.
+
+### Stage 1: Financial correctness
+
+1. Cash/investment conservation and typed cash movements: C1, H2.
+2. Contribution-adjusted performance and savings semantics: H1, H5.
+3. Money/quantity precision policy: M9.
+
+No later stage may rely on the old cash or gain semantics.
+
+### Stage 2: Asset, currency, and quote trust
+
+1. Canonical asset identity and duplicate prevention: AH1, AH3, AH4.
+2. Currency preservation and V1 foreign-asset policy: C2.
+3. Quote provenance, freshness, timeout, and concurrency: C3, M1, M2, M3.
+
+### Stage 3: Add Holding stabilization
+
+1. API metadata enrichment and selectors: AH7, AH8, approved metadata contract.
+2. Selection transitions and stale-response protection: AH5, AH6, AH11, AH12.
+3. Atomic/idempotent save: AH10, H8.
+4. Complete review and completion UX: AH9, AH13.
+5. Correctness-focused E2E: AH14.
+
+### Stage 4: Snapshot correctness
+
+1. Multi-month backfill: H3.
+2. Provisional historical-price confidence and retry: H4.
+3. Correct generated income/performance semantics: H5 and H1 integration.
+
+### Stage 5: Persistence and correction
+
+1. Validated storage, migrations, and recovery: H6.
+2. Atomic sell/redeem and other linked commands: H7.
+3. Edit/delete/cascade flows: H10.
+4. Strict effective-date behavior across every record type: H9.
+
+### Stage 6: Android privacy and release hardening
+
+1. Backup/encryption privacy contract: M5.
+2. Permission minimization and visual-QA isolation: M6, M8.
+3. Private signing and monotonic versioning: C4, M7.
+4. Dependency remediation described below.
+
+### Stage 7: Final adversarial gate
+
+V1 is not stabilized until:
+
+- every matrix row has automated evidence or a documented manual release check;
+- accounting invariants pass;
+- a fresh signed APK is installed as an upgrade on the emulator;
+- Maestro validates stored outcomes, not only navigation/success messages;
+- privacy, permissions, signing, and version evidence is recorded;
+- specs, design baseline, AGENTS.md, and testing documents match shipped
+  behavior.
+
 ## Dependency Audit
 
 `npm audit --json` reported:
