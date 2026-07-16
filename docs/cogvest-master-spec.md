@@ -12,16 +12,11 @@ domain functions. It must not recreate Excel as a spreadsheet UI.
 
 ## Current Source Of Truth
 
-For implementation, use these docs in order:
-
-- `AGENTS.md`
-- `DESIGN.md`
-- `docs/roadmap/cogvest-version-roadmap.md`
-- `docs/roadmap/v1-mvp-spec.md`
-- `docs/design/v1-screen-baseline.md`
-- `docs/design/v1-ux-research-baseline.md`
-- `docs/design/v1-research-preview/index.html`
-- active GitHub issues
+For implementation, use `AGENTS.md`, this product spec, and the active GitHub
+issue. Add `DESIGN.md` and `docs/design/v1-screen-baseline.md` for UI work, the
+testing matrix for verification work, and roadmap/release documents only when
+those boundaries are affected. Historical previews and completed plans are
+supporting evidence, not sources of truth.
 
 ## V1 Product Goal
 
@@ -53,7 +48,9 @@ V1 includes:
 - live current quote fetching
 - opening positions and holding records
 - derived Holdings, Dashboard, Cash Ledger, and Monthly Progress views
-- cash ledger entries for deposits, withdrawals, and investment transfers
+- cash ledger entries for typed additions and withdrawals; investment funding
+  and sale proceeds must use explicit linked accounting rather than a confusing
+  manual transfer mode
 - monthly snapshots
 - value masking
 - optional conviction capture and not-enough-data state

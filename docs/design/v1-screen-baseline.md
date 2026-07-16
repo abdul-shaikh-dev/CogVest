@@ -223,10 +223,12 @@ Baseline structure:
 - subtitle `Manual ledger - local only`
 - cash balance hero
 - invested, available, and savings context
-- entry form for deposit, withdrawal, and investment transfer
+- entry form for deposit and withdrawal
+- invested cash is derived only from trustworthy linked investment accounting;
+  do not expose a generic manual `Investment transfer` action
 - recent ledger rows or a useful empty state
 
-Investment transfers should reduce available cash where applicable. Empty cash
+Linked investment funding should reduce available cash exactly once. Empty cash
 state should be acceptable and should not imply missing setup.
 
 ## Settings

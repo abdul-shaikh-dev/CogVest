@@ -5,35 +5,15 @@ investors. V1 is local-first and focused on portfolio tracking, live current
 quotes, Add Holding entry, derived holdings, cash tracking, value masking, and
 lightweight conviction capture.
 
-The app is built with Expo Router, TypeScript, Zustand, MMKV, React Hook Form,
-Zod, Reanimated, and `react-native-gifted-charts` for V1 charts. There is no backend, auth, cloud sync,
+The app is built with Expo Router, TypeScript, Zustand, MMKV, Zod, Reanimated,
+and `react-native-gifted-charts` for V1 charts. There is no backend, auth, cloud sync,
 analytics, or push notification dependency in V1.
 
 ## Current Phase
 
-Current execution focus: V1 MVP.
-
-V1 includes:
-
-- Android-first app shell with Expo Router tabs.
-- Local data persistence.
-- Add Holding flow.
-- Derived holdings and dashboard.
-- Cash tracking.
-- Value masking.
-- Live current quote fetching with manual fallback.
-- Lightweight optional conviction state.
-
-Out of V1 scope:
-
-- Minimal Mode.
-- LTCG UI or tax badges.
-- Historical charts.
-- Full behaviour engine.
-- Import/export.
-- Backend, auth, cloud sync, analytics, or push notifications.
-
-See `AGENTS.md` and `docs/roadmap/v1-mvp-spec.md` before changing scope.
+Current execution focus is V1 adversarial stabilization: financial correctness,
+data integrity, quote provenance, persistence recovery, and Android release
+safety. See `AGENTS.md` and `docs/cogvest-master-spec.md` for current scope.
 
 ## Required Tools
 
@@ -195,28 +175,12 @@ default PR CI unless requested.
 
 See `docs/testing/maestro-e2e.md` for install and troubleshooting details.
 
-## V1 Verification Gates
+## V1 Verification Gate
 
-Development-complete gate:
-
-```powershell
-npm run test:v1:pc
-```
-
-Also verify:
-
-- Android Emulator app launch.
-- Local APK build/install on emulator.
-- Core manual flows pass or defects are logged.
-- PC-based V1 core-flow matrix is complete.
-
-Release-candidate gate:
-
-- Production AAB builds successfully.
-- EAS build URL is recorded.
-- Play Console internal testing upload is ready/manual.
-
-Do not auto-submit to Google Play in V1.
+Run `npm run test:v1:pc` and the relevant Maestro flows before claiming
+installed-app behavior is verified. Build and install a fresh local APK when
+release behavior is affected. Full release criteria live in
+`docs/release/v1-release-checklist.md`.
 
 ## Repository Map
 
@@ -256,19 +220,3 @@ Domain rules:
 - V1 release checklist: `docs/release/v1-release-checklist.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
 - V1 research preview: `docs/design/v1-research-preview/index.html`
-
-## Codex Workflow
-
-For repo changes:
-
-- Sync `main` after merged PRs.
-- Create a feature branch before edits.
-- Keep PRs focused.
-- Include `Closes #<issue>` in PR bodies when an issue should auto-close.
-- Do not commit directly on `main`.
-- Do not trigger EAS cloud builds unless explicitly asked.
-- Prefer PC-only Android verification with emulator, `adb`, Expo CLI, Jest,
-  React Native Testing Library, and optional Maestro.
-
-Before claiming a change is ready, run the relevant verification commands and
-report exact results.

@@ -12,22 +12,12 @@ than a standard finance dashboard.
 Every UI task must follow this document unless the issue explicitly says
 otherwise.
 
-## Current V1 Screen Baseline
+## Screen Contracts
 
-The accepted V1 screen contract lives in `docs/design/v1-screen-baseline.md`.
-The current app-wide research baseline lives in
-`docs/design/v1-ux-research-baseline.md`.
-The current repo design assets are:
-
-- Research preview: `docs/design/v1-research-preview/index.html`
-- UX research baseline: `docs/design/v1-ux-research-baseline.md`
-- Screen contract: `docs/design/v1-screen-baseline.md`
-- Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
-
-Future UI work on Dashboard, Holdings, Add Holding, Progress, Cash, or Settings
-must preserve those baselines unless the issue explicitly updates them. If the
-design changes, update the baseline doc, preview, and Figma generator together
-or log the drift.
+Use `docs/design/v1-screen-baseline.md` and the active issue for screen-specific
+behavior. A newer issue-approved preview supersedes older preview or Figma
+assets for that screen. Update only the canonical screen contract and assets
+that materially remain useful; do not synchronize every historical mockup.
 
 ## 1. Visual Theme & Atmosphere
 
@@ -263,58 +253,7 @@ Bad motion:
 - Aggressive chart movement.
 - Animated price tickers.
 
-## 8. Screen-Level Rules
-
-Dashboard:
-
-- Must feel calm on app open.
-- Show portfolio value, allocation, quote freshness, and a small reflective cue.
-- Do not turn the dashboard into a trading terminal.
-- Avoid more than one primary call to action.
-
-Holdings:
-
-- Show holdings as durable positions, not quick trades.
-- Include current value, invested value, P&L, P&L %, and allocation where appropriate.
-- Metadata such as instrument type and sector should support understanding without crowding.
-
-Add Holding:
-
-- Use clear sectioning and direct labels.
-- Financial entry must be reviewable before save.
-- Opening positions should feel like migration from Excel, not a workaround.
-
-Cash:
-
-- Treat cash as part of portfolio value.
-- Additions and withdrawals should be clear and auditable.
-- Cash history should be simple and readable.
-
-Settings:
-
-- Settings should reinforce local-first privacy.
-- Value masking should be obvious and reliable.
-- Keep release/build/technical notes secondary.
-
-Monthly Progress:
-
-- Monthly progression should feel like long-term tracking, not performance pressure.
-- Treat Monthly Progress as a statement-summary screen.
-- Show `Value Gap`, `Asset Momentum`, monthly change, cash, and savings context
-  with restraint.
-- Keep chart timeframe controls inside their chart cards.
-- Do not embed a full snapshot-entry form in the main Progress screen; use a
-  compact CTA into the dedicated capture flow.
-- Avoid noisy historical charts beyond the stored monthly snapshot scope.
-
-Minimal Mode:
-
-- Minimal Mode should reduce emotional noise.
-- It should not remove core functionality.
-- It should soften colour, hide sensitive values if enabled, reduce P&L prominence,
-  and emphasize long-term framing.
-
-## 9. Do's and Don'ts
+## 8. Do's and Don'ts
 
 Do:
 
@@ -339,7 +278,7 @@ Don't:
 - Do not add social, gamified, leaderboard, streak, or notification-driven UI.
 - Do not introduce generic Material screens without CogVest-specific hierarchy.
 
-## 10. Accessibility
+## 9. Accessibility
 
 Accessibility is part of the design system, not a final pass.
 
@@ -363,7 +302,7 @@ Financial accessibility:
 - INR values should use `₹`.
 - Masked values should not leak precision or magnitude through layout where avoidable.
 
-## 11. Android-Specific Rules
+## 10. Android-Specific Rules
 
 CogVest is Android-first.
 
@@ -384,74 +323,3 @@ Material 3 usage:
 - Use Material 3 principles for usability, spacing, states, and interaction.
 - Do not blindly copy default Material component appearances.
 - CogVest surfaces should feel quieter and more premium than stock templates.
-
-## 12. Agent Prompt Guide
-
-Use this guide when asking Codex or any design agent to work on CogVest UI.
-
-Default prompt prefix:
-
-```text
-Follow DESIGN.md. CogVest should feel calm, premium, disciplined, local-first,
-Android-native, low-noise, fintech, and long-term investing focused. Use
-Material 3 usability foundations without making the screen look like a generic
-Material template. Green is an accent, not decoration.
-```
-
-For dashboard work:
-
-```text
-Design this as a calm portfolio overview, not a trading dashboard. Prioritize
-portfolio value, allocation, quote freshness, and reflective long-term context.
-Avoid noisy widgets, flashing prices, and exchange-like layouts.
-```
-
-For holdings work:
-
-```text
-Make holdings feel like durable positions. Show current value, invested value,
-P&L, P&L %, allocation, and relevant metadata clearly. Keep density controlled
-and INR values readable and maskable.
-```
-
-For forms:
-
-```text
-Use grouped, Android-friendly form sections with clear labels and review-before-save
-for financial entries. The keyboard must not block critical actions.
-```
-
-For behaviour insights:
-
-```text
-Use non-judgmental, reflective language. The insight should help the user
-understand patterns without creating shame, urgency, or trading pressure.
-```
-
-For Minimal Mode:
-
-```text
-Reduce emotional noise. Lower P&L prominence, soften colour, preserve core
-functionality, and emphasize long-term framing. Minimal Mode is a display
-preference, not a restricted app mode.
-```
-
-For Excel tracker parity:
-
-```text
-Preserve the user's spreadsheet mental model while making it calmer and more
-mobile-native. Do not copy Excel density. Translate holdings, allocation,
-sector/instrument context, cash, and monthly progression into spacious,
-readable mobile screens.
-```
-
-Design review checklist for agents:
-
-- Does the screen follow the CogVest palette?
-- Is green used only as an accent?
-- Are financial values readable, maskable, and INR-first?
-- Does the screen avoid trading-app energy?
-- Is hierarchy clear within five seconds?
-- Are Android keyboard, touch, and navigation constraints handled?
-- Are behavioural messages non-judgmental?
-- Is the UI calmer than the Excel tracker while preserving its core information?
