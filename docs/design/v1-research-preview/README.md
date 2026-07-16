@@ -6,11 +6,11 @@ Tracking issue: #132
 
 Canonical references:
 
+- `docs/cogvest-master-spec.md`
 - `DESIGN.md`
 - `docs/design/v1-ux-research-baseline.md`
 - `docs/design/v1-screen-baseline.md`
-- `docs/superpowers/specs/2026-06-07-issue-122-progress-chart-richness.md`
-- `docs/superpowers/specs/2026-06-11-progress-lower-sections-polish.md`
+- The active GitHub issue for screen-specific acceptance criteria
 
 ## Purpose
 

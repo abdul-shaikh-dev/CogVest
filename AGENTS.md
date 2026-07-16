@@ -52,18 +52,8 @@ Cash, and Settings. Keep trade terminology internal where practical.
 
 ## Workflow
 
-Use `code-territory-guide` for non-trivial work when available. Choose the
-lightest mode that resolves the real uncertainty:
-
-- **Survey**: ambiguous product, design, architecture, or multiple valid options.
-- **Track**: bugs, regressions, flaky behavior, and unclear failures.
-- **Prove**: narrow behavior that can be locked with a failing test first.
-- **Expedition**: scoped implementation with a clear target.
-
-Do not run every mode. Do not create a durable spec or plan merely to satisfy
-process. If the skill is unavailable, follow the same principles directly.
-
-Process by risk:
+Match the process to the risk. Do not create a durable spec, plan, or review
+artifact merely to satisfy ceremony.
 
 - Routine change: reproduce/inspect, focused fix, focused validation, diff review.
 - Normal feature: concise issue acceptance criteria, internal route, tests,
