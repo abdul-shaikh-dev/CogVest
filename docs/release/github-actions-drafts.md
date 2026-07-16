@@ -1,82 +1,22 @@
-# GitHub Actions Drafts
+# GitHub Actions Release Drafts
 
-These workflows are release drafts only. Do not enable cloud EAS builds on pull
-requests or pushes until the release process is approved.
+The preview APK workflow is implemented at
+`.github/workflows/android-preview.yml`. This document contains only release
+automation that has not been enabled yet.
 
-## Android Preview APK
+Do not create or enable cloud EAS workflows unless the release process is
+explicitly approved. Local APK builds remain the normal developer path.
 
-Purpose: manually trigger an optional V1 preview APK build for internal
-distribution. This is not required for the local PC/emulator developer gate.
+## Android Production AAB
 
-Required GitHub secret:
-- `EXPO_TOKEN`
-
-Draft workflow file: `.github/workflows/android-preview.yml`
-
-```yaml
-name: Android Preview APK
-
-on:
-  workflow_dispatch:
-
-concurrency:
-  group: android-preview-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  preview-apk:
-    name: Build Android preview APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test -- --runInBand
-
-      - name: Expo doctor
-        run: npm run doctor
-
-      - name: Build preview APK
-        run: eas build --platform android --profile preview --non-interactive
-```
-
-Notes:
-- This workflow is manual only through `workflow_dispatch`.
-- It does not use an emulator.
-- It depends on the root `eas.json` preview profile, which outputs APK.
-- Record the EAS build URL in `docs/release/v1-release-checklist.md` only if
-  an EAS preview build is explicitly requested for release verification.
-
-## Android Production Build
-
-Purpose: build a production Android App Bundle for the V1 release-candidate
-gate. This is not part of the V1 dev-complete gate.
+Purpose: build a production Android App Bundle for the release-candidate gate.
+This is not part of default PR CI or the V1 development-complete gate.
 
 Required GitHub secret:
+
 - `EXPO_TOKEN`
 
-Draft workflow file: `.github/workflows/android-production.yml`
+Proposed workflow file: `.github/workflows/android-production.yml`
 
 ```yaml
 name: Android Production AAB
@@ -112,24 +52,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test -- --runInBand
-
-      - name: Expo doctor
-        run: npm run doctor
+      - name: Verify
+        run: npm run test:verify
 
       - name: Build production AAB
         run: eas build --platform android --profile production --non-interactive
 ```
 
-Notes:
-- This workflow is manual through `workflow_dispatch` or tag-triggered for
-  `v*.*.*` release tags.
-- It depends on the root `eas.json` production profile, which outputs AAB.
-- V1 does not auto-submit to Google Play.
-- Google Play upload remains manual through Play Console internal testing.
-- Record the EAS build URL in `docs/release/v1-release-checklist.md` during
-  release-candidate verification.
+## Activation Gate
+
+Before creating the workflow:
+
+- confirm `eas.json` production output is AAB
+- confirm Expo-managed signing ownership and recovery
+- confirm version name and monotonically increasing version code
+- confirm the repository secret is named `EXPO_TOKEN`
+- decide whether tag-triggered builds are wanted or manual dispatch is enough
+
+V1 does not auto-submit to Google Play. Upload to Play Console internal testing
+remains manual until a later issue explicitly changes the release process.

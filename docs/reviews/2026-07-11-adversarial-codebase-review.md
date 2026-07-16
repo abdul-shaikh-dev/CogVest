@@ -1,6 +1,9 @@
 # CogVest Adversarial Codebase Review
 
 **Date:** 2026-07-11
+
+**Status:** Point-in-time stabilization evidence. Use active GitHub issues for
+current execution state and rerun cited commands before relying on old results.
 **Scope:** V1 application code, financial calculations, quote services, persistence,
 monthly snapshots, Android release configuration, automated tests, E2E coverage,
 dependencies, and current documentation.
@@ -776,23 +779,18 @@ not force-downgrade Expo merely to produce a zero count.
 
 ## Documentation Drift
 
-The current documentation contains contradictory or obsolete behavior:
+The contradictions found during this review were resolved in the July
+documentation cleanup:
 
-- `docs/cogvest-master-spec.md:56` and
-  `docs/design/v1-screen-baseline.md:226` describe manual investment transfers.
-- `docs/testing/issue-110-ui-parity-qa.md:35` claims the Cash Ledger contains an
-  investment-transfer mode.
-- The current implementation and issue #126 plan intentionally expose only
-  deposit and withdrawal, deriving invested value separately.
-- `AGENTS.md:16-25` says historical charts belong to V3 and are forbidden in V1,
-  while V1 now includes monthly-snapshot charts. The intended distinction between
-  stored monthly trends and advanced per-asset historical market charts is not
-  stated clearly enough.
-- Snapshot specifications refer broadly to missing completed-month snapshots,
-  but implementation only creates the immediately previous month.
+- Cash documentation exposes deposit and withdrawal while requiring explicit
+  linked accounting for investment funding and sale proceeds.
+- V1 stored monthly-snapshot trends are distinguished from deferred advanced
+  per-asset market-price history.
+- Dated issue-closeout reports and historical implementation plans are no
+  longer treated as current contracts.
 
-Documentation should be corrected only after the accounting and snapshot
-contracts are settled.
+The accounting and snapshot findings elsewhere in this report remain open until
+their active issues and current tests prove otherwise.
 
 ## Verification Results
 

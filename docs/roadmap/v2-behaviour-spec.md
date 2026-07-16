@@ -21,7 +21,7 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 
 ## Explicitly Excluded Features
 
-- Historical charts.
+- Advanced per-asset market-price history.
 - Advanced asset search.
 - Advanced FIFO multi-lot LTCG.
 - Import/export.

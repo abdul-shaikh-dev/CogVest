@@ -160,7 +160,7 @@ It should show:
 
 - cash balance
 - added cash
-- invested/transferred cash
+- cash invested through explicit linked accounting
 - available cash
 - savings or investment rate where available
 - recent cash movement

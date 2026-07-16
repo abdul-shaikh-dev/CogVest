@@ -3,11 +3,10 @@
 ## Purpose
 
 This harness seeds a deterministic V1 portfolio on the Android Emulator and
-captures screenshots for screen-to-mock comparison against:
+captures screenshots for screen-to-contract comparison against:
 
+- `DESIGN.md`
 - `docs/design/v1-screen-baseline.md`
-- `docs/design/v1-research-preview/index.html`
-- Figma V1 UI concepts
 
 It is local-only. It does not require a physical phone, EAS cloud builds, or
 default GitHub Actions.
@@ -192,8 +191,8 @@ Expected Progress evidence:
 
 - Value Gap chart renders Portfolio vs Invested.
 - Value Gap has y-axis INR labels, sparse chart-native x-axis month labels
-  similar to the research preview (`Dec`, `Mar`, `May` for the seeded 6M
-  window), and chart-local `3M`, `6M`, `1Y`, `All` chips.
+  (`Dec`, `Mar`, `May` for the seeded 6M window), and chart-local `3M`, `6M`,
+  `1Y`, `All` chips.
 - Asset Momentum chart renders Equity, Debt, and Crypto lines with cash excluded.
 - Asset Momentum has y-axis INR labels, sparse chart-native x-axis month labels,
   chart-local timeframe chips, a legend, and per-asset insight rows.
@@ -239,7 +238,7 @@ The visual QA seed includes:
 
 ## Compare
 
-Open the latest screenshots beside the HTML preview and Figma screen contract.
+Open the latest screenshots beside the HTML preview and V1 screen baseline.
 Check:
 
 - Dashboard hierarchy and density

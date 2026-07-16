@@ -4,17 +4,14 @@
 
 - Master spec: `docs/cogvest-master-spec.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
-- V1 research preview: `docs/design/v1-research-preview/index.html`
-- V1 Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
-- Figma mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
+- V2 behavior contract: `docs/roadmap/v2-behaviour-spec.md`
+- V3 advanced contract: `docs/roadmap/v3-polish-and-advanced-spec.md`
 
 ## Version Strategy
 
 CogVest will ship in three product versions instead of one large build. V1 proves the local-first tracker and Android release path. V2 adds the behaviour-aware differentiation. V3 adds advanced market, tax, backup, and polish features after core usage is validated.
 
 ## V1: Shippable MVP
-
-Target: 2-3 weeks.
 
 Goal: replace a spreadsheet for day-to-day local portfolio tracking on Android.
 
@@ -38,7 +35,7 @@ Included:
 Excluded:
 - Minimal Mode.
 - LTCG UI or tax badges.
-- Historical charts.
+- Advanced per-asset market-price history.
 - Advanced asset search.
 - Patience and trade-frequency analysis.
 - Full behaviour insight engine.
@@ -66,7 +63,7 @@ Included:
 - More complete settings.
 
 Excluded:
-- Historical price charts.
+- Advanced per-asset market-price history.
 - Advanced search.
 - Advanced FIFO lot-level LTCG.
 - Import/export.
@@ -86,27 +83,8 @@ Included:
 - UI polish, animation, and performance hardening.
 - Optional Play Store submission automation.
 
-## Issue Creation Policy
+## Execution Tracking
 
-V1 issues are detailed and execution-ready. V2 and V3 remain flexible through specs, prompt files, milestones, and placeholder issues until V1 is validated.
-
-## GitHub Artifacts
-
-Labels created:
-- `v1`, `v2`, `v3`
-- `frontend`, `domain`, `store`, `infra`, `testing`, `design`, `docs`, `release`
-- `feature`, `bug`, `chore`, `refactor`
-- `priority-high`, `priority-medium`, `priority-low`
-
-Milestones created:
-- CogVest V1 MVP
-- CogVest V2 Behaviour
-- CogVest V3 Advanced
-
-Issues created:
-- V1 detailed issues: #1-#16
-- V2 placeholder issues: #17-#21
-- V3 placeholder issues: #22-#26
-
-Planning PR:
-- https://github.com/abdul-shaikh-dev/CogVest/pull/27
+This roadmap defines version boundaries only. GitHub milestones and active
+issues own sequencing, status, and task acceptance criteria; do not copy issue
+inventories into this document.

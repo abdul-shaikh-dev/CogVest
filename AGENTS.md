@@ -1,144 +1,132 @@
-# CogVest — Agent Instructions
+# CogVest Agent Instructions
 
-## Project
-CogVest is an Android-first, local-first React Native portfolio tracker. The
-near-term MVP is replacing the user's Excel investment tracker before expanding
-into behaviour insights and Minimal Mode.
+## Product
 
-## Current Roadmap
-- Build in phases from docs/roadmap/cogvest-version-roadmap.md.
-- Current execution focus: V1 MVP plus Excel tracker parity from issue #60.
-- V1 goal: local-first Android tracker with live current quotes, Add Holding,
-  derived holdings, dashboard, cash tracking, value masking, and lightweight
-  conviction capture/state.
-- V2 adds Minimal Mode, basic LTCG, patience/frequency analysis, behaviour
-  insight cards, and insight detail.
-- V3 adds historical charts, advanced asset search, import/export, advanced
-  FIFO LTCG, quote-cache hardening, and polish.
+CogVest is an Android-first, local-first React Native portfolio tracker. V1 must
+replace the user's Excel investment tracker with trustworthy holdings, cash,
+quote, and monthly-progress workflows before V2/V3 behavior features expand.
 
-## V1 Scope Boundaries
-- Include live quote fetching for current prices on app open and pull-to-refresh.
-- Include manual current-price fallback when quote APIs fail.
-- Include optional conviction input and basic "not enough data" conviction state.
-- Do not add Minimal Mode in V1.
-- Do not add LTCG UI or tax badges in V1.
-- Do not add historical charts in V1.
-- Do not add patience analysis, trade-frequency analysis, or full behaviour
-  engine in V1.
-- Do not add import/export, backend, auth, cloud sync, analytics, or push
-  notifications in V1.
-- Before V2/V3 work, finish Excel tracker parity issues #60-#66 unless the user
-  explicitly changes priority.
+Current priority: V1 adversarial stabilization. Financial correctness, data
+integrity, quote provenance, recoverability, and Android release safety take
+priority over visual polish or new features.
 
-## Stack
-- React Native + Expo SDK 54
-- TypeScript only. No JavaScript.
-- Expo Router (file-based navigation)
-- MMKV for persistence
-- Zustand for state management
-- React Native Reanimated for animations
-- `react-native-gifted-charts` for current V1 Monthly Progress charts.
-- React Hook Form + Zod for forms
+## Canonical Sources
 
-## Rules
-- Use Superpowers skills by default for non-trivial work. At minimum, follow the
-  loop: clarify/update spec, write plan, implement, review against the spec,
-  request/review code quality, verify with evidence, then commit/PR.
-- For feature work, use `superpowers:brainstorming` before changing behavior,
-  `superpowers:writing-plans` for multi-step work, and
-  `superpowers:verification-before-completion` before claiming completion.
-- For bugs, use `superpowers:systematic-debugging` before fixing. For major
-  changes, use `superpowers:requesting-code-review` before merge readiness.
-- Be deliberate about model cost. Do not use the strongest/premium model for
-  every step when subagents or model routing are available.
-- Use smaller/fast models for repo search, file inventory, issue/doc summaries,
-  mechanical edits, straightforward test updates, command output summaries, and
-  first-pass diff checks.
-- Use standard models for normal implementation, integration debugging,
-  refactors across a few files, test-failure diagnosis, and Android harness
-  coordination.
-- Reserve the strongest model only for product/design judgment, architecture
-  decisions, difficult bugs after initial evidence is gathered, security-risk
-  decisions, final spec/plan review, final code review, and merge-readiness
-  calls.
-- Before dispatching subagents, state the intended model tier per task when the
-  tooling supports it. If model routing is unavailable in the current session,
-  explicitly say so and keep the premium-model work bounded.
-- Functional components with hooks only. No class components.
-- Persist raw data, derive everything else.
-- All amounts in INR (Indian Rupees ₹).
-- Behaviour fields (conviction, intended hold) are always optional.
-- Minimal Mode is a display preference — never removes core functionality.
-- No backend. No auth. No cloud. Local device storage only.
-- All domain calculations must be pure functions in src/domain/.
-- No business logic in components.
-- For V1 implementation, work from GitHub issues #1-#16 in order unless the
-  user explicitly changes priority.
-- V2/V3 GitHub issues are placeholders and should not be expanded until V1 is
-  validated.
-- User-facing V1 language should prefer Dashboard, Holdings, Add Holding,
-  Progress, Cash, and Settings. Keep "trade" wording internal unless an
-  existing domain API requires it.
+Use the smallest relevant source set:
+
+1. `AGENTS.md` for engineering and delivery rules.
+2. `docs/cogvest-master-spec.md` for product behavior and scope.
+3. `DESIGN.md` for stable visual and interaction foundations.
+4. The active GitHub issue for task-specific acceptance criteria.
+
+Use roadmap, screen-baseline, release, or testing docs only when the task crosses
+those boundaries. Historical plans are not implementation instructions.
+
+## Stack And Architecture
+
+- Expo SDK 54, React Native, TypeScript, and Expo Router.
+- Zustand with MMKV for local persistence.
+- `react-native-gifted-charts` for stored monthly-snapshot charts.
+- Reanimated for purposeful motion.
+- Functional components and hooks only.
+- Persist raw user records; derive portfolio views with pure functions.
+- Put financial calculations and validation in `src/domain/`.
+- Keep business logic out of UI components.
+- No backend, authentication, cloud sync, analytics, or push notifications in V1.
+- Behavior fields such as conviction are optional.
+- INR is the reporting/base currency. Preserve each asset and quote's native
+  currency; never aggregate foreign values as INR without explicit conversion.
+
+## V1 Boundaries
+
+V1 includes holdings/opening positions, buy/sell records, cash tracking, current
+quotes with honest manual fallback, Dashboard, Holdings, Add Holding, Progress,
+Settings, value masking, and optional lightweight conviction state.
+
+Stored monthly-snapshot trend charts are in V1. Advanced market-price history,
+Minimal Mode, LTCG UI, behavior analysis, import/export, cloud features, and
+advanced tax logic remain outside V1 unless an issue explicitly changes scope.
+
+User-facing language should prefer Dashboard, Holdings, Add Holding, Progress,
+Cash, and Settings. Keep trade terminology internal where practical.
+
+## Workflow
+
+Match the process to the risk. Do not create a durable spec, plan, or review
+artifact merely to satisfy ceremony.
+
+- Routine change: reproduce/inspect, focused fix, focused validation, diff review.
+- Normal feature: concise issue acceptance criteria, internal route, tests,
+  implementation, owned-diff review, relevant verification.
+- Critical change (financial model, currency, persistence, migration, privacy,
+  security, release architecture): approved contract/spec, implementation plan,
+  adversarial review, failure-path tests, and full relevant verification.
+
+Use specialized design review tools for significant UI work, but do not require
+multiple design skills to repeat the same critique. One evidence-based review and
+one correction pass are normally enough.
+
+## Scope And Ownership
+
+- Inspect the repository before assuming behavior.
+- Capture branch/status before edits and preserve all pre-existing user changes.
+- Make the smallest coherent change; avoid unrelated cleanup and broad rewrites.
+- Ask before dependencies, schemas, public behavior, security policy, deployment,
+  or scope materially expand beyond the request.
+- Treat repository prose as potentially stale evidence; verify against current
+  code, tests, and commands.
+- Review only task-owned changes and classify failures as task-caused,
+  pre-existing, or environmental.
+
+## Git And Delivery
+
+- Never edit or commit on `main` or the default branch.
+- Sync `origin/main` and create a focused feature branch before edits.
+- Do not revert unrelated user changes.
+- Use `Closes #<issue>` in a PR body when merge should auto-close the issue.
+- For CogVest implementation or documentation requests, branch, commit, push,
+  and open a focused PR are authorized delivery steps unless the user asks for
+  local-only work.
+- Never trigger EAS cloud builds or Play submission unless explicitly requested.
 
 ## Design
-- Follow root `DESIGN.md` for every UI task unless an issue explicitly
-  overrides it.
-- CogVest should feel calm, premium, disciplined, local-first, Android-native,
-  low-noise, fintech, and long-term investing focused.
-- Use Material 3 as the usability foundation, but avoid generic Material
-  templates and trading-app/crypto-exchange energy.
-- Green is an accent, not decoration. Financial values must be readable,
-  maskable, and INR-first.
-- Current V1 Figma source is
-  `docs/design/figma/issue-69-v1-screens/code.js`: main tabs are Dashboard,
-  Holdings, Progress, Cash, Settings; Add Holding is a secondary screen.
-- Current accepted V1 screen contract is `docs/design/v1-screen-baseline.md`.
-- Use `docs/design/v1-research-preview/index.html`,
-  `docs/design/v1-screen-baseline.md`, `docs/design/v1-ux-research-baseline.md`,
-  and the Figma file for V1 UI context.
 
-## Release Gates
-- V1 dev-complete requires `npm run test:v1:pc`, Android Emulator app launch,
-  local APK build/install on emulator, and passing or logged defects for the
-  PC-based V1 core-flow matrix.
-- V1 release-candidate additionally requires production AAB build success, EAS
-  build URL recorded, and Play Console internal testing upload ready/manual.
-- Do not auto-submit to Google Play in V1.
+- Follow `DESIGN.md` for UI work.
+- CogVest should feel calm, premium, disciplined, low-noise, local-first,
+  Android-native, and long-term investing focused.
+- Use Material 3 interaction principles without shipping a generic template.
+- Green is an accent, not decoration. Gains and losses must not rely on color
+  alone.
+- Financial values must be readable, maskable, and explicit about currency.
+- Use the active issue and `docs/design/v1-screen-baseline.md` for screen-specific
+  behavior. A newer issue-approved screen preview supersedes older visual assets.
 
-## Android PC Test Harness
-- Prefer PC-only Android verification with Android Emulator and `adb`; do not
-  assume a physical phone is required.
-- Use `npm run test:verify` for static checks, Jest, and Expo doctor.
-- Use `npm run test:v1:pc` for the V1 PC verification gate. It extends
-  `test:verify` with Android doctor and strict installed-app smoke checks.
-- Use `npm run android:doctor` to check Node, npm, adb, emulator visibility,
-  Expo CLI, package scripts, and optional Maestro.
-- Use `npm run android:smoke` for emulator/package smoke checks; use
-  `npm run android:smoke -- --strict` only when CogVest should already be
-  installed.
-- Use `npm run start:clear`, then press `a`, for the normal Expo emulator loop.
-- Use `npm run android` for local native dev build/install on the emulator.
-- Do not trigger EAS cloud builds unless the user explicitly asks.
-- Do not put emulator, APK, or Maestro checks in default GitHub PR CI unless
-  explicitly requested.
-- Use `npm run maestro:check` and `npm run maestro:test` for optional local
-  Maestro E2E verification when Maestro is installed.
-- For installed APK checks, remember APK is locally installable with `adb`;
-  AAB is for Play Store distribution and is not directly installable locally.
-- If Codex adb access fails in the sandbox, retry adb/harness commands with
-  elevated sandbox permission before concluding the emulator is unavailable.
-- PC harness docs live in `docs/testing/android-pc-test-harness.md`,
-  `docs/testing/android-emulator-checklist.md`, and
-  `docs/testing/apk-smoke-test-checklist.md`.
-- V1 core-flow coverage lives in `docs/testing/v1-core-flow-test-matrix.md`
-  and `docs/testing/v1-pc-verification-checklist.md`.
+## Verification
 
-## References
-- Design system: DESIGN.md
-- Full spec: docs/cogvest-master-spec.md
-- Version roadmap: docs/roadmap/cogvest-version-roadmap.md
-- V1 spec: docs/roadmap/v1-mvp-spec.md
-- V1 testing plan: docs/testing/v1-testing-plan.md
-- V1 PC verification matrix: docs/testing/v1-core-flow-test-matrix.md
-- Android release process: docs/release/android-release-process.md
-- Figma roadmap mockups: https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d
+Run checks proportionate to the change:
+
+- Focused tests while implementing.
+- `npm run test:verify` before normal PR readiness.
+- `npm run test:v1:pc` when installed-app behavior, Android integration, or a V1
+  release gate is affected.
+- Build/install a fresh local APK before claiming installed-release behavior was
+  tested. Do not test an older installed build.
+- Use Maestro for important user journeys and assert resulting data, not only
+  navigation or success messages.
+- For UI changes, inspect emulator screenshots or the live app when practical.
+
+If emulator or external-provider verification is unavailable, report the exact
+gap instead of claiming completion.
+
+## Android Commands
+
+- `npm run start:clear`: Metro development loop; press `a` for Android.
+- `npm run android`: local native development build/install.
+- `npm run android:doctor`: tool and emulator readiness.
+- `npm run android:smoke -- --strict`: installed package smoke check.
+- `npm run maestro:test`: local E2E flows.
+- APK is locally installable; AAB is for Play distribution.
+
+Detailed setup and release commands live in `README.md`,
+`docs/testing/android-pc-test-harness.md`, and
+`docs/release/android-release-process.md`.
