@@ -7,7 +7,6 @@ captures screenshots for screen-to-mock comparison against:
 
 - `docs/design/v1-screen-baseline.md`
 - `docs/design/v1-research-preview/index.html`
-- Figma V1 UI concepts
 
 It is local-only. It does not require a physical phone, EAS cloud builds, or
 default GitHub Actions.
@@ -239,7 +238,7 @@ The visual QA seed includes:
 
 ## Compare
 
-Open the latest screenshots beside the HTML preview and Figma screen contract.
+Open the latest screenshots beside the HTML preview and V1 screen baseline.
 Check:
 
 - Dashboard hierarchy and density

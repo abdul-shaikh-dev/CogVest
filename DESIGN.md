@@ -15,8 +15,8 @@ otherwise.
 ## Screen Contracts
 
 Use `docs/design/v1-screen-baseline.md` and the active issue for screen-specific
-behavior. A newer issue-approved preview supersedes older preview or Figma
-assets for that screen. Update only the canonical screen contract and assets
+behavior. A newer issue-approved preview supersedes older visual assets for
+that screen. Update only the canonical screen contract and assets
 that materially remain useful; do not synchronize every historical mockup.
 
 ## 1. Visual Theme & Atmosphere

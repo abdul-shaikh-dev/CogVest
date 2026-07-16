@@ -5,17 +5,13 @@ Use it with `DESIGN.md` and the current design assets:
 
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`
 - Research preview: `docs/design/v1-research-preview/index.html`
-- Dashboard issue #127 preview:
-  `docs/design/screens/dashboard/issue-127/index.html`
-- Figma generator: `docs/design/figma/issue-69-v1-screens/code.js`
-- Figma file: `https://www.figma.com/design/elYeXztRAlYZBSRvlgL23d`
+- Dashboard preview: `docs/design/screens/dashboard/index.html`
 
 The external mockup used during review is not a future dependency. The repo
 assets above carry the accepted baseline forward.
 
-When a single screen has a newer tracked preview under `docs/design/screens/`,
-that screen-specific preview supersedes the matching section inside the older
-all-screen research preview.
+When a screen has a maintained preview under `docs/design/screens/`, that
+preview supersedes the matching section inside the all-screen research preview.
 
 ## Product Direction
 
@@ -30,7 +26,7 @@ CogVest V1 should feel like a premium private investment ledger:
 - statement-summary screens that answer first, show evidence second, and place
   actions last
 
-Do not add Minimal Mode, LTCG UI, historical-chart scope, import/export,
+Do not add Minimal Mode, LTCG UI, advanced market-price history, import/export,
 multi-portfolio behavior, auth, cloud sync, analytics, or trading-app visuals in
 V1 design or implementation unless a later issue explicitly changes scope.
 
@@ -70,10 +66,10 @@ Baseline structure:
 The dashboard must not become a trading terminal. Avoid ticker feeds, noisy
 daily movers, dense mini-widgets, and fake market history.
 
-Issue #127 refinement:
+Dashboard refinement:
 
 - The current accepted Dashboard design is
-  `docs/design/screens/dashboard/issue-127/index.html`.
+  `docs/design/screens/dashboard/index.html`.
 - Portfolio rollups belong near the top-level answer, not buried below every
   secondary card.
 - Allocation must be visual and compact rather than row-heavy.
@@ -266,5 +262,5 @@ first trust.
 
 Any UI PR that changes Dashboard, Holdings, Add Holding, Progress, Cash, or
 Settings must compare against this baseline before merge. If the accepted
-design changes, update this document, the HTML preview, and the Figma generator
-in the same issue or explicitly log the drift.
+design changes, update this document and any maintained HTML preview affected
+by that change.

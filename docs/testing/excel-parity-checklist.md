@@ -52,16 +52,16 @@ Do not add:
 
 ## Workbook-To-App Map
 
-| Excel tracker capability | CogVest V1 feature | Issue slice | Automated coverage | PC verification |
-| --- | --- | --- | --- | --- |
-| Opening positions / holdings inventory | Add Holding opening-position records | #61 | `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | Add an opening position on emulator; Holdings shows quantity, invested value, current value, and P&L. |
-| Asset metadata | Asset class, instrument type, sector type, quote source metadata | #62 | `src/domain/assets/__tests__/metadata.test.ts`, store migration tests | Add or inspect equity, debt, crypto, and cash-like records; metadata appears without spreadsheet columns. |
-| Debt / liquid / cash-like instruments | Debt and manual-price asset support | #63 | `src/services/quotes/__tests__/quotes.test.ts`, holdings calculation tests | Add a manual debt/liquid holding; app keeps manual price fallback and allocation. |
-| Consolidated `All` view | Dashboard/Holdings rollups and allocation details | #64 | dashboard, holdings, and calculation tests | Dashboard and Holdings answer invested/current/P&L/allocation without a grid. |
-| Monthly progress tracking | Monthly Progress snapshots | #65 | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/features/progress/__tests__/useProgress.test.tsx`, store persistence tests | Missing previous-month snapshot is generated automatically; review/edit remains available; Progress shows gain, gain %, investment, savings rate where derivable, and asset split. |
-| Daily cash tracking | Cash Ledger | V1 cash flow | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | Add deposit/withdrawal; Dashboard and Cash reflect balance. |
-| Current quote or manual price | Live quote refresh plus manual fallback | V1 quote flow | quote service tests, holdings screen tests | Refresh quotes when network is available; failed quotes keep manual prices visible. |
-| Privacy while checking values | Value masking | V1 settings flow | Settings and masked-value tests | Toggle value masking; INR values hide while quantities and percentages remain readable. |
+| Excel tracker capability | CogVest V1 feature | Automated coverage | PC verification |
+| --- | --- | --- | --- |
+| Opening positions / holdings inventory | Add Holding opening-position records | `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | Add an opening position on emulator; Holdings shows quantity, invested value, current value, and P&L. |
+| Asset metadata | Asset class, instrument type, sector type, quote source metadata | `src/domain/assets/__tests__/metadata.test.ts`, store migration tests | Add or inspect equity, debt, crypto, and cash-like records; metadata appears without spreadsheet columns. |
+| Debt / liquid / cash-like instruments | Debt and manual-price asset support | `src/services/quotes/__tests__/quotes.test.ts`, holdings calculation tests | Add a manual debt/liquid holding; app keeps manual price fallback and allocation. |
+| Consolidated `All` view | Dashboard/Holdings rollups and allocation details | Dashboard, Holdings, and calculation tests | Dashboard and Holdings answer invested/current/P&L/allocation without a grid. |
+| Monthly progress tracking | Monthly Progress snapshots | `src/features/progress/__tests__/ProgressScreen.test.tsx`, `src/features/progress/__tests__/useProgress.test.tsx`, store persistence tests | Missing previous-month snapshot is generated automatically; review/edit remains available; Progress shows gain, gain %, investment, savings rate where derivable, and asset split. |
+| Daily cash tracking | Cash Ledger | `src/features/cash/__tests__/CashScreen.test.tsx`, `src/features/cash/__tests__/useCash.test.tsx` | Add deposit/withdrawal; Dashboard and Cash reflect balance. |
+| Current quote or manual price | Live quote refresh plus manual fallback | Quote service and Holdings tests | Refresh quotes when network is available; failed quotes keep manual prices visible. |
+| Privacy while checking values | Value masking | Settings and masked-value tests | Toggle value masking; INR values hide while quantities and percentages remain readable. |
 
 ## Excel Parity Gate Questions
 

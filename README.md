@@ -203,7 +203,8 @@ Domain rules:
 - Derive portfolio state from raw data.
 - Keep business logic out of components.
 - Put pure calculations in `src/domain/`.
-- Use INR for all amounts.
+- Use INR as the reporting currency while preserving each asset and quote's
+  native currency until explicit conversion.
 - Behaviour fields are optional.
 
 ## Documentation Index
@@ -211,12 +212,13 @@ Domain rules:
 - Agent instructions: `AGENTS.md`
 - Full product spec: `docs/cogvest-master-spec.md`
 - Version roadmap: `docs/roadmap/cogvest-version-roadmap.md`
-- V1 MVP spec: `docs/roadmap/v1-mvp-spec.md`
-- V1 testing plan: `docs/testing/v1-testing-plan.md`
 - V1 PC verification matrix: `docs/testing/v1-core-flow-test-matrix.md`
+- Excel parity gate: `docs/testing/excel-parity-checklist.md`
 - Android PC harness: `docs/testing/android-pc-test-harness.md`
 - Maestro E2E: `docs/testing/maestro-e2e.md`
+- Seeded visual QA: `docs/testing/seeded-visual-qa.md`
 - Android release process: `docs/release/android-release-process.md`
 - V1 release checklist: `docs/release/v1-release-checklist.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
 - V1 research preview: `docs/design/v1-research-preview/index.html`
+- Adversarial stabilization review: `docs/reviews/2026-07-11-adversarial-codebase-review.md`

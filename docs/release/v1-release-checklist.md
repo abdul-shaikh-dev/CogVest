@@ -41,20 +41,3 @@ Record production EAS build URL during release-candidate verification.
 Record emulator model, Android version, APK source, and any issues found during
 PC-based APK testing. Include whether `docs/testing/excel-parity-checklist.md`
 passed.
-
-## Verification Runs
-
-### 2026-05-01 - Local Gate Check
-
-- `npm run typecheck`: passed.
-- `npm test -- --runInBand`: passed, 24 suites and 77 tests.
-- `npm run doctor`: passed, 17/17 Expo doctor checks.
-- `npm audit --audit-level=high`: passed; remaining findings are moderate Expo transitive dependencies where the force fix would downgrade Expo.
-- `npx expo start --offline --port 8086`: passed; Metro started and waited on `http://localhost:8086`.
-- `npx eas-cli build --platform android --profile preview --non-interactive`: blocked before build start because no Expo account login or `EXPO_TOKEN` is available.
-- `adb devices`: blocked because `adb` is not installed or not on `PATH` in this environment.
-
-Current device policy:
-
-- V1 dev-complete verification uses the PC/emulator matrix in `docs/testing/`.
-- EAS preview builds remain optional unless explicitly requested.

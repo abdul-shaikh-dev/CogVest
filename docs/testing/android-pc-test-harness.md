@@ -170,7 +170,7 @@ Do not trigger EAS cloud builds from this harness unless explicitly approved.
 
 ## Optional Maestro E2E
 
-The `e2e/` folder contains optional Maestro flow drafts. If Maestro is not
+The `e2e/` folder contains optional Maestro flows. If Maestro is not
 installed, the harness should not fail.
 
 Check Maestro:

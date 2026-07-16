@@ -67,7 +67,8 @@ The user can inspect historical performance, discover assets more easily, export
 - Export data, reinstall, import data.
 - Check chart fallback offline.
 - Validate multi-lot LTCG examples.
-- Review Android performance on a real device.
+- Review Android performance on the emulator; use optional physical-device beta
+  evidence only when preparing a store release.
 
 ## Definition of Done
 

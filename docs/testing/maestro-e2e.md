@@ -63,8 +63,10 @@ npm run maestro:test -- e2e/smoke-launch.yaml
 ## Flow Set
 
 - `e2e/smoke-launch.yaml`: cold-launch and Dashboard smoke.
-- `e2e/add-trade.yaml`: add a holding/opening entry with stable form IDs.
-- `e2e/holdings.yaml`: create a trade and verify Holdings.
+- `e2e/navigation.yaml`: verify primary tab navigation.
+- `e2e/add-trade.yaml`: add a holding through the manual-entry path.
+- `e2e/add-holding-lookup.yaml`: search, select, and save a provider result.
+- `e2e/holdings.yaml`: create a position and verify Holdings.
 - `e2e/cash.yaml`: add cash and verify Cash.
 - `e2e/value-masking.yaml`: open Settings by deep link and toggle masking.
 - `e2e/persistence.yaml`: create local data, close/reopen, and verify it remains.
@@ -91,5 +93,5 @@ checks and Android smoke checks should still work.
   `adb devices`.
 - `app package not installed`: install a local APK with
   `adb install -r path/to/app.apk`.
-- Flow cannot find a control: verify the app build includes the stable testIDs
-  from issue #50 and rerun from a clean app state.
+- Flow cannot find a control: verify the installed build is current, confirm
+  the stable testID still exists in source, and rerun from a clean app state.
