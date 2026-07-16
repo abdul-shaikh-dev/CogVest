@@ -220,5 +220,4 @@ Domain rules:
 - Android release process: `docs/release/android-release-process.md`
 - V1 release checklist: `docs/release/v1-release-checklist.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
-- V1 research preview: `docs/design/v1-research-preview/index.html`
 - Adversarial stabilization review: `docs/reviews/2026-07-11-adversarial-codebase-review.md`

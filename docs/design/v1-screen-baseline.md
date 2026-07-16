@@ -1,17 +1,14 @@
 # V1 Screen Baseline
 
 This is the accepted V1 screen contract for CogVest UI implementation work.
-Use it with `DESIGN.md` and the current design assets:
+Use it with `DESIGN.md` and these supporting sources:
 
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`
-- Research preview: `docs/design/v1-research-preview/index.html`
-- Dashboard preview: `docs/design/screens/dashboard/index.html`
+- Current emulator evidence: `docs/testing/artifacts/visual-qa/latest/`
 
-The external mockup used during review is not a future dependency. The repo
-assets above carry the accepted baseline forward.
-
-When a screen has a maintained preview under `docs/design/screens/`, that
-preview supersedes the matching section inside the all-screen research preview.
+The external mockup used during review is not a future dependency. This file
+and `DESIGN.md` define the contract; emulator screenshots are verification
+evidence, not design instructions.
 
 ## Product Direction
 
@@ -68,8 +65,6 @@ daily movers, dense mini-widgets, and fake market history.
 
 Dashboard refinement:
 
-- The current accepted Dashboard design is
-  `docs/design/screens/dashboard/index.html`.
 - Portfolio rollups belong near the top-level answer, not buried below every
   secondary card.
 - Allocation must be visual and compact rather than row-heavy.
@@ -183,8 +178,8 @@ Accepted chart direction:
 - each chart card owns its own timeframe controls
 - use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
   Native for these charts
-- x-axis labels should be sparse and chart-native, matching the research preview
-  rhythm: first month, middle month, and latest month for longer ranges
+- x-axis labels should be sparse and chart-native: show the first month, a
+  useful midpoint, and the latest month for longer ranges
 - `Monthly Change Breakdown` compares the selected month with the previous month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface

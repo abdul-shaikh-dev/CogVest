@@ -4,7 +4,6 @@
 
 - Master spec: `docs/cogvest-master-spec.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
-- V1 research preview: `docs/design/v1-research-preview/index.html`
 - V2 behavior contract: `docs/roadmap/v2-behaviour-spec.md`
 - V3 advanced contract: `docs/roadmap/v3-polish-and-advanced-spec.md`
 
