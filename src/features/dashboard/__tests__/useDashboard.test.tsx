@@ -58,6 +58,7 @@ describe("useDashboard", () => {
       date: "2026-04-22",
       id: "cash-1",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().upsertQuote({
@@ -193,6 +194,7 @@ describe("useDashboard", () => {
       date: "2026-04-22",
       id: "cash-1",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
 
@@ -234,6 +236,7 @@ describe("useDashboard", () => {
       date: "2026-05-01",
       id: "cash-addition",
       label: "Salary",
+      purpose: "income",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -241,6 +244,7 @@ describe("useDashboard", () => {
       date: "2026-05-10",
       id: "cash-withdrawal",
       label: "Transfer",
+      purpose: "withdrawal",
       type: "withdrawal",
     });
     store.getState().addOpeningPosition({

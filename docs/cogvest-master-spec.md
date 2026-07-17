@@ -91,6 +91,24 @@ Derive:
 
 All domain calculations must be pure functions under `src/domain/`.
 
+### V1 Cash Accounting Contract
+
+- Opening positions represent an external baseline and do not create cash
+  movements.
+- A new buy must be funded from deployable tracked cash. Saving the buy and its
+  linked cash withdrawal is one atomic store transition, and a buy above the
+  available balance is rejected before mutation.
+- A sale must add its net proceeds to deployable cash in the same atomic store
+  transition. Money leaving the tracked portfolio is recorded separately as a
+  withdrawal.
+- Cash additions are typed as income, capital contribution, or legacy
+  uncategorized data. Purchase funding, sale proceeds, and withdrawals are
+  distinct linked movement purposes.
+- Monthly investment rate uses typed income only. Capital contributions, sale
+  proceeds, and migrated legacy additions must not be treated as income.
+- Persisted pre-contract additions migrate to legacy uncategorized entries so
+  historical cash remains visible without inventing income semantics.
+
 ## Screen Contract
 
 Primary tabs:

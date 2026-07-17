@@ -8,7 +8,11 @@ import {
 } from "@/src/domain/calculations";
 import { formatCompactINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { CashEntry, CashEntryType } from "@/src/types";
+import type {
+  CashEntry,
+  CashEntryPurpose,
+  CashEntryType,
+} from "@/src/types";
 import { createId } from "@/src/utils";
 
 type UseCashInput = {
@@ -21,6 +25,7 @@ type AddCashEntryInput = {
   date: string;
   label: string;
   notes?: string;
+  purpose: CashEntryPurpose;
   type: CashEntryType;
 };
 

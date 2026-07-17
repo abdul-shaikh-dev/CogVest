@@ -121,6 +121,7 @@ export const visualQaCashEntries: CashEntry[] = [
     date: "2026-05-03T00:00:00.000Z",
     id: "visual-qa-cash-salary",
     label: "Salary added",
+    purpose: "income",
     type: "addition",
   },
   {
@@ -128,6 +129,7 @@ export const visualQaCashEntries: CashEntry[] = [
     date: "2026-05-08T00:00:00.000Z",
     id: "visual-qa-cash-sip-index",
     label: "SIP transfer - Index Fund",
+    purpose: "purchaseFunding",
     type: "withdrawal",
   },
   {
@@ -135,6 +137,7 @@ export const visualQaCashEntries: CashEntry[] = [
     date: "2026-05-16T00:00:00.000Z",
     id: "visual-qa-cash-emergency",
     label: "Emergency fund top-up",
+    purpose: "capitalContribution",
     type: "addition",
   },
   {
@@ -142,6 +145,7 @@ export const visualQaCashEntries: CashEntry[] = [
     date: "2026-05-22T00:00:00.000Z",
     id: "visual-qa-cash-sip-large-cap",
     label: "SIP transfer - Large Cap",
+    purpose: "purchaseFunding",
     type: "withdrawal",
   },
 ];

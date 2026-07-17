@@ -19,7 +19,7 @@ import { FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type { CashEntryType } from "@/src/types";
+import type { CashEntryPurpose, CashEntryType } from "@/src/types";
 
 import { useCash } from "./useCash";
 
@@ -30,6 +30,15 @@ type CashScreenProps = {
 
 type FieldErrors = Partial<Record<"amount" | "date" | "label", string>>;
 type CashEntryMode = CashEntryType;
+type AdditionPurpose = Extract<
+  CashEntryPurpose,
+  "capitalContribution" | "income"
+>;
+
+const additionPurposes: { label: string; value: AdditionPurpose }[] = [
+  { label: "Contribution", value: "capitalContribution" },
+  { label: "Income", value: "income" },
+];
 
 function validateCashEntry({
   amount,
@@ -90,8 +99,10 @@ function getCashEntryModeCopy(mode: CashEntryMode) {
       };
 }
 
-function formatSavingsRate(savingsRate: number | null) {
-  return savingsRate === null ? "Not enough data" : `${savingsRate.toFixed(2)}%`;
+function formatInvestmentRate(investmentRate: number | null) {
+  return investmentRate === null
+    ? "Not enough data"
+    : `${investmentRate.toFixed(2)}%`;
 }
 
 export function CashScreen({
@@ -108,6 +119,8 @@ export function CashScreen({
     monthlyMovementSummary,
   } = useCash({ now, store });
   const [mode, setMode] = useState<CashEntryMode>("addition");
+  const [additionPurpose, setAdditionPurpose] =
+    useState<AdditionPurpose>("capitalContribution");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [date, setDate] = useState("");
@@ -140,6 +153,7 @@ export function CashScreen({
       date: date.trim(),
       label: label.trim(),
       notes,
+      purpose: mode === "addition" ? additionPurpose : "withdrawal",
       type: mode,
     });
     resetForm();
@@ -171,15 +185,13 @@ export function CashScreen({
               value: formatCompactINR(monthlyMetrics.invested),
             },
             {
-              label: "Kept",
+              label: "Income",
               masked: maskWealthValues,
-              value: formatCompactINR(
-                Math.max(0, monthlyMetrics.added - monthlyMetrics.invested),
-              ),
+              value: formatCompactINR(monthlyMetrics.income),
             },
             {
-              label: "Savings",
-              value: formatSavingsRate(monthlyMetrics.savingsRate),
+              label: "Invested / income",
+              value: formatInvestmentRate(monthlyMetrics.investmentRate),
             },
           ]}
         />
@@ -249,6 +261,47 @@ export function CashScreen({
               </AppText>
             </View>
           </View>
+          {mode === "addition" ? (
+            <View style={styles.purposeGroup}>
+              <AppText color="secondary" variant="caption" weight="bold">
+                Deposit purpose
+              </AppText>
+              <View style={styles.segmentedControl}>
+                {additionPurposes.map((purpose) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected: additionPurpose === purpose.value,
+                    }}
+                    key={purpose.value}
+                    onPress={() => setAdditionPurpose(purpose.value)}
+                    style={({ pressed }) => [
+                      styles.segment,
+                      additionPurpose === purpose.value && styles.segmentActive,
+                      pressed && styles.pressed,
+                    ]}
+                    testID={`cash-purpose-${purpose.value}`}
+                  >
+                    <AppText
+                      color={
+                        additionPurpose === purpose.value
+                          ? "primary"
+                          : "secondary"
+                      }
+                      style={
+                        additionPurpose === purpose.value
+                          ? styles.segmentActiveText
+                          : undefined
+                      }
+                      weight="bold"
+                    >
+                      {purpose.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.formRow}>
             <View style={styles.formRowField}>
               <FormTextField
@@ -369,6 +422,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: interaction.pressedOpacity,
+  },
+  purposeGroup: {
+    gap: spacing.xs,
   },
   segment: {
     alignItems: "center",

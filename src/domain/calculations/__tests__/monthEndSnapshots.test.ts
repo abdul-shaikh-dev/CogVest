@@ -88,6 +88,7 @@ function cashEntry(overrides: Partial<CashEntry>): CashEntry {
     date: "2026-07-05T00:00:00.000Z",
     id: `cash-${Math.random()}`,
     label: "Deposit",
+    purpose: "capitalContribution",
     type: "addition",
     ...overrides,
   };

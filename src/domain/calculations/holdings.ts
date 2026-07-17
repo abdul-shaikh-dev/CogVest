@@ -76,8 +76,10 @@ export type MonthlyProgressSummary = {
 export type CashMonthlyMetrics = {
   added: number;
   available: number;
+  contributions: number;
+  income: number;
+  investmentRate: number | null;
   invested: number;
-  savingsRate: number | null;
 };
 
 export type PortfolioDayChange = {
@@ -230,34 +232,46 @@ function isSameMonth(isoDate: string, now: Date) {
 export function calculateCashMonthlyMetrics({
   cashEntries,
   now = new Date(),
-  openingPositions,
-  trades,
 }: {
   cashEntries: CashEntry[];
   now?: Date;
   openingPositions: OpeningPosition[];
   trades: Trade[];
 }): CashMonthlyMetrics {
-  const added = cashEntries
-    .filter((entry) => entry.type === "addition" && isSameMonth(entry.date, now))
+  const monthlyEntries = cashEntries.filter((entry) =>
+    isSameMonth(entry.date, now),
+  );
+  const income = monthlyEntries
+    .filter(
+      (entry) => entry.type === "addition" && entry.purpose === "income",
+    )
     .reduce((total, entry) => total + entry.amount, 0);
-  const tradeInvested = trades
-    .filter((trade) => trade.type === "buy" && isSameMonth(trade.date, now))
-    .reduce((total, trade) => total + trade.totalValue, 0);
-  const openingInvested = openingPositions
-    .filter((position) => isSameMonth(position.date, now))
-    .reduce(
-      (total, position) =>
-        total + position.quantity * position.averageCostPrice,
-      0,
-    );
-  const invested = tradeInvested + openingInvested;
+  const contributions = monthlyEntries
+    .filter(
+      (entry) =>
+        entry.type === "addition" && entry.purpose === "capitalContribution",
+    )
+    .reduce((total, entry) => total + entry.amount, 0);
+  const legacyAdded = monthlyEntries
+    .filter(
+      (entry) =>
+        entry.type === "addition" && entry.purpose === "legacyUncategorized",
+    )
+    .reduce((total, entry) => total + entry.amount, 0);
+  const invested = monthlyEntries
+    .filter(
+      (entry) =>
+        entry.type === "withdrawal" && entry.purpose === "purchaseFunding",
+    )
+    .reduce((total, entry) => total + entry.amount, 0);
 
   return {
-    added,
+    added: income + contributions + legacyAdded,
     available: calculateCashBalance(cashEntries),
+    contributions,
+    income,
+    investmentRate: income > 0 ? round((invested / income) * 100) : null,
     invested,
-    savingsRate: added > 0 ? round((invested / added) * 100) : null,
   };
 }
 

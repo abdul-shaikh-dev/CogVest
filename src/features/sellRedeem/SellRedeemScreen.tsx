@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -13,7 +13,6 @@ import {
   ScreenHeader,
   SectionHeader,
   assetClassLabel,
-  getPressedStateStyle,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
@@ -194,64 +193,23 @@ export function SellRedeemScreen({
         </PremiumCard>
 
         <PremiumCard>
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: flow.linkCashEntry }}
-            onPress={() => flow.setLinkCashEntry(!flow.linkCashEntry)}
-            style={({ pressed }) => [
-              styles.cashToggle,
-              getPressedStateStyle({ pressed }),
-            ]}
-            testID="sell-redeem-link-cash-toggle"
-          >
-            <View
-              style={[
-                styles.checkbox,
-                flow.linkCashEntry && styles.checkboxActive,
-              ]}
-            >
-              {flow.linkCashEntry ? <View style={styles.checkboxDot} /> : null}
-            </View>
-            <View style={styles.assetCopy}>
-              <AppText weight="bold">Add proceeds to Cash Ledger</AppText>
-              <AppText color="secondary" variant="caption">
-                Keeps deployable cash aligned with this asset exit.
-              </AppText>
-            </View>
-          </Pressable>
-
-          {flow.linkCashEntry ? (
-            flow.preview ? (
-              <View style={styles.formRow}>
-                <View style={styles.formField}>
-                  <FormTextField
-                    error={flow.errors.cashAmount}
-                    keyboardType="decimal-pad"
-                    label="Cash amount"
-                    onChangeText={flow.setCashAmount}
-                    placeholder="8400"
-                    testID="sell-redeem-cash-amount-input"
-                    value={flow.cashAmount}
-                  />
-                </View>
-                <View style={styles.formField}>
-                  <FormTextField
-                    error={flow.errors.cashLabel}
-                    label="Cash label"
-                    onChangeText={flow.setCashLabel}
-                    placeholder="Redemption proceeds"
-                    testID="sell-redeem-cash-label-input"
-                    value={flow.cashLabel}
-                  />
-                </View>
-              </View>
-            ) : (
-              <AppText color="secondary" variant="caption">
-                Cash entry appears after the exit proceeds are valid.
-              </AppText>
-            )
+          <SectionHeader title="Cash proceeds" />
+          <AppText color="secondary" variant="caption">
+            Net proceeds are added to deployable cash automatically. Record a
+            withdrawal separately if the money leaves the portfolio.
+          </AppText>
+          {flow.preview ? (
+            <AppText testID="sell-redeem-cash-link-summary" weight="bold">
+              {formatINR(flow.preview.netProceeds)} will be added to Cash Ledger
+            </AppText>
           ) : null}
         </PremiumCard>
+
+        {flow.errors.save ? (
+          <AppText style={styles.errorText} variant="caption">
+            {flow.errors.save}
+          </AppText>
+        ) : null}
 
         {flow.successMessage ? (
           <AppText style={styles.successText} weight="bold">
@@ -307,32 +265,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48,
   },
-  cashToggle: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  checkbox: {
-    alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    height: 28,
-    justifyContent: "center",
-    width: 28,
-  },
-  checkboxActive: {
-    backgroundColor: colors.primary,
-  },
-  checkboxDot: {
-    backgroundColor: colors.text.inverse,
-    borderRadius: radii.pill,
-    height: 8,
-    width: 8,
-  },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  errorText: {
+    color: colors.loss,
   },
   formField: {
     flex: 1,

@@ -6,6 +6,7 @@ import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
   Asset,
   CashEntry,
+  CashEntryPurpose,
   HistoricalQuote,
   HistoricalQuoteCache,
   MonthlySnapshot,
@@ -29,7 +30,7 @@ export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
 export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
-export const portfolioSchemaVersion = 4;
+export const portfolioSchemaVersion = 5;
 
 export { historicalQuoteCacheKey };
 
@@ -57,6 +58,12 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   removeMonthlySnapshot: (monthlySnapshotId: string) => void;
   removeOpeningPosition: (openingPositionId: string) => void;
   removeTrade: (tradeId: string) => void;
+  recordFundedBuy: (
+    input: LinkedTradeCommandInput,
+  ) => LinkedTradeCommandResult;
+  recordSaleWithProceeds: (
+    input: LinkedTradeCommandInput,
+  ) => LinkedTradeCommandResult;
   updateAsset: (asset: Asset) => void;
   updateCashEntry: (cashEntry: CashEntry) => void;
   updateMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
@@ -66,6 +73,29 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
   upsertQuote: (quote: Quote) => void;
 };
+
+export type LinkedTradeCommandInput = {
+  asset?: Asset;
+  cashLabel: string;
+  cashNotes?: string;
+  trade: Trade;
+};
+
+export type LinkedTradeCommandResult =
+  | { cashEntry: CashEntry; isValid: true; trade: Trade }
+  | {
+      availableCash?: number;
+      availableUnits?: number;
+      isValid: false;
+      reason:
+        | "duplicateTrade"
+        | "insufficientCash"
+        | "insufficientUnits"
+        | "invalidTrade"
+        | "invalidTradeType";
+      requiredCash?: number;
+      requiredUnits?: number;
+    };
 
 type CreatePortfolioStoreOptions = {
   storage?: JsonStorage;
@@ -91,11 +121,25 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
   };
 }
 
+type StoredCashEntry = Omit<CashEntry, "purpose"> & {
+  purpose?: CashEntryPurpose;
+};
+
 type StoredPortfolioSnapshot = Partial<
-  Omit<RawPortfolioSnapshot, "schemaVersion">
+  Omit<RawPortfolioSnapshot, "cashEntries" | "schemaVersion">
 > & {
+  cashEntries?: StoredCashEntry[];
   schemaVersion?: number;
 };
+
+function normalizeCashEntry(entry: StoredCashEntry): CashEntry {
+  return {
+    ...entry,
+    purpose:
+      entry.purpose ??
+      (entry.type === "withdrawal" ? "withdrawal" : "legacyUncategorized"),
+  };
+}
 
 function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
   const stored = storage.getItem<StoredPortfolioSnapshot & JsonValue>(
@@ -104,14 +148,14 @@ function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
 
   if (
     !stored ||
-    ![1, 2, 3, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
+    ![1, 2, 3, 4, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
   ) {
     return createEmptyPortfolioSnapshot();
   }
 
   return {
     assets: (stored.assets ?? []).map(normalizeAssetMetadata),
-    cashEntries: stored.cashEntries ?? [],
+    cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
     monthlySnapshots: stored.monthlySnapshots ?? [],
     openingPositions: stored.openingPositions ?? [],
     preferences: {
@@ -154,6 +198,85 @@ function persistPortfolio(
   state: PortfolioStoreState,
 ) {
   storage.setItem(portfolioStorageKey, selectRawSnapshot(state) as JsonValue);
+}
+
+function persistPortfolioTransition(
+  storage: JsonStorage,
+  state: PortfolioStoreState,
+  transition: Partial<RawPortfolioSnapshot>,
+) {
+  storage.setItem(portfolioStorageKey, {
+    ...selectRawSnapshot(state),
+    ...transition,
+    schemaVersion: portfolioSchemaVersion,
+  } as JsonValue);
+}
+
+function cashBalance(cashEntries: CashEntry[]) {
+  return cashEntries.reduce(
+    (balance, entry) =>
+      entry.type === "withdrawal"
+        ? balance - entry.amount
+        : balance + entry.amount,
+    0,
+  );
+}
+
+function linkedCashEntry(
+  input: LinkedTradeCommandInput,
+  purpose: "purchaseFunding" | "saleProceeds",
+): CashEntry {
+  return {
+    amount: input.trade.totalValue,
+    date: input.trade.date,
+    id: `cash-${input.trade.id}`,
+    label: input.cashLabel,
+    linkedTradeId: input.trade.id,
+    notes: input.cashNotes,
+    purpose,
+    type: purpose === "purchaseFunding" ? "withdrawal" : "addition",
+  };
+}
+
+function validateLinkedTrade(
+  state: PortfolioStoreState,
+  input: LinkedTradeCommandInput,
+  trade: Trade,
+  expectedType: Trade["type"],
+): LinkedTradeCommandResult | null {
+  if (trade.type !== expectedType) {
+    return { isValid: false, reason: "invalidTradeType" };
+  }
+
+  const fees = trade.fees ?? 0;
+  const grossValue = trade.quantity * trade.pricePerUnit;
+  const expectedTotal =
+    trade.type === "buy" ? grossValue + fees : grossValue - fees;
+  const hasMatchingAsset =
+    state.assets.some((asset) => asset.id === trade.assetId) ||
+    input.asset?.id === trade.assetId;
+
+  if (
+    !hasMatchingAsset ||
+    input.cashLabel.trim().length === 0 ||
+    !Number.isFinite(trade.quantity) ||
+    trade.quantity <= 0 ||
+    !Number.isFinite(trade.pricePerUnit) ||
+    trade.pricePerUnit <= 0 ||
+    !Number.isFinite(fees) ||
+    fees < 0 ||
+    !Number.isFinite(trade.totalValue) ||
+    trade.totalValue <= 0 ||
+    Math.abs(trade.totalValue - expectedTotal) > 0.01
+  ) {
+    return { isValid: false, reason: "invalidTrade" };
+  }
+
+  if (state.trades.some((currentTrade) => currentTrade.id === trade.id)) {
+    return { isValid: false, reason: "duplicateTrade" };
+  }
+
+  return null;
 }
 
 function persistQuoteCache(storage: JsonStorage, quoteCache: QuoteCache) {
@@ -246,6 +369,87 @@ export function createPortfolioStore({
         trades: state.trades.filter((trade) => trade.id !== tradeId),
       }));
       persistPortfolio(storage, get());
+    },
+    recordFundedBuy: (input) => {
+      const state = get();
+      const invalidResult = validateLinkedTrade(
+        state,
+        input,
+        input.trade,
+        "buy",
+      );
+
+      if (invalidResult) {
+        return invalidResult;
+      }
+
+      const availableCash = cashBalance(state.cashEntries);
+
+      if (input.trade.totalValue > availableCash) {
+        return {
+          availableCash,
+          isValid: false,
+          reason: "insufficientCash",
+          requiredCash: input.trade.totalValue,
+        };
+      }
+
+      const cashEntry = linkedCashEntry(input, "purchaseFunding");
+      const assets =
+        input.asset &&
+        !state.assets.some((currentAsset) => currentAsset.id === input.asset?.id)
+          ? [...state.assets, normalizeAssetMetadata(input.asset)]
+          : state.assets;
+      const cashEntries = [...state.cashEntries, cashEntry];
+      const trades = [...state.trades, input.trade];
+
+      persistPortfolioTransition(storage, state, { assets, cashEntries, trades });
+      set({ assets, cashEntries, trades });
+
+      return { cashEntry, isValid: true, trade: input.trade };
+    },
+    recordSaleWithProceeds: (input) => {
+      const state = get();
+      const invalidResult = validateLinkedTrade(
+        state,
+        input,
+        input.trade,
+        "sell",
+      );
+
+      if (invalidResult) {
+        return invalidResult;
+      }
+
+      const availableUnits =
+        state.openingPositions
+          .filter((position) => position.assetId === input.trade.assetId)
+          .reduce((total, position) => total + position.quantity, 0) +
+        state.trades
+          .filter((trade) => trade.assetId === input.trade.assetId)
+          .reduce(
+            (total, trade) =>
+              total + (trade.type === "buy" ? trade.quantity : -trade.quantity),
+            0,
+          );
+
+      if (input.trade.quantity > availableUnits) {
+        return {
+          availableUnits,
+          isValid: false,
+          reason: "insufficientUnits",
+          requiredUnits: input.trade.quantity,
+        };
+      }
+
+      const cashEntry = linkedCashEntry(input, "saleProceeds");
+      const cashEntries = [...state.cashEntries, cashEntry];
+      const trades = [...state.trades, input.trade];
+
+      persistPortfolioTransition(storage, state, { cashEntries, trades });
+      set({ cashEntries, trades });
+
+      return { cashEntry, isValid: true, trade: input.trade };
     },
     schemaVersion: portfolioSchemaVersion,
     updateAsset: (asset) => {

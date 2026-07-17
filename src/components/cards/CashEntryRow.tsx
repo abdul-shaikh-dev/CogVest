@@ -16,18 +16,23 @@ function formatCashAmount(entry: CashEntry) {
   return entry.type === "addition" ? `+${amount}` : `-${amount}`;
 }
 
-function isAssetExitProceeds(entry: CashEntry) {
-  return /sale proceeds|redemption proceeds/i.test(entry.label);
-}
-
 function getCashEntryMovement(entry: CashEntry) {
-  if (entry.type === "addition" && isAssetExitProceeds(entry)) {
-    return "Added from asset exit";
+  switch (entry.purpose) {
+    case "capitalContribution":
+      return "Capital added to deployable cash";
+    case "income":
+      return "Income added to deployable cash";
+    case "purchaseFunding":
+      return "Funded an investment purchase";
+    case "saleProceeds":
+      return "Added from asset exit";
+    case "withdrawal":
+      return "Withdrawn from deployable cash";
+    case "legacyUncategorized":
+      return entry.type === "addition"
+        ? "Legacy cash addition"
+        : "Legacy cash withdrawal";
   }
-
-  return entry.type === "addition"
-    ? "Increased deployable cash"
-    : "Reduced deployable cash";
 }
 
 export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {

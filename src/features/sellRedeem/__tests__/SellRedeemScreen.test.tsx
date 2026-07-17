@@ -54,8 +54,12 @@ describe("SellRedeemScreen", () => {
     expect(getByText("Available units")).toBeTruthy();
     expect(getByText("25")).toBeTruthy();
     expect(getByPlaceholderText("Max 25")).toBeTruthy();
-    expect(getByText("Add proceeds to Cash Ledger")).toBeTruthy();
-    expect(getByText("Cash entry appears after the exit proceeds are valid.")).toBeTruthy();
+    expect(getByText("Cash proceeds")).toBeTruthy();
+    expect(
+      getByText(
+        "Net proceeds are added to deployable cash automatically. Record a withdrawal separately if the money leaves the portfolio.",
+      ),
+    ).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
   });
 
@@ -85,29 +89,28 @@ describe("SellRedeemScreen", () => {
     });
     expect(store.getState().cashEntries[0]).toMatchObject({
       amount: 8400,
-      label: "HDFC Bank redemption proceeds",
+      label: "HDFC Bank sale proceeds",
+      purpose: "saleProceeds",
       type: "addition",
     });
     expect(onSaved).toHaveBeenCalledTimes(1);
   });
 
-  it("lets the user disable linked cash proceeds", () => {
+  it("shows derived linked proceeds without editable cash fields", () => {
     const store = seedStore();
     const { getByLabelText, getByTestId, queryByTestId } = render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
-    fireEvent.press(getByTestId("sell-redeem-link-cash-toggle"));
-
-    expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
-
     fireEvent.changeText(getByLabelText("Quantity"), "1");
     fireEvent.changeText(getByLabelText("Sell price"), "1700");
     fireEvent.changeText(getByLabelText("Date"), "2026-05-20");
-    fireEvent.press(getByTestId("sell-redeem-save-button"));
 
-    expect(store.getState().trades).toHaveLength(1);
-    expect(store.getState().cashEntries).toEqual([]);
+    expect(getByTestId("sell-redeem-cash-link-summary")).toHaveTextContent(
+      "₹1,700.00 will be added to Cash Ledger",
+    );
+    expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
+    expect(queryByTestId("sell-redeem-link-cash-toggle")).toBeNull();
   });
 
   it("blocks overselling before save and keeps cash fields hidden", () => {

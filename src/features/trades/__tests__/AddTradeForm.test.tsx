@@ -43,6 +43,14 @@ describe("AddTradeForm", () => {
 
   it("creates a manual asset and persists a reviewed buy trade", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({
+      amount: 1000,
+      date: "2026-04-20",
+      id: "cash-contribution",
+      label: "Broker contribution",
+      purpose: "capitalContribution",
+      type: "addition",
+    });
     const { getByLabelText, getByTestId, getByText } = render(
       <AddTradeForm store={store} />,
     );
@@ -105,6 +113,12 @@ describe("AddTradeForm", () => {
       quantity: 2,
       totalValue: 205,
       type: "buy",
+    });
+    expect(store.getState().cashEntries[1]).toMatchObject({
+      amount: 205,
+      linkedTradeId: store.getState().trades[0].id,
+      purpose: "purchaseFunding",
+      type: "withdrawal",
     });
     expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
       price: 100,
