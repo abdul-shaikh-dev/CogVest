@@ -457,7 +457,11 @@ function HoldingRow({
           testID={`holding-expanded-${holding.asset.id}`}
         >
           <View style={styles.detailGrid}>
-            <Detail label="Quantity" value={formatQuantity(holding.totalUnits)} />
+            <Detail
+              label="Quantity"
+              testID={`holding-quantity-${holding.asset.id}`}
+              value={formatQuantity(holding.totalUnits)}
+            />
             <Detail
               label="Avg cost"
               masked={masked}
@@ -528,16 +532,18 @@ function HoldingRow({
 function Detail({
   label,
   masked,
+  testID,
   tone,
   value,
 }: {
   label: string;
   masked?: boolean;
+  testID?: string;
   tone?: "negative" | "positive";
   value: string;
 }) {
   return (
-    <View style={styles.detail}>
+    <View style={styles.detail} testID={testID}>
       <AppText color="secondary" variant="caption">
         {label}
       </AppText>
