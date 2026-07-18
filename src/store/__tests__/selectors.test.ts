@@ -71,6 +71,7 @@ const cashEntries: CashEntry[] = [
     date: "2026-04-26T00:00:00.000Z",
     id: "cash-1",
     label: "Deposit",
+    purpose: "capitalContribution",
     type: "addition",
   },
   {
@@ -78,6 +79,7 @@ const cashEntries: CashEntry[] = [
     date: "2026-04-26T00:00:00.000Z",
     id: "cash-2",
     label: "Withdrawal",
+    purpose: "withdrawal",
     type: "withdrawal",
   },
 ];

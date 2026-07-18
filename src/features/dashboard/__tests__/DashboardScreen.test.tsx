@@ -147,6 +147,7 @@ describe("DashboardScreen", () => {
       date: "2026-04-22",
       id: "cash-1",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -154,6 +155,7 @@ describe("DashboardScreen", () => {
       date: "2026-05-05",
       id: "cash-2",
       label: "Withdrawal",
+      purpose: "withdrawal",
       type: "withdrawal",
     });
     store.getState().upsertQuote({
@@ -232,6 +234,7 @@ describe("DashboardScreen", () => {
       date: "2026-04-22",
       id: "cash-1",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().upsertQuote({

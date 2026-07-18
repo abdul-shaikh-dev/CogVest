@@ -77,6 +77,7 @@ function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
     date: "2026-07-01T00:00:00.000Z",
     id: "cash-salary",
     label: "Salary added",
+    purpose: "income",
     type: "addition",
   };
 

@@ -290,6 +290,12 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
         </AppText>
       ) : null}
 
+      {trade.errors.cash ? (
+        <AppText selectable style={styles.errorText} variant="caption">
+          {trade.errors.cash}
+        </AppText>
+      ) : null}
+
       <View style={styles.actions}>
         <AppButton
           title="Review Holding"

@@ -18,7 +18,7 @@ type UseSellRedeemHoldingInput = {
 };
 
 type FieldErrors = Partial<
-  Record<"cashAmount" | "cashLabel" | "date" | "fees" | "quantity" | "sellPrice", string>
+  Record<"date" | "fees" | "quantity" | "save" | "sellPrice", string>
 >;
 
 type SaveResult =
@@ -28,23 +28,17 @@ type SaveResult =
 export type UseSellRedeemHoldingResult = {
   availableUnits: number;
   canSave: boolean;
-  cashAmount: string;
-  cashLabel: string;
   date: string;
   errors: FieldErrors;
   fees: string;
   holding: Holding | null;
-  linkCashEntry: boolean;
   notes: string;
   preview: SellRedeemPreview | null;
   quantity: string;
   save: () => SaveResult;
   sellPrice: string;
-  setCashAmount: (value: string) => void;
-  setCashLabel: (value: string) => void;
   setDate: (value: string) => void;
   setFees: (value: string) => void;
-  setLinkCashEntry: (value: boolean) => void;
   setNotes: (value: string) => void;
   setQuantity: (value: string) => void;
   setSellPrice: (value: string) => void;
@@ -72,10 +66,6 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState);
 }
 
-function defaultCashLabel(holding: Holding | null) {
-  return holding ? `${holding.asset.name} redemption proceeds` : "";
-}
-
 export function useSellRedeemHolding({
   assetId,
   store = getPortfolioStore(),
@@ -86,10 +76,6 @@ export function useSellRedeemHolding({
   const [fees, setFees] = useState("");
   const [date, setDate] = useState(todayInputValue());
   const [notes, setNotes] = useState("");
-  const [linkCashEntry, setLinkCashEntry] = useState(true);
-  const [cashAmount, setCashAmount] = useState("");
-  const [cashAmountWasEdited, setCashAmountWasEdited] = useState(false);
-  const [cashLabel, setCashLabel] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -151,29 +137,6 @@ export function useSellRedeemHolding({
     }
   }, [holding, sellPrice]);
 
-  useEffect(() => {
-    if (holding && cashLabel.trim().length === 0) {
-      setCashLabel(defaultCashLabel(holding));
-    }
-  }, [cashLabel, holding]);
-
-  useEffect(() => {
-    if (preview && !cashAmountWasEdited) {
-      setCashAmount(String(preview.netProceeds));
-    }
-  }, [cashAmountWasEdited, preview]);
-
-  useEffect(() => {
-    if (!preview && !cashAmountWasEdited) {
-      setCashAmount("");
-    }
-  }, [cashAmountWasEdited, preview]);
-
-  function updateCashAmount(value: string) {
-    setCashAmountWasEdited(true);
-    setCashAmount(value);
-  }
-
   function validate() {
     const nextErrors: FieldErrors = {};
 
@@ -219,20 +182,6 @@ export function useSellRedeemHolding({
       }
     }
 
-    if (linkCashEntry) {
-      const cashAmountValue = parseNumber(cashAmount);
-
-      if (!Number.isFinite(cashAmountValue)) {
-        nextErrors.cashAmount = "Cash amount must be a valid number.";
-      } else if (cashAmountValue < 0) {
-        nextErrors.cashAmount = "Cash amount must be zero or greater.";
-      }
-
-      if (cashLabel.trim().length === 0) {
-        nextErrors.cashLabel = "Cash label is required.";
-      }
-    }
-
     return nextErrors;
   }
 
@@ -267,27 +216,26 @@ export function useSellRedeemHolding({
       totalValue: preview.netProceeds,
       type: "sell",
     };
-    let cashEntry: CashEntry | undefined;
+    const result = store.getState().recordSaleWithProceeds({
+      cashLabel: `${holding.asset.name} sale proceeds`,
+      cashNotes:
+        trimmedNotes || `Linked to ${holding.asset.name} sell / redeem`,
+      trade,
+    });
 
-    store.getState().addTrade(trade);
-
-    if (linkCashEntry) {
-      cashEntry = {
-        amount: parseNumber(cashAmount),
-        date: date.trim(),
-        id: createId("cash"),
-        label: cashLabel.trim(),
-        notes: trimmedNotes || `Linked to ${holding.asset.name} sell / redeem`,
-        type: "addition",
+    if (!result.isValid) {
+      const saveErrors = {
+        save: "This sale could not be saved safely. Review it and try again.",
       };
-      store.getState().addCashEntry(cashEntry);
+      setErrors(saveErrors);
+      return { errors: saveErrors, isValid: false };
     }
 
     setErrors({});
     setSuccessMessage("Sell / redeem recorded.");
 
     return {
-      cashEntry,
+      cashEntry: result.cashEntry,
       isValid: true,
       trade,
     };
@@ -296,23 +244,17 @@ export function useSellRedeemHolding({
   return {
     availableUnits,
     canSave,
-    cashAmount,
-    cashLabel,
     date,
     errors: displayErrors,
     fees,
     holding,
-    linkCashEntry,
     notes,
     preview,
     quantity,
     save,
     sellPrice,
-    setCashAmount: updateCashAmount,
-    setCashLabel,
     setDate,
     setFees,
-    setLinkCashEntry,
     setNotes,
     setQuantity,
     setSellPrice,

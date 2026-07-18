@@ -33,7 +33,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
       expect(getByText("Broker cash")).toBeTruthy();
-      expect(getByText("Increased deployable cash")).toBeTruthy();
+      expect(getByText("Capital added to deployable cash")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
     });
 
@@ -46,7 +46,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
       expect(getByText("Emergency withdrawal")).toBeTruthy();
-      expect(getByText("Reduced deployable cash")).toBeTruthy();
+      expect(getByText("Withdrawn from deployable cash")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
     });
   });
@@ -73,6 +73,28 @@ describe("CashScreen", () => {
     expect(queryByText("Deposit cash")).toBeNull();
   });
 
+  it("records deposit purpose explicitly", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
+
+    fireEvent.press(getByTestId("cash-purpose-income"));
+    fireEvent.changeText(getByLabelText("Amount"), "50000");
+    fireEvent.changeText(getByLabelText("Label"), "Salary");
+    fireEvent.changeText(getByLabelText("Date"), "2026-05-01");
+    fireEvent.press(getByTestId("save-cash-entry-button"));
+
+    await waitFor(() => {
+      expect(store.getState().cashEntries).toEqual([
+        expect.objectContaining({
+          amount: 50000,
+          label: "Salary",
+          purpose: "income",
+          type: "addition",
+        }),
+      ]);
+    });
+  });
+
   it("shows invested as derived evidence without exposing a manual Invest action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
@@ -88,9 +110,12 @@ describe("CashScreen", () => {
       date: "2026-05-01",
       id: "cash-salary",
       label: "Salary",
+      purpose: "income",
       type: "addition",
     });
-    store.getState().addTrade({
+    store.getState().recordFundedBuy({
+      cashLabel: "Reliance Industries purchase",
+      trade: {
       assetId: "asset-reliance",
       date: "2026-05-10",
       id: "trade-buy",
@@ -98,6 +123,7 @@ describe("CashScreen", () => {
       quantity: 200,
       totalValue: 20000,
       type: "buy",
+      },
     });
 
     const { getByText, queryByText } = render(
@@ -123,6 +149,7 @@ describe("CashScreen", () => {
       date: "2026-05-20",
       id: "cash-proceeds",
       label: "HDFC Bank redemption proceeds",
+      purpose: "saleProceeds",
       type: "addition",
     });
 
@@ -152,6 +179,7 @@ describe("CashScreen", () => {
       date: "2026-04-20",
       id: "cash-1",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
 

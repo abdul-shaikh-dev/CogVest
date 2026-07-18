@@ -616,6 +616,13 @@ export function AddOpeningPositionForm({
               </AppText>
             </View>
           </View>
+          <View style={styles.cashImpact}>
+            <AppText weight="bold">Cash impact</AppText>
+            <AppText color="secondary" variant="caption">
+              No cash movement. Opening positions are existing holdings funded
+              outside CogVest.
+            </AppText>
+          </View>
           </View>
         </PremiumCard>
       ) : null}
@@ -728,6 +735,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  cashImpact: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
   convictionChip: {
     alignItems: "center",

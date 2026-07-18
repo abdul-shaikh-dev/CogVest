@@ -12,6 +12,7 @@ describe("useCash", () => {
       date: "2026-04-20",
       id: "cash-add",
       label: "Broker cash",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -19,6 +20,7 @@ describe("useCash", () => {
       date: "2026-04-22",
       id: "cash-withdraw",
       label: "Withdrawal",
+      purpose: "withdrawal",
       type: "withdrawal",
     });
 
@@ -40,12 +42,14 @@ describe("useCash", () => {
         amount: 1000,
         date: "2026-04-20",
         label: "Broker cash",
+        purpose: "capitalContribution",
         type: "addition",
       });
       result.current.addEntry({
         amount: 300,
         date: "2026-04-21",
         label: "Withdrawal",
+        purpose: "withdrawal",
         type: "withdrawal",
       });
     });
@@ -64,6 +68,7 @@ describe("useCash", () => {
         amount: 500,
         date: "2026-04-20",
         label: "Opening cash",
+        purpose: "capitalContribution",
         type: "addition",
       });
     });
@@ -93,6 +98,7 @@ describe("useCash", () => {
       date: "2026-05-01",
       id: "cash-salary",
       label: "Salary",
+      purpose: "income",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -100,6 +106,8 @@ describe("useCash", () => {
       date: "2026-05-10",
       id: "cash-transfer",
       label: "SIP transfer",
+      linkedTradeId: "trade-buy",
+      purpose: "purchaseFunding",
       type: "withdrawal",
     });
     store.getState().addTrade({
@@ -119,8 +127,10 @@ describe("useCash", () => {
     expect(result.current.monthlyMetrics).toEqual({
       added: 100000,
       available: 80000,
+      contributions: 0,
+      income: 100000,
+      investmentRate: 20,
       invested: 20000,
-      savingsRate: 20,
     });
   });
 
@@ -139,16 +149,20 @@ describe("useCash", () => {
       date: "2026-05-03",
       id: "cash-salary",
       label: "Salary added",
+      purpose: "income",
       type: "addition",
     });
-    store.getState().addTrade({
-      assetId: "asset-hdfc",
-      date: "2026-05-05",
-      id: "trade-buy",
-      pricePerUnit: 1500,
-      quantity: 10,
-      totalValue: 15000,
-      type: "buy",
+    store.getState().recordFundedBuy({
+      cashLabel: "HDFC Bank purchase",
+      trade: {
+        assetId: "asset-hdfc",
+        date: "2026-05-05",
+        id: "trade-buy",
+        pricePerUnit: 1500,
+        quantity: 10,
+        totalValue: 15000,
+        type: "buy",
+      },
     });
 
     const { result } = renderHook(() =>
@@ -158,7 +172,8 @@ describe("useCash", () => {
     expect(result.current.manualEntryModes).toEqual(["addition", "withdrawal"]);
     expect(result.current.monthlyMetrics).toMatchObject({
       added: 70000,
-      available: 70000,
+      available: 55000,
+      income: 70000,
       invested: 15000,
     });
     expect(result.current.monthlyMovementSummary).toBe(
@@ -166,7 +181,7 @@ describe("useCash", () => {
     );
   });
 
-  it("marks savings rate unavailable when current-month added cash is missing", () => {
+  it("marks the investment rate unavailable when typed income is missing", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -176,14 +191,25 @@ describe("useCash", () => {
       symbol: "RELIANCE",
       ticker: "RELIANCE.NS",
     });
-    store.getState().addTrade({
-      assetId: "asset-reliance",
-      date: "2026-05-10",
-      id: "trade-buy",
-      pricePerUnit: 100,
-      quantity: 200,
-      totalValue: 20000,
-      type: "buy",
+    store.getState().addCashEntry({
+      amount: 20000,
+      date: "2026-05-01",
+      id: "cash-contribution",
+      label: "Capital contribution",
+      purpose: "capitalContribution",
+      type: "addition",
+    });
+    store.getState().recordFundedBuy({
+      cashLabel: "Reliance Industries purchase",
+      trade: {
+        assetId: "asset-reliance",
+        date: "2026-05-10",
+        id: "trade-buy",
+        pricePerUnit: 100,
+        quantity: 200,
+        totalValue: 20000,
+        type: "buy",
+      },
     });
 
     const { result } = renderHook(() =>
@@ -191,9 +217,12 @@ describe("useCash", () => {
     );
 
     expect(result.current.monthlyMetrics).toMatchObject({
-      added: 0,
+      added: 20000,
+      available: 0,
+      contributions: 20000,
+      income: 0,
+      investmentRate: null,
       invested: 20000,
-      savingsRate: null,
     });
   });
 });

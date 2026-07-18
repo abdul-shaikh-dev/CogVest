@@ -58,9 +58,6 @@ describe("useSellRedeemHolding", () => {
       netProceeds: 8400,
       remainingUnits: 20,
     });
-    expect(result.current.linkCashEntry).toBe(true);
-    expect(result.current.cashAmount).toBe("8400");
-
     act(() => {
       result.current.save();
     });
@@ -79,29 +76,13 @@ describe("useSellRedeemHolding", () => {
       expect.objectContaining({
         amount: 8400,
         date: "2026-05-20",
-        label: "HDFC Bank redemption proceeds",
+        label: "HDFC Bank sale proceeds",
+        linkedTradeId: expect.any(String),
+        purpose: "saleProceeds",
         type: "addition",
       }),
     ]);
     expect(result.current.successMessage).toBe("Sell / redeem recorded.");
-  });
-
-  it("can save without linked cash proceeds", () => {
-    const store = seedStore();
-    const { result } = renderHook(() =>
-      useSellRedeemHolding({ assetId: hdfc.id, store }),
-    );
-
-    act(() => result.current.setQuantity("2"));
-    act(() => result.current.setSellPrice("1600"));
-    act(() => result.current.setDate("2026-05-21"));
-    act(() => result.current.setLinkCashEntry(false));
-    act(() => {
-      result.current.save();
-    });
-
-    expect(store.getState().trades).toHaveLength(1);
-    expect(store.getState().cashEntries).toEqual([]);
   });
 
   it("rejects selling more than available units", () => {

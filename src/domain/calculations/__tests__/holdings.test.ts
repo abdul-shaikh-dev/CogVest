@@ -1,6 +1,7 @@
 import {
   calculateAllocation,
   calculateCashBalance,
+  calculateCashMonthlyMetrics,
   calculateConsolidatedHoldingRows,
   calculateHolding,
   calculateHoldings,
@@ -294,6 +295,7 @@ describe("portfolio calculations", () => {
       date: "2026-04-20T00:00:00.000Z",
       id: "cash-1",
       label: "Deposit",
+      purpose: "capitalContribution",
       type: "addition",
     },
     {
@@ -301,6 +303,7 @@ describe("portfolio calculations", () => {
       date: "2026-04-21T00:00:00.000Z",
       id: "cash-2",
       label: "Withdraw",
+      purpose: "withdrawal",
       type: "withdrawal",
     },
   ];
@@ -314,6 +317,130 @@ describe("portfolio calculations", () => {
 
     expect(calculateCashBalance(cashEntries)).toBe(8500);
     expect(calculatePortfolioTotal([holding], cashEntries)).toBe(9700);
+  });
+
+  it("conserves portfolio wealth across funded buys and sales before market movement", () => {
+    const contribution: CashEntry = {
+      amount: 100000,
+      date: "2026-05-01T00:00:00.000Z",
+      id: "cash-contribution",
+      label: "Capital contribution",
+      purpose: "capitalContribution",
+      type: "addition",
+    };
+    const purchaseFunding: CashEntry = {
+      amount: 80000,
+      date: "2026-05-05T00:00:00.000Z",
+      id: "cash-trade-buy",
+      label: "Reliance Industries purchase",
+      linkedTradeId: "trade-buy",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    };
+    const buy = trade({
+      date: "2026-05-05T00:00:00.000Z",
+      id: "trade-buy",
+      pricePerUnit: 100,
+      quantity: 800,
+      totalValue: 80000,
+    });
+    const holdingAfterBuy = calculateHolding({
+      asset: reliance,
+      currentPrice: 100,
+      trades: [buy],
+    });
+
+    expect(
+      calculatePortfolioTotal(
+        [holdingAfterBuy],
+        [contribution, purchaseFunding],
+      ),
+    ).toBe(100000);
+
+    const saleProceeds: CashEntry = {
+      amount: 22000,
+      date: "2026-05-20T00:00:00.000Z",
+      id: "cash-trade-sale",
+      label: "Reliance Industries sale proceeds",
+      linkedTradeId: "trade-sale",
+      purpose: "saleProceeds",
+      type: "addition",
+    };
+    const sale = trade({
+      date: "2026-05-20T00:00:00.000Z",
+      id: "trade-sale",
+      pricePerUnit: 110,
+      quantity: 200,
+      totalValue: 22000,
+      type: "sell",
+    });
+    const holdingAfterSale = calculateHolding({
+      asset: reliance,
+      currentPrice: 110,
+      trades: [buy, sale],
+    });
+
+    expect(
+      calculatePortfolioTotal(
+        [holdingAfterSale],
+        [contribution, purchaseFunding, saleProceeds],
+      ),
+    ).toBe(108000);
+  });
+
+  it("uses only typed income for the monthly investment rate", () => {
+    const monthlyEntries: CashEntry[] = [
+      {
+        amount: 50000,
+        date: "2026-05-01T00:00:00.000Z",
+        id: "cash-income",
+        label: "Salary",
+        purpose: "income",
+        type: "addition",
+      },
+      {
+        amount: 25000,
+        date: "2026-05-02T00:00:00.000Z",
+        id: "cash-contribution",
+        label: "Capital contribution",
+        purpose: "capitalContribution",
+        type: "addition",
+      },
+      {
+        amount: 10000,
+        date: "2026-05-03T00:00:00.000Z",
+        id: "cash-trade-buy",
+        label: "Funded purchase",
+        linkedTradeId: "trade-buy",
+        purpose: "purchaseFunding",
+        type: "withdrawal",
+      },
+      {
+        amount: 12000,
+        date: "2026-05-04T00:00:00.000Z",
+        id: "cash-trade-sale",
+        label: "Sale proceeds",
+        linkedTradeId: "trade-sale",
+        purpose: "saleProceeds",
+        type: "addition",
+      },
+    ];
+
+    expect(
+      calculateCashMonthlyMetrics({
+        cashEntries: monthlyEntries,
+        now: new Date("2026-05-20T00:00:00.000Z"),
+        openingPositions: [],
+        trades: [],
+      }),
+    ).toEqual({
+      added: 75000,
+      available: 77000,
+      contributions: 25000,
+      income: 50000,
+      investmentRate: 20,
+      invested: 10000,
+    });
   });
 
   it("calculates day change from holding values and quote change", () => {

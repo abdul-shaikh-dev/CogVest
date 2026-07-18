@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- tapOn:
+    id: "tab-cash"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: "cash-label-input"
+- inputText: "Test contribution"
+- hideKeyboard
+- tapOn:
+    id: "cash-date-input"
+- inputText: "2026-07-18"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
+- tapOn:
+    id: "save-cash-entry-button"
+- assertVisible: "₹1,000.00"
+- openLink: "cogvest:///add-trade"
+- assertVisible:
+    id: "add-trade-screen"
+- tapOn:
+    id: "asset-input"
+- inputText: "Accounting Test Asset"
+- hideKeyboard
+- tapOn:
+    id: "symbol-input"
+- inputText: "ACCT"
+- tapOn:
+    id: "ticker-input"
+- inputText: "ACCT.NS"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "quantity-input"
+    direction: DOWN
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "review-trade-button"
+- assertVisible: "Total: ₹200.00"
+- scrollUntilVisible:
+    element:
+      id: "save-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "save-trade-button"
+- assertVisible: "Holding saved."
+- tapOn:
+    id: "tab-cash"
+- assertVisible: "₹800.00"
+- tapOn:
+    id: "tab-holdings"
+- assertVisible: "Accounting Test Asset"

@@ -38,6 +38,7 @@ const cashEntry: CashEntry = {
   date: "2026-04-26T00:00:00.000Z",
   id: "cash-1",
   label: "Broker cash",
+  purpose: "capitalContribution",
   type: "addition",
 };
 
@@ -129,6 +130,160 @@ describe("portfolio store", () => {
     expect(store.getState().monthlySnapshots).toEqual([]);
   });
 
+  it("records a funded buy and linked cash movement in one transition", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 100000 });
+    const fundedBuy = {
+      ...trade,
+      pricePerUnit: 100,
+      quantity: 800,
+      totalValue: 80000,
+    };
+
+    const result = store.getState().recordFundedBuy({
+      cashLabel: "Reliance Industries purchase",
+      trade: fundedBuy,
+    });
+
+    expect(result).toMatchObject({ isValid: true, trade: fundedBuy });
+    expect(store.getState().trades).toEqual([fundedBuy]);
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({ amount: 100000 }),
+      expect.objectContaining({
+        amount: 80000,
+        linkedTradeId: fundedBuy.id,
+        purpose: "purchaseFunding",
+        type: "withdrawal",
+      }),
+    ]);
+    expect(storage.getItem(portfolioStorageKey)).toMatchObject({
+      cashEntries: store.getState().cashEntries,
+      trades: [fundedBuy],
+    });
+  });
+
+  it("rejects a funded buy above available cash before mutation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 5000 });
+
+    const result = store.getState().recordFundedBuy({
+      cashLabel: "Reliance Industries purchase",
+      trade: { ...trade, totalValue: 5800 },
+    });
+
+    expect(result).toEqual({
+      availableCash: 5000,
+      isValid: false,
+      reason: "insufficientCash",
+      requiredCash: 5800,
+    });
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({ amount: 5000 }),
+    ]);
+  });
+
+  it("records sale proceeds as a linked cash addition", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sale = {
+      ...trade,
+      id: "trade-sale",
+      pricePerUnit: 3100,
+      totalValue: 6200,
+      type: "sell" as const,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+
+    const result = store.getState().recordSaleWithProceeds({
+      cashLabel: "Reliance Industries sale proceeds",
+      trade: sale,
+    });
+
+    expect(result).toMatchObject({ isValid: true, trade: sale });
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({
+        amount: 6200,
+        linkedTradeId: sale.id,
+        purpose: "saleProceeds",
+        type: "addition",
+      }),
+    ]);
+  });
+
+  it("rejects a sale above available units before mutation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+
+    const result = store.getState().recordSaleWithProceeds({
+      cashLabel: "Reliance Industries sale proceeds",
+      trade: {
+        ...trade,
+        id: "trade-sale",
+        pricePerUnit: 100,
+        quantity: 30,
+        totalValue: 3000,
+        type: "sell",
+      },
+    });
+
+    expect(result).toEqual({
+      availableUnits: 25,
+      isValid: false,
+      reason: "insufficientUnits",
+      requiredUnits: 30,
+    });
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([]);
+  });
+
+  it("rejects a linked trade whose total does not match its units and fees", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 10000 });
+
+    const result = store.getState().recordFundedBuy({
+      cashLabel: "Reliance Industries purchase",
+      trade: { ...trade, totalValue: 5000 },
+    });
+
+    expect(result).toEqual({ isValid: false, reason: "invalidTrade" });
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({ amount: 10000 }),
+    ]);
+  });
+
+  it("keeps memory unchanged when an atomic accounting write fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 10000 });
+    const originalSetItem = storage.setItem;
+    storage.setItem = (key, value) => {
+      if (key === portfolioStorageKey) {
+        throw new Error("simulated persistence failure");
+      }
+
+      originalSetItem(key, value);
+    };
+
+    expect(() =>
+      store.getState().recordFundedBuy({
+        cashLabel: "Reliance Industries purchase",
+        trade,
+      }),
+    ).toThrow("simulated persistence failure");
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({ amount: 10000 }),
+    ]);
+  });
+
   it("persists only raw portfolio data under the portfolio key", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
@@ -147,7 +302,7 @@ describe("portfolio store", () => {
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 4,
+      schemaVersion: 5,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -177,7 +332,7 @@ describe("portfolio store", () => {
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: { ...createDefaultPreferences(), maskWealthValues: true },
-      schemaVersion: 4,
+      schemaVersion: 5,
       trades: [trade],
     });
     storage.setItem(quoteCacheStorageKey, {
@@ -203,7 +358,7 @@ describe("portfolio store", () => {
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 4,
+      schemaVersion: 5,
       trades: [trade],
     });
 
@@ -290,7 +445,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(4);
+    expect(store.getState().schemaVersion).toBe(5);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -325,7 +480,7 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(4);
+    expect(store.getState().schemaVersion).toBe(5);
   });
 
   it("migrates V3 snapshots by defaulting monthly snapshots", () => {
@@ -342,6 +497,37 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().monthlySnapshots).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(4);
+    expect(store.getState().schemaVersion).toBe(5);
+  });
+
+  it("migrates V4 additions without inventing income semantics", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [],
+      cashEntries: [
+        {
+          amount: 5000,
+          date: "2026-05-01",
+          id: "legacy-addition",
+          label: "Old deposit",
+          type: "addition",
+        },
+      ],
+      monthlySnapshots: [],
+      openingPositions: [],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 4,
+      trades: [],
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().cashEntries).toEqual([
+      expect.objectContaining({
+        id: "legacy-addition",
+        purpose: "legacyUncategorized",
+      }),
+    ]);
+    expect(store.getState().schemaVersion).toBe(5);
   });
 });

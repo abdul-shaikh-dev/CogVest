@@ -6,7 +6,7 @@ export type {
   InstrumentType,
   SectorType,
 } from "./asset";
-export type { CashEntry, CashEntryType } from "./cash";
+export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding } from "./holding";
 export type {
   MonthlySnapshot,

@@ -204,11 +204,34 @@ export function useAddTrade({
       return;
     }
 
-    if (!selectedAsset) {
-      store.getState().addAsset(reviewAsset);
+    const commandResult =
+      reviewTrade.type === "buy"
+        ? store.getState().recordFundedBuy({
+            asset: selectedAsset ? undefined : reviewAsset,
+            cashLabel: `${reviewAsset.name} purchase`,
+            cashNotes: reviewTrade.notes,
+            trade: reviewTrade,
+          })
+        : store.getState().recordSaleWithProceeds({
+            cashLabel: `${reviewAsset.name} sale proceeds`,
+            cashNotes: reviewTrade.notes,
+            trade: reviewTrade,
+          });
+
+    if (!commandResult.isValid) {
+      setErrors({
+        cash:
+          commandResult.reason === "insufficientCash"
+            ? `Not enough deployable cash. Available ₹${(
+                commandResult.availableCash ?? 0
+              ).toFixed(2)}; required ₹${(
+                commandResult.requiredCash ?? reviewTrade.totalValue
+              ).toFixed(2)}.`
+            : "This trade could not be saved safely. Review it and try again.",
+      });
+      return;
     }
 
-    store.getState().addTrade(reviewTrade);
     store.getState().upsertQuote({
       asOf: new Date().toISOString(),
       assetId: reviewAsset.id,
@@ -217,6 +240,7 @@ export function useAddTrade({
       source: "manual",
     });
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setErrors({});
     setSuccessMessage("Holding saved.");
     setReviewTrade(undefined);
   }

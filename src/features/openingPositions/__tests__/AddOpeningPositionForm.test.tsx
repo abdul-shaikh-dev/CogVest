@@ -151,6 +151,12 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("₹36,250.00")).toBeTruthy();
     expect(getByText("₹41,956.25")).toBeTruthy();
     expect(getByText("+₹5,706.25")).toBeTruthy();
+    expect(getByText("Cash impact")).toBeTruthy();
+    expect(
+      getByText(
+        "No cash movement. Opening positions are existing holdings funded outside CogVest.",
+      ),
+    ).toBeTruthy();
     expect(getByTestId("save-holding-button")).toBeTruthy();
 
     fireEvent.press(getByText("Save Holding"));
