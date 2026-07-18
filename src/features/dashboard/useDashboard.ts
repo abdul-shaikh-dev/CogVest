@@ -20,6 +20,11 @@ import {
   type PortfolioRollupTotals,
 } from "@/src/domain/calculations";
 import {
+  getPortfolioCurrencyIssues,
+  isV1CompatibleQuote,
+  type PortfolioCurrencyIssue,
+} from "@/src/domain/portfolioCurrency";
+import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
@@ -53,6 +58,7 @@ export type DashboardState = {
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
+  currencyIssues: PortfolioCurrencyIssue[];
   dayChange: PortfolioDayChange;
   holdings: Holding[];
   instrumentAllocation: MetadataAllocationItem[];
@@ -130,12 +136,22 @@ function selectManualPrices(state: PortfolioStoreState) {
 function calculateMonthlyMetrics(
   state: PortfolioStoreState,
   now: Date,
+  supportedAssetIds: Set<string>,
 ): DashboardMonthlyMetrics {
   const tradeInvestment = state.trades
-    .filter((trade) => trade.type === "buy" && isSameMonth(trade.date, now))
+    .filter(
+      (trade) =>
+        supportedAssetIds.has(trade.assetId) &&
+        trade.type === "buy" &&
+        isSameMonth(trade.date, now),
+    )
     .reduce((total, trade) => total + trade.totalValue, 0);
   const openingInvestment = state.openingPositions
-    .filter((position) => isSameMonth(position.date, now))
+    .filter(
+      (position) =>
+        supportedAssetIds.has(position.assetId) &&
+        isSameMonth(position.date, now),
+    )
     .reduce(
       (total, position) =>
         total + position.quantity * position.averageCostPrice,
@@ -168,6 +184,17 @@ export function useDashboard({
   const snapshot = usePortfolioSnapshot(store);
   const [quoteFailures, setQuoteFailures] = useState<QuoteRefreshFailure[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const currencyIssues = getPortfolioCurrencyIssues(
+    snapshot.assets,
+    snapshot.quoteCache,
+  );
+  const supportedAssetIds = new Set(
+    snapshot.assets
+      .filter((asset) =>
+        isV1CompatibleQuote(asset, snapshot.quoteCache[asset.id]),
+      )
+      .map((asset) => asset.id),
+  );
   const holdings = withQuoteMetadata(
     calculateHoldings({
       assets: snapshot.assets,
@@ -217,10 +244,13 @@ export function useDashboard({
     }),
     cashBalance,
     convictionReadiness: getConvictionReadiness(
-      snapshot.trades,
+      snapshot.trades.filter((trade) => supportedAssetIds.has(trade.assetId)),
       undefined,
-      snapshot.openingPositions,
+      snapshot.openingPositions.filter((position) =>
+        supportedAssetIds.has(position.assetId),
+      ),
     ),
+    currencyIssues,
     dayChange: calculatePortfolioDayChange(holdings),
     holdings,
     instrumentAllocation: calculateInstrumentAllocation(holdings),
@@ -228,7 +258,7 @@ export function useDashboard({
     latestQuoteAsOf: latestQuote?.asOf,
     latestQuoteSource: latestQuote?.source,
     maskWealthValues: snapshot.preferences.maskWealthValues,
-    monthlyMetrics: calculateMonthlyMetrics(snapshot, now),
+    monthlyMetrics: calculateMonthlyMetrics(snapshot, now, supportedAssetIds),
     quoteFailures,
     refresh,
     rollupRows,

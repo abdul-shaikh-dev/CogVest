@@ -1,4 +1,5 @@
 import type { QuoteProviderInput, QuoteResult } from "./types";
+import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import {
   coinGeckoSimplePriceUrl,
   defaultNow,
@@ -30,6 +31,12 @@ export async function fetchCoinGeckoQuote({
   now = defaultNow,
 }: QuoteProviderInput): Promise<QuoteResult> {
   try {
+    const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+    if (currencyIssue) {
+      return { error: currencyIssue, ok: false };
+    }
+
     const quoteSourceId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(buildCoinGeckoSimplePriceUrl(quoteSourceId));
 

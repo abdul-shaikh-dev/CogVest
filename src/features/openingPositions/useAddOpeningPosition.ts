@@ -5,6 +5,10 @@ import type { StoreApi } from "zustand/vanilla";
 import { getDefaultAssetMetadata } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
 import {
+  getV1AssetCurrencyIssue,
+  getV1QuoteCurrencyIssue,
+} from "@/src/domain/portfolioCurrency";
+import {
   searchAssetLookupResults as defaultSearchAssetLookupResults,
   type AssetLookupResult,
   type AssetLookupSearchResult,
@@ -21,6 +25,7 @@ import type {
   ConvictionScore,
   InstrumentType,
   OpeningPosition,
+  Quote,
   SectorType,
 } from "@/src/types";
 import { createId } from "@/src/utils";
@@ -32,6 +37,7 @@ export type FieldErrors = Partial<Record<string, string>>;
 
 export type AddOpeningPositionControllerInput = {
   initialVisualQaState?: "review";
+  onComplete?: (assetId: string) => void;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
@@ -58,6 +64,7 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
 
 export function useAddOpeningPosition({
   initialVisualQaState,
+  onComplete,
   resolveQuote = defaultResolveQuote,
   searchAssetLookupResults = defaultSearchAssetLookupResults,
   store = getPortfolioStore(),
@@ -98,6 +105,8 @@ export function useAddOpeningPosition({
   const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
   const [selectedLookupResult, setSelectedLookupResult] =
     useState<AssetLookupResult | undefined>();
+  const [selectedLookupQuote, setSelectedLookupQuote] =
+    useState<Quote | undefined>();
   const [isLookupSearching, setIsLookupSearching] = useState(false);
   const [lookupStatus, setLookupStatus] = useState("");
   const [quoteStatus, setQuoteStatus] = useState("");
@@ -348,6 +357,7 @@ export function useAddOpeningPosition({
     if (selectedLookupResult) {
       setSelectedLookupResult(undefined);
     }
+    setSelectedLookupQuote(undefined);
     setMetadataReviewMessage(defaultMetadataReviewMessage);
     setInstrumentTypeConfidence("reviewRequired");
     setSectorTypeConfidence("reviewRequired");
@@ -365,6 +375,7 @@ export function useAddOpeningPosition({
   function changeSelectedAsset() {
     setSelectedAssetId("");
     setSelectedLookupResult(undefined);
+    setSelectedLookupQuote(undefined);
     setMetadataReviewMessage(defaultMetadataReviewMessage);
     setInstrumentTypeConfidence("reviewRequired");
     setSectorTypeConfidence("reviewRequired");
@@ -376,10 +387,19 @@ export function useAddOpeningPosition({
   }
 
   function selectAsset(asset: Asset) {
+    const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+    if (currencyIssue) {
+      setErrors({ assetName: currencyIssue });
+      setLookupStatus(currencyIssue);
+      return;
+    }
+
     const quote = snapshot.quoteCache[asset.id];
 
     setSelectedAssetId(asset.id);
     setSelectedLookupResult(undefined);
+    setSelectedLookupQuote(undefined);
     setAssetClass(asset.assetClass);
     setAssetName(asset.name);
     setInstrumentType(asset.instrumentType ?? getDefaultAssetMetadata(asset.assetClass).instrumentType);
@@ -429,8 +449,17 @@ export function useAddOpeningPosition({
   }
 
   async function selectLookupResult(result: AssetLookupResult) {
+    const lookupAsset = buildLookupAsset(result);
+    const currencyIssue = getV1AssetCurrencyIssue(lookupAsset);
+
+    if (currencyIssue) {
+      setLookupStatus(currencyIssue);
+      return;
+    }
+
     setSelectedAssetId("");
     setSelectedLookupResult(result);
+    setSelectedLookupQuote(undefined);
     setAssetClass(result.assetClass);
     setAssetName(result.name);
     setInstrumentType(result.instrumentType);
@@ -447,15 +476,28 @@ export function useAddOpeningPosition({
     setQuoteStatus("Fetching live current price...");
     resetReview();
 
-    const quoteResult = await resolveQuote({ asset: buildLookupAsset(result) });
+    const quoteResult = await resolveQuote({ asset: lookupAsset });
 
     if (quoteResult.ok) {
+      const quoteCurrencyIssue = getV1QuoteCurrencyIssue(
+        lookupAsset,
+        quoteResult.quote,
+      );
+
+      if (quoteCurrencyIssue) {
+        setCurrentPrice("");
+        setQuoteStatus(quoteCurrencyIssue);
+        return;
+      }
+
+      setSelectedLookupQuote(quoteResult.quote);
       setCurrentPrice(quoteResult.quote.price.toString());
       setQuoteStatus(`Live price autofilled from ${result.sourceLabel}.`);
       return;
     }
 
     setCurrentPrice("");
+    setSelectedLookupQuote(undefined);
     setQuoteStatus("Live price unavailable. Enter current price manually.");
   }
 
@@ -493,7 +535,21 @@ export function useAddOpeningPosition({
     }
 
     const assetId = selectedAsset?.id ?? createId("asset");
-    const asset = selectedAsset ?? buildManualAsset(assetId);
+    const asset =
+      selectedAsset ??
+      (selectedLookupResult
+        ? {
+            ...buildLookupAsset(selectedLookupResult),
+            instrumentType,
+            sectorType,
+          }
+        : buildManualAsset(assetId));
+    const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+    if (currencyIssue) {
+      setErrors({ assetName: currencyIssue });
+      return;
+    }
 
     setErrors({});
     setReviewAsset(asset);
@@ -520,16 +576,39 @@ export function useAddOpeningPosition({
     }
 
     store.getState().addOpeningPosition(reviewOpeningPosition);
-    store.getState().upsertQuote({
-      asOf: new Date().toISOString(),
-      assetId: reviewAsset.id,
-      currency: "INR",
-      price: reviewOpeningPosition.currentPrice ?? 0,
-      source: "manual",
-    });
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const storedPrice = reviewOpeningPosition.currentPrice ?? 0;
+    const providerQuote = selectedAsset
+      ? snapshot.quoteCache[selectedAsset.id]
+      : selectedLookupQuote;
+    const shouldPreserveProviderQuote =
+      providerQuote !== undefined &&
+      providerQuote.currency === reviewAsset.currency &&
+      providerQuote.price === storedPrice;
+
+    store.getState().upsertQuote(
+      shouldPreserveProviderQuote
+        ? {
+            ...providerQuote,
+            assetId: reviewAsset.id,
+          }
+        : {
+            asOf: new Date().toISOString(),
+            assetId: reviewAsset.id,
+            currency: "INR",
+            price: storedPrice,
+            source: "manual",
+          },
+    );
+    try {
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      );
+    } catch {
+      // Saving and navigation must not depend on optional device feedback.
+    }
     setSuccessMessage("Opening position saved.");
     setReviewOpeningPosition(undefined);
+    onComplete?.(reviewAsset.id);
   }
 
   return {

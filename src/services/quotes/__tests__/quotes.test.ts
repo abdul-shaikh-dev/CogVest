@@ -113,6 +113,7 @@ describe("Yahoo quote service", () => {
           result: [
             {
               meta: {
+                currency: "INR",
                 regularMarketPrice: 101,
               },
             },
@@ -129,6 +130,31 @@ describe("Yahoo quote service", () => {
     expect(fetcher).toHaveBeenCalledWith(
       "https://query1.finance.yahoo.com/v8/finance/chart/RELIANCE.BO?range=1d&interval=1d",
     );
+  });
+
+  it("rejects a Yahoo price whose provider currency is not INR", async () => {
+    const result = await fetchYahooQuote({
+      asset: reliance,
+      fetcher: jest.fn().mockResolvedValue(
+        response({
+          chart: {
+            result: [
+              {
+                meta: {
+                  currency: "USD",
+                  regularMarketPrice: 101,
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    });
+
+    expect(result).toEqual({
+      error: "Yahoo quote currency was not INR; the price was not accepted.",
+      ok: false,
+    });
   });
 });
 

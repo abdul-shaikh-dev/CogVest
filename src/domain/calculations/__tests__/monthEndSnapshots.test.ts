@@ -49,6 +49,7 @@ const debtAsset: Asset = {
 const cryptoAsset: Asset = {
   assetClass: "crypto",
   currency: "INR",
+  exchange: "CRYPTO",
   id: "asset-crypto",
   instrumentType: "crypto",
   name: "Bitcoin",
@@ -247,6 +248,40 @@ describe("buildGeneratedMonthEndSnapshot", () => {
         priceBasis: "historical-close",
         source: "auto",
         warnings: [],
+      },
+    });
+  });
+
+  it("does not relabel a foreign historical quote as INR", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        historicalQuotes: {
+          [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: {
+            assetId: stockAsset.id,
+            asOfMonth: "2026-07",
+            basis: "historical-close",
+            currency: "USD",
+            fetchedAt: "2026-08-01T00:00:00.000Z",
+            price: 250,
+            source: "yahoo",
+          },
+        },
+        openingPositions: [
+          openingPosition({
+            assetId: stockAsset.id,
+            currentPrice: 175,
+            quantity: 10,
+          }),
+        ],
+      }),
+    );
+
+    expect(result.snapshot).toMatchObject({
+      equityValue: 1750,
+      portfolioValue: 1750,
+      generated: {
+        priceBasis: "manual-fallback",
+        warnings: ["1 holding used manual price fallback."],
       },
     });
   });

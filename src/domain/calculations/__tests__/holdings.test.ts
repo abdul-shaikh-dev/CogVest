@@ -30,13 +30,25 @@ const reliance: Asset = {
 
 const bitcoin: Asset = {
   assetClass: "crypto",
-  currency: "USD",
+  currency: "INR",
+  exchange: "CRYPTO",
   id: "asset-btc",
   instrumentType: "crypto",
   name: "Bitcoin",
   sectorType: "digitalAsset",
   symbol: "BTC",
   ticker: "bitcoin",
+};
+
+const unsupportedForeignAsset: Asset = {
+  assetClass: "stock",
+  currency: "USD",
+  id: "asset-aapl",
+  instrumentType: "stock",
+  name: "Apple",
+  sectorType: "technology",
+  symbol: "AAPL",
+  ticker: "AAPL",
 };
 
 const ppf: Asset = {
@@ -285,6 +297,53 @@ describe("holding calculations", () => {
       totalInvested: 250000,
       unrealisedPnL: 40000,
     });
+  });
+
+  it("excludes unsupported foreign assets from INR holdings", () => {
+    const holdings = calculateHoldings({
+      assets: [reliance, unsupportedForeignAsset],
+      quoteCache: {
+        [reliance.id]: {
+          assetId: reliance.id,
+          asOf: "2026-05-10T00:00:00.000Z",
+          currency: "INR",
+          price: 125,
+          source: "yahoo",
+        },
+        [unsupportedForeignAsset.id]: {
+          assetId: unsupportedForeignAsset.id,
+          asOf: "2026-05-10T00:00:00.000Z",
+          currency: "USD",
+          price: 200,
+          source: "yahoo",
+        },
+      },
+      trades: [
+        trade({ assetId: reliance.id }),
+        trade({ assetId: unsupportedForeignAsset.id }),
+      ],
+    });
+
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0]?.asset.id).toBe(reliance.id);
+  });
+
+  it("excludes INR assets whose stored quote is not INR", () => {
+    const holdings = calculateHoldings({
+      assets: [reliance],
+      quoteCache: {
+        [reliance.id]: {
+          assetId: reliance.id,
+          asOf: "2026-05-10T00:00:00.000Z",
+          currency: "USD",
+          price: 125,
+          source: "yahoo",
+        },
+      },
+      trades: [trade({ assetId: reliance.id })],
+    });
+
+    expect(holdings).toEqual([]);
   });
 });
 

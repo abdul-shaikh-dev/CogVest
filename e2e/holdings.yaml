@@ -50,8 +50,6 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "save-holding-button"
-- assertVisible: "Opening position saved."
-- openLink: "cogvest:///holdings"
 - assertVisible:
     id: "holdings-screen"
 - assertVisible: "Reliance Industries"

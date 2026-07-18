@@ -18,7 +18,8 @@ const stock: Asset = {
 
 const crypto: Asset = {
   assetClass: "crypto",
-  currency: "USD",
+  currency: "INR",
+  exchange: "CRYPTO",
   id: "asset-2",
   name: "Bitcoin",
   symbol: "BTC",

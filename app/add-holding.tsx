@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import {
@@ -20,6 +20,7 @@ export default function AddHoldingScreen() {
       initialVisualQaState={
         visualQaState === "review" ? "review" : undefined
       }
+      onComplete={() => router.replace("/(tabs)/holdings")}
       resolveQuote={
         visualQaState === "lookup"
           ? async ({ asset }) => {

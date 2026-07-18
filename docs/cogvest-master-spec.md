@@ -109,6 +109,25 @@ All domain calculations must be pure functions under `src/domain/`.
 - Persisted pre-contract additions migrate to legacy uncategorized entries so
   historical cash remains visible without inventing income semantics.
 
+### V1 Currency And Quote Contract
+
+- INR is the only reporting, transaction-entry, cash, quote, and snapshot
+  currency supported in V1.
+- Yahoo-assisted capture accepts supported NSE and BSE securities only. Foreign
+  securities must be rejected before persistence instead of being aggregated
+  as INR.
+- CoinGecko current and historical crypto prices are requested in INR. The
+  value is CoinGecko's globally aggregated market estimate expressed in INR,
+  not a direct INR trading pair or an exchange-specific execution price.
+- Selected lookup identity, ticker, exchange, currency, quote source ID, and
+  provider quote provenance must survive review and save.
+- Asset and quote currency compatibility must be proven before a record enters
+  INR totals, allocation, P&L, or monthly snapshots.
+- Unsupported persisted records remain local and visible as excluded data; they
+  must never be silently converted, deleted, or included in INR calculations.
+- General foreign-asset portfolios, FX conversion, and user-selectable reporting
+  currency remain outside V1.
+
 ## Screen Contract
 
 Primary tabs:

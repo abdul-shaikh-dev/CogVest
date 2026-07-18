@@ -1,4 +1,5 @@
 import type { QuoteCache } from "@/src/types";
+import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 
 import type {
   QuoteRefreshFailure,
@@ -16,6 +17,15 @@ export async function resolveQuote({
   manualPrice,
   now,
 }: ResolveQuoteInput): Promise<QuoteResult> {
+  const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+  if (currencyIssue) {
+    return {
+      error: currencyIssue,
+      ok: false,
+    };
+  }
+
   if (asset.assetClass === "debt") {
     if (manualPrice !== undefined) {
       return {

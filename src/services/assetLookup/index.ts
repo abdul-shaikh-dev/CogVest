@@ -89,10 +89,6 @@ function inferYahooExchange(symbol: string): AssetExchange | undefined {
   return undefined;
 }
 
-function inferYahooCurrency(symbol: string): Currency {
-  return symbol.endsWith(".NS") || symbol.endsWith(".BO") ? "INR" : "USD";
-}
-
 function normalizeYahooSymbol(symbol: string) {
   return symbol.replace(/\.(NS|BO)$/u, "").toUpperCase();
 }
@@ -110,6 +106,12 @@ export function mapYahooQuoteToLookupResult(
     return undefined;
   }
 
+  const exchange = inferYahooExchange(ticker);
+
+  if (!exchange) {
+    return undefined;
+  }
+
   const quoteType = quote.quoteType?.toUpperCase();
   const isEtf = quoteType === "ETF";
   const assetClass = inferYahooAssetClass(quoteType);
@@ -119,8 +121,8 @@ export function mapYahooQuoteToLookupResult(
 
   return {
     assetClass,
-    currency: inferYahooCurrency(ticker),
-    exchange: inferYahooExchange(ticker),
+    currency: "INR",
+    exchange,
     id: `yahoo:${ticker}`,
     instrumentType: defaults.instrumentType,
     instrumentTypeConfidence: "inferred",
