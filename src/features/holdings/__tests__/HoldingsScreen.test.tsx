@@ -160,6 +160,7 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
 
     expect(getByTestId(`holding-expanded-${asset.id}`)).toBeTruthy();
+    expect(getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
     expect(getByText("Quantity")).toBeTruthy();
     expect(getByText("Avg cost")).toBeTruthy();
     expect(getByText("Current price")).toBeTruthy();

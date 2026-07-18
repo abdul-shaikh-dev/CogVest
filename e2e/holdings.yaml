@@ -55,4 +55,12 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "holdings-screen"
 - assertVisible: "Reliance Industries"
-- assertVisible: "Qty 2"
+- assertVisible: "Invested ₹180"
+- tapOn:
+    id: "holding-row-.*"
+- assertVisible:
+    id: "holding-expanded-.*"
+- assertVisible:
+    id: "holding-quantity-.*"
+- assertVisible: "Quantity"
+- assertVisible: "2"
