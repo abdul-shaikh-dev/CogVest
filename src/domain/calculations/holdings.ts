@@ -8,6 +8,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import { isV1CompatibleQuote } from "@/src/domain/portfolioCurrency";
 
 type CalculateHoldingInput = {
   asset: Asset;
@@ -182,6 +183,12 @@ export function calculateHoldings({
 }: CalculateHoldingsInput) {
   return assets
     .map((asset) => {
+      const quote = quoteCache[asset.id];
+
+      if (!isV1CompatibleQuote(asset, quote)) {
+        return null;
+      }
+
       const assetTrades = trades.filter((trade) => trade.assetId === asset.id);
       const assetOpeningPositions = openingPositions.filter(
         (position) => position.assetId === asset.id,
@@ -197,7 +204,7 @@ export function calculateHoldings({
           (left, right) =>
             new Date(right.date).getTime() - new Date(left.date).getTime(),
         )[0]?.currentPrice;
-      const currentPrice = quoteCache[asset.id]?.price ?? latestManualPrice ?? 0;
+      const currentPrice = quote?.price ?? latestManualPrice ?? 0;
       const holding = calculateHolding({
         asset,
         currentPrice,

@@ -86,6 +86,32 @@ describe("portfolio store", () => {
     expect(store.getState().preferences).toEqual(createDefaultPreferences());
   });
 
+  it("rejects unsupported assets and quote currencies at write boundaries", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const foreignAsset: Asset = {
+      ...asset,
+      currency: "USD",
+      exchange: undefined,
+      id: "asset-aapl",
+      name: "Apple",
+      symbol: "AAPL",
+      ticker: "AAPL",
+    };
+
+    expect(() => store.getState().addAsset(foreignAsset)).toThrow(
+      "CogVest V1 supports INR holdings only",
+    );
+
+    store.getState().addAsset(asset);
+
+    expect(() =>
+      store.getState().upsertQuote({
+        ...quote,
+        currency: "USD",
+      }),
+    ).toThrow("has a USD quote");
+  });
+
   it("adds, updates, and removes raw portfolio records", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 

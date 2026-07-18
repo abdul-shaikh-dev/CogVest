@@ -39,12 +39,14 @@ function formatSignedINR(value: number) {
 
 export function AddOpeningPositionForm({
   initialVisualQaState,
+  onComplete,
   resolveQuote,
   searchAssetLookupResults,
   store,
 }: AddOpeningPositionFormProps) {
   const holding = useAddOpeningPosition({
     initialVisualQaState,
+    onComplete,
     resolveQuote,
     searchAssetLookupResults,
     store,

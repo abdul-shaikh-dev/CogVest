@@ -40,7 +40,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "save-holding-button"
-- assertVisible: "Opening position saved."
+- assertVisible:
+    id: "holdings-screen"
 - openLink: "cogvest:///settings"
 - assertVisible:
     id: "settings-screen"

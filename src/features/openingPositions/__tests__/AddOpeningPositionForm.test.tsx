@@ -663,9 +663,16 @@ describe("AddOpeningPositionForm", () => {
     });
 
     expect(store.getState().assets[0]).toMatchObject({
+      currency: "INR",
+      exchange: "NSE",
       instrumentType: "stock",
       quoteSourceId: "HDFCBANK.NS",
       sectorType: "financialServices",
+    });
+    expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
+      currency: "INR",
+      price: 1678.25,
+      source: "yahoo",
     });
   });
 

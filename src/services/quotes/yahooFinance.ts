@@ -45,6 +45,13 @@ export async function fetchYahooQuote({
     const meta = payload.chart?.result?.[0]?.meta;
     const price = meta?.regularMarketPrice;
 
+    if (meta?.currency?.toUpperCase() !== "INR") {
+      return {
+        error: "Yahoo quote currency was not INR; the price was not accepted.",
+        ok: false,
+      };
+    }
+
     if (typeof price !== "number") {
       return {
         error: "Yahoo quote response did not include a current price.",

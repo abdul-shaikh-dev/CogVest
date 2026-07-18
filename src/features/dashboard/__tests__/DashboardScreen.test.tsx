@@ -26,6 +26,15 @@ const etfAsset: Asset = {
   ticker: "NIFTYBEES.NS",
 };
 
+const unsupportedForeignAsset: Asset = {
+  assetClass: "stock",
+  currency: "USD",
+  id: "asset-aapl",
+  name: "Apple",
+  symbol: "AAPL",
+  ticker: "AAPL",
+};
+
 const buyTrade: Trade = {
   assetId: asset.id,
   date: "2026-04-20",
@@ -66,6 +75,37 @@ describe("DashboardScreen", () => {
     fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("warns about retained foreign data and excludes it from INR totals", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.setState({
+      assets: [unsupportedForeignAsset],
+      quoteCache: {
+        [unsupportedForeignAsset.id]: {
+          asOf: "2026-05-16T10:00:00.000Z",
+          assetId: unsupportedForeignAsset.id,
+          currency: "USD",
+          price: 200,
+          source: "yahoo",
+        },
+      },
+      trades: [
+        {
+          ...buyTrade,
+          assetId: unsupportedForeignAsset.id,
+        },
+      ],
+    });
+
+    const { getAllByText, getByTestId, getByText } = render(
+      <DashboardScreen store={store} />,
+    );
+
+    expect(getByTestId("dashboard-currency-warning")).toBeTruthy();
+    expect(getByText("Unsupported data excluded")).toBeTruthy();
+    expect(getByText(/Apple uses USD/u)).toBeTruthy();
+    expect(getAllByText("₹0").length).toBeGreaterThan(0);
   });
 
   it("wires Dashboard header value masking and quote refresh actions", async () => {

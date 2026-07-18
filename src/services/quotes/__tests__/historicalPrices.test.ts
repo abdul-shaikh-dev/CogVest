@@ -93,6 +93,7 @@ describe("historical Yahoo quote service", () => {
         chart: {
           result: [
             {
+              meta: { currency: "INR" },
               indicators: {
                 quote: [
                   {
@@ -134,6 +135,7 @@ describe("historical Yahoo quote service", () => {
         chart: {
           result: [
             {
+              meta: { currency: "INR" },
               indicators: {
                 quote: [
                   {
@@ -231,6 +233,7 @@ describe("historical Yahoo quote service", () => {
           chart: {
             result: [
               {
+                meta: { currency: "INR" },
                 indicators: {
                   quote: [
                     {
@@ -425,6 +428,7 @@ describe("historical quote resolver", () => {
           chart: {
             result: [
               {
+                meta: { currency: "INR" },
                 indicators: {
                   quote: [
                     {

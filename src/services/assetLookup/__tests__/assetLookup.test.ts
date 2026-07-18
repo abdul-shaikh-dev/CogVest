@@ -72,6 +72,17 @@ describe("asset lookup service", () => {
     });
   });
 
+  it("rejects foreign Yahoo results from the INR-only V1 lookup", () => {
+    expect(
+      mapYahooQuoteToLookupResult({
+        exchange: "NMS",
+        quoteType: "EQUITY",
+        shortname: "Apple Inc.",
+        symbol: "AAPL",
+      }),
+    ).toBeUndefined();
+  });
+
   it("maps CoinGecko coins to crypto metadata with coin ID as quote source", () => {
     expect(
       mapCoinGeckoCoinToLookupResult({

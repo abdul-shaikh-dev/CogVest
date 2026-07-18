@@ -9,6 +9,10 @@ import type {
   Trade,
 } from "@/src/types";
 import { historicalQuoteCacheKey } from "@/src/types";
+import {
+  isV1CompatibleQuote,
+  isV1SupportedAsset,
+} from "@/src/domain/portfolioCurrency";
 
 import {
   calculateCashBalance,
@@ -174,7 +178,7 @@ function selectAssetPrice({
   const historicalQuote =
     historicalQuotes[historicalQuoteCacheKey(asset.id, targetMonth)];
 
-  if (historicalQuote) {
+  if (historicalQuote && isV1CompatibleQuote(asset, historicalQuote)) {
     return {
       basis: historicalQuote.basis,
       price: historicalQuote.price,
@@ -183,7 +187,7 @@ function selectAssetPrice({
 
   const latestQuote = quoteCache[asset.id];
 
-  if (latestQuote) {
+  if (latestQuote && isV1CompatibleQuote(asset, latestQuote)) {
     return {
       basis: "latest-local-fallback",
       price: latestQuote.price,
@@ -249,10 +253,19 @@ export function buildGeneratedMonthEndSnapshot({
   }
 
   const monthEnd = getMonthEndDate(targetMonth);
-  const monthOpeningPositions = openingPositions.filter((position) =>
-    isOnOrBefore(position.date, monthEnd),
+  const supportedAssetIds = new Set(
+    assets.filter(isV1SupportedAsset).map((asset) => asset.id),
   );
-  const monthTrades = trades.filter((trade) => isOnOrBefore(trade.date, monthEnd));
+  const monthOpeningPositions = openingPositions.filter(
+    (position) =>
+      supportedAssetIds.has(position.assetId) &&
+      isOnOrBefore(position.date, monthEnd),
+  );
+  const monthTrades = trades.filter(
+    (trade) =>
+      supportedAssetIds.has(trade.assetId) &&
+      isOnOrBefore(trade.date, monthEnd),
+  );
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
   );
@@ -272,6 +285,10 @@ export function buildGeneratedMonthEndSnapshot({
   }
 
   const relevantAssets = assets.filter((asset) => {
+    if (!supportedAssetIds.has(asset.id)) {
+      return false;
+    }
+
     const hasOpeningPosition = monthOpeningPositions.some(
       (position) => position.assetId === asset.id,
     );
@@ -311,7 +328,7 @@ export function buildGeneratedMonthEndSnapshot({
     return cache;
   }, {});
   const holdings = calculateHoldings({
-    assets,
+    assets: relevantAssets,
     openingPositions: monthOpeningPositions,
     quoteCache: snapshotQuoteCache,
     trades: monthTrades,

@@ -182,6 +182,25 @@ export function DashboardScreen({
           }
         />
 
+        {dashboard.currencyIssues.length > 0 ? (
+          <PremiumCard testID="dashboard-currency-warning">
+            <View style={styles.infoCardRow}>
+              <CategoryIcon assetClass="neutral" />
+              <View style={styles.infoCardCopy}>
+                <AppText weight="bold">Unsupported data excluded</AppText>
+                <AppText color="secondary" variant="caption">
+                  {dashboard.currencyIssues[0].message}
+                  {dashboard.currencyIssues.length > 1
+                    ? ` ${dashboard.currencyIssues.length - 1} more record${
+                        dashboard.currencyIssues.length === 2 ? "" : "s"
+                      } remain stored locally.`
+                    : " The record remains stored locally."}
+                </AppText>
+              </View>
+            </View>
+          </PremiumCard>
+        ) : null}
+
         <PremiumCard elevated style={styles.heroCard} testID="dashboard-portfolio-hero">
           <AppText color="secondary" variant="caption" weight="bold">
             Portfolio value

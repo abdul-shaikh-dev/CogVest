@@ -1,6 +1,10 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { normalizeAssetMetadata } from "@/src/domain/assets";
+import {
+  getV1AssetCurrencyIssue,
+  getV1QuoteCurrencyIssue,
+} from "@/src/domain/portfolioCurrency";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
@@ -255,9 +259,13 @@ function validateLinkedTrade(
   const hasMatchingAsset =
     state.assets.some((asset) => asset.id === trade.assetId) ||
     input.asset?.id === trade.assetId;
+  const tradeAsset =
+    state.assets.find((asset) => asset.id === trade.assetId) ?? input.asset;
 
   if (
     !hasMatchingAsset ||
+    !tradeAsset ||
+    getV1AssetCurrencyIssue(tradeAsset) !== undefined ||
     input.cashLabel.trim().length === 0 ||
     !Number.isFinite(trade.quantity) ||
     trade.quantity <= 0 ||
@@ -303,6 +311,12 @@ export function createPortfolioStore({
   return createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
     addAsset: (asset) => {
+      const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+      if (currencyIssue) {
+        throw new Error(currencyIssue);
+      }
+
       set((state) => ({
         assets: [...state.assets, normalizeAssetMetadata(asset)],
       }));
@@ -453,6 +467,12 @@ export function createPortfolioStore({
     },
     schemaVersion: portfolioSchemaVersion,
     updateAsset: (asset) => {
+      const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+      if (currencyIssue) {
+        throw new Error(currencyIssue);
+      }
+
       const normalizedAsset = normalizeAssetMetadata(asset);
 
       set((state) => ({
@@ -508,6 +528,19 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     upsertHistoricalQuote: (historicalQuote) => {
+      const asset = get().assets.find(
+        (currentAsset) => currentAsset.id === historicalQuote.assetId,
+      );
+      const currencyIssue = asset
+        ? getV1QuoteCurrencyIssue(asset, historicalQuote)
+        : historicalQuote.currency === "INR"
+          ? undefined
+          : "Cannot save a non-INR historical quote without a supported asset.";
+
+      if (currencyIssue) {
+        throw new Error(currencyIssue);
+      }
+
       set((state) => ({
         historicalQuoteCache: {
           ...state.historicalQuoteCache,
@@ -520,6 +553,19 @@ export function createPortfolioStore({
       persistHistoricalQuoteCache(storage, get().historicalQuoteCache);
     },
     upsertQuote: (quote) => {
+      const asset = get().assets.find(
+        (currentAsset) => currentAsset.id === quote.assetId,
+      );
+      const currencyIssue = asset
+        ? getV1QuoteCurrencyIssue(asset, quote)
+        : quote.currency === "INR"
+          ? undefined
+          : "Cannot save a non-INR quote without a supported asset.";
+
+      if (currencyIssue) {
+        throw new Error(currencyIssue);
+      }
+
       set((state) => ({
         quoteCache: {
           ...state.quoteCache,

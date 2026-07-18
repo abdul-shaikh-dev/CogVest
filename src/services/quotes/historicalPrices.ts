@@ -2,6 +2,7 @@ import type {
   HistoricalPriceProviderInput,
   HistoricalPriceResult,
 } from "./types";
+import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import {
   coinGeckoMarketChartBaseUrl,
   defaultNow,
@@ -13,6 +14,9 @@ import {
 type YahooHistoricalChartResponse = {
   chart?: {
     result?: Array<{
+      meta?: {
+        currency?: string;
+      };
       indicators?: {
         quote?: Array<{
           close?: Array<number | null | undefined>;
@@ -108,6 +112,12 @@ export async function fetchYahooHistoricalPrice({
   targetMonth,
 }: HistoricalPriceProviderInput): Promise<HistoricalPriceResult> {
   try {
+    const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+    if (currencyIssue) {
+      return { error: currencyIssue, ok: false };
+    }
+
     const providerId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(
       buildYahooHistoricalChartUrl(providerId, targetMonth),
@@ -124,6 +134,15 @@ export async function fetchYahooHistoricalPrice({
     const result = Array.isArray(payload.chart?.result)
       ? payload.chart.result[0]
       : undefined;
+
+    if (result?.meta?.currency?.toUpperCase() !== "INR") {
+      return {
+        error:
+          "Yahoo historical quote currency was not INR; the price was not accepted.",
+        ok: false,
+      };
+    }
+
     const timestamps = result?.timestamp ?? [];
     const closes = result?.indicators?.quote?.[0]?.close ?? [];
     const monthEndSeconds = Math.floor(
@@ -186,6 +205,12 @@ export async function fetchCoinGeckoHistoricalPrice({
   targetMonth,
 }: HistoricalPriceProviderInput): Promise<HistoricalPriceResult> {
   try {
+    const currencyIssue = getV1AssetCurrencyIssue(asset);
+
+    if (currencyIssue) {
+      return { error: currencyIssue, ok: false };
+    }
+
     const providerId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(
       buildCoinGeckoHistoricalRangeUrl(providerId, targetMonth),
