@@ -4,11 +4,70 @@ appId: com.abdulshaikh.cogvest
     clearState: true
 - assertVisible:
     id: "dashboard-screen"
-- stopApp
+- openLink: "cogvest:///add-holding"
+- assertVisible:
+    id: "add-holding-phase-asset"
+- tapOn:
+    id: "asset-input"
+- inputText: "Masking Test Asset"
+- hideKeyboard
+- tapOn:
+    id: "symbol-input"
+- inputText: "MASK"
+- tapOn:
+    id: "ticker-input"
+- inputText: "MASK.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "90"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible: "Opening position saved."
 - openLink: "cogvest:///settings"
 - assertVisible:
     id: "settings-screen"
-- assertVisible: "Value masking"
 - tapOn:
     id: "value-mask-toggle"
-- assertVisible: "Values masked"
+- assertVisible:
+    id: "value-mask-toggle"
+    checked: true
+- openLink: "cogvest:///holdings"
+- assertVisible: "Masking Test Asset"
+- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertVisible: "+11.11%"
+- tapOn:
+    id: "holding-row-.*"
+- assertVisible:
+    id: "holding-quantity-.*"
+- assertVisible: "Quantity"
+- assertVisible: "2"
+- stopApp
+- launchApp
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: "value-mask-toggle"
+    checked: true
+- openLink: "cogvest:///holdings"
+- assertVisible: "Masking Test Asset"
+- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertVisible: "+11.11%"
