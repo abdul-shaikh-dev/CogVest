@@ -22,7 +22,8 @@ The highest-risk problems are:
 2. Foreign assets can be saved and valued as INR without currency conversion.
 3. Failed live quote refreshes can relabel stale cached prices as fresh manual
    prices.
-4. Locally distributed release APKs are signed with the public debug key.
+4. Locally distributed release APKs used the public debug key. Issue #171 adds
+   private local release signing and keeps debug signing development-only.
 
 These should be resolved before treating CogVest as a trustworthy replacement
 for the Excel tracker.
@@ -129,15 +130,35 @@ that last-known prices are shown.
 
 ### C4. Release APK uses the public debug signing key
 
+**Status (2026-07-19): Remediated by #171, pending merge.** The durable Expo
+config plugin now keeps debug builds on the debug key, requires owner-controlled
+credentials for local release tasks, and leaves EAS preview/production builds on
+Expo-managed credentials. The actual owner upload key and its expected
+certificate fingerprint remain release-candidate operational inputs.
+
 **Impact:** Directly distributed APKs cannot be trusted as production artifacts.
 Anyone with the standard debug key could sign an APK accepted as an update to a
 debug-signed installation.
 
-**Evidence:** `android/app/build.gradle:100-115` configures the release build with
-`signingConfigs.debug` and the standard debug credentials.
+**Original evidence:** The generated `android/app/build.gradle` configured the
+release build with `signingConfigs.debug` and the standard debug credentials.
 
-**Required direction:** Add a private release keystore workflow, keep secrets out
-of Git, and make release signing a release-candidate gate.
+**Remediation evidence:**
+
+- `plugins/withPrivateReleaseSigning.js` replaces generated release debug
+  signing through Expo prebuild and fails local release tasks clearly when any
+  required credential is absent.
+- `npm run android:apk:release` failed without credentials and listed all four
+  required signing values. It did not leave a stale release APK behind.
+- A disposable, one-day local verification keystore produced an x86_64 release
+  APK whose certificate subject was `CN=CogVest Verification`, proving that the
+  private-signing path replaces the debug certificate. The disposable keystore
+  and APK were removed after verification; they are not production credentials.
+- A fresh x86_64 debug APK remained signed as `CN=Android Debug`, installed on
+  `emulator-5554`, and passed `npm run test:v1:pc`.
+- `npm run test:verify` passed 46 suites and 278 tests; Expo Doctor passed 17/17.
+- Keystore and credential export patterns are ignored by Git. No EAS build was
+  triggered during remediation.
 
 ## High-Severity Findings
 

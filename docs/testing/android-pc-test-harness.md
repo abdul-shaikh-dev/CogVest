@@ -122,25 +122,43 @@ npm run android
 Use this when a local native build is needed. For normal JavaScript and
 TypeScript iteration, start Metro and press `a`.
 
-## Local Release APK Build
+## Local APK Build
 
-Use this path for developer APK smoke testing when you do not want to spend EAS
-cloud build compute:
+Use the debug APK path for routine developer smoke testing without EAS cloud
+compute:
 
 ```powershell
-.\android\gradlew.bat -p android assembleRelease
+npm run android:apk:emulator
 ```
 
-The release APK is generated under:
+The debug APK is generated at:
 
 ```text
-android/app/build/outputs/apk/release/
+android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Install it on the emulator with `adb install -r path\to\app-release.apk`, then
-run `npm run android:smoke -- --strict`. If Gradle signing is not configured,
-use the local dev build path (`npm run android`) for emulator verification and
-record the release APK blocker as a defect.
+Install it with:
+
+```powershell
+adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Keep Metro running with `npm run start:clear`, then run
+`npm run android:smoke -- --strict`.
+
+Use `npm run android:apk` instead when a universal debug APK is specifically
+needed for physical-device development. The emulator command produces a much
+smaller x86_64 APK.
+
+A standalone local release APK is a release-security operation:
+
+```powershell
+npm run android:apk:release
+```
+
+This command requires the private signing values documented in
+`docs/release/android-release-process.md`. It must fail when they are absent;
+never work around that failure by restoring debug signing.
 
 For seeded visual QA or chart inspection, use the seed-enabled bundled APK flow
 in `docs/testing/seeded-visual-qa.md`. That flow documents the

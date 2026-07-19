@@ -20,11 +20,12 @@ default GitHub Actions.
 npm run android
 ```
 
-or a local release APK installed with `adb install -r`.
+or a local debug APK installed with `adb install -r` while Metro is running.
 
-The seed route is hidden and only writes data in development builds. For a
-local release APK visual QA run, build with `EXPO_PUBLIC_COGVEST_VISUAL_QA=1`
-and use the local visual QA token supplied by `npm run visual-qa:android`.
+The seed route is hidden and only writes data in development builds. A local
+release APK visual QA run additionally requires private release signing,
+`EXPO_PUBLIC_COGVEST_VISUAL_QA=1`, and the local visual QA token supplied by
+`npm run visual-qa:android`.
 
 ## Run
 
@@ -55,7 +56,10 @@ Expected screenshots:
 Use this flow when you specifically need to populate and inspect seeded visual
 QA data on an installed emulator APK without depending on Metro. This is useful
 for chart review because release-style bundles load their JavaScript from the
-APK instead of requiring a running dev server.
+APK instead of requiring a running dev server. This is not the default local
+test path. Configure the private signing values from
+`docs/release/android-release-process.md` first; the build must fail if they
+are absent.
 
 ### 1. Confirm Emulator
 
@@ -270,8 +274,7 @@ Unable to load script.
 Make sure you're running Metro or that your bundle index.android.bundle is packaged correctly.
 ```
 
-For quick visual QA, prefer the bundled release APK flow above. If you really
-need the debug APK path, run:
+For routine visual QA, prefer the debug APK with Metro. Run:
 
 ```powershell
 adb -s emulator-5554 reverse tcp:8081 tcp:8081
@@ -279,7 +282,9 @@ $env:EXPO_PUBLIC_COGVEST_VISUAL_QA = "1"
 npm run start:clear
 ```
 
-Then reload the app and open the seed route.
+Then run `npm run android:apk`, install the debug APK, reload the app, and open
+the seed route. Use the bundled release flow only when standalone behavior is
+specifically under review and private signing is configured.
 
 ### Background Metro Starts but Port 8081 Is Closed
 
@@ -290,8 +295,8 @@ lifetime issues. Verify Metro before relying on it:
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8081/status
 ```
 
-If it refuses the connection, do not assume the app is broken. Either run Metro
-in the foreground or use the bundled release APK flow.
+If it refuses the connection, do not assume the app is broken. Run Metro in the
+foreground. Use the bundled release APK flow only with private signing.
 
 ### Kotlin Daemon Access Denied
 
