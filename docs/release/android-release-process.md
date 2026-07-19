@@ -8,10 +8,20 @@ Purpose: local development and native integration checks.
 
 Commands:
 
-```bash
+```powershell
 npx expo run:android
-eas build --platform android --profile development
+npm run android:apk
 ```
+
+`npm run android:apk` applies Expo config plugins and creates a debug-signed
+APK at:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Debug APKs are development-only and normally require Metro. They must not be
+distributed as release candidates.
 
 ### Preview Build
 
@@ -19,10 +29,14 @@ Purpose: optional installable APK for internal distribution. For local
 developer verification, prefer a PC-built APK installed on Android Emulator so
 EAS cloud compute is not consumed.
 
-Local PC command:
+Routine local testing must use the debug APK command above. A standalone local
+release APK requires the owner-controlled private signing credentials described
+under Signing Strategy.
+
+Private local release command:
 
 ```powershell
-.\android\gradlew.bat -p android assembleRelease
+npm run android:apk:release
 ```
 
 Local output:
@@ -131,7 +145,48 @@ Future Play submission secrets:
 
 ## Signing Strategy
 
-Use Expo-managed Android credentials through EAS for V1 unless explicitly changed. Do not commit keystores. Document who controls the Expo account and how signing credential recovery is handled.
+Use Expo-managed Android credentials through EAS for V1 release candidates.
+EAS injects its signing configuration during cloud builds; no local release
+credentials are required for normal EAS use.
+
+Local `assembleRelease` and `bundleRelease` tasks must never use the public
+debug key. CogVest's Expo config plugin requires these four values through
+environment variables or `~/.gradle/gradle.properties`:
+
+```properties
+COGVEST_RELEASE_STORE_FILE=C:/secure/cogvest/cogvest-upload.jks
+COGVEST_RELEASE_STORE_PASSWORD=replace-with-private-value
+COGVEST_RELEASE_KEY_ALIAS=replace-with-private-value
+COGVEST_RELEASE_KEY_PASSWORD=replace-with-private-value
+```
+
+Do not put these values in the repository's `android/gradle.properties`.
+The release build fails before execution when any value is missing.
+
+To reuse the EAS-managed upload key locally:
+
+1. Run `eas credentials`.
+2. Select Android and the CogVest build profile.
+3. Choose the credentials upload/download option.
+4. Download `credentials.json` and its keystore.
+5. Move the keystore to owner-controlled encrypted storage.
+6. Transfer its path, alias, and passwords into user-level Gradle properties.
+7. Delete transient credential exports after confirming the secure backup.
+
+The Expo account owner controls the upload key. Back up the keystore and its
+passwords in two owner-controlled secure locations. Losing the key can prevent
+future updates; exposing it allows unauthorized update signing.
+
+After a privately signed local build, inspect the certificate:
+
+```powershell
+$apksigner = "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.0.0\apksigner.bat"
+& $apksigner verify --print-certs `
+  android\app\build\outputs\apk\release\app-release.apk
+```
+
+Record the expected SHA-256 certificate fingerprint in the private release
+record, not in source control if the release policy treats it as restricted.
 
 ## Play Store Submission
 
