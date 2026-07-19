@@ -121,8 +121,14 @@ describe("useHoldings", () => {
     });
     expect(refreshQuotes).toHaveBeenCalledWith({
       assets: [asset],
-      manualPrices: {
-        [asset.id]: 100,
+      cachedQuotes: {
+        [asset.id]: {
+          asOf: "2026-04-20T10:00:00.000Z",
+          assetId: asset.id,
+          currency: "INR",
+          price: 100,
+          source: "manual",
+        },
       },
     });
     expect(result.current.holdings[0]).toMatchObject({

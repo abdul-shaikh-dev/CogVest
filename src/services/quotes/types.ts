@@ -53,13 +53,13 @@ export type HistoricalPriceProviderInput = {
 };
 
 export type ResolveQuoteInput = QuoteProviderInput & {
-  manualPrice?: number;
+  cachedQuote?: Quote;
 };
 
 export type RefreshQuotesInput = {
   assets: Asset[];
+  cachedQuotes?: QuoteCache;
   fetcher?: QuoteFetcher;
-  manualPrices?: Record<string, number>;
   now?: QuoteNow;
 };
 

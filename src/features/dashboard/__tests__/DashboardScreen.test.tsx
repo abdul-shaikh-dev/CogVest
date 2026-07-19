@@ -148,6 +148,39 @@ describe("DashboardScreen", () => {
     ).toBeTruthy();
   });
 
+  it("describes failed refreshes as last-known prices", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    const cachedQuote = {
+      asOf: "2026-05-15T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR" as const,
+      price: 165,
+      source: "yahoo" as const,
+    };
+    store.getState().upsertQuote(cachedQuote);
+    const refreshQuotes = jest.fn().mockResolvedValue({
+      failures: [{ assetId: asset.id, error: "Provider unavailable." }],
+      quoteCache: { [asset.id]: cachedQuote },
+    });
+
+    const { getByLabelText, getByText, queryByText } = render(
+      <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByLabelText("Refresh quotes"));
+    });
+
+    await waitFor(() => {
+      expect(
+        getByText("Some quotes could not refresh. Showing last known prices."),
+      ).toBeTruthy();
+    });
+    expect(queryByText(/Manual fallback ready/u)).toBeNull();
+  });
+
   it("wires Dashboard allocation and progress actions", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onOpenHoldings = jest.fn();

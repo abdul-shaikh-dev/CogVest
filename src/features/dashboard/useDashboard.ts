@@ -124,15 +124,6 @@ function isSameMonth(isoDate: string, now: Date) {
   );
 }
 
-function selectManualPrices(state: PortfolioStoreState) {
-  return Object.fromEntries(
-    Object.entries(state.quoteCache).map(([assetId, quote]) => [
-      assetId,
-      quote.price,
-    ]),
-  );
-}
-
 function calculateMonthlyMetrics(
   state: PortfolioStoreState,
   now: Date,
@@ -216,7 +207,7 @@ export function useDashboard({
       const currentState = store.getState();
       const result = await refreshQuotes({
         assets: currentState.assets,
-        manualPrices: selectManualPrices(currentState),
+        cachedQuotes: currentState.quoteCache,
       });
 
       for (const quote of Object.values(result.quoteCache)) {

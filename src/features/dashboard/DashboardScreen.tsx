@@ -441,7 +441,7 @@ function getQuoteStatus({
   }
 
   if (quoteFailures > 0) {
-    return "Some quotes could not refresh. Manual fallback ready.";
+    return "Some quotes could not refresh. Showing last known prices.";
   }
 
   if (!latestQuoteAsOf) {

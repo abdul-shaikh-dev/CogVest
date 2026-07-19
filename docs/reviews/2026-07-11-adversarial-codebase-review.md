@@ -106,6 +106,27 @@ and age.
 Fallback must preserve original source and timestamp and expose explicit stale
 status.
 
+**Remediation status (2026-07-19):** Implemented under GitHub issue #169,
+pending merge at the time of this update. Refresh now carries complete cached
+quote objects rather than numeric values labelled as manual input. A failed
+Yahoo or CoinGecko request returns the exact cached quote, preserving price,
+currency, source, timestamp, and day-change metadata. Genuine manual quotes
+also retain their original timestamp. Dashboard failure copy explicitly says
+that last-known prices are shown.
+
+**Remediation evidence:**
+
+- `src/services/quotes/quoteResolver.ts` preserves the cached quote on failure.
+- `src/features/dashboard/useDashboard.ts` and
+  `src/features/holdings/useHoldings.ts` pass the complete quote cache.
+- `src/services/quotes/__tests__/quotes.test.ts` covers Yahoo, CoinGecko,
+  genuine manual, debt, and mixed success/failure refresh paths.
+- Dashboard and Holdings hook/component tests cover the integration contract
+  and user-facing failure state.
+- `npm run test:verify` passed with 45 suites and 273 tests.
+- A fresh local x86_64 release APK was built, installed on `emulator-5554`, and
+  passed `e2e/smoke-launch.yaml`.
+
 ### C4. Release APK uses the public debug signing key
 
 **Impact:** Directly distributed APKs cannot be trusted as production artifacts.

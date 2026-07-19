@@ -9,12 +9,11 @@ import type {
 } from "./types";
 import { fetchCoinGeckoQuote } from "./coinGecko";
 import { fetchYahooQuote } from "./yahooFinance";
-import { createManualQuote } from "./utils";
 
 export async function resolveQuote({
   asset,
+  cachedQuote,
   fetcher,
-  manualPrice,
   now,
 }: ResolveQuoteInput): Promise<QuoteResult> {
   const currencyIssue = getV1AssetCurrencyIssue(asset);
@@ -27,10 +26,10 @@ export async function resolveQuote({
   }
 
   if (asset.assetClass === "debt") {
-    if (manualPrice !== undefined) {
+    if (cachedQuote) {
       return {
         ok: true,
-        quote: createManualQuote({ asset, now, price: manualPrice }),
+        quote: cachedQuote,
       };
     }
 
@@ -45,20 +44,20 @@ export async function resolveQuote({
       ? await fetchCoinGeckoQuote({ asset, fetcher, now })
       : await fetchYahooQuote({ asset, fetcher, now });
 
-  if (result.ok || manualPrice === undefined) {
+  if (result.ok || !cachedQuote) {
     return result;
   }
 
   return {
     ...result,
-    fallbackQuote: createManualQuote({ asset, now, price: manualPrice }),
+    fallbackQuote: cachedQuote,
   };
 }
 
 export async function refreshQuotes({
   assets,
+  cachedQuotes = {},
   fetcher,
-  manualPrices = {},
   now,
 }: RefreshQuotesInput) {
   const quoteCache: QuoteCache = {};
@@ -71,8 +70,8 @@ export async function refreshQuotes({
 
     const result = await resolveQuote({
       asset,
+      cachedQuote: cachedQuotes[asset.id],
       fetcher,
-      manualPrice: manualPrices[asset.id],
       now,
     });
 
