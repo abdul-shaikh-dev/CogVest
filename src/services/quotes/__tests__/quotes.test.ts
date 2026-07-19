@@ -4,7 +4,7 @@ import {
   refreshQuotes,
   resolveQuote,
 } from "@/src/services/quotes";
-import type { Asset } from "@/src/types";
+import type { Asset, Quote } from "@/src/types";
 
 const reliance: Asset = {
   assetClass: "stock",
@@ -253,65 +253,96 @@ describe("quote resolver", () => {
     expect(result.ok && result.quote.source).toBe("coingecko");
   });
 
-  it("uses manual fallback directly for debt assets", async () => {
+  it("uses the cached manual quote directly for debt assets", async () => {
     const fetcher = jest.fn();
+    const cachedQuote: Quote = {
+      assetId: ppf.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      price: 1,
+      source: "manual",
+    };
 
     const result = await resolveQuote({
       asset: ppf,
+      cachedQuote,
       fetcher,
-      manualPrice: 1,
       now: () => "2026-04-26T10:00:00.000Z",
     });
 
     expect(fetcher).not.toHaveBeenCalled();
     expect(result).toEqual({
       ok: true,
-      quote: {
-        assetId: ppf.id,
-        asOf: "2026-04-26T10:00:00.000Z",
-        currency: "INR",
-        price: 1,
-        source: "manual",
-      },
+      quote: cachedQuote,
     });
   });
 
-  it("keeps crypto manual fallback when CoinGecko fails", async () => {
+  it("preserves a cached CoinGecko quote when CoinGecko fails", async () => {
+    const cachedQuote: Quote = {
+      assetId: bitcoin.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      dayChangeAbs: -45000,
+      dayChangePct: -0.78,
+      price: 5700000,
+      source: "coingecko",
+    };
     const result = await resolveQuote({
       asset: bitcoin,
+      cachedQuote,
       fetcher: jest.fn().mockResolvedValue(response({}, false)),
-      manualPrice: 5700000,
       now: () => "2026-04-26T10:00:00.000Z",
     });
 
-    expect(result).toMatchObject({
-      fallbackQuote: {
-        assetId: bitcoin.id,
-        currency: "INR",
-        price: 5700000,
-        source: "manual",
-      },
+    expect(result).toEqual({
+      error: "CoinGecko quote request failed with status 500.",
+      fallbackQuote: cachedQuote,
       ok: false,
     });
   });
 
-  it("uses manual fallback when provider fetch fails", async () => {
+  it("preserves Yahoo provenance and timestamp when provider fetch fails", async () => {
+    const cachedQuote: Quote = {
+      assetId: reliance.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      dayChangeAbs: 25,
+      dayChangePct: 0.9,
+      price: 2800,
+      source: "yahoo",
+    };
     const result = await resolveQuote({
       asset: reliance,
+      cachedQuote,
       fetcher: jest.fn().mockResolvedValue(response({}, false)),
-      manualPrice: 2800,
       now: () => "2026-04-26T10:00:00.000Z",
     });
 
     expect(result).toEqual({
       error: "Yahoo quote request failed with status 500.",
-      fallbackQuote: {
-        assetId: reliance.id,
-        asOf: "2026-04-26T10:00:00.000Z",
-        currency: "INR",
-        price: 2800,
-        source: "manual",
-      },
+      fallbackQuote: cachedQuote,
+      ok: false,
+    });
+  });
+
+  it("preserves a genuine manual quote and its original timestamp", async () => {
+    const cachedQuote: Quote = {
+      assetId: reliance.id,
+      asOf: "2026-04-19T09:30:00.000Z",
+      currency: "INR",
+      price: 2750,
+      source: "manual",
+    };
+
+    const result = await resolveQuote({
+      asset: reliance,
+      cachedQuote,
+      fetcher: jest.fn().mockResolvedValue(response({}, false)),
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      fallbackQuote: cachedQuote,
       ok: false,
     });
   });
@@ -336,17 +367,38 @@ describe("quote resolver", () => {
       )
       .mockResolvedValueOnce(response({}, false));
 
+    const staleRelianceQuote: Quote = {
+      assetId: reliance.id,
+      asOf: "2026-04-17T10:00:00.000Z",
+      currency: "INR",
+      price: 95,
+      source: "yahoo",
+    };
+    const cachedQuote: Quote = {
+      assetId: niftyBees.id,
+      asOf: "2026-04-18T10:00:00.000Z",
+      currency: "INR",
+      dayChangeAbs: 2,
+      dayChangePct: 0.8,
+      price: 250,
+      source: "yahoo",
+    };
     const result = await refreshQuotes({
       assets: [reliance, niftyBees],
-      fetcher,
-      manualPrices: {
-        [niftyBees.id]: 250,
+      cachedQuotes: {
+        [reliance.id]: staleRelianceQuote,
+        [niftyBees.id]: cachedQuote,
       },
+      fetcher,
       now: () => "2026-04-26T10:00:00.000Z",
     });
 
-    expect(result.quoteCache[reliance.id]?.source).toBe("yahoo");
-    expect(result.quoteCache[niftyBees.id]?.source).toBe("manual");
+    expect(result.quoteCache[reliance.id]).toMatchObject({
+      asOf: "2026-04-26T10:00:00.000Z",
+      price: 101,
+      source: "yahoo",
+    });
+    expect(result.quoteCache[niftyBees.id]).toEqual(cachedQuote);
     expect(result.failures).toEqual([
       {
         assetId: niftyBees.id,

@@ -284,6 +284,15 @@ describe("useDashboard", () => {
   it("refreshes quotes and persists refreshed quote cache", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
+    const cachedQuote = {
+      asOf: "2026-05-15T10:00:00.000Z",
+      assetId: stockAsset.id,
+      currency: "INR" as const,
+      dayChangePct: 1.5,
+      price: 165,
+      source: "yahoo" as const,
+    };
+    store.getState().upsertQuote(cachedQuote);
     const refreshQuotes = jest.fn().mockResolvedValue({
       failures: [],
       quoteCache: {
@@ -306,7 +315,9 @@ describe("useDashboard", () => {
 
     expect(refreshQuotes).toHaveBeenCalledWith({
       assets: [expect.objectContaining(stockAsset)],
-      manualPrices: {},
+      cachedQuotes: {
+        [stockAsset.id]: cachedQuote,
+      },
     });
     expect(store.getState().quoteCache[stockAsset.id]).toMatchObject({
       price: 175,

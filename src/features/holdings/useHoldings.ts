@@ -63,15 +63,6 @@ function withQuoteMetadata(
   });
 }
 
-function selectManualPrices(state: PortfolioStoreState) {
-  return Object.fromEntries(
-    Object.entries(state.quoteCache).map(([assetId, quote]) => [
-      assetId,
-      quote.price,
-    ]),
-  );
-}
-
 function getLatestQuoteAsOf(holdings: HoldingWithQuoteMetadata[]) {
   return holdings
     .map((holding) => holding.lastUpdated)
@@ -109,7 +100,7 @@ export function useHoldings({
       const currentState = store.getState();
       const result = await refreshQuotes({
         assets: currentState.assets,
-        manualPrices: selectManualPrices(currentState),
+        cachedQuotes: currentState.quoteCache,
       });
 
       for (const quote of Object.values(result.quoteCache)) {
