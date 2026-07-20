@@ -50,17 +50,17 @@ advanced tax logic remain outside V1 unless an issue explicitly changes scope.
 User-facing language should prefer Dashboard, Holdings, Add Holding, Progress,
 Cash, and Settings. Keep trade terminology internal where practical.
 
-## Workflow
+## Change Risk
 
-Match the process to the risk. Do not create a durable spec, plan, or review
-artifact merely to satisfy ceremony.
+Match verification and review rigor to the risk. Do not create a durable spec,
+plan, or review artifact merely to satisfy ceremony.
 
-- Routine change: reproduce/inspect, focused fix, focused validation, diff review.
-- Normal feature: concise issue acceptance criteria, internal route, tests,
-  implementation, owned-diff review, relevant verification.
+- Routine change: focused inspection, validation, and owned-diff review.
+- Normal feature: clear issue acceptance criteria, relevant tests, owned-diff
+  review, and relevant verification.
 - Critical change (financial model, currency, persistence, migration, privacy,
-  security, release architecture): approved contract/spec, implementation plan,
-  adversarial review, failure-path tests, and full relevant verification.
+  security, release architecture): approved behavior contract, failure-path
+  tests, adversarial owned-diff review, and full relevant verification.
 
 Use specialized design review tools for significant UI work, but do not require
 multiple design skills to repeat the same critique. One evidence-based review and
