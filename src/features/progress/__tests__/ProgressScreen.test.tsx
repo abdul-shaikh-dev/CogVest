@@ -36,6 +36,12 @@ const maySnapshot: MonthlySnapshot = {
   monthlyExpense: 40000,
   monthlyInvestment: 60000,
   notes: "May close",
+  performanceBasis: {
+    netExternalFlow: 60000,
+    status: "complete",
+    warnings: [],
+    weightedExternalFlow: 60000,
+  },
   portfolioValue: 1385000,
   salary: 160000,
 };
@@ -199,12 +205,16 @@ describe("ProgressScreen", () => {
       month: "2026-05",
       monthlyExpense: 40000,
       monthlyInvestment: 60000,
+      performanceBasis: {
+        reason: "manual-snapshot",
+        status: "unavailable",
+      },
       portfolioValue: 1385000,
       salary: 160000,
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
-  it("renders persisted monthly gain, rates, and asset snapshot", () => {
+  it("renders contribution-adjusted performance and asset snapshot", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
@@ -213,12 +223,33 @@ describe("ProgressScreen", () => {
 
     expect(getAllByText("₹13,85,000.00").length).toBeGreaterThan(0);
     expect(getByText("₹13.85L")).toBeTruthy();
-    expect(getByText("+₹1.25L")).toBeTruthy();
-    expect(getByText("₹60K")).toBeTruthy();
     expect(getByText("+₹65K")).toBeTruthy();
+    expect(getByText("+₹60K")).toBeTruthy();
+    expect(getByText("₹60K")).toBeTruthy();
+    expect(
+      getByText("Market +₹65,000.00 · total +₹1,25,000.00"),
+    ).toBeTruthy();
     expect(getAllByText("Equity").length).toBeGreaterThan(0);
     expect(getByText("₹8,80,000.00")).toBeTruthy();
     expect(getByText("May close")).toBeTruthy();
+  });
+
+  it("labels legacy snapshot performance unavailable instead of guessing", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      performanceBasis: undefined,
+    });
+
+    const { getAllByText, getByText } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
+    expect(
+      getByText("Performance unavailable · total +₹1,25,000.00"),
+    ).toBeTruthy();
   });
 
   it("shows an insufficient chart-history state until two snapshots exist", () => {
@@ -275,7 +306,12 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().updatePreferences({ maskWealthValues: true });
 
-    const { getAllByTestId, getByTestId, getAllByText, queryByText } = render(
+    const {
+      getAllByTestId,
+      getByTestId,
+      getAllByText,
+      queryByText,
+    } = render(
       <ProgressScreen store={store} />,
     );
     const [portfolioChart] = getAllByTestId("gifted-line-chart");
@@ -283,6 +319,8 @@ describe("ProgressScreen", () => {
     expect(getByTestId("portfolio-trend-y-axis-0")).toHaveTextContent("₹••••");
     expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
     expect(queryByText("₹20L")).toBeNull();
+    expect(queryByText("₹13,85,000.00")).toBeNull();
+    expect(getAllByText("Performance values hidden").length).toBeGreaterThan(0);
     expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
   });
 
@@ -353,6 +391,7 @@ describe("ProgressScreen", () => {
       id: maySnapshot.id,
       investedValue: 1070000,
       monthlyInvestment: 70000,
+      performanceBasis: maySnapshot.performanceBasis,
       portfolioValue: 1400000,
     });
     expect(onComplete).toHaveBeenCalledTimes(1);

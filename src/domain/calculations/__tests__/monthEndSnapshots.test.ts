@@ -461,7 +461,11 @@ describe("buildGeneratedMonthEndSnapshot", () => {
         assets: [stockAsset, etfAsset, debtAsset, cryptoAsset],
         cashEntries: [
           cashEntry({ amount: 1500, type: "addition" }),
-          cashEntry({ amount: 250, type: "withdrawal" }),
+          cashEntry({
+            amount: 250,
+            purpose: "withdrawal",
+            type: "withdrawal",
+          }),
         ],
         historicalQuotes: {
           [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: {
@@ -572,6 +576,10 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.snapshot?.cashValue).toBe(1250);
     expect(result.snapshot?.investedValue).toBeCloseTo(52386.666666666664);
     expect(result.snapshot?.portfolioValue).toBe(65500);
+    expect(result.snapshot?.performanceBasis).toMatchObject({
+      netExternalFlow: 52500,
+      status: "complete",
+    });
     expect(result.snapshot?.salary).toBe(0);
   });
 

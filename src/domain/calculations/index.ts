@@ -12,6 +12,14 @@ export {
   getDefaultMonthlyChartRange,
   MONTHLY_CHART_RANGES,
 } from "./monthlyProgressCharts";
+export {
+  buildMonthlyPerformanceBasis,
+  calculateMonthlyPerformance,
+} from "./monthlyPerformance";
+export type {
+  MonthlyPerformanceResult,
+  MonthlyPerformanceUnavailableReason,
+} from "./monthlyPerformance";
 export type {
   AssetChartInsight,
   MonthlyChartRange,

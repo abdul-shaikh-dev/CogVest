@@ -1,5 +1,10 @@
 import type { MonthlySnapshot } from "@/src/types";
 
+import {
+  calculateMonthlyPerformance,
+  type MonthlyPerformanceResult,
+} from "./monthlyPerformance";
+
 export type MonthlyChartRange = "3M" | "6M" | "1Y" | "All";
 
 export const MONTHLY_CHART_RANGES: MonthlyChartRange[] = [
@@ -16,12 +21,11 @@ export type MonthlyProgressChartSeries = {
 
 export type PortfolioChartInsight = {
   latestInvestedValue: number;
-  latestMonthlyGain: number;
   latestMonthlyInvestment: number;
   latestPortfolioValue: number;
+  performance: MonthlyPerformanceResult;
   valueGap: number;
   valueGapPct: number;
-  valueMove: number;
 };
 
 export type AssetChartInsight = {
@@ -97,20 +101,16 @@ function buildPortfolioInsight(
   }
 
   const previousSnapshot = chronological.at(-2);
-  const latestMonthlyGain = previousSnapshot
-    ? latestSnapshot.portfolioValue - previousSnapshot.portfolioValue
-    : 0;
   const valueGap =
     latestSnapshot.portfolioValue - latestSnapshot.investedValue;
 
   return {
     latestInvestedValue: latestSnapshot.investedValue,
-    latestMonthlyGain,
     latestMonthlyInvestment: latestSnapshot.monthlyInvestment,
     latestPortfolioValue: latestSnapshot.portfolioValue,
+    performance: calculateMonthlyPerformance(previousSnapshot, latestSnapshot),
     valueGap,
     valueGapPct: safePercentage(valueGap, latestSnapshot.investedValue),
-    valueMove: latestMonthlyGain - latestSnapshot.monthlyInvestment,
   };
 }
 

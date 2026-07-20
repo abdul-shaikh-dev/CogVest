@@ -17,6 +17,12 @@ function snapshot(
     investedValue: 0,
     month,
     monthlyInvestment: 0,
+    performanceBasis: {
+      netExternalFlow: 0,
+      status: "complete",
+      warnings: [],
+      weightedExternalFlow: 0,
+    },
     portfolioValue: 0,
     salary: 0,
     ...values,
@@ -136,11 +142,18 @@ describe("buildMonthlyProgressChartData", () => {
     expect(chartData.assetSeries).toEqual([]);
     expect(chartData.portfolioInsight).toMatchObject({
       latestInvestedValue: 100000,
-      latestMonthlyGain: 0,
       latestPortfolioValue: 110000,
+      performance: {
+        denominator: null,
+        marketMovement: null,
+        marketMovementPct: null,
+        netExternalFlow: null,
+        reason: "missing-previous-snapshot",
+        status: "unavailable",
+        totalValueChange: null,
+      },
       valueGap: 10000,
       valueGapPct: 10,
-      valueMove: 0,
     });
   });
 
@@ -210,12 +223,19 @@ describe("buildMonthlyProgressChartData", () => {
 
     expect(chartData.portfolioInsight).toEqual({
       latestInvestedValue: 1385000,
-      latestMonthlyGain: 72600,
       latestMonthlyInvestment: 45000,
       latestPortfolioValue: 1589600,
+      performance: {
+        denominator: 1517000,
+        marketMovement: 72600,
+        marketMovementPct: 4.79,
+        netExternalFlow: 0,
+        reason: null,
+        status: "available",
+        totalValueChange: 72600,
+      },
       valueGap: 204600,
       valueGapPct: 14.772563176895307,
-      valueMove: 27600,
     });
   });
 

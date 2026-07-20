@@ -7,6 +7,22 @@ export type MonthlySnapshotGenerationMetadata = {
   warnings: string[];
 };
 
+export type MonthlyPerformanceBasis =
+  | {
+      netExternalFlow: number;
+      status: "complete";
+      warnings: string[];
+      weightedExternalFlow: number;
+    }
+  | {
+      reason:
+        | "ambiguous-cash-flow"
+        | "legacy-snapshot"
+        | "manual-snapshot";
+      status: "unavailable";
+      warnings: string[];
+    };
+
 export type MonthlySnapshot = {
   cashValue: number;
   cryptoValue: number;
@@ -19,6 +35,7 @@ export type MonthlySnapshot = {
   monthlyExpense?: number;
   monthlyInvestment: number;
   notes?: string;
+  performanceBasis?: MonthlyPerformanceBasis;
   portfolioValue: number;
   salary: number;
 };

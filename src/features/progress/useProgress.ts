@@ -135,6 +135,13 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
       monthlyExpense,
       monthlyInvestment: parsedValues.monthlyInvestment,
       notes: values.notes.trim() || undefined,
+      performanceBasis: {
+        reason: "manual-snapshot",
+        status: "unavailable",
+        warnings: [
+          "Monthly performance is unavailable because this snapshot has no classified external-flow basis.",
+        ],
+      },
       portfolioValue: parsedValues.portfolioValue,
       salary: parsedValues.salary,
     } satisfies MonthlySnapshot,
@@ -284,7 +291,16 @@ export function useProgress({
     if (existingSnapshot) {
       store.getState().updateMonthlySnapshot({
         ...result.snapshot,
+        generated: existingSnapshot.generated,
         id: existingSnapshot.id,
+        performanceBasis:
+          existingSnapshot.performanceBasis ?? {
+            reason: "legacy-snapshot",
+            status: "unavailable",
+            warnings: [
+              "Monthly performance is unavailable for snapshots recorded before contribution tracking.",
+            ],
+          },
       });
     } else {
       store.getState().addMonthlySnapshot(result.snapshot);

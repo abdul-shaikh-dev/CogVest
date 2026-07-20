@@ -19,6 +19,7 @@ import {
   calculateHoldings,
   calculatePortfolioTotal,
 } from "./holdings";
+import { buildMonthlyPerformanceBasis } from "./monthlyPerformance";
 
 export type GeneratedSnapshotStatus =
   | "already-exists"
@@ -398,6 +399,11 @@ export function buildGeneratedMonthEndSnapshot({
             trade.type === "buy" && isWithinMonth(trade.date, targetMonth),
         )
         .reduce((total, trade) => total + trade.totalValue, 0),
+    performanceBasis: buildMonthlyPerformanceBasis({
+      cashEntries: monthCashEntries,
+      openingPositions: monthOpeningPositions,
+      targetMonth,
+    }),
     portfolioValue: calculatePortfolioTotal(holdings, monthCashEntries),
     salary: 0,
   };
