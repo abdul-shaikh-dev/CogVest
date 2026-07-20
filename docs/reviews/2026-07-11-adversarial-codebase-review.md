@@ -196,10 +196,10 @@ instead of presenting a misleading gain.
   withdrawals, internal transfers, opening positions, invalid denominators,
   legacy data, value masking, and snapshot rehydration.
 - `npm run test:verify` passed 47 suites and 288 tests; Expo Doctor passed 17/17.
-- Fresh Android APK and visual verification were not run because Gradle's
-  distribution download was blocked by sandbox network access and escalation was
-  unavailable due the approval-service usage limit. The older installed APK was
-  not treated as verification evidence.
+- A fresh x86_64 debug APK was built from commit `8c26f69`, installed on
+  `emulator-5554`, and verified with strict package smoke plus the Maestro
+  launch and navigation flows. Seeded visual QA also confirmed the Progress
+  screen renders the distinct `Market change` and `Net contribution` metrics.
 
 ### H2. Cash savings metrics mix income, deposits, and sale proceeds
 
