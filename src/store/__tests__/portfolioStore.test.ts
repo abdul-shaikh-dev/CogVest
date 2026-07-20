@@ -412,6 +412,12 @@ describe("portfolio store", () => {
       investedValue: 900000,
       month: "2026-07",
       monthlyInvestment: 45000,
+      performanceBasis: {
+        netExternalFlow: 45000,
+        status: "complete",
+        warnings: [],
+        weightedExternalFlow: 22500,
+      },
       portfolioValue: 1050000,
       salary: 0,
     });
@@ -430,6 +436,13 @@ describe("portfolio store", () => {
     expect(rehydrated.getState().monthlySnapshots[0]?.generated).toMatchObject({
       priceBasis: "mixed",
       source: "auto",
+    });
+    expect(
+      rehydrated.getState().monthlySnapshots[0]?.performanceBasis,
+    ).toMatchObject({
+      netExternalFlow: 45000,
+      status: "complete",
+      weightedExternalFlow: 22500,
     });
     expect(
       rehydrated.getState().historicalQuoteCache[

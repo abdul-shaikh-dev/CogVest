@@ -18,7 +18,10 @@ import {
   getPressedStateStyle,
   minimumTouchTargetStyle,
 } from "@/src/components/common";
-import type { MonthlyProgressChartSeries } from "@/src/domain/calculations";
+import type {
+  MonthlyPerformanceResult,
+  MonthlyProgressChartSeries,
+} from "@/src/domain/calculations";
 import {
   MONTHLY_CHART_RANGES,
   type AssetChartInsight,
@@ -73,6 +76,26 @@ function formatSignedCompactINR(value: number) {
   }
 
   return amount;
+}
+
+function formatOptionalSignedCompactINR(value: number | null) {
+  return value === null ? "Unavailable" : formatSignedCompactINR(value);
+}
+
+function formatSnapshotChange(performance: MonthlyPerformanceResult) {
+  if (performance.totalValueChange === null) {
+    return "Baseline snapshot";
+  }
+
+  const totalChange = formatSignedINR(performance.totalValueChange);
+
+  if (performance.marketMovement === null) {
+    return `Performance unavailable · total ${totalChange}`;
+  }
+
+  return `Market ${formatSignedINR(
+    performance.marketMovement,
+  )} · total ${totalChange}`;
 }
 
 function formatUnsignedPercentage(value: number) {
@@ -624,22 +647,28 @@ export function ProgressScreen({
                   ),
                 },
                 {
-                  label: "Monthly gain",
-                  masked: progress.preferences.maskWealthValues,
-                  value: formatSignedCompactINR(progress.latestSummary.monthlyGain),
+                  label: "Market change",
+                  masked:
+                    progress.latestSummary.performance.marketMovement !== null &&
+                    progress.preferences.maskWealthValues,
+                  value: formatOptionalSignedCompactINR(
+                    progress.latestSummary.performance.marketMovement,
+                  ),
+                },
+                {
+                  label: "Net contribution",
+                  masked:
+                    progress.latestSummary.performance.netExternalFlow !== null &&
+                    progress.preferences.maskWealthValues,
+                  value: formatOptionalSignedCompactINR(
+                    progress.latestSummary.performance.netExternalFlow,
+                  ),
                 },
                 {
                   label: "Monthly investment",
                   masked: progress.preferences.maskWealthValues,
                   value: formatCompactINR(
                     progress.latestSummary.snapshot.monthlyInvestment,
-                  ),
-                },
-                {
-                  label: "Value move",
-                  masked: progress.preferences.maskWealthValues,
-                  value: formatSignedCompactINR(
-                    progress.portfolioChartData.portfolioInsight?.valueMove ?? 0,
                   ),
                 },
               ]}
@@ -687,9 +716,15 @@ export function ProgressScreen({
                     ) : null}
                   </View>
                   <View style={styles.assetValue}>
-                    <AppText>{formatINR(summary.snapshot.portfolioValue)}</AppText>
+                    <AppText>
+                      {progress.preferences.maskWealthValues
+                        ? maskedChartValueLabel
+                        : formatINR(summary.snapshot.portfolioValue)}
+                    </AppText>
                     <AppText color="secondary" variant="caption">
-                      {formatSignedINR(summary.monthlyGain)}
+                      {progress.preferences.maskWealthValues
+                        ? "Performance values hidden"
+                        : formatSnapshotChange(summary.performance)}
                     </AppText>
                   </View>
                 </View>

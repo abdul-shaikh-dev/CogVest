@@ -10,6 +10,11 @@ import type {
 } from "@/src/types";
 import { isV1CompatibleQuote } from "@/src/domain/portfolioCurrency";
 
+import {
+  calculateMonthlyPerformance,
+  type MonthlyPerformanceResult,
+} from "./monthlyPerformance";
+
 type CalculateHoldingInput = {
   asset: Asset;
   currentPrice: number;
@@ -68,8 +73,7 @@ export type MonthlyAssetSnapshotItem = {
 export type MonthlyProgressSummary = {
   assetSnapshot: MonthlyAssetSnapshotItem[];
   expenseRate: number | null;
-  monthlyGain: number;
-  monthlyGainPct: number;
+  performance: MonthlyPerformanceResult;
   savingsRate: number | null;
   snapshot: MonthlySnapshot;
 };
@@ -423,9 +427,6 @@ export function calculateMonthlyProgressSummaries(
   return chronological
     .map((snapshot, index) => {
       const previous = chronological[index - 1];
-      const monthlyGain = previous
-        ? snapshot.portfolioValue - previous.portfolioValue
-        : 0;
       const assetTotal =
         snapshot.equityValue +
         snapshot.debtValue +
@@ -452,11 +453,7 @@ export function calculateMonthlyProgressSummaries(
           snapshot.salary === 0 || snapshot.monthlyExpense === undefined
             ? null
             : round((snapshot.monthlyExpense / snapshot.salary) * 100),
-        monthlyGain,
-        monthlyGainPct:
-          previous && previous.portfolioValue !== 0
-            ? round((monthlyGain / previous.portfolioValue) * 100)
-            : 0,
+        performance: calculateMonthlyPerformance(previous, snapshot),
         savingsRate:
           snapshot.salary === 0
             ? null

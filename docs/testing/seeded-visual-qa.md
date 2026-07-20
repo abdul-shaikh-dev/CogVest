@@ -202,9 +202,9 @@ Expected Progress evidence:
   chart-local timeframe chips, a legend, and per-asset insight rows.
 - Seeded Progress defaults to the `6M` range while keeping `All` available.
 - Seeded chart data should stay calm and preview-like: latest Progress values
-  should be around Portfolio `₹19.87L`, Monthly gain `+₹58K`, Monthly
-  investment `₹45K`, Value move `+₹13K`, Value Gap around `+15.5%`, and Asset
-  Momentum led by Equity around `+4.9%`.
+  should be around Portfolio `₹19.87L`, Market change `+₹13K`, Net contribution
+  `+₹45K`, Monthly investment `₹45K`, total value change `+₹58K`, Value Gap
+  around `+15.5%`, and Asset Momentum led by Equity around `+4.9%`.
 
 ### 6. Clean Local Build Cache
 

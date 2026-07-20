@@ -108,6 +108,16 @@ All domain calculations must be pure functions under `src/domain/`.
   proceeds, and migrated legacy additions must not be treated as income.
 - Persisted pre-contract additions migrate to legacy uncategorized entries so
   historical cash remains visible without inventing income semantics.
+- Monthly portfolio performance separates total value change from external cash
+  flow. Typed income and capital contributions are inflows, withdrawals are
+  outflows, and cash-funded buys or retained sale proceeds are internal transfers.
+- Opening positions are external baseline additions for performance and use
+  their recorded cost. Monthly investment remains an activity metric; it is not
+  subtracted from portfolio value change.
+- Market change equals total value change minus net external flow. Its percentage
+  uses the previous portfolio value plus date-weighted external flow as the
+  denominator. Missing, legacy, ambiguous, or non-positive-denominator inputs
+  must show performance as unavailable rather than zero or a guessed return.
 
 ### V1 Currency And Quote Contract
 

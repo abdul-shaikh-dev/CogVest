@@ -9,6 +9,7 @@ export type {
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding } from "./holding";
 export type {
+  MonthlyPerformanceBasis,
   MonthlySnapshot,
   MonthlySnapshotGenerationMetadata,
 } from "./monthlySnapshot";

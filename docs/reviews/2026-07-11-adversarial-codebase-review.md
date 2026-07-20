@@ -25,12 +25,17 @@ The highest-risk problems are:
 4. Locally distributed release APKs used the public debug key. Issue #171 adds
    private local release signing and keeps debug signing development-only.
 
-These should be resolved before treating CogVest as a trustworthy replacement
-for the Excel tracker.
+As of 2026-07-21, C1-C4 have merged remediation evidence through issues #161,
+#167, #169, and #171. High-severity stabilization remains active; each finding's
+status below is authoritative for this review.
 
 ## Critical Findings
 
 ### C1. Purchases can double-count portfolio wealth
+
+**Status (2026-07-18): Remediated by #161.** Typed cash purposes and atomic
+funded-buy/sale commands now conserve tracked wealth and keep opening positions
+cash-neutral.
 
 **Impact:** Portfolio value, deployable cash, allocation, and savings metrics can
 all be materially overstated.
@@ -58,6 +63,10 @@ or the UI must clearly distinguish external holdings from cash-funded holdings.
 
 ### C2. Foreign assets are valued as INR without currency conversion
 
+**Status (2026-07-19): Remediated by #167.** V1 now rejects unsupported
+non-INR assets and quotes before persistence and preserves explicit INR
+valuation boundaries.
+
 **Impact:** Any USD or other foreign holding can corrupt portfolio totals,
 allocation, P&L, and monthly history.
 
@@ -84,6 +93,10 @@ FX conversion contract, and reject unsupported currencies until conversion data
 is available.
 
 ### C3. Stale live quotes can be disguised as fresh manual prices
+
+**Status (2026-07-19): Remediated by #169.** Failed refreshes preserve the
+cached quote's source and timestamp and expose stale provider state without
+inventing a fresh manual quote.
 
 **Impact:** Users can be told prices are current or manually confirmed when
 neither is true.
@@ -130,7 +143,7 @@ that last-known prices are shown.
 
 ### C4. Release APK uses the public debug signing key
 
-**Status (2026-07-19): Remediated by #171, pending merge.** The durable Expo
+**Status (2026-07-19): Remediated by #171 and merged in PR #172.** The durable Expo
 config plugin now keeps debug builds on the debug key, requires owner-controlled
 credentials for local release tasks, and leaves EAS preview/production builds on
 Expo-managed credentials. The actual owner upload key and its expected
@@ -164,16 +177,36 @@ release build with `signingConfigs.debug` and the standard debug credentials.
 
 ### H1. Monthly gain includes new contributions
 
-`monthlyGain` is calculated as current portfolio value minus previous portfolio
-value. Monthly investment is not removed, so adding capital appears as investment
-performance.
+**Status (2026-07-21): Implemented by #173, pending merge.** Monthly performance
+now separates total value change, net external flow, and cash-flow-adjusted market
+movement. Contribution-only months produce zero market movement, purchase funding
+and sale proceeds remain internal transfers, and withdrawals reduce net external
+flow. Legacy or ambiguous cash-flow history reports performance as unavailable
+instead of presenting a misleading gain.
 
-**Evidence:** `src/domain/calculations/holdings.ts:395-438`.
+**Remediation evidence:**
 
-**Required direction:** Separate net contribution, market movement, realized
-movement, and total value change. Do not label total value change as gain.
+- `src/domain/calculations/monthlyPerformance.ts` owns external-flow
+  classification, date weighting, and monthly performance calculations.
+- Automatic snapshots persist an explicit performance basis; manual and legacy
+  snapshots without reliable flow provenance are marked unavailable.
+- Progress summaries and chart insights consume the same domain result, and the
+  UI distinguishes `Market change`, `Net contribution`, and total value change.
+- Unit, integration, persistence, and component tests cover contributions,
+  withdrawals, internal transfers, opening positions, invalid denominators,
+  legacy data, value masking, and snapshot rehydration.
+- `npm run test:verify` passed 47 suites and 288 tests; Expo Doctor passed 17/17.
+- A fresh x86_64 debug APK was built from commit `8c26f69`, installed on
+  `emulator-5554`, and verified with strict package smoke plus the Maestro
+  launch and navigation flows. Seeded visual QA also confirmed the Progress
+  screen renders the distinct `Market change` and `Net contribution` metrics.
 
 ### H2. Cash savings metrics mix income, deposits, and sale proceeds
+
+**Status (2026-07-21): Partially remediated by #161.** Cash additions are typed,
+legacy entries remain uncategorized, and Cash Ledger metrics use typed income.
+Progress still derives its no-snapshot savings figure from all additions and
+is tracked for focused remediation in #175.
 
 Every cash addition is used as the savings-rate denominator. Deposits, broker
 transfers, emergency-fund movements, and linked redemption proceeds therefore

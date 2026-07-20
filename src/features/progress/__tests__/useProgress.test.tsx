@@ -113,6 +113,10 @@ describe("useProgress", () => {
         source: "auto",
       },
       month: "2026-07",
+      performanceBasis: {
+        netExternalFlow: 84500,
+        status: "complete",
+      },
     });
     expect(result.current.snapshotAutomationStatus).toMatchObject({
       status: "created",
