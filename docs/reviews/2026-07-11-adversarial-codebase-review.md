@@ -206,7 +206,7 @@ instead of presenting a misleading gain.
 **Status (2026-07-21): Partially remediated by #161.** Cash additions are typed,
 legacy entries remain uncategorized, and Cash Ledger metrics use typed income.
 Progress still derives its no-snapshot savings figure from all additions and
-requires a focused follow-up.
+is tracked for focused remediation in #175.
 
 Every cash addition is used as the savings-rate denominator. Deposits, broker
 transfers, emergency-fund movements, and linked redemption proceeds therefore
