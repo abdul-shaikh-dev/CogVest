@@ -92,6 +92,53 @@ function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
   store.getState().addCashEntry(cashEntry);
 }
 
+function seedCurrentMonthMetrics(
+  store: ReturnType<typeof createPortfolioStore>,
+  { includeIncome = true }: { includeIncome?: boolean } = {},
+) {
+  store.getState().addAsset(stockAsset);
+  if (includeIncome) {
+    store.getState().addCashEntry({
+      amount: 50000,
+      date: "2026-07-01T00:00:00.000Z",
+      id: "cash-income",
+      label: "Salary",
+      purpose: "income",
+      type: "addition",
+    });
+  }
+  store.getState().addCashEntry({
+    amount: 25000,
+    date: "2026-07-02T00:00:00.000Z",
+    id: "cash-contribution",
+    label: "Capital contribution",
+    purpose: "capitalContribution",
+    type: "addition",
+  });
+  if (!includeIncome) {
+    store.getState().addCashEntry({
+      amount: 5000,
+      date: "2026-07-03T00:00:00.000Z",
+      id: "cash-legacy",
+      label: "Legacy addition",
+      purpose: "legacyUncategorized",
+      type: "addition",
+    });
+  }
+  store.getState().recordFundedBuy({
+    cashLabel: "HDFC Bank purchase",
+    trade: {
+      assetId: stockAsset.id,
+      date: "2026-07-05T00:00:00.000Z",
+      id: "trade-buy",
+      pricePerUnit: 1000,
+      quantity: 10,
+      totalValue: 10000,
+      type: "buy",
+    },
+  });
+}
+
 describe("ProgressScreen", () => {
   beforeEach(() => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(false);
@@ -106,6 +153,39 @@ describe("ProgressScreen", () => {
     expect(
       getByText("Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."),
     ).toBeTruthy();
+  });
+
+  it("shows the typed-income investment rate before snapshots exist", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedCurrentMonthMetrics(store);
+
+    const { getByText, queryByText } = render(
+      <ProgressScreen
+        now={new Date("2026-07-20T00:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Investment rate")).toBeTruthy();
+    expect(getByText("20.00%")).toBeTruthy();
+    expect(getByText("Typed income: ₹50,000.00")).toBeTruthy();
+    expect(queryByText("Savings")).toBeNull();
+  });
+
+  it("shows an unavailable investment rate when typed income is missing", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedCurrentMonthMetrics(store, { includeIncome: false });
+
+    const { getByText } = render(
+      <ProgressScreen
+        now={new Date("2026-07-20T00:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Investment rate")).toBeTruthy();
+    expect(getByText("Not enough data")).toBeTruthy();
+    expect(getByText("Typed income: Not enough data")).toBeTruthy();
   });
 
   it("shows compact snapshot automation status instead of the manual form", async () => {

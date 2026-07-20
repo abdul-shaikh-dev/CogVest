@@ -4,6 +4,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { Asset, CashEntry, OpeningPosition } from "@/src/types";
 
+import { useCash } from "../../cash/useCash";
 import { useMonthEndSnapshotAutomation } from "../useMonthEndSnapshotAutomation";
 import { useProgress } from "../useProgress";
 
@@ -39,7 +40,102 @@ function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
   store.getState().addCashEntry(cashEntry);
 }
 
+function seedMonthlyInvestmentMetrics(
+  store: ReturnType<typeof createPortfolioStore>,
+  { includeIncome = true }: { includeIncome?: boolean } = {},
+) {
+  store.getState().addAsset(stockAsset);
+
+  const additions: CashEntry[] = [
+    ...(includeIncome
+      ? [
+          {
+            amount: 50000,
+            date: "2026-07-01T00:00:00.000Z",
+            id: "cash-income",
+            label: "Salary",
+            purpose: "income" as const,
+            type: "addition" as const,
+          },
+        ]
+      : []),
+    {
+      amount: 25000,
+      date: "2026-07-02T00:00:00.000Z",
+      id: "cash-contribution",
+      label: "Capital contribution",
+      purpose: "capitalContribution",
+      type: "addition",
+    },
+    ...(!includeIncome
+      ? [
+          {
+            amount: 5000,
+            date: "2026-07-03T00:00:00.000Z",
+            id: "cash-legacy",
+            label: "Legacy addition",
+            purpose: "legacyUncategorized" as const,
+            type: "addition" as const,
+          },
+        ]
+      : []),
+    {
+      amount: 12000,
+      date: "2026-07-04T00:00:00.000Z",
+      id: "cash-sale",
+      label: "Sale proceeds",
+      purpose: "saleProceeds",
+      type: "addition",
+    },
+  ];
+
+  additions.forEach((entry) => store.getState().addCashEntry(entry));
+  store.getState().recordFundedBuy({
+    cashLabel: "HDFC Bank purchase",
+    trade: {
+      assetId: stockAsset.id,
+      date: "2026-07-05T00:00:00.000Z",
+      id: "trade-buy",
+      pricePerUnit: 1000,
+      quantity: 10,
+      totalValue: 10000,
+      type: "buy",
+    },
+  });
+}
+
 describe("useProgress", () => {
+  it("shares typed-income investment metrics with Cash without double-counting a funded buy", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const now = new Date("2026-07-20T00:00:00.000Z");
+    seedMonthlyInvestmentMetrics(store);
+
+    const { result: cash } = renderHook(() => useCash({ now, store }));
+    const { result: progress } = renderHook(() => useProgress({ now, store }));
+
+    expect(progress.current.monthlyIncome).toBe(50000);
+    expect(progress.current.monthlyInvestment).toBe(10000);
+    expect(progress.current.investmentRate).toBe(20);
+    expect(progress.current.monthlyInvestment).toBe(
+      cash.current.monthlyMetrics.invested,
+    );
+    expect(progress.current.investmentRate).toBe(
+      cash.current.monthlyMetrics.investmentRate,
+    );
+  });
+
+  it("marks the investment rate unavailable without reliable typed income", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const now = new Date("2026-07-20T00:00:00.000Z");
+    seedMonthlyInvestmentMetrics(store, { includeIncome: false });
+
+    const { result } = renderHook(() => useProgress({ now, store }));
+
+    expect(result.current.monthlyIncome).toBeNull();
+    expect(result.current.monthlyInvestment).toBe(10000);
+    expect(result.current.investmentRate).toBeNull();
+  });
+
   it("saves and updates monthly snapshots through the feature controller", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { result } = renderHook(() => useProgress({ store }));

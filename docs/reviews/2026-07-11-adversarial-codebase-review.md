@@ -203,25 +203,27 @@ instead of presenting a misleading gain.
 
 ### H2. Cash savings metrics mix income, deposits, and sale proceeds
 
-**Status (2026-07-21): Partially remediated by #161.** Cash additions are typed,
-legacy entries remain uncategorized, and Cash Ledger metrics use typed income.
-Progress still derives its no-snapshot savings figure from all additions and
-is tracked for focused remediation in #175.
+**Status (2026-07-21): Remediated by #161 and #175.** Cash and Progress now use
+the same pure monthly metric. Only typed `income` entries form the investment-rate
+denominator; capital contributions, sale proceeds, transfers, withdrawals, and
+legacy uncategorized additions do not. Missing typed income produces an
+unavailable rate instead of zero or a guessed percentage, and any unclassified
+legacy addition keeps both income and the rate unavailable until classified.
 
-Every cash addition is used as the savings-rate denominator. Deposits, broker
-transfers, emergency-fund movements, and linked redemption proceeds therefore
-behave like salary/income. Sell proceeds can inflate both cash added and savings
-rate.
+**Remediation evidence:**
 
-**Evidence:**
-
-- `src/domain/calculations/holdings.ts:230-261`.
-- `src/features/sellRedeem/useSellRedeemHolding.ts:274-283` records linked sale
-  proceeds as a generic addition.
-
-**Required direction:** Add cash-entry purpose/category or model income,
-contributions, transfers, withdrawals, and sale proceeds as distinct movement
-types.
+- `calculateCashMonthlyMetrics` owns typed income, monthly investment, and the
+  nullable investment rate for both Cash and Progress.
+- Linked buy trades and `purchaseFunding` cash movements are matched against all
+  buy IDs and counted once in the canonical trade month. Unlinked legacy purchase
+  funding remains countable without duplicating a known trade.
+- Stored record dates use their calendar month while the active period follows
+  the device-local month, avoiding UTC rollover errors around local midnight.
+- Cash and Progress use the user-facing label `Investment rate` and render
+  `Not enough data` for income and rate when classification is insufficient.
+- Domain, hook, and component tests cover income, contribution, sale-proceeds,
+  legacy-entry, linked-funded-buy, shared Cash/Progress, and unavailable paths.
+- `npm run test:verify` passed 47 suites and 296 tests; Expo Doctor passed 17/17.
 
 ### H3. Automation only covers the immediately previous month
 

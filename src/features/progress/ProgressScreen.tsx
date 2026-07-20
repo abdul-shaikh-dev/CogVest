@@ -751,8 +751,11 @@ export function ProgressScreen({
                   value: formatCompactINR(progress.cashBalance),
                 },
                 {
-                  label: "Savings",
-                  value: progress.monthlyCashAdded === 0 ? "Not enough data" : formatPercentage(progress.savingsRate),
+                  label: "Investment rate",
+                  value:
+                    progress.investmentRate === null
+                      ? "Not enough data"
+                      : `${progress.investmentRate.toFixed(2)}%`,
                 },
               ]}
             />
@@ -763,7 +766,10 @@ export function ProgressScreen({
                 Monthly investment: {formatINR(progress.monthlyInvestment)}
               </AppText>
               <AppText color="secondary">
-                Cash added: {formatINR(progress.monthlyCashAdded)}
+                Typed income:{" "}
+                {progress.monthlyIncome === null
+                  ? "Not enough data"
+                  : formatINR(progress.monthlyIncome)}
               </AppText>
               <AppText color="secondary">
                 Expense rate needs explicit expense tracking and is not shown in V1.

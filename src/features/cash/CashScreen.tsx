@@ -187,10 +187,13 @@ export function CashScreen({
             {
               label: "Income",
               masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.income),
+              value:
+                monthlyMetrics.incomeStatus === "available"
+                  ? formatCompactINR(monthlyMetrics.income)
+                  : "Not enough data",
             },
             {
-              label: "Invested / income",
+              label: "Investment rate",
               value: formatInvestmentRate(monthlyMetrics.investmentRate),
             },
           ]}
