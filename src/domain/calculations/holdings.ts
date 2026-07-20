@@ -83,6 +83,7 @@ export type CashMonthlyMetrics = {
   available: number;
   contributions: number;
   income: number;
+  incomeStatus: "available" | "unavailable";
   investmentRate: number | null;
   invested: number;
 };
@@ -232,17 +233,18 @@ export function calculateCashBalance(cashEntries: CashEntry[]) {
 }
 
 function isSameMonth(isoDate: string, now: Date) {
-  const date = new Date(isoDate);
+  const recordMonth = isoDate.slice(0, 7);
+  const currentMonth = `${now.getFullYear()}-${String(
+    now.getMonth() + 1,
+  ).padStart(2, "0")}`;
 
-  return (
-    date.getUTCFullYear() === now.getUTCFullYear() &&
-    date.getUTCMonth() === now.getUTCMonth()
-  );
+  return recordMonth === currentMonth;
 }
 
 export function calculateCashMonthlyMetrics({
   cashEntries,
   now = new Date(),
+  trades,
 }: {
   cashEntries: CashEntry[];
   now?: Date;
@@ -269,19 +271,36 @@ export function calculateCashMonthlyMetrics({
         entry.type === "addition" && entry.purpose === "legacyUncategorized",
     )
     .reduce((total, entry) => total + entry.amount, 0);
-  const invested = monthlyEntries
+  const monthlyBuyTrades = trades.filter(
+    (trade) => trade.type === "buy" && isSameMonth(trade.date, now),
+  );
+  const allBuyTradeIds = new Set(
+    trades.filter((trade) => trade.type === "buy").map((trade) => trade.id),
+  );
+  const investedFromTrades = monthlyBuyTrades.reduce(
+    (total, trade) => total + trade.totalValue,
+    0,
+  );
+  const unmatchedPurchaseFunding = monthlyEntries
     .filter(
       (entry) =>
-        entry.type === "withdrawal" && entry.purpose === "purchaseFunding",
+        entry.type === "withdrawal" &&
+        entry.purpose === "purchaseFunding" &&
+        (!entry.linkedTradeId || !allBuyTradeIds.has(entry.linkedTradeId)),
     )
     .reduce((total, entry) => total + entry.amount, 0);
+  const invested = investedFromTrades + unmatchedPurchaseFunding;
+  const incomeStatus =
+    income > 0 && legacyAdded === 0 ? "available" : "unavailable";
 
   return {
     added: income + contributions + legacyAdded,
     available: calculateCashBalance(cashEntries),
     contributions,
     income,
-    investmentRate: income > 0 ? round((invested / income) * 100) : null,
+    incomeStatus,
+    investmentRate:
+      incomeStatus === "available" ? round((invested / income) * 100) : null,
     invested,
   };
 }

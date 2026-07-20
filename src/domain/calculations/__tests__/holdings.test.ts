@@ -490,16 +490,119 @@ describe("portfolio calculations", () => {
         cashEntries: monthlyEntries,
         now: new Date("2026-05-20T00:00:00.000Z"),
         openingPositions: [],
-        trades: [],
+        trades: [
+          trade({
+            date: "2026-05-03T00:00:00.000Z",
+            id: "trade-buy",
+            pricePerUnit: 1000,
+            quantity: 10,
+            totalValue: 10000,
+          }),
+        ],
       }),
     ).toEqual({
       added: 75000,
       available: 77000,
       contributions: 25000,
       income: 50000,
+      incomeStatus: "available",
       investmentRate: 20,
       invested: 10000,
     });
+  });
+
+  it("marks income-based metrics unavailable when legacy additions are unclassified", () => {
+    const metrics = calculateCashMonthlyMetrics({
+      cashEntries: [
+        {
+          amount: 50000,
+          date: "2026-05-01T00:00:00.000Z",
+          id: "cash-income",
+          label: "Salary",
+          purpose: "income",
+          type: "addition",
+        },
+        {
+          amount: 4000,
+          date: "2026-05-02T00:00:00.000Z",
+          id: "cash-legacy",
+          label: "Legacy addition",
+          purpose: "legacyUncategorized",
+          type: "addition",
+        },
+      ],
+      now: new Date("2026-05-20T00:00:00.000Z"),
+      openingPositions: [],
+      trades: [],
+    });
+
+    expect(metrics).toMatchObject({
+      income: 50000,
+      incomeStatus: "unavailable",
+      investmentRate: null,
+    });
+  });
+
+  it("uses the trade date as the canonical month for linked purchase funding", () => {
+    const linkedFunding: CashEntry = {
+      amount: 10000,
+      date: "2026-07-01T00:00:00.000Z",
+      id: "cash-trade-buy",
+      label: "Funded purchase",
+      linkedTradeId: "trade-buy",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    };
+    const juneBuy = trade({
+      date: "2026-06-30T00:00:00.000Z",
+      id: "trade-buy",
+      pricePerUnit: 1000,
+      quantity: 10,
+      totalValue: 10000,
+    });
+
+    expect(
+      calculateCashMonthlyMetrics({
+        cashEntries: [linkedFunding],
+        now: new Date("2026-07-20T00:00:00.000Z"),
+        openingPositions: [],
+        trades: [juneBuy],
+      }).invested,
+    ).toBe(0);
+    expect(
+      calculateCashMonthlyMetrics({
+        cashEntries: [linkedFunding],
+        now: new Date("2026-06-20T00:00:00.000Z"),
+        openingPositions: [],
+        trades: [juneBuy],
+      }).invested,
+    ).toBe(10000);
+  });
+
+  it("matches stored calendar dates against the device-local current month", () => {
+    const now = new Date("2026-06-30T19:00:00.000Z");
+    jest.spyOn(now, "getFullYear").mockReturnValue(2026);
+    jest.spyOn(now, "getMonth").mockReturnValue(6);
+    jest.spyOn(now, "getUTCFullYear").mockReturnValue(2026);
+    jest.spyOn(now, "getUTCMonth").mockReturnValue(5);
+    const metrics = calculateCashMonthlyMetrics({
+      cashEntries: [
+        {
+          amount: 50000,
+          date: "2026-07-01T00:00:00.000Z",
+          id: "cash-income",
+          label: "Salary",
+          purpose: "income",
+          type: "addition",
+        },
+      ],
+      now,
+      openingPositions: [],
+      trades: [],
+    });
+
+    expect(metrics.income).toBe(50000);
+    expect(metrics.incomeStatus).toBe("available");
   });
 
   it("calculates day change from holding values and quote change", () => {

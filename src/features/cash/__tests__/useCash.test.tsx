@@ -129,6 +129,7 @@ describe("useCash", () => {
       available: 80000,
       contributions: 0,
       income: 100000,
+      incomeStatus: "available",
       investmentRate: 20,
       invested: 20000,
     });
@@ -221,6 +222,7 @@ describe("useCash", () => {
       available: 0,
       contributions: 20000,
       income: 0,
+      incomeStatus: "unavailable",
       investmentRate: null,
       invested: 20000,
     });

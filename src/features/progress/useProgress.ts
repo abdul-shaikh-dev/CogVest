@@ -6,6 +6,7 @@ import {
   buildGeneratedMonthEndSnapshot,
   calculateAllocation,
   calculateCashBalance,
+  calculateCashMonthlyMetrics,
   calculateHoldings,
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
@@ -22,15 +23,6 @@ import { createId } from "@/src/utils";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState);
-}
-
-function isCurrentMonth(isoDate: string, now = new Date()) {
-  const date = new Date(isoDate);
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
-  );
 }
 
 export function emptyProgressFormValues() {
@@ -234,22 +226,12 @@ export function useProgress({
     (total, holding) => total + holding.totalInvested,
     0,
   );
-  const monthlyTradeInvestment = snapshot.trades
-    .filter((trade) => trade.type === "buy" && isCurrentMonth(trade.date, now))
-    .reduce((total, trade) => total + trade.totalValue, 0);
-  const monthlyOpeningInvestment = snapshot.openingPositions
-    .filter((position) => isCurrentMonth(position.date, now))
-    .reduce(
-      (total, position) =>
-        total + position.quantity * position.averageCostPrice,
-      0,
-    );
-  const monthlyInvestment = monthlyTradeInvestment + monthlyOpeningInvestment;
-  const monthlyCashAdded = snapshot.cashEntries
-    .filter((entry) => entry.type === "addition" && isCurrentMonth(entry.date, now))
-    .reduce((total, entry) => total + entry.amount, 0);
-  const savingsRate =
-    monthlyCashAdded === 0 ? 0 : (monthlyInvestment / monthlyCashAdded) * 100;
+  const monthlyMetrics = calculateCashMonthlyMetrics({
+    cashEntries: snapshot.cashEntries,
+    now,
+    openingPositions: snapshot.openingPositions,
+    trades: snapshot.trades,
+  });
   const allocation = calculateAllocation({ cashBalance, holdings });
   const hasData = holdings.length > 0 || snapshot.cashEntries.length > 0;
   const monthlySummaries = calculateMonthlyProgressSummaries(
@@ -382,9 +364,13 @@ export function useProgress({
     errors,
     formValues,
     hasData,
+    investmentRate: monthlyMetrics.investmentRate,
     latestSummary,
-    monthlyCashAdded,
-    monthlyInvestment,
+    monthlyIncome:
+      monthlyMetrics.incomeStatus === "available"
+        ? monthlyMetrics.income
+        : null,
+    monthlyInvestment: monthlyMetrics.invested,
     monthlySummaries,
     portfolioChartData,
     portfolioChartRange,
@@ -392,7 +378,6 @@ export function useProgress({
     preferences: snapshot.preferences,
     saveSnapshot,
     saveSnapshotEdits: saveSnapshot,
-    savingsRate,
     setAssetChartRange,
     setField,
     setPortfolioChartRange,
