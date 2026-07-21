@@ -23,6 +23,7 @@ import type {
   MonthlyProgressChartSeries,
 } from "@/src/domain/calculations";
 import {
+  getMonthlySnapshotPriceConfidence,
   MONTHLY_CHART_RANGES,
   type AssetChartInsight,
   type MonthlyChartRange,
@@ -577,6 +578,14 @@ function SnapshotStatusCard({
   onReview: () => void;
   status: ProgressSnapshotAutomationStatus;
 }) {
+  const priceConfidence = status.snapshot
+    ? getMonthlySnapshotPriceConfidence(status.snapshot)
+    : null;
+  const provisionalMonthLabels = status.provisionalMonths.map(formatMonth);
+  const provisionalMonthCopy = provisionalMonthLabels.length
+    ? `Estimated prices remain for ${provisionalMonthLabels.join(", ")}. Review if you have better month-end values.`
+    : null;
+
   return (
     <PremiumCard testID="month-end-snapshot-status-card">
       <View style={styles.snapshotStatusHeader}>
@@ -593,6 +602,21 @@ function SnapshotStatusCard({
           {warning}
         </AppText>
       ))}
+      {provisionalMonthCopy ? (
+        <AppText color="secondary" variant="caption">
+          {provisionalMonthCopy}
+        </AppText>
+      ) : null}
+      {priceConfidence === "confirmed" && !provisionalMonthCopy ? (
+        <AppText color="secondary" variant="caption">
+          Month-end prices confirmed.
+        </AppText>
+      ) : null}
+      {priceConfidence === "manual" ? (
+        <AppText color="secondary" variant="caption">
+          Reviewed values saved manually.
+        </AppText>
+      ) : null}
     </PremiumCard>
   );
 }

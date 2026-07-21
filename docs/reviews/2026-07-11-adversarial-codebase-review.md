@@ -259,20 +259,41 @@ the current month, and preserves existing snapshots.
 
 ### H4. Historical fallback can permanently store current prices as past values
 
-When a historical lookup fails, snapshot generation uses the latest cached quote
-or opening-position price. The snapshot is then persisted and not regenerated
-automatically. Debt assets always use fallback because historical debt lookup is
-unsupported.
+**Status (2026-07-22): Remediated by #150.** Auto-generated snapshots now store
+per-asset price evidence and explicit confirmed/provisional confidence. New
+snapshots using latest local, manual, mixed, or unavailable prices remain visibly
+provisional and are retried safely rather than appearing final.
 
-**Evidence:**
+**Remediation evidence:**
 
-- `src/domain/calculations/monthEndSnapshots.ts:161-207`.
-- `src/domain/calculations/monthEndSnapshots.ts:342-386`.
-- `src/services/quotes/historicalPrices.ts:250-261`.
-
-**Required direction:** Do not silently finalize estimated history. Persist
-confidence per asset, make estimated snapshots visibly provisional, and retry
-historical resolution.
+- Generated metadata records each holding's asset ID, selected price, and price
+  basis. Cash-only snapshots are confirmed without fabricating asset evidence.
+- Legacy aggregate-only metadata remains readable: historical-only auto snapshots
+  infer confirmed confidence, while mixed/fallback/unavailable snapshots infer
+  provisional confidence.
+- Automation retries auto-generated provisional months that carry per-asset
+  evidence, skips confirmed and manually reviewed months, ignores cached fallback
+  entries as confirmation, and preserves the existing ID.
+- Aggregate-only legacy automation stays visibly provisional but is not rewritten:
+  older user corrections cannot be distinguished safely from untouched output.
+- A failed or equal-confidence retry leaves the stored snapshot unchanged. A
+  candidate replaces it only when confirmed asset coverage improves without
+  regressing another asset's evidence.
+- Open positions with missing or unsupported asset metadata block snapshot
+  confirmation rather than producing an understated portfolio value.
+- Monthly Progress names every month whose prices remain estimated, offers calm
+  manual-review guidance, and does not claim confirmation while an older
+  completed month is still provisional.
+- Saving user corrections marks generated metadata manual so later automation
+  cannot overwrite reviewed values.
+- Domain, persistence, hook, and component tests cover confirmed, mixed,
+  fallback, unavailable, cash-only, legacy protection, failed retry, partial
+  improvement, per-asset non-regression, full confirmation, cached-fallback
+  retry, missing-asset protection, confirmed skip, manual-review protection, and
+  month-specific trust copy.
+- `npm run test:verify` passed 47 suites and 328 tests; Expo Doctor passed 17/17.
+- Precise exchange calendars and broader instrument/provider coverage remain
+  outside V1 under the issue's explicit non-goals.
 
 ### H5. Automatic snapshots always set salary to zero
 

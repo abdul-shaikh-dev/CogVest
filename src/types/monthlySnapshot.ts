@@ -1,8 +1,18 @@
 import type { HistoricalPriceBasis } from "./quote";
 
+export type MonthlySnapshotPriceConfidence = "confirmed" | "provisional";
+
+export type MonthlySnapshotPriceEvidence = {
+  assetId: string;
+  basis: HistoricalPriceBasis;
+  price?: number;
+};
+
 export type MonthlySnapshotGenerationMetadata = {
+  confidence?: MonthlySnapshotPriceConfidence;
   generatedAt: string;
   priceBasis: HistoricalPriceBasis | "mixed";
+  priceEvidence?: MonthlySnapshotPriceEvidence[];
   source: "auto" | "manual";
   warnings: string[];
 };

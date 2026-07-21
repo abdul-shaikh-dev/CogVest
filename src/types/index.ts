@@ -12,6 +12,8 @@ export type {
   MonthlyPerformanceBasis,
   MonthlySnapshot,
   MonthlySnapshotGenerationMetadata,
+  MonthlySnapshotPriceConfidence,
+  MonthlySnapshotPriceEvidence,
 } from "./monthlySnapshot";
 export type { OpeningPosition } from "./openingPosition";
 export type { ChartRange, Preferences } from "./preferences";
