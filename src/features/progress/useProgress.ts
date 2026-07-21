@@ -11,8 +11,8 @@ import {
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
   getDefaultMonthlyChartRange,
+  getMissingCompletedSnapshotMonths,
   getPreviousCompletedMonth,
-  type GeneratedMonthEndSnapshotResult,
   type GeneratedSnapshotStatus,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
@@ -53,6 +53,20 @@ export type ProgressSnapshotAutomationStatus = {
   targetMonth: string;
   warnings: string[];
 };
+
+type MonthEndSnapshotAutomationRunResult = {
+  createdCount: number;
+  lastCompletedMonth: string;
+  snapshot: MonthlySnapshot | null;
+  status: GeneratedSnapshotStatus;
+  targetMonths: string[];
+  warnings: string[];
+};
+
+const inFlightSnapshotAutomationRuns = new WeakMap<
+  StoreApi<PortfolioStoreState>,
+  Promise<MonthEndSnapshotAutomationRunResult>
+>();
 
 type UseProgressInput = {
   historicalPriceFetcher?: typeof resolveHistoricalPrice;
@@ -140,16 +154,24 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
   };
 }
 
-function automationMessage(result: GeneratedMonthEndSnapshotResult) {
-  if (result.status === "created") {
-    return "Previous month snapshot generated automatically.";
+function automationMessage({
+  createdCount,
+  status,
+}: {
+  createdCount: number;
+  status: GeneratedSnapshotStatus;
+}) {
+  if (status === "created") {
+    return createdCount === 1
+      ? "1 missing month snapshot generated automatically."
+      : `${createdCount} missing month snapshots generated automatically.`;
   }
 
-  if (result.status === "already-exists") {
-    return "Previous month snapshot is already recorded.";
+  if (status === "already-exists") {
+    return "All completed month snapshots are already recorded.";
   }
 
-  return "Not enough portfolio data to generate the previous month snapshot yet.";
+  return "Not enough portfolio data to generate a completed month snapshot yet.";
 }
 
 function getMonthEndDate(targetMonth: string) {
@@ -180,15 +202,22 @@ function needsHistoricalPrice({
   }
 
   const monthEnd = getMonthEndDate(targetMonth);
-  const hasOpeningPosition = state.openingPositions.some(
-    (position) =>
-      position.assetId === assetId && isOnOrBefore(position.date, monthEnd),
+  const openingQuantity = state.openingPositions.reduce(
+    (quantity, position) =>
+      position.assetId === assetId && isOnOrBefore(position.date, monthEnd)
+        ? quantity + position.quantity
+        : quantity,
+    0,
   );
-  const hasTrade = state.trades.some(
-    (trade) => trade.assetId === assetId && isOnOrBefore(trade.date, monthEnd),
-  );
+  const tradedQuantity = state.trades.reduce((quantity, trade) => {
+    if (trade.assetId !== assetId || !isOnOrBefore(trade.date, monthEnd)) {
+      return quantity;
+    }
 
-  return hasOpeningPosition || hasTrade;
+    return quantity + (trade.type === "buy" ? trade.quantity : -trade.quantity);
+  }, 0);
+
+  return openingQuantity + tradedQuantity > 0;
 }
 
 export function useProgress({
@@ -293,15 +322,15 @@ export function useProgress({
     return true;
   }
 
-  async function ensureMonthEndSnapshot() {
-    const state = store.getState();
-    const targetMonth = getPreviousCompletedMonth(now);
-    const existingSnapshot = state.monthlySnapshots.some(
-      (monthlySnapshot) => monthlySnapshot.month === targetMonth,
-    );
-    const lookupWarnings: string[] = [];
+  async function runMonthEndSnapshotAutomation(
+    targetMonths: string[],
+  ): Promise<MonthEndSnapshotAutomationRunResult> {
+    const lastCompletedMonth = getPreviousCompletedMonth(now);
+    const warnings: string[] = [];
+    const createdSnapshots: MonthlySnapshot[] = [];
 
-    if (!existingSnapshot) {
+    for (const targetMonth of targetMonths) {
+      const state = store.getState();
       const quoteableAssets = state.assets.filter(
         (asset) => asset.assetClass !== "cash" && asset.assetClass !== "debt",
       );
@@ -319,40 +348,150 @@ export function useProgress({
         if (historicalPriceResult.ok) {
           store.getState().upsertHistoricalQuote(historicalPriceResult.quote);
         } else {
-          lookupWarnings.push(historicalPriceResult.error);
+          warnings.push(`${targetMonth}: ${historicalPriceResult.error}`);
         }
+      }
+
+      const refreshedState = store.getState();
+      const result = buildGeneratedMonthEndSnapshot({
+        assets: refreshedState.assets,
+        cashEntries: refreshedState.cashEntries,
+        existingSnapshots: refreshedState.monthlySnapshots,
+        historicalQuotes: refreshedState.historicalQuoteCache,
+        now,
+        openingPositions: refreshedState.openingPositions,
+        quoteCache: refreshedState.quoteCache,
+        targetMonth,
+        trades: refreshedState.trades,
+      });
+
+      warnings.push(
+        ...result.warnings.map((warning) => `${targetMonth}: ${warning}`),
+      );
+
+      if (result.status === "created" && result.snapshot) {
+        store.getState().addMonthlySnapshot(result.snapshot);
+        createdSnapshots.push(result.snapshot);
       }
     }
 
-    const refreshedState = store.getState();
-    const result = buildGeneratedMonthEndSnapshot({
-      assets: refreshedState.assets,
-      cashEntries: refreshedState.cashEntries,
-      existingSnapshots: refreshedState.monthlySnapshots,
-      historicalQuotes: refreshedState.historicalQuoteCache,
+    const completedState = store.getState();
+    const latestCompletedSnapshot = [...completedState.monthlySnapshots]
+      .filter((monthlySnapshot) => monthlySnapshot.month <= lastCompletedMonth)
+      .sort((left, right) => right.month.localeCompare(left.month))[0] ?? null;
+    const hasCompletedPortfolioRecord = [
+      ...completedState.cashEntries.map((entry) => entry.date),
+      ...completedState.openingPositions.map((position) => position.date),
+      ...completedState.trades.map((trade) => trade.date),
+    ].some((date) => isOnOrBefore(date, getMonthEndDate(lastCompletedMonth)));
+    const remainingMissingMonths = getMissingCompletedSnapshotMonths({
+      cashEntries: completedState.cashEntries,
+      existingSnapshots: completedState.monthlySnapshots,
       now,
-      openingPositions: refreshedState.openingPositions,
-      quoteCache: refreshedState.quoteCache,
-      trades: refreshedState.trades,
+      openingPositions: completedState.openingPositions,
+      trades: completedState.trades,
     });
-    const statusWarnings = [...result.warnings, ...lookupWarnings];
-
-    if (result.status === "created" && result.snapshot) {
-      store.getState().addMonthlySnapshot(result.snapshot);
-    }
-
-    setSnapshotAutomationStatus({
-      message: automationMessage(result),
-      snapshot: result.snapshot,
-      status: result.status,
-      targetMonth: getPreviousCompletedMonth(now),
-      warnings: statusWarnings,
-    });
+    const status: GeneratedSnapshotStatus =
+      createdSnapshots.length > 0
+        ? "created"
+        : remainingMissingMonths.length === 0 && hasCompletedPortfolioRecord
+          ? "already-exists"
+          : "insufficient-data";
+    const snapshot = createdSnapshots.at(-1) ?? latestCompletedSnapshot;
 
     return {
-      ...result,
-      warnings: statusWarnings,
+      createdCount: createdSnapshots.length,
+      lastCompletedMonth,
+      snapshot,
+      status,
+      targetMonths,
+      warnings,
     };
+  }
+
+  async function ensureMonthEndSnapshot() {
+    const requestedLastCompletedMonth = getPreviousCompletedMonth(now);
+
+    while (true) {
+      let run = inFlightSnapshotAutomationRuns.get(store);
+
+      if (!run) {
+        const state = store.getState();
+        const targetMonths = getMissingCompletedSnapshotMonths({
+          cashEntries: state.cashEntries,
+          existingSnapshots: state.monthlySnapshots,
+          now,
+          openingPositions: state.openingPositions,
+          trades: state.trades,
+        });
+
+        if (targetMonths.length === 0) {
+          const latestCompletedSnapshot = [...state.monthlySnapshots]
+            .filter(
+              (monthlySnapshot) =>
+                monthlySnapshot.month <= requestedLastCompletedMonth,
+            )
+            .sort((left, right) => right.month.localeCompare(left.month))[0] ?? null;
+          const hasCompletedPortfolioRecord = [
+            ...state.cashEntries.map((entry) => entry.date),
+            ...state.openingPositions.map((position) => position.date),
+            ...state.trades.map((trade) => trade.date),
+          ].some((date) =>
+            isOnOrBefore(date, getMonthEndDate(requestedLastCompletedMonth)),
+          );
+          const result: MonthEndSnapshotAutomationRunResult = {
+            createdCount: 0,
+            lastCompletedMonth: requestedLastCompletedMonth,
+            snapshot: latestCompletedSnapshot,
+            status: hasCompletedPortfolioRecord
+              ? "already-exists"
+              : "insufficient-data",
+            targetMonths,
+            warnings: [],
+          };
+
+          setSnapshotAutomationStatus({
+            message: automationMessage(result),
+            snapshot: result.snapshot,
+            status: result.status,
+            targetMonth: result.lastCompletedMonth,
+            warnings: result.warnings,
+          });
+
+          return result;
+        }
+
+        run = runMonthEndSnapshotAutomation(targetMonths);
+        inFlightSnapshotAutomationRuns.set(store, run);
+        const startedRun = run;
+        void startedRun
+          .finally(() => {
+            if (inFlightSnapshotAutomationRuns.get(store) === startedRun) {
+              inFlightSnapshotAutomationRuns.delete(store);
+            }
+          })
+          .catch(() => undefined);
+      }
+
+      const result = await run;
+
+      if (result.lastCompletedMonth !== requestedLastCompletedMonth) {
+        if (inFlightSnapshotAutomationRuns.get(store) === run) {
+          inFlightSnapshotAutomationRuns.delete(store);
+        }
+        continue;
+      }
+
+      setSnapshotAutomationStatus({
+        message: automationMessage(result),
+        snapshot: result.snapshot,
+        status: result.status,
+        targetMonth: result.lastCompletedMonth,
+        warnings: result.warnings,
+      });
+
+      return result;
+    }
   }
 
   return {
