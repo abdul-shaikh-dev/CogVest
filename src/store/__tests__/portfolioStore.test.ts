@@ -6,6 +6,7 @@ import {
   portfolioStorageKey,
   quoteCacheStorageKey,
 } from "@/src/store";
+import { getMonthlySnapshotPriceConfidence } from "@/src/domain/calculations";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 import type { MonthlySnapshot } from "@/src/types";
@@ -403,8 +404,16 @@ describe("portfolio store", () => {
       debtValue: 200000,
       equityValue: 700000,
       generated: {
+        confidence: "provisional",
         generatedAt: "2026-08-01T04:00:00.000Z",
         priceBasis: "mixed",
+        priceEvidence: [
+          {
+            assetId: "asset-reliance",
+            basis: "latest-local-fallback",
+            price: 2910,
+          },
+        ],
         source: "auto",
         warnings: ["1 asset used latest local fallback"],
       },
@@ -434,7 +443,15 @@ describe("portfolio store", () => {
     const rehydrated = createPortfolioStore({ storage });
 
     expect(rehydrated.getState().monthlySnapshots[0]?.generated).toMatchObject({
+      confidence: "provisional",
       priceBasis: "mixed",
+      priceEvidence: [
+        {
+          assetId: "asset-reliance",
+          basis: "latest-local-fallback",
+          price: 2910,
+        },
+      ],
       source: "auto",
     });
     expect(
@@ -466,6 +483,29 @@ describe("portfolio store", () => {
         source: "yahoo",
       },
     });
+  });
+
+  it("rehydrates legacy aggregate price metadata with conservative confidence", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const legacySnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-08-01T04:00:00.000Z",
+        priceBasis: "mixed",
+        source: "auto",
+        warnings: ["1 holding used manual price fallback."],
+      },
+    };
+    store.getState().addMonthlySnapshot(legacySnapshot);
+
+    const rehydratedSnapshot = createPortfolioStore({ storage }).getState()
+      .monthlySnapshots[0];
+
+    expect(rehydratedSnapshot).toEqual(legacySnapshot);
+    expect(getMonthlySnapshotPriceConfidence(rehydratedSnapshot!)).toBe(
+      "provisional",
+    );
   });
 
   it("migrates V1 persisted snapshots by adding empty opening positions", () => {

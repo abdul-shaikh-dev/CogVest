@@ -22,6 +22,15 @@ const stockAsset: Asset = {
   ticker: "HDFCBANK.NS",
 };
 
+const etfAsset: Asset = {
+  assetClass: "etf",
+  currency: "INR",
+  id: "asset-nifty-etf",
+  name: "Nifty 50 ETF",
+  symbol: "NIFTYBEES",
+  ticker: "NIFTYBEES.NS",
+};
+
 function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
   const openingPosition: OpeningPosition = {
     assetId: stockAsset.id,
@@ -77,6 +86,26 @@ function existingSnapshot(month: string): MonthlySnapshot {
     monthlyInvestment: 0,
     portfolioValue: 86000,
     salary: 0,
+  };
+}
+
+function provisionalSnapshot(month = "2026-07"): MonthlySnapshot {
+  return {
+    ...existingSnapshot(month),
+    generated: {
+      confidence: "provisional",
+      generatedAt: "2026-08-01T00:00:00.000Z",
+      priceBasis: "manual-fallback",
+      priceEvidence: [
+        {
+          assetId: stockAsset.id,
+          basis: "manual-fallback",
+          price: 1678.25,
+        },
+      ],
+      source: "auto",
+      warnings: ["1 holding used manual price fallback."],
+    },
   };
 }
 
@@ -388,6 +417,15 @@ describe("useProgress", () => {
       id: "orphaned-opening-position",
       quantity: 1,
     });
+    store.getState().addTrade({
+      assetId: "missing-asset",
+      date: "2026-02-10T00:00:00.000Z",
+      id: "close-orphaned-position",
+      pricePerUnit: 100,
+      quantity: 1,
+      totalValue: 100,
+      type: "sell",
+    });
     store.getState().addCashEntry({
       amount: 10000,
       date: "2026-03-05T00:00:00.000Z",
@@ -624,5 +662,359 @@ describe("useProgress", () => {
 
     expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
     expect(store.getState().monthlySnapshots[0]?.equityValue).toBe(1600 * 10);
+  });
+
+  it("preserves a provisional snapshot unchanged when historical retry fails", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    const existing = provisionalSnapshot();
+    store.getState().addMonthlySnapshot(existing);
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      error: "Historical price is temporarily unavailable.",
+      ok: false,
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
+    expect(store.getState().monthlySnapshots).toEqual([existing]);
+    expect(result.current.snapshotAutomationStatus.message).toBe(
+      "Some completed months still use estimated values.",
+    );
+  });
+
+  it("does not retry legacy aggregate-only automation that may contain user corrections", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    const legacyCorrection: MonthlySnapshot = {
+      ...existingSnapshot("2026-07"),
+      equityValue: 17000,
+      generated: {
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        source: "auto",
+        warnings: ["1 holding used manual price fallback."],
+      },
+      portfolioValue: 87000,
+    };
+    store.getState().addMonthlySnapshot(legacyCorrection);
+    const historicalPriceFetcher = jest.fn();
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(historicalPriceFetcher).not.toHaveBeenCalled();
+    expect(store.getState().monthlySnapshots).toEqual([legacyCorrection]);
+    expect(result.current.snapshotAutomationStatus.provisionalMonths).toEqual([
+      "2026-07",
+    ]);
+  });
+
+  it("refreshes the same provisional snapshot when historical confidence improves", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    const existing = provisionalSnapshot();
+    store.getState().addMonthlySnapshot(existing);
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: stockAsset.id,
+        asOfMonth: "2026-07",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-02T10:00:00.000Z",
+        price: 1600,
+        source: "yahoo",
+      },
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(store.getState().monthlySnapshots[0]).toMatchObject({
+      equityValue: 16000,
+      generated: {
+        confidence: "confirmed",
+        source: "auto",
+      },
+      id: existing.id,
+      month: "2026-07",
+    });
+    expect(result.current.snapshotAutomationStatus.message).toBe(
+      "1 estimated snapshot updated with better month-end values.",
+    );
+  });
+
+  it("retries a cached fallback price until confirmed historical evidence is available", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    store.getState().addMonthlySnapshot(provisionalSnapshot());
+    store.getState().upsertHistoricalQuote({
+      assetId: stockAsset.id,
+      asOfMonth: "2026-07",
+      basis: "manual-fallback",
+      currency: "INR",
+      fetchedAt: "2026-08-01T00:00:00.000Z",
+      price: 1678.25,
+      source: "manual",
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: stockAsset.id,
+        asOfMonth: "2026-07",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-02T10:00:00.000Z",
+        price: 1600,
+        source: "yahoo",
+      },
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
+    expect(store.getState().monthlySnapshots[0]).toMatchObject({
+      generated: { confidence: "confirmed" },
+      id: "snapshot-2026-07",
+    });
+  });
+
+  it("keeps the latest completed month selected after refreshing an older estimate", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 1450,
+      currentPrice: 1678.25,
+      date: "2026-06-10T00:00:00.000Z",
+      id: "opening-hdfc-june",
+      quantity: 10,
+    });
+    store.getState().addMonthlySnapshot(provisionalSnapshot("2026-06"));
+    store.getState().addMonthlySnapshot({
+      ...existingSnapshot("2026-07"),
+      generated: {
+        confidence: "confirmed",
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "historical-close",
+            price: 1650,
+          },
+        ],
+        source: "auto",
+        warnings: [],
+      },
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: stockAsset.id,
+        asOfMonth: "2026-06",
+        basis: "historical-close",
+        currency: "INR",
+        fetchedAt: "2026-08-02T10:00:00.000Z",
+        price: 1600,
+        source: "yahoo",
+      },
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(result.current.snapshotAutomationStatus.snapshot?.month).toBe(
+      "2026-07",
+    );
+  });
+
+  it("updates a provisional snapshot when one asset gains confirmed evidence", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    store.getState().addAsset(etfAsset);
+    store.getState().addOpeningPosition({
+      assetId: etfAsset.id,
+      averageCostPrice: 200,
+      currentPrice: 220,
+      date: "2026-07-10T00:00:00.000Z",
+      id: "opening-nifty-etf",
+      quantity: 5,
+    });
+    const existing: MonthlySnapshot = {
+      ...provisionalSnapshot(),
+      generated: {
+        ...provisionalSnapshot().generated!,
+        priceBasis: "manual-fallback",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "manual-fallback",
+            price: 1678.25,
+          },
+          {
+            assetId: etfAsset.id,
+            basis: "manual-fallback",
+            price: 220,
+          },
+        ],
+      },
+    };
+    store.getState().addMonthlySnapshot(existing);
+    const historicalPriceFetcher = jest.fn().mockImplementation(
+      async ({ asset }: { asset: Asset }) =>
+        asset.id === stockAsset.id
+          ? {
+              ok: true as const,
+              quote: {
+                assetId: stockAsset.id,
+                asOfMonth: "2026-07",
+                basis: "historical-close" as const,
+                currency: "INR" as const,
+                fetchedAt: "2026-08-02T10:00:00.000Z",
+                price: 1600,
+                source: "yahoo" as const,
+              },
+            }
+          : {
+              error: "Historical price is temporarily unavailable.",
+              ok: false as const,
+            },
+    );
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(
+      store.getState().monthlySnapshots[0]?.generated?.priceEvidence,
+    ).toEqual([
+      {
+        assetId: stockAsset.id,
+        basis: "historical-close",
+        price: 1600,
+      },
+      {
+        assetId: etfAsset.id,
+        basis: "manual-fallback",
+        price: 220,
+      },
+    ]);
+    expect(store.getState().monthlySnapshots[0]).toMatchObject({
+      generated: { confidence: "provisional" },
+      id: existing.id,
+    });
+  });
+
+  it("does not retry confirmed or manually reviewed snapshots", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    const confirmed: MonthlySnapshot = {
+      ...provisionalSnapshot(),
+      generated: {
+        confidence: "confirmed",
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "historical-close",
+            price: 1600,
+          },
+        ],
+        source: "auto",
+        warnings: [],
+      },
+    };
+    store.getState().addMonthlySnapshot(confirmed);
+    const historicalPriceFetcher = jest.fn();
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(historicalPriceFetcher).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.setField("month", "2026-07");
+      result.current.setField("portfolioValue", "86000");
+      result.current.setField("investedValue", "14500");
+      result.current.setField("equityValue", "16000");
+      result.current.setField("debtValue", "0");
+      result.current.setField("cryptoValue", "0");
+      result.current.setField("cashValue", "70000");
+      result.current.setField("monthlyInvestment", "0");
+      result.current.setField("salary", "0");
+    });
+    act(() => {
+      result.current.saveSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots[0]?.generated?.source).toBe(
+      "manual",
+    );
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+    expect(historicalPriceFetcher).not.toHaveBeenCalled();
   });
 });

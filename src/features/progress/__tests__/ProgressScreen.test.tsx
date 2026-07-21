@@ -204,6 +204,108 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
 
+  it("labels provisional snapshot prices as estimates", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      generated: {
+        confidence: "provisional",
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "manual-fallback",
+            price: 1678.25,
+          },
+        ],
+        source: "auto",
+        warnings: ["1 holding used manual price fallback."],
+      },
+    });
+
+    const { findByText, queryByText } = render(<ProgressScreen store={store} />);
+
+    expect(
+      await findByText(
+        "Estimated prices remain for May 2026. Review if you have better month-end values.",
+      ),
+    ).toBeTruthy();
+    expect(queryByText(/provisional|historical|fallback/i)).toBeNull();
+  });
+
+  it("identifies confirmed historical month-end prices", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      generated: {
+        confidence: "confirmed",
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "historical-close",
+            price: 1678.25,
+          },
+        ],
+        source: "auto",
+        warnings: [],
+      },
+    });
+
+    const { getByText } = render(<ProgressScreen store={store} />);
+
+    expect(getByText("Month-end prices confirmed.")).toBeTruthy();
+  });
+
+  it("names older provisional months without claiming all prices are confirmed", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot({
+      ...aprilSnapshot,
+      generated: {
+        confidence: "provisional",
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "manual-fallback",
+            price: 1600,
+          },
+        ],
+        source: "auto",
+        warnings: [],
+      },
+    });
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      generated: {
+        confidence: "confirmed",
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        priceEvidence: [
+          {
+            assetId: stockAsset.id,
+            basis: "historical-close",
+            price: 1678.25,
+          },
+        ],
+        source: "auto",
+        warnings: [],
+      },
+    });
+
+    const { findByText, queryByText } = render(<ProgressScreen store={store} />);
+
+    expect(
+      await findByText(
+        "Estimated prices remain for April 2026. Review if you have better month-end values.",
+      ),
+    ).toBeTruthy();
+    expect(queryByText("Month-end prices confirmed.")).toBeNull();
+  });
+
   it("opens the dedicated snapshot review flow", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewSnapshot = jest.fn();
