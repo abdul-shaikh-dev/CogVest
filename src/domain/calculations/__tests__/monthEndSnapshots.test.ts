@@ -1,5 +1,6 @@
 import {
   buildGeneratedMonthEndSnapshot,
+  getMissingCompletedSnapshotMonths,
   getPreviousCompletedMonth,
 } from "@/src/domain/calculations";
 import { historicalQuoteCacheKey } from "@/src/types";
@@ -95,6 +96,24 @@ function cashEntry(overrides: Partial<CashEntry>): CashEntry {
   };
 }
 
+function monthlySnapshot(
+  overrides: Partial<MonthlySnapshot>,
+): MonthlySnapshot {
+  return {
+    cashValue: 0,
+    cryptoValue: 0,
+    debtValue: 0,
+    equityValue: 1000,
+    id: `snapshot-${Math.random()}`,
+    investedValue: 900,
+    month: "2026-01",
+    monthlyInvestment: 0,
+    portfolioValue: 1000,
+    salary: 0,
+    ...overrides,
+  };
+}
+
 function buildInput(overrides: {
   assets?: Asset[];
   cashEntries?: CashEntry[];
@@ -103,6 +122,7 @@ function buildInput(overrides: {
   now?: Date;
   openingPositions?: OpeningPosition[];
   quoteCache?: QuoteCache;
+  targetMonth?: string;
   trades?: Trade[];
 } = {}) {
   return {
@@ -113,6 +133,7 @@ function buildInput(overrides: {
     now: overrides.now ?? new Date("2026-08-15T10:00:00.000Z"),
     openingPositions: overrides.openingPositions ?? [],
     quoteCache: overrides.quoteCache ?? {},
+    targetMonth: overrides.targetMonth,
     trades: overrides.trades ?? [],
   };
 }
@@ -129,9 +150,93 @@ describe("getPreviousCompletedMonth", () => {
       getPreviousCompletedMonth(new Date("2026-01-01T10:00:00.000Z")),
     ).toBe("2025-12");
   });
+
+  it("uses the device-local month at the first hours of a new month", () => {
+    expect(getPreviousCompletedMonth(new Date(2026, 7, 1, 1, 30))).toBe(
+      "2026-07",
+    );
+  });
+});
+
+describe("getMissingCompletedSnapshotMonths", () => {
+  it("enumerates every completed month from the earliest record across years", () => {
+    expect(
+      getMissingCompletedSnapshotMonths({
+        cashEntries: [
+          cashEntry({ date: "2025-11-18T00:00:00.000Z" }),
+        ],
+        existingSnapshots: [],
+        now: new Date("2026-03-15T10:00:00.000Z"),
+        openingPositions: [],
+        trades: [],
+      }),
+    ).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
+  });
+
+  it("returns only gaps and never includes the current month", () => {
+    expect(
+      getMissingCompletedSnapshotMonths({
+        cashEntries: [cashEntry({ date: "2026-01-04T00:00:00.000Z" })],
+        existingSnapshots: [
+          monthlySnapshot({ month: "2026-02" }),
+          monthlySnapshot({ id: "snapshot-april", month: "2026-04" }),
+        ],
+        now: new Date("2026-05-20T10:00:00.000Z"),
+        openingPositions: [],
+        trades: [],
+      }),
+    ).toEqual(["2026-01", "2026-03"]);
+  });
+
+  it("returns no targets when there are no portfolio records", () => {
+    expect(
+      getMissingCompletedSnapshotMonths({
+        cashEntries: [],
+        existingSnapshots: [],
+        now: new Date("2026-05-20T10:00:00.000Z"),
+        openingPositions: [],
+        trades: [],
+      }),
+    ).toEqual([]);
+  });
+
+  it("returns no targets when the first record is in the current month", () => {
+    expect(
+      getMissingCompletedSnapshotMonths({
+        cashEntries: [],
+        existingSnapshots: [],
+        now: new Date("2026-05-20T10:00:00.000Z"),
+        openingPositions: [
+          openingPosition({ date: "2026-05-02T00:00:00.000Z" }),
+        ],
+        trades: [],
+      }),
+    ).toEqual([]);
+  });
 });
 
 describe("buildGeneratedMonthEndSnapshot", () => {
+  it.each(["not-a-month", "2026-08", "2026-09"])(
+    "rejects an explicit target that is not a completed month: %s",
+    (targetMonth) => {
+      const result = buildGeneratedMonthEndSnapshot(
+        buildInput({
+          cashEntries: [cashEntry({ date: "2026-07-05T00:00:00.000Z" })],
+          now: new Date(2026, 7, 15, 10, 0),
+          targetMonth,
+        }),
+      );
+
+      expect(result).toEqual({
+        snapshot: null,
+        status: "insufficient-data",
+        warnings: [
+          `Target month ${targetMonth} is invalid or has not completed yet.`,
+        ],
+      });
+    },
+  );
+
   it("returns already-exists when the target month snapshot is present", () => {
     const existingSnapshot: MonthlySnapshot = {
       cashValue: 1200,

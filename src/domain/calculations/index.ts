@@ -1,11 +1,13 @@
 export {
   buildGeneratedMonthEndSnapshot,
+  getMissingCompletedSnapshotMonths,
   getPreviousCompletedMonth,
 } from "./monthEndSnapshots";
 export type {
   BuildGeneratedMonthEndSnapshotInput,
   GeneratedMonthEndSnapshotResult,
   GeneratedSnapshotStatus,
+  MissingCompletedSnapshotMonthsInput,
 } from "./monthEndSnapshots";
 export {
   buildMonthlyProgressChartData,

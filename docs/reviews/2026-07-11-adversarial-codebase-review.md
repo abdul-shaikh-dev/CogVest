@@ -227,17 +227,35 @@ legacy addition keeps both income and the rate unavailable until classified.
 
 ### H3. Automation only covers the immediately previous month
 
-The generator computes one target month using `getPreviousCompletedMonth`. If the
-app remains unopened for several months, older gaps are not backfilled.
+**Status (2026-07-22): Remediated by #178.** Snapshot automation now determines
+every missing completed month from the earliest opening position, trade, or cash
+entry through the last completed month. It processes gaps oldest-first, excludes
+the current month, and preserves existing snapshots.
 
-**Evidence:**
+**Remediation evidence:**
 
-- `src/domain/calculations/monthEndSnapshots.ts:210-226`.
-- `src/features/progress/useMonthEndSnapshotAutomation.ts:20-31` runs the process
-  once per mount.
-
-**Required direction:** Determine every missing completed month from the earliest
-portfolio record through the last completed month, then process them in order.
+- `getMissingCompletedSnapshotMonths` owns deterministic cross-year month
+  enumeration and existing-snapshot exclusion.
+- `buildGeneratedMonthEndSnapshot` accepts an explicit target month while
+  preserving its previous-month default for existing callers.
+- Progress automation requests historical prices for each target month, persists
+  successful snapshots in order, continues after a non-derivable month, and
+  reports a run-level status from the final store state.
+- Completed-month selection follows the device-local calendar, explicit target
+  months are rejected unless already completed, and fully closed positions do
+  not trigger unnecessary historical-price requests.
+- Concurrent app, Progress, and review touchpoints share one in-flight run per
+  portfolio store, preventing duplicate provider work and competing results;
+  callers crossing local month-end wait for that run and then process the newly
+  completed month.
+- Domain and hook tests cover cross-year enumeration, partial gaps, current-month
+  exclusion, no-record behavior, per-month historical lookup, ordered
+  persistence, idempotent reruns, preserved existing snapshots, and continuation
+  after underivable months, plus local month boundaries, invalid targets, closed
+  positions, and concurrent calls.
+- `npm run test:verify` passed 47 suites and 310 tests; Expo Doctor passed 17/17.
+- Historical fallback confidence and retry semantics remain open under H4 and
+  #150; this remediation does not mark estimated prices as final-quality data.
 
 ### H4. Historical fallback can permanently store current prices as past values
 

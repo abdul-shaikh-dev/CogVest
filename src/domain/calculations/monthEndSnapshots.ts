@@ -40,8 +40,14 @@ export type BuildGeneratedMonthEndSnapshotInput = {
   now: Date;
   openingPositions: OpeningPosition[];
   quoteCache: QuoteCache;
+  targetMonth?: string;
   trades: Trade[];
 };
+
+export type MissingCompletedSnapshotMonthsInput = Pick<
+  BuildGeneratedMonthEndSnapshotInput,
+  "cashEntries" | "existingSnapshots" | "now" | "openingPositions" | "trades"
+>;
 
 type PriceSelectionBasis = HistoricalPriceBasis;
 
@@ -213,7 +219,78 @@ function selectAssetPrice({
 }
 
 export function getPreviousCompletedMonth(now: Date) {
-  return formatMonth(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0)));
+  const previousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  return `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthIndex(monthKey: string) {
+  const [yearValue, monthValue] = monthKey.split("-");
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+
+  if (
+    !/^\d{4}-\d{2}$/.test(monthKey) ||
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    return null;
+  }
+
+  return year * 12 + month - 1;
+}
+
+function formatMonthIndex(index: number) {
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+export function getMissingCompletedSnapshotMonths({
+  cashEntries,
+  existingSnapshots,
+  now,
+  openingPositions,
+  trades,
+}: MissingCompletedSnapshotMonthsInput) {
+  const recordMonthIndexes = [
+    ...cashEntries.map((entry) => entry.date),
+    ...openingPositions.map((position) => position.date),
+    ...trades.map((trade) => trade.date),
+  ]
+    .map((date) => new Date(date))
+    .filter((date) => Number.isFinite(date.getTime()))
+    .map((date) => monthIndex(formatMonth(date)))
+    .filter((index): index is number => index !== null);
+
+  if (recordMonthIndexes.length === 0) {
+    return [];
+  }
+
+  const firstRecordMonth = Math.min(...recordMonthIndexes);
+  const lastCompletedMonth = monthIndex(getPreviousCompletedMonth(now));
+
+  if (lastCompletedMonth === null || firstRecordMonth > lastCompletedMonth) {
+    return [];
+  }
+
+  const existingMonths = new Set(
+    existingSnapshots.map((snapshot) => snapshot.month),
+  );
+  const missingMonths: string[] = [];
+
+  for (let index = firstRecordMonth; index <= lastCompletedMonth; index += 1) {
+    const month = formatMonthIndex(index);
+
+    if (!existingMonths.has(month)) {
+      missingMonths.push(month);
+    }
+  }
+
+  return missingMonths;
 }
 
 export function buildGeneratedMonthEndSnapshot({
@@ -224,9 +301,27 @@ export function buildGeneratedMonthEndSnapshot({
   now,
   openingPositions,
   quoteCache,
+  targetMonth: requestedTargetMonth,
   trades,
 }: BuildGeneratedMonthEndSnapshotInput): GeneratedMonthEndSnapshotResult {
-  const targetMonth = getPreviousCompletedMonth(now);
+  const targetMonth = requestedTargetMonth ?? getPreviousCompletedMonth(now);
+  const targetMonthIndex = monthIndex(targetMonth);
+  const lastCompletedMonthIndex = monthIndex(getPreviousCompletedMonth(now));
+
+  if (
+    targetMonthIndex === null ||
+    lastCompletedMonthIndex === null ||
+    targetMonthIndex > lastCompletedMonthIndex
+  ) {
+    return {
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        `Target month ${targetMonth} is invalid or has not completed yet.`,
+      ],
+    };
+  }
+
   const existingSnapshot = existingSnapshots.find(
     (snapshot) => snapshot.month === targetMonth,
   );
