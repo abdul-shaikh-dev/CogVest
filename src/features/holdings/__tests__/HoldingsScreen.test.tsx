@@ -186,6 +186,39 @@ describe("HoldingsScreen", () => {
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
   });
 
+  it("exposes each opening record for correction without treating trades as openings", () => {
+    const store = seedMixedHoldings();
+    const onReviewOpeningPosition = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <HoldingsScreen
+        onReviewOpeningPosition={onReviewOpeningPosition}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    expect(queryByTestId("review-opening-position-opening-ppf")).toBeNull();
+    expect(queryByTestId("review-opening-position-opening-bitcoin")).toBeNull();
+
+    fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
+    fireEvent.press(getByTestId("review-opening-position-opening-ppf"));
+
+    expect(onReviewOpeningPosition).toHaveBeenCalledWith("opening-ppf");
+  });
+
+  it("shows one calm completion message after correction", () => {
+    const store = seedMixedHoldings();
+    const { getByTestId, getByText } = render(
+      <HoldingsScreen
+        statusMessage="Portfolio history updated."
+        store={store}
+      />,
+    );
+
+    expect(getByTestId("holdings-status-message")).toBeTruthy();
+    expect(getByText("Portfolio history updated.")).toBeTruthy();
+  });
+
   it("wires header Add Holding and value masking actions", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

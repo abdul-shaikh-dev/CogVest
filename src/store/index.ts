@@ -2,6 +2,11 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { normalizeAssetMetadata } from "@/src/domain/assets";
 import {
+  buildGeneratedMonthEndSnapshot,
+  getMissingCompletedSnapshotMonths,
+  getMonthlySnapshotPriceConfidence,
+} from "@/src/domain/calculations";
+import {
   getCalendarDatePart,
   isFutureCalendarDate,
 } from "@/src/domain/dates";
@@ -68,12 +73,18 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
+  correctOpeningPosition: (
+    openingPosition: OpeningPosition,
+  ) => OpeningPositionCorrectionResult;
   correctManualCashEntry: (
     cashEntry: CashEntry,
   ) => ManualCashCorrectionResult;
   deleteManualCashEntry: (
     cashEntryId: string,
   ) => ManualCashDeletionResult;
+  deleteOpeningPosition: (
+    openingPositionId: string,
+  ) => OpeningPositionDeletionResult;
   historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
@@ -153,6 +164,29 @@ export type OpeningPositionCommandResult = {
   quoteCacheStatus: "cached" | "notRequested" | "unavailable";
   status: "alreadyApplied" | "applied";
 };
+
+export type OpeningPositionCorrectionResult =
+  | {
+      openingPosition: OpeningPosition;
+      pendingMonths: string[];
+      provisionalMonths: string[];
+      refreshedMonths: string[];
+      status: "applied";
+    }
+  | {
+      reason: "assetMismatch" | "invalidEntry" | "notFound";
+      status: "rejected";
+    };
+
+export type OpeningPositionDeletionResult =
+  | {
+      openingPosition: OpeningPosition;
+      pendingMonths: string[];
+      provisionalMonths: string[];
+      refreshedMonths: string[];
+      status: "applied";
+    }
+  | { reason: "notFound"; status: "rejected" };
 
 type CreatePortfolioStoreOptions = {
   migratePortfolioSnapshot?: (
@@ -452,6 +486,111 @@ function isValidManualCashEntry(entry: CashEntry, now = new Date()) {
   );
 }
 
+function isValidOpeningPosition(
+  openingPosition: OpeningPosition,
+  now: Date,
+) {
+  const conviction = openingPosition.conviction;
+
+  return (
+    openingPosition.assetId.trim().length > 0 &&
+    Number.isFinite(openingPosition.quantity) &&
+    openingPosition.quantity > 0 &&
+    Number.isFinite(openingPosition.averageCostPrice) &&
+    openingPosition.averageCostPrice > 0 &&
+    openingPosition.currentPrice !== undefined &&
+    Number.isFinite(openingPosition.currentPrice) &&
+    openingPosition.currentPrice > 0 &&
+    Boolean(getCalendarDatePart(openingPosition.date)) &&
+    !isFutureCalendarDate(openingPosition.date, now) &&
+    (conviction === undefined ||
+      (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5))
+  );
+}
+
+function openingPositionMonth(openingPosition: OpeningPosition) {
+  return getCalendarDatePart(openingPosition.date)?.slice(0, 7) ?? null;
+}
+
+function rebuildOpeningPositionSnapshots({
+  earliestAffectedMonth,
+  now,
+  openingPositions,
+  state,
+}: {
+  earliestAffectedMonth: string;
+  now: Date;
+  openingPositions: OpeningPosition[];
+  state: PortfolioStoreState;
+}) {
+  const affectedAutoSnapshots = new Map(
+    state.monthlySnapshots
+      .filter(
+        (snapshot) =>
+          snapshot.month >= earliestAffectedMonth &&
+          snapshot.generated?.source === "auto",
+      )
+      .map((snapshot) => [snapshot.month, snapshot]),
+  );
+  let monthlySnapshots = state.monthlySnapshots.filter(
+    (snapshot) =>
+      snapshot.month < earliestAffectedMonth ||
+      snapshot.generated?.source !== "auto",
+  );
+  const targetMonths = getMissingCompletedSnapshotMonths({
+    cashEntries: state.cashEntries,
+    existingSnapshots: monthlySnapshots,
+    now,
+    openingPositions,
+    trades: state.trades,
+  }).filter((month) => month >= earliestAffectedMonth);
+  const pendingMonths: string[] = [];
+  const refreshedMonths: string[] = [];
+
+  for (const targetMonth of targetMonths) {
+    const result = buildGeneratedMonthEndSnapshot({
+      assets: state.assets,
+      cashEntries: state.cashEntries,
+      existingSnapshots: monthlySnapshots,
+      historicalQuotes: state.historicalQuoteCache,
+      now,
+      openingPositions,
+      quoteCache: state.quoteCache,
+      targetMonth,
+      trades: state.trades,
+    });
+
+    if (result.status === "created" && result.snapshot) {
+      const previousSnapshot = affectedAutoSnapshots.get(targetMonth);
+      monthlySnapshots = [
+        ...monthlySnapshots,
+        {
+          ...result.snapshot,
+          id: previousSnapshot?.id ?? result.snapshot.id,
+        },
+      ];
+      refreshedMonths.push(targetMonth);
+    } else {
+      pendingMonths.push(targetMonth);
+    }
+  }
+
+  monthlySnapshots.sort((left, right) => left.month.localeCompare(right.month));
+
+  return {
+    monthlySnapshots,
+    pendingMonths,
+    provisionalMonths: monthlySnapshots
+      .filter(
+        (snapshot) =>
+          refreshedMonths.includes(snapshot.month) &&
+          getMonthlySnapshotPriceConfidence(snapshot) === "provisional",
+      )
+      .map((snapshot) => snapshot.month),
+    refreshedMonths,
+  };
+}
+
 function linkedCashEntry(
   input: LinkedTradeCommandInput,
   purpose: "purchaseFunding" | "saleProceeds",
@@ -627,6 +766,64 @@ export function createPortfolioStore({
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
     },
+    correctOpeningPosition: (openingPosition) => {
+      const state = get();
+      const existingPosition = state.openingPositions.find(
+        (position) => position.id === openingPosition.id,
+      );
+
+      if (!existingPosition) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      if (existingPosition.assetId !== openingPosition.assetId) {
+        return { reason: "assetMismatch", status: "rejected" };
+      }
+
+      const currentDate = now();
+
+      if (!isValidOpeningPosition(openingPosition, currentDate)) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+
+      const earliestAffectedMonth = [
+        openingPositionMonth(existingPosition),
+        openingPositionMonth(openingPosition),
+      ]
+        .filter((month): month is string => Boolean(month))
+        .sort()[0];
+
+      if (!earliestAffectedMonth) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+
+      const openingPositions = state.openingPositions.map((position) =>
+        position.id === openingPosition.id ? openingPosition : position,
+      );
+      const history = rebuildOpeningPositionSnapshots({
+        earliestAffectedMonth,
+        now: currentDate,
+        openingPositions,
+        state,
+      });
+
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+      });
+      set({
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+      });
+
+      return {
+        openingPosition,
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+      };
+    },
     correctManualCashEntry: (cashEntry) => {
       const state = get();
       const existingEntry = state.cashEntries.find(
@@ -677,6 +874,49 @@ export function createPortfolioStore({
 
       return { entry: existingEntry, status: "applied" };
     },
+    deleteOpeningPosition: (openingPositionId) => {
+      const state = get();
+      const existingPosition = state.openingPositions.find(
+        (position) => position.id === openingPositionId,
+      );
+
+      if (!existingPosition) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      const earliestAffectedMonth = openingPositionMonth(existingPosition);
+
+      if (!earliestAffectedMonth) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      const openingPositions = state.openingPositions.filter(
+        (position) => position.id !== openingPositionId,
+      );
+      const history = rebuildOpeningPositionSnapshots({
+        earliestAffectedMonth,
+        now: now(),
+        openingPositions,
+        state,
+      });
+
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+      });
+      set({
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+      });
+
+      return {
+        openingPosition: existingPosition,
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+      };
+    },
     historicalQuoteCache,
     quoteCache,
     removeAsset: (assetId) => {
@@ -713,12 +953,7 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     removeOpeningPosition: (openingPositionId) => {
-      set((state) => ({
-        openingPositions: state.openingPositions.filter(
-          (openingPosition) => openingPosition.id !== openingPositionId,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      get().deleteOpeningPosition(openingPositionId);
     },
     removeTrade: (tradeId) => {
       set((state) => ({
@@ -980,14 +1215,7 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     updateOpeningPosition: (openingPosition) => {
-      set((state) => ({
-        openingPositions: state.openingPositions.map((currentPosition) =>
-          currentPosition.id === openingPosition.id
-            ? openingPosition
-            : currentPosition,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      get().correctOpeningPosition(openingPosition);
     },
     updatePreferences: (preferences) => {
       set((state) => ({

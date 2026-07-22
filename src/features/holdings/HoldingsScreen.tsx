@@ -27,6 +27,7 @@ import {
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
+import type { OpeningPosition } from "@/src/types";
 
 import {
   createHoldingReviewItems,
@@ -45,7 +46,9 @@ type RefreshQuotes = (
 
 type HoldingsScreenProps = {
   onAddTrade?: () => void;
+  onReviewOpeningPosition?: (openingPositionId: string) => void;
   onSellRedeem?: (assetId: string) => void;
+  statusMessage?: string;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -65,8 +68,10 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 
 export function HoldingsScreen({
   onAddTrade,
+  onReviewOpeningPosition,
   onSellRedeem,
   refreshQuotes,
+  statusMessage,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
   const {
@@ -75,6 +80,7 @@ export function HoldingsScreen({
     isRefreshing,
     latestQuoteAsOf,
     maskWealthValues,
+    openingPositions,
     refresh,
     rollupRows,
     toggleMaskWealthValues,
@@ -143,6 +149,19 @@ export function HoldingsScreen({
           }
         />
 
+        {statusMessage ? (
+          <View
+            accessibilityLiveRegion="polite"
+            testID="holdings-status-message"
+          >
+            <PremiumCard style={styles.statusCard}>
+              <AppText style={styles.positiveText} weight="bold">
+                {statusMessage}
+              </AppText>
+            </PremiumCard>
+          </View>
+        ) : null}
+
         {isSearchVisible ? (
           <FormTextField
             label="Search holdings input"
@@ -209,6 +228,10 @@ export function HoldingsScreen({
                     item={item}
                     key={item.holding.asset.id}
                     masked={maskWealthValues}
+                    openingPositions={openingPositions.filter(
+                      (position) => position.assetId === item.holding.asset.id,
+                    )}
+                    onReviewOpeningPosition={onReviewOpeningPosition}
                     onSellRedeem={onSellRedeem}
                     onPress={() =>
                       setExpandedAssetId((current) =>
@@ -379,13 +402,17 @@ function HoldingRow({
   expanded,
   item,
   masked,
+  openingPositions,
   onPress,
+  onReviewOpeningPosition,
   onSellRedeem,
 }: {
   expanded: boolean;
   item: HoldingReviewItem;
   masked: boolean;
+  openingPositions: OpeningPosition[];
   onPress: () => void;
+  onReviewOpeningPosition?: (openingPositionId: string) => void;
   onSellRedeem?: (assetId: string) => void;
 }) {
   const { holding } = item;
@@ -514,6 +541,33 @@ function HoldingRow({
                 : "Local position price"}
             </AppText>
           </View>
+
+          {onReviewOpeningPosition && openingPositions.length > 0 ? (
+            <View style={styles.openingRecords}>
+              <AppText color="secondary" variant="caption" weight="bold">
+                Opening {openingPositions.length === 1 ? "record" : "records"}
+              </AppText>
+              {openingPositions.map((position) => (
+                <View key={position.id} style={styles.openingRecordRow}>
+                  <View style={styles.openingRecordCopy}>
+                    <AppText variant="caption" weight="bold">
+                      {formatDate(position.date)}
+                    </AppText>
+                    <AppText color="secondary" variant="caption">
+                      {formatQuantity(position.quantity)} units · avg{" "}
+                      {formatCompactINR(position.averageCostPrice)}
+                    </AppText>
+                  </View>
+                  <AppButton
+                    title="Review"
+                    variant="secondary"
+                    testID={`review-opening-position-${position.id}`}
+                    onPress={() => onReviewOpeningPosition(position.id)}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {onSellRedeem ? (
             <AppButton
@@ -754,6 +808,21 @@ const styles = StyleSheet.create({
   negativeText: {
     color: colors.loss,
   },
+  openingRecordCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  openingRecordRow: {
+    alignItems: "center",
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  openingRecords: {
+    gap: spacing.sm,
+  },
   positiveText: {
     color: colors.profit,
   },
@@ -769,6 +838,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: spacing.md,
+  },
+  statusCard: {
+    backgroundColor: colors.surface.card,
+    paddingVertical: spacing.sm,
   },
   topThree: {
     alignItems: "flex-end",

@@ -115,7 +115,10 @@ describe("portfolio store", () => {
   });
 
   it("adds, updates, and removes raw portfolio records", () => {
-    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 3, 26, 12),
+      storage: createMemoryJsonStorage(),
+    });
 
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition(openingPosition);
@@ -356,6 +359,229 @@ describe("portfolio store", () => {
     ).toThrow("simulated cash correction failure");
     expect(store.getState().cashEntries).toEqual([cashEntry]);
     expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+  });
+
+  it("corrects an opening position and refreshes auto history while preserving manual history", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: ["Estimated from a local price."],
+      },
+      id: "snapshot-auto-april",
+      month: "2026-04",
+    };
+    const manualSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        source: "manual",
+        warnings: [],
+      },
+      id: "snapshot-manual-may",
+      month: "2026-05",
+      notes: "Keep my month-end note",
+    };
+
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+    store.getState().addMonthlySnapshot(manualSnapshot);
+
+    const result = store.getState().correctOpeningPosition({
+      ...openingPosition,
+      date: "2026-03-15T00:00:00.000Z",
+      quantity: 50,
+    });
+
+    expect(result).toMatchObject({
+      openingPosition: expect.objectContaining({ quantity: 50 }),
+      pendingMonths: [],
+      provisionalMonths: expect.arrayContaining(["2026-03", "2026-04"]),
+      refreshedMonths: expect.arrayContaining(["2026-03", "2026-04"]),
+      status: "applied",
+    });
+    expect(store.getState().openingPositions).toEqual([
+      {
+        ...openingPosition,
+        date: "2026-03-15T00:00:00.000Z",
+        quantity: 50,
+      },
+    ]);
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-04"),
+    ).toMatchObject({
+      id: autoSnapshot.id,
+      investedValue: 72500,
+      portfolioValue: 83912.5,
+    });
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-05"),
+    ).toEqual(manualSnapshot);
+    expect(createPortfolioStore({ storage }).getState().openingPositions).toEqual([
+      {
+        ...openingPosition,
+        date: "2026-03-15T00:00:00.000Z",
+        quantity: 50,
+      },
+    ]);
+  });
+
+  it("removes obsolete auto history when an acquisition date moves later", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-april",
+      month: "2026-04",
+    };
+    const manualSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        source: "manual",
+        warnings: [],
+      },
+      id: "snapshot-manual-may",
+      month: "2026-05",
+      notes: "Keep this review",
+    };
+
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+    store.getState().addMonthlySnapshot(manualSnapshot);
+
+    const result = store.getState().correctOpeningPosition({
+      ...openingPosition,
+      date: "2026-06-15T00:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      pendingMonths: [],
+      refreshedMonths: ["2026-06"],
+      status: "applied",
+    });
+    expect(store.getState().monthlySnapshots.map(({ month }) => month)).toEqual([
+      "2026-05",
+      "2026-06",
+    ]);
+    expect(store.getState().monthlySnapshots[0]).toEqual(manualSnapshot);
+  });
+
+  it("deletes an opening position and removes affected auto history without deleting manual history", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      month: "2026-04",
+    };
+    const manualSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      id: "snapshot-manual",
+      month: "2026-05",
+      notes: "Preserve this",
+    };
+
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+    store.getState().addMonthlySnapshot(manualSnapshot);
+
+    expect(store.getState().deleteOpeningPosition(openingPosition.id)).toMatchObject({
+      openingPosition,
+      status: "applied",
+    });
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().monthlySnapshots).toEqual([manualSnapshot]);
+    expect(createPortfolioStore({ storage }).getState().monthlySnapshots).toEqual([
+      manualSnapshot,
+    ]);
+  });
+
+  it.each([
+    ["unknown ID", { id: "missing" }, "notFound"],
+    ["asset mismatch", { assetId: "asset-other" }, "assetMismatch"],
+    ["zero quantity", { quantity: 0 }, "invalidEntry"],
+    ["negative average cost", { averageCostPrice: -1 }, "invalidEntry"],
+    ["invalid current price", { currentPrice: Number.NaN }, "invalidEntry"],
+    ["impossible date", { date: "2026-02-30" }, "invalidEntry"],
+    ["future date", { date: "2026-07-23" }, "invalidEntry"],
+    ["invalid conviction", { conviction: 8 }, "invalidEntry"],
+  ])("rejects opening-position correction with %s", (_case, override, reason) => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    const persistedBeforeCorrection = storage.getRawItem(portfolioStorageKey);
+
+    expect(
+      store.getState().correctOpeningPosition({
+        ...openingPosition,
+        ...override,
+      } as OpeningPosition),
+    ).toEqual({ reason, status: "rejected" });
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(
+      persistedBeforeCorrection,
+    );
+  });
+
+  it("keeps opening positions and history unchanged when correction persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
+    const persistedBeforeFailure = storage.getRawItem(portfolioStorageKey);
+    storage.setItem = () => {
+      throw new Error("simulated opening correction failure");
+    };
+
+    expect(() =>
+      store.getState().correctOpeningPosition({
+        ...openingPosition,
+        quantity: 50,
+      }),
+    ).toThrow("simulated opening correction failure");
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+
+    expect(() =>
+      store.getState().deleteOpeningPosition(openingPosition.id),
+    ).toThrow("simulated opening correction failure");
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
   });
 
   it("records an opening position atomically and ignores replay after restart", () => {
