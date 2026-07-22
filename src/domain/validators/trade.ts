@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  getCalendarDatePart,
+  isEffectiveCalendarDate,
+  isFutureCalendarDate,
+} from "@/src/domain/dates";
 import type { OpeningPosition, Trade, TradeType } from "@/src/types";
 
 type ValidationResult =
@@ -22,13 +27,11 @@ const tradeTypes = ["buy", "sell"] as const;
 export const tradeTypeSchema = z.enum(tradeTypes);
 
 export function isValidDateString(value: string) {
-  return !Number.isNaN(new Date(value).getTime());
+  return getCalendarDatePart(value) !== null;
 }
 
 export function isFutureDate(value: string, now = new Date()) {
-  const date = new Date(value);
-
-  return isValidDateString(value) && date.getTime() > now.getTime();
+  return isFutureCalendarDate(value, now);
 }
 
 export function createTradeInputSchema(now = new Date()) {
@@ -56,27 +59,37 @@ export const tradeInputSchema = createTradeInputSchema();
 export function getAvailableQuantity(
   trades: Trade[],
   openingPositions: OpeningPosition[] = [],
+  now = new Date(),
 ) {
-  const openingQuantity = openingPositions.reduce(
+  const openingQuantity = openingPositions
+    .filter((position) => isEffectiveCalendarDate(position.date, now))
+    .reduce(
     (quantity, position) => quantity + position.quantity,
     0,
   );
 
-  return trades.reduce((quantity, trade) => {
+  return trades
+    .filter((trade) => isEffectiveCalendarDate(trade.date, now))
+    .reduce((quantity, trade) => {
     if (trade.type === "sell") {
       return quantity - trade.quantity;
     }
 
     return quantity + trade.quantity;
-  }, openingQuantity);
+    }, openingQuantity);
 }
 
 export function validateSellQuantity(
   trades: Trade[],
   sellQuantity: number,
   openingPositions: OpeningPosition[] = [],
+  now = new Date(),
 ): SellQuantityResult {
-  const availableQuantity = getAvailableQuantity(trades, openingPositions);
+  const availableQuantity = getAvailableQuantity(
+    trades,
+    openingPositions,
+    now,
+  );
 
   if (sellQuantity > availableQuantity) {
     return {

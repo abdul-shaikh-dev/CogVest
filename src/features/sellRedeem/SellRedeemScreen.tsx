@@ -14,7 +14,7 @@ import {
   SectionHeader,
   assetClassLabel,
 } from "@/src/components/common";
-import { FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
@@ -23,6 +23,7 @@ import { useSellRedeemHolding } from "./useSellRedeemHolding";
 
 type SellRedeemScreenProps = {
   assetId: string;
+  now?: Date;
   onSaved?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -37,10 +38,11 @@ function quantityPlaceholder(availableUnits: number) {
 
 export function SellRedeemScreen({
   assetId,
+  now = new Date(),
   onSaved,
   store = getPortfolioStore(),
 }: SellRedeemScreenProps) {
-  const flow = useSellRedeemHolding({ assetId, store });
+  const flow = useSellRedeemHolding({ assetId, now, store });
 
   if (!flow.holding) {
     return (
@@ -146,11 +148,11 @@ export function SellRedeemScreen({
               />
             </View>
             <View style={styles.formField}>
-              <FormTextField
+              <DatePickerField
                 error={flow.errors.date}
                 label="Date"
-                onChangeText={flow.setDate}
-                placeholder="YYYY-MM-DD"
+                maximumDate={now}
+                onChange={flow.setDate}
                 testID="sell-redeem-date-input"
                 value={flow.date}
               />

@@ -4,6 +4,7 @@ import type { StoreApi } from "zustand/vanilla";
 
 import { getDefaultAssetMetadata } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -37,6 +38,7 @@ export type FieldErrors = Partial<Record<string, string>>;
 
 export type AddOpeningPositionControllerInput = {
   initialVisualQaState?: "review";
+  now?: Date;
   onComplete?: (assetId: string) => void;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
@@ -54,16 +56,13 @@ export const phases: Array<{ key: AddHoldingPhase; label: string }> = [
   { key: "review", label: "Review" },
 ];
 
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState);
 }
 
 export function useAddOpeningPosition({
   initialVisualQaState,
+  now = new Date(),
   onComplete,
   resolveQuote = defaultResolveQuote,
   searchAssetLookupResults = defaultSearchAssetLookupResults,
@@ -140,7 +139,7 @@ export function useAddOpeningPosition({
     initialReviewPosition?.currentPrice?.toString() ?? "",
   );
   const [date, setDate] = useState(
-    initialReviewPosition?.date.slice(0, 10) ?? todayInputValue(),
+    initialReviewPosition?.date.slice(0, 10) ?? formatLocalCalendarDate(now),
   );
   const [conviction, setConviction] = useState(
     initialReviewPosition?.conviction?.toString() ?? "",
@@ -218,7 +217,7 @@ export function useAddOpeningPosition({
       sectorType,
       symbol: symbol || "PHASE",
       ticker: ticker || "PHASE.NS",
-    });
+    }, now);
     const phaseErrors: FieldErrors = {};
 
     if (!result.isValid) {
@@ -249,7 +248,7 @@ export function useAddOpeningPosition({
       sectorType: sectorType || "financialServices",
       symbol: symbol || "PHASE",
       ticker: ticker || "PHASE.NS",
-    });
+    }, now);
     const phaseErrors: FieldErrors = {};
 
     if (!result.isValid) {
@@ -527,7 +526,7 @@ export function useAddOpeningPosition({
       sectorType,
       symbol,
       ticker,
-    });
+    }, now);
 
     if (!result.isValid) {
       setErrors(result.errors);
@@ -558,7 +557,7 @@ export function useAddOpeningPosition({
       averageCostPrice: result.value.averageCostPrice,
       conviction: result.value.conviction,
       currentPrice: result.value.currentPrice,
-      date: `${result.value.date}T00:00:00.000Z`,
+      date: result.value.date,
       id: createId("opening"),
       notes: result.value.notes,
       quantity: result.value.quantity,

@@ -18,8 +18,8 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - tapOn:
     id: "cash-date-input"
-- inputText: "2026-04-20"
-- hideKeyboard
+- assertVisible: "OK"
+- tapOn: "OK"
 - scrollUntilVisible:
     element:
       id: "save-cash-entry-button"
@@ -27,3 +27,6 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-cash-entry-button"
 - assertVisible: "Broker cash"
+- runScript:
+    file: scripts/current-local-date.js
+- assertVisible: "${output.currentLocalDate}"

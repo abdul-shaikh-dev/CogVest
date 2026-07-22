@@ -9,6 +9,7 @@ import type {
   Trade,
 } from "@/src/types";
 import { isV1CompatibleQuote } from "@/src/domain/portfolioCurrency";
+import { getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
 
 import {
   calculateMonthlyPerformance,
@@ -24,6 +25,7 @@ type CalculateHoldingInput = {
 
 type CalculateHoldingsInput = {
   assets: Asset[];
+  now?: Date;
   openingPositions?: OpeningPosition[];
   quoteCache: QuoteCache;
   trades: Trade[];
@@ -182,6 +184,7 @@ export function calculateHolding({
 
 export function calculateHoldings({
   assets,
+  now = new Date(),
   openingPositions = [],
   quoteCache,
   trades,
@@ -194,9 +197,15 @@ export function calculateHoldings({
         return null;
       }
 
-      const assetTrades = trades.filter((trade) => trade.assetId === asset.id);
+      const assetTrades = trades.filter(
+        (trade) =>
+          trade.assetId === asset.id &&
+          isEffectiveCalendarDate(trade.date, now),
+      );
       const assetOpeningPositions = openingPositions.filter(
-        (position) => position.assetId === asset.id,
+        (position) =>
+          position.assetId === asset.id &&
+          isEffectiveCalendarDate(position.date, now),
       );
 
       if (assetTrades.length === 0 && assetOpeningPositions.length === 0) {
@@ -222,18 +231,23 @@ export function calculateHoldings({
     .filter((holding): holding is Holding => holding !== null);
 }
 
-export function calculateCashBalance(cashEntries: CashEntry[]) {
-  return cashEntries.reduce((balance, entry) => {
+export function calculateCashBalance(
+  cashEntries: CashEntry[],
+  now = new Date(),
+) {
+  return cashEntries
+    .filter((entry) => isEffectiveCalendarDate(entry.date, now))
+    .reduce((balance, entry) => {
     if (entry.type === "withdrawal") {
       return balance - entry.amount;
     }
 
     return balance + entry.amount;
-  }, 0);
+    }, 0);
 }
 
 function isSameMonth(isoDate: string, now: Date) {
-  const recordMonth = isoDate.slice(0, 7);
+  const recordMonth = getCalendarDatePart(isoDate)?.slice(0, 7);
   const currentMonth = `${now.getFullYear()}-${String(
     now.getMonth() + 1,
   ).padStart(2, "0")}`;
@@ -251,8 +265,9 @@ export function calculateCashMonthlyMetrics({
   openingPositions: OpeningPosition[];
   trades: Trade[];
 }): CashMonthlyMetrics {
-  const monthlyEntries = cashEntries.filter((entry) =>
-    isSameMonth(entry.date, now),
+  const monthlyEntries = cashEntries.filter(
+    (entry) =>
+      isEffectiveCalendarDate(entry.date, now) && isSameMonth(entry.date, now),
   );
   const income = monthlyEntries
     .filter(
@@ -272,7 +287,10 @@ export function calculateCashMonthlyMetrics({
     )
     .reduce((total, entry) => total + entry.amount, 0);
   const monthlyBuyTrades = trades.filter(
-    (trade) => trade.type === "buy" && isSameMonth(trade.date, now),
+    (trade) =>
+      trade.type === "buy" &&
+      isEffectiveCalendarDate(trade.date, now) &&
+      isSameMonth(trade.date, now),
   );
   const allBuyTradeIds = new Set(
     trades.filter((trade) => trade.type === "buy").map((trade) => trade.id),
@@ -295,7 +313,7 @@ export function calculateCashMonthlyMetrics({
 
   return {
     added: income + contributions + legacyAdded,
-    available: calculateCashBalance(cashEntries),
+    available: calculateCashBalance(cashEntries, now),
     contributions,
     income,
     incomeStatus,
@@ -308,13 +326,14 @@ export function calculateCashMonthlyMetrics({
 export function calculatePortfolioTotal(
   holdings: Holding[],
   cashEntries: CashEntry[],
+  now = new Date(),
 ) {
   const holdingsValue = holdings.reduce(
     (total, holding) => total + holding.currentValue,
     0,
   );
 
-  return holdingsValue + calculateCashBalance(cashEntries);
+  return holdingsValue + calculateCashBalance(cashEntries, now);
 }
 
 export function calculatePortfolioDayChange(

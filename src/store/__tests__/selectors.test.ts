@@ -103,7 +103,9 @@ describe("portfolio selectors", () => {
   });
 
   it("calculates cash balance from raw cash entries", () => {
-    expect(selectCashBalance(cashEntries)).toBe(3800);
+    expect(
+      selectCashBalance(cashEntries, new Date("2026-04-30T12:00:00.000Z")),
+    ).toBe(3800);
   });
 
   it("selects cached quote by asset ID", () => {

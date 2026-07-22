@@ -10,7 +10,7 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type {
@@ -39,6 +39,7 @@ function formatSignedINR(value: number) {
 
 export function AddOpeningPositionForm({
   initialVisualQaState,
+  now,
   onComplete,
   resolveQuote,
   searchAssetLookupResults,
@@ -46,6 +47,7 @@ export function AddOpeningPositionForm({
 }: AddOpeningPositionFormProps) {
   const holding = useAddOpeningPosition({
     initialVisualQaState,
+    now,
     onComplete,
     resolveQuote,
     searchAssetLookupResults,
@@ -489,14 +491,14 @@ export function AddOpeningPositionForm({
             />
           </View>
           <View style={styles.flex}>
-            <FormTextField
+            <DatePickerField
               error={errors.date}
               label="Date acquired"
-              onChangeText={(value) => {
+              maximumDate={now}
+              onChange={(value) => {
                 setDate(value);
                 resetReview();
               }}
-              placeholder="YYYY-MM-DD"
               testID="date-input"
               value={date}
             />

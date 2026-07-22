@@ -67,4 +67,53 @@ describe("validateOpeningPositionForm", () => {
       isValid: false,
     });
   });
+
+  it.each(["2026-02-30", "2025-02-29"])(
+    "rejects impossible acquisition date %s",
+    (date) => {
+      const result = validateOpeningPositionForm(
+        {
+          assetClass: "stock",
+          assetName: "Reliance Industries",
+          averageCostPrice: "100",
+          currentPrice: "120",
+          date,
+          instrumentType: "stock",
+          quantity: "2",
+          sectorType: "energy",
+          symbol: "RELIANCE",
+          ticker: "RELIANCE.NS",
+        },
+        new Date(2026, 6, 22, 12),
+      );
+
+      expect(result).toMatchObject({
+        errors: { date: "Date must use YYYY-MM-DD." },
+        isValid: false,
+      });
+    },
+  );
+
+  it("rejects a future acquisition date", () => {
+    const result = validateOpeningPositionForm(
+      {
+        assetClass: "stock",
+        assetName: "Reliance Industries",
+        averageCostPrice: "100",
+        currentPrice: "120",
+        date: "2026-07-23",
+        instrumentType: "stock",
+        quantity: "2",
+        sectorType: "energy",
+        symbol: "RELIANCE",
+        ticker: "RELIANCE.NS",
+      },
+      new Date(2026, 6, 22, 12),
+    );
+
+    expect(result).toMatchObject({
+      errors: { date: "Date cannot be in the future." },
+      isValid: false,
+    });
+  });
 });

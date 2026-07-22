@@ -330,9 +330,14 @@ export function useProgress({
     openingPositions: snapshot.openingPositions,
     quoteCache: snapshot.quoteCache,
     trades: snapshot.trades,
+    now,
   });
-  const cashBalance = calculateCashBalance(snapshot.cashEntries);
-  const portfolioValue = calculatePortfolioTotal(holdings, snapshot.cashEntries);
+  const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
+  const portfolioValue = calculatePortfolioTotal(
+    holdings,
+    snapshot.cashEntries,
+    now,
+  );
   const totalInvested = holdings.reduce(
     (total, holding) => total + holding.totalInvested,
     0,

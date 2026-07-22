@@ -8,6 +8,7 @@ import {
   isSectorType,
 } from "@/src/domain/assets";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type {
   Asset,
   ConvictionScore,
@@ -24,17 +25,15 @@ type FieldErrors = Partial<Record<string, string>>;
 
 const manualAssetId = "__manual_asset__";
 
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState);
 }
 
 export function useAddTrade({
+  now = new Date(),
   store = getPortfolioStore(),
 }: {
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 } = {}) {
   const snapshot = usePortfolioSnapshot(store);
@@ -49,7 +48,7 @@ export function useAddTrade({
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [fees, setFees] = useState("");
-  const [date, setDate] = useState(todayInputValue());
+  const [date, setDate] = useState(formatLocalCalendarDate(now));
   const [conviction, setConviction] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -161,6 +160,7 @@ export function useAddTrade({
       },
       snapshot.trades,
       snapshot.openingPositions,
+      now,
     );
 
     if (!result.isValid || Object.keys(manualErrors).length > 0) {

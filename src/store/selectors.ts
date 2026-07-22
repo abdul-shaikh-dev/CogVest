@@ -5,6 +5,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import { isEffectiveCalendarDate } from "@/src/domain/dates";
 
 export function selectAssetById(assets: Asset[], assetId: string) {
   return assets.find((asset) => asset.id === assetId) ?? null;
@@ -21,14 +22,16 @@ export function selectOpeningPositionsForAsset(
   return openingPositions.filter((position) => position.assetId === assetId);
 }
 
-export function selectCashBalance(cashEntries: CashEntry[]) {
-  return cashEntries.reduce((balance, entry) => {
+export function selectCashBalance(cashEntries: CashEntry[], now = new Date()) {
+  return cashEntries
+    .filter((entry) => isEffectiveCalendarDate(entry.date, now))
+    .reduce((balance, entry) => {
     if (entry.type === "withdrawal") {
       return balance - entry.amount;
     }
 
     return balance + entry.amount;
-  }, 0);
+    }, 0);
 }
 
 export function selectQuoteForAsset(quoteCache: QuoteCache, assetId: string) {

@@ -255,6 +255,28 @@ describe("useDashboard", () => {
       id: "opening-current-month",
       quantity: 4,
     });
+    store.getState().addTrade({
+      ...buyStock,
+      date: "2026-05-20",
+      id: "future-trade",
+      totalValue: 900,
+    });
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 100,
+      currentPrice: 100,
+      date: "2026-05-21",
+      id: "future-opening",
+      quantity: 5,
+    });
+    store.getState().addCashEntry({
+      amount: 3000,
+      date: "2026-05-22",
+      id: "future-cash",
+      label: "Future salary",
+      purpose: "income",
+      type: "addition",
+    });
 
     const { result } = renderHook(() =>
       useDashboard({ now: new Date("2026-05-16T00:00:00.000Z"), store }),

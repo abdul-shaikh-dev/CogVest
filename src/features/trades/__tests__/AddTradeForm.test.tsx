@@ -36,6 +36,20 @@ const existingBuy: Trade = {
   type: "buy",
 };
 
+function chooseDate(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  year: number,
+  month: number,
+  day: number,
+) {
+  fireEvent.press(getByTestId("trade-date-input"));
+  fireEvent(
+    getByTestId("trade-date-input-picker"),
+    "onChange",
+    { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
+  );
+}
+
 describe("AddTradeForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,7 +95,7 @@ describe("AddTradeForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "2");
     fireEvent.changeText(getByLabelText("Price per unit"), "100");
     fireEvent.changeText(getByLabelText("Fees"), "5");
-    fireEvent.changeText(getByLabelText("Trade date"), "2026-04-20");
+    chooseDate(getByTestId, 2026, 4, 20);
     fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Core portfolio add");
 
@@ -133,13 +147,15 @@ describe("AddTradeForm", () => {
     store.getState().addAsset(existingAsset);
     store.getState().addTrade(existingBuy);
 
-    const { getByLabelText, getByText } = render(<AddTradeForm store={store} />);
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddTradeForm store={store} />,
+    );
 
     fireEvent.press(getByText("Sell"));
     fireEvent.press(getByText("RELIANCE"));
     fireEvent.changeText(getByLabelText("Quantity"), "2");
     fireEvent.changeText(getByLabelText("Price per unit"), "100");
-    fireEvent.changeText(getByLabelText("Trade date"), "2026-04-20");
+    chooseDate(getByTestId, 2026, 4, 20);
     fireEvent.press(getByText("Review Holding"));
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();

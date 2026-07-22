@@ -18,6 +18,20 @@ describe("useAddOpeningPosition", () => {
     jest.clearAllMocks();
   });
 
+  it("defaults acquisition to the injected local calendar day", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const now = new Date("2026-07-21T19:15:00.000Z");
+    jest.spyOn(now, "getFullYear").mockReturnValue(2026);
+    jest.spyOn(now, "getMonth").mockReturnValue(6);
+    jest.spyOn(now, "getDate").mockReturnValue(22);
+
+    const { result } = renderHook(() =>
+      useAddOpeningPosition({ now, store }),
+    );
+
+    expect(result.current.date).toBe("2026-07-22");
+  });
+
   it("reviews and confirms a manual opening position through the feature controller", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
