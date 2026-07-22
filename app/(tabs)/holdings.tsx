@@ -33,6 +33,9 @@ export default function HoldingsScreen() {
       onReviewAllTrades={() => {
         router.push("/holding-transactions");
       }}
+      onManageAssets={() => {
+        router.push("/manage-assets");
+      }}
       onSellRedeem={(assetId) => {
         router.push({ pathname: "/sell-redeem", params: { assetId } });
       }}

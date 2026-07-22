@@ -1,6 +1,7 @@
 import {
   createPortfolioStore,
   createDefaultPreferences,
+  assetGraphJournalStorageKey,
   historicalQuoteCacheKey,
   historicalQuoteCacheStorageKey,
   portfolioStorageKey,
@@ -159,6 +160,365 @@ describe("portfolio store", () => {
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
+  });
+
+  it("corrects asset metadata without changing its stable identity", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().upsertQuote(quote);
+
+    const result = store.getState().correctAsset({
+      ...asset,
+      name: "Reliance Industries Limited",
+      sectorType: "energy",
+    });
+
+    expect(result).toMatchObject({
+      asset: expect.objectContaining({
+        id: asset.id,
+        name: "Reliance Industries Limited",
+        sectorType: "energy",
+      }),
+      quoteCacheInvalidated: false,
+      status: "applied",
+    });
+    expect(store.getState().quoteCache[asset.id]).toEqual(quote);
+  });
+
+  it("rejects duplicate asset identities and invalid corrections", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset({
+      ...asset,
+      id: "asset-hdfc",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+
+    expect(
+      store.getState().correctAsset({
+        ...asset,
+        quoteSourceId: "HDFCBANK.NS",
+        ticker: "HDFCBANK.NS",
+      }),
+    ).toEqual({ reason: "duplicateIdentity", status: "rejected" });
+    expect(
+      store.getState().correctAsset({ ...asset, name: "" }),
+    ).toEqual({ reason: "invalidAsset", status: "rejected" });
+    expect(
+      store.getState().correctAsset({
+        ...asset,
+        sectorType: "not-a-sector" as Asset["sectorType"],
+      }),
+    ).toEqual({ reason: "invalidAsset", status: "rejected" });
+    expect(
+      store.getState().correctAsset({ ...asset, id: "missing" }),
+    ).toEqual({ reason: "notFound", status: "rejected" });
+  });
+
+  it("invalidates only the corrected asset quote identity", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const otherAsset: Asset = {
+      ...asset,
+      id: "asset-hdfc",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addAsset(otherAsset);
+    store.getState().upsertQuote(quote);
+    store.getState().upsertQuote({
+      ...quote,
+      assetId: otherAsset.id,
+    });
+    store.getState().upsertHistoricalQuote({
+      asOfMonth: "2026-04",
+      assetId: asset.id,
+      basis: "historical-close",
+      currency: "INR",
+      fetchedAt: "2026-05-01T00:00:00.000Z",
+      price: 2850,
+      source: "yahoo",
+    });
+
+    const result = store.getState().correctAsset({
+      ...asset,
+      quoteSourceId: "RELIANCE.BO",
+      exchange: "BSE",
+      ticker: "RELIANCE.BO",
+    });
+
+    expect(result).toMatchObject({
+      quoteCacheInvalidated: true,
+      status: "applied",
+    });
+    expect(store.getState().quoteCache[asset.id]).toBeUndefined();
+    expect(store.getState().historicalQuoteCache).toEqual({});
+    expect(store.getState().quoteCache[otherAsset.id]).toBeDefined();
+  });
+
+  it("rebuilds affected automatic snapshots after classification correction", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+    const automaticApril: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-april",
+      month: "2026-04",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(automaticApril);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
+
+    expect(
+      store.getState().correctAsset({
+        ...asset,
+        assetClass: "debt",
+        instrumentType: "debt",
+        sectorType: "fixedIncome",
+      }),
+    ).toMatchObject({ status: "applied" });
+
+    const rebuiltApril = store
+      .getState()
+      .monthlySnapshots.find((snapshot) => snapshot.month === "2026-04");
+    expect(rebuiltApril).toMatchObject({
+      debtValue: openingPosition.quantity * openingPosition.currentPrice!,
+      equityValue: 0,
+      id: automaticApril.id,
+    });
+    expect(
+      store
+        .getState()
+        .monthlySnapshots.find((snapshot) => snapshot.id === monthlySnapshot.id),
+    ).toEqual(monthlySnapshot);
+  });
+
+  it("deletes an asset graph without removing manual records", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    const linkedTrade: Trade = {
+      ...trade,
+      date: "2026-04-26",
+      id: "trade-linked",
+    };
+    const linkedCash: CashEntry = {
+      amount: linkedTrade.totalValue,
+      date: linkedTrade.date,
+      id: "cash-trade-linked",
+      label: "Purchase · Reliance",
+      linkedTradeId: linkedTrade.id,
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addTrade(linkedTrade);
+    store.getState().addCashEntry(cashEntry);
+    store.getState().addCashEntry(linkedCash);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
+    store.getState().upsertQuote(quote);
+    store.getState().upsertHistoricalQuote({
+      asOfMonth: "2026-04",
+      assetId: asset.id,
+      basis: "historical-close",
+      currency: "INR",
+      fetchedAt: "2026-05-01T00:00:00.000Z",
+      price: 2850,
+      source: "yahoo",
+    });
+
+    const result = store.getState().deleteAsset(asset.id);
+
+    expect(result).toMatchObject({
+      impact: {
+        automaticSnapshots: 0,
+        historicalQuotes: 1,
+        linkedCashEntries: 1,
+        openingPositions: 1,
+        quotes: 1,
+        trades: 1,
+      },
+      status: "applied",
+    });
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(
+      store
+        .getState()
+        .monthlySnapshots.find((snapshot) => snapshot.id === monthlySnapshot.id),
+    ).toEqual(monthlySnapshot);
+    expect(
+      store
+        .getState()
+        .monthlySnapshots.find((snapshot) => snapshot.month === "2026-04"),
+    ).toMatchObject({
+      cashValue: cashEntry.amount,
+      equityValue: 0,
+      portfolioValue: cashEntry.amount,
+    });
+    expect(store.getState().quoteCache).toEqual({});
+    expect(store.getState().historicalQuoteCache).toEqual({});
+    expect(createPortfolioStore({ storage }).getState().assets).toEqual([]);
+  });
+
+  it("keeps the asset graph unchanged when cascade persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().upsertQuote(quote);
+    const originalSetItem = storage.setItem;
+    let failed = false;
+    storage.setItem = (key, value) => {
+      if (key === historicalQuoteCacheStorageKey && !failed) {
+        failed = true;
+        throw new Error("simulated asset transition failure");
+      }
+      originalSetItem(key, value);
+    };
+
+    expect(() => store.getState().deleteAsset(asset.id)).toThrow(
+      "simulated asset transition failure",
+    );
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(store.getState().quoteCache[asset.id]).toEqual(quote);
+    expect(createPortfolioStore({ storage }).getState().assets).toEqual([asset]);
+  });
+
+  it("recovers an interrupted multi-key asset transition from its journal", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().upsertQuote(quote);
+    const originalSetItem = storage.setItem;
+    const originalSetRawItem = storage.setRawItem;
+    storage.setItem = (key, value) => {
+      if (key === historicalQuoteCacheStorageKey) {
+        throw new Error("simulated interrupted asset transition");
+      }
+      originalSetItem(key, value);
+    };
+    storage.setRawItem = () => {
+      throw new Error("simulated rollback interruption");
+    };
+
+    expect(() => store.getState().deleteAsset(asset.id)).toThrow(
+      "simulated interrupted asset transition",
+    );
+    expect(storage.getItem(assetGraphJournalStorageKey)).not.toBeNull();
+
+    storage.setItem = originalSetItem;
+    storage.setRawItem = originalSetRawItem;
+    const recovered = createPortfolioStore({ storage });
+
+    expect(recovered.getState().assets).toEqual([asset]);
+    expect(recovered.getState().quoteCache[asset.id]).toEqual(quote);
+    expect(storage.getItem(assetGraphJournalStorageKey)).toBeNull();
+  });
+
+  it("blocks safely when an asset transition journal is malformed", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setRawItem(assetGraphJournalStorageKey, "{broken-journal");
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().storageRecovery?.incidents[0]).toMatchObject({
+      displayName: "Interrupted asset change",
+      preserved: false,
+      reason: "invalid-json",
+      sourceKey: assetGraphJournalStorageKey,
+    });
+    expect(storage.getRawItem(assetGraphJournalStorageKey)).toBe(
+      "{broken-journal",
+    );
+  });
+
+  it("blocks safely when an interrupted asset transition still cannot replay", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    store.getState().upsertQuote(quote);
+    const originalSetItem = storage.setItem;
+    storage.setItem = (key, value) => {
+      if (key === historicalQuoteCacheStorageKey) {
+        throw new Error("simulated interrupted asset transition");
+      }
+      originalSetItem(key, value);
+    };
+    storage.setRawItem = () => {
+      throw new Error("storage remains unavailable");
+    };
+
+    expect(() => store.getState().deleteAsset(asset.id)).toThrow(
+      "simulated interrupted asset transition",
+    );
+
+    const recoveringStore = createPortfolioStore({ storage });
+
+    expect(
+      recoveringStore.getState().storageRecovery?.incidents[0],
+    ).toMatchObject({
+      displayName: "Interrupted asset change",
+      preserved: false,
+      reason: "migration-failed",
+      sourceKey: assetGraphJournalStorageKey,
+    });
+    expect(storage.getRawItem(assetGraphJournalStorageKey)).not.toBeNull();
+  });
+
+  it("rejects asset deletion when its sale proceeds fund later activity", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sale: Trade = {
+      ...trade,
+      id: "trade-sale",
+      type: "sell",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addTrade(sale);
+    store.getState().addCashEntry({
+      amount: sale.totalValue,
+      date: sale.date,
+      id: "cash-sale",
+      label: "Sale proceeds",
+      linkedTradeId: sale.id,
+      purpose: "saleProceeds",
+      type: "addition",
+    });
+    store.getState().addCashEntry({
+      amount: 1000,
+      date: "2026-04-27",
+      id: "later-withdrawal",
+      label: "Later use",
+      purpose: "withdrawal",
+      type: "withdrawal",
+    });
+
+    expect(store.getState().deleteAsset(asset.id)).toEqual({
+      reason: "insufficientCash",
+      status: "rejected",
+    });
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().trades).toEqual([sale]);
   });
 
   it("treats duplicate financial record IDs as idempotent appends", () => {

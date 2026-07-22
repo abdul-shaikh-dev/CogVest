@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-11
 
-**Last reconciled:** 2026-07-22 through issue #192 trade-correction work.
+**Last reconciled:** 2026-07-22 through issue #194 asset-correction work.
 **Status:** Living stabilization ledger. Original evidence remains useful for
 history, while each finding's explicit status and the current ledger below
 describe the verified state on the reconciliation date.
@@ -27,13 +27,14 @@ have merged remediation evidence. The highest remaining risks are:
 1. Duplicate save attempts and non-atomic Add Holding writes can create partial
    or repeated financial records.
 2. Impossible or future-dated records can affect current portfolio totals.
-3. Asset identity correction and confirmed cascade behavior remain incomplete.
+3. Generated snapshots can still encode unknown income as a factual zero.
 4. Android backup, permissions, and release-version policy remain unresolved.
 
 As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
 issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
 substantively remediated by the atomic linked-command work in #161. Issue #182
-reopened the `V1 Adversarial Stabilization` milestone for H6. Another 25 finding
+reopened the `V1 Adversarial Stabilization` milestone for H6. Issue #194 completes
+the remaining H10 asset correction/cascade slice. Another 24 finding
 IDs remain open or partial without focused open implementation issues. The
 milestone must not be treated as complete until that tracking gap is resolved.
 
@@ -46,15 +47,14 @@ minimum verification is not complete.
 | Area | Remediated | Partial | Open |
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
-| High | H1, H2, H3, H4, H6, H7, H8, H9 | H5, H10 | None |
+| High | H1, H2, H3, H4, H6, H7, H8, H9, H10 | H5 | None |
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
 | Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Tracking Gap
 
-Issues #188, #190, and #192 cover cash, opening-position, and trade correction.
-No focused open GitHub issue currently owns H5, the remaining asset/cascade
-slice of H10, M1-M9, or AH3-AH9
+Issues #188, #190, #192, and #194 cover cash, opening-position, trade, and asset
+correction. No focused open GitHub issue currently owns H5, M1-M9, or AH3-AH9
 and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
@@ -446,17 +446,16 @@ future-date policy. Current-state selectors must ignore records not yet effectiv
 
 ### H10. Users cannot practically correct most financial records
 
-**Status (2026-07-22): Partial.** Monthly snapshots now have a review/correction
+**Status (2026-07-22): Remediated.** Monthly snapshots now have a review/correction
 surface. Issue #188 adds persistence-safe edit/delete behavior for manual Cash
 Ledger entries while keeping trade-linked cash movements read-only. Issue #190
 adds persistence-safe edit/delete behavior for opening positions. Issue #192 adds
 a per-holding transaction history and persistence-safe trade edit/delete behavior,
 keeps linked cash movements synchronized, and rebuilds affected automatic monthly
-history while preserving manual snapshots. Asset correction and asset-removal
-cascade behavior remain undefined.
-
-The remaining gap is user-facing asset correction and confirmed cascade behavior.
-Removing an asset can still leave its trades, positions, and quote caches orphaned.
+history while preserving manual snapshots. Issue #194 adds stable-identity asset
+correction, duplicate-identity validation, scoped quote invalidation, and a
+confirmed cascade that removes positions, trades, linked cash movements, and
+owned quote caches without deleting unrelated manual records.
 
 **Evidence:**
 
@@ -470,9 +469,15 @@ Removing an asset can still leave its trades, positions, and quote caches orphan
 - `src/features/trades/TradeHistoryScreen.tsx`,
   `src/features/trades/ReviewTradeScreen.tsx`, atomic trade correction/deletion
   commands, and `e2e/trade-correction.yaml` stored-outcome coverage.
+- `src/features/assets/ManageAssetsScreen.tsx`,
+  `src/features/assets/ReviewAssetScreen.tsx`, asset-graph store commands and
+  failure-path tests, and `e2e/asset-correction.yaml` stored-outcome coverage.
 
-**Required direction:** Add safe asset identity correction and define confirmed
-cascade behavior for asset removal and affected snapshot history.
+**Resolution:** Asset identity remains stable during correction. Quote-identity
+changes invalidate only that asset's cached prices. Confirmed deletion previews
+and removes the complete owned graph, rejects a cascade that would make later
+cash activity impossible, and rebuilds automatic history while preserving
+manual snapshots.
 
 ## Medium-Severity Findings
 
@@ -1005,25 +1010,22 @@ issues.
 
 ### Remaining Remediation Order
 
-1. **Remaining correction and cascade UX (H10):** cash, opening-position, and
-   trade correction are covered by #188, #190, and #192. Add asset identity
-   correction and confirmed cascade behavior.
-2. **Generated income semantics (H5):** derive typed income or persist unknown;
+1. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
-3. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
+2. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
    then align manifest, storage, migration, and Settings copy.
-4. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
+3. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
    cancellation, bounded concurrency, and partial completion.
-5. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
+4. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
    prevention, stale-response rejection, and deterministic transition resets.
-6. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
+5. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
    mapping, user-facing selectors, unknown sector defaults, complete review, and
    bounded/ranked lookup.
-7. **Allocation and numeric integrity (M4, M9):** expose negative cash and
+6. **Allocation and numeric integrity (M4, M9):** expose negative cash and
      define money/quantity precision before changing representations.
-8. **Android release hardening (M6-M8):** minimize permissions, enforce
+7. **Android release hardening (M6-M8):** minimize permissions, enforce
      monotonic versions, and isolate destructive visual-QA seeding.
-9. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
+8. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
      duplicate absence after the owning Add Holding fixes land.
 
 ### Final Adversarial Gate
@@ -1126,7 +1128,7 @@ The remaining suite gaps correspond to the open and partial findings:
 ## Release Recommendation
 
 Do not treat the current V1 APK as a release candidate while the privacy and
-release-contract findings remain open. H5 and H10 must be resolved or
+release-contract findings remain open. H5 must be resolved or
 explicitly constrained before V1 completion. Add Holding integrity findings must
 be closed with stored-outcome evidence, not navigation-only E2E. Visual polish
 remains secondary to financial correctness, provenance, recoverability, and

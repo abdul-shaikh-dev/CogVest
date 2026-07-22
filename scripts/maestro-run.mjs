@@ -10,6 +10,7 @@ const defaultFlows = [
   "e2e/holdings.yaml",
   "e2e/opening-position-correction.yaml",
   "e2e/trade-correction.yaml",
+  "e2e/asset-correction.yaml",
   "e2e/cash.yaml",
   "e2e/funded-buy-cash.yaml",
   "e2e/value-masking.yaml",

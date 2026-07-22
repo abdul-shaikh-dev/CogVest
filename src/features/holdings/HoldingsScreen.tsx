@@ -46,6 +46,7 @@ type RefreshQuotes = (
 
 type HoldingsScreenProps = {
   onAddTrade?: () => void;
+  onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
   onReviewTrades?: (assetId: string) => void;
@@ -70,6 +71,7 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 
 export function HoldingsScreen({
   onAddTrade,
+  onManageAssets,
   onReviewAllTrades,
   onReviewOpeningPosition,
   onReviewTrades,
@@ -144,14 +146,6 @@ export function HoldingsScreen({
                   testID="holdings-add-button"
                 />
               ) : null}
-              {onReviewAllTrades && trades.length > 0 ? (
-                <IconButton
-                  accessibilityLabel="Review all transactions"
-                  icon="receipt-outline"
-                  onPress={onReviewAllTrades}
-                  testID="holdings-transactions-button"
-                />
-              ) : null}
               <IconButton
                 accessibilityLabel={maskWealthValues ? "Show values" : "Mask values"}
                 icon={maskWealthValues ? "eye-off-outline" : "eye-outline"}
@@ -172,6 +166,29 @@ export function HoldingsScreen({
                 {statusMessage}
               </AppText>
             </PremiumCard>
+          </View>
+        ) : null}
+
+        {onManageAssets || (onReviewAllTrades && trades.length > 0) ? (
+          <View style={styles.recordActions}>
+            {onReviewAllTrades && trades.length > 0 ? (
+              <AppButton
+                onPress={onReviewAllTrades}
+                style={styles.recordAction}
+                testID="holdings-transactions-button"
+                title="Transactions"
+                variant="secondary"
+              />
+            ) : null}
+            {onManageAssets ? (
+              <AppButton
+                onPress={onManageAssets}
+                style={styles.recordAction}
+                testID="holdings-manage-assets-button"
+                title="Manage assets"
+                variant="secondary"
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -855,6 +872,13 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
+  },
+  recordAction: {
+    flex: 1,
+  },
+  recordActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
   sectionHeading: {
     alignItems: "flex-start",
