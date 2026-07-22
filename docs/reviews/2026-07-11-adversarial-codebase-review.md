@@ -2,8 +2,7 @@
 
 **Date:** 2026-07-11
 
-**Last reconciled:** 2026-07-22 after PR #181 and the issue #182 persistence
-recovery implementation.
+**Last reconciled:** 2026-07-22 through issue #192 trade-correction work.
 **Status:** Living stabilization ledger. Original evidence remains useful for
 history, while each finding's explicit status and the current ledger below
 describe the verified state on the reconciliation date.
@@ -28,8 +27,7 @@ have merged remediation evidence. The highest remaining risks are:
 1. Duplicate save attempts and non-atomic Add Holding writes can create partial
    or repeated financial records.
 2. Impossible or future-dated records can affect current portfolio totals.
-3. Most financial records still lack safe user-facing correction and cascade
-   behavior.
+3. Asset identity correction and confirmed cascade behavior remain incomplete.
 4. Android backup, permissions, and release-version policy remain unresolved.
 
 As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
@@ -54,8 +52,9 @@ minimum verification is not complete.
 
 ### Current Tracking Gap
 
-Issue #190 owns the opening-position slice of H10. No focused open GitHub issue
-currently owns H5, the remaining trade/asset slice of H10, M1-M9, or AH3-AH9
+Issues #188, #190, and #192 cover cash, opening-position, and trade correction.
+No focused open GitHub issue currently owns H5, the remaining asset/cascade
+slice of H10, M1-M9, or AH3-AH9
 and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
@@ -450,13 +449,14 @@ future-date policy. Current-state selectors must ignore records not yet effectiv
 **Status (2026-07-22): Partial.** Monthly snapshots now have a review/correction
 surface. Issue #188 adds persistence-safe edit/delete behavior for manual Cash
 Ledger entries while keeping trade-linked cash movements read-only. Issue #190
-adds persistence-safe edit/delete behavior for opening positions and rebuilds
-affected automatic monthly history while preserving manual snapshots. Trades and
-assets still lack complete user-facing correction flows, and asset-removal
-cascade behavior remains undefined.
+adds persistence-safe edit/delete behavior for opening positions. Issue #192 adds
+a per-holding transaction history and persistence-safe trade edit/delete behavior,
+keeps linked cash movements synchronized, and rebuilds affected automatic monthly
+history while preserving manual snapshots. Asset correction and asset-removal
+cascade behavior remain undefined.
 
-The remaining gap is user-facing correction for trades and assets. Removing an
-asset also leaves its trades, positions, and quote caches orphaned.
+The remaining gap is user-facing asset correction and confirmed cascade behavior.
+Removing an asset can still leave its trades, positions, and quote caches orphaned.
 
 **Evidence:**
 
@@ -467,11 +467,12 @@ asset also leaves its trades, positions, and quote caches orphaned.
 - `src/features/openingPositions/ReviewOpeningPositionScreen.tsx`, the atomic
   opening-position commands in `src/store/index.ts`, and the
   `e2e/opening-position-correction.yaml` stored-outcome journey.
-- No corresponding trade correction action is exposed in the sell/redeem UI.
+- `src/features/trades/TradeHistoryScreen.tsx`,
+  `src/features/trades/ReviewTradeScreen.tsx`, atomic trade correction/deletion
+  commands, and `e2e/trade-correction.yaml` stored-outcome coverage.
 
-**Required direction:** Add atomic correction for trades, keep linked trades and
-cash movements synchronized, and define confirmed cascade behavior for asset
-removal and affected snapshot history.
+**Required direction:** Add safe asset identity correction and define confirmed
+cascade behavior for asset removal and affected snapshot history.
 
 ## Medium-Severity Findings
 
@@ -1004,9 +1005,9 @@ issues.
 
 ### Remaining Remediation Order
 
-1. **Remaining correction and cascade UX (H10):** complete #190 for opening
-   positions, then add trade correction with linked-cash synchronization, asset
-   identity correction, and confirmed cascade behavior.
+1. **Remaining correction and cascade UX (H10):** cash, opening-position, and
+   trade correction are covered by #188, #190, and #192. Add asset identity
+   correction and confirmed cascade behavior.
 2. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
 3. **Privacy contract (M5):** decide backup and at-rest encryption behavior,

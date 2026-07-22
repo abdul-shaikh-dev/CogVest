@@ -54,6 +54,11 @@ export default function RootLayout() {
                 name="opening-position"
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="holding-transactions"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen name="trade" options={{ headerShown: false }} />
               <Stack.Screen name="sell-redeem" options={{ headerShown: false }} />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
               <Stack.Screen

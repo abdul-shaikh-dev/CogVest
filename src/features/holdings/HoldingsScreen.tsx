@@ -27,7 +27,7 @@ import {
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type { OpeningPosition } from "@/src/types";
+import type { OpeningPosition, Trade } from "@/src/types";
 
 import {
   createHoldingReviewItems,
@@ -46,7 +46,9 @@ type RefreshQuotes = (
 
 type HoldingsScreenProps = {
   onAddTrade?: () => void;
+  onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
+  onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
   statusMessage?: string;
   refreshQuotes?: RefreshQuotes;
@@ -68,7 +70,9 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 
 export function HoldingsScreen({
   onAddTrade,
+  onReviewAllTrades,
   onReviewOpeningPosition,
+  onReviewTrades,
   onSellRedeem,
   refreshQuotes,
   statusMessage,
@@ -84,6 +88,7 @@ export function HoldingsScreen({
     refresh,
     rollupRows,
     toggleMaskWealthValues,
+    trades,
   } = useHoldings({
     refreshQuotes,
     store,
@@ -102,8 +107,8 @@ export function HoldingsScreen({
   const exposureSegments = getExposureSegments(reviewItems);
   const filterCounts = getFilterCounts(reviewItems);
   const subtitle = latestQuoteAsOf
-    ? `${holdings.length} positions · quotes updated ${formatDate(latestQuoteAsOf)}`
-    : `${holdings.length} positions · local data`;
+    ? `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · quotes updated ${formatDate(latestQuoteAsOf)}`
+    : `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · local data`;
 
   return (
     <ScreenContainer
@@ -137,6 +142,14 @@ export function HoldingsScreen({
                   icon="add-outline"
                   onPress={onAddTrade}
                   testID="holdings-add-button"
+                />
+              ) : null}
+              {onReviewAllTrades && trades.length > 0 ? (
+                <IconButton
+                  accessibilityLabel="Review all transactions"
+                  icon="receipt-outline"
+                  onPress={onReviewAllTrades}
+                  testID="holdings-transactions-button"
                 />
               ) : null}
               <IconButton
@@ -232,7 +245,11 @@ export function HoldingsScreen({
                       (position) => position.assetId === item.holding.asset.id,
                     )}
                     onReviewOpeningPosition={onReviewOpeningPosition}
+                    onReviewTrades={onReviewTrades}
                     onSellRedeem={onSellRedeem}
+                    trades={trades.filter(
+                      (trade) => trade.assetId === item.holding.asset.id,
+                    )}
                     onPress={() =>
                       setExpandedAssetId((current) =>
                         current === item.holding.asset.id
@@ -405,7 +422,9 @@ function HoldingRow({
   openingPositions,
   onPress,
   onReviewOpeningPosition,
+  onReviewTrades,
   onSellRedeem,
+  trades,
 }: {
   expanded: boolean;
   item: HoldingReviewItem;
@@ -413,7 +432,9 @@ function HoldingRow({
   openingPositions: OpeningPosition[];
   onPress: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
+  onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
+  trades: Trade[];
 }) {
   const { holding } = item;
   const positive = holding.unrealisedPnL >= 0;
@@ -567,6 +588,15 @@ function HoldingRow({
                 </View>
               ))}
             </View>
+          ) : null}
+
+          {onReviewTrades && trades.length > 0 ? (
+            <AppButton
+              title={`Review ${trades.length} ${trades.length === 1 ? "transaction" : "transactions"}`}
+              variant="secondary"
+              testID={`review-transactions-${holding.asset.id}`}
+              onPress={() => onReviewTrades(holding.asset.id)}
+            />
           ) : null}
 
           {onSellRedeem ? (

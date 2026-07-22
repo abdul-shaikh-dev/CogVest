@@ -30,6 +30,9 @@ export default function HoldingsScreen() {
       onAddTrade={() => {
         router.push("/add-holding");
       }}
+      onReviewAllTrades={() => {
+        router.push("/holding-transactions");
+      }}
       onSellRedeem={(assetId) => {
         router.push({ pathname: "/sell-redeem", params: { assetId } });
       }}
@@ -38,6 +41,9 @@ export default function HoldingsScreen() {
           pathname: "/opening-position",
           params: { openingPositionId },
         });
+      }}
+      onReviewTrades={(assetId) => {
+        router.push({ pathname: "/holding-transactions", params: { assetId } });
       }}
       statusMessage={statusMessage}
     />

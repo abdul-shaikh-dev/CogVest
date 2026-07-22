@@ -15,7 +15,7 @@ import {
   type RefreshQuotesInput,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { Holding, OpeningPosition } from "@/src/types";
+import type { Holding, OpeningPosition, Trade } from "@/src/types";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -42,6 +42,7 @@ export type UseHoldingsResult = {
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
   toggleMaskWealthValues: () => void;
+  trades: Trade[];
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -134,5 +135,6 @@ export function useHoldings({
     rollupRows,
     rollupTotals,
     toggleMaskWealthValues,
+    trades: snapshot.trades,
   };
 }
