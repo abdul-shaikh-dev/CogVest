@@ -220,8 +220,9 @@ export function SellRedeemScreen({
         ) : null}
 
         <AppButton
+          accessibilityState={{ busy: flow.isSaving, disabled: !flow.canSave }}
           disabled={!flow.canSave}
-          title="Save sell / redeem"
+          title={flow.isSaving ? "Saving..." : "Save sell / redeem"}
           testID="sell-redeem-save-button"
           onPress={save}
         />

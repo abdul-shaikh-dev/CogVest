@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -23,6 +23,7 @@ import {
 } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { createId } from "@/src/utils";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { CashEntryPurpose, CashEntryType } from "@/src/types";
 
@@ -33,7 +34,7 @@ type CashScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
-type FieldErrors = Partial<Record<"amount" | "date" | "label", string>>;
+type FieldErrors = Partial<Record<"amount" | "date" | "label" | "save", string>>;
 type CashEntryMode = CashEntryType;
 type AdditionPurpose = Extract<
   CashEntryPurpose,
@@ -135,6 +136,9 @@ export function CashScreen({
   const [date, setDate] = useState(() => formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
+  const entryIdRef = useRef(createId("cash"));
   const modeCopy = getCashEntryModeCopy(mode);
 
   function resetForm() {
@@ -145,7 +149,11 @@ export function CashScreen({
     setErrors({});
   }
 
-  function submit() {
+  async function submit() {
+    if (isSavingRef.current) {
+      return;
+    }
+
     const result = validateCashEntry({
       amount,
       date,
@@ -158,15 +166,30 @@ export function CashScreen({
       return;
     }
 
-    addEntry({
-      amount: result.parsedAmount,
-      date: date.trim(),
-      label: label.trim(),
-      notes,
-      purpose: mode === "addition" ? additionPurpose : "withdrawal",
-      type: mode,
-    });
-    resetForm();
+    isSavingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      addEntry({
+        amount: result.parsedAmount,
+        date: date.trim(),
+        id: entryIdRef.current,
+        label: label.trim(),
+        notes,
+        purpose: mode === "addition" ? additionPurpose : "withdrawal",
+        type: mode,
+      });
+      await Promise.resolve();
+      entryIdRef.current = createId("cash");
+      resetForm();
+    } catch {
+      setErrors({
+        save: "This cash entry could not be saved safely. Review it and try again.",
+      });
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -347,10 +370,17 @@ export function CashScreen({
             value={label}
           />
           <AppButton
-            title={modeCopy.saveLabel}
+            accessibilityState={{ busy: isSaving, disabled: isSaving }}
+            disabled={isSaving}
+            title={isSaving ? "Saving..." : modeCopy.saveLabel}
             testID="save-cash-entry-button"
             onPress={submit}
           />
+          {errors.save ? (
+            <AppText selectable style={styles.errorText} variant="caption">
+              {errors.save}
+            </AppText>
+          ) : null}
           <FormTextField
             label="Notes"
             multiline
@@ -407,6 +437,9 @@ const styles = StyleSheet.create({
   entryHeaderCopy: {
     flex: 1,
     gap: spacing.xs,
+  },
+  errorText: {
+    color: colors.loss,
   },
   formRow: {
     flexDirection: "row",

@@ -48,14 +48,14 @@ minimum verification is not complete.
 | Area | Remediated | Partial | Open |
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
-| High | H1, H2, H3, H4, H6, H7, H9 | H5, H10 | H8 |
+| High | H1, H2, H3, H4, H6, H7, H8, H9 | H5, H10 | None |
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
-| Add Holding | AH1, AH2, AH11 | AH10, AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
+| Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Tracking Gap
 
-No focused open GitHub issue currently owns H5, H8, H10, M1-M9, or
-AH3-AH10 and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
+No focused open GitHub issue currently owns H5, H10, M1-M9, or AH3-AH9 and
+AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
 `Remaining Remediation Order`.
@@ -405,20 +405,21 @@ records and enforce or explicitly explain cash/proceeds variance.
 
 ### H8. Rapid repeated taps can duplicate records
 
-**Status (2026-07-22): Open.** Atomic linked commands do not yet provide a
-cross-flow command ID/idempotency contract, Add Holding and Cash lack reliable
-in-flight save guards, and generic append operations accept duplicate IDs.
+**Status (2026-07-22): Remediated by #186.** Add Holding now uses one replay-safe
+store command, generic financial appends reject duplicate IDs, and Add Holding,
+Cash, and Sell/Redeem guard repeated save actions.
 
-Add Holding, cash entry, and sell/redeem do not use an in-flight save guard. Store
-append operations do not enforce unique IDs. Multiple taps before rerender can
-persist duplicate assets, positions, trades, or cash entries.
+The opening-position record ID is also the durable command ID, so replay after
+store recreation returns the existing result. Duplicate record IDs are no-ops,
+and rapid repeated screen actions cannot append a second financial record.
 
-**Evidence:**
+**Remediation evidence:**
 
-- `src/features/openingPositions/useAddOpeningPosition.ts:513-530`.
-- `src/features/cash/CashScreen.tsx:126-145`.
-- `src/features/sellRedeem/useSellRedeemHolding.ts:246-284`.
-- `src/store/index.ts:182-206`.
+- `src/store/index.ts` atomic opening-position command and duplicate-ID writes.
+- `src/store/__tests__/portfolioStore.test.ts` replay and fault-injection tests.
+- `src/features/openingPositions/useAddOpeningPosition.ts`.
+- `src/features/cash/CashScreen.tsx`.
+- `src/features/sellRedeem/useSellRedeemHolding.ts`.
 
 ### H9. Future-dated and impossible dates can affect current totals
 
@@ -620,8 +621,8 @@ This is the Add Holding entry point for critical finding C2.
 
 **Status (2026-07-22): Remediated on current `main`.** The selected provider
 quote is retained and persisted when its currency and price still match the
-reviewed asset; an edited price becomes an explicit manual quote. H8/AH10 still
-govern save idempotency and atomicity.
+reviewed asset; an edited price becomes an explicit manual quote. #186 applies
+that quote through the atomic, idempotent Add Holding command.
 
 After Yahoo or CoinGecko successfully autofills current price, save always writes
 a new quote with `source: manual`, `currency: INR`, and the save timestamp. The
@@ -778,17 +779,21 @@ classification, position inputs, source, and derived values before save.
 
 ### AH10. Save is non-atomic and post-save haptics can mask success
 
-**Status (2026-07-22): Partial.** Haptic failure is now caught and completion
-navigation is independent of device feedback. Asset, opening position, and quote
-are still persisted through separate store calls, and Save has no robust
-in-flight/idempotency guard.
+**Status (2026-07-22): Remediated by #186.** Asset, opening position, and quote
+are applied through one replay-safe store command. Save is disabled while the
+command completes, and haptic failure remains non-critical.
 
-Add Holding separately writes the asset, opening position, and quote. A failure
-between writes leaves partial state. Persistence finishes before awaiting
-haptics; if haptics rejects, the data is already saved but the success state and
-save lock are not applied, encouraging retry and duplication.
+The asset and opening position share one authoritative portfolio transition and
+are exposed only after it persists. Current price remains durable on the opening
+position; quote-cache persistence is best-effort and cannot make an otherwise
+successful holding save partial or failed.
 
-**Evidence:** `src/features/openingPositions/useAddOpeningPosition.ts:513-532`.
+**Remediation evidence:**
+
+- `src/store/index.ts`.
+- `src/store/__tests__/portfolioStore.test.ts`.
+- `src/features/openingPositions/useAddOpeningPosition.ts`.
+- `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`.
 
 **Required direction:** Persist the complete opening-position command atomically,
 disable save during execution, and treat haptics as a non-critical side effect.
@@ -983,36 +988,32 @@ The normal journey should be:
 
 ## Stabilization Delivery Plan
 
-The original staged plan is partially complete. Merged work covers C1-C4,
-H1-H4, H7, AH1, and AH2. The remaining work must be reopened as focused
+The original staged plan is partially complete. Work through #186 covers C1-C4,
+H1-H4, H7-H9, AH1, AH2, AH10, and AH11. Remaining work must be opened as focused
 issues because the stabilization milestone currently has no open implementation
 issues.
 
 ### Remaining Remediation Order
 
-1. **Date correctness (H9, AH11):** one strict local-calendar parser, future-date
-   policy, and effective-record filtering in current totals.
-2. **Idempotent financial writes (H8, AH10):** command IDs, uniqueness rules,
-   in-flight guards, and one atomic Add Holding command.
-3. **Correction and cascade UX (H10):** edit/delete flows after write and date
+1. **Correction and cascade UX (H10):** edit/delete flows after write and date
    semantics are safe.
-4. **Generated income semantics (H5):** derive typed income or persist unknown;
+2. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
-5. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
+3. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
    then align manifest, storage, migration, and Settings copy.
-6. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
+4. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
    cancellation, bounded concurrency, and partial completion.
-7. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
+5. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
    prevention, stale-response rejection, and deterministic transition resets.
-8. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
+6. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
    mapping, user-facing selectors, unknown sector defaults, complete review, and
    bounded/ranked lookup.
-9. **Allocation and numeric integrity (M4, M9):** expose negative cash and
-    define money/quantity precision before changing representations.
-10. **Android release hardening (M6-M8):** minimize permissions, enforce
-    monotonic versions, and isolate destructive visual-QA seeding.
-11. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
-    duplicate absence after the owning Add Holding fixes land.
+7. **Allocation and numeric integrity (M4, M9):** expose negative cash and
+     define money/quantity precision before changing representations.
+8. **Android release hardening (M6-M8):** minimize permissions, enforce
+     monotonic versions, and isolate destructive visual-QA seeding.
+9. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
+     duplicate absence after the owning Add Holding fixes land.
 
 ### Final Adversarial Gate
 
@@ -1113,8 +1114,8 @@ The remaining suite gaps correspond to the open and partial findings:
 
 ## Release Recommendation
 
-Do not treat the current V1 APK as a release candidate while H8 and the
-privacy/release-contract findings remain open. H5 and H10 must be resolved or
+Do not treat the current V1 APK as a release candidate while the privacy and
+release-contract findings remain open. H5 and H10 must be resolved or
 explicitly constrained before V1 completion. Add Holding integrity findings must
 be closed with stored-outcome evidence, not navigation-only E2E. Visual polish
 remains secondary to financial correctness, provenance, recoverability, and

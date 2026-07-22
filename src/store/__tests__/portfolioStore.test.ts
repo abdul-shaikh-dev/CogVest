@@ -158,6 +158,114 @@ describe("portfolio store", () => {
     expect(store.getState().monthlySnapshots).toEqual([]);
   });
 
+  it("treats duplicate financial record IDs as idempotent appends", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    store.getState().addAsset(asset);
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addTrade(trade);
+    store.getState().addTrade(trade);
+    store.getState().addCashEntry(cashEntry);
+    store.getState().addCashEntry(cashEntry);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
+    store.getState().addMonthlySnapshot(monthlySnapshot);
+
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(store.getState().trades).toEqual([trade]);
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
+  });
+
+  it("records an opening position atomically and ignores replay after restart", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const command = {
+      asset,
+      commandId: openingPosition.id,
+      openingPosition,
+      quote,
+    };
+
+    expect(store.getState().recordOpeningPosition(command).status).toBe(
+      "applied",
+    );
+    const restartedStore = createPortfolioStore({ storage });
+
+    expect(restartedStore.getState().recordOpeningPosition(command).status).toBe(
+      "alreadyApplied",
+    );
+    expect(restartedStore.getState().assets).toEqual([asset]);
+    expect(restartedStore.getState().openingPositions).toEqual([openingPosition]);
+    expect(restartedStore.getState().quoteCache).toEqual({ [asset.id]: quote });
+  });
+
+  it("exposes no partial opening position when portfolio persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const originalSetItem = storage.setItem;
+    let shouldFailPortfolioWrite = true;
+
+    storage.setItem = (key, value) => {
+      if (key === portfolioStorageKey && shouldFailPortfolioWrite) {
+        shouldFailPortfolioWrite = false;
+        throw new Error("simulated portfolio failure");
+      }
+
+      originalSetItem(key, value);
+    };
+
+    expect(() =>
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: openingPosition.id,
+        openingPosition,
+        quote,
+      }),
+    ).toThrow("simulated portfolio failure");
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().quoteCache).toEqual({});
+    expect(storage.getItem(quoteCacheStorageKey)).toBeNull();
+  });
+
+  it("keeps the durable holding when optional quote caching fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const originalSetItem = storage.setItem;
+
+    storage.setItem = (key, value) => {
+      if (key === quoteCacheStorageKey) {
+        throw new Error("simulated quote cache failure");
+      }
+
+      originalSetItem(key, value);
+    };
+
+    const result = store.getState().recordOpeningPosition({
+      asset,
+      commandId: openingPosition.id,
+      openingPosition,
+      quote,
+    });
+
+    expect(result).toMatchObject({
+      quoteCacheStatus: "unavailable",
+      status: "applied",
+    });
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().openingPositions).toEqual([openingPosition]);
+    expect(store.getState().quoteCache).toEqual({});
+
+    const restartedStore = createPortfolioStore({ storage });
+    expect(restartedStore.getState().assets).toEqual([asset]);
+    expect(restartedStore.getState().openingPositions).toEqual([
+      openingPosition,
+    ]);
+  });
+
   it("records a funded buy and linked cash movement in one transition", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });

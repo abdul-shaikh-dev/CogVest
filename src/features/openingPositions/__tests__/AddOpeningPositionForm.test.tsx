@@ -4,7 +4,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
-import { createPortfolioStore } from "@/src/store";
+import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
 
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
@@ -263,6 +263,67 @@ describe("AddOpeningPositionForm", () => {
     ).toMatchObject({
       sectorType: "other",
     });
+  });
+
+  it("ignores repeated save presses while the holding command is completing", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    let finishHaptics: (() => void) | undefined;
+
+    jest.mocked(Haptics.notificationAsync).mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishHaptics = resolve;
+      }),
+    );
+    const { getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        initialVisualQaState="review"
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("save-holding-button"));
+    fireEvent.press(getByTestId("save-holding-button"));
+
+    expect(store.getState().assets).toHaveLength(1);
+    expect(store.getState().openingPositions).toHaveLength(1);
+    expect(getByText("Saving...")).toBeTruthy();
+
+    finishHaptics?.();
+
+    await waitFor(() => {
+      expect(getByText("Opening position saved.")).toBeTruthy();
+    });
+    expect(store.getState().openingPositions).toHaveLength(1);
+  });
+
+  it("confirms the durable holding when optional quote caching is unavailable", async () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const originalSetItem = storage.setItem;
+
+    storage.setItem = (key, value) => {
+      if (key === quoteCacheStorageKey) {
+        throw new Error("simulated quote cache failure");
+      }
+
+      originalSetItem(key, value);
+    };
+    const { getByTestId, getByText } = render(
+      <AddOpeningPositionForm
+        initialVisualQaState="review"
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("save-holding-button"));
+
+    await waitFor(() => {
+      expect(
+        getByText("Opening position saved. Live quote will refresh later."),
+      ).toBeTruthy();
+    });
+    expect(store.getState().openingPositions).toHaveLength(1);
+    expect(store.getState().quoteCache).toEqual({});
   });
 
   it("creates a debt opening position without trade records", async () => {
