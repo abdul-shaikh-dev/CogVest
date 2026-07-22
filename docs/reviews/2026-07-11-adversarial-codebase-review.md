@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-11
 
-**Last reconciled:** 2026-07-22 through issue #196 snapshot-income work.
+**Last reconciled:** 2026-07-23 through the focused V1 issue organization in
+#153 and #198-#203.
 **Status:** Living stabilization ledger. Original evidence remains useful for
 history, while each finding's explicit status and the current ledger below
 describe the verified state on the reconciliation date.
@@ -34,9 +35,9 @@ issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
 substantively remediated by the atomic linked-command work in #161. Issue #182
 reopened the `V1 Adversarial Stabilization` milestone for H6. Issue #194 completes
 the remaining H10 asset correction/cascade slice, and #196 resolves H5 income
-semantics. Another 23 finding
-IDs remain open or partial without focused open implementation issues. The
-milestone must not be treated as complete until that tracking gap is resolved.
+semantics. Another 19 finding IDs remain open or partial. They now have focused
+issue ownership under #153 and #198-#203. The milestone must not be treated as
+complete until those issues are verified and merged.
 
 ## Current Finding Ledger
 
@@ -51,14 +52,26 @@ minimum verification is not complete.
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
 | Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
-### Current Tracking Gap
+### Current Issue Ownership
 
-Issues #188, #190, #192, #194, and #196 cover correction flows and generated
-income semantics. No focused open GitHub issue currently owns M1-M9 or AH3-AH9
-and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
-provide the finding-specific acceptance criteria in this report. Before more
-implementation, create focused issues in the priority order documented under
-`Remaining Remediation Order`.
+Issues #188, #190, #192, #194, and #196 cover the completed correction and
+generated-income work. The 19 remaining open or partial findings are owned by:
+
+- #198: M5 privacy, Android backup, and storage guarantees.
+- #202: M1-M2 portfolio freshness and quote-refresh reliability.
+- #200: AH3-AH6 and AH13 canonical identity, transition state, and completion.
+- #201: M3, AH7-AH9, and AH12 metadata, review, and scalable search.
+- #203: M4 and M9 negative cash, allocation, and numeric precision.
+- #153: M6-M8 Android permissions, release identity, and visual-QA isolation.
+- #199: AH14 semantic Add Holding Android E2E after #200 and #201.
+
+Umbrella issue #136 remains useful for screen-level sequencing but does not
+replace the finding-specific contracts above.
+
+Issue #203 has two closure phases. Phase A (M4 negative cash) may merge
+independently and must reference rather than close #203. The issue remains open
+until Phase B (M9 precision) has an owner-approved policy and verified
+implementation.
 
 ## Critical Findings
 
@@ -1015,21 +1028,22 @@ issues with finding-specific acceptance criteria.
 
 ### Remaining Remediation Order
 
-1. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
-   then align manifest, storage, migration, and Settings copy.
-2. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
-   cancellation, bounded concurrency, and partial completion.
-3. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
-   prevention, stale-response rejection, and deterministic transition resets.
-4. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
-   mapping, user-facing selectors, unknown sector defaults, complete review, and
-   bounded/ranked lookup.
-5. **Allocation and numeric integrity (M4, M9):** expose negative cash and
-     define money/quantity precision before changing representations.
-6. **Android release hardening (M6-M8):** minimize permissions, enforce
-     monotonic versions, and isolate destructive visual-QA seeding.
-7. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
-     duplicate absence after the owning Add Holding fixes land.
+1. **#198 - Privacy contract (M5):** decide backup and at-rest encryption
+   behavior, then align manifest, storage, migration, and Settings copy.
+2. **#202 - Quote reliability (M1, M2):** per-holding freshness, provider
+   deadlines, cancellation, bounded concurrency, and partial completion.
+3. **#200 - Add Holding identity and state (AH3-AH6, AH13):** canonical reuse,
+   duplicate prevention, stale-response rejection, deterministic transition
+   resets, and explicit completion paths.
+4. **#201 - Add Holding metadata and review (M3, AH7-AH9, AH12):** supported
+   provider mapping, user-facing selectors, unknown sector defaults, complete
+   review, and bounded/ranked lookup.
+5. **#203 - Allocation and numeric integrity (M4, M9):** expose negative cash
+   and define money/quantity precision before changing representations.
+6. **#153 - Android release hardening (M6-M8):** minimize permissions, enforce
+   monotonic versions, and isolate destructive visual-QA seeding.
+7. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
+   values, and duplicate absence after #200 and #201 land.
 
 ### Final Adversarial Gate
 
