@@ -8,24 +8,39 @@ export type JsonValue =
 
 export type JsonStorage = {
   getItem: <T extends JsonValue>(key: string) => T | null;
+  getRawItem: (key: string) => string | null;
   removeItem: (key: string) => void;
   setItem: <T extends JsonValue>(key: string, value: T) => void;
+  setRawItem: (key: string, rawValue: string) => void;
 };
 
 export function createMemoryJsonStorage(
   initialValues: Record<string, JsonValue> = {},
 ): JsonStorage {
-  const values = new Map<string, JsonValue>(Object.entries(initialValues));
+  const values = new Map<string, string>(
+    Object.entries(initialValues).map(([key, value]) => [
+      key,
+      JSON.stringify(value),
+    ]),
+  );
 
   return {
     getItem: <T extends JsonValue>(key: string) => {
-      return (values.get(key) as T | undefined) ?? null;
+      const rawValue = values.get(key);
+
+      return rawValue === undefined ? null : (JSON.parse(rawValue) as T);
+    },
+    getRawItem: (key: string) => {
+      return values.get(key) ?? null;
     },
     removeItem: (key: string) => {
       values.delete(key);
     },
     setItem: <T extends JsonValue>(key: string, value: T) => {
-      values.set(key, value);
+      values.set(key, JSON.stringify(value));
+    },
+    setRawItem: (key: string, rawValue: string) => {
+      values.set(key, rawValue);
     },
   };
 }
@@ -51,17 +66,23 @@ export function createMmkvJsonStorage(
     getItem: <T extends JsonValue>(key: string) => {
       const rawValue = storage.getString(key);
 
-      if (!rawValue) {
+      if (rawValue === undefined) {
         return null;
       }
 
       return JSON.parse(rawValue) as T;
+    },
+    getRawItem: (key: string) => {
+      return storage.getString(key) ?? null;
     },
     removeItem: (key: string) => {
       storage.remove(key);
     },
     setItem: <T extends JsonValue>(key: string, value: T) => {
       storage.set(key, JSON.stringify(value));
+    },
+    setRawItem: (key: string, rawValue: string) => {
+      storage.set(key, rawValue);
     },
   };
 }

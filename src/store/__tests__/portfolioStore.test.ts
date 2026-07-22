@@ -5,6 +5,7 @@ import {
   historicalQuoteCacheStorageKey,
   portfolioStorageKey,
   quoteCacheStorageKey,
+  storageRecoveryKeyPrefix,
 } from "@/src/store";
 import { getMonthlySnapshotPriceConfidence } from "@/src/domain/calculations";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -186,7 +187,9 @@ describe("portfolio store", () => {
       }),
     ]);
     expect(storage.getItem(portfolioStorageKey)).toMatchObject({
-      cashEntries: store.getState().cashEntries,
+      cashEntries: store.getState().cashEntries.map(({ notes: _notes, ...entry }) =>
+        entry,
+      ),
       trades: [fundedBuy],
     });
   });
@@ -608,5 +611,158 @@ describe("portfolio store", () => {
       }),
     ]);
     expect(store.getState().schemaVersion).toBe(5);
+  });
+
+  it.each([
+    ["malformed JSON", "{not-json", "invalid-json"],
+    [
+      "unsupported schema",
+      JSON.stringify({ schemaVersion: 99 }),
+      "unsupported-schema",
+    ],
+    [
+      "invalid record shape",
+      JSON.stringify({ assets: [{ id: "broken" }], schemaVersion: 5 }),
+      "invalid-shape",
+    ],
+  ])("quarantines %s without treating it as a normal empty portfolio", (
+    _label,
+    rawValue,
+    reason,
+  ) => {
+    const storage = createMemoryJsonStorage();
+    const now = new Date("2026-07-22T10:00:00.000Z");
+    storage.setRawItem(portfolioStorageKey, rawValue);
+
+    const store = createPortfolioStore({ now: () => now, storage });
+    const incident = store.getState().storageRecovery?.incidents[0];
+    const recoveryKey = `${storageRecoveryKeyPrefix}:${portfolioStorageKey}`;
+
+    expect(incident).toMatchObject({
+      detectedAt: now.toISOString(),
+      displayName: "Portfolio records",
+      preserved: true,
+      reason,
+      recoveryKey,
+      sourceKey: portfolioStorageKey,
+    });
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(rawValue);
+    expect(storage.getRawItem(recoveryKey)).toBe(rawValue);
+    expect(storage.getItem(`${recoveryKey}:metadata`)).toEqual({
+      detectedAt: now.toISOString(),
+      reason,
+      sourceKey: portfolioStorageKey,
+    });
+    expect(store.getState().assets).toEqual([]);
+  });
+
+  it("quarantines malformed quote caches without losing valid portfolio records", () => {
+    const storage = createMemoryJsonStorage();
+    const firstStore = createPortfolioStore({ storage });
+    firstStore.getState().addAsset(asset);
+    storage.setRawItem(quoteCacheStorageKey, "{broken-quotes");
+    storage.setRawItem(historicalQuoteCacheStorageKey, "[not-a-cache]");
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().quoteCache).toEqual({});
+    expect(store.getState().historicalQuoteCache).toEqual({});
+    expect(store.getState().storageRecovery?.incidents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sourceKey: quoteCacheStorageKey }),
+        expect.objectContaining({ sourceKey: historicalQuoteCacheStorageKey }),
+      ]),
+    );
+  });
+
+  it("enters recovery when a valid stored snapshot cannot be migrated", () => {
+    const storage = createMemoryJsonStorage();
+    const firstStore = createPortfolioStore({ storage });
+    firstStore.getState().addAsset(asset);
+    const originalRaw = storage.getRawItem(portfolioStorageKey);
+
+    const store = createPortfolioStore({
+      migratePortfolioSnapshot: () => {
+        throw new Error("migration failed");
+      },
+      storage,
+    });
+
+    expect(store.getState().storageRecovery?.incidents[0]).toMatchObject({
+      preserved: true,
+      reason: "migration-failed",
+      sourceKey: portfolioStorageKey,
+    });
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(originalRaw);
+    expect(
+      storage.getRawItem(`${storageRecoveryKeyPrefix}:${portfolioStorageKey}`),
+    ).toBe(originalRaw);
+  });
+
+  it("resets only affected active keys and retains recovery copies", () => {
+    const storage = createMemoryJsonStorage();
+    const firstStore = createPortfolioStore({ storage });
+    firstStore.getState().addAsset(asset);
+    const corruptQuoteCache = "{broken-quotes";
+    storage.setRawItem(quoteCacheStorageKey, corruptQuoteCache);
+
+    const store = createPortfolioStore({ storage });
+    const recoveryKey = `${storageRecoveryKeyPrefix}:${quoteCacheStorageKey}`;
+
+    store.getState().resetAffectedStorage();
+
+    expect(store.getState().storageRecovery).toBeUndefined();
+    expect(store.getState().assets).toEqual([asset]);
+    expect(storage.getRawItem(portfolioStorageKey)).not.toBeNull();
+    expect(storage.getRawItem(quoteCacheStorageKey)).toBeNull();
+    expect(storage.getRawItem(recoveryKey)).toBe(corruptQuoteCache);
+  });
+
+  it("starts from a safe empty portfolio after confirmed portfolio reset", () => {
+    const storage = createMemoryJsonStorage();
+    const corruptPortfolio = "{broken-portfolio";
+    storage.setRawItem(portfolioStorageKey, corruptPortfolio);
+
+    const store = createPortfolioStore({ storage });
+    const recoveryKey = `${storageRecoveryKeyPrefix}:${portfolioStorageKey}`;
+
+    store.getState().resetAffectedStorage();
+
+    expect(store.getState()).toMatchObject({
+      assets: [],
+      cashEntries: [],
+      monthlySnapshots: [],
+      openingPositions: [],
+      quoteCache: {},
+      trades: [],
+    });
+    expect(store.getState().storageRecovery).toBeUndefined();
+    expect(storage.getRawItem(portfolioStorageKey)).toBeNull();
+    expect(storage.getRawItem(recoveryKey)).toBe(corruptPortfolio);
+  });
+
+  it("refuses reset when a recovery copy could not be preserved", () => {
+    const baseStorage = createMemoryJsonStorage();
+    const corruptPortfolio = "{broken-portfolio";
+    baseStorage.setRawItem(portfolioStorageKey, corruptPortfolio);
+    const storage = {
+      ...baseStorage,
+      setRawItem: () => {
+        throw new Error("storage full");
+      },
+    };
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().storageRecovery?.incidents[0]).toMatchObject({
+      preserved: false,
+      sourceKey: portfolioStorageKey,
+    });
+
+    store.getState().resetAffectedStorage();
+
+    expect(store.getState().storageRecovery).toBeDefined();
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(corruptPortfolio);
   });
 });
