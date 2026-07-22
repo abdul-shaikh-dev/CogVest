@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-11
 
-**Last reconciled:** 2026-07-22 through issue #194 asset-correction work.
+**Last reconciled:** 2026-07-22 through issue #196 snapshot-income work.
 **Status:** Living stabilization ledger. Original evidence remains useful for
 history, while each finding's explicit status and the current ledger below
 describe the verified state on the reconciliation date.
@@ -27,14 +27,14 @@ have merged remediation evidence. The highest remaining risks are:
 1. Duplicate save attempts and non-atomic Add Holding writes can create partial
    or repeated financial records.
 2. Impossible or future-dated records can affect current portfolio totals.
-3. Generated snapshots can still encode unknown income as a factual zero.
-4. Android backup, permissions, and release-version policy remain unresolved.
+3. Android backup, permissions, and release-version policy remain unresolved.
 
 As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
 issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
 substantively remediated by the atomic linked-command work in #161. Issue #182
 reopened the `V1 Adversarial Stabilization` milestone for H6. Issue #194 completes
-the remaining H10 asset correction/cascade slice. Another 24 finding
+the remaining H10 asset correction/cascade slice, and #196 resolves H5 income
+semantics. Another 23 finding
 IDs remain open or partial without focused open implementation issues. The
 milestone must not be treated as complete until that tracking gap is resolved.
 
@@ -47,14 +47,14 @@ minimum verification is not complete.
 | Area | Remediated | Partial | Open |
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
-| High | H1, H2, H3, H4, H6, H7, H8, H9, H10 | H5 | None |
+| High | H1, H2, H3, H4, H5, H6, H7, H8, H9, H10 | None | None |
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
 | Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Tracking Gap
 
-Issues #188, #190, #192, and #194 cover cash, opening-position, trade, and asset
-correction. No focused open GitHub issue currently owns H5, M1-M9, or AH3-AH9
+Issues #188, #190, #192, #194, and #196 cover correction flows and generated
+income semantics. No focused open GitHub issue currently owns M1-M9 or AH3-AH9
 and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
@@ -328,19 +328,25 @@ provisional and are retried safely rather than appearing final.
 
 ### H5. Automatic snapshots always set salary to zero
 
-**Status (2026-07-22): Partial.** Typed cash-income records and nullable
-investment-rate semantics now exist through #161 and #175, but automatic
-snapshot generation still persists `salary: 0`. Generated snapshots therefore
-cannot distinguish known zero income from income that was not derived.
+**Status (2026-07-22): Remediated by #196.** Automatic snapshots sum same-month
+typed income only when no legacy unclassified addition makes that income
+ambiguous. Otherwise salary is omitted as explicitly unknown instead of being
+persisted as zero. Contributions and other cash additions are not treated as
+salary.
 
-Savings and expense rates become unavailable for generated snapshots, even when
-cash additions exist. Generic additions cannot safely be assumed to be salary.
+Legacy automatic snapshots with `salary: 0` normalize to unknown during
+rehydration. Manual zero values and non-zero generated income remain preserved.
+When typed income is backfilled later, new-provenance automatic snapshots update
+their income without changing price evidence or manually reviewed values. Legacy
+aggregate-only automatic snapshots are left unchanged because they may contain a
+manual correction that cannot be distinguished safely.
+Salary-dependent savings and expense rates stay unavailable for unknown or zero
+income, and snapshot review renders unknown income as an empty editable field.
 
-**Current evidence:** `src/domain/calculations/monthEndSnapshots.ts:694` and its
-current test explicitly retain `salary: 0`.
-
-**Required direction:** Either capture typed income records or explicitly omit
-salary-dependent metrics from automatic snapshots.
+**Remediation evidence:** `src/domain/calculations/monthEndSnapshots.ts`,
+`src/store/index.ts`, `src/store/persistedPortfolioSchema.ts`, and focused
+calculation, migration, schema, rate, and review tests. `npm run test:verify`
+passed 58 suites and 470 tests; Expo Doctor passed 17/17.
 
 ### H6. Persistence failures can look like complete data loss
 
@@ -1003,29 +1009,26 @@ The normal journey should be:
 
 ## Stabilization Delivery Plan
 
-The original staged plan is partially complete. Work through #186 covers C1-C4,
-H1-H4, H7-H9, AH1, AH2, AH10, and AH11. Remaining work must be opened as focused
-issues because the stabilization milestone currently has no open implementation
-issues.
+The original staged plan is partially complete. Work through #196 covers C1-C4,
+H1-H10, AH1, AH2, AH10, and AH11. Remaining work must continue as focused
+issues with finding-specific acceptance criteria.
 
 ### Remaining Remediation Order
 
-1. **Generated income semantics (H5):** derive typed income or persist unknown;
-   never encode missing income as known zero.
-2. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
+1. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
    then align manifest, storage, migration, and Settings copy.
-3. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
+2. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
    cancellation, bounded concurrency, and partial completion.
-4. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
+3. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
    prevention, stale-response rejection, and deterministic transition resets.
-5. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
+4. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
    mapping, user-facing selectors, unknown sector defaults, complete review, and
    bounded/ranked lookup.
-6. **Allocation and numeric integrity (M4, M9):** expose negative cash and
+5. **Allocation and numeric integrity (M4, M9):** expose negative cash and
      define money/quantity precision before changing representations.
-7. **Android release hardening (M6-M8):** minimize permissions, enforce
+6. **Android release hardening (M6-M8):** minimize permissions, enforce
      monotonic versions, and isolate destructive visual-QA seeding.
-8. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
+7. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
      duplicate absence after the owning Add Holding fixes land.
 
 ### Final Adversarial Gate
@@ -1128,8 +1131,7 @@ The remaining suite gaps correspond to the open and partial findings:
 ## Release Recommendation
 
 Do not treat the current V1 APK as a release candidate while the privacy and
-release-contract findings remain open. H5 must be resolved or
-explicitly constrained before V1 completion. Add Holding integrity findings must
+release-contract findings remain open. Add Holding integrity findings must
 be closed with stored-outcome evidence, not navigation-only E2E. Visual polish
 remains secondary to financial correctness, provenance, recoverability, and
 safe correction.

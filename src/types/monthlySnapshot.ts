@@ -47,5 +47,5 @@ export type MonthlySnapshot = {
   notes?: string;
   performanceBasis?: MonthlyPerformanceBasis;
   portfolioValue: number;
-  salary: number;
+  salary?: number;
 };

@@ -897,6 +897,26 @@ describe("portfolio calculations", () => {
       },
     ]);
   });
+
+  it("keeps salary-dependent rates unavailable when snapshot income is unknown", () => {
+    const snapshot: MonthlySnapshot = {
+      cashValue: 200,
+      cryptoValue: 0,
+      debtValue: 0,
+      equityValue: 800,
+      id: "snapshot-unknown-income",
+      investedValue: 800,
+      month: "2026-06",
+      monthlyExpense: 300,
+      monthlyInvestment: 100,
+      portfolioValue: 1000,
+    };
+
+    expect(calculateMonthlyProgressSummaries([snapshot])[0]).toMatchObject({
+      expenseRate: null,
+      savingsRate: null,
+    });
+  });
 });
 
 describe("date and conviction calculations", () => {

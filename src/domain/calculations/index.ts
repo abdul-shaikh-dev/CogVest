@@ -1,5 +1,6 @@
 export {
   buildGeneratedMonthEndSnapshot,
+  deriveMonthlySnapshotSalary,
   getMonthlySnapshotPriceConfidence,
   getMissingCompletedSnapshotMonths,
   getPreviousCompletedMonth,

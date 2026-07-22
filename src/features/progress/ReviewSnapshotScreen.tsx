@@ -32,7 +32,7 @@ function setSnapshotFormFields({
   progress.setField("cryptoValue", String(snapshot.cryptoValue));
   progress.setField("cashValue", String(snapshot.cashValue));
   progress.setField("monthlyInvestment", String(snapshot.monthlyInvestment));
-  progress.setField("salary", String(snapshot.salary));
+  progress.setField("salary", String(snapshot.salary ?? ""));
   progress.setField("monthlyExpense", String(snapshot.monthlyExpense ?? ""));
   progress.setField("notes", snapshot.notes ?? "");
 }

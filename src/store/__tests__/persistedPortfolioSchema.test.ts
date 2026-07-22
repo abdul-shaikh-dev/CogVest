@@ -76,6 +76,29 @@ describe("persisted portfolio schema", () => {
     expect(result).toEqual({ reason: "invalid-shape", success: false });
   });
 
+  it("accepts snapshots with explicitly unknown income", () => {
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          monthlySnapshots: [
+            {
+              cashValue: 1000,
+              cryptoValue: 0,
+              debtValue: 0,
+              equityValue: 0,
+              id: "snapshot-2026-07",
+              investedValue: 0,
+              month: "2026-07",
+              monthlyInvestment: 0,
+              portfolioValue: 1000,
+            },
+          ],
+          schemaVersion: 5,
+        }),
+      ),
+    ).toMatchObject({ success: true });
+  });
+
   it("validates current quote caches without exposing their content on failure", () => {
     expect(
       parsePersistedQuoteCache(
