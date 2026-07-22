@@ -6,8 +6,20 @@ import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 
 import RootLayout from "../../app/_layout";
 
+const mockResetAffectedStorage = jest.fn();
+
 jest.mock("@/src/features/progress", () => ({
   useMonthEndSnapshotAutomation: jest.fn(),
+}));
+
+jest.mock("@/src/store", () => ({
+  getPortfolioStore: () => ({
+    getState: () => ({
+      resetAffectedStorage: mockResetAffectedStorage,
+      storageRecovery: undefined,
+    }),
+    subscribe: () => () => undefined,
+  }),
 }));
 
 jest.mock("expo-router", () => {
@@ -16,7 +28,11 @@ jest.mock("expo-router", () => {
   const Stack = ({ children }: { children: React.ReactNode }) =>
     React.createElement("Stack", {}, children);
   Stack.Screen = ({ name, options }: { name: string; options?: unknown }) =>
-    React.createElement("Stack.Screen", { name, options });
+    React.createElement("Stack.Screen", {
+      name,
+      options,
+      testID: `stack-screen-${name}`,
+    });
 
   return { Stack };
 });
@@ -47,75 +63,36 @@ jest.mock("react-native-gesture-handler", () => {
   };
 });
 
-type TestElement = React.ReactElement<{
-  children?: React.ReactNode;
-  name?: string;
-  options?: unknown;
-  style?: unknown;
-}>;
-
-function isElement(node: unknown): node is TestElement {
-  return React.isValidElement(node);
-}
-
-function collectScreenNames(node: unknown): string[] {
-  if (!isElement(node)) {
-    return [];
-  }
-
-  const ownName = typeof node.props.name === "string" ? [node.props.name] : [];
-  const childNames = React.Children.toArray(node.props.children).flatMap(collectScreenNames);
-
-  return [...ownName, ...childNames];
-}
-
-function collectScreenOptions(node: unknown): Record<string, unknown> {
-  if (!isElement(node)) {
-    return {};
-  }
-
-  const ownOptions =
-    typeof node.props.name === "string"
-      ? { [node.props.name]: node.props.options }
-      : {};
-  const childOptions = React.Children.toArray(node.props.children).reduce(
-    (accumulator, child) => ({
-      ...accumulator,
-      ...collectScreenOptions(child),
-    }),
-    {},
-  );
-
-  return { ...ownOptions, ...childOptions };
-}
-
 describe("RootLayout", () => {
-  it("wraps navigation with the gesture handler root required by native navigation", () => {
-    const layout = RootLayout() as TestElement;
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-    expect(layout.type).toBe(GestureHandlerRootView);
+  it("wraps navigation with the gesture handler root required by native navigation", () => {
+    const { UNSAFE_getByType } = render(<RootLayout />);
+    const layout = UNSAFE_getByType(GestureHandlerRootView);
+
     expect(layout.props.style).toEqual({ flex: 1 });
   });
 
   it("registers the add holding route used by dashboard and holdings actions", () => {
-    const layout = RootLayout();
+    const { getByTestId } = render(<RootLayout />);
 
-    expect(collectScreenNames(layout)).toEqual(
-      expect.arrayContaining([
-        "(tabs)",
-        "settings",
-        "add-holding",
-        "visual-qa-seed",
-      ]),
-    );
+    expect(getByTestId("stack-screen-(tabs)")).toBeTruthy();
+    expect(getByTestId("stack-screen-settings")).toBeTruthy();
+    expect(getByTestId("stack-screen-add-holding")).toBeTruthy();
+    expect(getByTestId("stack-screen-visual-qa-seed")).toBeTruthy();
   });
 
   it("lets app screens own their premium headers", () => {
-    const layout = RootLayout();
-    const screenOptions = collectScreenOptions(layout);
+    const { getByTestId } = render(<RootLayout />);
 
-    expect(screenOptions["add-holding"]).toEqual({ headerShown: false });
-    expect(screenOptions.settings).toEqual({ headerShown: false });
+    expect(getByTestId("stack-screen-add-holding").props.options).toEqual({
+      headerShown: false,
+    });
+    expect(getByTestId("stack-screen-settings").props.options).toEqual({
+      headerShown: false,
+    });
   });
 
   it("runs month-end snapshot automation on app launch", () => {

@@ -2,8 +2,8 @@
 
 **Date:** 2026-07-11
 
-**Last reconciled:** 2026-07-22 against `main` at `5df0534` and the current open
-GitHub issue list.
+**Last reconciled:** 2026-07-22 after PR #181 and the issue #182 persistence
+recovery implementation.
 **Status:** Living stabilization ledger. Original evidence remains useful for
 history, while each finding's explicit status and the current ledger below
 describe the verified state on the reconciliation date.
@@ -25,20 +25,19 @@ The original four critical risks were cash double-counting, unsupported currency
 aggregation, false quote freshness, and debug-signed release APKs. All four now
 have merged remediation evidence. The highest remaining risks are:
 
-1. Corrupt or unsupported persisted data can appear as an empty portfolio.
-2. Duplicate save attempts and non-atomic Add Holding writes can create partial
+1. Duplicate save attempts and non-atomic Add Holding writes can create partial
    or repeated financial records.
-3. Impossible or future-dated records can affect current portfolio totals.
-4. Most financial records still lack safe user-facing correction and cascade
+2. Impossible or future-dated records can affect current portfolio totals.
+3. Most financial records still lack safe user-facing correction and cascade
    behavior.
+4. Android backup, permissions, and release-version policy remain unresolved.
 
 As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
 issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
-substantively remediated by the atomic linked-command work in #161. The GitHub
-`V1 Adversarial Stabilization` milestone has no open issues, but 26 finding IDs
-remain open or partial and are not represented by focused open implementation
-issues. The milestone must not be treated as complete until that tracking gap is
-resolved.
+substantively remediated by the atomic linked-command work in #161. Issue #182
+reopened the `V1 Adversarial Stabilization` milestone for H6. Another 25 finding
+IDs remain open or partial without focused open implementation issues. The
+milestone must not be treated as complete until that tracking gap is resolved.
 
 ## Current Finding Ledger
 
@@ -49,13 +48,13 @@ minimum verification is not complete.
 | Area | Remediated | Partial | Open |
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
-| High | H1, H2, H3, H4, H7 | H5, H10 | H6, H8, H9 |
+| High | H1, H2, H3, H4, H6, H7 | H5, H10 | H8, H9 |
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
 | Add Holding | AH1, AH2 | AH10, AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH11, AH12 |
 
 ### Current Tracking Gap
 
-No focused open GitHub issue currently owns H5, H6, H8-H10, M1-M9, or
+No focused open GitHub issue currently owns H5, H8-H10, M1-M9, or
 AH3-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
@@ -345,8 +344,31 @@ salary-dependent metrics from automatic snapshots.
 
 ### H6. Persistence failures can look like complete data loss
 
-**Status (2026-07-22): Open and highest priority.** No focused GitHub issue
-currently tracks recovery behavior.
+**Status (2026-07-22): Remediated by #182.** Persisted portfolio and quote data
+now crosses a runtime Zod boundary before migration. Malformed JSON, unsupported
+schemas, invalid shapes, and migration exceptions preserve the exact raw value
+under deterministic recovery keys and expose typed, non-sensitive recovery
+incidents instead of rendering a normal empty portfolio.
+
+The root layout blocks navigation and month-end automation while recovery is
+active. The recovery screen requires two-step confirmation before removing only
+affected active keys and retains quarantined copies. If a recovery copy cannot
+be written, both UI and store refuse reset.
+
+**Remediation evidence:**
+
+- `src/store/persistedPortfolioSchema.ts` validates portfolio schema versions
+  1-5 and both quote-cache namespaces without logging payload content.
+- `src/services/storage/index.ts` provides exact raw access for MMKV and its
+  production-like memory test adapter.
+- `src/store/index.ts` quarantines parse/migration failures, preserves originals,
+  exposes recovery state, and scopes confirmed reset behavior.
+- `app/_layout.tsx` suppresses routes and snapshot automation until recovery is
+  resolved.
+- Store, parser, storage, root-layout, and component tests cover corrupt JSON,
+  unknown schemas, invalid records, failed migration, cache corruption,
+  preservation failure, reset cancellation, confirmed reset, and valid legacy
+  migrations.
 
 Malformed MMKV JSON throws during startup. Unsupported or absent schema versions
 silently return a completely empty portfolio. There is no quarantine, migration
@@ -958,31 +980,28 @@ issues.
 
 ### Remaining Remediation Order
 
-1. **Persistence recovery (H6):** runtime payload validation, corrupt-data
-   quarantine/recovery, explicit migration failure, and user-visible startup
-   handling.
-2. **Date correctness (H9, AH11):** one strict local-calendar parser, future-date
+1. **Date correctness (H9, AH11):** one strict local-calendar parser, future-date
    policy, and effective-record filtering in current totals.
-3. **Idempotent financial writes (H8, AH10):** command IDs, uniqueness rules,
+2. **Idempotent financial writes (H8, AH10):** command IDs, uniqueness rules,
    in-flight guards, and one atomic Add Holding command.
-4. **Correction and cascade UX (H10):** edit/delete flows after write and date
+3. **Correction and cascade UX (H10):** edit/delete flows after write and date
    semantics are safe.
-5. **Generated income semantics (H5):** derive typed income or persist unknown;
+4. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
-6. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
+5. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
    then align manifest, storage, migration, and Settings copy.
-7. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
+6. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
    cancellation, bounded concurrency, and partial completion.
-8. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
+7. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
    prevention, stale-response rejection, and deterministic transition resets.
-9. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
+8. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
    mapping, user-facing selectors, unknown sector defaults, complete review, and
    bounded/ranked lookup.
-10. **Allocation and numeric integrity (M4, M9):** expose negative cash and
+9. **Allocation and numeric integrity (M4, M9):** expose negative cash and
     define money/quantity precision before changing representations.
-11. **Android release hardening (M6-M8):** minimize permissions, enforce
+10. **Android release hardening (M6-M8):** minimize permissions, enforce
     monotonic versions, and isolate destructive visual-QA seeding.
-12. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
+11. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
     duplicate absence after the owning Add Holding fixes land.
 
 ### Final Adversarial Gate
@@ -1084,7 +1103,7 @@ The remaining suite gaps correspond to the open and partial findings:
 
 ## Release Recommendation
 
-Do not treat the current V1 APK as a release candidate while H6, H8, H9, and the
+Do not treat the current V1 APK as a release candidate while H8, H9, and the
 privacy/release-contract findings remain open. H5 and H10 must be resolved or
 explicitly constrained before V1 completion. Add Holding integrity findings must
 be closed with stored-outcome evidence, not navigation-only E2E. Visual polish

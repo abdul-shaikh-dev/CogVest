@@ -22,6 +22,14 @@ import type {
 } from "@/src/types";
 import { historicalQuoteCacheKey } from "@/src/types";
 
+import {
+  parsePersistedHistoricalQuoteCache,
+  parsePersistedPortfolio,
+  parsePersistedQuoteCache,
+  type PersistedParseFailure,
+  type PersistedPortfolioSnapshot,
+} from "./persistedPortfolioSchema";
+
 export {
   selectAssetById,
   selectCashBalance,
@@ -35,6 +43,7 @@ export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
 export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const portfolioSchemaVersion = 5;
+export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
 
@@ -68,6 +77,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   recordSaleWithProceeds: (
     input: LinkedTradeCommandInput,
   ) => LinkedTradeCommandResult;
+  resetAffectedStorage: () => void;
+  storageRecovery?: StorageRecoveryState;
   updateAsset: (asset: Asset) => void;
   updateCashEntry: (cashEntry: CashEntry) => void;
   updateMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
@@ -102,7 +113,29 @@ export type LinkedTradeCommandResult =
     };
 
 type CreatePortfolioStoreOptions = {
+  migratePortfolioSnapshot?: (
+    stored: PersistedPortfolioSnapshot,
+  ) => RawPortfolioSnapshot;
+  now?: () => Date;
   storage?: JsonStorage;
+};
+
+type StorageRecoveryReason =
+  | PersistedParseFailure["reason"]
+  | "migration-failed";
+
+export type StorageRecoveryIncident = {
+  detectedAt: string;
+  displayName: string;
+  metadataKey: string;
+  preserved: boolean;
+  reason: StorageRecoveryReason;
+  recoveryKey: string;
+  sourceKey: string;
+};
+
+export type StorageRecoveryState = {
+  incidents: StorageRecoveryIncident[];
 };
 
 export function createDefaultPreferences(): Preferences {
@@ -145,17 +178,52 @@ function normalizeCashEntry(entry: StoredCashEntry): CashEntry {
   };
 }
 
-function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
-  const stored = storage.getItem<StoredPortfolioSnapshot & JsonValue>(
-    portfolioStorageKey,
-  );
+type PersistedReadResult<T> = {
+  data: T;
+  incident?: StorageRecoveryIncident;
+};
 
-  if (
-    !stored ||
-    ![1, 2, 3, 4, portfolioSchemaVersion].includes(stored.schemaVersion ?? 0)
-  ) {
-    return createEmptyPortfolioSnapshot();
+function quarantineRawValue(
+  storage: JsonStorage,
+  sourceKey: string,
+  displayName: string,
+  rawValue: string,
+  reason: StorageRecoveryReason,
+  now: () => Date,
+): StorageRecoveryIncident {
+  const recoveryKey = `${storageRecoveryKeyPrefix}:${sourceKey}`;
+  const metadataKey = `${recoveryKey}:metadata`;
+  const detectedAt = now().toISOString();
+  let preserved = false;
+
+  try {
+    storage.setRawItem(recoveryKey, rawValue);
+    storage.setItem(metadataKey, {
+      detectedAt,
+      reason,
+      sourceKey,
+    });
+    preserved = true;
+  } catch {
+    // Recovery remains blocking when the storage device cannot preserve a copy.
   }
+
+  return {
+    detectedAt,
+    displayName,
+    metadataKey,
+    preserved,
+    reason,
+    recoveryKey,
+    sourceKey,
+  };
+}
+
+function migratePortfolioSnapshot(
+  parsedSnapshot: PersistedPortfolioSnapshot,
+): RawPortfolioSnapshot {
+  const stored = parsedSnapshot as StoredPortfolioSnapshot &
+    PersistedPortfolioSnapshot;
 
   return {
     assets: (stored.assets ?? []).map(normalizeAssetMetadata),
@@ -171,16 +239,103 @@ function readPortfolioSnapshot(storage: JsonStorage): RawPortfolioSnapshot {
   };
 }
 
-function readQuoteCache(storage: JsonStorage): QuoteCache {
-  return storage.getItem<QuoteCache & JsonValue>(quoteCacheStorageKey) ?? {};
+function readPortfolioSnapshot(
+  storage: JsonStorage,
+  now: () => Date,
+  migrate: (stored: PersistedPortfolioSnapshot) => RawPortfolioSnapshot,
+): PersistedReadResult<RawPortfolioSnapshot> {
+  const rawValue = storage.getRawItem(portfolioStorageKey);
+
+  if (rawValue === null) {
+    return { data: createEmptyPortfolioSnapshot() };
+  }
+
+  const parsed = parsePersistedPortfolio(rawValue);
+
+  if (!parsed.success) {
+    return {
+      data: createEmptyPortfolioSnapshot(),
+      incident: quarantineRawValue(
+        storage,
+        portfolioStorageKey,
+        "Portfolio records",
+        rawValue,
+        parsed.reason,
+        now,
+      ),
+    };
+  }
+
+  try {
+    return { data: migrate(parsed.data) };
+  } catch {
+    return {
+      data: createEmptyPortfolioSnapshot(),
+      incident: quarantineRawValue(
+        storage,
+        portfolioStorageKey,
+        "Portfolio records",
+        rawValue,
+        "migration-failed",
+        now,
+      ),
+    };
+  }
+
 }
 
-function readHistoricalQuoteCache(storage: JsonStorage): HistoricalQuoteCache {
-  return (
-    storage.getItem<HistoricalQuoteCache & JsonValue>(
-      historicalQuoteCacheStorageKey,
-    ) ?? {}
-  );
+function readQuoteCache(
+  storage: JsonStorage,
+  now: () => Date,
+): PersistedReadResult<QuoteCache> {
+  const rawValue = storage.getRawItem(quoteCacheStorageKey);
+
+  if (rawValue === null) {
+    return { data: {} };
+  }
+
+  const parsed = parsePersistedQuoteCache(rawValue);
+
+  return parsed.success
+    ? { data: parsed.data }
+    : {
+        data: {},
+        incident: quarantineRawValue(
+          storage,
+          quoteCacheStorageKey,
+          "Current quote cache",
+          rawValue,
+          parsed.reason,
+          now,
+        ),
+      };
+}
+
+function readHistoricalQuoteCache(
+  storage: JsonStorage,
+  now: () => Date,
+): PersistedReadResult<HistoricalQuoteCache> {
+  const rawValue = storage.getRawItem(historicalQuoteCacheStorageKey);
+
+  if (rawValue === null) {
+    return { data: {} };
+  }
+
+  const parsed = parsePersistedHistoricalQuoteCache(rawValue);
+
+  return parsed.success
+    ? { data: parsed.data }
+    : {
+        data: {},
+        incident: quarantineRawValue(
+          storage,
+          historicalQuoteCacheStorageKey,
+          "Historical quote cache",
+          rawValue,
+          parsed.reason,
+          now,
+        ),
+      };
 }
 
 function selectRawSnapshot(
@@ -302,11 +457,21 @@ function persistHistoricalQuoteCache(
 }
 
 export function createPortfolioStore({
+  migratePortfolioSnapshot: migrate = migratePortfolioSnapshot,
+  now = () => new Date(),
   storage = createMmkvJsonStorage(),
 }: CreatePortfolioStoreOptions = {}): StoreApi<PortfolioStoreState> {
-  const snapshot = readPortfolioSnapshot(storage);
-  const quoteCache = readQuoteCache(storage);
-  const historicalQuoteCache = readHistoricalQuoteCache(storage);
+  const snapshotResult = readPortfolioSnapshot(storage, now, migrate);
+  const quoteCacheResult = readQuoteCache(storage, now);
+  const historicalQuoteCacheResult = readHistoricalQuoteCache(storage, now);
+  const incidents = [
+    snapshotResult.incident,
+    quoteCacheResult.incident,
+    historicalQuoteCacheResult.incident,
+  ].filter((incident): incident is StorageRecoveryIncident => Boolean(incident));
+  const snapshot = snapshotResult.data;
+  const quoteCache = quoteCacheResult.data;
+  const historicalQuoteCache = historicalQuoteCacheResult.data;
 
   return createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
@@ -465,7 +630,36 @@ export function createPortfolioStore({
 
       return { cashEntry, isValid: true, trade: input.trade };
     },
+    resetAffectedStorage: () => {
+      const recoveryIncidents = get().storageRecovery?.incidents ?? [];
+
+      if (recoveryIncidents.some((incident) => !incident.preserved)) {
+        return;
+      }
+
+      const resetPortfolio = recoveryIncidents.some(
+        (incident) => incident.sourceKey === portfolioStorageKey,
+      );
+      const resetQuoteCache = recoveryIncidents.some(
+        (incident) => incident.sourceKey === quoteCacheStorageKey,
+      );
+      const resetHistoricalQuoteCache = recoveryIncidents.some(
+        (incident) => incident.sourceKey === historicalQuoteCacheStorageKey,
+      );
+
+      for (const incident of recoveryIncidents) {
+        storage.removeItem(incident.sourceKey);
+      }
+
+      set({
+        ...(resetPortfolio ? createEmptyPortfolioSnapshot() : {}),
+        ...(resetQuoteCache ? { quoteCache: {} } : {}),
+        ...(resetHistoricalQuoteCache ? { historicalQuoteCache: {} } : {}),
+        storageRecovery: undefined,
+      });
+    },
     schemaVersion: portfolioSchemaVersion,
+    storageRecovery: incidents.length > 0 ? { incidents } : undefined,
     updateAsset: (asset) => {
       const currencyIssue = getV1AssetCurrencyIssue(asset);
 
