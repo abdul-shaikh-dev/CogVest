@@ -179,6 +179,185 @@ describe("portfolio store", () => {
     expect(store.getState().monthlySnapshots).toEqual([monthlySnapshot]);
   });
 
+  it("corrects and deletes a manual cash entry with durable state", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+
+    store.getState().addCashEntry(cashEntry);
+
+    expect(
+      store.getState().correctManualCashEntry({
+        ...cashEntry,
+        amount: 12500,
+        label: "Corrected broker cash",
+      }),
+    ).toEqual({
+      entry: {
+        ...cashEntry,
+        amount: 12500,
+        label: "Corrected broker cash",
+      },
+      status: "applied",
+    });
+    expect(createPortfolioStore({ storage }).getState().cashEntries).toEqual([
+      {
+        ...cashEntry,
+        amount: 12500,
+        label: "Corrected broker cash",
+      },
+    ]);
+
+    expect(store.getState().deleteManualCashEntry(cashEntry.id)).toMatchObject({
+      entry: expect.objectContaining({ id: cashEntry.id }),
+      status: "applied",
+    });
+    expect(createPortfolioStore({ storage }).getState().cashEntries).toEqual([]);
+  });
+
+  it("rejects cash correction for unknown and trade-linked entries", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const linkedEntry: CashEntry = {
+      ...cashEntry,
+      id: "cash-trade-buy",
+      linkedTradeId: "trade-buy",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    };
+
+    store.getState().addCashEntry(linkedEntry);
+
+    expect(
+      store.getState().correctManualCashEntry({
+        ...linkedEntry,
+        amount: 500,
+      }),
+    ).toEqual({ reason: "linkedEntry", status: "rejected" });
+    expect(store.getState().deleteManualCashEntry(linkedEntry.id)).toEqual({
+      reason: "linkedEntry",
+      status: "rejected",
+    });
+    expect(store.getState().deleteManualCashEntry("cash-missing")).toEqual({
+      reason: "notFound",
+      status: "rejected",
+    });
+    expect(store.getState().cashEntries).toEqual([linkedEntry]);
+  });
+
+  it.each([
+    ["invalid calendar date", { date: "2026-02-30" }],
+    ["future calendar date", { date: "2999-01-01" }],
+    ["unknown runtime type", { type: "transfer" }],
+  ])("rejects a manual cash correction with %s", (_scenario, override) => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addCashEntry(cashEntry);
+    const persistedBeforeCorrection = storage.getRawItem(portfolioStorageKey);
+
+    expect(
+      store.getState().correctManualCashEntry({
+        ...cashEntry,
+        ...override,
+      } as CashEntry),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(
+      persistedBeforeCorrection,
+    );
+  });
+
+  it("uses the injected clock when validating a correction date", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 3, 26, 12),
+      storage,
+    });
+    store.getState().addCashEntry(cashEntry);
+
+    expect(
+      store.getState().correctManualCashEntry({
+        ...cashEntry,
+        date: "2026-04-27",
+      }),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+  });
+
+  it("prevents generic cash mutations from breaking a linked transaction", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const linkedEntry: CashEntry = {
+      ...cashEntry,
+      id: "cash-linked",
+      linkedTradeId: "trade-linked",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    };
+    store.getState().addCashEntry(linkedEntry);
+
+    expect(() => store.getState().removeCashEntry(linkedEntry.id)).toThrow(
+      "Linked cash entries must be changed with their investment transaction.",
+    );
+    expect(() =>
+      store.getState().updateCashEntry({ ...linkedEntry, amount: 500 }),
+    ).toThrow(
+      "Linked cash entries must be changed with their investment transaction.",
+    );
+    expect(store.getState().cashEntries).toEqual([linkedEntry]);
+  });
+
+  it("keeps generic cash mutations unchanged when persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addCashEntry(cashEntry);
+    const persistedBeforeFailure = storage.getRawItem(portfolioStorageKey);
+    storage.setItem = () => {
+      throw new Error("simulated generic cash mutation failure");
+    };
+
+    expect(() =>
+      store.getState().updateCashEntry({ ...cashEntry, amount: 20000 }),
+    ).toThrow("simulated generic cash mutation failure");
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+
+    expect(() => store.getState().removeCashEntry(cashEntry.id)).toThrow(
+      "simulated generic cash mutation failure",
+    );
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+  });
+
+  it("keeps the original cash entry when correction persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+
+    store.getState().addCashEntry(cashEntry);
+    const persistedBeforeFailure = storage.getRawItem(portfolioStorageKey);
+    const originalSetItem = storage.setItem;
+    storage.setItem = (key, value) => {
+      if (key === portfolioStorageKey) {
+        throw new Error("simulated cash correction failure");
+      }
+
+      originalSetItem(key, value);
+    };
+
+    expect(() =>
+      store.getState().correctManualCashEntry({
+        ...cashEntry,
+        amount: 20000,
+      }),
+    ).toThrow("simulated cash correction failure");
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+
+    expect(() =>
+      store.getState().deleteManualCashEntry(cashEntry.id),
+    ).toThrow("simulated cash correction failure");
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(persistedBeforeFailure);
+  });
+
   it("records an opening position atomically and ignores replay after restart", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });

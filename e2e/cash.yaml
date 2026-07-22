@@ -32,3 +32,27 @@ appId: com.abdulshaikh.cogvest
 - runScript:
     file: scripts/current-local-date.js
 - assertVisible: "${output.currentLocalDate}"
+- scrollUntilVisible:
+    element:
+      text: "Tap to review or correct"
+    direction: DOWN
+- tapOn: "Tap to review or correct"
+- assertVisible:
+    id: "review-cash-entry-screen"
+- scrollUntilVisible:
+    element:
+      id: "delete-cash-entry-button"
+    direction: DOWN
+- tapOn:
+    id: "delete-cash-entry-button"
+- assertVisible: "Delete this cash entry?"
+- scrollUntilVisible:
+    element:
+      id: "confirm-delete-cash-entry-button"
+    direction: DOWN
+- tapOn:
+    id: "confirm-delete-cash-entry-button"
+- assertVisible:
+    id: "cash-screen"
+- assertNotVisible: "Tap to review or correct"
+- assertVisible: "No cash movement yet"

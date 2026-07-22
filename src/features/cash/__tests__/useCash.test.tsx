@@ -83,6 +83,42 @@ describe("useCash", () => {
     });
   });
 
+  it("recalculates balance and monthly metrics after correction and deletion", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const entry = {
+      amount: 1000,
+      date: "2026-05-02",
+      id: "cash-correction",
+      label: "Broker cash",
+      purpose: "capitalContribution" as const,
+      type: "addition" as const,
+    };
+    store.getState().addCashEntry(entry);
+    const { result } = renderHook(() =>
+      useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
+    );
+
+    act(() => {
+      store.getState().correctManualCashEntry({ ...entry, amount: 1500 });
+    });
+
+    expect(result.current.balance).toBe(1500);
+    expect(result.current.monthlyMetrics).toMatchObject({
+      added: 1500,
+      contributions: 1500,
+    });
+
+    act(() => {
+      store.getState().deleteManualCashEntry(entry.id);
+    });
+
+    expect(result.current.balance).toBe(0);
+    expect(result.current.monthlyMetrics).toMatchObject({
+      added: 0,
+      contributions: 0,
+    });
+  });
+
   it("derives monthly cash metrics from stored cash and investment records", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
