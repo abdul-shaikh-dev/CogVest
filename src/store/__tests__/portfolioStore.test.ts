@@ -801,6 +801,356 @@ describe("portfolio store", () => {
     ]);
   });
 
+  it("corrects a funded buy and its linked cash movement atomically", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    const fundedBuy = {
+      ...trade,
+      fees: 10,
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 210,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 1000 });
+    store.getState().recordFundedBuy({ cashLabel: "Reliance purchase", trade: fundedBuy });
+
+    const { totalValue: _totalValue, ...corrected } = {
+      ...fundedBuy,
+      date: "2026-04-27",
+      quantity: 3,
+    };
+    expect(store.getState().correctTrade(corrected)).toMatchObject({
+      cashEntry: expect.objectContaining({
+        amount: 310,
+        date: "2026-04-27",
+        id: `cash-${trade.id}`,
+      }),
+      status: "applied",
+      trade: { ...corrected, totalValue: 310 },
+    });
+    expect(store.getState().cashEntries).toContainEqual(
+      expect.objectContaining({ amount: 310, linkedTradeId: trade.id }),
+    );
+    expect(createPortfolioStore({ storage }).getState().trades).toEqual([
+      { ...corrected, totalValue: 310 },
+    ]);
+  });
+
+  it("derives a corrected trade total instead of trusting caller data", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    const { totalValue: _totalValue, ...correction } = {
+      ...trade,
+      fees: 25,
+      pricePerUnit: 100,
+      quantity: 3,
+    };
+
+    expect(store.getState().correctTrade(correction)).toMatchObject({
+      status: "applied",
+      trade: { totalValue: 325 },
+    });
+  });
+
+  it("rejects a backdated funded buy that depends on a later cash deposit", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const fundedBuy = {
+      ...trade,
+      date: "2026-04-26",
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 200,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({
+      ...cashEntry,
+      amount: 1000,
+      date: "2026-04-20",
+    });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade: fundedBuy });
+    store.getState().addCashEntry({
+      ...cashEntry,
+      amount: 1000,
+      date: "2026-05-01",
+      id: "cash-future",
+    });
+    const { totalValue: _totalValue, ...correction } = {
+      ...fundedBuy,
+      date: "2026-04-10",
+    };
+
+    expect(store.getState().correctTrade(correction)).toEqual({
+      reason: "insufficientCash",
+      status: "rejected",
+    });
+  });
+
+  it("keeps an unlinked legacy trade unlinked after correction", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+
+    const { totalValue: _totalValue, ...correction } = {
+      ...trade,
+      quantity: 3,
+    };
+    expect(store.getState().correctTrade(correction)).toMatchObject({
+      cashEntry: undefined,
+      status: "applied",
+    });
+    expect(store.getState().cashEntries).toEqual([]);
+  });
+
+  it("rejects trade correction and deletion that would oversell a holding", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const buy = { ...trade, pricePerUnit: 100, quantity: 5, totalValue: 500 };
+    const sell = {
+      ...trade,
+      id: "trade-sale",
+      pricePerUnit: 120,
+      quantity: 4,
+      totalValue: 480,
+      type: "sell" as const,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buy);
+    store.getState().addTrade(sell);
+
+    const { totalValue: _totalValue, ...correction } = {
+      ...sell,
+      quantity: 6,
+    };
+    expect(store.getState().correctTrade(correction)).toEqual({
+      reason: "oversold",
+      status: "rejected",
+    });
+    expect(store.getState().deleteTrade(buy.id)).toEqual({
+      reason: "oversold",
+      status: "rejected",
+    });
+  });
+
+  it("rejects stale, identity-changing, invalid, and future trade corrections", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    const { totalValue: _totalValue, ...correction } = trade;
+
+    expect(
+      store.getState().correctTrade({ ...correction, id: "missing" }),
+    ).toEqual({ reason: "notFound", status: "rejected" });
+    expect(
+      store.getState().correctTrade({ ...correction, assetId: "other" }),
+    ).toEqual({ reason: "assetMismatch", status: "rejected" });
+    expect(
+      store.getState().correctTrade({ ...correction, type: "sell" }),
+    ).toEqual({ reason: "typeMismatch", status: "rejected" });
+    expect(
+      store.getState().correctTrade({ ...correction, quantity: 0 }),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(
+      store.getState().correctTrade({ ...correction, date: "2026-07-23" }),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(store.getState().trades).toEqual([trade]);
+  });
+
+  it("rejects correction when a trade has duplicate linked cash movements", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const fundedBuy = { ...trade, pricePerUnit: 100, quantity: 2, totalValue: 200 };
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 1000 });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade: fundedBuy });
+    store.setState((state) => ({
+      cashEntries: [
+        ...state.cashEntries,
+        {
+          amount: 200,
+          date: fundedBuy.date,
+          id: "cash-duplicate-link",
+          label: "Duplicate",
+          linkedTradeId: fundedBuy.id,
+          purpose: "purchaseFunding",
+          type: "withdrawal",
+        },
+      ],
+    }));
+    const { totalValue: _totalValue, ...correction } = fundedBuy;
+
+    expect(store.getState().correctTrade(correction)).toEqual({
+      reason: "inconsistentLink",
+      status: "rejected",
+    });
+  });
+
+  it("refreshes automatic trade history while preserving manual snapshots", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-april",
+      month: "2026-04",
+    };
+    const manualSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      id: "snapshot-manual-may",
+      month: "2026-05",
+      notes: "Keep reviewed values",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+    store.getState().addMonthlySnapshot(manualSnapshot);
+    const { totalValue: _totalValue, ...correction } = {
+      ...trade,
+      quantity: 3,
+    };
+
+    expect(store.getState().correctTrade(correction)).toMatchObject({
+      refreshedMonths: expect.arrayContaining(["2026-04"]),
+      status: "applied",
+    });
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-04"),
+    ).toMatchObject({ id: autoSnapshot.id, investedValue: 8700 });
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-05"),
+    ).toEqual(manualSnapshot);
+  });
+
+  it("deletes a linked sale and its proceeds together", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sale = {
+      ...trade,
+      id: "trade-sale",
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 200,
+      type: "sell" as const,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().recordSaleWithProceeds({ cashLabel: "Sale proceeds", trade: sale });
+
+    expect(store.getState().deleteTrade(sale.id)).toMatchObject({
+      cashEntry: expect.objectContaining({ linkedTradeId: sale.id }),
+      status: "applied",
+      trade: sale,
+    });
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([]);
+  });
+
+  it("rejects reducing or deleting sale proceeds that funded a later purchase", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sale = {
+      ...trade,
+      date: "2026-04-10",
+      id: "trade-sale",
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 200,
+      type: "sell" as const,
+    };
+    const laterBuy = {
+      ...trade,
+      date: "2026-04-20",
+      id: "trade-later-buy",
+      pricePerUnit: 150,
+      quantity: 1,
+      totalValue: 150,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      ...openingPosition,
+      date: "2026-04-01",
+      quantity: 2,
+    });
+    store.getState().recordSaleWithProceeds({ cashLabel: "Sale", trade: sale });
+    store.getState().recordFundedBuy({ cashLabel: "Later buy", trade: laterBuy });
+    const { totalValue: _totalValue, ...correction } = {
+      ...sale,
+      quantity: 1,
+    };
+
+    expect(store.getState().correctTrade(correction)).toEqual({
+      reason: "insufficientCash",
+      status: "rejected",
+    });
+    expect(store.getState().deleteTrade(sale.id)).toEqual({
+      reason: "insufficientCash",
+      status: "rejected",
+    });
+  });
+
+  it("applies acquisitions before disposals on the same calendar date", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sameDayBuy = {
+      ...trade,
+      date: "2026-04-10",
+      id: "z-buy",
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 200,
+    };
+    const sameDaySale = {
+      ...trade,
+      date: "2026-04-10",
+      id: "a-sale",
+      pricePerUnit: 100,
+      quantity: 2,
+      totalValue: 200,
+      type: "sell" as const,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(sameDayBuy);
+    store.getState().addTrade(sameDaySale);
+    const { totalValue: _totalValue, ...correction } = sameDaySale;
+
+    expect(store.getState().correctTrade(correction)).toMatchObject({
+      status: "applied",
+    });
+  });
+
+  it("preserves trade, linked cash, and history when correction persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const fundedBuy = { ...trade, pricePerUnit: 100, quantity: 2, totalValue: 200 };
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 1000 });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade: fundedBuy });
+    const before = store.getState();
+    storage.setItem = () => {
+      throw new Error("simulated trade correction failure");
+    };
+
+    const { totalValue: _totalValue, ...correction } = {
+      ...fundedBuy,
+      quantity: 3,
+    };
+    expect(() => store.getState().correctTrade(correction)).toThrow(
+      "simulated trade correction failure",
+    );
+    expect(store.getState().trades).toEqual(before.trades);
+    expect(store.getState().cashEntries).toEqual(before.cashEntries);
+    expect(store.getState().monthlySnapshots).toEqual(before.monthlySnapshots);
+  });
+
   it("keeps memory unchanged when an atomic accounting write fails", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });

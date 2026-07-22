@@ -1,0 +1,95 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "tab-cash"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: "cash-label-input"
+- inputText: "Correction test cash"
+- hideKeyboard
+- tapOn:
+    id: "cash-date-input"
+- inputText: "2026-07-18"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
+- tapOn:
+    id: "save-cash-entry-button"
+- openLink: "cogvest:///add-trade"
+- tapOn:
+    id: "asset-input"
+- inputText: "Correction Test Asset"
+- hideKeyboard
+- tapOn:
+    id: "symbol-input"
+- inputText: "CORR"
+- tapOn:
+    id: "ticker-input"
+- inputText: "CORR.NS"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "quantity-input"
+    direction: DOWN
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "review-trade-button"
+- scrollUntilVisible:
+    element:
+      id: "save-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "save-trade-button"
+- tapOn:
+    id: "tab-holdings"
+- tapOn:
+    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      id: "review-transactions-.*"
+    direction: DOWN
+- tapOn:
+    id: "review-transactions-.*"
+- assertVisible:
+    id: "trade-history-screen"
+- tapOn:
+    id: "review-trade-.*"
+- assertVisible:
+    id: "review-trade-screen"
+- tapOn:
+    id: "trade-correction-quantity-input"
+- eraseText: 10
+- inputText: "3"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-trade-correction-button"
+    direction: DOWN
+- doubleTapOn:
+    id: "save-trade-correction-button"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Transaction saved. Portfolio and cash records updated."
+- tapOn:
+    id: "holding-row-.*"
+- assertVisible: "3"
+- tapOn:
+    id: "tab-cash"
+- assertVisible: "₹700.00"

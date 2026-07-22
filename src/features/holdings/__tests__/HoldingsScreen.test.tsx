@@ -186,6 +186,42 @@ describe("HoldingsScreen", () => {
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
   });
 
+  it("opens a scalable transaction history from an expanded holding", () => {
+    const store = seedMixedHoldings();
+    const onReviewTrades = jest.fn();
+    const { getByTestId } = render(
+      <HoldingsScreen store={store} onReviewTrades={onReviewTrades} />,
+    );
+
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(getByTestId(`review-transactions-${asset.id}`));
+
+    expect(onReviewTrades).toHaveBeenCalledWith(asset.id);
+  });
+
+  it("keeps all transaction history reachable after a holding is fully sold", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onReviewAllTrades = jest.fn();
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addTrade({
+      ...buyTrade,
+      id: "trade-sale",
+      totalValue: 220,
+      type: "sell",
+    });
+    const { getByTestId, getByText } = render(
+      <HoldingsScreen
+        onReviewAllTrades={onReviewAllTrades}
+        store={store}
+      />,
+    );
+
+    expect(getByText("No holdings yet")).toBeTruthy();
+    fireEvent.press(getByTestId("holdings-transactions-button"));
+    expect(onReviewAllTrades).toHaveBeenCalledTimes(1);
+  });
+
   it("exposes each opening record for correction without treating trades as openings", () => {
     const store = seedMixedHoldings();
     const onReviewOpeningPosition = jest.fn();

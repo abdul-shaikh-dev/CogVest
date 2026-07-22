@@ -73,6 +73,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
+  correctTrade: (trade: TradeCorrectionInput) => TradeCorrectionResult;
   correctOpeningPosition: (
     openingPosition: OpeningPosition,
   ) => OpeningPositionCorrectionResult;
@@ -85,6 +86,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deleteOpeningPosition: (
     openingPositionId: string,
   ) => OpeningPositionDeletionResult;
+  deleteTrade: (tradeId: string) => TradeDeletionResult;
   historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
@@ -187,6 +189,42 @@ export type OpeningPositionDeletionResult =
       status: "applied";
     }
   | { reason: "notFound"; status: "rejected" };
+
+type TradeMutationRejectionReason =
+  | "assetMismatch"
+  | "inconsistentLink"
+  | "insufficientCash"
+  | "invalidEntry"
+  | "notFound"
+  | "oversold"
+  | "typeMismatch";
+
+export type TradeCorrectionInput = Omit<Trade, "totalValue">;
+
+type TradeHistoryResult = {
+  pendingMonths: string[];
+  provisionalMonths: string[];
+  refreshedMonths: string[];
+};
+
+export type TradeCorrectionResult =
+  | (TradeHistoryResult & {
+      cashEntry?: CashEntry;
+      status: "applied";
+      trade: Trade;
+    })
+  | { reason: TradeMutationRejectionReason; status: "rejected" };
+
+export type TradeDeletionResult =
+  | (TradeHistoryResult & {
+      cashEntry?: CashEntry;
+      status: "applied";
+      trade: Trade;
+    })
+  | {
+      reason: "inconsistentLink" | "insufficientCash" | "notFound" | "oversold";
+      status: "rejected";
+    };
 
 type CreatePortfolioStoreOptions = {
   migratePortfolioSnapshot?: (
@@ -512,17 +550,24 @@ function openingPositionMonth(openingPosition: OpeningPosition) {
   return getCalendarDatePart(openingPosition.date)?.slice(0, 7) ?? null;
 }
 
-function rebuildOpeningPositionSnapshots({
+function rebuildPortfolioSnapshots({
+  cashEntries,
   earliestAffectedMonth,
   now,
   openingPositions,
   state,
+  trades,
 }: {
+  cashEntries?: CashEntry[];
   earliestAffectedMonth: string;
   now: Date;
-  openingPositions: OpeningPosition[];
+  openingPositions?: OpeningPosition[];
   state: PortfolioStoreState;
+  trades?: Trade[];
 }) {
+  const nextCashEntries = cashEntries ?? state.cashEntries;
+  const nextOpeningPositions = openingPositions ?? state.openingPositions;
+  const nextTrades = trades ?? state.trades;
   const affectedAutoSnapshots = new Map(
     state.monthlySnapshots
       .filter(
@@ -538,11 +583,11 @@ function rebuildOpeningPositionSnapshots({
       snapshot.generated?.source !== "auto",
   );
   const targetMonths = getMissingCompletedSnapshotMonths({
-    cashEntries: state.cashEntries,
+    cashEntries: nextCashEntries,
     existingSnapshots: monthlySnapshots,
     now,
-    openingPositions,
-    trades: state.trades,
+    openingPositions: nextOpeningPositions,
+    trades: nextTrades,
   }).filter((month) => month >= earliestAffectedMonth);
   const pendingMonths: string[] = [];
   const refreshedMonths: string[] = [];
@@ -550,14 +595,14 @@ function rebuildOpeningPositionSnapshots({
   for (const targetMonth of targetMonths) {
     const result = buildGeneratedMonthEndSnapshot({
       assets: state.assets,
-      cashEntries: state.cashEntries,
+      cashEntries: nextCashEntries,
       existingSnapshots: monthlySnapshots,
       historicalQuotes: state.historicalQuoteCache,
       now,
-      openingPositions,
+      openingPositions: nextOpeningPositions,
       quoteCache: state.quoteCache,
       targetMonth,
-      trades: state.trades,
+      trades: nextTrades,
     });
 
     if (result.status === "created" && result.snapshot) {
@@ -589,6 +634,118 @@ function rebuildOpeningPositionSnapshots({
       .map((snapshot) => snapshot.month),
     refreshedMonths,
   };
+}
+
+function tradeMonth(trade: Trade) {
+  return getCalendarDatePart(trade.date)?.slice(0, 7) ?? null;
+}
+
+function isValidTradeRecord(trade: Trade, now: Date) {
+  const fees = trade.fees ?? 0;
+  const grossValue = trade.quantity * trade.pricePerUnit;
+  const expectedTotal =
+    trade.type === "buy" ? grossValue + fees : grossValue - fees;
+
+  return (
+    trade.assetId.trim().length > 0 &&
+    (trade.type === "buy" || trade.type === "sell") &&
+    Number.isFinite(trade.quantity) &&
+    trade.quantity > 0 &&
+    Number.isFinite(trade.pricePerUnit) &&
+    trade.pricePerUnit > 0 &&
+    Number.isFinite(fees) &&
+    fees >= 0 &&
+    Number.isFinite(trade.totalValue) &&
+    trade.totalValue > 0 &&
+    Math.abs(trade.totalValue - expectedTotal) <= 0.01 &&
+    Boolean(getCalendarDatePart(trade.date)) &&
+    !isFutureCalendarDate(trade.date, now) &&
+    (trade.conviction === undefined ||
+      (Number.isInteger(trade.conviction) &&
+        trade.conviction >= 1 &&
+        trade.conviction <= 5)) &&
+    (trade.intendedHoldDays === undefined ||
+      (Number.isInteger(trade.intendedHoldDays) && trade.intendedHoldDays > 0))
+  );
+}
+
+function deriveTrade(input: TradeCorrectionInput): Trade {
+  const fees = input.fees ?? 0;
+  const grossValue = input.quantity * input.pricePerUnit;
+
+  return {
+    ...input,
+    totalValue: input.type === "buy" ? grossValue + fees : grossValue - fees,
+  };
+}
+
+function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
+  const orderedEntries = [...cashEntries].sort((left, right) => {
+    const dateOrder = left.date.localeCompare(right.date);
+    if (dateOrder !== 0) return dateOrder;
+    if (left.type !== right.type) return left.type === "addition" ? -1 : 1;
+    return left.id.localeCompare(right.id);
+  });
+  let balance = 0;
+
+  for (const entry of orderedEntries) {
+    balance += entry.type === "addition" ? entry.amount : -entry.amount;
+    if (balance < -0.00000001) return false;
+  }
+
+  return true;
+}
+
+function wouldOversellAsset(
+  assetId: string,
+  openingPositions: OpeningPosition[],
+  trades: Trade[],
+) {
+  const events = [
+    ...openingPositions
+      .filter((item) => item.assetId === assetId)
+      .map((position) => ({
+        date: getCalendarDatePart(position.date) ?? "",
+        delta: position.quantity,
+        id: position.id,
+        priority: 0,
+      })),
+    ...trades
+      .filter((item) => item.assetId === assetId)
+      .map((trade) => ({
+        date: getCalendarDatePart(trade.date) ?? "",
+        delta: trade.type === "buy" ? trade.quantity : -trade.quantity,
+        id: trade.id,
+        priority: trade.type === "buy" ? 1 : 2,
+      })),
+  ].filter((event) => event.date);
+
+  // V1 stores calendar dates, not intraday timestamps. Acquisitions therefore
+  // become effective before disposals on the same date, with IDs as a stable tie-break.
+  events.sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) ||
+      left.priority - right.priority ||
+      left.id.localeCompare(right.id),
+  );
+
+  let units = 0;
+  for (const event of events) {
+    units += event.delta;
+    if (units < -0.00000001) return true;
+  }
+
+  return false;
+}
+
+function linkedCashEntriesForTrade(state: PortfolioStoreState, tradeId: string) {
+  return state.cashEntries.filter((entry) => entry.linkedTradeId === tradeId);
+}
+
+function isConsistentTradeCashLink(trade: Trade, entry: CashEntry) {
+  return trade.type === "buy"
+    ? entry.type === "withdrawal" && entry.purpose === "purchaseFunding"
+    : entry.type === "addition" && entry.purpose === "saleProceeds";
 }
 
 function linkedCashEntry(
@@ -766,6 +923,91 @@ export function createPortfolioStore({
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
     },
+    correctTrade: (input) => {
+      const state = get();
+      const existingTrade = state.trades.find((item) => item.id === input.id);
+
+      if (!existingTrade) return { reason: "notFound", status: "rejected" };
+      if (existingTrade.assetId !== input.assetId) {
+        return { reason: "assetMismatch", status: "rejected" };
+      }
+      if (existingTrade.type !== input.type) {
+        return { reason: "typeMismatch", status: "rejected" };
+      }
+      const currentDate = now();
+      const trade = deriveTrade(input);
+      if (!isValidTradeRecord(trade, currentDate)) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+
+      const linkedEntries = linkedCashEntriesForTrade(state, trade.id);
+      if (
+        linkedEntries.length > 1 ||
+        (linkedEntries[0] &&
+          !isConsistentTradeCashLink(existingTrade, linkedEntries[0]))
+      ) {
+        return { reason: "inconsistentLink", status: "rejected" };
+      }
+
+      const trades = state.trades.map((item) =>
+        item.id === trade.id ? trade : item,
+      );
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades)) {
+        return { reason: "oversold", status: "rejected" };
+      }
+
+      const linkedEntry = linkedEntries[0];
+      const correctedCashEntry = linkedEntry
+        ? {
+            ...linkedEntry,
+            amount: trade.totalValue,
+            date: trade.date,
+            notes: trade.notes,
+          }
+        : undefined;
+      const cashEntries = correctedCashEntry
+        ? state.cashEntries.map((entry) =>
+            entry.id === correctedCashEntry.id ? correctedCashEntry : entry,
+          )
+        : state.cashEntries;
+      if (correctedCashEntry && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
+      const earliestAffectedMonth = [
+        tradeMonth(existingTrade),
+        tradeMonth(trade),
+        linkedEntry ? getCalendarDatePart(linkedEntry.date)?.slice(0, 7) : null,
+      ]
+        .filter((month): month is string => Boolean(month))
+        .sort()[0];
+
+      if (!earliestAffectedMonth) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+
+      const history = rebuildPortfolioSnapshots({
+        cashEntries,
+        earliestAffectedMonth,
+        now: currentDate,
+        state,
+        trades,
+      });
+      persistPortfolioTransition(storage, state, {
+        cashEntries,
+        monthlySnapshots: history.monthlySnapshots,
+        trades,
+      });
+      set({ cashEntries, monthlySnapshots: history.monthlySnapshots, trades });
+
+      return {
+        cashEntry: correctedCashEntry,
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+        trade,
+      };
+    },
     correctOpeningPosition: (openingPosition) => {
       const state = get();
       const existingPosition = state.openingPositions.find(
@@ -800,7 +1042,7 @@ export function createPortfolioStore({
       const openingPositions = state.openingPositions.map((position) =>
         position.id === openingPosition.id ? openingPosition : position,
       );
-      const history = rebuildOpeningPositionSnapshots({
+      const history = rebuildPortfolioSnapshots({
         earliestAffectedMonth,
         now: currentDate,
         openingPositions,
@@ -893,7 +1135,7 @@ export function createPortfolioStore({
       const openingPositions = state.openingPositions.filter(
         (position) => position.id !== openingPositionId,
       );
-      const history = rebuildOpeningPositionSnapshots({
+      const history = rebuildPortfolioSnapshots({
         earliestAffectedMonth,
         now: now(),
         openingPositions,
@@ -915,6 +1157,65 @@ export function createPortfolioStore({
         provisionalMonths: history.provisionalMonths,
         refreshedMonths: history.refreshedMonths,
         status: "applied",
+      };
+    },
+    deleteTrade: (tradeId) => {
+      const state = get();
+      const trade = state.trades.find((item) => item.id === tradeId);
+      if (!trade) return { reason: "notFound", status: "rejected" };
+
+      const linkedEntries = linkedCashEntriesForTrade(state, tradeId);
+      if (
+        linkedEntries.length > 1 ||
+        (linkedEntries[0] && !isConsistentTradeCashLink(trade, linkedEntries[0]))
+      ) {
+        return { reason: "inconsistentLink", status: "rejected" };
+      }
+
+      const trades = state.trades.filter((item) => item.id !== tradeId);
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades)) {
+        return { reason: "oversold", status: "rejected" };
+      }
+
+      const linkedEntry = linkedEntries[0];
+      const cashEntries = linkedEntry
+        ? state.cashEntries.filter((entry) => entry.id !== linkedEntry.id)
+        : state.cashEntries;
+      if (linkedEntry && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
+      const earliestAffectedMonth = [
+        tradeMonth(trade),
+        linkedEntry ? getCalendarDatePart(linkedEntry.date)?.slice(0, 7) : null,
+      ]
+        .filter((month): month is string => Boolean(month))
+        .sort()[0];
+
+      if (!earliestAffectedMonth) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      const history = rebuildPortfolioSnapshots({
+        cashEntries,
+        earliestAffectedMonth,
+        now: now(),
+        state,
+        trades,
+      });
+      persistPortfolioTransition(storage, state, {
+        cashEntries,
+        monthlySnapshots: history.monthlySnapshots,
+        trades,
+      });
+      set({ cashEntries, monthlySnapshots: history.monthlySnapshots, trades });
+
+      return {
+        cashEntry: linkedEntry,
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+        trade,
       };
     },
     historicalQuoteCache,
@@ -956,10 +1257,7 @@ export function createPortfolioStore({
       get().deleteOpeningPosition(openingPositionId);
     },
     removeTrade: (tradeId) => {
-      set((state) => ({
-        trades: state.trades.filter((trade) => trade.id !== tradeId),
-      }));
-      persistPortfolio(storage, get());
+      get().deleteTrade(tradeId);
     },
     recordFundedBuy: (input) => {
       const state = get();
@@ -1227,12 +1525,8 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     updateTrade: (trade) => {
-      set((state) => ({
-        trades: state.trades.map((currentTrade) =>
-          currentTrade.id === trade.id ? trade : currentTrade,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      const { totalValue: _totalValue, ...input } = trade;
+      get().correctTrade(input);
     },
     upsertHistoricalQuote: (historicalQuote) => {
       const asset = get().assets.find(
