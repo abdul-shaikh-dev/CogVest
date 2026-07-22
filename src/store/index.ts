@@ -334,6 +334,15 @@ function normalizeCashEntry(entry: StoredCashEntry): CashEntry {
   };
 }
 
+function normalizeMonthlySnapshot(snapshot: MonthlySnapshot): MonthlySnapshot {
+  if (snapshot.generated?.source !== "auto" || snapshot.salary !== 0) {
+    return snapshot;
+  }
+
+  const { salary: _legacyUnknownSalary, ...normalized } = snapshot;
+  return normalized;
+}
+
 type PersistedReadResult<T> = {
   data: T;
   incident?: StorageRecoveryIncident;
@@ -384,7 +393,9 @@ function migratePortfolioSnapshot(
   return {
     assets: (stored.assets ?? []).map(normalizeAssetMetadata),
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
-    monthlySnapshots: stored.monthlySnapshots ?? [],
+    monthlySnapshots: (stored.monthlySnapshots ?? []).map(
+      normalizeMonthlySnapshot,
+    ),
     openingPositions: stored.openingPositions ?? [],
     preferences: {
       ...createDefaultPreferences(),

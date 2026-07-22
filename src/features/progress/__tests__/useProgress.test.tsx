@@ -257,6 +257,26 @@ describe("useProgress", () => {
     });
   });
 
+  it("saves a reviewed snapshot without inventing unknown income", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { result } = renderHook(() => useProgress({ store }));
+
+    act(() => {
+      result.current.setField("month", "2026-05");
+      result.current.setField("portfolioValue", "1000");
+      result.current.setField("investedValue", "800");
+      result.current.setField("equityValue", "800");
+      result.current.setField("debtValue", "0");
+      result.current.setField("cryptoValue", "0");
+      result.current.setField("cashValue", "200");
+      result.current.setField("monthlyInvestment", "100");
+      result.current.saveSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots[0]?.salary).toBeUndefined();
+    expect(result.current.errors.salary).toBeUndefined();
+  });
+
   it("auto-generates the previous completed month snapshot once", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
@@ -297,6 +317,47 @@ describe("useProgress", () => {
       status: "already-exists",
       targetMonth: "2026-07",
     });
+  });
+
+  it("refreshes automatic income after a completed month is backfilled", async () => {
+    const now = new Date("2026-08-02T10:00:00.000Z");
+    const store = createPortfolioStore({
+      now: () => now,
+      storage: createMemoryJsonStorage(),
+    });
+    store.getState().addCashEntry({
+      amount: 50000,
+      date: "2026-07-05",
+      id: "cash-july-contribution",
+      label: "Contribution",
+      purpose: "capitalContribution",
+      type: "addition",
+    });
+    const { result } = renderHook(() => useProgress({ now, store }));
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+    expect(store.getState().monthlySnapshots[0]?.salary).toBeUndefined();
+
+    act(() => {
+      store.getState().addCashEntry({
+        amount: 100000,
+        date: "2026-07-06",
+        id: "cash-july-income",
+        label: "Income",
+        purpose: "income",
+        type: "addition",
+      });
+    });
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots[0]?.salary).toBe(100000);
+    expect(result.current.snapshotAutomationStatus.message).toBe(
+      "1 snapshot updated with newly recorded income.",
+    );
   });
 
   it("backfills every missing completed month oldest-first with month-specific prices", async () => {
@@ -686,9 +747,11 @@ describe("useProgress", () => {
     });
 
     expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
-    expect(store.getState().monthlySnapshots).toEqual([existing]);
+    expect(store.getState().monthlySnapshots).toEqual([
+      { ...existing, salary: 70000 },
+    ]);
     expect(result.current.snapshotAutomationStatus.message).toBe(
-      "Some completed months still use estimated values.",
+      "Newly recorded income was added. Some completed months still use estimated values.",
     );
   });
 

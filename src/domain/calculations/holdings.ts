@@ -488,12 +488,12 @@ export function calculateMonthlyProgressSummaries(
       return {
         assetSnapshot,
         expenseRate:
-          snapshot.salary === 0 || snapshot.monthlyExpense === undefined
+          !snapshot.salary || snapshot.monthlyExpense === undefined
             ? null
             : round((snapshot.monthlyExpense / snapshot.salary) * 100),
         performance: calculateMonthlyPerformance(previous, snapshot),
         savingsRate:
-          snapshot.salary === 0
+          !snapshot.salary
             ? null
             : round((snapshot.monthlyInvestment / snapshot.salary) * 100),
         snapshot,

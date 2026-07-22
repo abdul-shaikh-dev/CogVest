@@ -1836,6 +1836,57 @@ describe("portfolio store", () => {
     expect(store.getState().schemaVersion).toBe(5);
   });
 
+  it("migrates legacy automatic zero income to unknown without changing manual values", () => {
+    const storage = createMemoryJsonStorage();
+    const automaticZero: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-zero",
+      salary: 0,
+    };
+    const manualZero: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-06-01T00:00:00.000Z",
+        priceBasis: "manual-fallback",
+        source: "manual",
+        warnings: [],
+      },
+      id: "snapshot-manual-zero",
+      salary: 0,
+    };
+    const automaticIncome: MonthlySnapshot = {
+      ...automaticZero,
+      id: "snapshot-auto-income",
+      salary: 160000,
+    };
+    storage.setItem(portfolioStorageKey, {
+      assets: [],
+      cashEntries: [],
+      monthlySnapshots: [automaticZero, manualZero, automaticIncome],
+      openingPositions: [],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 5,
+      trades: [],
+    });
+
+    const snapshots = createPortfolioStore({ storage }).getState()
+      .monthlySnapshots;
+
+    expect(
+      snapshots.find((item) => item.id === automaticZero.id)?.salary,
+    ).toBeUndefined();
+    expect(snapshots.find((item) => item.id === manualZero.id)?.salary).toBe(0);
+    expect(
+      snapshots.find((item) => item.id === automaticIncome.id)?.salary,
+    ).toBe(160000);
+  });
+
   it.each([
     ["malformed JSON", "{not-json", "invalid-json"],
     [

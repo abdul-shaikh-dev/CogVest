@@ -234,7 +234,7 @@ describe("ProgressScreen", () => {
     expect(queryByText(/provisional|historical|fallback/i)).toBeNull();
   });
 
-  it("identifies confirmed historical month-end prices", () => {
+  it("identifies confirmed historical month-end prices", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot({
       ...maySnapshot,
@@ -254,9 +254,9 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { getByText } = render(<ProgressScreen store={store} />);
+    const { findByText } = render(<ProgressScreen store={store} />);
 
-    expect(getByText("Month-end prices confirmed.")).toBeTruthy();
+    expect(await findByText("Month-end prices confirmed.")).toBeTruthy();
   });
 
   it("names older provisional months without claiming all prices are confirmed", async () => {
@@ -334,6 +334,22 @@ describe("ProgressScreen", () => {
     expect(getByTestId("snapshot-month-input").props.value).toBe("2026-05");
     expect(getByTestId("snapshot-portfolio-input").props.value).toBe("1385000");
     expect(getByTestId("snapshot-notes-input").props.value).toBe("May close");
+  });
+
+  it("renders unknown snapshot income as an empty review field", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { salary: _salary, ...unknownIncomeSnapshot } = maySnapshot;
+    store.getState().addMonthlySnapshot(unknownIncomeSnapshot);
+
+    const { getByTestId } = render(
+      <ReviewSnapshotScreen
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(getByTestId("snapshot-salary-input").props.value).toBe("");
   });
 
   it("cancels a review without persisting field changes", () => {

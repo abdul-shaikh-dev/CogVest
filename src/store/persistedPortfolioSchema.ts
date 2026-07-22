@@ -162,7 +162,7 @@ const monthlySnapshotSchema = z.object({
     ])
     .optional(),
   portfolioValue: finiteNumberSchema,
-  salary: finiteNumberSchema,
+  salary: finiteNumberSchema.optional(),
 });
 
 const preferencesSchema = z

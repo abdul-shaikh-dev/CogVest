@@ -938,7 +938,79 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       netExternalFlow: 52500,
       status: "complete",
     });
-    expect(result.snapshot?.salary).toBe(0);
+    expect(result.snapshot?.salary).toBeUndefined();
+  });
+
+  it("derives snapshot income only from unambiguous typed income", () => {
+    const typedIncome = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [],
+        cashEntries: [
+          cashEntry({ amount: 100000, purpose: "income" }),
+          cashEntry({ amount: 25000, id: "cash-income-2", purpose: "income" }),
+          cashEntry({
+            amount: 50000,
+            id: "cash-contribution",
+            purpose: "capitalContribution",
+          }),
+        ],
+        targetMonth: "2026-07",
+      }),
+    );
+    const ambiguousIncome = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [],
+        cashEntries: [
+          cashEntry({ amount: 100000, purpose: "income" }),
+          cashEntry({
+            amount: 50000,
+            id: "cash-legacy",
+            purpose: "legacyUncategorized",
+          }),
+        ],
+        targetMonth: "2026-07",
+      }),
+    );
+
+    expect(typedIncome.snapshot?.salary).toBe(125000);
+    expect(ambiguousIncome.snapshot?.salary).toBeUndefined();
+  });
+
+  it("refreshes automatic snapshot income after typed income is backfilled", () => {
+    const existing = monthlySnapshot({
+      generated: {
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        priceBasis: "historical-close",
+        priceEvidence: [],
+        source: "auto",
+        warnings: [],
+      },
+      month: "2026-07",
+      salary: undefined,
+    });
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [],
+        cashEntries: [cashEntry({ amount: 100000, purpose: "income" })],
+        existingSnapshots: [existing],
+        targetMonth: "2026-07",
+      }),
+    );
+    const refreshed = buildGeneratedMonthEndSnapshot({
+      ...buildInput({
+        assets: [],
+        cashEntries: [cashEntry({ amount: 100000, purpose: "income" })],
+        existingSnapshots: [existing],
+        targetMonth: "2026-07",
+      }),
+      refreshIncome: true,
+    });
+
+    expect(result.status).toBe("already-exists");
+    expect(refreshed).toMatchObject({
+      snapshot: { salary: 100000 },
+      status: "created",
+    });
   });
 
   it("classifies monthly investment dates by their stored local calendar date", () => {
