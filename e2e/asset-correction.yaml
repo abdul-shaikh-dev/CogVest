@@ -1,0 +1,118 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "tab-cash"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: "cash-label-input"
+- inputText: "Asset correction cash"
+- hideKeyboard
+- tapOn:
+    id: "cash-date-input"
+- inputText: "2026-07-18"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
+- tapOn:
+    id: "save-cash-entry-button"
+- openLink: "cogvest:///add-trade"
+- tapOn:
+    id: "asset-input"
+- inputText: "Original Asset"
+- hideKeyboard
+- tapOn:
+    id: "symbol-input"
+- inputText: "ORIG"
+- tapOn:
+    id: "ticker-input"
+- inputText: "ORIG.NS"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "quantity-input"
+    direction: DOWN
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "review-trade-button"
+- scrollUntilVisible:
+    element:
+      id: "save-trade-button"
+    direction: DOWN
+- tapOn:
+    id: "save-trade-button"
+- tapOn:
+    id: "tab-holdings"
+- tapOn:
+    id: "holdings-manage-assets-button"
+- assertVisible:
+    id: "manage-assets-screen"
+- tapOn:
+    id: "manage-asset-.*"
+- assertVisible:
+    id: "review-asset-screen"
+- tapOn:
+    id: "asset-name-input"
+- eraseText: 30
+- inputText: "Corrected Asset"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-asset-correction-button"
+    direction: DOWN
+- doubleTapOn:
+    id: "save-asset-correction-button"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Asset details saved."
+- stopApp
+- launchApp
+- tapOn:
+    id: "tab-holdings"
+- tapOn:
+    id: "holdings-manage-assets-button"
+- assertVisible: "Corrected Asset"
+- tapOn:
+    id: "manage-asset-.*"
+- scrollUntilVisible:
+    element:
+      id: "delete-asset-button"
+    direction: DOWN
+- tapOn:
+    id: "delete-asset-button"
+- assertVisible: "Delete Corrected Asset?"
+- doubleTapOn:
+    id: "confirm-delete-asset-button"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Asset and linked records deleted."
+- assertVisible: "No holdings yet"
+- tapOn:
+    id: "tab-cash"
+- assertVisible: "₹1,000.00"
+- stopApp
+- launchApp
+- tapOn:
+    id: "tab-cash"
+- assertVisible:
+    id: "cash-screen"
+- assertVisible: "₹1,000.00"
+- tapOn:
+    id: "tab-holdings"
+- assertVisible: "No holdings yet"

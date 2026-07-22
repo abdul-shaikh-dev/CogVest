@@ -202,6 +202,7 @@ describe("HoldingsScreen", () => {
   it("keeps all transaction history reachable after a holding is fully sold", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewAllTrades = jest.fn();
+    const onManageAssets = jest.fn();
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     store.getState().addTrade({
@@ -212,6 +213,7 @@ describe("HoldingsScreen", () => {
     });
     const { getByTestId, getByText } = render(
       <HoldingsScreen
+        onManageAssets={onManageAssets}
         onReviewAllTrades={onReviewAllTrades}
         store={store}
       />,
@@ -220,6 +222,8 @@ describe("HoldingsScreen", () => {
     expect(getByText("No holdings yet")).toBeTruthy();
     fireEvent.press(getByTestId("holdings-transactions-button"));
     expect(onReviewAllTrades).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId("holdings-manage-assets-button"));
+    expect(onManageAssets).toHaveBeenCalledTimes(1);
   });
 
   it("exposes each opening record for correction without treating trades as openings", () => {

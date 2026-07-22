@@ -1,6 +1,10 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import { normalizeAssetMetadata } from "@/src/domain/assets";
+import {
+  isInstrumentType,
+  isSectorType,
+  normalizeAssetMetadata,
+} from "@/src/domain/assets";
 import {
   buildGeneratedMonthEndSnapshot,
   getMissingCompletedSnapshotMonths,
@@ -51,6 +55,8 @@ export const portfolioStorageKey = "cogvest:v1:portfolio";
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
 export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
+export const assetGraphJournalStorageKey =
+  "cogvest:v1:asset-graph-journal";
 export const portfolioSchemaVersion = 5;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
@@ -73,6 +79,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
+  correctAsset: (asset: Asset) => AssetCorrectionResult;
   correctTrade: (trade: TradeCorrectionInput) => TradeCorrectionResult;
   correctOpeningPosition: (
     openingPosition: OpeningPosition,
@@ -83,6 +90,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deleteManualCashEntry: (
     cashEntryId: string,
   ) => ManualCashDeletionResult;
+  deleteAsset: (assetId: string) => AssetDeletionResult;
   deleteOpeningPosition: (
     openingPositionId: string,
   ) => OpeningPositionDeletionResult;
@@ -151,6 +159,40 @@ export type ManualCashCorrectionResult =
       reason: "invalidEntry" | "linkedEntry" | "notFound";
       status: "rejected";
     };
+
+type AssetHistoryResult = {
+  pendingMonths: string[];
+  provisionalMonths: string[];
+  refreshedMonths: string[];
+};
+
+export type AssetCorrectionResult =
+  | (AssetHistoryResult & {
+      asset: Asset;
+      quoteCacheInvalidated: boolean;
+      status: "applied";
+    })
+  | {
+      reason: "duplicateIdentity" | "invalidAsset" | "notFound";
+      status: "rejected";
+    };
+
+export type AssetDeletionImpact = {
+  automaticSnapshots: number;
+  historicalQuotes: number;
+  linkedCashEntries: number;
+  openingPositions: number;
+  quotes: number;
+  trades: number;
+};
+
+export type AssetDeletionResult =
+  | (AssetHistoryResult & {
+      asset: Asset;
+      impact: AssetDeletionImpact;
+      status: "applied";
+    })
+  | { reason: "insufficientCash" | "notFound"; status: "rejected" };
 
 export type ManualCashDeletionResult =
   | { entry: CashEntry; status: "applied" }
@@ -551,6 +593,7 @@ function openingPositionMonth(openingPosition: OpeningPosition) {
 }
 
 function rebuildPortfolioSnapshots({
+  assets,
   cashEntries,
   earliestAffectedMonth,
   now,
@@ -558,6 +601,7 @@ function rebuildPortfolioSnapshots({
   state,
   trades,
 }: {
+  assets?: Asset[];
   cashEntries?: CashEntry[];
   earliestAffectedMonth: string;
   now: Date;
@@ -565,6 +609,7 @@ function rebuildPortfolioSnapshots({
   state: PortfolioStoreState;
   trades?: Trade[];
 }) {
+  const nextAssets = assets ?? state.assets;
   const nextCashEntries = cashEntries ?? state.cashEntries;
   const nextOpeningPositions = openingPositions ?? state.openingPositions;
   const nextTrades = trades ?? state.trades;
@@ -594,7 +639,7 @@ function rebuildPortfolioSnapshots({
 
   for (const targetMonth of targetMonths) {
     const result = buildGeneratedMonthEndSnapshot({
-      assets: state.assets,
+      assets: nextAssets,
       cashEntries: nextCashEntries,
       existingSnapshots: monthlySnapshots,
       historicalQuotes: state.historicalQuoteCache,
@@ -634,6 +679,227 @@ function rebuildPortfolioSnapshots({
       .map((snapshot) => snapshot.month),
     refreshedMonths,
   };
+}
+
+function assetRecordMonth(state: PortfolioStoreState, assetId: string) {
+  return [
+    ...state.openingPositions
+      .filter((position) => position.assetId === assetId)
+      .map(openingPositionMonth),
+    ...state.trades
+      .filter((trade) => trade.assetId === assetId)
+      .map(tradeMonth),
+  ]
+    .filter((month): month is string => Boolean(month))
+    .sort()[0];
+}
+
+function normalizedIdentity(value?: string) {
+  return value?.trim().toUpperCase() ?? "";
+}
+
+function hasDuplicateAssetIdentity(assets: Asset[], candidate: Asset) {
+  return assets.some((asset) => {
+    if (asset.id === candidate.id) return false;
+
+    const providerId = normalizedIdentity(candidate.quoteSourceId);
+    if (
+      providerId &&
+      normalizedIdentity(asset.quoteSourceId) === providerId
+    ) {
+      return true;
+    }
+
+    const ticker = normalizedIdentity(candidate.ticker);
+    return (
+      ticker.length > 0 &&
+      normalizedIdentity(asset.ticker) === ticker &&
+      normalizedIdentity(asset.exchange) ===
+        normalizedIdentity(candidate.exchange)
+    );
+  });
+}
+
+const validAssetClasses: Asset["assetClass"][] = [
+  "cash",
+  "crypto",
+  "debt",
+  "etf",
+  "stock",
+];
+const validExchanges = ["BSE", "CRYPTO", "NSE"];
+
+function hasValidAssetIdentity(asset: Asset) {
+
+  return (
+    asset.id.trim().length > 0 &&
+    asset.name.trim().length > 0 &&
+    asset.symbol.trim().length > 0 &&
+    asset.ticker.trim().length > 0 &&
+    validAssetClasses.includes(asset.assetClass) &&
+    (asset.exchange === undefined || validExchanges.includes(asset.exchange)) &&
+    asset.instrumentType !== undefined &&
+    isInstrumentType(asset.instrumentType) &&
+    asset.sectorType !== undefined &&
+    isSectorType(asset.sectorType) &&
+    (asset.isTaxEligible === undefined ||
+      typeof asset.isTaxEligible === "boolean") &&
+    getV1AssetCurrencyIssue(asset) === undefined
+  );
+}
+
+function quoteIdentityChanged(previous: Asset, next: Asset) {
+  return (
+    normalizedIdentity(previous.quoteSourceId) !==
+      normalizedIdentity(next.quoteSourceId) ||
+    normalizedIdentity(previous.ticker) !== normalizedIdentity(next.ticker) ||
+    normalizedIdentity(previous.exchange) !==
+      normalizedIdentity(next.exchange) ||
+    previous.currency !== next.currency
+  );
+}
+
+function withoutAssetQuotes<T extends QuoteCache | HistoricalQuoteCache>(
+  cache: T,
+  assetId: string,
+): T {
+  return Object.fromEntries(
+    Object.entries(cache).filter(([, quote]) => quote.assetId !== assetId),
+  ) as T;
+}
+
+function restoreRawStorageValue(
+  storage: JsonStorage,
+  key: string,
+  rawValue: string | null,
+) {
+  if (rawValue === null) storage.removeItem(key);
+  else storage.setRawItem(key, rawValue);
+}
+
+type AssetGraphJournal = {
+  historical: string | null;
+  portfolio: string | null;
+  quotes: string | null;
+};
+
+type AssetGraphJournalParseResult =
+  | { journal: AssetGraphJournal }
+  | { reason: "invalid-json" | "invalid-shape" };
+
+function parseAssetGraphJournal(
+  rawValue: string,
+): AssetGraphJournalParseResult {
+  let value: JsonValue;
+
+  try {
+    value = JSON.parse(rawValue) as JsonValue;
+  } catch {
+    return { reason: "invalid-json" as const };
+  }
+
+  if (!value || Array.isArray(value) || typeof value !== "object") {
+    return { reason: "invalid-shape" as const };
+  }
+
+  const candidate = value as Record<string, JsonValue>;
+  const validRaw = (raw: JsonValue | undefined) =>
+    raw === null || typeof raw === "string";
+
+  return validRaw(candidate.historical) &&
+    validRaw(candidate.portfolio) &&
+    validRaw(candidate.quotes)
+    ? { journal: candidate as AssetGraphJournal }
+    : { reason: "invalid-shape" as const };
+}
+
+function restoreAssetGraphJournal(
+  storage: JsonStorage,
+  journal: AssetGraphJournal,
+) {
+  restoreRawStorageValue(storage, quoteCacheStorageKey, journal.quotes);
+  restoreRawStorageValue(
+    storage,
+    historicalQuoteCacheStorageKey,
+    journal.historical,
+  );
+  restoreRawStorageValue(storage, portfolioStorageKey, journal.portfolio);
+}
+
+function recoverPendingAssetGraphTransition(
+  storage: JsonStorage,
+  now: () => Date,
+): StorageRecoveryIncident | undefined {
+  const rawValue = storage.getRawItem(assetGraphJournalStorageKey);
+  if (rawValue === null) return undefined;
+
+  const parsed = parseAssetGraphJournal(rawValue);
+  if ("reason" in parsed) {
+    return {
+      ...quarantineRawValue(
+        storage,
+        assetGraphJournalStorageKey,
+        "Interrupted asset change",
+        rawValue,
+        parsed.reason,
+        now,
+      ),
+      preserved: false,
+    };
+  }
+
+  try {
+    restoreAssetGraphJournal(storage, parsed.journal);
+    storage.removeItem(assetGraphJournalStorageKey);
+    return undefined;
+  } catch {
+    return {
+      ...quarantineRawValue(
+        storage,
+        assetGraphJournalStorageKey,
+        "Interrupted asset change",
+        rawValue,
+        "migration-failed",
+        now,
+      ),
+      preserved: false,
+    };
+  }
+}
+
+function persistAssetGraphTransition({
+  historicalQuoteCache,
+  portfolio,
+  quoteCache,
+  storage,
+}: {
+  historicalQuoteCache: HistoricalQuoteCache;
+  portfolio: RawPortfolioSnapshot;
+  quoteCache: QuoteCache;
+  storage: JsonStorage;
+}) {
+  const previous = {
+    historical: storage.getRawItem(historicalQuoteCacheStorageKey),
+    portfolio: storage.getRawItem(portfolioStorageKey),
+    quotes: storage.getRawItem(quoteCacheStorageKey),
+  };
+
+  storage.setItem(assetGraphJournalStorageKey, previous as JsonValue);
+
+  try {
+    persistQuoteCache(storage, quoteCache);
+    persistHistoricalQuoteCache(storage, historicalQuoteCache);
+    storage.setItem(portfolioStorageKey, portfolio as JsonValue);
+    storage.removeItem(assetGraphJournalStorageKey);
+  } catch (error) {
+    try {
+      restoreAssetGraphJournal(storage, previous);
+      storage.removeItem(assetGraphJournalStorageKey);
+    } catch {
+      // The journal remains durable and is replayed before the next read.
+    }
+    throw error;
+  }
 }
 
 function tradeMonth(trade: Trade) {
@@ -828,10 +1094,15 @@ export function createPortfolioStore({
   now = () => new Date(),
   storage = createMmkvJsonStorage(),
 }: CreatePortfolioStoreOptions = {}): StoreApi<PortfolioStoreState> {
+  const assetGraphRecoveryIncident = recoverPendingAssetGraphTransition(
+    storage,
+    now,
+  );
   const snapshotResult = readPortfolioSnapshot(storage, now, migrate);
   const quoteCacheResult = readQuoteCache(storage, now);
   const historicalQuoteCacheResult = readHistoricalQuoteCache(storage, now);
   const incidents = [
+    assetGraphRecoveryIncident,
     snapshotResult.incident,
     quoteCacheResult.incident,
     historicalQuoteCacheResult.incident,
@@ -922,6 +1193,86 @@ export function createPortfolioStore({
     clearQuoteCache: () => {
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
+    },
+    correctAsset: (input) => {
+      const state = get();
+      const existingAsset = state.assets.find((asset) => asset.id === input.id);
+
+      if (!existingAsset) return { reason: "notFound", status: "rejected" };
+      if (
+        typeof input.name !== "string" ||
+        typeof input.symbol !== "string" ||
+        typeof input.ticker !== "string" ||
+        (input.quoteSourceId !== undefined &&
+          typeof input.quoteSourceId !== "string") ||
+        !validAssetClasses.includes(input.assetClass)
+      ) {
+        return { reason: "invalidAsset", status: "rejected" };
+      }
+
+      const asset = normalizeAssetMetadata(input);
+      if (!hasValidAssetIdentity(asset)) {
+        return { reason: "invalidAsset", status: "rejected" };
+      }
+      if (hasDuplicateAssetIdentity(state.assets, asset)) {
+        return { reason: "duplicateIdentity", status: "rejected" };
+      }
+
+      const assets = state.assets.map((currentAsset) =>
+        currentAsset.id === asset.id ? asset : currentAsset,
+      );
+      const invalidatesQuotes = quoteIdentityChanged(existingAsset, asset);
+      const quoteCache = invalidatesQuotes
+        ? withoutAssetQuotes(state.quoteCache, asset.id)
+        : state.quoteCache;
+      const historicalQuoteCache = invalidatesQuotes
+        ? withoutAssetQuotes(state.historicalQuoteCache, asset.id)
+        : state.historicalQuoteCache;
+      const earliestAffectedMonth = assetRecordMonth(state, asset.id);
+      const history = earliestAffectedMonth
+        ? rebuildPortfolioSnapshots({
+            assets,
+            earliestAffectedMonth,
+            now: now(),
+            state: {
+              ...state,
+              historicalQuoteCache,
+              quoteCache,
+            },
+          })
+        : {
+            monthlySnapshots: state.monthlySnapshots,
+            pendingMonths: [],
+            provisionalMonths: [],
+            refreshedMonths: [],
+          };
+      const portfolio = {
+        ...selectRawSnapshot(state),
+        assets,
+        monthlySnapshots: history.monthlySnapshots,
+      };
+
+      persistAssetGraphTransition({
+        historicalQuoteCache,
+        portfolio,
+        quoteCache,
+        storage,
+      });
+      set({
+        assets,
+        historicalQuoteCache,
+        monthlySnapshots: history.monthlySnapshots,
+        quoteCache,
+      });
+
+      return {
+        asset,
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        quoteCacheInvalidated: invalidatesQuotes,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+      };
     },
     correctTrade: (input) => {
       const state = get();
@@ -1116,6 +1467,109 @@ export function createPortfolioStore({
 
       return { entry: existingEntry, status: "applied" };
     },
+    deleteAsset: (assetId) => {
+      const state = get();
+      const asset = state.assets.find((item) => item.id === assetId);
+      if (!asset) return { reason: "notFound", status: "rejected" };
+
+      const removedTrades = state.trades.filter(
+        (trade) => trade.assetId === assetId,
+      );
+      const removedTradeIds = new Set(removedTrades.map((trade) => trade.id));
+      const linkedCashEntries = state.cashEntries.filter(
+        (entry) =>
+          Boolean(entry.linkedTradeId) &&
+          removedTradeIds.has(entry.linkedTradeId ?? ""),
+      );
+      const assets = state.assets.filter((item) => item.id !== assetId);
+      const openingPositions = state.openingPositions.filter(
+        (position) => position.assetId !== assetId,
+      );
+      const trades = state.trades.filter((trade) => trade.assetId !== assetId);
+      const cashEntries = state.cashEntries.filter(
+        (entry) => !removedTradeIds.has(entry.linkedTradeId ?? ""),
+      );
+      if (!hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
+      const quoteCache = withoutAssetQuotes(state.quoteCache, assetId);
+      const historicalQuoteCache = withoutAssetQuotes(
+        state.historicalQuoteCache,
+        assetId,
+      );
+      const earliestAffectedMonth = assetRecordMonth(state, assetId);
+      const affectedAutomaticSnapshots = earliestAffectedMonth
+        ? state.monthlySnapshots.filter(
+            (snapshot) =>
+              snapshot.month >= earliestAffectedMonth &&
+              snapshot.generated?.source === "auto",
+          ).length
+        : 0;
+      const history = earliestAffectedMonth
+        ? rebuildPortfolioSnapshots({
+            assets,
+            cashEntries,
+            earliestAffectedMonth,
+            now: now(),
+            openingPositions,
+            state: {
+              ...state,
+              historicalQuoteCache,
+              quoteCache,
+            },
+            trades,
+          })
+        : {
+            monthlySnapshots: state.monthlySnapshots,
+            pendingMonths: [],
+            provisionalMonths: [],
+            refreshedMonths: [],
+          };
+      const portfolio = {
+        ...selectRawSnapshot(state),
+        assets,
+        cashEntries,
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+        trades,
+      };
+
+      persistAssetGraphTransition({
+        historicalQuoteCache,
+        portfolio,
+        quoteCache,
+        storage,
+      });
+      set({
+        assets,
+        cashEntries,
+        historicalQuoteCache,
+        monthlySnapshots: history.monthlySnapshots,
+        openingPositions,
+        quoteCache,
+        trades,
+      });
+
+      return {
+        asset,
+        impact: {
+          automaticSnapshots: affectedAutomaticSnapshots,
+          historicalQuotes:
+            Object.keys(state.historicalQuoteCache).length -
+            Object.keys(historicalQuoteCache).length,
+          linkedCashEntries: linkedCashEntries.length,
+          openingPositions:
+            state.openingPositions.length - openingPositions.length,
+          quotes:
+            Object.keys(state.quoteCache).length - Object.keys(quoteCache).length,
+          trades: removedTrades.length,
+        },
+        pendingMonths: history.pendingMonths,
+        provisionalMonths: history.provisionalMonths,
+        refreshedMonths: history.refreshedMonths,
+        status: "applied",
+      };
+    },
     deleteOpeningPosition: (openingPositionId) => {
       const state = get();
       const existingPosition = state.openingPositions.find(
@@ -1221,10 +1675,7 @@ export function createPortfolioStore({
     historicalQuoteCache,
     quoteCache,
     removeAsset: (assetId) => {
-      set((state) => ({
-        assets: state.assets.filter((asset) => asset.id !== assetId),
-      }));
-      persistPortfolio(storage, get());
+      get().deleteAsset(assetId);
     },
     removeCashEntry: (cashEntryId) => {
       const state = get();
@@ -1465,20 +1916,10 @@ export function createPortfolioStore({
     schemaVersion: portfolioSchemaVersion,
     storageRecovery: incidents.length > 0 ? { incidents } : undefined,
     updateAsset: (asset) => {
-      const currencyIssue = getV1AssetCurrencyIssue(asset);
-
-      if (currencyIssue) {
-        throw new Error(currencyIssue);
+      const result = get().correctAsset(asset);
+      if (result.status === "rejected") {
+        throw new Error(`Asset update rejected: ${result.reason}.`);
       }
-
-      const normalizedAsset = normalizeAssetMetadata(asset);
-
-      set((state) => ({
-        assets: state.assets.map((currentAsset) =>
-          currentAsset.id === asset.id ? normalizedAsset : currentAsset,
-        ),
-      }));
-      persistPortfolio(storage, get());
     },
     updateCashEntry: (cashEntry) => {
       const state = get();
