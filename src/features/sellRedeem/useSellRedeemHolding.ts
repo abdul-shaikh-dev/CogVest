@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -38,6 +44,7 @@ export type UseSellRedeemHoldingResult = {
   errors: FieldErrors;
   fees: string;
   holding: Holding | null;
+  isSaving: boolean;
   notes: string;
   preview: SellRedeemPreview | null;
   quantity: string;
@@ -81,6 +88,10 @@ export function useSellRedeemHolding({
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
+  const savedResultRef = useRef<SaveResult | null>(null);
+  const tradeIdRef = useRef(createId("trade"));
 
   const holdings = useMemo(
     () =>
@@ -198,9 +209,23 @@ export function useSellRedeemHolding({
     quantity: errors.quantity ?? quantityValidationMessage,
   };
   const canSave =
-    Boolean(preview) && Object.keys(validate()).length === 0;
+    Boolean(preview) &&
+    Object.keys(validate()).length === 0 &&
+    !isSaving &&
+    !successMessage;
 
   function save(): SaveResult {
+    if (savedResultRef.current) {
+      return savedResultRef.current;
+    }
+
+    if (isSavingRef.current) {
+      return {
+        errors: { save: "This sale is already being saved." },
+        isValid: false,
+      };
+    }
+
     setSuccessMessage("");
     const nextErrors = validate();
 
@@ -217,36 +242,53 @@ export function useSellRedeemHolding({
       assetId,
       date: date.trim(),
       fees: feeValue || undefined,
-      id: createId("trade"),
+      id: tradeIdRef.current,
       notes: trimmedNotes || undefined,
       pricePerUnit: sellPriceValue,
       quantity: quantityValue,
       totalValue: preview.netProceeds,
       type: "sell",
     };
-    const result = store.getState().recordSaleWithProceeds({
-      cashLabel: `${holding.asset.name} sale proceeds`,
-      cashNotes:
-        trimmedNotes || `Linked to ${holding.asset.name} sell / redeem`,
-      trade,
-    });
+    isSavingRef.current = true;
+    setIsSaving(true);
 
-    if (!result.isValid) {
+    try {
+      const result = store.getState().recordSaleWithProceeds({
+        cashLabel: `${holding.asset.name} sale proceeds`,
+        cashNotes:
+          trimmedNotes || `Linked to ${holding.asset.name} sell / redeem`,
+        trade,
+      });
+
+      if (!result.isValid) {
+        const saveErrors = {
+          save: "This sale could not be saved safely. Review it and try again.",
+        };
+        setErrors(saveErrors);
+        return { errors: saveErrors, isValid: false };
+      }
+
+      const saveResult: SaveResult = {
+        cashEntry: result.cashEntry,
+        isValid: true,
+        trade,
+      };
+
+      savedResultRef.current = saveResult;
+      setErrors({});
+      setSuccessMessage("Sell / redeem recorded.");
+
+      return saveResult;
+    } catch {
       const saveErrors = {
         save: "This sale could not be saved safely. Review it and try again.",
       };
       setErrors(saveErrors);
       return { errors: saveErrors, isValid: false };
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
-
-    setErrors({});
-    setSuccessMessage("Sell / redeem recorded.");
-
-    return {
-      cashEntry: result.cashEntry,
-      isValid: true,
-      trade,
-    };
   }
 
   return {
@@ -256,6 +298,7 @@ export function useSellRedeemHolding({
     errors: displayErrors,
     fees,
     holding,
+    isSaving,
     notes,
     preview,
     quantity,

@@ -73,6 +73,7 @@ export function AddOpeningPositionForm({
     instrumentType,
     instrumentTypeConfidence,
     isLookupSearching,
+    isSaving,
     lookupQuery,
     lookupResults,
     lookupStatus,
@@ -677,13 +678,20 @@ export function AddOpeningPositionForm({
         ) : null}
         {currentPhase === "review" ? (
           <>
+            {errors.save ? (
+              <AppText selectable style={styles.errorText} variant="caption">
+                {errors.save}
+              </AppText>
+            ) : null}
             <AppButton
-              disabled={!reviewOpeningPosition}
+              accessibilityState={{ busy: isSaving, disabled: isSaving }}
+              disabled={!reviewOpeningPosition || isSaving}
               onPress={handleConfirm}
               testID="save-holding-button"
-              title="Save Holding"
+              title={isSaving ? "Saving..." : "Save Holding"}
             />
             <AppButton
+              disabled={isSaving}
               onPress={() => moveToPhase("position")}
               testID="back-button"
               title="Back"

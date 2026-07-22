@@ -1,5 +1,11 @@
 import * as Haptics from "expo-haptics";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import { getDefaultAssetMetadata } from "@/src/domain/assets";
@@ -152,6 +158,11 @@ export function useAddOpeningPosition({
   const [reviewOpeningPosition, setReviewOpeningPosition] =
     useState<OpeningPosition | undefined>(initialReviewPosition);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
+  const reviewCommandIdRef = useRef<string | undefined>(
+    initialReviewPosition?.id,
+  );
 
   const selectedAsset = useMemo(
     () => snapshot.assets.find((asset) => asset.id === selectedAssetId),
@@ -172,6 +183,7 @@ export function useAddOpeningPosition({
     setReviewAsset(undefined);
     setReviewOpeningPosition(undefined);
     setSuccessMessage("");
+    reviewCommandIdRef.current = undefined;
   }
 
   function getPhaseIndex(phase: AddHoldingPhase) {
@@ -552,29 +564,34 @@ export function useAddOpeningPosition({
 
     setErrors({});
     setReviewAsset(asset);
+    const commandId = createId("opening");
+
     setReviewOpeningPosition({
       assetId: asset.id,
       averageCostPrice: result.value.averageCostPrice,
       conviction: result.value.conviction,
       currentPrice: result.value.currentPrice,
       date: result.value.date,
-      id: createId("opening"),
+      id: commandId,
       notes: result.value.notes,
       quantity: result.value.quantity,
     });
+    reviewCommandIdRef.current = commandId;
     setCurrentPhase("review");
   }
 
   async function handleConfirm() {
-    if (!reviewAsset || !reviewOpeningPosition) {
+    if (
+      !reviewAsset ||
+      !reviewOpeningPosition ||
+      !reviewCommandIdRef.current ||
+      isSavingRef.current
+    ) {
       return;
     }
 
-    if (!selectedAsset) {
-      store.getState().addAsset(reviewAsset);
-    }
-
-    store.getState().addOpeningPosition(reviewOpeningPosition);
+    isSavingRef.current = true;
+    setIsSaving(true);
     const storedPrice = reviewOpeningPosition.currentPrice ?? 0;
     const providerQuote = selectedAsset
       ? snapshot.quoteCache[selectedAsset.id]
@@ -584,8 +601,8 @@ export function useAddOpeningPosition({
       providerQuote.currency === reviewAsset.currency &&
       providerQuote.price === storedPrice;
 
-    store.getState().upsertQuote(
-      shouldPreserveProviderQuote
+    try {
+      const quote = shouldPreserveProviderQuote
         ? {
             ...providerQuote,
             assetId: reviewAsset.id,
@@ -593,21 +610,41 @@ export function useAddOpeningPosition({
         : {
             asOf: new Date().toISOString(),
             assetId: reviewAsset.id,
-            currency: "INR",
+            currency: "INR" as const,
             price: storedPrice,
-            source: "manual",
-          },
-    );
-    try {
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
+            source: "manual" as const,
+          };
+
+      const commandResult = store.getState().recordOpeningPosition({
+        asset: reviewAsset,
+        commandId: reviewCommandIdRef.current,
+        openingPosition: reviewOpeningPosition,
+        quote,
+      });
+
+      try {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+      } catch {
+        // Saving and navigation must not depend on optional device feedback.
+      }
+      setErrors({});
+      setSuccessMessage(
+        commandResult.quoteCacheStatus === "unavailable"
+          ? "Opening position saved. Live quote will refresh later."
+          : "Opening position saved.",
       );
+      setReviewOpeningPosition(undefined);
+      onComplete?.(reviewAsset.id);
     } catch {
-      // Saving and navigation must not depend on optional device feedback.
+      setErrors({
+        save: "This holding could not be saved safely. Review it and try again.",
+      });
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
-    setSuccessMessage("Opening position saved.");
-    setReviewOpeningPosition(undefined);
-    onComplete?.(reviewAsset.id);
   }
 
   return {
@@ -630,6 +667,7 @@ export function useAddOpeningPosition({
     handleReview,
     instrumentType,
     instrumentTypeConfidence,
+    isSaving,
     isLookupSearching,
     lookupQuery,
     lookupResults,

@@ -24,9 +24,11 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-cash-entry-button"
     direction: DOWN
-- tapOn:
+- doubleTapOn:
     id: "save-cash-entry-button"
 - assertVisible: "Broker cash"
+- assertVisible: "₹1,000.00"
+- assertNotVisible: "₹2,000.00"
 - runScript:
     file: scripts/current-local-date.js
 - assertVisible: "${output.currentLocalDate}"

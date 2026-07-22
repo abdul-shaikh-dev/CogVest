@@ -3,7 +3,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
-import { createPortfolioStore } from "@/src/store";
+import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
 
 function selectDate(
   getByTestId: ReturnType<typeof render>["getByTestId"],
@@ -107,6 +107,54 @@ describe("CashScreen", () => {
         }),
       ]);
     });
+  });
+
+  it("ignores rapid repeated cash save presses", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
+
+    fireEvent.changeText(getByLabelText("Amount"), "1000");
+    fireEvent.changeText(getByLabelText("Label"), "One deposit");
+    fireEvent.press(getByTestId("save-cash-entry-button"));
+    fireEvent.press(getByTestId("save-cash-entry-button"));
+
+    await waitFor(() => {
+      expect(store.getState().cashEntries).toHaveLength(1);
+    });
+    expect(store.getState().cashEntries[0]).toMatchObject({
+      amount: 1000,
+      label: "One deposit",
+    });
+  });
+
+  it("keeps the form available and reports a cash persistence failure", async () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const originalSetItem = storage.setItem;
+    const { getByLabelText, getByTestId, getByText } = render(
+      <CashScreen store={store} />,
+    );
+
+    storage.setItem = (key, value) => {
+      if (key === portfolioStorageKey) {
+        throw new Error("simulated cash persistence failure");
+      }
+
+      originalSetItem(key, value);
+    };
+    fireEvent.changeText(getByLabelText("Amount"), "1000");
+    fireEvent.changeText(getByLabelText("Label"), "Retry deposit");
+    fireEvent.press(getByTestId("save-cash-entry-button"));
+
+    await waitFor(() => {
+      expect(
+        getByText(
+          "This cash entry could not be saved safely. Review it and try again.",
+        ),
+      ).toBeTruthy();
+    });
+    expect(store.getState().cashEntries).toEqual([]);
+    expect(getByLabelText("Amount")).toHaveProp("value", "1000");
   });
 
   it("shows invested as derived evidence without exposing a manual Invest action", () => {

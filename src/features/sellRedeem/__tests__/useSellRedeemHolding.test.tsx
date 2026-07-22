@@ -85,6 +85,26 @@ describe("useSellRedeemHolding", () => {
     expect(result.current.successMessage).toBe("Sell / redeem recorded.");
   });
 
+  it("returns the completed result without duplicating a repeated sale", () => {
+    const store = seedStore();
+    const { result } = renderHook(() =>
+      useSellRedeemHolding({ assetId: hdfc.id, store }),
+    );
+    let firstResult: ReturnType<typeof result.current.save> | undefined;
+    let secondResult: ReturnType<typeof result.current.save> | undefined;
+
+    act(() => result.current.setQuantity("5"));
+    act(() => result.current.setSellPrice("1700"));
+    act(() => {
+      firstResult = result.current.save();
+      secondResult = result.current.save();
+    });
+
+    expect(firstResult).toEqual(secondResult);
+    expect(store.getState().trades).toHaveLength(1);
+    expect(store.getState().cashEntries).toHaveLength(1);
+  });
+
   it("rejects selling more than available units", () => {
     const store = seedStore();
     const { result } = renderHook(() =>

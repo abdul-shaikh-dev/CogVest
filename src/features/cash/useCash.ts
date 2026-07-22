@@ -24,6 +24,7 @@ type UseCashInput = {
 type AddCashEntryInput = {
   amount: number;
   date: string;
+  id?: string;
   label: string;
   notes?: string;
   purpose: CashEntryPurpose;
@@ -67,7 +68,7 @@ export function useCash({
   function addEntry(input: AddCashEntryInput) {
     const entry: CashEntry = {
       ...input,
-      id: createId("cash"),
+      id: input.id ?? createId("cash"),
       notes: input.notes?.trim() || undefined,
     };
 

@@ -74,6 +74,9 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   recordFundedBuy: (
     input: LinkedTradeCommandInput,
   ) => LinkedTradeCommandResult;
+  recordOpeningPosition: (
+    input: OpeningPositionCommandInput,
+  ) => OpeningPositionCommandResult;
   recordSaleWithProceeds: (
     input: LinkedTradeCommandInput,
   ) => LinkedTradeCommandResult;
@@ -111,6 +114,21 @@ export type LinkedTradeCommandResult =
       requiredCash?: number;
       requiredUnits?: number;
     };
+
+export type OpeningPositionCommandInput = {
+  asset: Asset;
+  commandId: string;
+  openingPosition: OpeningPosition;
+  quote?: Quote;
+};
+
+export type OpeningPositionCommandResult = {
+  asset: Asset;
+  openingPosition: OpeningPosition;
+  quote?: Quote;
+  quoteCacheStatus: "cached" | "notRequested" | "unavailable";
+  status: "alreadyApplied" | "applied";
+};
 
 type CreatePortfolioStoreOptions = {
   migratePortfolioSnapshot?: (
@@ -476,36 +494,81 @@ export function createPortfolioStore({
   return createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
     addAsset: (asset) => {
+      const state = get();
+
+      if (state.assets.some((currentAsset) => currentAsset.id === asset.id)) {
+        return;
+      }
+
       const currencyIssue = getV1AssetCurrencyIssue(asset);
 
       if (currencyIssue) {
         throw new Error(currencyIssue);
       }
 
-      set((state) => ({
-        assets: [...state.assets, normalizeAssetMetadata(asset)],
-      }));
-      persistPortfolio(storage, get());
+      const assets = [...state.assets, normalizeAssetMetadata(asset)];
+
+      persistPortfolioTransition(storage, state, { assets });
+      set({ assets });
     },
     addCashEntry: (cashEntry) => {
-      set((state) => ({ cashEntries: [...state.cashEntries, cashEntry] }));
-      persistPortfolio(storage, get());
+      const state = get();
+
+      if (state.cashEntries.some((entry) => entry.id === cashEntry.id)) {
+        return;
+      }
+
+      const cashEntries = [...state.cashEntries, cashEntry];
+
+      persistPortfolioTransition(storage, state, { cashEntries });
+      set({ cashEntries });
     },
     addMonthlySnapshot: (monthlySnapshot) => {
-      set((state) => ({
-        monthlySnapshots: [...state.monthlySnapshots, monthlySnapshot],
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+
+      if (
+        state.monthlySnapshots.some(
+          (snapshot) => snapshot.id === monthlySnapshot.id,
+        )
+      ) {
+        return;
+      }
+
+      const monthlySnapshots = [
+        ...state.monthlySnapshots,
+        monthlySnapshot,
+      ];
+
+      persistPortfolioTransition(storage, state, { monthlySnapshots });
+      set({ monthlySnapshots });
     },
     addOpeningPosition: (openingPosition) => {
-      set((state) => ({
-        openingPositions: [...state.openingPositions, openingPosition],
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+
+      if (
+        state.openingPositions.some(
+          (position) => position.id === openingPosition.id,
+        )
+      ) {
+        return;
+      }
+
+      const openingPositions = [...state.openingPositions, openingPosition];
+
+      persistPortfolioTransition(storage, state, { openingPositions });
+      set({ openingPositions });
     },
     addTrade: (trade) => {
-      set((state) => ({ trades: [...state.trades, trade] }));
-      persistPortfolio(storage, get());
+      const state = get();
+
+      if (state.trades.some((currentTrade) => currentTrade.id === trade.id)) {
+        return;
+      }
+
+      const trades = [...state.trades, trade];
+
+      persistPortfolioTransition(storage, state, { trades });
+      set({ trades });
     },
     clearQuoteCache: () => {
       set({ quoteCache: {} });
@@ -586,6 +649,100 @@ export function createPortfolioStore({
       set({ assets, cashEntries, trades });
 
       return { cashEntry, isValid: true, trade: input.trade };
+    },
+    recordOpeningPosition: (input) => {
+      const state = get();
+
+      if (
+        input.commandId.trim().length === 0 ||
+        input.commandId !== input.openingPosition.id
+      ) {
+        throw new Error("Opening position command ID is required.");
+      }
+
+      const existingPosition = state.openingPositions.find(
+        (position) => position.id === input.openingPosition.id,
+      );
+
+      if (
+        existingPosition
+      ) {
+        return {
+          asset:
+            state.assets.find((asset) => asset.id === input.asset.id) ??
+            input.asset,
+          openingPosition: existingPosition ?? input.openingPosition,
+          quote: state.quoteCache[input.asset.id] ?? input.quote,
+          quoteCacheStatus: state.quoteCache[input.asset.id]
+            ? "cached"
+            : input.quote
+              ? "unavailable"
+              : "notRequested",
+          status: "alreadyApplied",
+        };
+      }
+
+      if (input.openingPosition.assetId !== input.asset.id) {
+        throw new Error("Opening position must reference the command asset.");
+      }
+
+      if (input.quote && input.quote.assetId !== input.asset.id) {
+        throw new Error("Opening position quote must reference the command asset.");
+      }
+
+      const normalizedAsset = normalizeAssetMetadata(input.asset);
+      const currencyIssue = getV1AssetCurrencyIssue(normalizedAsset);
+      const quoteCurrencyIssue = input.quote
+        ? getV1QuoteCurrencyIssue(normalizedAsset, input.quote)
+        : undefined;
+
+      if (currencyIssue || quoteCurrencyIssue) {
+        throw new Error(currencyIssue ?? quoteCurrencyIssue);
+      }
+
+      const assets = state.assets.some(
+        (asset) => asset.id === normalizedAsset.id,
+      )
+        ? state.assets
+        : [...state.assets, normalizedAsset];
+      const openingPositions = [
+        ...state.openingPositions,
+        input.openingPosition,
+      ];
+      persistPortfolioTransition(storage, state, {
+        assets,
+        openingPositions,
+      });
+      set({ assets, openingPositions });
+
+      let cachedQuote: Quote | undefined;
+
+      if (input.quote) {
+        const quoteCache = {
+          ...state.quoteCache,
+          [input.asset.id]: input.quote,
+        };
+
+        try {
+          persistQuoteCache(storage, quoteCache);
+          set({ quoteCache });
+          cachedQuote = input.quote;
+        } catch {
+          // Current price is durable on the opening position; quote cache can refresh later.
+        }
+      }
+
+      return {
+        asset: normalizedAsset,
+        openingPosition: input.openingPosition,
+        quote: cachedQuote,
+        quoteCacheStatus: input.quote
+          ? cachedQuote
+            ? "cached"
+            : "unavailable"
+          : "notRequested",
+        status: "applied",
+      };
     },
     recordSaleWithProceeds: (input) => {
       const state = get();
