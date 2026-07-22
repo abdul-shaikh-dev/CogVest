@@ -54,8 +54,9 @@ minimum verification is not complete.
 
 ### Current Tracking Gap
 
-No focused open GitHub issue currently owns H5, H10, M1-M9, or AH3-AH9 and
-AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
+Issue #190 owns the opening-position slice of H10. No focused open GitHub issue
+currently owns H5, the remaining trade/asset slice of H10, M1-M9, or AH3-AH9
+and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
 `Remaining Remediation Order`.
@@ -448,13 +449,14 @@ future-date policy. Current-state selectors must ignore records not yet effectiv
 
 **Status (2026-07-22): Partial.** Monthly snapshots now have a review/correction
 surface. Issue #188 adds persistence-safe edit/delete behavior for manual Cash
-Ledger entries while keeping trade-linked cash movements read-only. Opening
-positions, trades, and assets still lack complete user-facing correction flows,
-and asset-removal cascade behavior remains undefined.
+Ledger entries while keeping trade-linked cash movements read-only. Issue #190
+adds persistence-safe edit/delete behavior for opening positions and rebuilds
+affected automatic monthly history while preserving manual snapshots. Trades and
+assets still lack complete user-facing correction flows, and asset-removal
+cascade behavior remains undefined.
 
-The store exposes update/remove methods, but the app has no user-facing edit or
-delete flow for cash entries, opening positions, or trades. Removing an asset
-also leaves its trades, positions, and quote caches orphaned.
+The remaining gap is user-facing correction for trades and assets. Removing an
+asset also leaves its trades, positions, and quote caches orphaned.
 
 **Evidence:**
 
@@ -462,12 +464,14 @@ also leaves its trades, positions, and quote caches orphaned.
   failure coverage in `src/store/__tests__/portfolioStore.test.ts`.
 - `src/features/cash/ReviewCashEntryScreen.tsx` and
   `src/features/cash/__tests__/ReviewCashEntryScreen.test.tsx`.
-- No corresponding correction actions are exposed in `src/features/holdings`
-  or the sell/redeem UI.
+- `src/features/openingPositions/ReviewOpeningPositionScreen.tsx`, the atomic
+  opening-position commands in `src/store/index.ts`, and the
+  `e2e/opening-position-correction.yaml` stored-outcome journey.
+- No corresponding trade correction action is exposed in the sell/redeem UI.
 
-**Required direction:** Add atomic correction for opening positions and trades,
-keep linked trades and cash movements synchronized, and define confirmed cascade
-behavior for asset removal and affected snapshot history.
+**Required direction:** Add atomic correction for trades, keep linked trades and
+cash movements synchronized, and define confirmed cascade behavior for asset
+removal and affected snapshot history.
 
 ## Medium-Severity Findings
 
@@ -1000,9 +1004,9 @@ issues.
 
 ### Remaining Remediation Order
 
-1. **Remaining correction and cascade UX (H10):** build on #188 with
-   opening-position/trade correction, linked-cash synchronization, asset identity
-   correction, and confirmed cascade behavior.
+1. **Remaining correction and cascade UX (H10):** complete #190 for opening
+   positions, then add trade correction with linked-cash synchronization, asset
+   identity correction, and confirmed cascade behavior.
 2. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
 3. **Privacy contract (M5):** decide backup and at-rest encryption behavior,

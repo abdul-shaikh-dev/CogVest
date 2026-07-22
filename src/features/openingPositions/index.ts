@@ -1,4 +1,5 @@
 export { AddOpeningPositionForm } from "./AddOpeningPositionForm";
+export { ReviewOpeningPositionScreen } from "./ReviewOpeningPositionScreen";
 export {
   validateOpeningPositionForm,
   type OpeningPositionFormValues,

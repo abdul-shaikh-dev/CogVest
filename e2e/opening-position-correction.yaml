@@ -1,0 +1,78 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///add-holding"
+- assertVisible:
+    id: "add-holding-phase-asset"
+- tapOn:
+    id: "asset-input"
+- inputText: "Reliance Industries"
+- hideKeyboard
+- tapOn:
+    id: "symbol-input"
+- inputText: "RELIANCE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "RELIANCE.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "90"
+- tapOn:
+    id: "price-input"
+- inputText: "100"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holdings-screen"
+- tapOn:
+    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      id: "review-opening-position-.*"
+    direction: DOWN
+- tapOn:
+    id: "review-opening-position-.*"
+- assertVisible:
+    id: "review-opening-position-screen"
+- tapOn:
+    id: "opening-correction-quantity-input"
+- eraseText: 20
+- inputText: "3"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-opening-correction-button"
+    direction: DOWN
+- doubleTapOn:
+    id: "save-opening-correction-button"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Portfolio history updated."
+- tapOn:
+    id: "holding-row-.*"
+- assertVisible:
+    id: "holding-quantity-.*"
+- assertVisible: "3"
+- tapOn:
+    id: "tab-dashboard"
+- assertVisible:
+    id: "dashboard-screen"
+- assertVisible: "₹300"

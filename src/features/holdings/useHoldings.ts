@@ -15,7 +15,7 @@ import {
   type RefreshQuotesInput,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { Holding } from "@/src/types";
+import type { Holding, OpeningPosition } from "@/src/types";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -37,6 +37,7 @@ export type UseHoldingsResult = {
   latestQuoteAsOf?: string;
   manualFallbackCount: number;
   maskWealthValues: boolean;
+  openingPositions: OpeningPosition[];
   refresh: () => Promise<QuoteRefreshResult>;
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
@@ -128,6 +129,7 @@ export function useHoldings({
     latestQuoteAsOf: getLatestQuoteAsOf(holdings),
     manualFallbackCount: countManualFallbacks(holdings),
     maskWealthValues: snapshot.preferences.maskWealthValues,
+    openingPositions: snapshot.openingPositions,
     refresh,
     rollupRows,
     rollupTotals,
