@@ -224,6 +224,41 @@ describe("CashScreen", () => {
     expect(getByText("+₹8,400.00")).toBeTruthy();
   });
 
+  it("opens manual entries for correction and keeps linked entries read-only", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCorrectEntry = jest.fn();
+    store.getState().addCashEntry({
+      amount: 1000,
+      date: "2026-05-01",
+      id: "cash-manual",
+      label: "Broker cash",
+      purpose: "capitalContribution",
+      type: "addition",
+    });
+    store.getState().addCashEntry({
+      amount: 500,
+      date: "2026-05-02",
+      id: "cash-linked",
+      label: "Investment purchase",
+      linkedTradeId: "trade-buy",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    });
+
+    const { getByLabelText, getByText } = render(
+      <CashScreen onCorrectEntry={onCorrectEntry} store={store} />,
+    );
+
+    expect(getByText("Tap to review or correct")).toBeTruthy();
+    expect(
+      getByText("Managed with its investment transaction"),
+    ).toBeTruthy();
+    fireEvent.press(getByLabelText("Review Broker cash"));
+
+    expect(onCorrectEntry).toHaveBeenCalledWith("cash-manual");
+    expect(() => getByLabelText("Review Investment purchase")).toThrow();
+  });
+
   it("shows income-based metrics as unavailable for unclassified legacy additions", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({

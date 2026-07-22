@@ -12,7 +12,7 @@ import { colors, interaction, radii, spacing } from "@/src/theme";
 import { AppText } from "./AppText";
 import { androidRipple, getPressedStateStyle } from "./pressableStyles";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "destructive" | "primary" | "secondary" | "ghost";
 
 type AppButtonProps = Omit<PressableProps, "children" | "style"> & {
   style?: StyleProp<ViewStyle>;
@@ -41,7 +41,10 @@ export function AppButton({
 }: AppButtonProps) {
   const isDisabled = Boolean(disabled);
   const resolvedTextColor =
-    textColor ?? (variant === "primary" ? "inverse" : "primary");
+    textColor ??
+    (variant === "primary" || variant === "destructive"
+      ? "inverse"
+      : "primary");
 
   return (
     <Pressable
@@ -83,5 +86,8 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: colors.surface.elevated,
+  },
+  destructive: {
+    backgroundColor: colors.loss,
   },
 });

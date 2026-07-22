@@ -1,13 +1,21 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, MaskedValue, PremiumCard } from "@/src/components/common";
+import {
+  AppText,
+  MaskedValue,
+  PremiumCard,
+  androidRipple,
+  getPressedStateStyle,
+} from "@/src/components/common";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { colors, spacing } from "@/src/theme";
 import type { CashEntry } from "@/src/types";
 
 type CashEntryRowProps = {
+  correctionHint?: string;
   entry: CashEntry;
   masked?: boolean;
+  onPress?: () => void;
 };
 
 function formatCashAmount(entry: CashEntry) {
@@ -35,11 +43,15 @@ function getCashEntryMovement(entry: CashEntry) {
   }
 }
 
-export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
+export function CashEntryRow({
+  correctionHint,
+  entry,
+  masked = false,
+  onPress,
+}: CashEntryRowProps) {
   const isAddition = entry.type === "addition";
-
-  return (
-    <PremiumCard style={styles.row}>
+  const content = (
+    <PremiumCard style={styles.row} testID={`cash-entry-row-${entry.id}`}>
       <View style={styles.details}>
         <AppText weight="bold">{entry.label}</AppText>
         <AppText color="secondary" variant="caption">
@@ -53,6 +65,11 @@ export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
             {entry.notes}
           </AppText>
         ) : null}
+        {correctionHint ? (
+          <AppText color="secondary" variant="caption" weight="medium">
+            {correctionHint}
+          </AppText>
+        ) : null}
       </View>
       <MaskedValue
         masked={masked}
@@ -61,6 +78,23 @@ export function CashEntryRow({ entry, masked = false }: CashEntryRowProps) {
         weight="bold"
       />
     </PremiumCard>
+  );
+
+  if (!onPress) {
+    return content;
+  }
+
+  return (
+    <Pressable
+      accessibilityHint="Opens this manual cash entry for review and correction"
+      accessibilityLabel={`Review ${entry.label}`}
+      accessibilityRole="button"
+      android_ripple={androidRipple()}
+      onPress={onPress}
+      style={({ pressed }) => getPressedStateStyle({ pressed })}
+    >
+      {content}
+    </Pressable>
   );
 }
 

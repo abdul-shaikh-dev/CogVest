@@ -447,9 +447,10 @@ future-date policy. Current-state selectors must ignore records not yet effectiv
 ### H10. Users cannot practically correct most financial records
 
 **Status (2026-07-22): Partial.** Monthly snapshots now have a review/correction
-surface. Cash entries, opening positions, trades, and assets still lack complete
-user-facing correction flows, and asset-removal cascade behavior remains
-undefined.
+surface. Issue #188 adds persistence-safe edit/delete behavior for manual Cash
+Ledger entries while keeping trade-linked cash movements read-only. Opening
+positions, trades, and assets still lack complete user-facing correction flows,
+and asset-removal cascade behavior remains undefined.
 
 The store exposes update/remove methods, but the app has no user-facing edit or
 delete flow for cash entries, opening positions, or trades. Removing an asset
@@ -457,12 +458,16 @@ also leaves its trades, positions, and quote caches orphaned.
 
 **Evidence:**
 
-- `src/store/index.ts:214-248`.
-- No corresponding correction actions are exposed in `src/features/cash`,
-  `src/features/holdings`, or the sell/redeem UI.
+- `src/store/index.ts` manual cash correction/deletion commands and persistence
+  failure coverage in `src/store/__tests__/portfolioStore.test.ts`.
+- `src/features/cash/ReviewCashEntryScreen.tsx` and
+  `src/features/cash/__tests__/ReviewCashEntryScreen.test.tsx`.
+- No corresponding correction actions are exposed in `src/features/holdings`
+  or the sell/redeem UI.
 
-**Required direction:** Add correction flows with review/confirmation and define
-cascade behavior for asset removal.
+**Required direction:** Add atomic correction for opening positions and trades,
+keep linked trades and cash movements synchronized, and define confirmed cascade
+behavior for asset removal and affected snapshot history.
 
 ## Medium-Severity Findings
 
@@ -995,8 +1000,9 @@ issues.
 
 ### Remaining Remediation Order
 
-1. **Correction and cascade UX (H10):** edit/delete flows after write and date
-   semantics are safe.
+1. **Remaining correction and cascade UX (H10):** build on #188 with
+   opening-position/trade correction, linked-cash synchronization, asset identity
+   correction, and confirmed cascade behavior.
 2. **Generated income semantics (H5):** derive typed income or persist unknown;
    never encode missing income as known zero.
 3. **Privacy contract (M5):** decide backup and at-rest encryption behavior,

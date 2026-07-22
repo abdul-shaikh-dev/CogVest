@@ -54,6 +54,23 @@ describe("common UI primitives", () => {
     ).toEqual({ opacity: interaction.disabledOpacity });
   });
 
+  it("renders destructive actions with the semantic loss color", () => {
+    const { getByTestId, getByText } = render(
+      <AppButton
+        testID="delete-button"
+        title="Delete entry"
+        variant="destructive"
+      />,
+    );
+
+    expect(getByTestId("delete-button")).toHaveStyle({
+      backgroundColor: colors.loss,
+    });
+    expect(getByText("Delete entry")).toHaveStyle({
+      color: colors.text.inverse,
+    });
+  });
+
   it("exposes Android ripple and 48dp touch target helpers", () => {
     expect(androidRipple()).toEqual({
       borderless: false,

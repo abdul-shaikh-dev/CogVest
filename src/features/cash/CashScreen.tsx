@@ -16,25 +16,26 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
-import {
-  formatLocalCalendarDate,
-  isFutureCalendarDate,
-  parseCalendarDate,
-} from "@/src/domain/dates";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { CashEntryPurpose, CashEntryType } from "@/src/types";
 
+import {
+  type CashEntryFormErrors,
+  isLinkedCashEntry,
+  validateCashEntryForm,
+} from "./cashEntryForm";
 import { useCash } from "./useCash";
 
 type CashScreenProps = {
   now?: Date;
+  onCorrectEntry?: (entryId: string) => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
-type FieldErrors = Partial<Record<"amount" | "date" | "label" | "save", string>>;
 type CashEntryMode = CashEntryType;
 type AdditionPurpose = Extract<
   CashEntryPurpose,
@@ -45,45 +46,6 @@ const additionPurposes: { label: string; value: AdditionPurpose }[] = [
   { label: "Contribution", value: "capitalContribution" },
   { label: "Income", value: "income" },
 ];
-
-function validateCashEntry({
-  amount,
-  date,
-  label,
-  now,
-}: {
-  amount: string;
-  date: string;
-  label: string;
-  now: Date;
-}) {
-  const errors: FieldErrors = {};
-  const trimmedAmount = amount.trim();
-  const parsedAmount = trimmedAmount.length > 0 ? Number(trimmedAmount) : Number.NaN;
-
-  if (!Number.isFinite(parsedAmount)) {
-    errors.amount = "Amount must be a valid number.";
-  } else if (parsedAmount <= 0) {
-    errors.amount = "Amount must be greater than zero.";
-  }
-
-  if (label.trim().length === 0) {
-    errors.label = "Label is required.";
-  }
-
-  if (date.trim().length === 0) {
-    errors.date = "Date is required.";
-  } else if (!parseCalendarDate(date)) {
-    errors.date = "Date must be valid.";
-  } else if (isFutureCalendarDate(date, now)) {
-    errors.date = "Date cannot be in the future.";
-  }
-
-  return {
-    errors,
-    parsedAmount,
-  };
-}
 
 function getCashEntryModeLabel(mode: CashEntryMode) {
   return mode === "addition" ? "Deposit" : "Withdraw";
@@ -117,6 +79,7 @@ function formatInvestmentRate(investmentRate: number | null) {
 
 export function CashScreen({
   now = new Date(),
+  onCorrectEntry,
   store = getPortfolioStore(),
 }: CashScreenProps) {
   const {
@@ -135,7 +98,7 @@ export function CashScreen({
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(() => formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [errors, setErrors] = useState<CashEntryFormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
   const entryIdRef = useRef(createId("cash"));
@@ -154,7 +117,7 @@ export function CashScreen({
       return;
     }
 
-    const result = validateCashEntry({
+    const result = validateCashEntryForm({
       amount,
       date,
       label,
@@ -400,9 +363,21 @@ export function CashScreen({
             <SectionHeader title="Recent cash ledger" />
             {entries.map((entry) => (
               <CashEntryRow
+                correctionHint={
+                  isLinkedCashEntry(entry)
+                    ? "Managed with its investment transaction"
+                    : onCorrectEntry
+                      ? "Tap to review or correct"
+                      : undefined
+                }
                 entry={entry}
                 key={entry.id}
                 masked={maskWealthValues}
+                onPress={
+                  !isLinkedCashEntry(entry) && onCorrectEntry
+                    ? () => onCorrectEntry(entry.id)
+                    : undefined
+                }
               />
             ))}
           </View>

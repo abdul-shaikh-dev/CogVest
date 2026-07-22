@@ -2,6 +2,10 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { normalizeAssetMetadata } from "@/src/domain/assets";
 import {
+  getCalendarDatePart,
+  isFutureCalendarDate,
+} from "@/src/domain/dates";
+import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
 } from "@/src/domain/portfolioCurrency";
@@ -64,6 +68,12 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
   clearQuoteCache: () => void;
+  correctManualCashEntry: (
+    cashEntry: CashEntry,
+  ) => ManualCashCorrectionResult;
+  deleteManualCashEntry: (
+    cashEntryId: string,
+  ) => ManualCashDeletionResult;
   historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
@@ -121,6 +131,20 @@ export type OpeningPositionCommandInput = {
   openingPosition: OpeningPosition;
   quote?: Quote;
 };
+
+export type ManualCashCorrectionResult =
+  | { entry: CashEntry; status: "applied" }
+  | {
+      reason: "invalidEntry" | "linkedEntry" | "notFound";
+      status: "rejected";
+    };
+
+export type ManualCashDeletionResult =
+  | { entry: CashEntry; status: "applied" }
+  | {
+      reason: "linkedEntry" | "notFound";
+      status: "rejected";
+    };
 
 export type OpeningPositionCommandResult = {
   asset: Asset;
@@ -399,6 +423,35 @@ function cashBalance(cashEntries: CashEntry[]) {
   );
 }
 
+function isLinkedCashEntry(entry: CashEntry) {
+  return (
+    Boolean(entry.linkedTradeId) ||
+    entry.purpose === "purchaseFunding" ||
+    entry.purpose === "saleProceeds"
+  );
+}
+
+function isValidManualCashEntry(entry: CashEntry, now = new Date()) {
+  const hasValidType = entry.type === "addition" || entry.type === "withdrawal";
+  const hasValidPurpose =
+    entry.type === "withdrawal"
+      ? entry.purpose === "withdrawal"
+      : ["capitalContribution", "income", "legacyUncategorized"].includes(
+          entry.purpose,
+        );
+
+  return (
+    !isLinkedCashEntry(entry) &&
+    hasValidType &&
+    Number.isFinite(entry.amount) &&
+    entry.amount > 0 &&
+    Boolean(getCalendarDatePart(entry.date)) &&
+    !isFutureCalendarDate(entry.date, now) &&
+    entry.label.trim().length > 0 &&
+    hasValidPurpose
+  );
+}
+
 function linkedCashEntry(
   input: LinkedTradeCommandInput,
   purpose: "purchaseFunding" | "saleProceeds",
@@ -574,6 +627,56 @@ export function createPortfolioStore({
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
     },
+    correctManualCashEntry: (cashEntry) => {
+      const state = get();
+      const existingEntry = state.cashEntries.find(
+        (entry) => entry.id === cashEntry.id,
+      );
+
+      if (!existingEntry) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      if (isLinkedCashEntry(existingEntry) || isLinkedCashEntry(cashEntry)) {
+        return { reason: "linkedEntry", status: "rejected" };
+      }
+
+      if (!isValidManualCashEntry(cashEntry, now())) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+
+      const cashEntries = state.cashEntries.map((entry) =>
+        entry.id === cashEntry.id ? cashEntry : entry,
+      );
+
+      persistPortfolioTransition(storage, state, { cashEntries });
+      set({ cashEntries });
+
+      return { entry: cashEntry, status: "applied" };
+    },
+    deleteManualCashEntry: (cashEntryId) => {
+      const state = get();
+      const existingEntry = state.cashEntries.find(
+        (entry) => entry.id === cashEntryId,
+      );
+
+      if (!existingEntry) {
+        return { reason: "notFound", status: "rejected" };
+      }
+
+      if (isLinkedCashEntry(existingEntry)) {
+        return { reason: "linkedEntry", status: "rejected" };
+      }
+
+      const cashEntries = state.cashEntries.filter(
+        (entry) => entry.id !== cashEntryId,
+      );
+
+      persistPortfolioTransition(storage, state, { cashEntries });
+      set({ cashEntries });
+
+      return { entry: existingEntry, status: "applied" };
+    },
     historicalQuoteCache,
     quoteCache,
     removeAsset: (assetId) => {
@@ -583,12 +686,23 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     removeCashEntry: (cashEntryId) => {
-      set((state) => ({
-        cashEntries: state.cashEntries.filter(
-          (cashEntry) => cashEntry.id !== cashEntryId,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+      const existingEntry = state.cashEntries.find(
+        (cashEntry) => cashEntry.id === cashEntryId,
+      );
+
+      if (existingEntry && isLinkedCashEntry(existingEntry)) {
+        throw new Error(
+          "Linked cash entries must be changed with their investment transaction.",
+        );
+      }
+
+      const cashEntries = state.cashEntries.filter(
+        (cashEntry) => cashEntry.id !== cashEntryId,
+      );
+
+      persistPortfolioTransition(storage, state, { cashEntries });
+      set({ cashEntries });
     },
     removeMonthlySnapshot: (monthlySnapshotId) => {
       set((state) => ({
@@ -834,12 +948,26 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     updateCashEntry: (cashEntry) => {
-      set((state) => ({
-        cashEntries: state.cashEntries.map((currentEntry) =>
-          currentEntry.id === cashEntry.id ? cashEntry : currentEntry,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+      const existingEntry = state.cashEntries.find(
+        (currentEntry) => currentEntry.id === cashEntry.id,
+      );
+
+      if (
+        (existingEntry && isLinkedCashEntry(existingEntry)) ||
+        isLinkedCashEntry(cashEntry)
+      ) {
+        throw new Error(
+          "Linked cash entries must be changed with their investment transaction.",
+        );
+      }
+
+      const cashEntries = state.cashEntries.map((currentEntry) =>
+        currentEntry.id === cashEntry.id ? cashEntry : currentEntry,
+      );
+
+      persistPortfolioTransition(storage, state, { cashEntries });
+      set({ cashEntries });
     },
     updateMonthlySnapshot: (monthlySnapshot) => {
       set((state) => ({

@@ -369,20 +369,18 @@ export const visualQaAssetLookupResults: AssetLookupResult[] = [
   },
 ];
 
-export function resetPortfolioStoreForVisualQa(
+function resetPortfolioStoreForVisualQa(
   store: StoreApi<PortfolioStoreState>,
 ) {
   const state = store.getState();
 
-  state.trades.forEach((trade) => state.removeTrade(trade.id));
-  state.openingPositions.forEach((position) =>
-    state.removeOpeningPosition(position.id),
-  );
-  state.assets.forEach((asset) => state.removeAsset(asset.id));
-  state.cashEntries.forEach((entry) => state.removeCashEntry(entry.id));
-  state.monthlySnapshots.forEach((snapshot) =>
-    state.removeMonthlySnapshot(snapshot.id),
-  );
+  store.setState({
+    assets: [],
+    cashEntries: [],
+    monthlySnapshots: [],
+    openingPositions: [],
+    trades: [],
+  });
   state.clearQuoteCache();
   state.updatePreferences({
     hasCompletedOnboarding: true,
