@@ -32,6 +32,10 @@ import {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Holding } from "@/src/types";
+import {
+  getCalendarDatePart,
+  isEffectiveCalendarDate,
+} from "@/src/domain/dates";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -116,11 +120,13 @@ function getLatestQuote(holdings: DashboardHolding[]) {
 }
 
 function isSameMonth(isoDate: string, now: Date) {
-  const date = new Date(isoDate);
+  const calendarDate = getCalendarDatePart(isoDate);
 
   return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
+    calendarDate !== null &&
+    isEffectiveCalendarDate(calendarDate, now) &&
+    calendarDate.slice(0, 7) ===
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   );
 }
 
@@ -192,10 +198,11 @@ export function useDashboard({
       openingPositions: snapshot.openingPositions,
       quoteCache: snapshot.quoteCache,
       trades: snapshot.trades,
+      now,
     }),
     snapshot.quoteCache,
   );
-  const cashBalance = calculateCashBalance(snapshot.cashEntries);
+  const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
   const rollupTotals = calculatePortfolioRollupTotals(rollupRows, cashBalance);
   const latestQuote = getLatestQuote(holdings);
@@ -256,6 +263,6 @@ export function useDashboard({
     rollupTotals,
     sectorAllocation: calculateSectorAllocation(holdings),
     toggleMaskWealthValues,
-    totalValue: calculatePortfolioTotal(holdings, snapshot.cashEntries),
+    totalValue: calculatePortfolioTotal(holdings, snapshot.cashEntries, now),
   };
 }

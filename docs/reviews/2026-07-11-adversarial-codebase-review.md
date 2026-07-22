@@ -48,14 +48,14 @@ minimum verification is not complete.
 | Area | Remediated | Partial | Open |
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
-| High | H1, H2, H3, H4, H6, H7 | H5, H10 | H8, H9 |
+| High | H1, H2, H3, H4, H6, H7, H9 | H5, H10 | H8 |
 | Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
-| Add Holding | AH1, AH2 | AH10, AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH11, AH12 |
+| Add Holding | AH1, AH2, AH11 | AH10, AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Tracking Gap
 
-No focused open GitHub issue currently owns H5, H8-H10, M1-M9, or
-AH3-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
+No focused open GitHub issue currently owns H5, H8, H10, M1-M9, or
+AH3-AH10 and AH12-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
 provide the finding-specific acceptance criteria in this report. Before more
 implementation, create focused issues in the priority order documented under
 `Remaining Remediation Order`.
@@ -422,8 +422,9 @@ persist duplicate assets, positions, trades, or cash entries.
 
 ### H9. Future-dated and impossible dates can affect current totals
 
-**Status (2026-07-22): Open.** Strict local-calendar validation and a shared
-effective-date policy have not been implemented.
+**Status (2026-07-22): Remediated by #184.** A shared strict calendar-date
+parser rejects impossible dates, the entry flows reject future dates, and
+current-state calculations ignore invalid or not-yet-effective records.
 
 Cash, opening positions, and sell/redeem only verify that JavaScript can parse a
 date. Future cash entries immediately alter current balance; future positions
@@ -432,9 +433,12 @@ dates such as `2026-02-30` instead of rejecting them.
 
 **Evidence:**
 
-- `src/features/cash/CashScreen.tsx:34-65`.
-- `src/features/openingPositions/openingPositionForm.ts:57-63`.
-- `src/features/sellRedeem/useSellRedeemHolding.ts:205-209`.
+- `src/domain/dates.ts`.
+- `src/domain/__tests__/dates.test.ts`.
+- `src/domain/calculations/holdings.ts` and its future-record coverage.
+- `src/features/cash/CashScreen.tsx`.
+- `src/features/openingPositions/openingPositionForm.ts`.
+- `src/features/sellRedeem/useSellRedeemHolding.ts`.
 
 **Required direction:** Use strict calendar-date parsing and apply a consistent
 future-date policy. Current-state selectors must ignore records not yet effective.
@@ -791,13 +795,19 @@ disable save during execution, and treat haptics as a non-critical side effect.
 
 ### AH11. Local date default is wrong during early IST hours
 
-**Status (2026-07-22): Open.** The default still slices a UTC ISO timestamp.
+**Status (2026-07-22): Remediated by #184.** The opening-position flow now uses
+the device-local calendar date and stores a date-only value.
 
 The default acquisition date is derived with `new Date().toISOString()`, which is
 UTC. In India between midnight and 05:29, it defaults to the previous calendar
 day.
 
-**Evidence:** `src/features/openingPositions/useAddOpeningPosition.ts:51-53`.
+**Evidence:**
+
+- `src/domain/dates.ts`.
+- `src/domain/__tests__/dates.test.ts`.
+- `src/features/openingPositions/useAddOpeningPosition.ts`.
+- `src/features/openingPositions/__tests__/useAddOpeningPosition.test.tsx`.
 
 Use a local-calendar formatter rather than slicing a UTC timestamp.
 
@@ -1103,7 +1113,7 @@ The remaining suite gaps correspond to the open and partial findings:
 
 ## Release Recommendation
 
-Do not treat the current V1 APK as a release candidate while H8, H9, and the
+Do not treat the current V1 APK as a release candidate while H8 and the
 privacy/release-contract findings remain open. H5 and H10 must be resolved or
 explicitly constrained before V1 completion. Add Holding integrity findings must
 be closed with stored-outcome evidence, not navigation-only E2E. Visual polish

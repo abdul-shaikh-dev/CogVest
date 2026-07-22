@@ -7,13 +7,19 @@ import {
   validateSellRedeemFees,
   type SellRedeemPreview,
 } from "@/src/domain/calculations";
-import { validateSellQuantity } from "@/src/domain/validators";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
+import {
+  isFutureDate,
+  isValidDateString,
+  validateSellQuantity,
+} from "@/src/domain/validators";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
 
 type UseSellRedeemHoldingInput = {
   assetId: string;
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -46,10 +52,6 @@ export type UseSellRedeemHoldingResult = {
   successMessage: string;
 };
 
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function parseNumber(value: string) {
   const trimmed = value.trim();
 
@@ -68,13 +70,14 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
 
 export function useSellRedeemHolding({
   assetId,
+  now = new Date(),
   store = getPortfolioStore(),
 }: UseSellRedeemHoldingInput): UseSellRedeemHoldingResult {
   const snapshot = usePortfolioSnapshot(store);
   const [quantity, setQuantity] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [fees, setFees] = useState("");
-  const [date, setDate] = useState(todayInputValue());
+  const [date, setDate] = useState(formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -86,6 +89,7 @@ export function useSellRedeemHolding({
         openingPositions: snapshot.openingPositions,
         quoteCache: snapshot.quoteCache,
         trades: snapshot.trades,
+        now,
       }),
     [snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades],
   );
@@ -107,6 +111,7 @@ export function useSellRedeemHolding({
       assetTrades,
       quantityValue,
       assetOpeningPositions,
+      now,
     );
 
     return sellQuantityResult.isValid ? undefined : sellQuantityResult.message;
@@ -116,6 +121,7 @@ export function useSellRedeemHolding({
     quantityValue,
     snapshot.openingPositions,
     snapshot.trades,
+    now,
   ]);
   const preview =
     holding &&
@@ -167,8 +173,10 @@ export function useSellRedeemHolding({
 
     if (date.trim().length === 0) {
       nextErrors.date = "Date is required.";
-    } else if (Number.isNaN(new Date(date).getTime())) {
+    } else if (!isValidDateString(date)) {
       nextErrors.date = "Date must be valid.";
+    } else if (isFutureDate(date, now)) {
+      nextErrors.date = "Date cannot be in the future.";
     }
 
     if (preview) {

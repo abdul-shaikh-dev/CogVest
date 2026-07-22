@@ -5,6 +5,20 @@ import { CashScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
+function selectDate(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  value: string,
+) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  fireEvent.press(getByTestId("cash-date-input"));
+  fireEvent(
+    getByTestId("cash-date-input-picker"),
+    "onChange",
+    { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
+  );
+}
+
 describe("CashScreen", () => {
   it("shows an empty cash state with zero balance", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -27,7 +41,7 @@ describe("CashScreen", () => {
 
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "Broker cash");
-    fireEvent.changeText(getByLabelText("Date"), "2026-04-20");
+    selectDate(getByTestId, "2026-04-20");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
@@ -40,7 +54,7 @@ describe("CashScreen", () => {
     fireEvent.press(getByText("Withdraw"));
     fireEvent.changeText(getByLabelText("Amount"), "250");
     fireEvent.changeText(getByLabelText("Label"), "Emergency withdrawal");
-    fireEvent.changeText(getByLabelText("Date"), "2026-04-21");
+    selectDate(getByTestId, "2026-04-21");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
@@ -80,7 +94,7 @@ describe("CashScreen", () => {
     fireEvent.press(getByTestId("cash-purpose-income"));
     fireEvent.changeText(getByLabelText("Amount"), "50000");
     fireEvent.changeText(getByLabelText("Label"), "Salary");
-    fireEvent.changeText(getByLabelText("Date"), "2026-05-01");
+    selectDate(getByTestId, "2026-05-01");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
@@ -194,13 +208,15 @@ describe("CashScreen", () => {
 
   it("shows validation errors for invalid cash entries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(<CashScreen store={store} />);
+    const { getByTestId, getByText } = render(
+      <CashScreen now={new Date(2026, 6, 22, 12)} store={store} />,
+    );
 
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     expect(getByText("Amount must be a valid number.")).toBeTruthy();
     expect(getByText("Label is required.")).toBeTruthy();
-    expect(getByText("Date is required.")).toBeTruthy();
+    expect(getByText("22 Jul 2026")).toBeTruthy();
   });
 
   it("masks cash wealth values when value masking is enabled", () => {

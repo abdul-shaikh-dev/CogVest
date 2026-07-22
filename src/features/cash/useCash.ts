@@ -6,6 +6,7 @@ import {
   calculateCashMonthlyMetrics,
   type CashMonthlyMetrics,
 } from "@/src/domain/calculations";
+import { isEffectiveCalendarDate } from "@/src/domain/dates";
 import { formatCompactINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type {
@@ -77,8 +78,12 @@ export function useCash({
 
   return {
     addEntry,
-    balance: calculateCashBalance(snapshot.cashEntries),
-    entries: sortCashEntries(snapshot.cashEntries),
+    balance: calculateCashBalance(snapshot.cashEntries, now),
+    entries: sortCashEntries(
+      snapshot.cashEntries.filter((entry) =>
+        isEffectiveCalendarDate(entry.date, now),
+      ),
+    ),
     manualEntryModes: ["addition", "withdrawal"],
     maskWealthValues: snapshot.preferences.maskWealthValues,
     monthlyMetrics,

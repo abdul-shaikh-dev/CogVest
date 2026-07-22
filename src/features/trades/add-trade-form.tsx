@@ -9,20 +9,24 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { ConvictionScore, InstrumentType, SectorType } from "@/src/types";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useAddTrade } from "./useAddTrade";
 
 type AddTradeFormProps = {
+  now?: Date;
   store?: StoreApi<PortfolioStoreState>;
 };
 
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
-export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps) {
-  const trade = useAddTrade({ store });
+export function AddTradeForm({
+  now = new Date(),
+  store = getPortfolioStore(),
+}: AddTradeFormProps) {
+  const trade = useAddTrade({ now, store });
 
   return (
     <ScreenContainer scroll testID="add-trade-screen">
@@ -206,13 +210,14 @@ export function AddTradeForm({ store = getPortfolioStore() }: AddTradeFormProps)
             />
           </View>
           <View style={styles.flex}>
-            <FormTextField
+            <DatePickerField
               error={trade.errors.date}
               label="Trade date"
-              onChangeText={(value) => {
+              maximumDate={now}
+              onChange={(value) => {
                 trade.setDate(value);
               }}
-              placeholder="YYYY-MM-DD"
+              testID="trade-date-input"
               value={trade.date}
             />
           </View>

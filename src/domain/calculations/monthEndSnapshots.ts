@@ -10,6 +10,10 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import {
+  formatLocalCalendarDate,
+  getCalendarDatePart,
+} from "@/src/domain/dates";
 import { historicalQuoteCacheKey } from "@/src/types";
 import {
   isV1CompatibleQuote,
@@ -204,19 +208,19 @@ function getMonthEndDate(targetMonth: string) {
   const year = Number(yearValue);
   const monthIndex = Number(monthValue) - 1;
 
-  return new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
-}
-
-function getUtcMonthKey(isoDate: string) {
-  return formatMonth(new Date(isoDate));
+  return new Date(year, monthIndex + 1, 0, 12, 0, 0, 0);
 }
 
 function isWithinMonth(isoDate: string, targetMonth: string) {
-  return getUtcMonthKey(isoDate) === targetMonth;
+  return getCalendarDatePart(isoDate)?.slice(0, 7) === targetMonth;
 }
 
 function isOnOrBefore(isoDate: string, maxDate: Date) {
-  return new Date(isoDate).getTime() <= maxDate.getTime();
+  const calendarDate = getCalendarDatePart(isoDate);
+
+  return (
+    calendarDate !== null && calendarDate <= formatLocalCalendarDate(maxDate)
+  );
 }
 
 function toSnapshotPriceBasis(
@@ -602,6 +606,7 @@ export function buildGeneratedMonthEndSnapshot({
   }, {});
   const holdings = calculateHoldings({
     assets: relevantAssets,
+    now: monthEnd,
     openingPositions: monthOpeningPositions,
     quoteCache: snapshotQuoteCache,
     trades: monthTrades,
@@ -613,7 +618,7 @@ export function buildGeneratedMonthEndSnapshot({
         basis: "unavailable" as const,
       },
   }));
-  const cashValue = calculateCashBalance(monthCashEntries);
+  const cashValue = calculateCashBalance(monthCashEntries, monthEnd);
   const equityValue = holdings.reduce((total, holding) => {
     if (
       holding.asset.assetClass === "stock" ||

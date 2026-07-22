@@ -29,7 +29,8 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "./plugins/withPrivateReleaseSigning"
+      "./plugins/withPrivateReleaseSigning",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

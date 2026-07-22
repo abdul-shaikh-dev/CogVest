@@ -13,6 +13,21 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
+function selectDate(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  testID: string,
+  value: string,
+) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  fireEvent.press(getByTestId(testID));
+  fireEvent(
+    getByTestId(`${testID}-picker`),
+    "onChange",
+    { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
+  );
+}
+
 describe("AddOpeningPositionForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -75,7 +90,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
     fireEvent.press(getByText("Review and save"));
 
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
@@ -142,7 +157,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
     fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Excel opening position");
 
@@ -220,7 +235,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
 
     fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
@@ -267,7 +282,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "10");
     fireEvent.changeText(getByLabelText("Average cost"), "5300");
     fireEvent.changeText(getByLabelText("Current price"), "5711");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
 
     fireEvent.press(getByText("Review and save"));
     fireEvent.press(getByText("Save Holding"));
@@ -298,7 +313,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "0.05");
     fireEvent.changeText(getByLabelText("Average cost"), "5000000");
     fireEvent.changeText(getByLabelText("Current price"), "5800000");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
 
     fireEvent.press(getByText("Review and save"));
     fireEvent.press(getByText("Save Holding"));
@@ -651,7 +666,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    fireEvent.changeText(getByLabelText("Date acquired"), "2026-04-15");
+    selectDate(getByTestId, "date-input", "2026-04-15");
 
     fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();

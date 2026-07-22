@@ -3,6 +3,20 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { SellRedeemScreen } from "@/src/features/sellRedeem";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+
+function selectDate(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  value: string,
+) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  fireEvent.press(getByTestId("sell-redeem-date-input"));
+  fireEvent(
+    getByTestId("sell-redeem-date-input-picker"),
+    "onChange",
+    { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
+  );
+}
 import type { Asset } from "@/src/types";
 
 const asset: Asset = {
@@ -73,7 +87,7 @@ describe("SellRedeemScreen", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "5");
     fireEvent.changeText(getByLabelText("Sell price"), "1700");
     fireEvent.changeText(getByLabelText("Fees"), "100");
-    fireEvent.changeText(getByLabelText("Date"), "2026-05-20");
+    selectDate(getByTestId, "2026-05-20");
 
     await waitFor(() => {
       expect(getByText("Net proceeds")).toBeTruthy();
@@ -104,7 +118,7 @@ describe("SellRedeemScreen", () => {
 
     fireEvent.changeText(getByLabelText("Quantity"), "1");
     fireEvent.changeText(getByLabelText("Sell price"), "1700");
-    fireEvent.changeText(getByLabelText("Date"), "2026-05-20");
+    selectDate(getByTestId, "2026-05-20");
 
     expect(getByTestId("sell-redeem-cash-link-summary")).toHaveTextContent(
       "₹1,700.00 will be added to Cash Ledger",

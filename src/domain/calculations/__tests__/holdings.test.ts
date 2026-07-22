@@ -572,11 +572,68 @@ describe("portfolio calculations", () => {
     expect(
       calculateCashMonthlyMetrics({
         cashEntries: [linkedFunding],
-        now: new Date("2026-06-20T00:00:00.000Z"),
+        now: new Date("2026-06-30T12:00:00.000Z"),
         openingPositions: [],
         trades: [juneBuy],
       }).invested,
     ).toBe(10000);
+  });
+
+  it("excludes invalid and future-effective records from current totals", () => {
+    const now = new Date("2026-05-20T12:00:00.000Z");
+    const holdings = calculateHoldings({
+      assets: [reliance],
+      now,
+      openingPositions: [
+        openingPosition({ date: "2026-05-01", id: "opening-current" }),
+        openingPosition({ date: "2026-05-21", id: "opening-future" }),
+        openingPosition({ date: "2026-02-30", id: "opening-invalid" }),
+      ],
+      quoteCache: {
+        [reliance.id]: {
+          assetId: reliance.id,
+          asOf: "2026-05-20T10:00:00.000Z",
+          currency: "INR",
+          price: 1600,
+          source: "manual",
+        },
+      },
+      trades: [
+        trade({ date: "2026-05-10", id: "trade-current", quantity: 5 }),
+        trade({ date: "2026-05-22", id: "trade-future", quantity: 50 }),
+      ],
+    });
+    const cashEntries: CashEntry[] = [
+      {
+        amount: 1000,
+        date: "2026-05-01",
+        id: "cash-current",
+        label: "Current cash",
+        purpose: "capitalContribution",
+        type: "addition",
+      },
+      {
+        amount: 5000,
+        date: "2026-05-21",
+        id: "cash-future",
+        label: "Future cash",
+        purpose: "capitalContribution",
+        type: "addition",
+      },
+      {
+        amount: 7000,
+        date: "2026-02-30",
+        id: "cash-invalid",
+        label: "Invalid cash",
+        purpose: "capitalContribution",
+        type: "addition",
+      },
+    ];
+
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0].totalUnits).toBe(30);
+    expect(calculateCashBalance(cashEntries, now)).toBe(1000);
+    expect(calculatePortfolioTotal(holdings, cashEntries, now)).toBe(49000);
   });
 
   it("matches stored calendar dates against the device-local current month", () => {

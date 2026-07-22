@@ -5,6 +5,10 @@ import type {
   SectorType,
 } from "@/src/types";
 import { isInstrumentType, isSectorType } from "@/src/domain/assets";
+import {
+  isFutureCalendarDate,
+  parseCalendarDate,
+} from "@/src/domain/dates";
 
 export type OpeningPositionFormValues = {
   assetClass: AssetClass;
@@ -54,16 +58,9 @@ function parsePositiveNumber(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function isValidDateInput(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  return !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime());
-}
-
 export function validateOpeningPositionForm(
   values: OpeningPositionFormValues,
+  now = new Date(),
 ): OpeningPositionFormResult {
   const errors: Partial<Record<keyof OpeningPositionFormValues, string>> = {};
   const quantity = parsePositiveNumber(values.quantity);
@@ -98,8 +95,10 @@ export function validateOpeningPositionForm(
     errors.currentPrice = "Current price must be greater than zero.";
   }
 
-  if (!isValidDateInput(values.date)) {
+  if (!parseCalendarDate(values.date)) {
     errors.date = "Date must use YYYY-MM-DD.";
+  } else if (isFutureCalendarDate(values.date, now)) {
+    errors.date = "Date cannot be in the future.";
   }
 
   if (!isInstrumentType(values.instrumentType)) {

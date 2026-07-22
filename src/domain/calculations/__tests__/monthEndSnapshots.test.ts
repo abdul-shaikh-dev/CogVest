@@ -941,7 +941,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.snapshot?.salary).toBe(0);
   });
 
-  it("classifies monthly investment dates by parsed UTC month instead of string prefixes", () => {
+  it("classifies monthly investment dates by their stored local calendar date", () => {
     const result = buildGeneratedMonthEndSnapshot(
       buildInput({
         assets: [stockAsset],
@@ -968,9 +968,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       }),
     );
 
-    expect(result.status).toBe("created");
-    expect(result.snapshot?.month).toBe("2026-07");
-    expect(result.snapshot?.monthlyInvestment).toBe(1000);
-    expect(result.snapshot?.equityValue).toBe(2500);
+    expect(result.status).toBe("insufficient-data");
+    expect(result.snapshot).toBeNull();
   });
 });

@@ -15,7 +15,12 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField } from "@/src/components/forms";
+import {
+  formatLocalCalendarDate,
+  isFutureCalendarDate,
+  parseCalendarDate,
+} from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
@@ -44,10 +49,12 @@ function validateCashEntry({
   amount,
   date,
   label,
+  now,
 }: {
   amount: string;
   date: string;
   label: string;
+  now: Date;
 }) {
   const errors: FieldErrors = {};
   const trimmedAmount = amount.trim();
@@ -65,8 +72,10 @@ function validateCashEntry({
 
   if (date.trim().length === 0) {
     errors.date = "Date is required.";
-  } else if (Number.isNaN(new Date(date).getTime())) {
+  } else if (!parseCalendarDate(date)) {
     errors.date = "Date must be valid.";
+  } else if (isFutureCalendarDate(date, now)) {
+    errors.date = "Date cannot be in the future.";
   }
 
   return {
@@ -106,7 +115,7 @@ function formatInvestmentRate(investmentRate: number | null) {
 }
 
 export function CashScreen({
-  now,
+  now = new Date(),
   store = getPortfolioStore(),
 }: CashScreenProps) {
   const {
@@ -123,7 +132,7 @@ export function CashScreen({
     useState<AdditionPurpose>("capitalContribution");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const modeCopy = getCashEntryModeCopy(mode);
@@ -131,7 +140,7 @@ export function CashScreen({
   function resetForm() {
     setAmount("");
     setLabel("");
-    setDate("");
+    setDate(formatLocalCalendarDate(now));
     setNotes("");
     setErrors({});
   }
@@ -141,6 +150,7 @@ export function CashScreen({
       amount,
       date,
       label,
+      now,
     });
 
     if (Object.keys(result.errors).length > 0) {
@@ -318,11 +328,11 @@ export function CashScreen({
               />
             </View>
             <View style={styles.formRowField}>
-              <FormTextField
+              <DatePickerField
                 error={errors.date}
                 label="Date"
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
+                maximumDate={now}
+                onChange={setDate}
                 testID="cash-date-input"
                 value={date}
               />
