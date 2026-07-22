@@ -2,12 +2,17 @@
 
 **Date:** 2026-07-11
 
-**Status:** Point-in-time stabilization evidence. Use active GitHub issues for
-current execution state and rerun cited commands before relying on old results.
+**Last reconciled:** 2026-07-22 against `main` at `5df0534` and the current open
+GitHub issue list.
+**Status:** Living stabilization ledger. Original evidence remains useful for
+history, while each finding's explicit status and the current ledger below
+describe the verified state on the reconciliation date.
 **Scope:** V1 application code, financial calculations, quote services, persistence,
 monthly snapshots, Android release configuration, automated tests, E2E coverage,
 dependencies, and current documentation.
-**Assessment:** Not release-ready.
+**Assessment:** Not release-ready. Critical findings are remediated, but
+recoverability, write idempotency, date correctness, correction flows, Android
+privacy/release hardening, and Add Holding integrity remain incomplete.
 
 ## Executive Summary
 
@@ -16,18 +21,45 @@ several underlying defects can misstate portfolio value, gains, cash, quote
 freshness, and historical snapshots. The current tests mostly confirm the
 implemented behavior rather than independently proving financial correctness.
 
-The highest-risk problems are:
+The original four critical risks were cash double-counting, unsupported currency
+aggregation, false quote freshness, and debug-signed release APKs. All four now
+have merged remediation evidence. The highest remaining risks are:
 
-1. Purchases do not automatically reduce cash and can double-count wealth.
-2. Foreign assets can be saved and valued as INR without currency conversion.
-3. Failed live quote refreshes can relabel stale cached prices as fresh manual
-   prices.
-4. Locally distributed release APKs used the public debug key. Issue #171 adds
-   private local release signing and keeps debug signing development-only.
+1. Corrupt or unsupported persisted data can appear as an empty portfolio.
+2. Duplicate save attempts and non-atomic Add Holding writes can create partial
+   or repeated financial records.
+3. Impossible or future-dated records can affect current portfolio totals.
+4. Most financial records still lack safe user-facing correction and cascade
+   behavior.
 
-As of 2026-07-21, C1-C4 have merged remediation evidence through issues #161,
-#167, #169, and #171. High-severity stabilization remains active; each finding's
-status below is authoritative for this review.
+As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
+issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
+substantively remediated by the atomic linked-command work in #161. The GitHub
+`V1 Adversarial Stabilization` milestone has no open issues, but 26 finding IDs
+remain open or partial and are not represented by focused open implementation
+issues. The milestone must not be treated as complete until that tracking gap is
+resolved.
+
+## Current Finding Ledger
+
+Statuses are based on current code and tests, not on whether an issue was once
+opened. `Partial` means a material part is fixed but the required direction or
+minimum verification is not complete.
+
+| Area | Remediated | Partial | Open |
+| --- | --- | --- | --- |
+| Critical | C1, C2, C3, C4 | None | None |
+| High | H1, H2, H3, H4, H7 | H5, H10 | H6, H8, H9 |
+| Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
+| Add Holding | AH1, AH2 | AH10, AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH11, AH12 |
+
+### Current Tracking Gap
+
+No focused open GitHub issue currently owns H5, H6, H8-H10, M1-M9, or
+AH3-AH14. Existing open V1 tracker #136 and visual-QA issue #153 do not
+provide the finding-specific acceptance criteria in this report. Before more
+implementation, create focused issues in the priority order documented under
+`Remaining Remediation Order`.
 
 ## Critical Findings
 
@@ -120,8 +152,8 @@ and age.
 Fallback must preserve original source and timestamp and expose explicit stale
 status.
 
-**Remediation status (2026-07-19):** Implemented under GitHub issue #169,
-pending merge at the time of this update. Refresh now carries complete cached
+**Remediation status (2026-07-19):** Implemented and merged under GitHub issue
+#169. Refresh now carries complete cached
 quote objects rather than numeric values labelled as manual input. A failed
 Yahoo or CoinGecko request returns the exact cached quote, preserving price,
 currency, source, timestamp, and day-change metadata. Genuine manual quotes
@@ -177,7 +209,7 @@ release build with `signingConfigs.debug` and the standard debug credentials.
 
 ### H1. Monthly gain includes new contributions
 
-**Status (2026-07-21): Implemented by #173, pending merge.** Monthly performance
+**Status (2026-07-22): Remediated by #173.** Monthly performance
 now separates total value change, net external flow, and cash-flow-adjusted market
 movement. Contribution-only months produce zero market movement, purchase funding
 and sale proceeds remain internal transfers, and withdrawals reduce net external
@@ -297,15 +329,24 @@ provisional and are retried safely rather than appearing final.
 
 ### H5. Automatic snapshots always set salary to zero
 
+**Status (2026-07-22): Partial.** Typed cash-income records and nullable
+investment-rate semantics now exist through #161 and #175, but automatic
+snapshot generation still persists `salary: 0`. Generated snapshots therefore
+cannot distinguish known zero income from income that was not derived.
+
 Savings and expense rates become unavailable for generated snapshots, even when
 cash additions exist. Generic additions cannot safely be assumed to be salary.
 
-**Evidence:** `src/domain/calculations/monthEndSnapshots.ts:353-386`.
+**Current evidence:** `src/domain/calculations/monthEndSnapshots.ts:694` and its
+current test explicitly retain `salary: 0`.
 
 **Required direction:** Either capture typed income records or explicitly omit
 salary-dependent metrics from automatic snapshots.
 
 ### H6. Persistence failures can look like complete data loss
+
+**Status (2026-07-22): Open and highest priority.** No focused GitHub issue
+currently tracks recovery behavior.
 
 Malformed MMKV JSON throws during startup. Unsupported or absent schema versions
 silently return a completely empty portfolio. There is no quarantine, migration
@@ -322,16 +363,29 @@ value, show a recoverable error, and test migration failures.
 
 ### H7. Multi-record financial operations are not atomic
 
+**Status (2026-07-22): Remediated by #161.** `recordSaleWithProceeds` and the
+funded-buy command construct linked state, persist once before in-memory
+mutation, and have storage-failure tests. Proceeds are derived from the validated
+trade rather than independently editable cash input.
+
 Sell/redeem first persists a trade and then separately persists an optional cash
 entry. An interruption or write failure can save only one side. The linked cash
 amount can also be edited independently from calculated net proceeds.
 
-**Evidence:** `src/features/sellRedeem/useSellRedeemHolding.ts:222-284`.
+**Original evidence:** `src/features/sellRedeem/useSellRedeemHolding.ts:222-284`.
+
+**Remediation evidence:** `src/store/index.ts:229-260` and
+`src/store/index.ts:425-462`; fault-injection coverage is in
+`src/store/__tests__/portfolioStore.test.ts`.
 
 **Required direction:** Add an atomic store operation for linked financial
 records and enforce or explicitly explain cash/proceeds variance.
 
 ### H8. Rapid repeated taps can duplicate records
+
+**Status (2026-07-22): Open.** Atomic linked commands do not yet provide a
+cross-flow command ID/idempotency contract, Add Holding and Cash lack reliable
+in-flight save guards, and generic append operations accept duplicate IDs.
 
 Add Holding, cash entry, and sell/redeem do not use an in-flight save guard. Store
 append operations do not enforce unique IDs. Multiple taps before rerender can
@@ -345,6 +399,9 @@ persist duplicate assets, positions, trades, or cash entries.
 - `src/store/index.ts:182-206`.
 
 ### H9. Future-dated and impossible dates can affect current totals
+
+**Status (2026-07-22): Open.** Strict local-calendar validation and a shared
+effective-date policy have not been implemented.
 
 Cash, opening positions, and sell/redeem only verify that JavaScript can parse a
 date. Future cash entries immediately alter current balance; future positions
@@ -361,6 +418,11 @@ dates such as `2026-02-30` instead of rejecting them.
 future-date policy. Current-state selectors must ignore records not yet effective.
 
 ### H10. Users cannot practically correct most financial records
+
+**Status (2026-07-22): Partial.** Monthly snapshots now have a review/correction
+surface. Cash entries, opening positions, trades, and assets still lack complete
+user-facing correction flows, and asset-removal cascade behavior remains
+undefined.
 
 The store exposes update/remove methods, but the app has no user-facing edit or
 delete flow for cash entries, opening positions, or trades. Removing an asset
@@ -379,6 +441,9 @@ cascade behavior for asset removal.
 
 ### M1. Portfolio quote freshness uses the newest quote
 
+**Status (2026-07-22): Open.** Dashboard and Holdings still summarize the newest
+quote timestamp, allowing one fresh holding to conceal older or missing quotes.
+
 One recently refreshed asset can make the portfolio appear current while other
 holdings are stale.
 
@@ -392,6 +457,9 @@ freshness.
 
 ### M2. Quote refresh is sequential and has no timeout
 
+**Status (2026-07-22): Open.** Refresh still awaits providers sequentially and
+has no deadline, cancellation, or bounded-concurrency contract.
+
 Assets are refreshed one by one. A stalled request can block the entire refresh,
 and larger portfolios will refresh slowly.
 
@@ -400,6 +468,9 @@ and larger portfolios will refresh slowly.
 Add request deadlines, cancellation, bounded concurrency, and partial completion.
 
 ### M3. Yahoo lookup maps all non-ETF results to stock
+
+**Status (2026-07-22): Open.** Unsupported Yahoo quote types are still coerced
+to the stock domain type instead of being mapped explicitly or rejected.
 
 Mutual funds, indices, futures, currencies, and unsupported instruments can be
 saved under the stock domain type.
@@ -411,6 +482,9 @@ types.
 
 ### M4. Negative cash is hidden from allocation
 
+**Status (2026-07-22): Open.** Allocation still includes cash only when its
+balance is positive.
+
 Cash is included in allocation only when the balance is positive. An overdraft or
 data error therefore disappears from allocation while still reducing portfolio
 value.
@@ -418,6 +492,10 @@ value.
 **Evidence:** `src/domain/calculations/holdings.ts:301-333`.
 
 ### M5. Local-only privacy messaging conflicts with Android backup
+
+**Status (2026-07-22): Open.** Android backup remains enabled, MMKV remains
+unencrypted, and the product privacy contract has not been reconciled with that
+configuration.
 
 The manifest enables Android backup while Settings says portfolio records stay
 on the device. MMKV is also created without an encryption key.
@@ -433,6 +511,9 @@ whether at-rest encryption is required by the product's privacy promise.
 
 ### M6. Android manifest contains unnecessary-looking permissions
 
+**Status (2026-07-22): Open.** `READ_EXTERNAL_STORAGE`,
+`WRITE_EXTERNAL_STORAGE`, and `SYSTEM_ALERT_WINDOW` remain in the main manifest.
+
 `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, and `SYSTEM_ALERT_WINDOW` are
 present without an evident V1 requirement. They undermine least privilege and
 may complicate Play review.
@@ -441,12 +522,22 @@ may complicate Play review.
 
 ### M7. Android release identity is not ready for updates
 
+**Status (2026-07-22): Open.** `versionCode` remains `1` and `versionName`
+remains `1.0.0`; release documentation describes a manual step but does not
+enforce monotonic versioning.
+
 `versionCode` remains 1 and `versionName` remains 1.0.0. Successive distributed
 builds are indistinguishable and cannot follow proper Android upgrade ordering.
 
 **Evidence:** `android/app/build.gradle:91-96` and `app.json:21`.
 
 ### M8. Visual-QA route can erase development data
+
+**Status (2026-07-22): Partial.** The route is hidden and production-default
+configuration does not enable it, but development seeding can still replace all
+local data without confirmation. A public build flag plus static token can also
+enable the route in a release build, so exclusion is procedural rather than
+enforced.
 
 In development, the seed route is permitted without a token and replaces the
 local portfolio. A development build containing real records can be erased by
@@ -458,6 +549,10 @@ opening the route.
 - `app/visual-qa-seed.tsx:11-23`.
 
 ### M9. Financial calculations use binary floating-point numbers
+
+**Status (2026-07-22): Open.** Financial calculations still use JavaScript
+`number`; no explicit money/quantity precision policy or invariant coverage
+defines acceptable rounding behavior.
 
 Quantities, prices, fees, cost basis, and currency totals all use JavaScript
 `number`. Fractional crypto quantities and repeated operations can accumulate
@@ -473,6 +568,11 @@ cross-cutting currency, quote, date, persistence, and duplicate-save findings
 above.
 
 ### AH1. Provider-selected assets lose provider identity at save time
+
+**Status (2026-07-22): Remediated on current `main`.** Review now builds the
+persisted asset from `selectedLookupResult`, preserving provider currency,
+exchange, ticker, and quote-source ID. The original evidence below describes the
+pre-remediation flow.
 
 The lookup result is used to populate the form and fetch a quote, but review/save
 does not persist the lookup asset. Unless an existing local asset was selected,
@@ -492,6 +592,11 @@ This is the Add Holding entry point for critical finding C2.
 
 ### AH2. A live autofilled quote is persisted as manual
 
+**Status (2026-07-22): Remediated on current `main`.** The selected provider
+quote is retained and persisted when its currency and price still match the
+reviewed asset; an edited price becomes an explicit manual quote. H8/AH10 still
+govern save idempotency and atomicity.
+
 After Yahoo or CoinGecko successfully autofills current price, save always writes
 a new quote with `source: manual`, `currency: INR`, and the save timestamp. The
 provider source, provider timestamp, currency, and day-change fields are lost.
@@ -509,6 +614,9 @@ manual even though the user did not enter it.
 provider quote unless the user edits the price.
 
 ### AH3. Editing an existing asset creates a duplicate asset
+
+**Status (2026-07-22): Open.** Metadata edits still clear the saved asset
+selection, after which review creates a new asset ID.
 
 Selecting an existing asset correctly reuses its ID only until instrument or
 sector metadata is edited. The edit handler clears `selectedAssetId`, and save
@@ -531,6 +639,10 @@ update/reuse the existing asset.
 
 ### AH4. Provider lookup can duplicate an already-saved asset
 
+**Status (2026-07-22): Open.** Lookup candidates are not resolved against saved
+assets by quote-source identity or exchange+ticker, and the store does not
+enforce canonical uniqueness.
+
 Lookup results are not matched against existing assets by provider ID, quote
 source ID, exchange+ticker, or another canonical identity. Selecting Yahoo for
 an asset already present locally creates another asset record.
@@ -547,6 +659,10 @@ before creating new records.
 
 ### AH5. Quote-response races can apply the wrong asset's price
 
+**Status (2026-07-22): Open.** Lookup search cancellation exists, but selected
+candidate quote resolution still lacks a request token, selection check, or
+abort contract after the awaited provider call.
+
 `selectLookupResult` has no request token, cancellation, or selected-result check
 after awaiting the provider. If the user selects asset A, changes selection, and
 selects asset B before A finishes, A's later response can overwrite B's current
@@ -559,6 +675,9 @@ manually after selection.
 ignore stale completions, and abort obsolete requests where supported.
 
 ### AH6. Switching assets carries stale position and price state
+
+**Status (2026-07-22): Open.** Asset transitions still retain position fields,
+and selecting an asset without a cached quote can retain the previous price.
 
 Changing the selected asset does not clear quantity, average cost, current price,
 date, conviction, or notes. Selecting an existing asset with no cached quote also
@@ -580,6 +699,9 @@ price, quantity, cost, or notes.
 
 ### AH7. The metadata UI exposes internal enum tokens
 
+**Status (2026-07-22): Open.** Instrument and sector remain free-text fields
+whose values are cast to internal enums; user-facing selectors are not present.
+
 Instrument and sector are free-text inputs that require exact internal values
 such as `financialServices`, `fixedDeposit`, and `digitalAsset`. Invalid spacing,
 capitalization, or user-friendly labels are rejected. There is no selector or
@@ -596,6 +718,9 @@ This makes the supposed assisted-capture step behave like editing a schema.
 
 ### AH8. Manual stocks default to Financial Services
 
+**Status (2026-07-22): Open.** The stock metadata default remains
+`financialServices` instead of unknown/`other`.
+
 The initial stock metadata defaults sector to `financialServices`. A user adding
 an energy, technology, healthcare, or consumer stock manually can continue
 without changing it, silently storing false sector data.
@@ -611,6 +736,9 @@ provider supplies a sector.
 
 ### AH9. Review does not show the fields the user is committing
 
+**Status (2026-07-22): Open.** Final review still omits material identity,
+classification, source, position-input, date, and optional-note fields.
+
 The final review surface shows only asset name/class and derived invested,
 current, P&L, and P&L percentage. It omits ticker, exchange, currency, quantity,
 average cost, current price, acquisition date, instrument, sector, conviction,
@@ -624,6 +752,11 @@ classification, position inputs, source, and derived values before save.
 
 ### AH10. Save is non-atomic and post-save haptics can mask success
 
+**Status (2026-07-22): Partial.** Haptic failure is now caught and completion
+navigation is independent of device feedback. Asset, opening position, and quote
+are still persisted through separate store calls, and Save has no robust
+in-flight/idempotency guard.
+
 Add Holding separately writes the asset, opening position, and quote. A failure
 between writes leaves partial state. Persistence finishes before awaiting
 haptics; if haptics rejects, the data is already saved but the success state and
@@ -636,6 +769,8 @@ disable save during execution, and treat haptics as a non-critical side effect.
 
 ### AH11. Local date default is wrong during early IST hours
 
+**Status (2026-07-22): Open.** The default still slices a UTC ISO timestamp.
+
 The default acquisition date is derived with `new Date().toISOString()`, which is
 UTC. In India between midnight and 05:29, it defaults to the previous calendar
 day.
@@ -645,6 +780,10 @@ day.
 Use a local-calendar formatter rather than slicing a UTC timestamp.
 
 ### AH12. Search and existing-asset lists do not scale
+
+**Status (2026-07-22): Open.** Existing assets and lookup results remain
+unbounded rendered lists without canonical deduplication, provider grouping, or
+result caps.
 
 Every existing asset is rendered before the search form, and every CoinGecko
 result is appended after Yahoo results without ranking, deduplication, grouping,
@@ -659,6 +798,11 @@ step into a long, noisy screen.
 
 ### AH13. The post-save state is a dead-end confirmation
 
+**Status (2026-07-22): Partial.** The route-level completion callback now
+replaces Add Holding with Holdings after persistence, removing the dead end from
+the normal flow. The required dedicated `View holding` and `Add another` paths
+and their state-reset verification remain absent.
+
 After save, the controller stays in the Review phase, removes the review
 position, and shows a success message. The preview disappears and Save becomes
 disabled, but there is no `View holding`, `Return to Holdings`, or `Add another`
@@ -670,6 +814,10 @@ action. The user must infer that Android Back is the completion action.
 - `src/features/openingPositions/AddOpeningPositionForm.tsx:623-681`.
 
 ### AH14. The lookup E2E proves completion, not correctness
+
+**Status (2026-07-22): Partial.** The flow now verifies Holdings, the saved
+Bitcoin row, and `Invested Rs 100`, but it still does not prove persisted
+currency, exchange, quote source, current value, or duplicate absence.
 
 The Maestro flow finds `BTC-USD`, selects it, and saves, but never verifies the
 saved asset's currency, exchange, quote source, price, holding value, or absence
@@ -803,64 +951,41 @@ The normal journey should be:
 
 ## Stabilization Delivery Plan
 
-The remediation should be managed under one `V1 Adversarial Stabilization`
-milestone with focused issues and one implementation concern per PR.
+The original staged plan is partially complete. Merged work covers C1-C4,
+H1-H4, H7, AH1, and AH2. The remaining work must be reopened as focused
+issues because the stabilization milestone currently has no open implementation
+issues.
 
-### Stage 0: Correctness contracts
+### Remaining Remediation Order
 
-Before changing UI, write and approve contracts for:
+1. **Persistence recovery (H6):** runtime payload validation, corrupt-data
+   quarantine/recovery, explicit migration failure, and user-visible startup
+   handling.
+2. **Date correctness (H9, AH11):** one strict local-calendar parser, future-date
+   policy, and effective-record filtering in current totals.
+3. **Idempotent financial writes (H8, AH10):** command IDs, uniqueness rules,
+   in-flight guards, and one atomic Add Holding command.
+4. **Correction and cascade UX (H10):** edit/delete flows after write and date
+   semantics are safe.
+5. **Generated income semantics (H5):** derive typed income or persist unknown;
+   never encode missing income as known zero.
+6. **Privacy contract (M5):** decide backup and at-rest encryption behavior,
+   then align manifest, storage, migration, and Settings copy.
+7. **Quote reliability (M1, M2):** per-holding freshness, provider deadlines,
+   cancellation, bounded concurrency, and partial completion.
+8. **Add Holding identity and state (AH3-AH6):** canonical reuse, duplicate
+   prevention, stale-response rejection, and deterministic transition resets.
+9. **Add Holding metadata and review (M3, AH7-AH9, AH12):** supported provider
+   mapping, user-facing selectors, unknown sector defaults, complete review, and
+   bounded/ranked lookup.
+10. **Allocation and numeric integrity (M4, M9):** expose negative cash and
+    define money/quantity precision before changing representations.
+11. **Android release hardening (M6-M8):** minimize permissions, enforce
+    monotonic versions, and isolate destructive visual-QA seeding.
+12. **Semantic E2E (AH14):** assert persisted identity, provenance, values, and
+    duplicate absence after the owning Add Holding fixes land.
 
-- cash and investment accounting;
-- contribution-adjusted performance;
-- canonical asset identity;
-- currency and FX support;
-- quote provenance/freshness;
-- snapshot confidence/backfill;
-- persistence recovery and atomicity.
-
-### Stage 1: Financial correctness
-
-1. Cash/investment conservation and typed cash movements: C1, H2.
-2. Contribution-adjusted performance and savings semantics: H1, H5.
-3. Money/quantity precision policy: M9.
-
-No later stage may rely on the old cash or gain semantics.
-
-### Stage 2: Asset, currency, and quote trust
-
-1. Canonical asset identity and duplicate prevention: AH1, AH3, AH4.
-2. Currency preservation and V1 foreign-asset policy: C2.
-3. Quote provenance, freshness, timeout, and concurrency: C3, M1, M2, M3.
-
-### Stage 3: Add Holding stabilization
-
-1. API metadata enrichment and selectors: AH7, AH8, approved metadata contract.
-2. Selection transitions and stale-response protection: AH5, AH6, AH11, AH12.
-3. Atomic/idempotent save: AH10, H8.
-4. Complete review and completion UX: AH9, AH13.
-5. Correctness-focused E2E: AH14.
-
-### Stage 4: Snapshot correctness
-
-1. Multi-month backfill: H3.
-2. Provisional historical-price confidence and retry: H4.
-3. Correct generated income/performance semantics: H5 and H1 integration.
-
-### Stage 5: Persistence and correction
-
-1. Validated storage, migrations, and recovery: H6.
-2. Atomic sell/redeem and other linked commands: H7.
-3. Edit/delete/cascade flows: H10.
-4. Strict effective-date behavior across every record type: H9.
-
-### Stage 6: Android privacy and release hardening
-
-1. Backup/encryption privacy contract: M5.
-2. Permission minimization and visual-QA isolation: M6, M8.
-3. Private signing and monotonic versioning: C4, M7.
-4. Dependency remediation described below.
-
-### Stage 7: Final adversarial gate
+### Final Adversarial Gate
 
 V1 is not stabilized until:
 
@@ -874,7 +999,7 @@ V1 is not stabilized until:
 
 ## Dependency Audit
 
-`npm audit --json` reported:
+The original 2026-07-11 `npm audit --json` run reported:
 
 | Severity | Count |
 | --- | ---: |
@@ -905,10 +1030,17 @@ documentation cleanup:
 - Dated issue-closeout reports and historical implementation plans are no
   longer treated as current contracts.
 
-The accounting and snapshot findings elsewhere in this report remain open until
-their active issues and current tests prove otherwise.
+The accounting, performance, backfill, and snapshot-confidence findings now have
+merged evidence. Remaining documentation claims must stay constrained by the
+current ledger, especially persistence recovery, privacy, quote freshness,
+effective dates, and correction support.
 
 ## Verification Results
+
+The figures in this section are original 2026-07-11 review evidence, not the
+current suite count. Later remediation evidence is recorded under its owning
+finding. This 2026-07-22 status reconciliation was documentation-only and did not
+rerun the application suite.
 
 ### Passed
 
@@ -933,66 +1065,28 @@ vulnerabilities, summarized above.
 
 ## Test Gaps
 
-The suite needs adversarial tests for:
+The remaining suite gaps correspond to the open and partial findings:
 
-1. Accounting conservation when cash funds a purchase.
-2. Deposit, income, transfer, sale-proceeds, and investment distinctions.
-3. USD quote preservation and INR conversion.
-4. Mixed-currency portfolio aggregation rejection or conversion.
-5. Stale live quote fallback without changing source or timestamp.
-6. Partial refresh with mixed quote ages.
-7. Provider timeout, cancellation, bounded concurrency, and partial success.
-8. Multiple missing snapshot months.
-9. Historical lookup failure and provisional snapshot behavior.
-10. Debt snapshot pricing.
-11. Contribution-adjusted monthly performance.
-12. Corrupt JSON, invalid schema, and failed migrations.
-13. Failed persistence during linked trade/cash writes.
-14. Duplicate button taps and duplicate IDs.
-15. Future dates, leap years, impossible dates, and timezone boundaries.
-16. Editing/deleting records and asset-removal cascades.
-17. Android release signing, version increments, permissions, and backup policy.
-18. Sell/redeem, snapshot automation, and correction flows in Maestro E2E.
-
-## Recommended Remediation Order
-
-### Phase 1: Financial correctness
-
-1. Define the cash-to-investment accounting contract.
-2. Separate contribution from investment performance.
-3. Define cash-entry categories and savings-rate semantics.
-4. Preserve currency and add or constrain FX conversion.
-
-### Phase 2: Quote and snapshot trust
-
-1. Separate manual prices from provider cache.
-2. Preserve quote source and age on failure.
-3. Add timeout and partial-refresh behavior.
-4. Backfill all missing months and mark estimated snapshots provisional.
-
-### Phase 3: Data integrity
-
-1. Add strict persisted-data validation and recovery.
-2. Add atomic multi-record store actions.
-3. Add save guards and uniqueness checks.
-4. Add strict date validation and correction flows.
-
-### Phase 4: Release hardening
-
-1. Configure private release signing and version management.
-2. Resolve the Android backup/privacy contract.
-3. Remove unnecessary permissions.
-4. Triage dependency advisories without breaking Expo compatibility.
-
-### Phase 5: Verification and documentation
-
-1. Add the adversarial test matrix above.
-2. Run fresh APK and Maestro verification on the emulator.
-3. Reconcile specs, design baseline, testing claims, and AGENTS.md.
+1. Corrupt JSON, unsupported schema, failed migration, quarantine, and recovery.
+2. Duplicate taps, duplicate IDs, command replay, and partial Add Holding writes.
+3. Impossible/future dates, leap years, local-midnight boundaries, and
+   effective-record filtering.
+4. Editing/deleting financial records and asset-removal cascades.
+5. Unknown versus zero generated income and dependent rates.
+6. Mixed quote ages, provider timeout/cancellation, bounded concurrency, and
+   partial refresh.
+7. Unsupported Yahoo quote-type rejection.
+8. Negative cash allocation and decimal/rounding invariants.
+9. Android backup/encryption policy, least-privilege permissions, monotonic
+   versioning, and release exclusion of destructive visual-QA capabilities.
+10. Add Holding canonical identity, race ordering, state reset, metadata
+    selectors, complete review, result scaling, and persisted-outcome E2E.
 
 ## Release Recommendation
 
-Do not treat the current V1 APK as a trusted portfolio tracker or release
-candidate until C1-C4 and H1-H9 are resolved or explicitly constrained with
-clear user-facing behavior. Visual polish should remain secondary to financial
-correctness, provenance, and recoverability.
+Do not treat the current V1 APK as a release candidate while H6, H8, H9, and the
+privacy/release-contract findings remain open. H5 and H10 must be resolved or
+explicitly constrained before V1 completion. Add Holding integrity findings must
+be closed with stored-outcome evidence, not navigation-only E2E. Visual polish
+remains secondary to financial correctness, provenance, recoverability, and
+safe correction.
