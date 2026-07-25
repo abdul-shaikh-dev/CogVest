@@ -1026,24 +1026,35 @@ The original staged plan is partially complete. Work through #196 covers C1-C4,
 H1-H10, AH1, AH2, AH10, and AH11. Remaining work must continue as focused
 issues with finding-specific acceptance criteria.
 
-### Remaining Remediation Order
+### Core-Feature Remediation Order
 
-1. **#198 - Privacy contract (M5):** decide backup and at-rest encryption
-   behavior, then align manifest, storage, migration, and Settings copy.
-2. **#202 - Quote reliability (M1, M2):** per-holding freshness, provider
-   deadlines, cancellation, bounded concurrency, and partial completion.
-3. **#200 - Add Holding identity and state (AH3-AH6, AH13):** canonical reuse,
+The current implementation sequence prioritizes trustworthy core portfolio
+behavior before APK release work:
+
+1. **#200 - Add Holding identity and state (AH3-AH6, AH13):** canonical reuse,
    duplicate prevention, stale-response rejection, deterministic transition
    resets, and explicit completion paths.
-4. **#201 - Add Holding metadata and review (M3, AH7-AH9, AH12):** supported
+2. **#201 - Add Holding metadata and review (M3, AH7-AH9, AH12):** supported
    provider mapping, user-facing selectors, unknown sector defaults, complete
    review, and bounded/ranked lookup.
-5. **#203 - Allocation and numeric integrity (M4, M9):** expose negative cash
+3. **#202 - Quote reliability (M1, M2):** per-holding freshness, provider
+   deadlines, cancellation, bounded concurrency, and partial completion.
+4. **#203 - Allocation and numeric integrity (M4, M9):** expose negative cash
    and define money/quantity precision before changing representations.
-6. **#153 - Android release hardening (M6-M8):** minimize permissions, enforce
-   monotonic versions, and isolate destructive visual-QA seeding.
-7. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
+5. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
    values, and duplicate absence after #200 and #201 land.
+
+### Deferred Privacy And Release Gates
+
+Deferral changes sequencing only. These issues remain mandatory before the
+corresponding V1 usage or release gate:
+
+- **#198 - Privacy contract (M5):** complete before sensitive real portfolio
+  data is used on a personal device.
+- **#153 - Android release hardening (M6-M8):** complete before preparing an
+  installable APK or V1 release candidate.
+
+All seven issues remain required by the final adversarial gate.
 
 ### Final Adversarial Gate
 
