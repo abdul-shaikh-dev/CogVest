@@ -62,8 +62,6 @@ export function AddOpeningPositionForm({
     assetName,
     averageCostPrice,
     changeSelectedAsset,
-    clearSavedAssetSelection,
-    clearSelectedAsset,
     continueFromAsset,
     continueFromClass,
     continueFromPosition,
@@ -91,6 +89,7 @@ export function AddOpeningPositionForm({
     resetReview,
     reviewAsset,
     reviewOpeningPosition,
+    savedAssetId,
     sectorType,
     sectorTypeConfidence,
     selectAsset,
@@ -106,16 +105,18 @@ export function AddOpeningPositionForm({
     setLookupQuery,
     setNotes,
     setQuantity,
-    setQuoteSourceId,
     setQuoteStatus,
     setSectorType,
     setSymbol,
-    setTicker,
     snapshot,
+    startAnotherHolding,
     successMessage,
     symbol,
     ticker,
     updateAssetClass,
+    updateQuoteSourceId,
+    updateTicker,
+    viewSavedHolding,
   } = holding;
   const hasSelectedAssetSummary = Boolean(selectedAssetId || selectedLookupResult);
   const selectedAssetSourceLabel = selectedLookupResult
@@ -132,7 +133,7 @@ export function AddOpeningPositionForm({
         {phases.map((phase, index) => {
           const isActive = phase.key === currentPhase;
           const isComplete = index < currentIndex;
-          const isDisabled = index > currentIndex;
+          const isDisabled = Boolean(savedAssetId) || index > currentIndex;
 
           return (
             <Pressable
@@ -306,7 +307,6 @@ export function AddOpeningPositionForm({
             label="Asset name"
             onChangeText={(value) => {
               setAssetName(value);
-              clearSelectedAsset();
               resetReview();
             }}
             placeholder="Reliance Industries"
@@ -320,7 +320,6 @@ export function AddOpeningPositionForm({
                 label="Symbol"
                 onChangeText={(value) => {
                   setSymbol(value);
-                  clearSelectedAsset();
                   resetReview();
                 }}
                 placeholder="RELIANCE"
@@ -332,11 +331,7 @@ export function AddOpeningPositionForm({
               <FormTextField
                 error={errors.ticker}
                 label="Ticker"
-                onChangeText={(value) => {
-                  setTicker(value);
-                  clearSelectedAsset();
-                  resetReview();
-                }}
+                onChangeText={updateTicker}
                 placeholder="RELIANCE.NS"
                 testID="ticker-input"
                 value={ticker}
@@ -345,11 +340,7 @@ export function AddOpeningPositionForm({
           </View>
           <FormTextField
             label="Quote source ID"
-            onChangeText={(value) => {
-              setQuoteSourceId(value);
-              clearSelectedAsset();
-              resetReview();
-            }}
+            onChangeText={updateQuoteSourceId}
             placeholder="RELIANCE.NS"
             testID="quote-source-id-input"
             value={quoteSourceId}
@@ -416,7 +407,6 @@ export function AddOpeningPositionForm({
               label="Instrument type"
               onChangeText={(value) => {
                 setInstrumentType(value as InstrumentType);
-                clearSavedAssetSelection();
                 resetReview();
               }}
               placeholder="stock"
@@ -439,7 +429,6 @@ export function AddOpeningPositionForm({
               label="Sector type"
               onChangeText={(value) => {
                 setSectorType(value as SectorType);
-                clearSavedAssetSelection();
                 resetReview();
               }}
               placeholder="financialServices"
@@ -649,10 +638,26 @@ export function AddOpeningPositionForm({
         </PremiumCard>
       ) : null}
 
-      {successMessage ? (
-        <AppText selectable style={styles.successText}>
-          {successMessage}
-        </AppText>
+      {savedAssetId ? (
+        <PremiumCard elevated testID="holding-save-complete">
+          <SectionHeader title="Holding saved" />
+          <AppText selectable style={styles.successText}>
+            {successMessage}
+          </AppText>
+          <View style={styles.actions}>
+            <AppButton
+              onPress={viewSavedHolding}
+              testID="view-holding-button"
+              title="View holding"
+            />
+            <AppButton
+              onPress={startAnotherHolding}
+              testID="add-another-holding-button"
+              title="Add another"
+              variant="secondary"
+            />
+          </View>
+        </PremiumCard>
       ) : null}
 
       <View style={styles.actions}>
@@ -693,7 +698,7 @@ export function AddOpeningPositionForm({
             />
           </>
         ) : null}
-        {currentPhase === "review" ? (
+        {currentPhase === "review" && !savedAssetId ? (
           <>
             {errors.save ? (
               <AppText selectable style={styles.errorText} variant="caption">
