@@ -28,7 +28,9 @@ export type {
 } from "./monthlyPerformance";
 export type {
   AssetChartInsight,
+  MonthlyChartCustomRange,
   MonthlyChartRange,
+  MonthlyChartRangeError,
   MonthlyProgressChartData,
   MonthlyProgressChartSeries,
   PortfolioChartInsight,

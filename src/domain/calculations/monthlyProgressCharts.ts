@@ -5,14 +5,25 @@ import {
   type MonthlyPerformanceResult,
 } from "./monthlyPerformance";
 
-export type MonthlyChartRange = "3M" | "6M" | "1Y" | "All";
+export type MonthlyChartRange = "3M" | "6M" | "1Y" | "All" | "Custom";
 
 export const MONTHLY_CHART_RANGES: MonthlyChartRange[] = [
   "3M",
   "6M",
   "1Y",
   "All",
+  "Custom",
 ];
+
+export type MonthlyChartCustomRange = {
+  endMonth: string;
+  startMonth: string;
+};
+
+export type MonthlyChartRangeError =
+  | "empty-range"
+  | "invalid-order"
+  | "missing-boundary";
 
 export type MonthlyProgressChartSeries = {
   label: string;
@@ -40,12 +51,15 @@ export type AssetChartInsight = {
 export type MonthlyProgressChartData = {
   assetSeries: MonthlyProgressChartSeries[];
   assetInsights: AssetChartInsight[];
+  availableMonths: string[];
   availableRanges: MonthlyChartRange[];
+  customRange: MonthlyChartCustomRange | null;
   hasEnoughHistory: boolean;
   largestAssetMove: AssetChartInsight | null;
   monthLabels: string[];
   portfolioInsight: PortfolioChartInsight | null;
   portfolioSeries: MonthlyProgressChartSeries[];
+  rangeError: MonthlyChartRangeError | null;
   selectedRange: MonthlyChartRange;
 };
 
@@ -73,6 +87,8 @@ function getRangeLimit(range: MonthlyChartRange) {
       return 12;
     case "All":
       return Number.POSITIVE_INFINITY;
+    case "Custom":
+      return 0;
   }
 }
 
@@ -85,10 +101,43 @@ export function getDefaultMonthlyChartRange(
 function getFilteredSnapshots(
   chronological: MonthlySnapshot[],
   range: MonthlyChartRange,
+  customRange?: MonthlyChartCustomRange,
 ) {
+  if (range === "Custom") {
+    if (!customRange?.startMonth || !customRange.endMonth) {
+      return {
+        rangeError: "missing-boundary" as const,
+        snapshots: [],
+      };
+    }
+
+    if (customRange.startMonth >= customRange.endMonth) {
+      return {
+        rangeError: "invalid-order" as const,
+        snapshots: [],
+      };
+    }
+
+    const snapshots = chronological.filter(
+      (snapshot) =>
+        snapshot.month >= customRange.startMonth &&
+        snapshot.month <= customRange.endMonth,
+    );
+
+    return {
+      rangeError: snapshots.length === 0 ? ("empty-range" as const) : null,
+      snapshots,
+    };
+  }
+
   const limit = getRangeLimit(range);
 
-  return Number.isFinite(limit) ? chronological.slice(-limit) : chronological;
+  return {
+    rangeError: null,
+    snapshots: Number.isFinite(limit)
+      ? chronological.slice(-limit)
+      : chronological,
+  };
 }
 
 function buildPortfolioInsight(
@@ -189,12 +238,21 @@ function getLargestAssetMove(assetInsights: AssetChartInsight[]) {
 export function buildMonthlyProgressChartData(
   snapshots: MonthlySnapshot[],
   range?: MonthlyChartRange,
+  customRange?: MonthlyChartCustomRange,
 ): MonthlyProgressChartData {
   const chronological = [...snapshots].sort((left, right) =>
     left.month.localeCompare(right.month),
   );
+  const availableMonths = [
+    ...new Set(chronological.map((snapshot) => snapshot.month)),
+  ];
   const selectedRange = range ?? getDefaultMonthlyChartRange(chronological.length);
-  const filtered = getFilteredSnapshots(chronological, selectedRange);
+  const filteredResult = getFilteredSnapshots(
+    chronological,
+    selectedRange,
+    customRange,
+  );
+  const filtered = filteredResult.snapshots;
   const monthLabels = filtered.map((snapshot) =>
     formatShortMonth(snapshot.month),
   );
@@ -204,12 +262,15 @@ export function buildMonthlyProgressChartData(
     return {
       assetSeries: [],
       assetInsights,
+      availableMonths,
       availableRanges: MONTHLY_CHART_RANGES,
+      customRange: selectedRange === "Custom" ? customRange ?? null : null,
       hasEnoughHistory: false,
       largestAssetMove: getLargestAssetMove(assetInsights),
       monthLabels,
       portfolioInsight: buildPortfolioInsight(filtered),
       portfolioSeries: [],
+      rangeError: filteredResult.rangeError,
       selectedRange,
     };
   }
@@ -230,7 +291,9 @@ export function buildMonthlyProgressChartData(
       },
     ],
     assetInsights,
+    availableMonths,
     availableRanges: MONTHLY_CHART_RANGES,
+    customRange: selectedRange === "Custom" ? customRange ?? null : null,
     hasEnoughHistory: true,
     largestAssetMove: getLargestAssetMove(assetInsights),
     monthLabels,
@@ -245,6 +308,7 @@ export function buildMonthlyProgressChartData(
         values: filtered.map((snapshot) => snapshot.investedValue),
       },
     ],
+    rangeError: filteredResult.rangeError,
     selectedRange,
   };
 }

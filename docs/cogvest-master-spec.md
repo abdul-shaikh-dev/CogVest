@@ -159,8 +159,9 @@ rows.
 Add Holding owns assisted capture: search, explicit result selection, provider
 metadata review, position details, derived preview, and manual fallback.
 
-Monthly Progress owns statement-style progress: `Value Gap`, `Asset Momentum`,
-`Monthly Change Breakdown`, month selection, and a compact snapshot CTA.
+Monthly Progress owns statement-style progress: `Portfolio Growth`,
+`Asset Momentum`, `Monthly Change Breakdown`, month selection, and a compact
+snapshot CTA.
 
 Cash Ledger owns deployable capital and cash movement.
 
@@ -189,10 +190,16 @@ V1 Monthly Progress uses stored monthly snapshots only.
 
 The accepted charts are:
 
-- `Value Gap`: portfolio value against invested capital
+- `Portfolio Growth`: portfolio value against invested capital
 - `Asset Momentum`: equity, debt, and crypto trends over months; cash excluded
 
 Use `react-native-gifted-charts` for the current V1 implementation.
+
+Each chart owns independent `3M`, `6M`, `1Y`, `All`, and `Custom` range
+controls. Custom ranges select inclusive start and end months from available
+stored snapshots only. Selecting a chart month updates a CogVest-owned summary
+panel with the exact values and change context; chart rendering remains the
+responsibility of `react-native-gifted-charts`.
 
 ## Verification
 

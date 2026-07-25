@@ -169,13 +169,24 @@ The V1 screen title is `Monthly Progress`; the tab label can be `Progress`.
 
 Accepted chart direction:
 
-- first graph: `Value Gap` - total portfolio value vs invested value by month
-- `Value Gap` color contract: Portfolio line is green; Invested line is white
+- first graph: `Portfolio Growth` - total portfolio value vs invested value by
+  month, with the subtitle `Portfolio value compared with invested capital`
+- `Portfolio Growth` color contract: Portfolio line is green; Invested line is
+  white and dashed
 - second graph: `Asset Momentum` - asset values vs months
 - cash is excluded from the asset-trend graph and tracked separately in Cash
 - charts must use stored monthly snapshots or a clear empty/no-snapshot state
 - chart y-axis labels and chart-native value labels must obey value masking
-- each chart card owns its own timeframe controls
+- each chart card owns independent `3M`, `6M`, `1Y`, `All`, and `Custom`
+  timeframe controls
+- custom ranges use inclusive start and end months chosen from available stored
+  snapshot months; do not present unavailable or hard-coded months
+- selecting a month updates a compact summary above the plot. Portfolio Growth
+  shows portfolio value, invested value, and the percentage and amount ahead or
+  behind invested capital. Asset Momentum shows Equity, Debt, and Crypto values
+  with percentage movement from the previous visible month.
+- `react-native-gifted-charts` owns plot interaction; CogVest-owned components
+  own the selected figures, legend, masking, and accessibility text
 - use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
   Native for these charts
 - x-axis labels should be sparse and chart-native: show the first month, a
@@ -183,6 +194,15 @@ Accepted chart direction:
 - `Monthly Change Breakdown` compares the selected month with the previous month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
+- snapshot history uses one fixed-height explorer instead of rendering every
+  stored month as a vertical list
+- the explorer keeps all stored months available in a horizontal selector and
+  shows one selected month at a time
+- the selected snapshot shows portfolio and invested values plus percentage
+  movement for the portfolio and Equity, Debt, Crypto, and Cash against the
+  previous stored month
+- snapshot history replaces a separate asset-class snapshot card so the same
+  values are not repeated and the screen does not grow with every saved month
 
 Do not fake production chart history. If snapshots are missing, show a premium
 empty state and a clear path to record a snapshot.

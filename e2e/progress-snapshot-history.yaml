@@ -1,0 +1,28 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: "progress-screen"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "snapshot-month-2026-05"
+    direction: DOWN
+- tapOn:
+    id: "snapshot-month-2026-05"
+- assertVisible:
+    id: "selected-snapshot-summary"
+- scrollUntilVisible:
+    element: "May parity seed"
+    direction: DOWN
