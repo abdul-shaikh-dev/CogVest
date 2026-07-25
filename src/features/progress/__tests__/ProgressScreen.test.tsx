@@ -412,23 +412,26 @@ describe("ProgressScreen", () => {
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
-  it("renders contribution-adjusted performance and asset snapshot", () => {
+  it("renders contribution-adjusted performance and compact snapshot history", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByText, getByText } = render(<ProgressScreen store={store} />);
+    const { getAllByText, getByTestId, getByText } = render(
+      <ProgressScreen store={store} />,
+    );
 
-    expect(getAllByText("₹13,85,000.00").length).toBeGreaterThan(0);
     expect(getAllByText("₹13.85L").length).toBeGreaterThanOrEqual(2);
     expect(getByText("+₹65K")).toBeTruthy();
     expect(getByText("+₹60K")).toBeTruthy();
     expect(getByText("₹60K")).toBeTruthy();
-    expect(
-      getByText("Market +₹65,000.00 · total +₹1,25,000.00"),
-    ).toBeTruthy();
+    expect(getByText("Snapshot history")).toBeTruthy();
+    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
     expect(getAllByText("Equity").length).toBeGreaterThan(0);
-    expect(getByText("₹8,80,000.00")).toBeTruthy();
+    expect(getAllByText("₹8.8L").length).toBeGreaterThan(0);
+    expect(getByText("Up 10.00%")).toBeTruthy();
     expect(getByText("May close")).toBeTruthy();
   });
 
@@ -445,9 +448,29 @@ describe("ProgressScreen", () => {
     );
 
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
-    expect(
-      getByText("Performance unavailable · total +₹1,25,000.00"),
-    ).toBeTruthy();
+    expect(getByText("Snapshot history")).toBeTruthy();
+  });
+
+  it("shows one selected snapshot while keeping older months available", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByTestId } = render(<ProgressScreen store={store} />);
+
+    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+
+    fireEvent.press(getByTestId("snapshot-month-2026-04"));
+
+    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
+      "April 2026",
+    );
+    expect(getByTestId("snapshot-month-2026-04").props.accessibilityState).toEqual({
+      selected: true,
+    });
   });
 
   it("shows an insufficient chart-history state until two snapshots exist", () => {
@@ -562,6 +585,9 @@ describe("ProgressScreen", () => {
     expect(queryByText("₹20L")).toBeNull();
     expect(queryByText("₹13,85,000.00")).toBeNull();
     expect(getAllByText("Performance values hidden").length).toBeGreaterThan(0);
+    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
+      "Portfolio hidden. Change hidden",
+    );
     expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
   });
 

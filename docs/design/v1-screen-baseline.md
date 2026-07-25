@@ -194,6 +194,15 @@ Accepted chart direction:
 - `Monthly Change Breakdown` compares the selected month with the previous month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
+- snapshot history uses one fixed-height explorer instead of rendering every
+  stored month as a vertical list
+- the explorer keeps all stored months available in a horizontal selector and
+  shows one selected month at a time
+- the selected snapshot shows portfolio and invested values plus percentage
+  movement for the portfolio and Equity, Debt, Crypto, and Cash against the
+  previous stored month
+- snapshot history replaces a separate asset-class snapshot card so the same
+  values are not repeated and the screen does not grow with every saved month
 
 Do not fake production chart history. If snapshots are missing, show a premium
 empty state and a clear path to record a snapshot.

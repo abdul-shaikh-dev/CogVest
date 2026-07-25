@@ -19,7 +19,7 @@ import {
   minimumTouchTargetStyle,
 } from "@/src/components/common";
 import type {
-  MonthlyPerformanceResult,
+  MonthlyProgressSummary,
   MonthlyProgressChartSeries,
 } from "@/src/domain/calculations";
 import {
@@ -60,10 +60,15 @@ function formatMonth(month: string) {
   }).format(new Date(Date.UTC(Number(year), monthIndex, 1)));
 }
 
-function formatSignedINR(value: number) {
-  const amount = formatINR(value);
+function formatShortMonth(month: string) {
+  const [year, monthPart] = month.split("-");
+  const monthIndex = Number(monthPart) - 1;
 
-  return value > 0 ? `+${amount}` : amount;
+  return new Intl.DateTimeFormat("en-IN", {
+    month: "short",
+    timeZone: "UTC",
+    year: "2-digit",
+  }).format(new Date(Date.UTC(Number(year), monthIndex, 1)));
 }
 
 function formatSignedCompactINR(value: number) {
@@ -84,20 +89,28 @@ function formatOptionalSignedCompactINR(value: number | null) {
   return value === null ? "Unavailable" : formatSignedCompactINR(value);
 }
 
-function formatSnapshotChange(performance: MonthlyPerformanceResult) {
-  if (performance.totalValueChange === null) {
-    return "Baseline snapshot";
+function calculatePercentageChange(current: number, previous: number | undefined) {
+  if (previous === undefined || previous === 0) {
+    return null;
   }
 
-  const totalChange = formatSignedINR(performance.totalValueChange);
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
 
-  if (performance.marketMovement === null) {
-    return `Performance unavailable · total ${totalChange}`;
+function formatChangeDirection(value: number | null, hasPreviousValue: boolean) {
+  if (value === null) {
+    return hasPreviousValue ? "No % baseline" : "No earlier snapshot";
   }
 
-  return `Market ${formatSignedINR(
-    performance.marketMovement,
-  )} · total ${totalChange}`;
+  if (value > 0) {
+    return `Up ${formatUnsignedPercentage(value)}`;
+  }
+
+  if (value < 0) {
+    return `Down ${formatUnsignedPercentage(Math.abs(value))}`;
+  }
+
+  return "No change";
 }
 
 function formatUnsignedPercentage(value: number) {
@@ -1059,6 +1072,226 @@ function ProgressTrendCards({
   );
 }
 
+function SnapshotHistoryCard({
+  maskWealthValues,
+  summaries,
+}: {
+  maskWealthValues: boolean;
+  summaries: MonthlyProgressSummary[];
+}) {
+  const [selectedMonth, setSelectedMonth] = useState(
+    summaries[0]?.snapshot.month ?? "",
+  );
+
+  useEffect(() => {
+    if (!summaries.some((summary) => summary.snapshot.month === selectedMonth)) {
+      setSelectedMonth(summaries[0]?.snapshot.month ?? "");
+    }
+  }, [selectedMonth, summaries]);
+
+  const selectedIndex = summaries.findIndex(
+    (summary) => summary.snapshot.month === selectedMonth,
+  );
+  const normalizedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const selectedSummary = summaries[normalizedIndex];
+  const previousSummary = summaries[normalizedIndex + 1];
+
+  if (!selectedSummary) {
+    return null;
+  }
+
+  const snapshot = selectedSummary.snapshot;
+  const previousSnapshot = previousSummary?.snapshot;
+  const portfolioChange = calculatePercentageChange(
+    snapshot.portfolioValue,
+    previousSnapshot?.portfolioValue,
+  );
+  const assetMetrics = [
+    {
+      assetClass: "stock" as const,
+      current: snapshot.equityValue,
+      previous: previousSnapshot?.equityValue,
+    },
+    {
+      assetClass: "debt" as const,
+      current: snapshot.debtValue,
+      previous: previousSnapshot?.debtValue,
+    },
+    {
+      assetClass: "crypto" as const,
+      current: snapshot.cryptoValue,
+      previous: previousSnapshot?.cryptoValue,
+    },
+    {
+      assetClass: "cash" as const,
+      current: snapshot.cashValue,
+      previous: previousSnapshot?.cashValue,
+    },
+  ];
+  const comparisonLabel = previousSnapshot
+    ? `vs ${formatMonth(previousSnapshot.month)}`
+    : "First stored month";
+  const portfolioChangeLabel = maskWealthValues
+    ? "Change hidden"
+    : formatChangeDirection(
+        portfolioChange,
+        previousSnapshot?.portfolioValue !== undefined,
+      );
+
+  return (
+    <PremiumCard testID="snapshot-history-card">
+      <View style={styles.snapshotHistoryHeader}>
+        <View style={styles.snapshotCopy}>
+          <SectionHeader title="Snapshot history" />
+          <AppText color="secondary" variant="caption">
+            Select a month to compare with its previous snapshot
+          </AppText>
+        </View>
+        <AppText color="secondary" variant="caption">
+          {summaries.length} stored
+        </AppText>
+      </View>
+
+      <ScrollView
+        horizontal
+        contentContainerStyle={styles.snapshotMonthList}
+        showsHorizontalScrollIndicator={false}
+      >
+        {summaries.map((summary) => {
+          const month = summary.snapshot.month;
+          const isSelected = month === snapshot.month;
+
+          return (
+            <Pressable
+              accessibilityLabel={`Show ${formatMonth(month)} snapshot`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              android_ripple={androidRipple()}
+              key={summary.snapshot.id}
+              onPress={() => setSelectedMonth(month)}
+              style={({ pressed }) => [
+                styles.snapshotMonthChip,
+                isSelected ? styles.snapshotMonthChipSelected : null,
+                getPressedStateStyle({ pressed }),
+              ]}
+              testID={`snapshot-month-${month}`}
+            >
+              <AppText
+                color={isSelected ? "inverse" : "secondary"}
+                variant="caption"
+                weight="bold"
+              >
+                {formatShortMonth(month)}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View
+        accessibilityLabel={`${formatMonth(snapshot.month)}. Portfolio ${
+          maskWealthValues ? "hidden" : formatINR(snapshot.portfolioValue)
+        }. ${portfolioChangeLabel}, ${comparisonLabel}.`}
+        style={styles.snapshotSummary}
+        testID="selected-snapshot-summary"
+      >
+        <View style={styles.snapshotSummaryHeader}>
+          <View style={styles.snapshotCopy}>
+            <AppText color="secondary" variant="caption">
+              {formatMonth(snapshot.month)}
+            </AppText>
+            <AppText style={styles.snapshotPortfolioValue} weight="bold">
+              {maskWealthValues
+                ? maskedChartValueLabel
+                : formatCompactINR(snapshot.portfolioValue)}
+            </AppText>
+          </View>
+          <View style={styles.assetValue}>
+            <AppText color="secondary" variant="caption">
+              Invested
+            </AppText>
+            <AppText weight="bold">
+              {maskWealthValues
+                ? maskedChartValueLabel
+                : formatCompactINR(snapshot.investedValue)}
+            </AppText>
+          </View>
+        </View>
+        <AppText
+          color="secondary"
+          variant="caption"
+          style={
+            !maskWealthValues && portfolioChange !== null
+              ? portfolioChange >= 0
+                ? styles.gainText
+                : styles.lossText
+              : undefined
+          }
+          weight="bold"
+        >
+          {portfolioChangeLabel} · {comparisonLabel}
+        </AppText>
+
+        <View style={styles.snapshotDivider} />
+        <View style={styles.snapshotAssetGrid}>
+          {assetMetrics.map((metric) => {
+            const change = calculatePercentageChange(
+              metric.current,
+              metric.previous,
+            );
+            const changeLabel = maskWealthValues
+              ? "Change hidden"
+              : formatChangeDirection(
+                  change,
+                  metric.previous !== undefined,
+                );
+
+            return (
+              <View key={metric.assetClass} style={styles.snapshotAssetMetric}>
+                <View style={styles.snapshotAssetTopRow}>
+                  <View style={styles.snapshotAssetLabel}>
+                    <CategoryIcon assetClass={metric.assetClass} size={18} />
+                    <AppText variant="caption" weight="bold">
+                      {assetClassLabel(metric.assetClass)}
+                    </AppText>
+                  </View>
+                  <AppText
+                    color="secondary"
+                    variant="caption"
+                    style={
+                      !maskWealthValues && change !== null
+                        ? change >= 0
+                          ? styles.gainText
+                          : styles.lossText
+                        : undefined
+                    }
+                  >
+                    {changeLabel}
+                  </AppText>
+                </View>
+                <AppText weight="bold">
+                  {maskWealthValues
+                    ? maskedChartValueLabel
+                    : formatCompactINR(metric.current)}
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+
+        {snapshot.notes ? (
+          <>
+            <View style={styles.snapshotDivider} />
+            <AppText color="secondary" variant="caption">
+              {snapshot.notes}
+            </AppText>
+          </>
+        ) : null}
+      </View>
+    </PremiumCard>
+  );
+}
+
 function SnapshotStatusCard({
   onReview,
   status,
@@ -1203,51 +1436,10 @@ export function ProgressScreen({
               portfolioChartRange={progress.portfolioChartRange}
             />
 
-            <PremiumCard>
-              <SectionHeader title="Asset class snapshot" />
-              {progress.latestSummary.assetSnapshot.map((item) => (
-                <View key={item.assetClass} style={styles.assetRow}>
-                  <View style={styles.assetIdentity}>
-                    <CategoryIcon assetClass={item.assetClass} />
-                    <AppText weight="bold">{assetClassLabel(item.assetClass)}</AppText>
-                  </View>
-                  <View style={styles.assetValue}>
-                    <AppText>{formatINR(item.value)}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {formatPercentage(item.percentage).replace("+", "")}
-                    </AppText>
-                  </View>
-                </View>
-              ))}
-            </PremiumCard>
-
-            <PremiumCard>
-              <SectionHeader title="Recent snapshots" />
-              {progress.monthlySummaries.map((summary) => (
-                <View key={summary.snapshot.id} style={styles.snapshotRow}>
-                  <View style={styles.snapshotCopy}>
-                    <AppText weight="bold">{formatMonth(summary.snapshot.month)}</AppText>
-                    {summary.snapshot.notes ? (
-                      <AppText color="secondary" variant="caption">
-                        {summary.snapshot.notes}
-                      </AppText>
-                    ) : null}
-                  </View>
-                  <View style={styles.assetValue}>
-                    <AppText>
-                      {progress.preferences.maskWealthValues
-                        ? maskedChartValueLabel
-                        : formatINR(summary.snapshot.portfolioValue)}
-                    </AppText>
-                    <AppText color="secondary" variant="caption">
-                      {progress.preferences.maskWealthValues
-                        ? "Performance values hidden"
-                        : formatSnapshotChange(summary.performance)}
-                    </AppText>
-                  </View>
-                </View>
-              ))}
-            </PremiumCard>
+            <SnapshotHistoryCard
+              maskWealthValues={progress.preferences.maskWealthValues}
+              summaries={progress.monthlySummaries}
+            />
           </>
         ) : progress.hasData ? (
           <>
@@ -1538,16 +1730,70 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  snapshotStatusHeader: {
+  snapshotAssetGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: spacing.md,
+  },
+  snapshotAssetLabel: {
     alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  snapshotAssetMetric: {
+    gap: spacing.xs,
+    paddingRight: spacing.sm,
+    width: "50%",
+  },
+  snapshotAssetTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "space-between",
+  },
+  snapshotDivider: {
+    backgroundColor: colors.border.subtle,
+    height: StyleSheet.hairlineWidth,
+  },
+  snapshotHistoryHeader: {
+    alignItems: "flex-start",
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "space-between",
   },
-  snapshotRow: {
+  snapshotMonthChip: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 999,
+    flexShrink: 0,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
+  snapshotMonthChipSelected: {
+    backgroundColor: colors.primary,
+  },
+  snapshotMonthList: {
+    gap: spacing.xs,
+    paddingRight: spacing.cardInner,
+  },
+  snapshotPortfolioValue: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  snapshotSummary: {
+    gap: spacing.sm,
+  },
+  snapshotSummaryHeader: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+  },
+  snapshotStatusHeader: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.cardInner,
+    gap: spacing.sm,
     justifyContent: "space-between",
   },
   chartSurface: {

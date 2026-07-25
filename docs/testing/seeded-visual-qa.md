@@ -39,6 +39,12 @@ To verify the installed custom-range controls against the same seeded data:
 npm run maestro:test -- e2e/progress-chart-range.yaml
 ```
 
+To verify compact snapshot history and older-month selection:
+
+```powershell
+npm run maestro:test -- e2e/progress-snapshot-history.yaml
+```
+
 This optional flow requires the development visual-QA route to be enabled as
 described above. It is not part of default PR CI or the default Maestro suite.
 
@@ -67,11 +73,13 @@ Issue #206 also records focused Progress evidence:
 - `progress-middle-point.png`
 - `progress-masked.png`
 - `progress-invalid-range.png`
+- `progress-snapshot-history.png`
+- `progress-snapshot-history-older-month.png`
 
 These focused screenshots are captured after the corresponding Maestro or
 manual pointer interaction. They verify the custom range, first/middle/latest
-selection states, masking, and invalid-range guidance that the standard
-full-app capture cannot drive by itself.
+selection states, masking, invalid-range guidance, and fixed-height snapshot
+history with an older selected month.
 
 ## Manual Bundled APK Flow
 
