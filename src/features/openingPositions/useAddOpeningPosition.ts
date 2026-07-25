@@ -8,7 +8,10 @@ import {
 } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
-import { getDefaultAssetMetadata } from "@/src/domain/assets";
+import {
+  findCanonicalAsset,
+  getDefaultAssetMetadata,
+} from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
@@ -158,8 +161,10 @@ export function useAddOpeningPosition({
   const [reviewOpeningPosition, setReviewOpeningPosition] =
     useState<OpeningPosition | undefined>(initialReviewPosition);
   const [successMessage, setSuccessMessage] = useState("");
+  const [savedAssetId, setSavedAssetId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
+  const quoteRequestIdRef = useRef(0);
   const reviewCommandIdRef = useRef<string | undefined>(
     initialReviewPosition?.id,
   );
@@ -184,6 +189,26 @@ export function useAddOpeningPosition({
     setReviewOpeningPosition(undefined);
     setSuccessMessage("");
     reviewCommandIdRef.current = undefined;
+  }
+
+  function resetPositionFields() {
+    setQuantity("");
+    setAverageCostPrice("");
+    setCurrentPrice("");
+    setDate(formatLocalCalendarDate(now));
+    setConviction("");
+    setNotes("");
+  }
+
+  function invalidateQuoteRequest() {
+    quoteRequestIdRef.current += 1;
+  }
+
+  function invalidateSelectedQuote() {
+    invalidateQuoteRequest();
+    setSelectedLookupQuote(undefined);
+    setCurrentPrice("");
+    setQuoteStatus("Asset identity changed. Enter current price manually.");
   }
 
   function getPhaseIndex(phase: AddHoldingPhase) {
@@ -361,29 +386,8 @@ export function useAddOpeningPosition({
     };
   }, [lookupQuery, searchAssetLookupResults]);
 
-  function clearSelectedAsset() {
-    if (selectedAssetId) {
-      setSelectedAssetId("");
-    }
-    if (selectedLookupResult) {
-      setSelectedLookupResult(undefined);
-    }
-    setSelectedLookupQuote(undefined);
-    setMetadataReviewMessage(defaultMetadataReviewMessage);
-    setInstrumentTypeConfidence("reviewRequired");
-    setSectorTypeConfidence("reviewRequired");
-  }
-
-  function clearSavedAssetSelection() {
-    if (selectedAssetId) {
-      setSelectedAssetId("");
-      setMetadataReviewMessage(defaultMetadataReviewMessage);
-      setInstrumentTypeConfidence("reviewRequired");
-      setSectorTypeConfidence("reviewRequired");
-    }
-  }
-
   function changeSelectedAsset() {
+    invalidateQuoteRequest();
     setSelectedAssetId("");
     setSelectedLookupResult(undefined);
     setSelectedLookupQuote(undefined);
@@ -394,6 +398,15 @@ export function useAddOpeningPosition({
     setLookupResults([]);
     setLookupStatus("");
     setQuoteStatus("");
+    setAssetName("");
+    setSymbol("");
+    setTicker("");
+    setQuoteSourceId("");
+    setAssetClass("stock");
+    setInstrumentType("stock");
+    setSectorType("financialServices");
+    setErrors({});
+    resetPositionFields();
     resetReview();
   }
 
@@ -408,6 +421,8 @@ export function useAddOpeningPosition({
 
     const quote = snapshot.quoteCache[asset.id];
 
+    invalidateQuoteRequest();
+    resetPositionFields();
     setSelectedAssetId(asset.id);
     setSelectedLookupResult(undefined);
     setSelectedLookupQuote(undefined);
@@ -421,27 +436,14 @@ export function useAddOpeningPosition({
     setSectorTypeConfidence("provider");
     setSymbol(asset.symbol);
     setTicker(asset.ticker);
-    if (quote) {
-      setCurrentPrice(quote.price.toString());
-    }
+    setCurrentPrice(quote?.price.toString() ?? "");
+    setQuoteStatus(
+      quote
+        ? "Saved current price loaded."
+        : "No saved current price. Enter it manually.",
+    );
+    setErrors({});
     resetReview();
-  }
-
-  function buildManualAsset(id: string): Asset {
-    const trimmedTicker = ticker.trim();
-
-    return {
-      assetClass,
-      currency: "INR",
-      exchange: assetClass === "crypto" ? "CRYPTO" : "NSE",
-      id,
-      instrumentType,
-      name: assetName.trim(),
-      quoteSourceId: quoteSourceId.trim() || trimmedTicker,
-      sectorType,
-      symbol: symbol.trim().toUpperCase(),
-      ticker: assetClass === "crypto" ? trimmedTicker : trimmedTicker.toUpperCase(),
-    };
   }
 
   function buildLookupAsset(result: AssetLookupResult): Asset {
@@ -468,7 +470,12 @@ export function useAddOpeningPosition({
       return;
     }
 
-    setSelectedAssetId("");
+    const canonicalAsset = findCanonicalAsset(snapshot.assets, lookupAsset);
+    const quoteRequestId = quoteRequestIdRef.current + 1;
+
+    quoteRequestIdRef.current = quoteRequestId;
+    resetPositionFields();
+    setSelectedAssetId(canonicalAsset?.id ?? "");
     setSelectedLookupResult(result);
     setSelectedLookupQuote(undefined);
     setAssetClass(result.assetClass);
@@ -485,9 +492,14 @@ export function useAddOpeningPosition({
     setLookupResults([]);
     setLookupStatus("");
     setQuoteStatus("Fetching live current price...");
+    setErrors({});
     resetReview();
 
     const quoteResult = await resolveQuote({ asset: lookupAsset });
+
+    if (quoteRequestId !== quoteRequestIdRef.current) {
+      return;
+    }
 
     if (quoteResult.ok) {
       const quoteCurrencyIssue = getV1QuoteCurrencyIssue(
@@ -515,11 +527,54 @@ export function useAddOpeningPosition({
   function updateAssetClass(nextAssetClass: AssetClass) {
     const defaults = getDefaultAssetMetadata(nextAssetClass);
 
+    invalidateSelectedQuote();
     setAssetClass(nextAssetClass);
     setInstrumentType(defaults.instrumentType);
     setSectorType(defaults.sectorType);
-    clearSelectedAsset();
     resetReview();
+  }
+
+  function updateQuoteSourceId(value: string) {
+    invalidateSelectedQuote();
+    setQuoteSourceId(value);
+    resetReview();
+  }
+
+  function updateTicker(value: string) {
+    invalidateSelectedQuote();
+    setTicker(value);
+    resetReview();
+  }
+
+  function buildReviewedAsset(): Asset {
+    const lookupAsset = selectedLookupResult
+      ? buildLookupAsset(selectedLookupResult)
+      : undefined;
+    const baseAsset = lookupAsset ?? selectedAsset;
+    const candidate = {
+      assetClass,
+      currency: baseAsset?.currency ?? "INR",
+      exchange:
+        baseAsset?.exchange ?? (assetClass === "crypto" ? "CRYPTO" : "NSE"),
+      id: selectedAssetId || createId("asset"),
+      instrumentType,
+      name: assetName.trim(),
+      quoteSourceId: quoteSourceId.trim() || ticker.trim(),
+      sectorType,
+      symbol: symbol.trim().toUpperCase(),
+      ticker:
+        assetClass === "crypto"
+          ? ticker.trim()
+          : ticker.trim().toUpperCase(),
+    } satisfies Asset;
+    const canonicalAsset = findCanonicalAsset(snapshot.assets, candidate);
+
+    return canonicalAsset
+      ? {
+          ...candidate,
+          id: canonicalAsset.id,
+        }
+      : candidate;
   }
 
   function handleReview() {
@@ -545,16 +600,7 @@ export function useAddOpeningPosition({
       return;
     }
 
-    const assetId = selectedAsset?.id ?? createId("asset");
-    const asset =
-      selectedAsset ??
-      (selectedLookupResult
-        ? {
-            ...buildLookupAsset(selectedLookupResult),
-            instrumentType,
-            sectorType,
-          }
-        : buildManualAsset(assetId));
+    const asset = buildReviewedAsset();
     const currencyIssue = getV1AssetCurrencyIssue(asset);
 
     if (currencyIssue) {
@@ -593,9 +639,9 @@ export function useAddOpeningPosition({
     isSavingRef.current = true;
     setIsSaving(true);
     const storedPrice = reviewOpeningPosition.currentPrice ?? 0;
-    const providerQuote = selectedAsset
-      ? snapshot.quoteCache[selectedAsset.id]
-      : selectedLookupQuote;
+    const providerQuote =
+      selectedLookupQuote ??
+      (selectedAsset ? snapshot.quoteCache[selectedAsset.id] : undefined);
     const shouldPreserveProviderQuote =
       providerQuote !== undefined &&
       providerQuote.currency === reviewAsset.currency &&
@@ -635,8 +681,7 @@ export function useAddOpeningPosition({
           ? "Opening position saved. Live quote will refresh later."
           : "Opening position saved.",
       );
-      setReviewOpeningPosition(undefined);
-      onComplete?.(reviewAsset.id);
+      setSavedAssetId(commandResult.asset.id);
     } catch {
       setErrors({
         save: "This holding could not be saved safely. Review it and try again.",
@@ -647,13 +692,43 @@ export function useAddOpeningPosition({
     }
   }
 
+  function viewSavedHolding() {
+    if (savedAssetId) {
+      onComplete?.(savedAssetId);
+    }
+  }
+
+  function startAnotherHolding() {
+    invalidateQuoteRequest();
+    setSavedAssetId("");
+    setSelectedAssetId("");
+    setSelectedLookupResult(undefined);
+    setSelectedLookupQuote(undefined);
+    setLookupQuery("");
+    setLookupResults([]);
+    setLookupStatus("");
+    setQuoteStatus("");
+    setAssetClass("stock");
+    setAssetName("");
+    setSymbol("");
+    setTicker("");
+    setInstrumentType("stock");
+    setSectorType("financialServices");
+    setQuoteSourceId("");
+    setMetadataReviewMessage(defaultMetadataReviewMessage);
+    setInstrumentTypeConfidence("reviewRequired");
+    setSectorTypeConfidence("reviewRequired");
+    setErrors({});
+    resetPositionFields();
+    resetReview();
+    setCurrentPhase("asset");
+  }
+
   return {
     assetClass,
     assetName,
     averageCostPrice,
     changeSelectedAsset,
-    clearSavedAssetSelection,
-    clearSelectedAsset,
     continueFromAsset,
     continueFromClass,
     continueFromPosition,
@@ -682,6 +757,7 @@ export function useAddOpeningPosition({
     resetReview,
     reviewAsset,
     reviewOpeningPosition,
+    savedAssetId,
     sectorType,
     sectorTypeConfidence,
     selectAsset,
@@ -703,9 +779,13 @@ export function useAddOpeningPosition({
     setSymbol,
     setTicker,
     snapshot,
+    startAnotherHolding,
     successMessage,
     symbol,
     ticker,
     updateAssetClass,
+    updateQuoteSourceId,
+    updateTicker,
+    viewSavedHolding,
   };
 }

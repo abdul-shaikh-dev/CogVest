@@ -54,6 +54,15 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-holding-button"
 - assertVisible:
+    id: "holding-save-complete"
+- assertVisible: "Opening position saved."
+- assertVisible:
+    id: "view-holding-button"
+- assertVisible:
+    id: "add-another-holding-button"
+- tapOn:
+    id: "view-holding-button"
+- assertVisible:
     id: "holdings-screen"
 - assertVisible: "Bitcoin"
 - assertVisible: "Invested ₹100"

@@ -1,6 +1,8 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import {
+  findCanonicalAsset,
+  hasCanonicalAssetConflict,
   isInstrumentType,
   isSectorType,
   normalizeAssetMetadata,
@@ -710,25 +712,7 @@ function normalizedIdentity(value?: string) {
 }
 
 function hasDuplicateAssetIdentity(assets: Asset[], candidate: Asset) {
-  return assets.some((asset) => {
-    if (asset.id === candidate.id) return false;
-
-    const providerId = normalizedIdentity(candidate.quoteSourceId);
-    if (
-      providerId &&
-      normalizedIdentity(asset.quoteSourceId) === providerId
-    ) {
-      return true;
-    }
-
-    const ticker = normalizedIdentity(candidate.ticker);
-    return (
-      ticker.length > 0 &&
-      normalizedIdentity(asset.ticker) === ticker &&
-      normalizedIdentity(asset.exchange) ===
-        normalizedIdentity(candidate.exchange)
-    );
-  });
+  return hasCanonicalAssetConflict(assets, candidate);
 }
 
 const validAssetClasses: Asset["assetClass"][] = [
@@ -1137,7 +1121,13 @@ export function createPortfolioStore({
         throw new Error(currencyIssue);
       }
 
-      const assets = [...state.assets, normalizeAssetMetadata(asset)];
+      const normalizedAsset = normalizeAssetMetadata(asset);
+
+      if (hasDuplicateAssetIdentity(state.assets, normalizedAsset)) {
+        throw new Error("Asset identity already exists.");
+      }
+
+      const assets = [...state.assets, normalizedAsset];
 
       persistPortfolioTransition(storage, state, { assets });
       set({ assets });
@@ -1723,10 +1713,39 @@ export function createPortfolioStore({
     },
     recordFundedBuy: (input) => {
       const state = get();
+      let commandInput = input;
+
+      if (input.asset) {
+        const normalizedCandidate = normalizeAssetMetadata(input.asset);
+        const canonicalMatch = findCanonicalAsset(
+          state.assets,
+          normalizedCandidate,
+        );
+        const candidateWithCanonicalId = canonicalMatch
+          ? { ...normalizedCandidate, id: canonicalMatch.id }
+          : normalizedCandidate;
+
+        if (
+          hasCanonicalAssetConflict(state.assets, candidateWithCanonicalId)
+        ) {
+          return { isValid: false, reason: "invalidTrade" };
+        }
+
+        const asset = canonicalMatch ?? normalizedCandidate;
+        commandInput = {
+          ...input,
+          asset,
+          trade: {
+            ...input.trade,
+            assetId: asset.id,
+          },
+        };
+      }
+
       const invalidResult = validateLinkedTrade(
         state,
-        input,
-        input.trade,
+        commandInput,
+        commandInput.trade,
         "buy",
       );
 
@@ -1736,28 +1755,30 @@ export function createPortfolioStore({
 
       const availableCash = cashBalance(state.cashEntries);
 
-      if (input.trade.totalValue > availableCash) {
+      if (commandInput.trade.totalValue > availableCash) {
         return {
           availableCash,
           isValid: false,
           reason: "insufficientCash",
-          requiredCash: input.trade.totalValue,
+          requiredCash: commandInput.trade.totalValue,
         };
       }
 
-      const cashEntry = linkedCashEntry(input, "purchaseFunding");
+      const cashEntry = linkedCashEntry(commandInput, "purchaseFunding");
       const assets =
-        input.asset &&
-        !state.assets.some((currentAsset) => currentAsset.id === input.asset?.id)
-          ? [...state.assets, normalizeAssetMetadata(input.asset)]
+        commandInput.asset &&
+        !state.assets.some(
+          (currentAsset) => currentAsset.id === commandInput.asset?.id,
+        )
+          ? [...state.assets, commandInput.asset]
           : state.assets;
       const cashEntries = [...state.cashEntries, cashEntry];
-      const trades = [...state.trades, input.trade];
+      const trades = [...state.trades, commandInput.trade];
 
       persistPortfolioTransition(storage, state, { assets, cashEntries, trades });
       set({ assets, cashEntries, trades });
 
-      return { cashEntry, isValid: true, trade: input.trade };
+      return { cashEntry, isValid: true, trade: commandInput.trade };
     },
     recordOpeningPosition: (input) => {
       const state = get();
@@ -1773,16 +1794,16 @@ export function createPortfolioStore({
         (position) => position.id === input.openingPosition.id,
       );
 
-      if (
-        existingPosition
-      ) {
+      if (existingPosition) {
+        const existingAsset = state.assets.find(
+          (asset) => asset.id === existingPosition.assetId,
+        );
+
         return {
-          asset:
-            state.assets.find((asset) => asset.id === input.asset.id) ??
-            input.asset,
-          openingPosition: existingPosition ?? input.openingPosition,
-          quote: state.quoteCache[input.asset.id] ?? input.quote,
-          quoteCacheStatus: state.quoteCache[input.asset.id]
+          asset: existingAsset ?? input.asset,
+          openingPosition: existingPosition,
+          quote: state.quoteCache[existingPosition.assetId] ?? input.quote,
+          quoteCacheStatus: state.quoteCache[existingPosition.assetId]
             ? "cached"
             : input.quote
               ? "unavailable"
@@ -1799,53 +1820,127 @@ export function createPortfolioStore({
         throw new Error("Opening position quote must reference the command asset.");
       }
 
-      const normalizedAsset = normalizeAssetMetadata(input.asset);
-      const currencyIssue = getV1AssetCurrencyIssue(normalizedAsset);
-      const quoteCurrencyIssue = input.quote
-        ? getV1QuoteCurrencyIssue(normalizedAsset, input.quote)
+      const normalizedCandidate = normalizeAssetMetadata(input.asset);
+      const canonicalMatch = findCanonicalAsset(
+        state.assets,
+        normalizedCandidate,
+      );
+      const canonicalAsset = canonicalMatch
+        ? { ...normalizedCandidate, id: canonicalMatch.id }
+        : normalizedCandidate;
+
+      if (hasCanonicalAssetConflict(state.assets, canonicalAsset)) {
+        throw new Error("Asset identity already exists.");
+      }
+
+      const openingPosition = {
+        ...input.openingPosition,
+        assetId: canonicalAsset.id,
+      };
+      const quote = input.quote
+        ? { ...input.quote, assetId: canonicalAsset.id }
+        : undefined;
+      const currencyIssue = getV1AssetCurrencyIssue(canonicalAsset);
+      const quoteCurrencyIssue = quote
+        ? getV1QuoteCurrencyIssue(canonicalAsset, quote)
         : undefined;
 
       if (currencyIssue || quoteCurrencyIssue) {
         throw new Error(currencyIssue ?? quoteCurrencyIssue);
       }
 
-      const assets = state.assets.some(
-        (asset) => asset.id === normalizedAsset.id,
-      )
-        ? state.assets
-        : [...state.assets, normalizedAsset];
+      const assets = canonicalMatch
+        ? state.assets.map((asset) =>
+            asset.id === canonicalAsset.id ? canonicalAsset : asset,
+          )
+        : [...state.assets, canonicalAsset];
       const openingPositions = [
         ...state.openingPositions,
-        input.openingPosition,
+        openingPosition,
       ];
-      persistPortfolioTransition(storage, state, {
-        assets,
-        openingPositions,
-      });
-      set({ assets, openingPositions });
+      const invalidatesQuotes =
+        canonicalMatch !== undefined &&
+        quoteIdentityChanged(canonicalMatch, canonicalAsset);
+      const baseQuoteCache = invalidatesQuotes
+        ? withoutAssetQuotes(state.quoteCache, canonicalAsset.id)
+        : state.quoteCache;
+      const historicalQuoteCache = invalidatesQuotes
+        ? withoutAssetQuotes(
+            state.historicalQuoteCache,
+            canonicalAsset.id,
+          )
+        : state.historicalQuoteCache;
+
+      if (invalidatesQuotes) {
+        const earliestAffectedMonth = assetRecordMonth(
+          state,
+          canonicalAsset.id,
+        );
+        const history = earliestAffectedMonth
+          ? rebuildPortfolioSnapshots({
+              assets,
+              earliestAffectedMonth,
+              now: now(),
+              state: {
+                ...state,
+                historicalQuoteCache,
+                openingPositions,
+                quoteCache: baseQuoteCache,
+              },
+            })
+          : {
+              monthlySnapshots: state.monthlySnapshots,
+            };
+        const portfolio = {
+          ...selectRawSnapshot(state),
+          assets,
+          monthlySnapshots: history.monthlySnapshots,
+          openingPositions,
+        };
+
+        persistAssetGraphTransition({
+          historicalQuoteCache,
+          portfolio,
+          quoteCache: baseQuoteCache,
+          storage,
+        });
+        set({
+          assets,
+          historicalQuoteCache,
+          monthlySnapshots: history.monthlySnapshots,
+          openingPositions,
+          quoteCache: baseQuoteCache,
+        });
+      } else {
+        persistPortfolioTransition(storage, state, {
+          assets,
+          openingPositions,
+        });
+        set({ assets, openingPositions });
+      }
 
       let cachedQuote: Quote | undefined;
 
-      if (input.quote) {
+      if (quote) {
         const quoteCache = {
-          ...state.quoteCache,
-          [input.asset.id]: input.quote,
+          ...baseQuoteCache,
+          [canonicalAsset.id]: quote,
         };
 
         try {
           persistQuoteCache(storage, quoteCache);
           set({ quoteCache });
-          cachedQuote = input.quote;
+          cachedQuote = quote;
         } catch {
           // Current price is durable on the opening position; quote cache can refresh later.
         }
       }
 
       return {
-        asset: normalizedAsset,
-        openingPosition: input.openingPosition,
+        asset: canonicalAsset,
+        openingPosition,
         quote: cachedQuote,
-        quoteCacheStatus: input.quote
+        quoteCacheStatus: quote
           ? cachedQuote
             ? "cached"
             : "unavailable"

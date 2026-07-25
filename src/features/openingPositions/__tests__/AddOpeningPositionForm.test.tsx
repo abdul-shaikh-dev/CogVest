@@ -219,6 +219,8 @@ describe("AddOpeningPositionForm", () => {
     });
     expect(Haptics.notificationAsync).toHaveBeenCalledWith("success");
     expect(getByText("Opening position saved.")).toBeTruthy();
+    expect(getByTestId("view-holding-button")).toBeTruthy();
+    expect(getByTestId("add-another-holding-button")).toBeTruthy();
   });
 
   it("persists metadata edits after selecting an existing saved asset", async () => {
@@ -264,19 +266,52 @@ describe("AddOpeningPositionForm", () => {
       .getState()
       .assets.find((asset) => asset.id === savedPosition?.assetId);
 
-    expect(store.getState().assets).toHaveLength(2);
-    expect(savedPosition?.assetId).not.toBe(savedAssetId);
+    expect(store.getState().assets).toHaveLength(1);
+    expect(savedPosition?.assetId).toBe(savedAssetId);
     expect(editedAsset).toMatchObject({
       name: "HDFC Bank",
       sectorType: "technology",
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
     });
-    expect(
-      store.getState().assets.find((asset) => asset.id === savedAssetId),
-    ).toMatchObject({
-      sectorType: "other",
+    expect(store.getState().assets[0]).toMatchObject({
+      id: savedAssetId,
+      sectorType: "technology",
     });
+  });
+
+  it("offers explicit completion actions after saving", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onComplete = jest.fn();
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm onComplete={onComplete} store={store} />,
+    );
+
+    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "2");
+    fireEvent.changeText(getByLabelText("Average cost"), "100");
+    fireEvent.changeText(getByLabelText("Current price"), "120");
+    fireEvent.press(getByText("Review and save"));
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(getByTestId("holding-save-complete")).toBeTruthy();
+    });
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(queryByTestId("save-holding-button")).toBeNull();
+
+    fireEvent.press(getByTestId("view-holding-button"));
+    expect(onComplete).toHaveBeenCalledWith(store.getState().assets[0].id);
+
+    fireEvent.press(getByTestId("add-another-holding-button"));
+
+    expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
+    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+    expect(queryByTestId("holding-save-complete")).toBeNull();
   });
 
   it("ignores repeated save presses while the holding command is completing", async () => {

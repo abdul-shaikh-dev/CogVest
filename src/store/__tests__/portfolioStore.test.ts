@@ -185,6 +185,21 @@ describe("portfolio store", () => {
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
   });
 
+  it("rejects direct insertion of a duplicate canonical asset identity", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+
+    expect(() =>
+      store.getState().addAsset({
+        ...asset,
+        id: "asset-duplicate",
+        name: "Reliance duplicate",
+        quoteSourceId: " reliance.ns ",
+      }),
+    ).toThrow("Asset identity already exists.");
+    expect(store.getState().assets).toEqual([asset]);
+  });
+
   it("rejects duplicate asset identities and invalid corrections", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
@@ -967,6 +982,147 @@ describe("portfolio store", () => {
     expect(restartedStore.getState().quoteCache).toEqual({ [asset.id]: quote });
   });
 
+  it("reuses and updates a canonical asset when recording an opening position", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    const duplicateCandidate = {
+      ...asset,
+      id: "asset-provider-candidate",
+      name: "Reliance Industries Limited",
+      sectorType: "energy" as const,
+    };
+    const candidatePosition = {
+      ...openingPosition,
+      assetId: duplicateCandidate.id,
+      id: "opening-provider-candidate",
+    };
+    const candidateQuote = {
+      ...quote,
+      assetId: duplicateCandidate.id,
+      price: 3000,
+    };
+
+    const result = store.getState().recordOpeningPosition({
+      asset: duplicateCandidate,
+      commandId: candidatePosition.id,
+      openingPosition: candidatePosition,
+      quote: candidateQuote,
+    });
+
+    expect(result).toMatchObject({
+      asset: {
+        id: asset.id,
+        name: "Reliance Industries Limited",
+        sectorType: "energy",
+      },
+      openingPosition: {
+        assetId: asset.id,
+        id: candidatePosition.id,
+      },
+      quote: {
+        assetId: asset.id,
+        price: 3000,
+      },
+      status: "applied",
+    });
+    expect(store.getState().assets).toHaveLength(1);
+    expect(store.getState().assets[0]).toMatchObject({
+      id: asset.id,
+      name: "Reliance Industries Limited",
+      sectorType: "energy",
+    });
+    expect(store.getState().openingPositions[0]?.assetId).toBe(asset.id);
+    expect(store.getState().quoteCache[asset.id]).toMatchObject({
+      assetId: asset.id,
+      price: 3000,
+    });
+    expect(
+      store.getState().quoteCache[duplicateCandidate.id],
+    ).toBeUndefined();
+  });
+
+  it("rejects an opening position candidate with conflicting canonical identities", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const secondAsset = {
+      ...asset,
+      id: "asset-hdfc",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addAsset(secondAsset);
+    const ambiguousAsset = {
+      ...asset,
+      id: "asset-ambiguous",
+      quoteSourceId: asset.quoteSourceId,
+      ticker: secondAsset.ticker,
+    };
+    const ambiguousPosition = {
+      ...openingPosition,
+      assetId: ambiguousAsset.id,
+      id: "opening-ambiguous",
+    };
+
+    expect(() =>
+      store.getState().recordOpeningPosition({
+        asset: ambiguousAsset,
+        commandId: ambiguousPosition.id,
+        openingPosition: ambiguousPosition,
+      }),
+    ).toThrow("Asset identity already exists.");
+    expect(store.getState().assets).toHaveLength(2);
+    expect(store.getState().openingPositions).toEqual([]);
+  });
+
+  it("invalidates old quote history when canonical quote identity changes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().upsertQuote(quote);
+    store.getState().upsertHistoricalQuote({
+      asOfMonth: "2026-04",
+      assetId: asset.id,
+      basis: "historical-close",
+      currency: "INR",
+      fetchedAt: "2026-05-01T00:00:00.000Z",
+      price: 2800,
+      source: "yahoo",
+    });
+    const correctedAsset = {
+      ...asset,
+      quoteSourceId: "RELIANCE-BSE",
+      ticker: "RELIANCE.BO",
+    };
+    const nextPosition = {
+      ...openingPosition,
+      id: "opening-corrected-identity",
+    };
+    const nextQuote = {
+      ...quote,
+      asOf: "2026-07-20T10:00:00.000Z",
+      price: 3100,
+    };
+
+    store.getState().recordOpeningPosition({
+      asset: correctedAsset,
+      commandId: nextPosition.id,
+      openingPosition: nextPosition,
+      quote: nextQuote,
+    });
+
+    expect(store.getState().assets[0]).toMatchObject({
+      id: asset.id,
+      quoteSourceId: "RELIANCE-BSE",
+      ticker: "RELIANCE.BO",
+    });
+    expect(store.getState().historicalQuoteCache[asset.id]).toBeUndefined();
+    expect(store.getState().quoteCache[asset.id]).toMatchObject({
+      price: 3100,
+    });
+  });
+
   it("exposes no partial opening position when portfolio persistence fails", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
@@ -1065,6 +1221,38 @@ describe("portfolio store", () => {
       ),
       trades: [fundedBuy],
     });
+  });
+
+  it("reuses a canonical asset for a funded buy", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 100000 });
+    const duplicateCandidate = {
+      ...asset,
+      id: "asset-provider-candidate",
+    };
+    const candidateTrade = {
+      ...trade,
+      assetId: duplicateCandidate.id,
+      pricePerUnit: 100,
+      quantity: 800,
+      totalValue: 80000,
+    };
+
+    const result = store.getState().recordFundedBuy({
+      asset: duplicateCandidate,
+      cashLabel: "Reliance Industries purchase",
+      trade: candidateTrade,
+    });
+
+    expect(result).toMatchObject({
+      isValid: true,
+      trade: {
+        assetId: asset.id,
+      },
+    });
+    expect(store.getState().assets).toEqual([asset]);
+    expect(store.getState().trades[0]?.assetId).toBe(asset.id);
   });
 
   it("rejects a funded buy above available cash before mutation", () => {
