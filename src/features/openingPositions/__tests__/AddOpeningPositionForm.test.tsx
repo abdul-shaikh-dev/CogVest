@@ -28,6 +28,15 @@ function selectDate(
   );
 }
 
+function selectOption(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  prefix: string,
+  value: string,
+) {
+  fireEvent.press(getByTestId(`${prefix}-picker`));
+  fireEvent.press(getByTestId(`${prefix}-${value}`));
+}
+
 describe("AddOpeningPositionForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,6 +90,108 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("Ticker is required.")).toBeTruthy();
   });
 
+  it("caps and filters the saved asset list", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    for (let index = 0; index < 8; index += 1) {
+      store.getState().addAsset({
+        assetClass: "stock",
+        currency: "INR",
+        exchange: "NSE" as const,
+        id: `asset-${index}`,
+        instrumentType: "stock",
+        name: `Saved Asset ${index}`,
+        quoteSourceId: `ASSET${index}.NS`,
+        sectorType: "other",
+        symbol: `ASSET${index}`,
+        ticker: `ASSET${index}.NS`,
+      });
+    }
+
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [],
+    });
+    const {
+      getAllByText,
+      getByLabelText,
+      getByTestId,
+      queryByTestId,
+    } = render(
+      <AddOpeningPositionForm
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    expect(getAllByText("Use")).toHaveLength(6);
+
+    fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    expect(getByTestId("existing-asset-asset-7")).toBeTruthy();
+    expect(queryByTestId("existing-asset-asset-0")).toBeNull();
+  });
+
+  it("shows a canonical saved asset instead of a duplicate provider result", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "asset-hdfc",
+      instrumentType: "stock",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+    const duplicateResult: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Provider details available.",
+      name: "HDFC Bank Limited",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      sectorTypeConfidence: "provider",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [duplicateResult],
+    });
+    const { getByLabelText, getByTestId, queryByTestId } = render(
+      <AddOpeningPositionForm
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "HDFC Bank");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => {
+      expect(getByTestId("existing-asset-asset-hdfc")).toBeTruthy();
+      expect(
+        queryByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"),
+      ).toBeNull();
+    });
+  });
+
   it("moves through Asset, Metadata, Position, and Review phases", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
@@ -109,11 +220,20 @@ describe("AddOpeningPositionForm", () => {
 
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
     expect(getByTestId("derived-preview")).toBeTruthy();
+    expect(getByTestId("review-identity")).toBeTruthy();
+    expect(getByTestId("review-classification")).toBeTruthy();
+    expect(getByTestId("review-position")).toBeTruthy();
+    expect(getByTestId("review-quote-provenance")).toBeTruthy();
+
+    fireEvent.press(getByTestId("review-edit-classification"));
+    expect(getByTestId("add-holding-phase-class")).toBeTruthy();
+    fireEvent.press(getByText("Continue to position"));
+    expect(getByLabelText("Quantity")).toHaveProp("value", "25");
   });
 
   it("allows returning to completed phases before saving", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -138,7 +258,7 @@ describe("AddOpeningPositionForm", () => {
 
   it("creates a manual asset and persists a reviewed opening position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -155,11 +275,10 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByText("Continue to classification"));
 
     expect(getByTestId("asset-class-stock")).toBeTruthy();
-    expect(getByTestId("instrument-type-input")).toBeTruthy();
-    expect(getByTestId("sector-type-input")).toBeTruthy();
+    expect(getByTestId("instrument-type-picker")).toBeTruthy();
+    expect(getByTestId("sector-type-picker")).toBeTruthy();
 
-    fireEvent.changeText(getByLabelText("Instrument type"), "stock");
-    fireEvent.changeText(getByLabelText("Sector type"), "energy");
+    selectOption(getByTestId, "sector-type", "energy");
     fireEvent.press(getByText("Continue to position"));
 
     expect(getByTestId("quantity-input")).toBeTruthy();
@@ -242,11 +361,11 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm store={store} />,
     );
 
-    fireEvent.press(getByText("HDFCBANK"));
+    fireEvent.press(getByTestId(`existing-asset-${savedAssetId}`));
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
 
     fireEvent.press(getByText("Continue to classification"));
-    fireEvent.changeText(getByLabelText("Sector type"), "technology");
+    selectOption(getByTestId, "sector-type", "technology");
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
@@ -377,7 +496,7 @@ describe("AddOpeningPositionForm", () => {
 
   it("creates a debt opening position without trade records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -387,7 +506,9 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quote source ID"), "SGB");
     fireEvent.press(getByText("Continue to classification"));
     fireEvent.press(getByTestId("asset-class-debt"));
-    fireEvent.changeText(getByLabelText("Instrument type"), "ppf");
+    expect(queryByTestId("sector-type-picker")).toBeNull();
+    expect(getByTestId("sector-not-applicable")).toBeTruthy();
+    selectOption(getByTestId, "instrument-type", "ppf");
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "10");
     fireEvent.changeText(getByLabelText("Average cost"), "5300");
@@ -518,7 +639,60 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.changeText(getByLabelText("Current price"), "1700");
+    selectDate(getByTestId, "date-input", "2026-04-15");
+    fireEvent.press(getByText("Review and save"));
+
+    expect(
+      getByText("Manual price • Yahoo Finance identity"),
+    ).toBeTruthy();
   });
+
+  it.each([
+    ["yahoo", "Saved live quote • Yahoo Finance"],
+    ["manual", "Saved manual price"],
+  ] as const)(
+    "shows %s provenance for a saved asset quote",
+    (source, expectedLabel) => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      const asset = {
+        assetClass: "stock" as const,
+        currency: "INR" as const,
+        exchange: "NSE" as const,
+        id: `saved-${source}`,
+        instrumentType: "stock" as const,
+        name: "Saved HDFC Bank",
+        quoteSourceId: "HDFCBANK.NS",
+        sectorType: "financialServices" as const,
+        symbol: "HDFCBANK",
+        ticker: "HDFCBANK.NS",
+      };
+
+      store.getState().addAsset(asset);
+      store.getState().upsertQuote({
+        assetId: asset.id,
+        asOf: "2026-07-26T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source,
+      });
+      const { getByLabelText, getByTestId, getByText } = render(
+        <AddOpeningPositionForm store={store} />,
+      );
+
+      fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
+      fireEvent.press(getByText("Continue to classification"));
+      fireEvent.press(getByText("Continue to position"));
+      fireEvent.changeText(getByLabelText("Quantity"), "25");
+      fireEvent.changeText(getByLabelText("Average cost"), "1450");
+      selectDate(getByTestId, "date-input", "2026-04-15");
+      fireEvent.press(getByText("Review and save"));
+
+      expect(getByText(expectedLabel)).toBeTruthy();
+    },
+  );
 
   it("lets the user change a selected lookup asset before continuing", async () => {
     jest.useFakeTimers();
@@ -651,7 +825,7 @@ describe("AddOpeningPositionForm", () => {
     ).toBeTruthy();
     expect(getByTestId("instrument-type-review-hint")).toBeTruthy();
     expect(getByTestId("sector-type-review-hint")).toBeTruthy();
-    expect(getByLabelText("Sector type")).toHaveProp("value", "other");
+    expect(getByText("Unknown")).toBeTruthy();
   });
 
   it("keeps selected lookup summary after metadata edits", async () => {
@@ -709,7 +883,7 @@ describe("AddOpeningPositionForm", () => {
     });
 
     fireEvent.press(getByText("Continue to classification"));
-    fireEvent.changeText(getByLabelText("Sector type"), "financialServices");
+    selectOption(getByTestId, "sector-type", "financialServices");
     fireEvent.press(getByText("Asset"));
 
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
@@ -770,8 +944,8 @@ describe("AddOpeningPositionForm", () => {
     });
 
     fireEvent.press(getByText("Continue to classification"));
-    expect(getByLabelText("Sector type")).toHaveProp("value", "other");
-    fireEvent.changeText(getByLabelText("Sector type"), "financialServices");
+    expect(getByText("Unknown")).toBeTruthy();
+    selectOption(getByTestId, "sector-type", "financialServices");
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "25");
     fireEvent.changeText(getByLabelText("Average cost"), "1450");

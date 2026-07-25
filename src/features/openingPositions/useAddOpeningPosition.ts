@@ -126,7 +126,7 @@ export function useAddOpeningPosition({
   const [symbol, setSymbol] = useState(initialReviewAsset?.symbol ?? "");
   const [ticker, setTicker] = useState(initialReviewAsset?.ticker ?? "");
   const [instrumentType, setInstrumentType] = useState<InstrumentType>("stock");
-  const [sectorType, setSectorType] = useState<SectorType>("financialServices");
+  const [sectorType, setSectorType] = useState<SectorType>("other");
   const defaultMetadataReviewMessage = "Manual details. Review before saving.";
   const [metadataReviewMessage, setMetadataReviewMessage] = useState(
     defaultMetadataReviewMessage,
@@ -173,6 +173,21 @@ export function useAddOpeningPosition({
     () => snapshot.assets.find((asset) => asset.id === selectedAssetId),
     [selectedAssetId, snapshot.assets],
   );
+  const matchingExistingAssets = useMemo(() => {
+    const normalizedQuery = lookupQuery.trim().toLowerCase();
+
+    return snapshot.assets
+      .filter((asset) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        return [asset.name, asset.symbol, asset.ticker].some((value) =>
+          value.toLowerCase().includes(normalizedQuery),
+        );
+      })
+      .slice(0, 6);
+  }, [lookupQuery, snapshot.assets]);
 
   const previewHolding =
     reviewAsset && reviewOpeningPosition
@@ -282,7 +297,7 @@ export function useAddOpeningPosition({
       notes,
       quoteSourceId,
       quantity,
-      sectorType: sectorType || "financialServices",
+      sectorType: sectorType || "other",
       symbol: symbol || "PHASE",
       ticker: ticker || "PHASE.NS",
     }, now);
@@ -358,14 +373,26 @@ export function useAddOpeningPosition({
           return;
         }
 
-        setLookupResults(result.results);
+        const providerResults = result.results.filter((lookupResult) => {
+          const candidate = buildLookupAsset(lookupResult);
+
+          return !findCanonicalAsset(snapshot.assets, candidate);
+        });
+
+        setLookupResults(providerResults);
         setLookupStatus(
-          result.results.length > 0
+          providerResults.length > 0
             ? "Select a result to autofill asset details."
+            : matchingExistingAssets.length > 0
+              ? "This asset is already in your saved assets."
             : "No public result found. You can enter details manually.",
         );
 
-        if (result.failures.length > 0 && result.results.length === 0) {
+        if (
+          result.failures.length > 0 &&
+          providerResults.length === 0 &&
+          matchingExistingAssets.length === 0
+        ) {
           setLookupStatus("Lookup unavailable. You can enter details manually.");
         }
       } catch {
@@ -384,7 +411,12 @@ export function useAddOpeningPosition({
       isCancelled = true;
       clearTimeout(timeout);
     };
-  }, [lookupQuery, searchAssetLookupResults]);
+  }, [
+    lookupQuery,
+    matchingExistingAssets.length,
+    searchAssetLookupResults,
+    snapshot.assets,
+  ]);
 
   function changeSelectedAsset() {
     invalidateQuoteRequest();
@@ -404,7 +436,7 @@ export function useAddOpeningPosition({
     setQuoteSourceId("");
     setAssetClass("stock");
     setInstrumentType("stock");
-    setSectorType("financialServices");
+    setSectorType("other");
     setErrors({});
     resetPositionFields();
     resetReview();
@@ -526,8 +558,19 @@ export function useAddOpeningPosition({
 
   function updateAssetClass(nextAssetClass: AssetClass) {
     const defaults = getDefaultAssetMetadata(nextAssetClass);
+    const identityClass =
+      selectedLookupResult?.assetClass ?? selectedAsset?.assetClass;
 
     invalidateSelectedQuote();
+    if (identityClass && identityClass !== nextAssetClass) {
+      setSelectedAssetId("");
+      setSelectedLookupResult(undefined);
+      setMetadataReviewMessage(defaultMetadataReviewMessage);
+      setInstrumentTypeConfidence("reviewRequired");
+      setSectorTypeConfidence("reviewRequired");
+      setQuoteSourceId("");
+      setTicker("");
+    }
     setAssetClass(nextAssetClass);
     setInstrumentType(defaults.instrumentType);
     setSectorType(defaults.sectorType);
@@ -713,7 +756,7 @@ export function useAddOpeningPosition({
     setSymbol("");
     setTicker("");
     setInstrumentType("stock");
-    setSectorType("financialServices");
+    setSectorType("other");
     setQuoteSourceId("");
     setMetadataReviewMessage(defaultMetadataReviewMessage);
     setInstrumentTypeConfidence("reviewRequired");
@@ -747,6 +790,7 @@ export function useAddOpeningPosition({
     lookupQuery,
     lookupResults,
     lookupStatus,
+    matchingExistingAssets,
     metadataReviewMessage,
     moveToPhase,
     notes,
@@ -764,6 +808,7 @@ export function useAddOpeningPosition({
     selectLookupResult,
     selectedAssetId,
     selectedLookupResult,
+    selectedLookupQuote,
     setAssetName,
     setAverageCostPrice,
     setConviction,

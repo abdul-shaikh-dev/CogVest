@@ -68,6 +68,26 @@ describe("validateOpeningPositionForm", () => {
     });
   });
 
+  it("treats a blank optional sector as Unknown", () => {
+    const result = validateOpeningPositionForm({
+      assetClass: "stock",
+      assetName: "Reliance Industries",
+      averageCostPrice: "100",
+      currentPrice: "120",
+      date: "2026-04-15",
+      instrumentType: "stock",
+      quantity: "2",
+      sectorType: "",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { sectorType: "other" },
+    });
+  });
+
   it.each(["2026-02-30", "2025-02-29"])(
     "rejects impossible acquisition date %s",
     (date) => {

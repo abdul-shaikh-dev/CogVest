@@ -45,6 +45,10 @@ appId: com.abdulshaikh.cogvest
     id: "review-holding-button"
 - assertVisible:
     id: "add-holding-phase-review"
+- scrollUntilVisible:
+    element:
+      id: "derived-preview"
+    direction: DOWN
 - assertVisible:
     id: "derived-preview"
 - scrollUntilVisible:

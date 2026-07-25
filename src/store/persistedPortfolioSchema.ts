@@ -41,6 +41,7 @@ const assetSchema = z.object({
   sectorType: z
     .enum([
       "consumer",
+      "communicationServices",
       "digitalAsset",
       "diversified",
       "energy",
@@ -49,8 +50,11 @@ const assetSchema = z.object({
       "healthcare",
       "industrial",
       "liquidity",
+      "materials",
       "other",
+      "realEstate",
       "technology",
+      "utilities",
     ])
     .optional(),
   symbol: nonEmptyStringSchema,

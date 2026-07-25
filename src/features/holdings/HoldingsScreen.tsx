@@ -20,6 +20,10 @@ import {
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import {
+  instrumentTypeLabel,
+  sectorTypeLabel,
+} from "@/src/domain/assets";
+import {
   formatCompactINR,
   formatDate,
   formatPercentage,
@@ -685,15 +689,9 @@ function getFilterLabel(filter: HoldingFilter) {
 function formatClassification(item: HoldingReviewItem) {
   return [
     assetClassLabel(item.holding.asset.assetClass),
-    humanize(item.holding.asset.instrumentType ?? "other"),
-    humanize(item.holding.asset.sectorType ?? "other"),
+    instrumentTypeLabel(item.holding.asset.instrumentType ?? "other"),
+    sectorTypeLabel(item.holding.asset.sectorType ?? "other"),
   ].join(" · ");
-}
-
-function humanize(value: string) {
-  const spaced = value.replace(/([a-z])([A-Z])/g, "$1 $2");
-
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
 function formatQuantity(value: number) {

@@ -1,6 +1,10 @@
 import {
+  equitySectorTypeOptions,
   getDefaultAssetMetadata,
+  getInstrumentTypeOptions,
+  instrumentTypeLabel,
   normalizeAssetMetadata,
+  sectorTypeLabel,
 } from "@/src/domain/assets";
 import type { Asset } from "@/src/types";
 
@@ -16,7 +20,7 @@ const baseAsset: Asset = {
 
 describe("asset metadata", () => {
   it.each([
-    ["stock", "stock", "financialServices"],
+    ["stock", "stock", "other"],
     ["etf", "etf", "diversified"],
     ["debt", "debt", "fixedIncome"],
     ["crypto", "crypto", "digitalAsset"],
@@ -33,7 +37,7 @@ describe("asset metadata", () => {
       ...baseAsset,
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
-      sectorType: "financialServices",
+      sectorType: "other",
     });
 
     expect(
@@ -48,5 +52,14 @@ describe("asset metadata", () => {
       quoteSourceId: "custom-source",
       sectorType: "technology",
     });
+  });
+
+  it("uses user-facing labels and class-specific choices", () => {
+    expect(instrumentTypeLabel("fixedDeposit")).toBe("Fixed Deposit");
+    expect(sectorTypeLabel("other")).toBe("Unknown");
+    expect(equitySectorTypeOptions).toContain("communicationServices");
+    expect(equitySectorTypeOptions).not.toContain("digitalAsset");
+    expect(getInstrumentTypeOptions("stock")).toEqual(["stock"]);
+    expect(getInstrumentTypeOptions("debt")).toContain("ppf");
   });
 });

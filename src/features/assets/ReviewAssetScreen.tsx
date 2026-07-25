@@ -13,7 +13,11 @@ import {
   assetClassLabel,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
-import { instrumentTypeOptions, sectorTypeOptions } from "@/src/domain/assets";
+import {
+  instrumentTypeOptions,
+  sectorTypeLabel,
+  sectorTypeOptions,
+} from "@/src/domain/assets";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
@@ -61,6 +65,8 @@ function ChoiceGroup<T extends string>({
   const selectedLabel =
     label === "Asset class"
       ? assetClassLabel(value as AssetClass)
+      : label === "Sector"
+        ? sectorTypeLabel(value as SectorType)
       : humanize(value);
 
   return (
@@ -93,6 +99,8 @@ function ChoiceGroup<T extends string>({
                 const optionLabel =
                   label === "Asset class"
                     ? assetClassLabel(option as AssetClass)
+                    : label === "Sector"
+                      ? sectorTypeLabel(option as SectorType)
                     : humanize(option);
                 return (
                   <Pressable
