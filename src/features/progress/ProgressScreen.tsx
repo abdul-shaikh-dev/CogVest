@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -26,6 +26,7 @@ import {
   getMonthlySnapshotPriceConfidence,
   MONTHLY_CHART_RANGES,
   type AssetChartInsight,
+  type MonthlyChartCustomRange,
   type MonthlyChartRange,
   type MonthlyProgressChartData,
 } from "@/src/domain/calculations";
@@ -191,32 +192,263 @@ function getChartSpacing(pointCount: number) {
   );
 }
 
+function getDimmedSeriesColor(label: string) {
+  switch (label) {
+    case "Portfolio":
+    case "Equity":
+      return "rgba(52,199,89,0.24)";
+    case "Invested":
+      return "rgba(255,255,255,0.24)";
+    case "Debt":
+      return "rgba(10,132,255,0.24)";
+    case "Crypto":
+      return "rgba(255,214,10,0.24)";
+    default:
+      return "rgba(142,142,147,0.24)";
+  }
+}
+
+function getDisplayedSeriesColor(label: string, focusedSeries: string | null) {
+  return focusedSeries && focusedSeries !== label
+    ? getDimmedSeriesColor(label)
+    : getSeriesColor(label);
+}
+
 function TrendLegend({
+  focusedSeries,
+  onFocusSeries,
   series,
   testIDPrefix,
 }: {
+  focusedSeries: string | null;
+  onFocusSeries: (label: string | null) => void;
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
 }) {
   return (
     <View style={styles.chartLegend}>
-      {series.map((item) => (
-        <View
-          key={item.label}
-          style={styles.legendItem}
-          testID={`${testIDPrefix}-${item.label}`}
-        >
-          <View
-            style={[
-              styles.legendDot,
-              { backgroundColor: getSeriesColor(item.label) },
+      {series.map((item) => {
+        const isFocused = focusedSeries === item.label;
+        const isDimmed = focusedSeries !== null && !isFocused;
+
+        return (
+          <Pressable
+            accessibilityLabel={`Emphasize ${item.label} series`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFocused }}
+            key={item.label}
+            onPress={() => onFocusSeries(isFocused ? null : item.label)}
+            style={({ pressed }) => [
+              styles.legendItem,
+              isFocused ? styles.legendItemFocused : null,
+              isDimmed ? styles.legendItemDimmed : null,
+              getPressedStateStyle({ pressed }),
             ]}
-          />
-          <AppText color="secondary" variant="caption" weight="medium">
-            {item.label}
+            testID={`${testIDPrefix}-${item.label}`}
+          >
+            <View
+              style={[
+                styles.legendLine,
+                item.label === "Invested" ? styles.legendLineDashed : null,
+                { borderColor: getSeriesColor(item.label) },
+              ]}
+            />
+            <AppText color="secondary" variant="caption" weight="medium">
+              {item.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function PointerSelectionBridge({
+  index,
+  onSelect,
+}: {
+  index: number;
+  onSelect: (index: number) => void;
+}) {
+  useEffect(() => {
+    onSelect(index);
+  }, [index, onSelect]);
+
+  return null;
+}
+
+function getSeriesValue(
+  series: MonthlyProgressChartSeries[],
+  label: string,
+  index: number,
+) {
+  return series.find((item) => item.label === label)?.values[index] ?? 0;
+}
+
+function getSelectedChange(
+  values: number[],
+  selectedIndex: number,
+): number | null {
+  if (selectedIndex <= 0) {
+    return null;
+  }
+
+  const previousValue = values[selectedIndex - 1] ?? 0;
+  const currentValue = values[selectedIndex] ?? 0;
+
+  return previousValue === 0
+    ? null
+    : ((currentValue - previousValue) / previousValue) * 100;
+}
+
+function SelectedMonthPanel({
+  maskWealthValues,
+  monthLabel,
+  selectedIndex,
+  series,
+  testIDPrefix,
+}: {
+  maskWealthValues: boolean;
+  monthLabel: string;
+  selectedIndex: number;
+  series: MonthlyProgressChartSeries[];
+  testIDPrefix: string;
+}) {
+  const isPortfolioChart = testIDPrefix === "portfolio-trend";
+
+  if (isPortfolioChart) {
+    const portfolioValue = getSeriesValue(series, "Portfolio", selectedIndex);
+    const investedValue = getSeriesValue(series, "Invested", selectedIndex);
+    const difference = portfolioValue - investedValue;
+    const differencePercentage =
+      investedValue === 0 ? null : (difference / investedValue) * 100;
+    const direction = difference >= 0 ? "ahead of invested" : "behind invested";
+
+    return (
+      <View
+        accessibilityLabel={
+          maskWealthValues
+            ? `${monthLabel}. Portfolio values hidden.`
+            : `${monthLabel}. Portfolio ${formatCompactINR(
+                portfolioValue,
+              )}. Invested ${formatCompactINR(
+                investedValue,
+              )}. ${formatSignedCompactINR(difference)} ${direction}.`
+        }
+        accessible
+        style={styles.selectedPanel}
+        testID={`${testIDPrefix}-selected-panel`}
+      >
+        <View style={styles.selectedPanelHeader}>
+          <AppText color="secondary" variant="caption">
+            Selected month
+          </AppText>
+          <AppText variant="caption" weight="bold">
+            {monthLabel}
           </AppText>
         </View>
-      ))}
+        {maskWealthValues ? (
+          <AppText color="secondary">Performance values hidden</AppText>
+        ) : (
+          <View style={styles.portfolioSelectionContent}>
+            <View style={styles.gapOutcome}>
+              <AppText
+                style={difference >= 0 ? styles.gainText : styles.lossText}
+                variant="title"
+                weight="bold"
+              >
+                {differencePercentage === null
+                  ? "Unavailable"
+                  : formatPercentage(differencePercentage)}
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                {`${formatSignedCompactINR(difference)} ${direction}`}
+              </AppText>
+            </View>
+            <View style={styles.gapValues}>
+              <View style={styles.gapValueRow}>
+                <AppText color="secondary" variant="caption">
+                  Portfolio
+                </AppText>
+                <AppText variant="caption" weight="bold">
+                  {formatCompactINR(portfolioValue)}
+                </AppText>
+              </View>
+              <View style={styles.gapValueRow}>
+                <AppText color="secondary" variant="caption">
+                  Invested
+                </AppText>
+                <AppText variant="caption" weight="bold">
+                  {formatCompactINR(investedValue)}
+                </AppText>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      accessibilityLabel={
+        maskWealthValues
+          ? `${monthLabel}. Asset values hidden.`
+          : `${monthLabel}. ${series
+              .map(
+                (item) =>
+                  `${item.label} ${formatCompactINR(
+                    item.values[selectedIndex] ?? 0,
+                  )}`,
+              )
+              .join(". ")}.`
+      }
+      accessible
+      style={styles.selectedPanel}
+      testID={`${testIDPrefix}-selected-panel`}
+    >
+      <View style={styles.selectedPanelHeader}>
+        <AppText color="secondary" variant="caption">
+          Selected month
+        </AppText>
+        <AppText variant="caption" weight="bold">
+          {monthLabel}
+        </AppText>
+      </View>
+      {maskWealthValues ? (
+        <AppText color="secondary">Asset values hidden</AppText>
+      ) : (
+        <View style={styles.assetSelectionGrid}>
+          {series.map((item) => {
+            const change = getSelectedChange(item.values, selectedIndex);
+
+            return (
+              <View key={item.label} style={styles.assetSelectionMetric}>
+                <AppText color="secondary" variant="caption">
+                  {item.label}
+                </AppText>
+                <AppText weight="bold">
+                  {formatCompactINR(item.values[selectedIndex] ?? 0)}
+                </AppText>
+                <AppText
+                  style={
+                    change === null
+                      ? styles.neutralText
+                      : change >= 0
+                        ? styles.gainText
+                        : styles.lossText
+                  }
+                  variant="caption"
+                >
+                  {change === null
+                    ? "First visible month"
+                    : `${formatPercentage(change)} vs prior`}
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -238,9 +470,43 @@ function TrendChart({
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const pointCount = series[0]?.values.length ?? 0;
   const spacingValue = getChartSpacing(pointCount);
+  const monthRangeKey = monthLabels.join("|");
+  const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(
+    Math.max(pointCount - 1, 0),
+  );
+  const safeSelectedIndex = Math.min(
+    selectedIndex,
+    Math.max(pointCount - 1, 0),
+  );
+
+  useEffect(() => {
+    setSelectedIndex(Math.max(pointCount - 1, 0));
+  }, [monthRangeKey, pointCount]);
+
+  const selectPointerIndex = (index: number) => {
+    if (index >= 0 && index < pointCount) {
+      setSelectedIndex(index);
+    }
+  };
+
+  const pointerLabelComponent = (
+    _items: unknown,
+    _secondaryItems: unknown,
+    index: number,
+  ) => (
+    <PointerSelectionBridge index={index} onSelect={selectPointerIndex} />
+  );
 
   return (
     <View style={styles.chartBlock}>
+      <SelectedMonthPanel
+        maskWealthValues={maskWealthValues}
+        monthLabel={monthLabels[safeSelectedIndex] ?? ""}
+        selectedIndex={safeSelectedIndex}
+        series={series}
+        testIDPrefix={testIDPrefix}
+      />
       <View style={styles.chartWithAxis}>
         <View style={styles.yAxisLabels}>
           {getYAxisLabels(series, maskWealthValues).map((label, index) => (
@@ -259,8 +525,14 @@ function TrendChart({
             <LineChart
             adjustToWidth
             areaChart
-            color1={getSeriesColor(series[0]?.label ?? "")}
-            color2={getSeriesColor(series[1]?.label ?? "")}
+            color1={getDisplayedSeriesColor(
+              series[0]?.label ?? "",
+              focusedSeries,
+            )}
+            color2={getDisplayedSeriesColor(
+              series[1]?.label ?? "",
+              focusedSeries,
+            )}
             curved
             data={toGiftedChartData(series[0], monthLabels)}
             data2={toGiftedChartData(series[1], monthLabels, false)}
@@ -282,8 +554,14 @@ function TrendChart({
             noOfSections={3}
             pointerConfig={{
               activatePointersOnLongPress: true,
+              initialPointerIndex: safeSelectedIndex,
+              persistPointer: true,
               pointerColor: colors.profit,
+              pointerLabelComponent,
+              pointerLabelHeight: 1,
+              pointerLabelWidth: 1,
               pointerStripColor: colors.border.subtle,
+              resetPointerIndexOnRelease: false,
             }}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
@@ -292,6 +570,7 @@ function TrendChart({
             startOpacity={0.18}
             thickness1={3}
             thickness2={3}
+            strokeDashArray2={[6, 4]}
             width={chartWidth}
             xAxisColor={colors.border.subtle}
             xAxisLabelTextStyle={styles.axisText}
@@ -306,7 +585,7 @@ function TrendChart({
             adjustToWidth
             curved
             dataSet={series.map((item, index) => ({
-              color: getSeriesColor(item.label),
+              color: getDisplayedSeriesColor(item.label, focusedSeries),
               data: toGiftedChartData(item, monthLabels, index === 0),
               dataPointsColor: getSeriesColor(item.label),
               dataPointsRadius: 3,
@@ -323,8 +602,14 @@ function TrendChart({
             noOfSections={3}
             pointerConfig={{
               activatePointersOnLongPress: true,
+              initialPointerIndex: safeSelectedIndex,
+              persistPointer: true,
               pointerColor: colors.text.secondary,
+              pointerLabelComponent,
+              pointerLabelHeight: 1,
+              pointerLabelWidth: 1,
               pointerStripColor: colors.border.subtle,
+              resetPointerIndexOnRelease: false,
             }}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
@@ -341,7 +626,12 @@ function TrendChart({
           )}
         </View>
       </View>
-      <TrendLegend series={series} testIDPrefix={testIDPrefix} />
+      <TrendLegend
+        focusedSeries={focusedSeries}
+        onFocusSeries={setFocusedSeries}
+        series={series}
+        testIDPrefix={testIDPrefix}
+      />
     </View>
   );
 }
@@ -389,6 +679,175 @@ function ChartRangeSelector({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+function MonthPickerField({
+  label,
+  months,
+  onChange,
+  testID,
+  value,
+}: {
+  label: string;
+  months: string[];
+  onChange: (month: string) => void;
+  testID: string;
+  value: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <View style={styles.monthPickerContainer}>
+      <AppText color="secondary" variant="caption">
+        {label}
+      </AppText>
+      <Pressable
+        accessibilityLabel={`Choose ${label.toLowerCase()}`}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isOpen }}
+        onPress={() => setIsOpen(true)}
+        style={({ pressed }) => [
+          styles.monthPickerField,
+          getPressedStateStyle({ pressed }),
+        ]}
+        testID={testID}
+      >
+        <AppText variant="caption" weight="bold">
+          {value ? formatMonth(value) : "Choose month"}
+        </AppText>
+        <AppText color="secondary" variant="caption">
+          Change
+        </AppText>
+      </Pressable>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsOpen(false)}
+        transparent
+        visible={isOpen}
+      >
+        <View style={styles.monthPickerOverlay}>
+          <Pressable
+            accessibilityLabel="Close month picker"
+            onPress={() => setIsOpen(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.monthPickerSheet}>
+            <View style={styles.monthPickerHeader}>
+              <AppText variant="title" weight="bold">
+                {label}
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                Stored snapshots only
+              </AppText>
+            </View>
+            <ScrollView
+              contentContainerStyle={styles.monthPickerOptions}
+              keyboardShouldPersistTaps="handled"
+            >
+              {months.map((month) => {
+                const isSelected = month === value;
+
+                return (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected }}
+                    key={month}
+                    onPress={() => {
+                      onChange(month);
+                      setIsOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.monthPickerOption,
+                      isSelected ? styles.monthPickerOptionSelected : null,
+                      getPressedStateStyle({ pressed }),
+                    ]}
+                    testID={`${testID}-${month}`}
+                  >
+                    <AppText weight={isSelected ? "bold" : "medium"}>
+                      {formatMonth(month)}
+                    </AppText>
+                    {isSelected ? (
+                      <AppText style={styles.gainText} variant="caption">
+                        Selected
+                      </AppText>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function CustomMonthRangeControls({
+  appliedRange,
+  availableMonths,
+  onApply,
+  testIDPrefix,
+}: {
+  appliedRange: MonthlyChartCustomRange;
+  availableMonths: string[];
+  onApply: (range: MonthlyChartCustomRange) => void;
+  testIDPrefix: string;
+}) {
+  const [startMonth, setStartMonth] = useState(appliedRange.startMonth);
+  const [endMonth, setEndMonth] = useState(appliedRange.endMonth);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStartMonth(appliedRange.startMonth);
+    setEndMonth(appliedRange.endMonth);
+    setError(null);
+  }, [appliedRange.endMonth, appliedRange.startMonth]);
+
+  function applyRange() {
+    if (!startMonth || !endMonth) {
+      setError("Choose both months.");
+      return;
+    }
+
+    if (startMonth > endMonth) {
+      setError("From month must be before To month.");
+      return;
+    }
+
+    setError(null);
+    onApply({ endMonth, startMonth });
+  }
+
+  return (
+    <View style={styles.customRangePanel}>
+      <View style={styles.customRangeFields}>
+        <MonthPickerField
+          label="From month"
+          months={availableMonths}
+          onChange={setStartMonth}
+          testID={`${testIDPrefix}-start`}
+          value={startMonth}
+        />
+        <MonthPickerField
+          label="To month"
+          months={availableMonths}
+          onChange={setEndMonth}
+          testID={`${testIDPrefix}-end`}
+          value={endMonth}
+        />
+      </View>
+      {error ? (
+        <AppText style={styles.lossText} testID={`${testIDPrefix}-error`} variant="caption">
+          {error}
+        </AppText>
+      ) : null}
+      <AppButton
+        onPress={applyRange}
+        testID={`${testIDPrefix}-apply`}
+        title="Apply range"
+      />
     </View>
   );
 }
@@ -472,27 +931,35 @@ function AssetInsightRows({ insights }: { insights: AssetChartInsight[] }) {
 }
 
 function ProgressTrendCards({
+  assetChartCustomRange,
   assetChartData,
   assetChartRange,
   isReducedMotionEnabled,
   maskWealthValues,
+  onAssetCustomRangeChange,
   onAssetRangeChange,
+  onPortfolioCustomRangeChange,
   onPortfolioRangeChange,
+  portfolioChartCustomRange,
   portfolioChartData,
   portfolioChartRange,
 }: {
+  assetChartCustomRange: MonthlyChartCustomRange;
   assetChartData: MonthlyProgressChartData;
   assetChartRange: MonthlyChartRange;
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
+  onAssetCustomRangeChange: (range: MonthlyChartCustomRange) => void;
   onAssetRangeChange: (range: MonthlyChartRange) => void;
+  onPortfolioCustomRangeChange: (range: MonthlyChartCustomRange) => void;
   onPortfolioRangeChange: (range: MonthlyChartRange) => void;
+  portfolioChartCustomRange: MonthlyChartCustomRange;
   portfolioChartData: MonthlyProgressChartData;
   portfolioChartRange: MonthlyChartRange;
 }) {
   if (
-    !portfolioChartData.hasEnoughHistory &&
-    !assetChartData.hasEnoughHistory
+    portfolioChartData.availableMonths.length < 2 &&
+    assetChartData.availableMonths.length < 2
   ) {
     return (
       <PremiumCard>
@@ -510,31 +977,37 @@ function ProgressTrendCards({
     <>
       <PremiumCard>
         <ChartCardHeader
-          actionLabel={
-            portfolioChartData.portfolioInsight
-              ? formatPercentage(portfolioChartData.portfolioInsight.valueGapPct)
-              : undefined
-          }
-          actionTone={
-            (portfolioChartData.portfolioInsight?.valueGap ?? 0) >= 0
-              ? "positive"
-              : "negative"
-          }
-          subtitle="Portfolio value against invested capital"
-          title="Value Gap"
+          subtitle="Portfolio value compared with invested capital"
+          title="Portfolio Growth"
         />
         <ChartRangeSelector
           onChange={onPortfolioRangeChange}
           selectedRange={portfolioChartRange}
           testIDPrefix="portfolio-monthly-chart-range"
         />
-        <TrendChart
-          isReducedMotionEnabled={isReducedMotionEnabled}
-          maskWealthValues={maskWealthValues}
-          monthLabels={portfolioChartData.monthLabels}
-          series={portfolioChartData.portfolioSeries}
-          testIDPrefix="portfolio-trend"
-        />
+        {portfolioChartRange === "Custom" ? (
+          <CustomMonthRangeControls
+            appliedRange={portfolioChartCustomRange}
+            availableMonths={portfolioChartData.availableMonths}
+            onApply={onPortfolioCustomRangeChange}
+            testIDPrefix="portfolio-custom-range"
+          />
+        ) : null}
+        {portfolioChartData.hasEnoughHistory ? (
+          <TrendChart
+            isReducedMotionEnabled={isReducedMotionEnabled}
+            maskWealthValues={maskWealthValues}
+            monthLabels={portfolioChartData.monthLabels}
+            series={portfolioChartData.portfolioSeries}
+            testIDPrefix="portfolio-trend"
+          />
+        ) : (
+          <View style={styles.chartPlaceholder}>
+            <AppText color="secondary" align="center">
+              Select at least 2 stored snapshot months to show this trend.
+            </AppText>
+          </View>
+        )}
       </PremiumCard>
       <PremiumCard>
         <ChartCardHeader
@@ -558,14 +1031,32 @@ function ProgressTrendCards({
           selectedRange={assetChartRange}
           testIDPrefix="asset-monthly-chart-range"
         />
-        <TrendChart
-          isReducedMotionEnabled={isReducedMotionEnabled}
-          maskWealthValues={maskWealthValues}
-          monthLabels={assetChartData.monthLabels}
-          series={assetChartData.assetSeries}
-          testIDPrefix="asset-trend"
-        />
-        <AssetInsightRows insights={assetChartData.assetInsights} />
+        {assetChartRange === "Custom" ? (
+          <CustomMonthRangeControls
+            appliedRange={assetChartCustomRange}
+            availableMonths={assetChartData.availableMonths}
+            onApply={onAssetCustomRangeChange}
+            testIDPrefix="asset-custom-range"
+          />
+        ) : null}
+        {assetChartData.hasEnoughHistory ? (
+          <>
+            <TrendChart
+              isReducedMotionEnabled={isReducedMotionEnabled}
+              maskWealthValues={maskWealthValues}
+              monthLabels={assetChartData.monthLabels}
+              series={assetChartData.assetSeries}
+              testIDPrefix="asset-trend"
+            />
+            <AssetInsightRows insights={assetChartData.assetInsights} />
+          </>
+        ) : (
+          <View style={styles.chartPlaceholder}>
+            <AppText color="secondary" align="center">
+              Select at least 2 stored snapshot months to show this trend.
+            </AppText>
+          </View>
+        )}
       </PremiumCard>
     </>
   );
@@ -699,12 +1190,18 @@ export function ProgressScreen({
             />
 
             <ProgressTrendCards
+              assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
               maskWealthValues={progress.preferences.maskWealthValues}
+              onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}
+              onPortfolioCustomRangeChange={
+                progress.setPortfolioChartCustomRange
+              }
               onPortfolioRangeChange={progress.setPortfolioChartRange}
+              portfolioChartCustomRange={progress.portfolioChartCustomRange}
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
             />
@@ -801,12 +1298,18 @@ export function ProgressScreen({
             </PremiumCard>
 
             <ProgressTrendCards
+              assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
               maskWealthValues={progress.preferences.maskWealthValues}
+              onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}
+              onPortfolioCustomRangeChange={
+                progress.setPortfolioChartCustomRange
+              }
               onPortfolioRangeChange={progress.setPortfolioChartRange}
+              portfolioChartCustomRange={progress.portfolioChartCustomRange}
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
             />
@@ -842,6 +1345,15 @@ export function ProgressScreen({
 }
 
 const styles = StyleSheet.create({
+  assetSelectionGrid: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  assetSelectionMetric: {
+    flex: 1,
+    gap: spacing.xs,
+    minWidth: 0,
+  },
   assetIdentity: {
     alignItems: "center",
     flex: 1,
@@ -896,15 +1408,102 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
   },
-  legendDot: {
-    borderRadius: 4,
-    height: 8,
-    width: 8,
+  customRangeFields: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  customRangePanel: {
+    backgroundColor: "#111113",
+    borderRadius: 14,
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  gapOutcome: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  gapValueRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  gapValues: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  legendItemDimmed: {
+    opacity: 0.45,
+  },
+  legendItemFocused: {
+    backgroundColor: colors.surface.elevated,
+  },
+  legendLine: {
+    borderTopWidth: 2,
+    width: 14,
+  },
+  legendLineDashed: {
+    borderStyle: "dashed",
   },
   legendItem: {
     alignItems: "center",
+    borderRadius: 999,
     flexDirection: "row",
     gap: spacing.xs,
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  monthPickerContainer: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  monthPickerField: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  monthPickerHeader: {
+    gap: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  monthPickerOption: {
+    alignItems: "center",
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
+  monthPickerOptionSelected: {
+    backgroundColor: "rgba(52,199,89,0.12)",
+  },
+  monthPickerOptions: {
+    gap: spacing.xs,
+  },
+  monthPickerOverlay: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: spacing.md,
+  },
+  monthPickerSheet: {
+    backgroundColor: colors.surface.card,
+    borderRadius: 22,
+    gap: spacing.sm,
+    maxHeight: "72%",
+    padding: spacing.md,
+  },
+  neutralText: {
+    color: colors.text.secondary,
+  },
+  portfolioSelectionContent: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: spacing.md,
   },
   rangeChip: {
     alignItems: "center",
@@ -925,6 +1524,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     padding: spacing.xs,
+  },
+  selectedPanel: {
+    backgroundColor: "#111113",
+    borderRadius: 14,
+    gap: spacing.sm,
+    minHeight: 82,
+    padding: spacing.cardInner,
+  },
+  selectedPanelHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   snapshotCopy: {
     flex: 1,

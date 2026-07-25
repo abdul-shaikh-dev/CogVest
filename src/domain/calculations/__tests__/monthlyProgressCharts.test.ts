@@ -114,6 +114,78 @@ describe("buildMonthlyProgressChartData", () => {
     ]);
   });
 
+  it("filters an inclusive custom range using stored snapshot months", () => {
+    const chartData = buildMonthlyProgressChartData(
+      monthlySnapshots,
+      "Custom",
+      {
+        endMonth: "2026-04",
+        startMonth: "2026-01",
+      },
+    );
+
+    expect(chartData.selectedRange).toBe("Custom");
+    expect(chartData.customRange).toEqual({
+      endMonth: "2026-04",
+      startMonth: "2026-01",
+    });
+    expect(chartData.monthLabels).toEqual([
+      "Jan 2026",
+      "Feb 2026",
+      "Mar 2026",
+      "Apr 2026",
+    ]);
+    expect(chartData.rangeError).toBeNull();
+  });
+
+  it("derives custom range options from persisted snapshots in chronological order", () => {
+    const chartData = buildMonthlyProgressChartData([
+      monthlySnapshots[2]!,
+      monthlySnapshots[0]!,
+      monthlySnapshots[1]!,
+    ]);
+
+    expect(chartData.availableMonths).toEqual([
+      "2025-11",
+      "2025-12",
+      "2026-01",
+    ]);
+  });
+
+  it.each([
+    {
+      customRange: { endMonth: "2026-02", startMonth: "2026-04" },
+      expectedError: "invalid-order",
+    },
+    {
+      customRange: { endMonth: "2024-02", startMonth: "2024-01" },
+      expectedError: "empty-range",
+    },
+  ])(
+    "reports $expectedError for an unusable custom range",
+    ({ customRange, expectedError }) => {
+      const chartData = buildMonthlyProgressChartData(
+        monthlySnapshots,
+        "Custom",
+        customRange,
+      );
+
+      expect(chartData.hasEnoughHistory).toBe(false);
+      expect(chartData.monthLabels).toEqual([]);
+      expect(chartData.rangeError).toBe(expectedError);
+    },
+  );
+
+  it("requires both custom range boundaries", () => {
+    const chartData = buildMonthlyProgressChartData(
+      monthlySnapshots,
+      "Custom",
+    );
+
+    expect(chartData.hasEnoughHistory).toBe(false);
+    expect(chartData.rangeError).toBe("missing-boundary");
+  });
+
   it("defaults to six latest snapshots when more than six exist", () => {
     const chartData = buildMonthlyProgressChartData(monthlySnapshots);
 

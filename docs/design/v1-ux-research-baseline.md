@@ -143,8 +143,14 @@ It should answer:
 Accepted V1 structure:
 
 - top summary metrics
-- `Value Gap` chart: portfolio value vs invested value
+- `Portfolio Growth` chart: portfolio value vs invested capital, with a
+  selected-month summary that explains the percentage and amount ahead or
+  behind invested capital
 - `Asset Momentum` chart: Equity, Debt, and Crypto over months; Cash excluded
+- independent per-chart ranges: `3M`, `6M`, `1Y`, `All`, and a custom inclusive
+  range built only from available stored snapshot months
+- selected-month figures live above each plot so exact values remain readable
+  without crowding the chart
 - `Monthly Change Breakdown`: selected month vs previous month
 - compact month-end snapshot call-to-action
 

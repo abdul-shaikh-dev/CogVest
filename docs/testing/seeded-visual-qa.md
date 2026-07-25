@@ -33,6 +33,15 @@ release APK visual QA run additionally requires private release signing,
 npm run visual-qa:android
 ```
 
+To verify the installed custom-range controls against the same seeded data:
+
+```powershell
+npm run maestro:test -- e2e/progress-chart-range.yaml
+```
+
+This optional flow requires the development visual-QA route to be enabled as
+described above. It is not part of default PR CI or the default Maestro suite.
+
 Output is written to:
 
 ```text
@@ -50,6 +59,19 @@ Expected screenshots:
 - `progress.png`
 - `progress-assets-chart.png`
 - `settings.png`
+
+Issue #206 also records focused Progress evidence:
+
+- `progress-custom-range.png`
+- `progress-first-point-masked.png`
+- `progress-middle-point.png`
+- `progress-masked.png`
+- `progress-invalid-range.png`
+
+These focused screenshots are captured after the corresponding Maestro or
+manual pointer interaction. They verify the custom range, first/middle/latest
+selection states, masking, and invalid-range guidance that the standard
+full-app capture cannot drive by itself.
 
 ## Manual Bundled APK Flow
 
@@ -193,18 +215,22 @@ adb -s emulator-5554 exec-out screencap -p > .expo\progress-asset-trend-seeded.p
 
 Expected Progress evidence:
 
-- Value Gap chart renders Portfolio vs Invested.
-- Value Gap has y-axis INR labels, sparse chart-native x-axis month labels
-  (`Dec`, `Mar`, `May` for the seeded 6M window), and chart-local `3M`, `6M`,
-  `1Y`, `All` chips.
+- Portfolio Growth chart renders Portfolio vs Invested, with a selected-month
+  summary showing the percentage and amount ahead or behind invested capital.
+- Portfolio Growth has y-axis INR labels, sparse chart-native x-axis month
+  labels (`Dec`, `Mar`, `May` for the seeded 6M window), and chart-local `3M`,
+  `6M`, `1Y`, `All`, and `Custom` controls.
 - Asset Momentum chart renders Equity, Debt, and Crypto lines with cash excluded.
 - Asset Momentum has y-axis INR labels, sparse chart-native x-axis month labels,
-  chart-local timeframe chips, a legend, and per-asset insight rows.
+  chart-local timeframe controls, an interactive legend, selected-month values,
+  and per-asset insight rows.
+- Each chart's custom range uses only available stored snapshot months, applies
+  inclusively, and does not alter the other chart's selected range.
 - Seeded Progress defaults to the `6M` range while keeping `All` available.
 - Seeded chart data should stay calm and preview-like: latest Progress values
   should be around Portfolio `₹19.87L`, Market change `+₹13K`, Net contribution
-  `+₹45K`, Monthly investment `₹45K`, total value change `+₹58K`, Value Gap
-  around `+15.5%`, and Asset Momentum led by Equity around `+4.9%`.
+  `+₹45K`, Monthly investment `₹45K`, total value change `+₹58K`, Portfolio
+  Growth around `+15.5%`, and Asset Momentum led by Equity around `+4.9%`.
 
 ### 6. Clean Local Build Cache
 
@@ -249,7 +275,7 @@ Check:
 - Holdings populated row layout
 - Add Holding initial, lookup selection, and review states
 - Cash Ledger hero, metrics, entry form, and ledger rows
-- Monthly Progress `Value Gap` and `Asset Momentum` charts
+- Monthly Progress `Portfolio Growth` and `Asset Momentum` charts
 - Settings local-first trust sections
 
 Log any mismatch as a focused GitHub issue with screenshot evidence.

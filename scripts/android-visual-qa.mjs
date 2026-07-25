@@ -188,7 +188,7 @@ try {
   captureWhenReady("cash", ["Cash Ledger", "Deployable cash"]);
 
   openDeepLink("progress");
-  captureWhenReady("progress", ["Monthly Progress", "Value Gap"]);
+  captureWhenReady("progress", ["Monthly Progress", "Portfolio Growth"]);
   scrollDown();
   captureWhenReady("progress-assets-chart", [
     "Asset Momentum",

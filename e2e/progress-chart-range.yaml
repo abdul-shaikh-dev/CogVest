@@ -1,0 +1,53 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: "progress-screen"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "portfolio-monthly-chart-range-Custom"
+    direction: DOWN
+- tapOn:
+    id: "portfolio-monthly-chart-range-Custom"
+- assertVisible:
+    id: "portfolio-custom-range-start"
+- assertVisible:
+    id: "portfolio-custom-range-end"
+- tapOn:
+    id: "portfolio-custom-range-start"
+- scrollUntilVisible:
+    element:
+      id: "portfolio-custom-range-start-2026-03"
+    direction: DOWN
+- tapOn:
+    id: "portfolio-custom-range-start-2026-03"
+- tapOn:
+    id: "portfolio-custom-range-apply"
+- assertVisible:
+    id: "portfolio-trend-selected-panel"
+- scrollUntilVisible:
+    element:
+      id: "asset-monthly-chart-range-Custom"
+    direction: DOWN
+- tapOn:
+    id: "asset-monthly-chart-range-Custom"
+- assertVisible:
+    id: "asset-custom-range-start"
+- assertVisible:
+    id: "asset-custom-range-end"
+- scrollUntilVisible:
+    element:
+      id: "asset-trend-selected-panel"
+    direction: DOWN
