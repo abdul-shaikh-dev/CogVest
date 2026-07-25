@@ -34,6 +34,14 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "portfolio-custom-range-start-2026-03"
 - tapOn:
+    id: "portfolio-custom-range-end"
+- assertNotVisible:
+    id: "portfolio-custom-range-end-2026-02"
+- assertVisible:
+    id: "portfolio-custom-range-end-2026-03"
+- tapOn:
+    id: "portfolio-custom-range-end-2026-06"
+- tapOn:
     id: "portfolio-custom-range-apply"
 - assertVisible:
     id: "portfolio-trend-selected-panel"

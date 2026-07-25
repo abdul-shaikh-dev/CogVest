@@ -636,24 +636,37 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.dataSet[0].data).toHaveLength(3);
   });
 
-  it("rejects a custom range whose start month follows its end month", () => {
+  it("only offers valid end months after the selected start month", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId } = render(<ProgressScreen store={store} />);
+    const { getByTestId, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
 
     fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-05"));
     fireEvent.press(getByTestId("portfolio-custom-range-end"));
     fireEvent.press(getByTestId("portfolio-custom-range-end-2026-04"));
+    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-05"));
+
+    expect(getByTestId("portfolio-custom-range-end")).toHaveTextContent(
+      /May 2026/,
+    );
+    fireEvent.press(getByTestId("portfolio-custom-range-end"));
+    expect(
+      queryByTestId("portfolio-custom-range-end-2026-03"),
+    ).toBeNull();
+    expect(
+      queryByTestId("portfolio-custom-range-end-2026-04"),
+    ).toBeNull();
+    expect(getByTestId("portfolio-custom-range-end-2026-05")).toBeTruthy();
+    fireEvent.press(getByTestId("portfolio-custom-range-end-2026-05"));
     fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
-    expect(getByTestId("portfolio-custom-range-error")).toHaveTextContent(
-      "From month must be before To month.",
-    );
+    expect(queryByTestId("portfolio-custom-range-error")).toBeNull();
   });
 
   it("updates an existing month instead of creating duplicate snapshots", () => {
