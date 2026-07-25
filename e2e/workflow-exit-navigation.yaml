@@ -1,0 +1,41 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: "holdings-screen"
+- tapOn:
+    id: "holdings-add-button"
+- assertVisible:
+    id: "add-holding-screen"
+- tapOn:
+    id: "add-holding-exit"
+- assertVisible:
+    id: "holdings-screen"
+- scrollUntilVisible:
+    element:
+      id: "holding-row-visual-qa-asset-hdfc"
+    direction: DOWN
+- tapOn:
+    id: "holding-row-visual-qa-asset-hdfc"
+- scrollUntilVisible:
+    element:
+      id: "holding-sell-redeem-visual-qa-asset-hdfc"
+    direction: DOWN
+- tapOn:
+    id: "holding-sell-redeem-visual-qa-asset-hdfc"
+- assertVisible:
+    id: "sell-redeem-screen"
+- tapOn:
+    id: "sell-redeem-back"
+- assertVisible:
+    id: "holdings-screen"

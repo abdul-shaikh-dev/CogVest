@@ -5,6 +5,7 @@ import {
   AppText,
   assetClassLabel,
   CategoryIcon,
+  IconButton,
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
@@ -29,7 +30,9 @@ import {
   useAddOpeningPosition,
 } from "./useAddOpeningPosition";
 
-type AddOpeningPositionFormProps = AddOpeningPositionControllerInput;
+type AddOpeningPositionFormProps = AddOpeningPositionControllerInput & {
+  onCancel?: () => void;
+};
 
 function formatSignedINR(value: number) {
   const amount = formatINR(value);
@@ -40,6 +43,7 @@ function formatSignedINR(value: number) {
 export function AddOpeningPositionForm({
   initialVisualQaState,
   now,
+  onCancel,
   onComplete,
   resolveQuote,
   searchAssetLookupResults,
@@ -169,7 +173,20 @@ export function AddOpeningPositionForm({
 
   return (
     <ScreenContainer scroll testID="add-holding-screen">
-      <ScreenHeader title="Add Holding" subtitle="Opening position • local only" />
+      <ScreenHeader
+        leading={
+          onCancel ? (
+            <IconButton
+              accessibilityLabel="Back to Holdings"
+              icon="arrow-back"
+              onPress={onCancel}
+              testID="add-holding-exit"
+            />
+          ) : null
+        }
+        title="Add Holding"
+        subtitle="Opening position • local only"
+      />
       {renderStepper()}
 
       {currentPhase === "asset" && snapshot.assets.length > 0 ? (

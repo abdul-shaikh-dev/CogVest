@@ -6,6 +6,7 @@ import {
   AppText,
   CategoryIcon,
   EmptyState,
+  IconButton,
   MaskedValue,
   MetricGroup,
   PremiumCard,
@@ -24,6 +25,7 @@ import { useSellRedeemHolding } from "./useSellRedeemHolding";
 type SellRedeemScreenProps = {
   assetId: string;
   now?: Date;
+  onCancel?: () => void;
   onSaved?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -39,16 +41,29 @@ function quantityPlaceholder(availableUnits: number) {
 export function SellRedeemScreen({
   assetId,
   now = new Date(),
+  onCancel,
   onSaved,
   store = getPortfolioStore(),
 }: SellRedeemScreenProps) {
   const flow = useSellRedeemHolding({ assetId, now, store });
+  const backAction = onCancel ? (
+    <IconButton
+      accessibilityLabel="Back to Holdings"
+      icon="arrow-back"
+      onPress={onCancel}
+      testID="sell-redeem-back"
+    />
+  ) : null;
 
   if (!flow.holding) {
     return (
       <ScreenContainer scroll testID="sell-redeem-screen">
         <View style={styles.content}>
-          <ScreenHeader title="Sell / redeem" subtitle="Record exit • local only" />
+          <ScreenHeader
+            leading={backAction}
+            title="Sell / redeem"
+            subtitle="Record exit • local only"
+          />
           <EmptyState
             message="Open Holdings and choose an active position to sell or redeem."
             title="Holding not found"
@@ -71,7 +86,11 @@ export function SellRedeemScreen({
   return (
     <ScreenContainer scroll testID="sell-redeem-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Sell / redeem" subtitle="Record exit • local only" />
+        <ScreenHeader
+          leading={backAction}
+          title="Sell / redeem"
+          subtitle="Record exit • local only"
+        />
 
         <PremiumCard style={styles.summaryCard}>
           <View style={styles.summaryRow}>
