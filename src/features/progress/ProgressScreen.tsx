@@ -263,20 +263,6 @@ function TrendLegend({
   );
 }
 
-function PointerSelectionBridge({
-  index,
-  onSelect,
-}: {
-  index: number;
-  onSelect: (index: number) => void;
-}) {
-  useEffect(() => {
-    onSelect(index);
-  }, [index, onSelect]);
-
-  return null;
-}
-
 function getSeriesValue(
   series: MonthlyProgressChartSeries[],
   label: string,
@@ -484,19 +470,15 @@ function TrendChart({
     setSelectedIndex(Math.max(pointCount - 1, 0));
   }, [monthRangeKey, pointCount]);
 
-  const selectPointerIndex = (index: number) => {
-    if (index >= 0 && index < pointCount) {
-      setSelectedIndex(index);
+  const selectPointerIndex = ({
+    pointerIndex,
+  }: {
+    pointerIndex: number;
+  }) => {
+    if (pointerIndex >= 0 && pointerIndex < pointCount) {
+      setSelectedIndex(pointerIndex);
     }
   };
-
-  const pointerLabelComponent = (
-    _items: unknown,
-    _secondaryItems: unknown,
-    index: number,
-  ) => (
-    <PointerSelectionBridge index={index} onSelect={selectPointerIndex} />
-  );
 
   return (
     <View style={styles.chartBlock}>
@@ -545,6 +527,7 @@ function TrendChart({
             endOpacity={0}
             endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
+            getPointerProps={selectPointerIndex}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
@@ -554,12 +537,9 @@ function TrendChart({
             noOfSections={3}
             pointerConfig={{
               activatePointersOnLongPress: true,
-              initialPointerIndex: safeSelectedIndex,
+              initialPointerIndex: Math.max(pointCount - 1, 0),
               persistPointer: true,
               pointerColor: colors.profit,
-              pointerLabelComponent,
-              pointerLabelHeight: 1,
-              pointerLabelWidth: 1,
               pointerStripColor: colors.border.subtle,
               resetPointerIndexOnRelease: false,
             }}
@@ -594,6 +574,7 @@ function TrendChart({
             disableScroll
             endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
+            getPointerProps={selectPointerIndex}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
@@ -602,12 +583,9 @@ function TrendChart({
             noOfSections={3}
             pointerConfig={{
               activatePointersOnLongPress: true,
-              initialPointerIndex: safeSelectedIndex,
+              initialPointerIndex: Math.max(pointCount - 1, 0),
               persistPointer: true,
               pointerColor: colors.text.secondary,
-              pointerLabelComponent,
-              pointerLabelHeight: 1,
-              pointerLabelWidth: 1,
               pointerStripColor: colors.border.subtle,
               resetPointerIndexOnRelease: false,
             }}

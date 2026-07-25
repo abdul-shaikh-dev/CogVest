@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
@@ -497,13 +497,48 @@ describe("ProgressScreen", () => {
       colors.text.primary,
     );
     expect(portfolioChart.props.strokeDashArray2).toEqual([6, 4]);
-    expect(
-      portfolioChart.props.pointerConfig.pointerLabelComponent,
-    ).toEqual(expect.any(Function));
+    expect(portfolioChart.props.getPointerProps).toEqual(expect.any(Function));
     expect(getByTestId("asset-trend-Equity")).toBeTruthy();
     expect(getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
     expect(queryByTestId("asset-trend-Cash")).toBeNull();
+  });
+
+  it("keeps the selected chart month stable until the pointer changes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(marchSnapshot);
+
+    const { getAllByTestId, getByTestId, rerender } = render(
+      <ProgressScreen store={store} />,
+    );
+    const portfolioChart = getAllByTestId("gifted-line-chart")[0];
+    const selectedPanel = () =>
+      getByTestId("portfolio-trend-selected-panel");
+
+    expect(selectedPanel().props.accessibilityLabel).toContain("May 2026");
+
+    act(() => {
+      portfolioChart.props.getPointerProps({
+        pointerIndex: 0,
+        pointerX: 0,
+        pointerY: 0,
+      });
+    });
+    expect(selectedPanel().props.accessibilityLabel).toContain("Mar 2026");
+
+    rerender(<ProgressScreen store={store} />);
+    expect(selectedPanel().props.accessibilityLabel).toContain("Mar 2026");
+
+    act(() => {
+      getAllByTestId("gifted-line-chart")[0].props.getPointerProps({
+        pointerIndex: 2,
+        pointerX: 0,
+        pointerY: 0,
+      });
+    });
+    expect(selectedPanel().props.accessibilityLabel).toContain("May 2026");
   });
 
   it("masks chart axis and chart-native y labels when wealth masking is enabled", () => {
