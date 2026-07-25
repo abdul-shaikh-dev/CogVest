@@ -39,8 +39,12 @@ export type AssetLookupSearchResult = {
 
 export type YahooSearchQuote = {
   exchange?: string;
+  industry?: string;
+  industryDisp?: string;
   longname?: string;
   quoteType?: string;
+  sector?: string;
+  sectorDisp?: string;
   shortname?: string;
   symbol?: string;
 };
@@ -93,8 +97,56 @@ function normalizeYahooSymbol(symbol: string) {
   return symbol.replace(/\.(NS|BO)$/u, "").toUpperCase();
 }
 
-function inferYahooAssetClass(quoteType?: string): AssetClass {
-  return quoteType?.toUpperCase() === "ETF" ? "etf" : "stock";
+function inferYahooAssetClass(quoteType?: string): AssetClass | undefined {
+  switch (quoteType?.toUpperCase()) {
+    case "EQUITY":
+      return "stock";
+    case "ETF":
+      return "etf";
+    default:
+      return undefined;
+  }
+}
+
+function normalizeMetadataLabel(value?: string) {
+  return value
+    ?.trim()
+    .toLowerCase()
+    .replace(/&/gu, "and")
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
+}
+
+const yahooSectorAliases: Partial<Record<string, SectorType>> = {
+  "basic materials": "materials",
+  "communication services": "communicationServices",
+  communications: "communicationServices",
+  "consumer cyclical": "consumer",
+  "consumer defensive": "consumer",
+  "consumer discretionary": "consumer",
+  "consumer staples": "consumer",
+  energy: "energy",
+  "financial services": "financialServices",
+  financials: "financialServices",
+  healthcare: "healthcare",
+  industrials: "industrial",
+  "real estate": "realEstate",
+  technology: "technology",
+  utilities: "utilities",
+};
+
+export function mapYahooSectorToSectorType(
+  ...values: Array<string | undefined>
+): SectorType | undefined {
+  for (const value of values) {
+    const normalized = normalizeMetadataLabel(value);
+
+    if (normalized && yahooSectorAliases[normalized]) {
+      return yahooSectorAliases[normalized];
+    }
+  }
+
+  return undefined;
 }
 
 export function mapYahooQuoteToLookupResult(
@@ -113,11 +165,23 @@ export function mapYahooQuoteToLookupResult(
   }
 
   const quoteType = quote.quoteType?.toUpperCase();
-  const isEtf = quoteType === "ETF";
   const assetClass = inferYahooAssetClass(quoteType);
+
+  if (!assetClass) {
+    return undefined;
+  }
+
+  const isEtf = assetClass === "etf";
   const defaults = getDefaultAssetMetadata(assetClass);
-  const sectorType = isEtf ? defaults.sectorType : "other";
-  const sectorTypeConfidence = isEtf ? "inferred" : "reviewRequired";
+  const providerSector = isEtf
+    ? undefined
+    : mapYahooSectorToSectorType(quote.sector, quote.sectorDisp);
+  const sectorType = providerSector ?? defaults.sectorType;
+  const sectorTypeConfidence = providerSector
+    ? "provider"
+    : isEtf
+      ? "inferred"
+      : "reviewRequired";
 
   return {
     assetClass,
@@ -126,9 +190,9 @@ export function mapYahooQuoteToLookupResult(
     id: `yahoo:${ticker}`,
     instrumentType: defaults.instrumentType,
     instrumentTypeConfidence: "inferred",
-    metadataReviewMessage: isEtf
+    metadataReviewMessage: providerSector || isEtf
       ? "Provider details look ready. Confirm before saving."
-      : "Sector needs review. Yahoo did not provide a sector.",
+      : "Sector is unknown. Add it only if it helps your portfolio review.",
     name: quote.longname?.trim() || quote.shortname?.trim() || ticker,
     provider: "yahoo",
     quoteSourceId: ticker,
@@ -191,6 +255,64 @@ async function searchYahoo({
     .filter((result): result is AssetLookupResult => result !== undefined);
 }
 
+function resultRank(query: string, result: AssetLookupResult) {
+  const normalizedQuery = normalizeMetadataLabel(query) ?? "";
+  const normalizedSymbol = normalizeMetadataLabel(result.symbol) ?? "";
+  const normalizedTicker = normalizeMetadataLabel(result.ticker) ?? "";
+  const normalizedName = normalizeMetadataLabel(result.name) ?? "";
+
+  if (
+    normalizedQuery === normalizedSymbol ||
+    normalizedQuery === normalizedTicker
+  ) {
+    return 0;
+  }
+
+  if (
+    normalizedSymbol.startsWith(normalizedQuery) ||
+    normalizedTicker.startsWith(normalizedQuery)
+  ) {
+    return 1;
+  }
+
+  if (normalizedName.startsWith(normalizedQuery)) {
+    return 2;
+  }
+
+  if (normalizedName.includes(normalizedQuery)) {
+    return 3;
+  }
+
+  return 4;
+}
+
+export function prepareAssetLookupResults(
+  query: string,
+  results: AssetLookupResult[],
+) {
+  const uniqueResults = new Map<string, AssetLookupResult>();
+
+  for (const result of results) {
+    const key = `${result.provider}:${result.quoteSourceId.toLowerCase()}`;
+
+    if (!uniqueResults.has(key)) {
+      uniqueResults.set(key, result);
+    }
+  }
+
+  return [...uniqueResults.values()]
+    .sort((left, right) => {
+      const rankDifference = resultRank(query, left) - resultRank(query, right);
+
+      if (rankDifference !== 0) {
+        return rankDifference;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, 8);
+}
+
 async function searchCoinGecko({
   fetcher,
   query,
@@ -249,6 +371,6 @@ export async function searchAssetLookupResults({
 
   return {
     failures,
-    results,
+    results: prepareAssetLookupResults(trimmedQuery, results),
   };
 }

@@ -19,6 +19,7 @@ export type InstrumentType =
   | "stock";
 
 export type SectorType =
+  | "communicationServices"
   | "consumer"
   | "digitalAsset"
   | "diversified"
@@ -28,8 +29,11 @@ export type SectorType =
   | "healthcare"
   | "industrial"
   | "liquidity"
+  | "materials"
   | "other"
-  | "technology";
+  | "realEstate"
+  | "technology"
+  | "utilities";
 
 export type Asset = {
   assetClass: AssetClass;

@@ -105,7 +105,7 @@ export function validateOpeningPositionForm(
     errors.instrumentType = "Instrument type is not supported.";
   }
 
-  if (!isSectorType(values.sectorType)) {
+  if (values.sectorType.trim().length > 0 && !isSectorType(values.sectorType)) {
     errors.sectorType = "Sector type is not supported.";
   }
 
@@ -138,7 +138,7 @@ export function validateOpeningPositionForm(
         values.quoteSourceId?.trim() ||
         values.ticker.trim(),
       quantity: quantity as number,
-      sectorType: values.sectorType as SectorType,
+      sectorType: (values.sectorType.trim() || "other") as SectorType,
       symbol: values.symbol.trim().toUpperCase(),
       ticker: values.ticker.trim().toUpperCase(),
     },

@@ -136,7 +136,7 @@ describe("HoldingsScreen", () => {
     expect(getByText("Losers 0")).toBeTruthy();
     expect(getByText("High alloc. 1")).toBeTruthy();
     expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
-    expect(getByText("Equity · Stock · Financial Services")).toBeTruthy();
+    expect(getByText("Equity · Stock · Unknown")).toBeTruthy();
     expect(getByText("₹250")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
     expect(getByText("Invested ₹200")).toBeTruthy();

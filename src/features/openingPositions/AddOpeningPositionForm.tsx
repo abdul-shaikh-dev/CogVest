@@ -11,14 +11,23 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import {
+  DatePickerField,
+  FormTextField,
+  SelectionField,
+} from "@/src/components/forms";
+import {
+  equitySectorTypeOptions,
+  getInstrumentTypeOptions,
+  instrumentTypeLabel,
+  sectorTypeLabel,
+} from "@/src/domain/assets";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type {
   AssetClass,
   ConvictionScore,
-  InstrumentType,
-  SectorType,
+  Quote,
 } from "@/src/types";
 
 import {
@@ -38,6 +47,67 @@ function formatSignedINR(value: number) {
   const amount = formatINR(value);
 
   return value > 0 ? `+${amount}` : amount;
+}
+
+function quoteSourceLabel(quote: Quote) {
+  if (quote.source === "yahoo") {
+    return "Yahoo Finance";
+  }
+
+  if (quote.source === "coingecko") {
+    return "CoinGecko";
+  }
+
+  return "manual";
+}
+
+function ReviewDetailRow({
+  label,
+  testID,
+  value,
+}: {
+  label: string;
+  testID?: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.reviewDetailRow} testID={testID}>
+      <AppText color="secondary" variant="caption">
+        {label}
+      </AppText>
+      <AppText style={styles.reviewDetailValue} weight="bold">
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function ReviewSectionHeader({
+  onEdit,
+  testID,
+  title,
+}: {
+  onEdit: () => void;
+  testID: string;
+  title: string;
+}) {
+  return (
+    <View style={styles.reviewSectionHeader}>
+      <SectionHeader title={title} />
+      <TouchableOpacity
+        accessibilityLabel={`Edit ${title.toLowerCase()}`}
+        accessibilityRole="button"
+        activeOpacity={0.74}
+        onPress={onEdit}
+        style={styles.reviewEditAction}
+        testID={testID}
+      >
+        <AppText color="secondary" variant="caption" weight="bold">
+          Edit
+        </AppText>
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 export function AddOpeningPositionForm({
@@ -79,6 +149,7 @@ export function AddOpeningPositionForm({
     lookupQuery,
     lookupResults,
     lookupStatus,
+    matchingExistingAssets,
     metadataReviewMessage,
     moveToPhase,
     notes,
@@ -96,6 +167,7 @@ export function AddOpeningPositionForm({
     selectLookupResult,
     selectedAssetId,
     selectedLookupResult,
+    selectedLookupQuote,
     setAssetName,
     setAverageCostPrice,
     setConviction,
@@ -124,6 +196,48 @@ export function AddOpeningPositionForm({
     : selectedAssetId
       ? "Existing asset"
       : "";
+  const availableInstrumentTypes = getInstrumentTypeOptions(assetClass);
+  const instrumentOptions = (
+    availableInstrumentTypes.includes(instrumentType)
+      ? availableInstrumentTypes
+      : [...availableInstrumentTypes, instrumentType]
+  ).map(
+    (value) => ({
+      label: instrumentTypeLabel(value),
+      value,
+    }),
+  );
+  const availableSectorTypes = equitySectorTypeOptions.includes(sectorType)
+    ? equitySectorTypeOptions
+    : [...equitySectorTypeOptions, sectorType];
+  const sectorOptions = availableSectorTypes.map((value) => ({
+    label: sectorTypeLabel(value),
+    value,
+  }));
+  const lookupGroups = [
+    ...new Set(lookupResults.map((result) => result.provider)),
+  ].map((provider) => ({
+    label: provider === "yahoo" ? "Indian market" : "Crypto",
+    results: lookupResults.filter((result) => result.provider === provider),
+  }));
+  const selectedSavedQuote = selectedAssetId
+    ? snapshot.quoteCache[selectedAssetId]
+    : undefined;
+  const candidateProviderQuote = selectedLookupQuote ?? selectedSavedQuote;
+  const currentPriceNumber = Number(currentPrice);
+  const preservesProviderQuote =
+    candidateProviderQuote !== undefined &&
+    Number.isFinite(currentPriceNumber) &&
+    candidateProviderQuote.price === currentPriceNumber;
+  const reviewQuoteSourceLabel = selectedLookupResult
+    ? selectedLookupQuote && preservesProviderQuote
+      ? `Live quote • ${selectedLookupResult.sourceLabel}`
+      : `Manual price • ${selectedLookupResult.sourceLabel} identity`
+    : selectedSavedQuote && preservesProviderQuote
+      ? selectedSavedQuote.source === "manual"
+        ? "Saved manual price"
+        : `Saved live quote • ${quoteSourceLabel(selectedSavedQuote)}`
+      : "Manual price";
 
   function renderStepper() {
     const currentIndex = getPhaseIndex(currentPhase);
@@ -190,36 +304,6 @@ export function AddOpeningPositionForm({
       />
       {renderStepper()}
 
-      {currentPhase === "asset" && snapshot.assets.length > 0 ? (
-        <PremiumCard>
-          <AppText color="secondary" variant="caption" weight="medium">
-            Existing assets
-          </AppText>
-          <View style={styles.assetGrid}>
-            {snapshot.assets.map((asset) => (
-              <Pressable
-                accessibilityRole="button"
-                key={asset.id}
-                onPress={() => selectAsset(asset)}
-                style={({ pressed }) => [
-                  styles.assetChip,
-                  selectedAssetId === asset.id && styles.assetChipActive,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <CategoryIcon assetClass={asset.assetClass} size={18} />
-                <View style={styles.assetChipCopy}>
-                  <AppText weight="bold">{asset.symbol}</AppText>
-                  <AppText color="secondary" variant="caption">
-                    {asset.name}
-                  </AppText>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        </PremiumCard>
-      ) : null}
-
       {currentPhase === "asset" ? (
       <PremiumCard testID="add-holding-phase-asset">
         <SectionHeader title="Asset" />
@@ -256,38 +340,82 @@ export function AddOpeningPositionForm({
               testID="asset-lookup-input"
               value={lookupQuery}
             />
+            {matchingExistingAssets.length > 0 ? (
+              <View
+                style={styles.lookupResults}
+                testID="existing-asset-results"
+              >
+                <AppText color="secondary" variant="caption" weight="medium">
+                  Your assets
+                </AppText>
+                {matchingExistingAssets.map((asset) => (
+                  <TouchableOpacity
+                    accessibilityLabel={`Use ${asset.name}`}
+                    accessibilityRole="button"
+                    activeOpacity={0.74}
+                    key={asset.id}
+                    onPress={() => selectAsset(asset)}
+                    style={styles.lookupResult}
+                    testID={`existing-asset-${asset.id}`}
+                  >
+                    <CategoryIcon assetClass={asset.assetClass} size={18} />
+                    <View style={styles.lookupResultCopy}>
+                      <AppText weight="bold">{asset.name}</AppText>
+                      <AppText color="secondary" variant="caption">
+                        {asset.symbol} • {asset.ticker}
+                      </AppText>
+                    </View>
+                    <AppText color="secondary" variant="caption" weight="bold">
+                      Use
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
             {lookupStatus ? (
               <AppText color="secondary" variant="caption">
                 {isLookupSearching ? "Searching..." : lookupStatus}
               </AppText>
             ) : null}
-            {lookupResults.length > 0 ? (
+            {lookupGroups.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
                 <AppText color="secondary" variant="caption" weight="medium">
                   Select a result
                 </AppText>
-                {lookupResults.map((result) => (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    activeOpacity={0.74}
-                    key={result.id}
-                    onPress={() => {
-                      void selectLookupResult(result);
-                    }}
-                    style={styles.lookupResult}
-                    testID={`asset-lookup-result-${result.id}`}
-                  >
-                    <CategoryIcon assetClass={result.assetClass} size={18} />
-                    <View style={styles.lookupResultCopy}>
-                      <AppText weight="bold">{result.name}</AppText>
-                      <AppText color="secondary" variant="caption">
-                        {result.symbol} • {result.ticker} • {result.sourceLabel}
-                      </AppText>
-                    </View>
+                {lookupGroups.map((group) => (
+                  <View key={group.label} style={styles.lookupGroup}>
                     <AppText color="secondary" variant="caption" weight="bold">
-                      Select
+                      {group.label}
                     </AppText>
-                  </TouchableOpacity>
+                    {group.results.map((result) => (
+                      <TouchableOpacity
+                        accessibilityLabel={`Select ${result.name}`}
+                        accessibilityRole="button"
+                        activeOpacity={0.74}
+                        key={result.id}
+                        onPress={() => {
+                          void selectLookupResult(result);
+                        }}
+                        style={styles.lookupResult}
+                        testID={`asset-lookup-result-${result.id}`}
+                      >
+                        <CategoryIcon assetClass={result.assetClass} size={18} />
+                        <View style={styles.lookupResultCopy}>
+                          <AppText weight="bold">{result.name}</AppText>
+                          <AppText color="secondary" variant="caption">
+                            {result.symbol} • {result.ticker}
+                          </AppText>
+                        </View>
+                        <AppText
+                          color="secondary"
+                          variant="caption"
+                          weight="bold"
+                        >
+                          Select
+                        </AppText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 ))}
               </View>
             ) : null}
@@ -400,52 +528,68 @@ export function AddOpeningPositionForm({
             );
           })}
         </View>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <FormTextField
-              error={errors.instrumentType}
-              label="Instrument type"
-              onChangeText={(value) => {
-                setInstrumentType(value as InstrumentType);
+        <SelectionField
+          helperText={
+            instrumentTypeConfidence === "reviewRequired"
+              ? "Confirm the instrument that best describes this holding."
+              : undefined
+          }
+          helperTestID={
+            instrumentTypeConfidence === "reviewRequired"
+              ? "instrument-type-review-hint"
+              : undefined
+          }
+          label="Instrument type"
+          onChange={(value) => {
+            setInstrumentType(value);
+            resetReview();
+          }}
+          options={instrumentOptions}
+          testIDPrefix="instrument-type"
+          value={instrumentType}
+        />
+        {errors.instrumentType ? (
+          <AppText selectable style={styles.errorText} variant="caption">
+            {errors.instrumentType}
+          </AppText>
+        ) : null}
+        {assetClass === "stock" ? (
+          <>
+            <SelectionField
+              helperText={
+                sectorTypeConfidence === "reviewRequired"
+                  ? "Optional. Leave as Unknown if you are unsure."
+                  : "Optional portfolio context."
+              }
+              helperTestID={
+                sectorTypeConfidence === "reviewRequired"
+                  ? "sector-type-review-hint"
+                  : undefined
+              }
+              label="Sector"
+              onChange={(value) => {
+                setSectorType(value);
                 resetReview();
               }}
-              placeholder="stock"
-              testID="instrument-type-input"
-              value={instrumentType}
-            />
-            {instrumentTypeConfidence === "reviewRequired" ? (
-              <AppText
-                color="secondary"
-                testID="instrument-type-review-hint"
-                variant="caption"
-              >
-                Review instrument type before saving.
-              </AppText>
-            ) : null}
-          </View>
-          <View style={styles.flex}>
-            <FormTextField
-              error={errors.sectorType}
-              label="Sector type"
-              onChangeText={(value) => {
-                setSectorType(value as SectorType);
-                resetReview();
-              }}
-              placeholder="financialServices"
-              testID="sector-type-input"
+              options={sectorOptions}
+              testIDPrefix="sector-type"
               value={sectorType}
             />
-            {sectorTypeConfidence === "reviewRequired" ? (
-              <AppText
-                color="secondary"
-                testID="sector-type-review-hint"
-                variant="caption"
-              >
-                Review sector/type before saving.
+            {errors.sectorType ? (
+              <AppText selectable style={styles.errorText} variant="caption">
+                {errors.sectorType}
               </AppText>
             ) : null}
-          </View>
-        </View>
+          </>
+        ) : (
+          <AppText
+            color="secondary"
+            testID="sector-not-applicable"
+            variant="caption"
+          >
+            Sector is not needed for this asset class.
+          </AppText>
+        )}
       </PremiumCard>
       ) : null}
 
@@ -566,8 +710,101 @@ export function AddOpeningPositionForm({
       </PremiumCard>
       ) : null}
 
-      {currentPhase === "review" && previewHolding ? (
-        <PremiumCard elevated testID="add-holding-phase-review">
+      {currentPhase === "review" &&
+      previewHolding &&
+      reviewAsset &&
+      reviewOpeningPosition ? (
+        <View
+          style={styles.reviewSections}
+          testID="add-holding-phase-review"
+        >
+        <PremiumCard testID="review-identity">
+          <ReviewSectionHeader
+            onEdit={() => moveToPhase("asset")}
+            testID="review-edit-asset"
+            title="Asset"
+          />
+          <ReviewDetailRow label="Name" value={reviewAsset.name} />
+          <ReviewDetailRow
+            label="Symbol and ticker"
+            value={`${reviewAsset.symbol} • ${reviewAsset.ticker}`}
+          />
+          <ReviewDetailRow
+            label="Exchange and currency"
+            value={`${reviewAsset.exchange ?? "Not set"} • ${reviewAsset.currency}`}
+          />
+          <ReviewDetailRow
+            label="Price lookup symbol"
+            value={reviewAsset.quoteSourceId ?? reviewAsset.ticker}
+          />
+          <ReviewDetailRow
+            label="Price source"
+            testID="review-quote-provenance"
+            value={reviewQuoteSourceLabel}
+          />
+        </PremiumCard>
+
+        <PremiumCard testID="review-classification">
+          <ReviewSectionHeader
+            onEdit={() => moveToPhase("class")}
+            testID="review-edit-classification"
+            title="Classification"
+          />
+          <ReviewDetailRow
+            label="Asset class"
+            value={assetClassLabel(reviewAsset.assetClass)}
+          />
+          <ReviewDetailRow
+            label="Instrument"
+            value={instrumentTypeLabel(
+              reviewAsset.instrumentType ?? instrumentType,
+            )}
+          />
+          {reviewAsset.assetClass === "stock" ? (
+            <ReviewDetailRow
+              label="Sector"
+              value={sectorTypeLabel(reviewAsset.sectorType ?? "other")}
+            />
+          ) : null}
+        </PremiumCard>
+
+        <PremiumCard testID="review-position">
+          <ReviewSectionHeader
+            onEdit={() => moveToPhase("position")}
+            testID="review-edit-position"
+            title="Position"
+          />
+          <ReviewDetailRow
+            label="Quantity"
+            value={reviewOpeningPosition.quantity.toString()}
+          />
+          <ReviewDetailRow
+            label="Average cost"
+            value={formatINR(reviewOpeningPosition.averageCostPrice)}
+          />
+          <ReviewDetailRow
+            label="Current price"
+            value={formatINR(reviewOpeningPosition.currentPrice ?? 0)}
+          />
+          <ReviewDetailRow
+            label="Date acquired"
+            value={reviewOpeningPosition.date.slice(0, 10)}
+          />
+          <ReviewDetailRow
+            label="Note"
+            value={reviewOpeningPosition.notes || "None"}
+          />
+          <ReviewDetailRow
+            label="Conviction"
+            value={
+              reviewOpeningPosition.conviction
+                ? `${reviewOpeningPosition.conviction} of 5`
+                : "Not set"
+            }
+          />
+        </PremiumCard>
+
+        <PremiumCard elevated testID="derived-preview-card">
           <SectionHeader title="Derived Preview" />
           <View testID="derived-preview">
           <View style={styles.summaryCard}>
@@ -636,6 +873,7 @@ export function AddOpeningPositionForm({
           </View>
           </View>
         </PremiumCard>
+        </View>
       ) : null}
 
       {savedAssetId ? (
@@ -815,6 +1053,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  lookupGroup: {
+    gap: spacing.xs,
+  },
   lookupResults: {
     gap: spacing.xs,
   },
@@ -849,6 +1090,31 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: spacing.sm,
+  },
+  reviewDetailRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    paddingVertical: spacing.xs,
+  },
+  reviewDetailValue: {
+    flex: 1,
+    textAlign: "right",
+  },
+  reviewEditAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  reviewSectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  reviewSections: {
+    gap: spacing.cardGap,
   },
   selectedAssetSummary: {
     alignItems: "center",

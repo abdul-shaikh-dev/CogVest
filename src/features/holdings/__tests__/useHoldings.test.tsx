@@ -20,7 +20,7 @@ const asset: Asset = {
   ...rawAsset,
   instrumentType: "stock",
   quoteSourceId: "RELIANCE.NS",
-  sectorType: "financialServices",
+  sectorType: "other",
 };
 
 const buyTrade: Trade = {

@@ -108,6 +108,52 @@ describe("useAddOpeningPosition", () => {
     expect(onComplete).toHaveBeenCalledWith(store.getState().assets[0].id);
   });
 
+  it("detaches incompatible provider identity when the asset class changes", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const resolveQuote = jest.fn().mockResolvedValue({
+      ok: true,
+      quote: {
+        assetId: hdfcLookupResult.id,
+        asOf: "2026-07-26T10:00:00.000Z",
+        currency: "INR",
+        price: 1678.25,
+        source: "yahoo",
+      },
+    });
+    const { result } = renderHook(() =>
+      useAddOpeningPosition({ resolveQuote, store }),
+    );
+
+    await act(async () => {
+      await result.current.selectLookupResult(hdfcLookupResult);
+    });
+    act(() => {
+      result.current.updateAssetClass("crypto");
+    });
+
+    expect(result.current.selectedLookupResult).toBeUndefined();
+    expect(result.current.selectedAssetId).toBe("");
+    expect(result.current.ticker).toBe("");
+    expect(result.current.quoteSourceId).toBe("");
+
+    act(() => {
+      result.current.setTicker("hdfc-token");
+      result.current.setQuoteSourceId("hdfc-token");
+      result.current.setQuantity("1");
+      result.current.setAverageCostPrice("100");
+      result.current.setCurrentPrice("120");
+    });
+    act(() => {
+      result.current.handleReview();
+    });
+
+    expect(result.current.reviewAsset).toMatchObject({
+      assetClass: "crypto",
+      exchange: "CRYPTO",
+      ticker: "hdfc-token",
+    });
+  });
+
   it("completes after persistence when haptic feedback is unavailable", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();

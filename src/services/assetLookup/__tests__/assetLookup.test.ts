@@ -3,8 +3,11 @@ import {
   buildYahooSearchUrl,
   mapCoinGeckoCoinToLookupResult,
   mapYahooQuoteToLookupResult,
+  mapYahooSectorToSectorType,
+  prepareAssetLookupResults,
   searchAssetLookupResults,
 } from "@/src/services/assetLookup";
+import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 function response(payload: unknown, ok = true): Response {
   return {
@@ -40,7 +43,8 @@ describe("asset lookup service", () => {
       id: "yahoo:HDFCBANK.NS",
       instrumentType: "stock",
       instrumentTypeConfidence: "inferred",
-      metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
+      metadataReviewMessage:
+        "Sector is unknown. Add it only if it helps your portfolio review.",
       name: "HDFC Bank Limited",
       provider: "yahoo",
       quoteSourceId: "HDFCBANK.NS",
@@ -50,6 +54,83 @@ describe("asset lookup service", () => {
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
     });
+  });
+
+  it("accepts only supported Yahoo quote types", () => {
+    for (const quoteType of ["INDEX", "MUTUALFUND", "FUTURE", "OPTION"]) {
+      expect(
+        mapYahooQuoteToLookupResult({
+          quoteType,
+          shortname: "Unsupported",
+          symbol: "TEST.NS",
+        }),
+      ).toBeUndefined();
+    }
+  });
+
+  it("normalizes reliable Yahoo sector aliases and leaves unknown values unset", () => {
+    expect(mapYahooSectorToSectorType("Financial Services")).toBe(
+      "financialServices",
+    );
+    expect(mapYahooSectorToSectorType("Basic Materials")).toBe("materials");
+    expect(mapYahooSectorToSectorType("Communication Services")).toBe(
+      "communicationServices",
+    );
+    expect(mapYahooSectorToSectorType("Unmapped Sector")).toBeUndefined();
+    expect(mapYahooSectorToSectorType(undefined)).toBeUndefined();
+
+    expect(
+      mapYahooQuoteToLookupResult({
+        quoteType: "EQUITY",
+        sectorDisp: "Technology",
+        shortname: "Tech Company",
+        symbol: "TECH.NS",
+      }),
+    ).toMatchObject({
+      sectorType: "technology",
+      sectorTypeConfidence: "provider",
+    });
+  });
+
+  it("deduplicates, ranks, and caps combined provider results", () => {
+    const makeResult = (
+      id: string,
+      name: string,
+      symbol: string,
+    ): AssetLookupResult => ({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id,
+      instrumentType: "stock",
+      instrumentTypeConfidence: "inferred",
+      metadataReviewMessage: "Review details.",
+      name,
+      provider: "yahoo",
+      quoteSourceId: `${symbol}.NS`,
+      sectorType: "other",
+      sectorTypeConfidence: "reviewRequired",
+      sourceLabel: "Yahoo Finance",
+      symbol,
+      ticker: `${symbol}.NS`,
+    });
+    const exact = makeResult("exact", "HDFC Bank", "HDFCBANK");
+    const duplicate = { ...exact, id: "duplicate" };
+    const others = Array.from({ length: 9 }, (_, index) =>
+      makeResult(`other-${index}`, `Other ${index}`, `OTHER${index}`),
+    );
+
+    const results = prepareAssetLookupResults("HDFCBANK", [
+      ...others,
+      duplicate,
+      exact,
+    ]);
+
+    expect(results).toHaveLength(8);
+    expect(results[0]?.symbol).toBe("HDFCBANK");
+    expect(
+      results.filter((result) => result.quoteSourceId === "HDFCBANK.NS"),
+    ).toHaveLength(1);
   });
 
   it("maps ETF-like Yahoo search results to ETF metadata", () => {
