@@ -111,7 +111,7 @@ function getFilteredSnapshots(
       };
     }
 
-    if (customRange.startMonth > customRange.endMonth) {
+    if (customRange.startMonth >= customRange.endMonth) {
       return {
         rangeError: "invalid-order" as const,
         snapshots: [],

@@ -158,6 +158,10 @@ describe("buildMonthlyProgressChartData", () => {
       expectedError: "invalid-order",
     },
     {
+      customRange: { endMonth: "2026-04", startMonth: "2026-04" },
+      expectedError: "invalid-order",
+    },
+    {
       customRange: { endMonth: "2024-02", startMonth: "2024-01" },
       expectedError: "empty-range",
     },

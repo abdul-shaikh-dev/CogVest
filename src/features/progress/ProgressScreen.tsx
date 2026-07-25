@@ -776,8 +776,9 @@ function CustomMonthRangeControls({
   const [startMonth, setStartMonth] = useState(appliedRange.startMonth);
   const [endMonth, setEndMonth] = useState(appliedRange.endMonth);
   const [error, setError] = useState<string | null>(null);
+  const availableStartMonths = availableMonths.slice(0, -1);
   const availableEndMonths = availableMonths.filter(
-    (month) => !startMonth || month >= startMonth,
+    (month) => !startMonth || month > startMonth,
   );
 
   useEffect(() => {
@@ -789,7 +790,7 @@ function CustomMonthRangeControls({
   function changeStartMonth(nextStartMonth: string) {
     setStartMonth(nextStartMonth);
     setEndMonth((currentEndMonth) =>
-      currentEndMonth >= nextStartMonth
+      currentEndMonth > nextStartMonth
         ? currentEndMonth
         : availableMonths.at(-1) ?? nextStartMonth,
     );
@@ -807,8 +808,8 @@ function CustomMonthRangeControls({
       return;
     }
 
-    if (startMonth > endMonth) {
-      setError("From month must be before To month.");
+    if (startMonth >= endMonth) {
+      setError("To month must be later than From month.");
       return;
     }
 
@@ -821,7 +822,7 @@ function CustomMonthRangeControls({
       <View style={styles.customRangeFields}>
         <MonthPickerField
           label="From month"
-          months={availableMonths}
+          months={availableStartMonths}
           onChange={changeStartMonth}
           testID={`${testIDPrefix}-start`}
           value={startMonth}

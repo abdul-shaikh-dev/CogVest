@@ -37,8 +37,10 @@ appId: com.abdulshaikh.cogvest
     id: "portfolio-custom-range-end"
 - assertNotVisible:
     id: "portfolio-custom-range-end-2026-02"
-- assertVisible:
+- assertNotVisible:
     id: "portfolio-custom-range-end-2026-03"
+- assertVisible:
+    id: "portfolio-custom-range-end-2026-04"
 - tapOn:
     id: "portfolio-custom-range-end-2026-06"
 - tapOn:

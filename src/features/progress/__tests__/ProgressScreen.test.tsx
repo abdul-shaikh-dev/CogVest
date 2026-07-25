@@ -621,7 +621,9 @@ describe("ProgressScreen", () => {
 
     expect(getByTestId("portfolio-custom-range-start-2026-03")).toBeTruthy();
     expect(getByTestId("portfolio-custom-range-start-2026-04")).toBeTruthy();
-    expect(getByTestId("portfolio-custom-range-start-2026-05")).toBeTruthy();
+    expect(
+      queryByTestId("portfolio-custom-range-start-2026-05"),
+    ).toBeNull();
     expect(
       queryByTestId("portfolio-custom-range-start-2026-02"),
     ).toBeNull();
@@ -650,7 +652,10 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("portfolio-custom-range-end"));
     fireEvent.press(getByTestId("portfolio-custom-range-end-2026-04"));
     fireEvent.press(getByTestId("portfolio-custom-range-start"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-05"));
+    expect(
+      queryByTestId("portfolio-custom-range-start-2026-05"),
+    ).toBeNull();
+    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
 
     expect(getByTestId("portfolio-custom-range-end")).toHaveTextContent(
       /May 2026/,

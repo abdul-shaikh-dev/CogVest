@@ -111,7 +111,7 @@ function normalizeCustomChartRange(
     ? current.endMonth
     : months.at(-1) ?? "";
 
-  if (startMonth > endMonth) {
+  if (startMonth >= endMonth) {
     return {
       endMonth: months.at(-1) ?? "",
       startMonth: months[0] ?? "",
