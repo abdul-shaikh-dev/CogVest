@@ -28,6 +28,7 @@ type PremiumCardProps = {
 
 type ScreenHeaderProps = {
   action?: ReactNode;
+  leading?: ReactNode;
   subtitle: string;
   title: string;
 };
@@ -82,9 +83,15 @@ export function PremiumCard({
   );
 }
 
-export function ScreenHeader({ action, subtitle, title }: ScreenHeaderProps) {
+export function ScreenHeader({
+  action,
+  leading,
+  subtitle,
+  title,
+}: ScreenHeaderProps) {
   return (
     <View style={styles.header}>
+      {leading ? <View style={styles.headerLeading}>{leading}</View> : null}
       <View style={styles.headerCopy}>
         <AppText variant="largeTitle" weight="bold">
           {title}
@@ -317,6 +324,9 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
     gap: spacing.xs,
+  },
+  headerLeading: {
+    alignSelf: "flex-start",
   },
   heroCard: {
     gap: spacing.sm,

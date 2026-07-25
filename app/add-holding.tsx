@@ -20,6 +20,7 @@ export default function AddHoldingScreen() {
       initialVisualQaState={
         visualQaState === "review" ? "review" : undefined
       }
+      onCancel={() => router.back()}
       onComplete={() => router.replace("/(tabs)/holdings")}
       resolveQuote={
         visualQaState === "lookup"

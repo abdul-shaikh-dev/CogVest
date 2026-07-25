@@ -8,6 +8,9 @@ export default function SellRedeemRoute() {
   return (
     <SellRedeemScreen
       assetId={params.assetId ?? ""}
+      onCancel={() => {
+        router.back();
+      }}
       onSaved={() => {
         router.back();
       }}

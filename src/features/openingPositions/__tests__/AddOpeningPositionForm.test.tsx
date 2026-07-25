@@ -37,6 +37,20 @@ describe("AddOpeningPositionForm", () => {
     jest.useRealTimers();
   });
 
+  it("exits without saving an opening position", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCancel = jest.fn();
+    const { getByLabelText } = render(
+      <AddOpeningPositionForm onCancel={onCancel} store={store} />,
+    );
+
+    fireEvent.press(getByLabelText("Back to Holdings"));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+  });
+
   it("starts on the Asset phase and hides later phase fields", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText, queryByTestId } = render(

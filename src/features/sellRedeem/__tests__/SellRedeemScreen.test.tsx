@@ -56,6 +56,24 @@ function seedStore() {
 }
 
 describe("SellRedeemScreen", () => {
+  it("returns to Holdings without recording a sale", () => {
+    const store = seedStore();
+    const onCancel = jest.fn();
+    const { getByLabelText } = render(
+      <SellRedeemScreen
+        assetId={asset.id}
+        onCancel={onCancel}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Back to Holdings"));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([]);
+  });
+
   it("renders the selected holding and waits to show linked cash fields until proceeds are valid", () => {
     const store = seedStore();
     const { getByPlaceholderText, getByTestId, getByText, queryByTestId } = render(
