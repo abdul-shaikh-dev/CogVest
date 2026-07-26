@@ -12,7 +12,10 @@ import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
+  type QuoteRefreshTimeout,
+  type QuoteFreshnessSummary,
   type RefreshQuotesInput,
+  summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Holding, OpeningPosition, Trade } from "@/src/types";
@@ -26,19 +29,20 @@ type HoldingWithQuoteMetadata = Holding & {
 };
 
 type UseHoldingsInput = {
+  now?: Date;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
 
 export type UseHoldingsResult = {
-  failures: QuoteRefreshFailure[];
+  failed: QuoteRefreshFailure[];
   holdings: HoldingWithQuoteMetadata[];
   isRefreshing: boolean;
-  latestQuoteAsOf?: string;
-  manualFallbackCount: number;
   maskWealthValues: boolean;
   openingPositions: OpeningPosition[];
   refresh: () => Promise<QuoteRefreshResult>;
+  quoteFreshness: QuoteFreshnessSummary;
+  timedOut: QuoteRefreshTimeout[];
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
   toggleMaskWealthValues: () => void;
@@ -65,23 +69,14 @@ function withQuoteMetadata(
   });
 }
 
-function getLatestQuoteAsOf(holdings: HoldingWithQuoteMetadata[]) {
-  return holdings
-    .map((holding) => holding.lastUpdated)
-    .filter((value): value is string => Boolean(value))
-    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0];
-}
-
-function countManualFallbacks(holdings: HoldingWithQuoteMetadata[]) {
-  return holdings.filter((holding) => holding.quoteSource === "manual").length;
-}
-
 export function useHoldings({
+  now = new Date(),
   refreshQuotes = defaultRefreshQuotes,
   store = getPortfolioStore(),
 }: UseHoldingsInput = {}): UseHoldingsResult {
   const snapshot = usePortfolioSnapshot(store);
-  const [failures, setFailures] = useState<QuoteRefreshFailure[]>([]);
+  const [failed, setFailed] = useState<QuoteRefreshFailure[]>([]);
+  const [timedOut, setTimedOut] = useState<QuoteRefreshTimeout[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const holdings = withQuoteMetadata(
     calculateHoldings({
@@ -92,6 +87,13 @@ export function useHoldings({
     }),
     snapshot.quoteCache,
   );
+  const quoteFreshness = summarizeQuoteFreshness(
+    holdings
+      .filter((holding) => holding.asset.assetClass !== "cash")
+      .map((holding) => holding.asset.id),
+    snapshot.quoteCache,
+    now,
+  );
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
   const rollupTotals = calculatePortfolioRollupTotals(rollupRows);
 
@@ -100,8 +102,19 @@ export function useHoldings({
 
     try {
       const currentState = store.getState();
+      const heldAssetIds = new Set(
+        calculateHoldings({
+          assets: currentState.assets,
+          openingPositions: currentState.openingPositions,
+          quoteCache: currentState.quoteCache,
+          trades: currentState.trades,
+          now,
+        }).map((holding) => holding.asset.id),
+      );
       const result = await refreshQuotes({
-        assets: currentState.assets,
+        assets: currentState.assets.filter((asset) =>
+          heldAssetIds.has(asset.id),
+        ),
         cachedQuotes: currentState.quoteCache,
       });
 
@@ -109,7 +122,8 @@ export function useHoldings({
         store.getState().upsertQuote(quote);
       }
 
-      setFailures(result.failures);
+      setFailed(result.failed);
+      setTimedOut(result.timedOut);
 
       return result;
     } finally {
@@ -124,17 +138,17 @@ export function useHoldings({
   }
 
   return {
-    failures,
+    failed,
     holdings,
     isRefreshing,
-    latestQuoteAsOf: getLatestQuoteAsOf(holdings),
-    manualFallbackCount: countManualFallbacks(holdings),
     maskWealthValues: snapshot.preferences.maskWealthValues,
     openingPositions: snapshot.openingPositions,
     refresh,
+    quoteFreshness,
     rollupRows,
     rollupTotals,
     toggleMaskWealthValues,
+    timedOut,
     trades: snapshot.trades,
   };
 }

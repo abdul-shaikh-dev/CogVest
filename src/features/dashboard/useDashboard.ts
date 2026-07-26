@@ -28,7 +28,10 @@ import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
+  type QuoteRefreshTimeout,
+  type QuoteFreshnessSummary,
   type RefreshQuotesInput,
+  summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Holding } from "@/src/types";
@@ -67,11 +70,11 @@ export type DashboardState = {
   holdings: Holding[];
   instrumentAllocation: MetadataAllocationItem[];
   isRefreshing: boolean;
-  latestQuoteAsOf?: string;
-  latestQuoteSource?: string;
   maskWealthValues: boolean;
   monthlyMetrics: DashboardMonthlyMetrics;
-  quoteFailures: QuoteRefreshFailure[];
+  quoteFailed: QuoteRefreshFailure[];
+  quoteFreshness: QuoteFreshnessSummary;
+  quoteTimedOut: QuoteRefreshTimeout[];
   refresh: () => Promise<QuoteRefreshResult>;
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
@@ -98,25 +101,6 @@ function withQuoteMetadata(
       quoteSource: quote?.source,
     };
   });
-}
-
-function getLatestQuote(holdings: DashboardHolding[]) {
-  return holdings
-    .map((holding) => {
-      if (!holding.lastUpdated) {
-        return null;
-      }
-
-      return {
-        asOf: holding.lastUpdated,
-        source: holding.quoteSource,
-      };
-    })
-    .filter((value): value is { asOf: string; source: string } => Boolean(value))
-    .sort(
-      (left, right) =>
-        new Date(right.asOf).getTime() - new Date(left.asOf).getTime(),
-    )[0];
 }
 
 function isSameMonth(isoDate: string, now: Date) {
@@ -179,7 +163,8 @@ export function useDashboard({
   store = getPortfolioStore(),
 }: UseDashboardInput = {}): DashboardState {
   const snapshot = usePortfolioSnapshot(store);
-  const [quoteFailures, setQuoteFailures] = useState<QuoteRefreshFailure[]>([]);
+  const [quoteFailed, setQuoteFailed] = useState<QuoteRefreshFailure[]>([]);
+  const [quoteTimedOut, setQuoteTimedOut] = useState<QuoteRefreshTimeout[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const currencyIssues = getPortfolioCurrencyIssues(
     snapshot.assets,
@@ -205,15 +190,32 @@ export function useDashboard({
   const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
   const rollupTotals = calculatePortfolioRollupTotals(rollupRows, cashBalance);
-  const latestQuote = getLatestQuote(holdings);
+  const quoteFreshness = summarizeQuoteFreshness(
+    holdings
+      .filter((holding) => holding.asset.assetClass !== "cash")
+      .map((holding) => holding.asset.id),
+    snapshot.quoteCache,
+    now,
+  );
 
   async function refresh() {
     setIsRefreshing(true);
 
     try {
       const currentState = store.getState();
+      const heldAssetIds = new Set(
+        calculateHoldings({
+          assets: currentState.assets,
+          openingPositions: currentState.openingPositions,
+          quoteCache: currentState.quoteCache,
+          trades: currentState.trades,
+          now,
+        }).map((holding) => holding.asset.id),
+      );
       const result = await refreshQuotes({
-        assets: currentState.assets,
+        assets: currentState.assets.filter((asset) =>
+          heldAssetIds.has(asset.id),
+        ),
         cachedQuotes: currentState.quoteCache,
       });
 
@@ -221,7 +223,8 @@ export function useDashboard({
         store.getState().upsertQuote(quote);
       }
 
-      setQuoteFailures(result.failures);
+      setQuoteFailed(result.failed);
+      setQuoteTimedOut(result.timedOut);
 
       return result;
     } finally {
@@ -253,11 +256,11 @@ export function useDashboard({
     holdings,
     instrumentAllocation: calculateInstrumentAllocation(holdings),
     isRefreshing,
-    latestQuoteAsOf: latestQuote?.asOf,
-    latestQuoteSource: latestQuote?.source,
     maskWealthValues: snapshot.preferences.maskWealthValues,
     monthlyMetrics: calculateMonthlyMetrics(snapshot, now, supportedAssetIds),
-    quoteFailures,
+    quoteFailed,
+    quoteFreshness,
+    quoteTimedOut,
     refresh,
     rollupRows,
     rollupTotals,

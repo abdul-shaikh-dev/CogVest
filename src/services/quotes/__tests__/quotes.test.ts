@@ -56,6 +56,10 @@ function response(payload: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe("Yahoo quote service", () => {
   it("maps a Yahoo chart response to an INR quote", async () => {
     const fetcher = jest.fn().mockResolvedValue(
@@ -399,11 +403,250 @@ describe("quote resolver", () => {
       source: "yahoo",
     });
     expect(result.quoteCache[niftyBees.id]).toEqual(cachedQuote);
-    expect(result.failures).toEqual([
+    expect(result.updated).toEqual([reliance.id]);
+    expect(result.failed).toEqual([
       {
         assetId: niftyBees.id,
         error: "Yahoo quote request failed with status 500.",
       },
     ]);
+    expect(result.timedOut).toEqual([]);
+  });
+
+  it("times out a hung provider without discarding its cached quote", async () => {
+    jest.useFakeTimers();
+    const cachedQuote: Quote = {
+      assetId: reliance.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      price: 2800,
+      source: "yahoo",
+    };
+    const refreshPromise = refreshQuotes({
+      assets: [reliance],
+      cachedQuotes: { [reliance.id]: cachedQuote },
+      fetcher: jest.fn().mockReturnValue(new Promise(() => {})),
+    });
+
+    await jest.advanceTimersByTimeAsync(10_000);
+    const result = await refreshPromise;
+
+    expect(result).toEqual({
+      failed: [],
+      quoteCache: { [reliance.id]: cachedQuote },
+      timedOut: [
+        {
+          assetId: reliance.id,
+          error: "Quote provider did not respond within 10 seconds.",
+        },
+      ],
+      updated: [],
+    });
+  });
+
+  it("keeps successful updates when another provider attempt times out", async () => {
+    jest.useFakeTimers();
+    const cachedEtfQuote: Quote = {
+      assetId: niftyBees.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      price: 250,
+      source: "yahoo",
+    };
+    const fetcher = jest
+      .fn()
+      .mockResolvedValueOnce(
+        response({
+          chart: {
+            result: [
+              {
+                meta: {
+                  currency: "INR",
+                  regularMarketPrice: 101,
+                },
+              },
+            ],
+          },
+        }),
+      )
+      .mockReturnValueOnce(new Promise(() => {}));
+    const refreshPromise = refreshQuotes({
+      assets: [reliance, niftyBees],
+      cachedQuotes: { [niftyBees.id]: cachedEtfQuote },
+      fetcher,
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+    await jest.advanceTimersByTimeAsync(10_000);
+    const result = await refreshPromise;
+
+    expect(result.updated).toEqual([reliance.id]);
+    expect(result.quoteCache[reliance.id]).toMatchObject({
+      price: 101,
+      source: "yahoo",
+    });
+    expect(result.quoteCache[niftyBees.id]).toEqual(cachedEtfQuote);
+    expect(result.timedOut).toEqual([
+      {
+        assetId: niftyBees.id,
+        error: "Quote provider did not respond within 10 seconds.",
+      },
+    ]);
+  });
+
+  it("does not let a late provider completion change a timed-out result", async () => {
+    jest.useFakeTimers();
+    let finishRequest!: (value: Response) => void;
+    const fetcher = jest.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finishRequest = resolve;
+      }),
+    );
+    const refreshPromise = refreshQuotes({
+      assets: [reliance],
+      fetcher,
+    });
+
+    await jest.advanceTimersByTimeAsync(10_000);
+    const result = await refreshPromise;
+
+    finishRequest(
+      response({
+        chart: {
+          result: [
+            {
+              meta: {
+                currency: "INR",
+                regularMarketPrice: 3000,
+              },
+            },
+          ],
+        },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(result.updated).toEqual([]);
+    expect(result.quoteCache).toEqual({});
+    expect(result.timedOut).toHaveLength(1);
+  });
+
+  it("cancels active attempts without accepting late provider values", async () => {
+    const controller = new AbortController();
+    let finishRequest!: (value: Response) => void;
+    const cachedQuote: Quote = {
+      assetId: reliance.id,
+      asOf: "2026-04-20T10:00:00.000Z",
+      currency: "INR",
+      price: 2800,
+      source: "yahoo",
+    };
+    const fetcher = jest.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finishRequest = resolve;
+      }),
+    );
+    const refreshPromise = refreshQuotes({
+      assets: [reliance],
+      cachedQuotes: { [reliance.id]: cachedQuote },
+      fetcher,
+      signal: controller.signal,
+    });
+
+    controller.abort();
+    const result = await refreshPromise;
+
+    finishRequest(
+      response({
+        chart: {
+          result: [
+            {
+              meta: {
+                currency: "INR",
+                regularMarketPrice: 3000,
+              },
+            },
+          ],
+        },
+      }),
+    );
+    await Promise.resolve();
+
+    expect(result).toEqual({
+      failed: [
+        {
+          assetId: reliance.id,
+          error: "Quote refresh was cancelled.",
+        },
+      ],
+      quoteCache: { [reliance.id]: cachedQuote },
+      timedOut: [],
+      updated: [],
+    });
+  });
+
+  it("refreshes at most four provider assets concurrently", async () => {
+    const providerAssets = Array.from({ length: 5 }, (_, index) => ({
+      ...reliance,
+      id: `asset-${index}`,
+      ticker: `ASSET${index}.NS`,
+    }));
+    const resolvers: Array<(value: Response) => void> = [];
+    const fetcher = jest.fn().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const refreshPromise = refreshQuotes({
+      assets: providerAssets,
+      fetcher,
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+    await Promise.resolve();
+    expect(fetcher).toHaveBeenCalledTimes(4);
+
+    resolvers[0](
+      response({
+        chart: {
+          result: [
+            {
+              meta: {
+                currency: "INR",
+                regularMarketPrice: 101,
+              },
+            },
+          ],
+        },
+      }),
+    );
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    expect(fetcher).toHaveBeenCalledTimes(5);
+
+    for (const resolve of resolvers.slice(1)) {
+      resolve(
+        response({
+          chart: {
+            result: [
+              {
+                meta: {
+                  currency: "INR",
+                  regularMarketPrice: 101,
+                },
+              },
+            ],
+          },
+        }),
+      );
+    }
+
+    const result = await refreshPromise;
+
+    expect(result.updated).toEqual(providerAssets.map((asset) => asset.id));
+    expect(result.failed).toEqual([]);
+    expect(result.timedOut).toEqual([]);
   });
 });

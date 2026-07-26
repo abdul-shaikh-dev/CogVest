@@ -92,7 +92,7 @@ describe("useHoldings", () => {
     const refreshQuotes = jest
       .fn<Promise<QuoteRefreshResult>, [RefreshQuotesInput]>()
       .mockResolvedValue({
-        failures: [],
+        failed: [],
         quoteCache: {
           [asset.id]: {
             asOf: "2026-04-21T10:00:00.000Z",
@@ -103,6 +103,8 @@ describe("useHoldings", () => {
             source: "yahoo",
           },
         },
+        timedOut: [],
+        updated: [asset.id],
       });
 
     const { result } = renderHook(() =>
@@ -141,8 +143,26 @@ describe("useHoldings", () => {
 
   it("exposes quote status metadata and value-mask toggle", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const cashAsset: Asset = {
+      assetClass: "cash",
+      currency: "INR",
+      id: "asset-cash",
+      name: "Cash",
+      symbol: "CASH",
+      ticker: "CASH",
+    };
     store.getState().addAsset(rawAsset);
+    store.getState().addAsset(cashAsset);
     store.getState().addTrade(buyTrade);
+    store.getState().addTrade({
+      assetId: cashAsset.id,
+      date: "2026-04-20",
+      id: "trade-cash",
+      pricePerUnit: 1,
+      quantity: 100,
+      totalValue: 100,
+      type: "buy",
+    });
     store.getState().upsertQuote({
       asOf: "2026-04-20T10:00:00.000Z",
       assetId: asset.id,
@@ -153,8 +173,14 @@ describe("useHoldings", () => {
 
     const { result } = renderHook(() => useHoldings({ store }));
 
-    expect(result.current.latestQuoteAsOf).toBe("2026-04-20T10:00:00.000Z");
-    expect(result.current.manualFallbackCount).toBe(1);
+    expect(result.current.quoteFreshness).toEqual({
+      current: 0,
+      manual: 1,
+      missing: 0,
+      stale: 0,
+      status: "manual",
+      total: 1,
+    });
     expect(result.current.maskWealthValues).toBe(false);
 
     act(() => {

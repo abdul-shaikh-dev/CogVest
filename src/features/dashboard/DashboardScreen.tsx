@@ -26,7 +26,11 @@ import {
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
-import type { RefreshQuotesInput, QuoteRefreshResult } from "@/src/services/quotes";
+import type {
+  QuoteFreshnessSummary,
+  QuoteRefreshResult,
+  RefreshQuotesInput,
+} from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
 import type { AssetClass } from "@/src/types";
@@ -38,6 +42,7 @@ type RefreshQuotes = (
 ) => Promise<QuoteRefreshResult>;
 
 type DashboardScreenProps = {
+  now?: Date;
   onAddTrade?: () => void;
   onOpenHoldings?: () => void;
   onOpenProgress?: () => void;
@@ -134,13 +139,14 @@ function getAllocationWidth(percentage: number): DimensionValue {
 }
 
 export function DashboardScreen({
+  now,
   onAddTrade,
   onOpenHoldings,
   onOpenProgress,
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
-  const dashboard = useDashboard({ refreshQuotes, store });
+  const dashboard = useDashboard({ now, refreshQuotes, store });
   const displayAllocation = toDisplayAllocation(dashboard.allocation);
   const hasAllocation = displayAllocation.length > 0;
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
@@ -149,9 +155,9 @@ export function DashboardScreen({
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
   const quoteStatus = getQuoteStatus({
     isRefreshing: dashboard.isRefreshing,
-    latestQuoteAsOf: dashboard.latestQuoteAsOf,
-    latestQuoteSource: dashboard.latestQuoteSource,
-    quoteFailures: dashboard.quoteFailures.length,
+    quoteFailed: dashboard.quoteFailed.length,
+    quoteFreshness: dashboard.quoteFreshness,
+    quoteTimedOut: dashboard.quoteTimedOut.length,
   });
 
   return (
@@ -351,9 +357,9 @@ export function DashboardScreen({
           <View style={styles.infoCardRow}>
             <CategoryIcon assetClass="neutral" />
             <View style={styles.infoCardCopy}>
-              <AppText weight="bold">Quotes updated</AppText>
+              <AppText weight="bold">{quoteStatus.title}</AppText>
               <AppText color="secondary" variant="caption">
-                {quoteStatus}
+                {quoteStatus.detail}
               </AppText>
             </View>
           </View>
@@ -427,31 +433,64 @@ export function DashboardScreen({
 
 function getQuoteStatus({
   isRefreshing,
-  latestQuoteAsOf,
-  latestQuoteSource,
-  quoteFailures,
+  quoteFailed,
+  quoteFreshness,
+  quoteTimedOut,
 }: {
   isRefreshing: boolean;
-  latestQuoteAsOf?: string;
-  latestQuoteSource?: string;
-  quoteFailures: number;
+  quoteFailed: number;
+  quoteFreshness: QuoteFreshnessSummary;
+  quoteTimedOut: number;
 }) {
+  const counts = `Current ${quoteFreshness.current} · Stale ${quoteFreshness.stale} · Manual ${quoteFreshness.manual} · Missing ${quoteFreshness.missing}`;
+
   if (isRefreshing) {
-    return "Refreshing quotes...";
+    return {
+      detail: counts,
+      title: "Refreshing quotes...",
+    };
   }
 
-  if (quoteFailures > 0) {
-    return "Some quotes could not refresh. Showing last known prices.";
+  if (quoteFailed > 0 || quoteTimedOut > 0) {
+    const outcomes = [
+      quoteFailed > 0 ? `${quoteFailed} failed` : "",
+      quoteTimedOut > 0 ? `${quoteTimedOut} timed out` : "",
+    ].filter(Boolean);
+    const usablePriceCount =
+      quoteFreshness.total - quoteFreshness.missing;
+
+    return {
+      detail: `${counts}. ${outcomes.join(" · ")}. ${
+        usablePriceCount > 0
+          ? "Existing prices remain available."
+          : "No usable prices are available."
+      }`,
+      title:
+        usablePriceCount > 0
+          ? "Refresh partially completed"
+          : "Quote refresh failed",
+    };
   }
 
-  if (!latestQuoteAsOf) {
-    return "Quotes will appear after your first priced holding.";
+  if (quoteFreshness.status === "empty") {
+    return {
+      detail: "Quote coverage appears after your first holding.",
+      title: "No holdings to price",
+    };
   }
 
-  const mode =
-    latestQuoteSource === "manual" ? "Manual fallback ready" : "Live refresh available";
+  const titles = {
+    current: "Quotes current",
+    manual: "Manual prices in use",
+    missing: "Prices missing",
+    partial: "Quote coverage needs attention",
+    stale: "Quotes are stale",
+  } as const;
 
-  return `${formatDate(latestQuoteAsOf)} • ${mode}`;
+  return {
+    detail: counts,
+    title: titles[quoteFreshness.status],
+  };
 }
 
 const styles = StyleSheet.create({

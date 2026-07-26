@@ -325,7 +325,7 @@ describe("HoldingsScreen", () => {
     const refreshQuotes = jest
       .fn<Promise<QuoteRefreshResult>, [RefreshQuotesInput]>()
       .mockResolvedValue({
-        failures: [],
+        failed: [],
         quoteCache: {
           [asset.id]: {
             asOf: "2026-04-21T10:00:00.000Z",
@@ -335,10 +335,16 @@ describe("HoldingsScreen", () => {
             source: "yahoo",
           },
         },
+        timedOut: [],
+        updated: [asset.id],
       });
 
     const { getAllByText, UNSAFE_getByType } = render(
-      <HoldingsScreen store={store} refreshQuotes={refreshQuotes} />,
+      <HoldingsScreen
+        now={new Date("2026-04-21T10:05:00.000Z")}
+        store={store}
+        refreshQuotes={refreshQuotes}
+      />,
     );
 
     const scrollView = UNSAFE_getByType(ScrollView);
@@ -349,6 +355,82 @@ describe("HoldingsScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹300").length).toBeGreaterThan(0);
     });
+  });
+
+  it("shows aggregate freshness and partial refresh outcomes", async () => {
+    const store = seedMixedHoldings();
+    const refreshQuotes = jest
+      .fn<Promise<QuoteRefreshResult>, [RefreshQuotesInput]>()
+      .mockResolvedValue({
+        failed: [{ assetId: asset.id, error: "Provider unavailable." }],
+        quoteCache: {},
+        timedOut: [
+          {
+            assetId: cryptoAsset.id,
+            error: "Quote provider did not respond within 10 seconds.",
+          },
+        ],
+        updated: [],
+      });
+    const { getByText, UNSAFE_getByType } = render(
+      <HoldingsScreen
+        now={new Date("2026-04-20T10:10:00.000Z")}
+        refreshQuotes={refreshQuotes}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Quote coverage needs attention")).toBeTruthy();
+    expect(
+      getByText("Current 1 · Stale 0 · Manual 0 · Missing 2"),
+    ).toBeTruthy();
+
+    await act(async () => {
+      await UNSAFE_getByType(ScrollView).props.refreshControl.props.onRefresh();
+    });
+
+    await waitFor(() => {
+      expect(getByText("Refresh partially completed")).toBeTruthy();
+    });
+    expect(
+      getByText(
+        "Current 1 · Stale 0 · Manual 0 · Missing 2. 1 failed · 1 timed out. Existing prices remain available.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("does not promise cached prices when all quote attempts fail", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    const refreshQuotes = jest
+      .fn<Promise<QuoteRefreshResult>, [RefreshQuotesInput]>()
+      .mockResolvedValue({
+        failed: [{ assetId: asset.id, error: "Provider unavailable." }],
+        quoteCache: {},
+        timedOut: [],
+        updated: [],
+      });
+    const { getByText, UNSAFE_getByType } = render(
+      <HoldingsScreen
+        now={new Date("2026-04-20T10:10:00.000Z")}
+        refreshQuotes={refreshQuotes}
+        store={store}
+      />,
+    );
+
+    await act(async () => {
+      await UNSAFE_getByType(ScrollView).props.refreshControl.props.onRefresh();
+    });
+
+    await waitFor(() => {
+      expect(getByText("Quote refresh failed")).toBeTruthy();
+    });
+    expect(
+      getByText(
+        "Current 0 · Stale 0 · Manual 0 · Missing 1. 1 failed. No usable prices are available.",
+      ),
+    ).toBeTruthy();
   });
 
   it("masks wealth values without hiding quantities or percentages", () => {
