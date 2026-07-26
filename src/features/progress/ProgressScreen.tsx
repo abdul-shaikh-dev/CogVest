@@ -1504,7 +1504,19 @@ export function ProgressScreen({
             />
 
             <PremiumCard>
-              <SectionHeader title="Asset class snapshot" />
+              <SectionHeader
+                title={
+                  progress.allocation.some((item) => item.percentage === null)
+                    ? "Asset class balances"
+                    : "Asset class snapshot"
+                }
+              />
+              {progress.allocation.some((item) => item.percentage === null) ? (
+                <AppText color="secondary" variant="caption">
+                  Allocation percentages are unavailable while net portfolio
+                  value is zero or negative.
+                </AppText>
+              ) : null}
               {progress.allocation.map((item) => (
                 <View key={item.assetClass} style={styles.assetRow}>
                   <View style={styles.assetIdentity}>
@@ -1513,9 +1525,11 @@ export function ProgressScreen({
                   </View>
                   <View style={styles.assetValue}>
                     <AppText>{formatINR(item.value)}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {formatPercentage(item.percentage).replace("+", "")}
-                    </AppText>
+                    {item.percentage === null ? null : (
+                      <AppText color="secondary" variant="caption">
+                        {formatPercentage(item.percentage).replace("+", "")}
+                      </AppText>
+                    )}
                   </View>
                 </View>
               ))}

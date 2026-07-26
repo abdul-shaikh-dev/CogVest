@@ -188,6 +188,43 @@ describe("ProgressScreen", () => {
     expect(getByText("Typed income: Not enough data")).toBeTruthy();
   });
 
+  it("shows balances without allocation percentages for a negative net portfolio", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 1450,
+      currentPrice: 1678.25,
+      date: "2026-07-15T00:00:00.000Z",
+      id: "opening-negative-net",
+      quantity: 10,
+    });
+    store.getState().addCashEntry({
+      amount: 20000,
+      date: "2026-07-16T00:00:00.000Z",
+      id: "cash-negative-net",
+      label: "Temporary overdraft",
+      purpose: "withdrawal",
+      type: "withdrawal",
+    });
+
+    const { getByText } = render(
+      <ProgressScreen
+        now={new Date("2026-07-20T00:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Asset class balances")).toBeTruthy();
+    expect(
+      getByText(
+        "Allocation percentages are unavailable while net portfolio value is zero or negative.",
+      ),
+    ).toBeTruthy();
+    expect(getByText("₹16,782.50")).toBeTruthy();
+    expect(getByText("-₹20,000.00")).toBeTruthy();
+  });
+
   it("shows compact snapshot automation status instead of the manual form", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);

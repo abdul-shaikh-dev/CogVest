@@ -1,4 +1,10 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
@@ -340,6 +346,117 @@ describe("DashboardScreen", () => {
     expect(getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
+  });
+
+  it("shows a negative cash liability and reconciles it to net portfolio value", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addCashEntry({
+      amount: 400,
+      date: "2026-04-22",
+      id: "cash-overdraft",
+      label: "Broker overdraft",
+      purpose: "withdrawal",
+      type: "withdrawal",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+
+    const { getByTestId, getByText } = render(
+      <DashboardScreen
+        now={new Date("2026-04-22T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    const liabilityCard = within(getByTestId("dashboard-cash-liability"));
+    expect(liabilityCard.getByText("Negative cash balance")).toBeTruthy();
+    expect(liabilityCard.getByText("Gross holdings")).toBeTruthy();
+    expect(liabilityCard.getByText("₹300")).toBeTruthy();
+    expect(liabilityCard.getByText("Cash balance")).toBeTruthy();
+    expect(liabilityCard.getByText("-₹400")).toBeTruthy();
+    expect(liabilityCard.getByText("Net portfolio")).toBeTruthy();
+    expect(liabilityCard.getByText("-₹100")).toBeTruthy();
+    expect(getByText("Portfolio composition")).toBeTruthy();
+    expect(
+      getByText(
+        "Allocation percentages are unavailable while net portfolio value is zero or negative.",
+      ),
+    ).toBeTruthy();
+    expect(getByText("Cash")).toBeTruthy();
+    expect(
+      within(getByTestId("dashboard-allocation-card")).getByText("-₹400"),
+    ).toBeTruthy();
+  });
+
+  it("shows signed net exposure when negative cash does not exhaust holdings", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addCashEntry({
+      amount: 100,
+      date: "2026-04-22",
+      id: "cash-small-overdraft",
+      label: "Temporary overdraft",
+      purpose: "withdrawal",
+      type: "withdrawal",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+
+    const { getByText, queryByTestId } = render(
+      <DashboardScreen
+        now={new Date("2026-04-22T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Net exposure")).toBeTruthy();
+    expect(
+      getByText(
+        "Percentages show signed exposure against net portfolio value.",
+      ),
+    ).toBeTruthy();
+    expect(getByText("150.00% · ₹300")).toBeTruthy();
+    expect(getByText("-50.00% · -₹100")).toBeTruthy();
+    expect(queryByTestId("dashboard-allocation-visual")).toBeNull();
+  });
+
+  it("masks a cash-only liability without hiding its reconciliation state", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addCashEntry({
+      amount: 500,
+      date: "2026-04-22",
+      id: "cash-only-overdraft",
+      label: "Temporary overdraft",
+      purpose: "withdrawal",
+      type: "withdrawal",
+    });
+
+    const { getAllByText, getByText, queryByText } = render(
+      <DashboardScreen
+        now={new Date("2026-04-22T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Negative cash balance")).toBeTruthy();
+    expect(getByText("Portfolio composition")).toBeTruthy();
+    expect(getByText("Cash")).toBeTruthy();
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(4);
+    expect(queryByText("-₹500")).toBeNull();
   });
 
   it("groups stock and ETF allocation into one Equity row for Dashboard display", () => {

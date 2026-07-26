@@ -33,7 +33,7 @@ type CalculateHoldingsInput = {
 
 export type AllocationItem = {
   assetClass: AssetClass;
-  percentage: number;
+  percentage: number | null;
   value: number;
 };
 
@@ -377,20 +377,21 @@ export function calculateAllocation({
     );
   }
 
-  if (cashBalance > 0) {
+  if (cashBalance !== 0) {
     values.set("cash", (values.get("cash") ?? 0) + cashBalance);
   }
 
-  const total = [...values.values()].reduce((sum, value) => sum + value, 0);
+  const allocationValues = [...values.values()];
+  const netTotal = allocationValues.reduce((sum, value) => sum + value, 0);
 
-  if (total === 0) {
+  if (allocationValues.length === 0) {
     return [];
   }
 
   return [...values.entries()]
     .map(([assetClass, value]) => ({
       assetClass,
-      percentage: round((value / total) * 100),
+      percentage: netTotal > 0 ? round((value / netTotal) * 100) : null,
       value,
     }))
     .sort((left, right) => right.value - left.value);
