@@ -70,14 +70,14 @@ type DisplayAllocationClass = "cash" | "crypto" | "debt" | "equity";
 
 type DisplayAllocationItem = {
   assetClass: DisplayAllocationClass;
-  percentage: number;
+  percentage: number | null;
   value: number;
 };
 
 function toDisplayAllocation(
   allocation: Array<{
     assetClass: AssetClass;
-    percentage: number;
+    percentage: number | null;
     value: number;
   }>,
 ): DisplayAllocationItem[] {
@@ -104,10 +104,10 @@ function toDisplayAllocation(
       percentage:
         totalValue > 0
           ? Number(((values[assetClass] / totalValue) * 100).toFixed(2))
-          : 0,
+          : null,
       value: values[assetClass],
     }))
-    .filter((item) => item.value > 0);
+    .filter((item) => item.value !== 0);
 }
 
 function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
@@ -134,8 +134,15 @@ function getAllocationColor(assetClass: DisplayAllocationClass) {
   return colors.primary;
 }
 
-function getAllocationWidth(percentage: number): DimensionValue {
-  return `${Math.min(100, Math.max(0, percentage))}%`;
+function getAllocationWidth(
+  value: number,
+  positiveTotal: number,
+): DimensionValue {
+  if (value <= 0 || positiveTotal <= 0) {
+    return "0%";
+  }
+
+  return `${(value / positiveTotal) * 100}%`;
 }
 
 export function DashboardScreen({
@@ -148,11 +155,19 @@ export function DashboardScreen({
 }: DashboardScreenProps) {
   const dashboard = useDashboard({ now, refreshQuotes, store });
   const displayAllocation = toDisplayAllocation(dashboard.allocation);
+  const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
+  const positiveAllocationTotal = positiveAllocation.reduce(
+    (total, item) => total + item.value,
+    0,
+  );
   const hasAllocation = displayAllocation.length > 0;
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
   const totalInvested = dashboard.rollupTotals.totalInvested;
   const totalPnL = dashboard.rollupTotals.pnl;
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
+  const hasNegativeCash = dashboard.cashBalance < 0;
+  const hasPositiveNetPortfolio =
+    dashboard.rollupTotals.totalCurrentValue > 0;
   const quoteStatus = getQuoteStatus({
     isRefreshing: dashboard.isRefreshing,
     quoteFailed: dashboard.quoteFailed.length,
@@ -254,7 +269,7 @@ export function DashboardScreen({
             </View>
             <View style={styles.heroMetricCell}>
               <AppText color="secondary" variant="caption">
-                P&L
+                Holdings P&L
               </AppText>
               <MaskedValue
                 masked={dashboard.maskWealthValues}
@@ -265,7 +280,7 @@ export function DashboardScreen({
             </View>
             <View style={styles.heroMetricCell}>
               <AppText color="secondary" variant="caption">
-                P&L %
+                Holdings P&L %
               </AppText>
               <AppText
                 style={totalPnLPct >= 0 ? styles.positiveText : styles.negativeText}
@@ -277,11 +292,79 @@ export function DashboardScreen({
           </View>
         </PremiumCard>
 
+        {dashboard.cashBalance < 0 ? (
+          <PremiumCard
+            style={styles.liabilityCard}
+            testID="dashboard-cash-liability"
+          >
+            <View style={styles.liabilityHeader}>
+              <View style={styles.liabilityCopy}>
+                <AppText style={styles.warningText} weight="bold">
+                  Negative cash balance
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  This liability is included in net portfolio value. Review Cash
+                  Ledger if it is unexpected.
+                </AppText>
+              </View>
+            </View>
+            <View style={styles.heroMetrics}>
+              <View style={styles.heroMetricCell}>
+                <AppText color="secondary" variant="caption">
+                  Gross holdings
+                </AppText>
+                <MaskedValue
+                  masked={dashboard.maskWealthValues}
+                  testID="dashboard-liability-gross"
+                  value={formatCompactINR(
+                    dashboard.rollupTotals.holdingsCurrentValue,
+                  )}
+                  weight="bold"
+                />
+              </View>
+              <View style={styles.heroMetricCell}>
+                <AppText color="secondary" variant="caption">
+                  Cash balance
+                </AppText>
+                <MaskedValue
+                  masked={dashboard.maskWealthValues}
+                  style={styles.negativeText}
+                  testID="dashboard-liability-cash"
+                  value={formatCompactINR(dashboard.cashBalance)}
+                  weight="bold"
+                />
+              </View>
+              <View style={styles.heroMetricCell}>
+                <AppText color="secondary" variant="caption">
+                  Net portfolio
+                </AppText>
+                <MaskedValue
+                  masked={dashboard.maskWealthValues}
+                  style={
+                    dashboard.rollupTotals.totalCurrentValue < 0
+                      ? styles.negativeText
+                      : undefined
+                  }
+                  testID="dashboard-liability-net"
+                  value={formatCompactINR(
+                    dashboard.rollupTotals.totalCurrentValue,
+                  )}
+                  weight="bold"
+                />
+              </View>
+            </View>
+          </PremiumCard>
+        ) : null}
+
         {hasAllocation ? (
           <PremiumCard testID="dashboard-allocation-card">
             <View style={styles.allocationHeader}>
               <AppText variant="title" weight="bold">
-                Allocation
+                {hasNegativeCash
+                  ? hasPositiveNetPortfolio
+                    ? "Net exposure"
+                    : "Portfolio composition"
+                  : "Allocation"}
               </AppText>
               <Pressable
                 accessibilityRole="button"
@@ -294,25 +377,36 @@ export function DashboardScreen({
                 </AppText>
               </Pressable>
             </View>
-            <View style={styles.allocationSummary}>
-              <View
-                style={styles.allocationVisual}
-                testID="dashboard-allocation-visual"
-              >
-                {displayAllocation.map((item) => (
-                  <View
-                    key={item.assetClass}
-                    style={[
-                      styles.allocationSegment,
-                      {
-                        backgroundColor: getAllocationColor(item.assetClass),
-                        width: getAllocationWidth(item.percentage),
-                      },
-                    ]}
-                  />
-                ))}
+            {hasNegativeCash ? (
+              <AppText color="secondary" variant="caption">
+                {hasPositiveNetPortfolio
+                  ? "Percentages show signed exposure against net portfolio value."
+                  : "Allocation percentages are unavailable while net portfolio value is zero or negative."}
+              </AppText>
+            ) : (
+              <View style={styles.allocationSummary}>
+                <View
+                  style={styles.allocationVisual}
+                  testID="dashboard-allocation-visual"
+                >
+                  {positiveAllocation.map((item) => (
+                    <View
+                      key={item.assetClass}
+                      style={[
+                        styles.allocationSegment,
+                        {
+                          backgroundColor: getAllocationColor(item.assetClass),
+                          width: getAllocationWidth(
+                            item.value,
+                            positiveAllocationTotal,
+                          ),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
             <View style={styles.allocationLegend}>
               {displayAllocation.map((item) => (
                 <View key={item.assetClass} style={styles.allocationLegendRow}>
@@ -334,9 +428,13 @@ export function DashboardScreen({
                     minimumFontScale={0.75}
                     numberOfLines={1}
                     style={styles.allocationLegendValue}
-                    value={`${formatUnsignedPercentage(item.percentage)} · ${formatCompactINR(
-                      item.value,
-                    )}`}
+                    value={
+                      item.percentage === null
+                        ? formatCompactINR(item.value)
+                        : `${formatUnsignedPercentage(item.percentage)} · ${formatCompactINR(
+                            item.value,
+                          )}`
+                    }
                     variant="caption"
                   />
                 </View>
@@ -571,6 +669,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.cardInner,
   },
+  liabilityCard: {
+    gap: spacing.cardInner,
+  },
+  liabilityCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  liabilityHeader: {
+    flexDirection: "row",
+  },
   reviewCardRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -597,5 +705,8 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
+  },
+  warningText: {
+    color: colors.warning,
   },
 });

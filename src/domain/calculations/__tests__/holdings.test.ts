@@ -108,6 +108,56 @@ describe("holding calculations", () => {
     expect(holding.unrealisedPnLPct).toBeCloseTo(-10, 5);
   });
 
+  it("reconciles repeated fractional crypto buys, fees, and partial sells", () => {
+    const buys = Array.from({ length: 100 }, (_, index) =>
+      trade({
+        assetId: bitcoin.id,
+        date: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
+        fees: 0.01,
+        pricePerUnit: 5_000_000 + index * 0.01,
+        quantity: 0.001,
+        totalValue: (5_000_000 + index * 0.01) * 0.001 + 0.01,
+      }),
+    );
+    const sells = Array.from({ length: 40 }, (_, index) =>
+      trade({
+        assetId: bitcoin.id,
+        date: new Date(Date.UTC(2026, 1, 1, 0, 0, index)).toISOString(),
+        pricePerUnit: 5_100_000,
+        quantity: 0.001,
+        totalValue: 5_100,
+        type: "sell",
+      }),
+    );
+    const expectedBuyCost = buys.reduce(
+      (total, buy) =>
+        total + buy.pricePerUnit * buy.quantity + (buy.fees ?? 0),
+      0,
+    );
+    const expectedAverageCost = expectedBuyCost / 0.1;
+
+    const holding = calculateHolding({
+      asset: bitcoin,
+      currentPrice: 5_200_000,
+      trades: [...buys, ...sells],
+    });
+
+    expect(holding.totalUnits).toBeCloseTo(0.06, 12);
+    expect(holding.averageCostPrice).toBeCloseTo(expectedAverageCost, 7);
+    expect(holding.totalInvested).toBeCloseTo(
+      holding.totalUnits * holding.averageCostPrice,
+      8,
+    );
+    expect(holding.currentValue).toBeCloseTo(
+      holding.totalUnits * holding.currentPrice,
+      8,
+    );
+    expect(holding.unrealisedPnL).toBeCloseTo(
+      holding.currentValue - holding.totalInvested,
+      8,
+    );
+  });
+
   it("keeps average cost stable after a partial sell", () => {
     const holding = calculateHolding({
       asset: reliance,
@@ -726,6 +776,88 @@ describe("portfolio calculations", () => {
       { assetClass: "debt", percentage: 27.54, value: 3800 },
       { assetClass: "cash", percentage: 27.54, value: 3800 },
       { assetClass: "stock", percentage: 8.7, value: 1200 },
+    ]);
+  });
+
+  it("keeps negative cash visible and reconciles allocation to net portfolio value", () => {
+    const stockHolding = calculateHolding({
+      asset: reliance,
+      currentPrice: 120,
+      trades: [trade({ quantity: 10, totalValue: 1000 })],
+    });
+
+    const allocation = calculateAllocation({
+      cashBalance: -200,
+      holdings: [stockHolding],
+    });
+    const rows = calculateConsolidatedHoldingRows([stockHolding]);
+    const totals = calculatePortfolioRollupTotals(rows, -200);
+
+    expect(allocation).toEqual([
+      { assetClass: "stock", percentage: 120, value: 1200 },
+      { assetClass: "cash", percentage: -20, value: -200 },
+    ]);
+    expect(
+      allocation.reduce((total, item) => total + item.value, 0),
+    ).toBe(totals.totalCurrentValue);
+    expect(
+      allocation.reduce(
+        (total, item) => total + (item.percentage ?? 0),
+        0,
+      ),
+    ).toBe(100);
+  });
+
+  it.each([
+    {
+      cashBalance: 0,
+      expected: [{ assetClass: "stock", percentage: 100, value: 1200 }],
+      netValue: 1200,
+    },
+    {
+      cashBalance: -1200,
+      expected: [
+        { assetClass: "stock", percentage: null, value: 1200 },
+        { assetClass: "cash", percentage: null, value: -1200 },
+      ],
+      netValue: 0,
+    },
+    {
+      cashBalance: -1500,
+      expected: [
+        { assetClass: "stock", percentage: null, value: 1200 },
+        { assetClass: "cash", percentage: null, value: -1500 },
+      ],
+      netValue: -300,
+    },
+  ])(
+    "keeps $cashBalance cash mathematically explainable",
+    ({ cashBalance, expected, netValue }) => {
+      const stockHolding = calculateHolding({
+        asset: reliance,
+        currentPrice: 120,
+        trades: [trade({ quantity: 10, totalValue: 1000 })],
+      });
+      const allocation = calculateAllocation({
+        cashBalance,
+        holdings: [stockHolding],
+      });
+
+      expect(allocation).toEqual(expected);
+      expect(
+        allocation.reduce((total, item) => total + item.value, 0),
+      ).toBe(netValue);
+    },
+  );
+
+  it("keeps a cash-only liability visible without inventing a percentage", () => {
+    expect(
+      calculateAllocation({
+        cashBalance: -500,
+        holdings: [],
+      }),
+    ).toEqual([
+      { assetClass: "cash", percentage: null, value: -500 },
     ]);
   });
 
