@@ -28,7 +28,11 @@ import {
   formatDate,
   formatPercentage,
 } from "@/src/domain/formatters";
-import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
+import type {
+  QuoteFreshnessSummary,
+  QuoteRefreshResult,
+  RefreshQuotesInput,
+} from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { OpeningPosition, Trade } from "@/src/types";
@@ -49,6 +53,7 @@ type RefreshQuotes = (
 ) => Promise<QuoteRefreshResult>;
 
 type HoldingsScreenProps = {
+  now?: Date;
   onAddTrade?: () => void;
   onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
@@ -74,6 +79,7 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 };
 
 export function HoldingsScreen({
+  now,
   onAddTrade,
   onManageAssets,
   onReviewAllTrades,
@@ -85,17 +91,19 @@ export function HoldingsScreen({
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
   const {
-    failures,
+    failed,
     holdings,
     isRefreshing,
-    latestQuoteAsOf,
     maskWealthValues,
     openingPositions,
+    quoteFreshness,
     refresh,
     rollupRows,
+    timedOut,
     toggleMaskWealthValues,
     trades,
   } = useHoldings({
+    now,
     refreshQuotes,
     store,
   });
@@ -112,9 +120,13 @@ export function HoldingsScreen({
   const summary = getHoldingReviewSummary(reviewItems);
   const exposureSegments = getExposureSegments(reviewItems);
   const filterCounts = getFilterCounts(reviewItems);
-  const subtitle = latestQuoteAsOf
-    ? `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · quotes updated ${formatDate(latestQuoteAsOf)}`
-    : `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · local data`;
+  const subtitle = `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · local data`;
+  const quoteStatus = getQuoteStatus({
+    failed: failed.length,
+    isRefreshing,
+    quoteFreshness,
+    timedOut: timedOut.length,
+  });
 
   return (
     <ScreenContainer
@@ -171,6 +183,15 @@ export function HoldingsScreen({
               </AppText>
             </PremiumCard>
           </View>
+        ) : null}
+
+        {holdings.length > 0 ? (
+          <PremiumCard style={styles.statusCard} testID="holdings-quote-health">
+            <AppText weight="bold">{quoteStatus.title}</AppText>
+            <AppText color="secondary" variant="caption">
+              {quoteStatus.detail}
+            </AppText>
+          </PremiumCard>
         ) : null}
 
         {onManageAssets || (onReviewAllTrades && trades.length > 0) ? (
@@ -285,14 +306,65 @@ export function HoldingsScreen({
           </>
         )}
 
-        {failures.length > 0 ? (
-          <AppText color="secondary" variant="caption">
-            Some prices could not refresh. Existing values remain available.
-          </AppText>
-        ) : null}
       </View>
     </ScreenContainer>
   );
+}
+
+function getQuoteStatus({
+  failed,
+  isRefreshing,
+  quoteFreshness,
+  timedOut,
+}: {
+  failed: number;
+  isRefreshing: boolean;
+  quoteFreshness: QuoteFreshnessSummary;
+  timedOut: number;
+}) {
+  const counts = `Current ${quoteFreshness.current} · Stale ${quoteFreshness.stale} · Manual ${quoteFreshness.manual} · Missing ${quoteFreshness.missing}`;
+
+  if (isRefreshing) {
+    return {
+      detail: counts,
+      title: "Refreshing quotes...",
+    };
+  }
+
+  if (failed > 0 || timedOut > 0) {
+    const outcomes = [
+      failed > 0 ? `${failed} failed` : "",
+      timedOut > 0 ? `${timedOut} timed out` : "",
+    ].filter(Boolean);
+    const usablePriceCount =
+      quoteFreshness.total - quoteFreshness.missing;
+
+    return {
+      detail: `${counts}. ${outcomes.join(" · ")}. ${
+        usablePriceCount > 0
+          ? "Existing prices remain available."
+          : "No usable prices are available."
+      }`,
+      title:
+        usablePriceCount > 0
+          ? "Refresh partially completed"
+          : "Quote refresh failed",
+    };
+  }
+
+  const titles = {
+    current: "Quotes current",
+    empty: "No holdings to price",
+    manual: "Manual prices in use",
+    missing: "Prices missing",
+    partial: "Quote coverage needs attention",
+    stale: "Quotes are stale",
+  } as const;
+
+  return {
+    detail: counts,
+    title: titles[quoteFreshness.status],
+  };
 }
 
 function InsightCard({

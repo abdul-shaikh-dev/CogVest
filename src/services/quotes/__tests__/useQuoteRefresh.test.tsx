@@ -51,7 +51,8 @@ describe("useQuoteRefresh", () => {
     });
 
     expect(result.current.isRefreshing).toBe(false);
-    expect(result.current.failures).toEqual([]);
+    expect(result.current.failed).toEqual([]);
+    expect(result.current.timedOut).toEqual([]);
     expect(result.current.quoteCache[reliance.id]).toEqual({
       assetId: reliance.id,
       asOf: "2026-04-26T10:00:00.000Z",

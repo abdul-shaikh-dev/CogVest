@@ -78,7 +78,12 @@ describe("useDashboard", () => {
       source: "yahoo",
     });
 
-    const { result } = renderHook(() => useDashboard({ store }));
+    const { result } = renderHook(() =>
+      useDashboard({
+        now: new Date("2026-04-22T10:10:00.000Z"),
+        store,
+      }),
+    );
 
     expect(result.current.totalValue).toBe(550);
     expect(result.current.rollupTotals).toEqual({
@@ -94,7 +99,14 @@ describe("useDashboard", () => {
       absolute: 16.75,
       percentage: 3.47,
     });
-    expect(result.current.latestQuoteAsOf).toBe("2026-04-22T10:00:00.000Z");
+    expect(result.current.quoteFreshness).toEqual({
+      current: 1,
+      manual: 0,
+      missing: 0,
+      stale: 1,
+      status: "partial",
+      total: 2,
+    });
     expect(result.current.allocation).toEqual([
       {
         assetClass: "stock",
@@ -137,6 +149,39 @@ describe("useDashboard", () => {
         pnlPct: 100,
       },
     ]);
+  });
+
+  it("does not classify cash holdings as missing quotes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const cashAsset: Asset = {
+      assetClass: "cash",
+      currency: "INR",
+      id: "asset-cash",
+      name: "Cash",
+      symbol: "CASH",
+      ticker: "CASH",
+    };
+    store.getState().addAsset(cashAsset);
+    store.getState().addTrade({
+      assetId: cashAsset.id,
+      date: "2026-04-20",
+      id: "trade-cash",
+      pricePerUnit: 1,
+      quantity: 100,
+      totalValue: 100,
+      type: "buy",
+    });
+
+    const { result } = renderHook(() => useDashboard({ store }));
+
+    expect(result.current.quoteFreshness).toEqual({
+      current: 0,
+      manual: 0,
+      missing: 0,
+      stale: 0,
+      status: "empty",
+      total: 0,
+    });
   });
 
   it("includes debt and crypto opening positions in consolidated allocation", () => {
@@ -306,6 +351,7 @@ describe("useDashboard", () => {
   it("refreshes quotes and persists refreshed quote cache", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
+    store.getState().addTrade(buyStock);
     const cachedQuote = {
       asOf: "2026-05-15T10:00:00.000Z",
       assetId: stockAsset.id,
@@ -316,7 +362,7 @@ describe("useDashboard", () => {
     };
     store.getState().upsertQuote(cachedQuote);
     const refreshQuotes = jest.fn().mockResolvedValue({
-      failures: [],
+      failed: [],
       quoteCache: {
         [stockAsset.id]: {
           asOf: "2026-05-16T10:00:00.000Z",
@@ -326,6 +372,8 @@ describe("useDashboard", () => {
           source: "yahoo",
         },
       },
+      timedOut: [],
+      updated: [stockAsset.id],
     });
     const { result } = renderHook(() =>
       useDashboard({ refreshQuotes, store }),

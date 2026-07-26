@@ -43,6 +43,7 @@ export type QuoteProviderInput = {
   asset: Asset;
   fetcher?: QuoteFetcher;
   now?: QuoteNow;
+  signal?: AbortSignal;
 };
 
 export type HistoricalPriceProviderInput = {
@@ -61,6 +62,7 @@ export type RefreshQuotesInput = {
   cachedQuotes?: QuoteCache;
   fetcher?: QuoteFetcher;
   now?: QuoteNow;
+  signal?: AbortSignal;
 };
 
 export type QuoteRefreshFailure = {
@@ -68,7 +70,14 @@ export type QuoteRefreshFailure = {
   error: string;
 };
 
+export type QuoteRefreshTimeout = {
+  assetId: string;
+  error: string;
+};
+
 export type QuoteRefreshResult = {
-  failures: QuoteRefreshFailure[];
+  failed: QuoteRefreshFailure[];
   quoteCache: QuoteCache;
+  timedOut: QuoteRefreshTimeout[];
+  updated: string[];
 };

@@ -5,6 +5,7 @@ import type { QuoteCache } from "@/src/types";
 import { refreshQuotes } from "./quoteResolver";
 import type {
   QuoteRefreshFailure,
+  QuoteRefreshTimeout,
   RefreshQuotesInput,
 } from "./types";
 
@@ -12,7 +13,8 @@ type UseQuoteRefreshInput = RefreshQuotesInput;
 
 export function useQuoteRefresh(input: UseQuoteRefreshInput) {
   const [quoteCache, setQuoteCache] = useState<QuoteCache>({});
-  const [failures, setFailures] = useState<QuoteRefreshFailure[]>([]);
+  const [failed, setFailed] = useState<QuoteRefreshFailure[]>([]);
+  const [timedOut, setTimedOut] = useState<QuoteRefreshTimeout[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   async function refresh() {
@@ -22,7 +24,8 @@ export function useQuoteRefresh(input: UseQuoteRefreshInput) {
       const result = await refreshQuotes(input);
 
       setQuoteCache(result.quoteCache);
-      setFailures(result.failures);
+      setFailed(result.failed);
+      setTimedOut(result.timedOut);
 
       return result;
     } finally {
@@ -31,9 +34,10 @@ export function useQuoteRefresh(input: UseQuoteRefreshInput) {
   }
 
   return {
-    failures,
+    failed,
     isRefreshing,
     quoteCache,
     refresh,
+    timedOut,
   };
 }

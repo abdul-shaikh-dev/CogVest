@@ -28,11 +28,13 @@ export async function fetchYahooQuote({
   asset,
   fetcher = getDefaultFetcher(),
   now = defaultNow,
+  signal,
 }: QuoteProviderInput): Promise<QuoteResult> {
   try {
-    const response = await fetcher(
-      buildYahooChartUrl(asset.quoteSourceId ?? asset.ticker),
-    );
+    const url = buildYahooChartUrl(asset.quoteSourceId ?? asset.ticker);
+    const response = signal
+      ? await fetcher(url, { signal })
+      : await fetcher(url);
 
     if (!response.ok) {
       return {

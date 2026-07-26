@@ -113,7 +113,7 @@ describe("DashboardScreen", () => {
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     const refreshQuotes = jest.fn().mockResolvedValue({
-      failures: [],
+      failed: [],
       quoteCache: {
         [asset.id]: {
           asOf: "2026-05-16T10:00:00.000Z",
@@ -123,10 +123,13 @@ describe("DashboardScreen", () => {
           source: "yahoo",
         },
       },
+      timedOut: [],
+      updated: [asset.id],
     });
 
     const { getByLabelText, getByText } = render(
       <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
         store={store}
       />,
@@ -142,10 +145,8 @@ describe("DashboardScreen", () => {
     await waitFor(() => {
       expect(refreshQuotes).toHaveBeenCalledTimes(1);
     });
-    expect(getByText("Quotes updated")).toBeTruthy();
-    expect(
-      getByText("16 May 2026 • Live refresh available"),
-    ).toBeTruthy();
+    expect(getByText("Quotes current")).toBeTruthy();
+    expect(getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
   });
 
   it("describes failed refreshes as last-known prices", async () => {
@@ -161,12 +162,18 @@ describe("DashboardScreen", () => {
     };
     store.getState().upsertQuote(cachedQuote);
     const refreshQuotes = jest.fn().mockResolvedValue({
-      failures: [{ assetId: asset.id, error: "Provider unavailable." }],
+      failed: [{ assetId: asset.id, error: "Provider unavailable." }],
       quoteCache: { [asset.id]: cachedQuote },
+      timedOut: [],
+      updated: [],
     });
 
     const { getByLabelText, getByText, queryByText } = render(
-      <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
+      <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
+        refreshQuotes={refreshQuotes}
+        store={store}
+      />,
     );
 
     await act(async () => {
@@ -175,10 +182,75 @@ describe("DashboardScreen", () => {
 
     await waitFor(() => {
       expect(
-        getByText("Some quotes could not refresh. Showing last known prices."),
+        getByText("Refresh partially completed"),
       ).toBeTruthy();
     });
-    expect(queryByText(/Manual fallback ready/u)).toBeNull();
+    expect(
+      getByText(
+        "Current 0 · Stale 1 · Manual 0 · Missing 0. 1 failed. Existing prices remain available.",
+      ),
+    ).toBeTruthy();
+    expect(queryByText(/Quotes current/u)).toBeNull();
+  });
+
+  it("does not promise cached prices when the first refresh fails", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    const refreshQuotes = jest.fn().mockResolvedValue({
+      failed: [{ assetId: asset.id, error: "Provider unavailable." }],
+      quoteCache: {},
+      timedOut: [],
+      updated: [],
+    });
+
+    const { getByLabelText, getByText } = render(
+      <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
+        refreshQuotes={refreshQuotes}
+        store={store}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByLabelText("Refresh quotes"));
+    });
+
+    await waitFor(() => {
+      expect(getByText("Quote refresh failed")).toBeTruthy();
+    });
+    expect(
+      getByText(
+        "Current 0 · Stale 0 · Manual 0 · Missing 1. 1 failed. No usable prices are available.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("shows partial coverage when one current quote masks a missing holding", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset(etfAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addTrade(etfBuyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-05-16T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 175,
+      source: "yahoo",
+    });
+
+    const { getByText } = render(
+      <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Quote coverage needs attention")).toBeTruthy();
+    expect(
+      getByText("Current 1 · Stale 0 · Manual 0 · Missing 1"),
+    ).toBeTruthy();
   });
 
   it("wires Dashboard allocation and progress actions", () => {
@@ -251,8 +323,8 @@ describe("DashboardScreen", () => {
     expect(getByText("Equity")).toBeTruthy();
     expect(getByText("Open Holdings")).toBeTruthy();
     expect(getByText("Cash")).toBeTruthy();
-    expect(getByText("Quotes updated")).toBeTruthy();
-    expect(getByText("22 Apr 2026 • Live refresh available")).toBeTruthy();
+    expect(getByText("Quotes are stale")).toBeTruthy();
+    expect(getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
     expect(getByText("Review month-end snapshot")).toBeTruthy();
     expect(getByText("Open Progress")).toBeTruthy();
     expect(getByText("This Month")).toBeTruthy();
