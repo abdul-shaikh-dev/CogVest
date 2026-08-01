@@ -19,6 +19,7 @@
     "android": {
       "package": "com.abdulshaikh.cogvest",
       "versionCode": 1,
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1C1B1F"
@@ -30,6 +31,7 @@
       "expo-router",
       "expo-font",
       "./plugins/withPrivateReleaseSigning",
+      "./plugins/withPrivateDataBackupPolicy",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

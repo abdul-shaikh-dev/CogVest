@@ -20,6 +20,9 @@
 - [ ] Play Console internal testing upload ready/manual.
 - [ ] Store listing draft reviewed.
 - [ ] Privacy notes reviewed.
+- [ ] Merged release manifest disables Android backup and references both backup-rule resources.
+- [ ] Backup rules exclude cloud backup and device transfers for all app-data domains.
+- [ ] Settings and store copy describe app-private storage without claiming separate MMKV encryption.
 - [ ] Screenshots planned or generated.
 
 ## Build URL Log

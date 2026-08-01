@@ -103,16 +103,22 @@ export function SettingsScreen({
                 Your portfolio stays here
               </AppText>
               <AppText color="secondary">
-                CogVest V1 is local-first by default. The key privacy guarantees
-                are visible at a glance.
+                Records use Android app-private storage and device security.
+                CogVest does not add separate app encryption in V1.
               </AppText>
             </View>
           </View>
           <GroupedListRow
             icon="phone-portrait-outline"
             title="Local storage"
-            meta="Portfolio records stay on this Android device."
+            meta="Portfolio records use CogVest's app-private Android storage."
             value="Active"
+          />
+          <GroupedListRow
+            icon="cloud-offline-outline"
+            title="Android backup"
+            meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
+            value="Excluded"
           />
           <GroupedListRow
             icon="person-circle-outline"

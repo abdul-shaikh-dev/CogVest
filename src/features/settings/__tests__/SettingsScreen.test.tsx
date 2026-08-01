@@ -30,6 +30,21 @@ describe("SettingsScreen", () => {
     expect(getByText("Your portfolio stays here")).toBeTruthy();
     expect(getByText("Local storage")).toBeTruthy();
     expect(getByText("Active")).toBeTruthy();
+    expect(
+      getByText("Portfolio records use CogVest's app-private Android storage."),
+    ).toBeTruthy();
+    expect(getByText("Android backup")).toBeTruthy();
+    expect(getByText("Excluded")).toBeTruthy();
+    expect(
+      getByText(
+        "Cloud backup, device-to-device, and cross-platform transfer are disabled.",
+      ),
+    ).toBeTruthy();
+    expect(
+      getByText(
+        "Records use Android app-private storage and device security. CogVest does not add separate app encryption in V1.",
+      ),
+    ).toBeTruthy();
     expect(getByText("Account")).toBeTruthy();
     expect(getByText("Not required")).toBeTruthy();
     expect(getByText("Cloud sync")).toBeTruthy();
@@ -83,7 +98,7 @@ describe("SettingsScreen", () => {
     expect(queryByText("USD & crypto fallback")).toBeNull();
     expect(queryByText("Density changes")).toBeNull();
     expect(queryByText(/Export/i)).toBeNull();
-    expect(queryByText("Backup")).toBeNull();
+    expect(getByText("Android backup")).toBeTruthy();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(getByText("Clear local data")).toBeTruthy();

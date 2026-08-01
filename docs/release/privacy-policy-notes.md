@@ -4,6 +4,10 @@
 
 CogVest V1 stores portfolio data locally on the user's Android device.
 
+The records use CogVest's app-private Android storage. Android cloud backup,
+device-to-device transfer, and cross-platform transfer are disabled for CogVest
+app data.
+
 Stored locally:
 - assets
 - trades
@@ -45,6 +49,15 @@ Because V1 is local-only:
 - clearing app storage may delete data
 - device loss may lose data
 - export/import is planned for a later version
+
+## Storage Protection
+
+- CogVest relies on Android app isolation and the user's device security.
+- CogVest V1 does not add separate application-layer encryption to MMKV.
+- Product and store copy must not claim encrypted MMKV, hardware-backed
+  encryption, or recoverable backup.
+- Backup exclusion is enforced with `android:allowBackup="false"` and explicit
+  rules for Android 12+ cloud backup, device transfers, and legacy Android backup.
 
 ## Secrets
 

@@ -97,6 +97,24 @@ Before production build:
 - set `versionName`
 - verify icon, adaptive icon, and splash screen
 
+## Local Data And Backup Policy
+
+CogVest V1 stores portfolio records in app-private Android storage and excludes
+all app data from Android cloud backup, device-to-device transfer, and
+cross-platform transfer. V1 relies on Android/device security and does not add
+separate application-layer MMKV encryption.
+
+The durable Expo configuration must generate all three controls:
+
+- `android:allowBackup="false"`
+- `android:fullBackupContent="@xml/cogvest_backup_rules"`
+- `android:dataExtractionRules="@xml/cogvest_data_extraction_rules"`
+
+Both XML resources exclude every supported app-data domain. After Expo prebuild
+or before a release candidate, inspect the merged manifest and generated XML
+resources. Settings and store copy must not promise cloud recovery or encrypted
+MMKV.
+
 ## EAS Profiles
 
 Configured in root `eas.json`:
