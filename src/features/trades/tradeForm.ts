@@ -6,6 +6,10 @@ import {
   tradeTypeSchema,
   validateSellQuantity,
 } from "@/src/domain/validators";
+import {
+  normalizeQuantity,
+  normalizeUnitPrice,
+} from "@/src/domain/precision";
 import type { OpeningPosition, Trade, TradeType } from "@/src/types";
 
 export type TradeFormValues = {
@@ -112,11 +116,18 @@ export function createTradeFormSchema(now = new Date()) {
     pricePerUnit: positiveNumberField(
       "Price must be a valid number.",
       "Price must be greater than zero.",
-    ),
+    )
+      .transform(normalizeUnitPrice)
+      .refine((value) => value > 0, "Price precision is limited to 8 decimals."),
     quantity: positiveNumberField(
       "Quantity must be a valid number.",
       "Quantity must be greater than zero.",
-    ),
+    )
+      .transform(normalizeQuantity)
+      .refine(
+        (value) => value > 0,
+        "Quantity precision is limited to 8 decimals.",
+      ),
     type: tradeTypeSchema,
   });
 }

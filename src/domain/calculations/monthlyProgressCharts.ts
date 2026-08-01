@@ -1,4 +1,10 @@
 import type { MonthlySnapshot } from "@/src/types";
+import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 
 import {
   calculateMonthlyPerformance,
@@ -74,7 +80,11 @@ function formatShortMonth(month: string) {
 }
 
 function safePercentage(numerator: number, denominator: number) {
-  return denominator === 0 ? 0 : (numerator / denominator) * 100;
+  return denominator === 0
+    ? 0
+    : normalizePercentage(
+        decimal(numerator).dividedBy(denominator).times(100),
+      );
 }
 
 function getRangeLimit(range: MonthlyChartRange) {
@@ -150,8 +160,10 @@ function buildPortfolioInsight(
   }
 
   const previousSnapshot = chronological.at(-2);
-  const valueGap =
-    latestSnapshot.portfolioValue - latestSnapshot.investedValue;
+  const valueGapDecimal = decimal(latestSnapshot.portfolioValue).minus(
+    latestSnapshot.investedValue,
+  );
+  const valueGap = normalizeMoney(valueGapDecimal);
 
   return {
     latestInvestedValue: latestSnapshot.investedValue,
@@ -159,17 +171,24 @@ function buildPortfolioInsight(
     latestPortfolioValue: latestSnapshot.portfolioValue,
     performance: calculateMonthlyPerformance(previousSnapshot, latestSnapshot),
     valueGap,
-    valueGapPct: safePercentage(valueGap, latestSnapshot.investedValue),
+    valueGapPct:
+      latestSnapshot.investedValue === 0
+        ? 0
+        : normalizePercentage(
+            valueGapDecimal
+              .dividedBy(latestSnapshot.investedValue)
+              .times(100),
+          ),
   };
 }
 
 function getSnapshotAssetTotal(snapshot: MonthlySnapshot) {
-  return (
-    snapshot.equityValue +
-    snapshot.debtValue +
-    snapshot.cryptoValue +
-    snapshot.cashValue
-  );
+  return sumFinancialValues([
+    snapshot.equityValue,
+    snapshot.debtValue,
+    snapshot.cryptoValue,
+    snapshot.cashValue,
+  ]);
 }
 
 function getAssetValue(
@@ -199,7 +218,7 @@ function buildAssetInsights(
   const latestTotal = getSnapshotAssetTotal(latestSnapshot);
   const previousTotal = previousSnapshot
     ? getSnapshotAssetTotal(previousSnapshot)
-    : 0;
+    : decimal(0);
   const labels: AssetChartInsight["label"][] = ["Equity", "Debt", "Crypto"];
 
   return labels.map((label) => {
@@ -207,18 +226,31 @@ function buildAssetInsights(
     const previousValue = previousSnapshot
       ? getAssetValue(previousSnapshot, label)
       : 0;
-    const latestDelta = previousSnapshot ? latestValue - previousValue : 0;
-    const allocationPct = safePercentage(latestValue, latestTotal);
-    const previousAllocationPct = previousSnapshot
-      ? safePercentage(previousValue, previousTotal)
-      : allocationPct;
+    const latestDeltaDecimal = previousSnapshot
+      ? decimal(latestValue).minus(previousValue)
+      : decimal(0);
+    const latestDelta = normalizeMoney(latestDeltaDecimal);
+    const allocationRatio = latestTotal.isZero()
+      ? decimal(0)
+      : decimal(latestValue).dividedBy(latestTotal).times(100);
+    const previousAllocationRatio = previousSnapshot && !previousTotal.isZero()
+      ? decimal(previousValue).dividedBy(previousTotal).times(100)
+      : allocationRatio;
+    const allocationPct = normalizePercentage(allocationRatio);
 
     return {
       allocationPct,
-      allocationShiftPct: allocationPct - previousAllocationPct,
+      allocationShiftPct: normalizePercentage(
+        allocationRatio.minus(previousAllocationRatio),
+      ),
       label,
       latestDelta,
-      latestDeltaPct: safePercentage(latestDelta, previousValue),
+      latestDeltaPct:
+        previousValue === 0
+          ? 0
+          : normalizePercentage(
+              latestDeltaDecimal.dividedBy(previousValue).times(100),
+            ),
       latestValue,
     };
   });

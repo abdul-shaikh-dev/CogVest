@@ -8,6 +8,13 @@ import {
   normalizeAssetMetadata,
 } from "@/src/domain/assets";
 import {
+  normalizeCashEntry as normalizeCashRecord,
+  normalizeMonthlySnapshot as normalizeSnapshotRecord,
+  normalizeOpeningPosition,
+  normalizeQuote,
+  normalizeTrade,
+} from "@/src/domain/financialRecords";
+import {
   buildGeneratedMonthEndSnapshot,
   getMissingCompletedSnapshotMonths,
   getMonthlySnapshotPriceConfidence,
@@ -20,6 +27,16 @@ import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
 } from "@/src/domain/portfolioCurrency";
+import {
+  decimal,
+  isAtOrBeyondNegativeQuantum,
+  isWithinQuantum,
+  moneyQuantum,
+  normalizeMoney,
+  normalizeQuantity,
+  quantityQuantum,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
@@ -541,13 +558,16 @@ function persistPortfolioTransition(
 }
 
 function cashBalance(cashEntries: CashEntry[]) {
-  return cashEntries.reduce(
+  const balance = cashEntries
+    .reduce(
     (balance, entry) =>
       entry.type === "withdrawal"
-        ? balance - entry.amount
-        : balance + entry.amount,
-    0,
-  );
+          ? balance.minus(entry.amount)
+          : balance.plus(entry.amount),
+      decimal(0),
+    );
+
+  return normalizeMoney(balance);
 }
 
 function isLinkedCashEntry(entry: CashEntry) {
@@ -598,6 +618,20 @@ function isValidOpeningPosition(
     !isFutureCalendarDate(openingPosition.date, now) &&
     (conviction === undefined ||
       (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5))
+  );
+}
+
+function hasSupportedOpeningPositionPrecision(
+  openingPosition: OpeningPosition,
+) {
+  return (
+    Number.isFinite(openingPosition.quantity) &&
+    openingPosition.quantity > 0 &&
+    Number.isFinite(openingPosition.averageCostPrice) &&
+    openingPosition.averageCostPrice > 0 &&
+    (openingPosition.currentPrice === undefined ||
+      (Number.isFinite(openingPosition.currentPrice) &&
+        openingPosition.currentPrice > 0))
   );
 }
 
@@ -903,22 +937,27 @@ function tradeMonth(trade: Trade) {
 
 function isValidTradeRecord(trade: Trade, now: Date) {
   const fees = trade.fees ?? 0;
-  const grossValue = trade.quantity * trade.pricePerUnit;
+  if (
+    !Number.isFinite(trade.quantity) ||
+    trade.quantity <= 0 ||
+    !Number.isFinite(trade.pricePerUnit) ||
+    trade.pricePerUnit <= 0 ||
+    !Number.isFinite(fees) ||
+    fees < 0 ||
+    !Number.isFinite(trade.totalValue) ||
+    trade.totalValue <= 0
+  ) {
+    return false;
+  }
+
+  const grossValue = decimal(trade.quantity).times(trade.pricePerUnit);
   const expectedTotal =
-    trade.type === "buy" ? grossValue + fees : grossValue - fees;
+    trade.type === "buy" ? grossValue.plus(fees) : grossValue.minus(fees);
 
   return (
     trade.assetId.trim().length > 0 &&
     (trade.type === "buy" || trade.type === "sell") &&
-    Number.isFinite(trade.quantity) &&
-    trade.quantity > 0 &&
-    Number.isFinite(trade.pricePerUnit) &&
-    trade.pricePerUnit > 0 &&
-    Number.isFinite(fees) &&
-    fees >= 0 &&
-    Number.isFinite(trade.totalValue) &&
-    trade.totalValue > 0 &&
-    Math.abs(trade.totalValue - expectedTotal) <= 0.01 &&
+    isWithinQuantum(trade.totalValue, expectedTotal, moneyQuantum) &&
     Boolean(getCalendarDatePart(trade.date)) &&
     !isFutureCalendarDate(trade.date, now) &&
     (trade.conviction === undefined ||
@@ -931,13 +970,10 @@ function isValidTradeRecord(trade: Trade, now: Date) {
 }
 
 function deriveTrade(input: TradeCorrectionInput): Trade {
-  const fees = input.fees ?? 0;
-  const grossValue = input.quantity * input.pricePerUnit;
-
-  return {
+  return normalizeTrade({
     ...input,
-    totalValue: input.type === "buy" ? grossValue + fees : grossValue - fees,
-  };
+    totalValue: 0,
+  });
 }
 
 function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
@@ -947,11 +983,14 @@ function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
     if (left.type !== right.type) return left.type === "addition" ? -1 : 1;
     return left.id.localeCompare(right.id);
   });
-  let balance = 0;
+  let balance = decimal(0);
 
   for (const entry of orderedEntries) {
-    balance += entry.type === "addition" ? entry.amount : -entry.amount;
-    if (balance < -0.00000001) return false;
+    balance =
+      entry.type === "addition"
+        ? balance.plus(entry.amount)
+        : balance.minus(entry.amount);
+    if (isAtOrBeyondNegativeQuantum(balance, moneyQuantum)) return false;
   }
 
   return true;
@@ -990,10 +1029,10 @@ function wouldOversellAsset(
       left.id.localeCompare(right.id),
   );
 
-  let units = 0;
+  let units = decimal(0);
   for (const event of events) {
-    units += event.delta;
-    if (units < -0.00000001) return true;
+    units = units.plus(event.delta);
+    if (isAtOrBeyondNegativeQuantum(units, quantityQuantum)) return true;
   }
 
   return false;
@@ -1036,9 +1075,22 @@ function validateLinkedTrade(
   }
 
   const fees = trade.fees ?? 0;
-  const grossValue = trade.quantity * trade.pricePerUnit;
+  if (
+    !Number.isFinite(trade.quantity) ||
+    trade.quantity <= 0 ||
+    !Number.isFinite(trade.pricePerUnit) ||
+    trade.pricePerUnit <= 0 ||
+    !Number.isFinite(fees) ||
+    fees < 0 ||
+    !Number.isFinite(trade.totalValue) ||
+    trade.totalValue <= 0
+  ) {
+    return { isValid: false, reason: "invalidTrade" };
+  }
+
+  const grossValue = decimal(trade.quantity).times(trade.pricePerUnit);
   const expectedTotal =
-    trade.type === "buy" ? grossValue + fees : grossValue - fees;
+    trade.type === "buy" ? grossValue.plus(fees) : grossValue.minus(fees);
   const hasMatchingAsset =
     state.assets.some((asset) => asset.id === trade.assetId) ||
     input.asset?.id === trade.assetId;
@@ -1050,15 +1102,7 @@ function validateLinkedTrade(
     !tradeAsset ||
     getV1AssetCurrencyIssue(tradeAsset) !== undefined ||
     input.cashLabel.trim().length === 0 ||
-    !Number.isFinite(trade.quantity) ||
-    trade.quantity <= 0 ||
-    !Number.isFinite(trade.pricePerUnit) ||
-    trade.pricePerUnit <= 0 ||
-    !Number.isFinite(fees) ||
-    fees < 0 ||
-    !Number.isFinite(trade.totalValue) ||
-    trade.totalValue <= 0 ||
-    Math.abs(trade.totalValue - expectedTotal) > 0.01
+    !isWithinQuantum(trade.totalValue, expectedTotal, moneyQuantum)
   ) {
     return { isValid: false, reason: "invalidTrade" };
   }
@@ -1139,7 +1183,14 @@ export function createPortfolioStore({
         return;
       }
 
-      const cashEntries = [...state.cashEntries, cashEntry];
+      const normalizedCashEntry = normalizeCashRecord(cashEntry);
+      if (
+        !Number.isFinite(normalizedCashEntry.amount) ||
+        normalizedCashEntry.amount <= 0
+      ) {
+        throw new Error("Cash entry amount is below supported precision.");
+      }
+      const cashEntries = [...state.cashEntries, normalizedCashEntry];
 
       persistPortfolioTransition(storage, state, { cashEntries });
       set({ cashEntries });
@@ -1157,7 +1208,7 @@ export function createPortfolioStore({
 
       const monthlySnapshots = [
         ...state.monthlySnapshots,
-        monthlySnapshot,
+        normalizeSnapshotRecord(monthlySnapshot),
       ];
 
       persistPortfolioTransition(storage, state, { monthlySnapshots });
@@ -1174,7 +1225,11 @@ export function createPortfolioStore({
         return;
       }
 
-      const openingPositions = [...state.openingPositions, openingPosition];
+      const normalizedPosition = normalizeOpeningPosition(openingPosition);
+      if (!hasSupportedOpeningPositionPrecision(normalizedPosition)) {
+        throw new Error("Opening position contains invalid financial values.");
+      }
+      const openingPositions = [...state.openingPositions, normalizedPosition];
 
       persistPortfolioTransition(storage, state, { openingPositions });
       set({ openingPositions });
@@ -1186,7 +1241,11 @@ export function createPortfolioStore({
         return;
       }
 
-      const trades = [...state.trades, trade];
+      const normalizedTrade = normalizeTrade(trade);
+      if (!isValidTradeRecord(normalizedTrade, now())) {
+        throw new Error("Trade contains invalid financial values.");
+      }
+      const trades = [...state.trades, normalizedTrade];
 
       persistPortfolioTransition(storage, state, { trades });
       set({ trades });
@@ -1286,6 +1345,13 @@ export function createPortfolioStore({
       if (existingTrade.type !== input.type) {
         return { reason: "typeMismatch", status: "rejected" };
       }
+      if (
+        !Number.isFinite(input.quantity) ||
+        !Number.isFinite(input.pricePerUnit) ||
+        (input.fees !== undefined && !Number.isFinite(input.fees))
+      ) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
       const currentDate = now();
       const trade = deriveTrade(input);
       if (!isValidTradeRecord(trade, currentDate)) {
@@ -1379,10 +1445,14 @@ export function createPortfolioStore({
       if (!isValidOpeningPosition(openingPosition, currentDate)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
+      const normalizedPosition = normalizeOpeningPosition(openingPosition);
+      if (!isValidOpeningPosition(normalizedPosition, currentDate)) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
 
       const earliestAffectedMonth = [
         openingPositionMonth(existingPosition),
-        openingPositionMonth(openingPosition),
+        openingPositionMonth(normalizedPosition),
       ]
         .filter((month): month is string => Boolean(month))
         .sort()[0];
@@ -1392,7 +1462,7 @@ export function createPortfolioStore({
       }
 
       const openingPositions = state.openingPositions.map((position) =>
-        position.id === openingPosition.id ? openingPosition : position,
+        position.id === normalizedPosition.id ? normalizedPosition : position,
       );
       const history = rebuildPortfolioSnapshots({
         earliestAffectedMonth,
@@ -1411,7 +1481,7 @@ export function createPortfolioStore({
       });
 
       return {
-        openingPosition,
+        openingPosition: normalizedPosition,
         pendingMonths: history.pendingMonths,
         provisionalMonths: history.provisionalMonths,
         refreshedMonths: history.refreshedMonths,
@@ -1435,15 +1505,19 @@ export function createPortfolioStore({
       if (!isValidManualCashEntry(cashEntry, now())) {
         return { reason: "invalidEntry", status: "rejected" };
       }
+      const normalizedEntry = normalizeCashRecord(cashEntry);
+      if (!isValidManualCashEntry(normalizedEntry, now())) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
 
       const cashEntries = state.cashEntries.map((entry) =>
-        entry.id === cashEntry.id ? cashEntry : entry,
+        entry.id === normalizedEntry.id ? normalizedEntry : entry,
       );
 
       persistPortfolioTransition(storage, state, { cashEntries });
       set({ cashEntries });
 
-      return { entry: cashEntry, status: "applied" };
+      return { entry: normalizedEntry, status: "applied" };
     },
     deleteManualCashEntry: (cashEntryId) => {
       const state = get();
@@ -1753,9 +1827,27 @@ export function createPortfolioStore({
         return invalidResult;
       }
 
+      commandInput = {
+        ...commandInput,
+        trade: normalizeTrade(commandInput.trade),
+      };
+      const normalizedInvalidResult = validateLinkedTrade(
+        state,
+        commandInput,
+        commandInput.trade,
+        "buy",
+      );
+      if (normalizedInvalidResult) {
+        return normalizedInvalidResult;
+      }
+
       const availableCash = cashBalance(state.cashEntries);
 
-      if (commandInput.trade.totalValue > availableCash) {
+      if (
+        decimal(commandInput.trade.totalValue)
+          .minus(availableCash)
+          .greaterThan(0)
+      ) {
         return {
           availableCash,
           isValid: false,
@@ -1812,11 +1904,42 @@ export function createPortfolioStore({
         };
       }
 
-      if (input.openingPosition.assetId !== input.asset.id) {
+      if (!isValidOpeningPosition(input.openingPosition, now())) {
+        throw new Error("Opening position contains invalid financial values.");
+      }
+      if (
+        input.quote &&
+        (!Number.isFinite(input.quote.price) ||
+          (input.quote.dayChangeAbs !== undefined &&
+            !Number.isFinite(input.quote.dayChangeAbs)) ||
+          (input.quote.dayChangePct !== undefined &&
+            !Number.isFinite(input.quote.dayChangePct)))
+      ) {
+        throw new Error("Opening position quote contains invalid financial values.");
+      }
+
+      const normalizedInputPosition = normalizeOpeningPosition(
+        input.openingPosition,
+      );
+      const normalizedInputQuote = input.quote
+        ? normalizeQuote(input.quote)
+        : undefined;
+
+      if (!isValidOpeningPosition(normalizedInputPosition, now())) {
+        throw new Error("Opening position is below supported precision.");
+      }
+      if (normalizedInputQuote && normalizedInputQuote.price <= 0) {
+        throw new Error("Opening position quote is below supported precision.");
+      }
+
+      if (normalizedInputPosition.assetId !== input.asset.id) {
         throw new Error("Opening position must reference the command asset.");
       }
 
-      if (input.quote && input.quote.assetId !== input.asset.id) {
+      if (
+        normalizedInputQuote &&
+        normalizedInputQuote.assetId !== input.asset.id
+      ) {
         throw new Error("Opening position quote must reference the command asset.");
       }
 
@@ -1834,11 +1957,11 @@ export function createPortfolioStore({
       }
 
       const openingPosition = {
-        ...input.openingPosition,
+        ...normalizedInputPosition,
         assetId: canonicalAsset.id,
       };
-      const quote = input.quote
-        ? { ...input.quote, assetId: canonicalAsset.id }
+      const quote = normalizedInputQuote
+        ? { ...normalizedInputQuote, assetId: canonicalAsset.id }
         : undefined;
       const currencyIssue = getV1AssetCurrencyIssue(canonicalAsset);
       const quoteCurrencyIssue = quote
@@ -1961,35 +2084,54 @@ export function createPortfolioStore({
         return invalidResult;
       }
 
-      const availableUnits =
-        state.openingPositions
-          .filter((position) => position.assetId === input.trade.assetId)
-          .reduce((total, position) => total + position.quantity, 0) +
-        state.trades
-          .filter((trade) => trade.assetId === input.trade.assetId)
-          .reduce(
-            (total, trade) =>
-              total + (trade.type === "buy" ? trade.quantity : -trade.quantity),
-            0,
-          );
+      const normalizedInput = {
+        ...input,
+        trade: normalizeTrade(input.trade),
+      };
+      const normalizedInvalidResult = validateLinkedTrade(
+        state,
+        normalizedInput,
+        normalizedInput.trade,
+        "sell",
+      );
+      if (normalizedInvalidResult) {
+        return normalizedInvalidResult;
+      }
 
-      if (input.trade.quantity > availableUnits) {
+      const availableUnits = normalizeQuantity(
+        sumFinancialValues([
+          ...state.openingPositions
+            .filter((position) => position.assetId === input.trade.assetId)
+            .map((position) => position.quantity),
+          ...state.trades
+            .filter((trade) => trade.assetId === input.trade.assetId)
+            .map((trade) =>
+              trade.type === "buy" ? trade.quantity : -trade.quantity,
+            ),
+        ]),
+      );
+
+      if (
+        decimal(normalizedInput.trade.quantity)
+          .minus(availableUnits)
+          .greaterThan(0)
+      ) {
         return {
           availableUnits,
           isValid: false,
           reason: "insufficientUnits",
-          requiredUnits: input.trade.quantity,
+          requiredUnits: normalizedInput.trade.quantity,
         };
       }
 
-      const cashEntry = linkedCashEntry(input, "saleProceeds");
+      const cashEntry = linkedCashEntry(normalizedInput, "saleProceeds");
       const cashEntries = [...state.cashEntries, cashEntry];
-      const trades = [...state.trades, input.trade];
+      const trades = [...state.trades, normalizedInput.trade];
 
       persistPortfolioTransition(storage, state, { cashEntries, trades });
       set({ cashEntries, trades });
 
-      return { cashEntry, isValid: true, trade: input.trade };
+      return { cashEntry, isValid: true, trade: normalizedInput.trade };
     },
     resetAffectedStorage: () => {
       const recoveryIncidents = get().storageRecovery?.incidents ?? [];
@@ -2029,13 +2171,20 @@ export function createPortfolioStore({
     },
     updateCashEntry: (cashEntry) => {
       const state = get();
+      const normalizedEntry = normalizeCashRecord(cashEntry);
+      if (
+        !Number.isFinite(normalizedEntry.amount) ||
+        normalizedEntry.amount <= 0
+      ) {
+        throw new Error("Cash entry amount is below supported precision.");
+      }
       const existingEntry = state.cashEntries.find(
         (currentEntry) => currentEntry.id === cashEntry.id,
       );
 
       if (
         (existingEntry && isLinkedCashEntry(existingEntry)) ||
-        isLinkedCashEntry(cashEntry)
+        isLinkedCashEntry(normalizedEntry)
       ) {
         throw new Error(
           "Linked cash entries must be changed with their investment transaction.",
@@ -2043,17 +2192,18 @@ export function createPortfolioStore({
       }
 
       const cashEntries = state.cashEntries.map((currentEntry) =>
-        currentEntry.id === cashEntry.id ? cashEntry : currentEntry,
+        currentEntry.id === normalizedEntry.id ? normalizedEntry : currentEntry,
       );
 
       persistPortfolioTransition(storage, state, { cashEntries });
       set({ cashEntries });
     },
     updateMonthlySnapshot: (monthlySnapshot) => {
+      const normalizedSnapshot = normalizeSnapshotRecord(monthlySnapshot);
       set((state) => ({
         monthlySnapshots: state.monthlySnapshots.map((currentSnapshot) =>
-          currentSnapshot.id === monthlySnapshot.id
-            ? monthlySnapshot
+          currentSnapshot.id === normalizedSnapshot.id
+            ? normalizedSnapshot
             : currentSnapshot,
         ),
       }));
@@ -2076,12 +2226,20 @@ export function createPortfolioStore({
       get().correctTrade(input);
     },
     upsertHistoricalQuote: (historicalQuote) => {
+      if (!Number.isFinite(historicalQuote.price)) {
+        throw new Error("Historical quote price must be finite.");
+      }
+      const normalizedHistoricalQuote = normalizeQuote(historicalQuote);
+      if (normalizedHistoricalQuote.price <= 0) {
+        throw new Error("Historical quote price is below supported precision.");
+      }
       const asset = get().assets.find(
-        (currentAsset) => currentAsset.id === historicalQuote.assetId,
+        (currentAsset) =>
+          currentAsset.id === normalizedHistoricalQuote.assetId,
       );
       const currencyIssue = asset
-        ? getV1QuoteCurrencyIssue(asset, historicalQuote)
-        : historicalQuote.currency === "INR"
+        ? getV1QuoteCurrencyIssue(asset, normalizedHistoricalQuote)
+        : normalizedHistoricalQuote.currency === "INR"
           ? undefined
           : "Cannot save a non-INR historical quote without a supported asset.";
 
@@ -2093,20 +2251,33 @@ export function createPortfolioStore({
         historicalQuoteCache: {
           ...state.historicalQuoteCache,
           [historicalQuoteCacheKey(
-            historicalQuote.assetId,
-            historicalQuote.asOfMonth,
-          )]: historicalQuote,
+            normalizedHistoricalQuote.assetId,
+            normalizedHistoricalQuote.asOfMonth,
+          )]: normalizedHistoricalQuote,
         },
       }));
       persistHistoricalQuoteCache(storage, get().historicalQuoteCache);
     },
     upsertQuote: (quote) => {
+      if (
+        !Number.isFinite(quote.price) ||
+        (quote.dayChangeAbs !== undefined &&
+          !Number.isFinite(quote.dayChangeAbs)) ||
+        (quote.dayChangePct !== undefined &&
+          !Number.isFinite(quote.dayChangePct))
+      ) {
+        throw new Error("Quote financial values must be finite.");
+      }
+      const normalizedQuote = normalizeQuote(quote);
+      if (normalizedQuote.price <= 0) {
+        throw new Error("Quote price is below supported precision.");
+      }
       const asset = get().assets.find(
-        (currentAsset) => currentAsset.id === quote.assetId,
+        (currentAsset) => currentAsset.id === normalizedQuote.assetId,
       );
       const currencyIssue = asset
-        ? getV1QuoteCurrencyIssue(asset, quote)
-        : quote.currency === "INR"
+        ? getV1QuoteCurrencyIssue(asset, normalizedQuote)
+        : normalizedQuote.currency === "INR"
           ? undefined
           : "Cannot save a non-INR quote without a supported asset.";
 
@@ -2117,7 +2288,7 @@ export function createPortfolioStore({
       set((state) => ({
         quoteCache: {
           ...state.quoteCache,
-          [quote.assetId]: quote,
+          [normalizedQuote.assetId]: normalizedQuote,
         },
       }));
       persistQuoteCache(storage, get().quoteCache);

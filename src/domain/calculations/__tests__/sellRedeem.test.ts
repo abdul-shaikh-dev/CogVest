@@ -49,27 +49,26 @@ describe("sell/redeem calculations", () => {
     const preview = calculateSellRedeemPreview(input);
 
     expect(preview.remainingUnits).toBeCloseTo(0.1, 12);
-    expect(preview.grossProceeds).toBeCloseTo(
-      input.quantity * input.sellPrice,
-      8,
-    );
-    expect(preview.netProceeds).toBeCloseTo(
-      preview.grossProceeds - input.fees,
-      8,
-    );
-    expect(preview.remainingValue).toBeCloseTo(
-      preview.remainingUnits * input.currentPrice,
-      8,
-    );
+    expect(preview.grossProceeds).toBe(146242.89);
+    expect(preview.netProceeds).toBe(146230.55);
+    expect(preview.remainingValue).toBe(612345.68);
   });
 
-  it("rejects fees above gross proceeds", () => {
+  it("rejects fees that leave zero or negative proceeds", () => {
     expect(validateSellRedeemFees({ fees: 801, grossProceeds: 800 })).toEqual({
       isValid: false,
-      message: "Fees cannot exceed gross proceeds.",
+      message: "Fees must be less than gross proceeds.",
     });
     expect(validateSellRedeemFees({ fees: 800, grossProceeds: 800 })).toEqual({
+      isValid: false,
+      message: "Fees must be less than gross proceeds.",
+    });
+    expect(validateSellRedeemFees({ fees: 799.99, grossProceeds: 800 })).toEqual({
       isValid: true,
+    });
+    expect(validateSellRedeemFees({ fees: 799.999, grossProceeds: 800 })).toEqual({
+      isValid: false,
+      message: "Fees must be less than gross proceeds.",
     });
   });
 });

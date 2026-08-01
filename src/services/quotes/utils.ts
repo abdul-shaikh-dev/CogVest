@@ -1,4 +1,8 @@
 import type { Asset, Quote } from "@/src/types";
+import {
+  financialPrecision,
+  roundHalfUp,
+} from "@/src/domain/precision";
 
 import type { QuoteFetcher, QuoteNow } from "./types";
 
@@ -21,10 +25,11 @@ export function getDefaultFetcher(): QuoteFetcher {
   return fetch;
 }
 
-export function roundQuoteNumber(value: number, decimals = 2) {
-  const factor = 10 ** decimals;
-
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+export function roundQuoteNumber(
+  value: number,
+  decimals: number = financialPrecision.unitPrice,
+) {
+  return roundHalfUp(value, decimals);
 }
 
 export function createManualQuote({
@@ -40,7 +45,7 @@ export function createManualQuote({
     assetId: asset.id,
     asOf: now(),
     currency: "INR",
-    price,
+    price: roundQuoteNumber(price),
     source: "manual",
   };
 }

@@ -144,10 +144,7 @@ describe("holding calculations", () => {
 
     expect(holding.totalUnits).toBeCloseTo(0.06, 12);
     expect(holding.averageCostPrice).toBeCloseTo(expectedAverageCost, 7);
-    expect(holding.totalInvested).toBeCloseTo(
-      holding.totalUnits * holding.averageCostPrice,
-      8,
-    );
+    expect(holding.totalInvested).toBe(300000.63);
     expect(holding.currentValue).toBeCloseTo(
       holding.totalUnits * holding.currentPrice,
       8,
@@ -235,7 +232,7 @@ describe("holding calculations", () => {
     expect(holding.totalInvested).toBe(35000);
     expect(holding.currentValue).toBe(41956.25);
     expect(holding.unrealisedPnL).toBe(6956.25);
-    expect(holding.unrealisedPnLPct).toBeCloseTo(19.875, 3);
+    expect(holding.unrealisedPnLPct).toBe(19.88);
   });
 
   it("uses opening-position manual price when quote cache is empty", () => {
@@ -733,6 +730,13 @@ describe("portfolio calculations", () => {
       absolute: 200,
       percentage: 20,
     });
+
+    expect(
+      calculatePortfolioDayChange([{ ...holding, dayChangePct: -100 }]),
+    ).toEqual({
+      absolute: 0,
+      percentage: 0,
+    });
   });
 
   it("groups allocation by asset class including cash", () => {
@@ -946,6 +950,52 @@ describe("portfolio calculations", () => {
       pnlPct: 10.34,
       totalCurrentValue: 3500,
       totalInvested: 2900,
+    });
+  });
+
+  it("aggregates precise holding values before rounding portfolio outputs", () => {
+    const firstAsset = { ...reliance, id: "asset-first", ticker: "FIRST.NS" };
+    const secondAsset = { ...reliance, id: "asset-second", ticker: "SECOND.NS" };
+    const holdings = [firstAsset, secondAsset].map((asset) =>
+      calculateHolding({
+        asset,
+        currentPrice: 1,
+        openingPositions: [
+          openingPosition({
+            assetId: asset.id,
+            averageCostPrice: 1,
+            quantity: 0.005,
+          }),
+        ],
+        trades: [],
+      }),
+    );
+    const rows = calculateConsolidatedHoldingRows(holdings);
+
+    expect(holdings.map((holding) => holding.currentValue)).toEqual([0.01, 0.01]);
+    expect(calculatePortfolioTotal(holdings, [])).toBe(0.01);
+    expect(
+      calculatePortfolioTotal(holdings.slice(0, 1), [
+        {
+          amount: 0.005,
+          date: "2026-04-20T00:00:00.000Z",
+          id: "legacy-sub-cent-cash",
+          label: "Legacy cash",
+          purpose: "capitalContribution",
+          type: "addition",
+        },
+      ]),
+    ).toBe(0.01);
+    expect(calculateAllocation({ cashBalance: 0, holdings })).toEqual([
+      { assetClass: "stock", percentage: 100, value: 0.01 },
+    ]);
+    expect(calculatePortfolioRollupTotals(rows, 0, holdings)).toEqual({
+      cashBalance: 0,
+      holdingsCurrentValue: 0.01,
+      pnl: 0,
+      pnlPct: 0,
+      totalCurrentValue: 0.01,
+      totalInvested: 0.01,
     });
   });
 

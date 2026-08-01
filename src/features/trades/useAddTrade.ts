@@ -7,6 +7,8 @@ import {
   isInstrumentType,
   isSectorType,
 } from "@/src/domain/assets";
+import { normalizeTrade } from "@/src/domain/financialRecords";
+import { normalizeMoney } from "@/src/domain/precision";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type {
@@ -172,31 +174,31 @@ export function useAddTrade({
     }
 
     const asset = selectedAsset ?? buildManualAsset();
-    const feeValue = fees.trim().length > 0 ? Number(fees) : 0;
+    const parsedFeeValue = fees.trim().length > 0 ? Number(fees) : 0;
 
-    if (!Number.isFinite(feeValue) || feeValue < 0) {
+    if (!Number.isFinite(parsedFeeValue) || parsedFeeValue < 0) {
       setErrors({ fees: "Fees must be zero or greater." });
       return;
     }
 
-    const grossValue = result.value.quantity * result.value.pricePerUnit;
-    const totalValue =
-      result.value.type === "buy" ? grossValue + feeValue : grossValue - feeValue;
+    const feeValue = normalizeMoney(parsedFeeValue);
 
     setErrors({});
     setReviewAsset(asset);
-    setReviewTrade({
-      assetId: asset.id,
-      conviction: result.value.conviction as ConvictionScore | undefined,
-      date: result.value.date,
-      fees: feeValue || undefined,
-      id: createId("trade"),
-      notes: notes.trim() || undefined,
-      pricePerUnit: result.value.pricePerUnit,
-      quantity: result.value.quantity,
-      totalValue,
-      type: result.value.type,
-    });
+    setReviewTrade(
+      normalizeTrade({
+        assetId: asset.id,
+        conviction: result.value.conviction as ConvictionScore | undefined,
+        date: result.value.date,
+        fees: feeValue || undefined,
+        id: createId("trade"),
+        notes: notes.trim() || undefined,
+        pricePerUnit: result.value.pricePerUnit,
+        quantity: result.value.quantity,
+        totalValue: 0,
+        type: result.value.type,
+      }),
+    );
   }
 
   async function handleConfirm() {

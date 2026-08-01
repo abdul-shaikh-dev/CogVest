@@ -9,6 +9,7 @@ import {
   storageRecoveryKeyPrefix,
 } from "@/src/store";
 import { getMonthlySnapshotPriceConfidence } from "@/src/domain/calculations";
+import { getAvailableQuantity } from "@/src/domain/validators/trade";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 import type { MonthlySnapshot } from "@/src/types";
@@ -87,6 +88,141 @@ describe("portfolio store", () => {
     expect(store.getState().cashEntries).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().preferences).toEqual(createDefaultPreferences());
+  });
+
+  it("normalizes only newly written financial records", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    store.getState().addCashEntry({
+      ...cashEntry,
+      amount: 10000.005,
+    });
+    store.getState().addOpeningPosition({
+      ...openingPosition,
+      averageCostPrice: 1450.123456785,
+      currentPrice: 1678.123456785,
+      quantity: 0.123456785,
+    });
+    store.getState().upsertQuote({
+      ...quote,
+      dayChangeAbs: 1.005,
+      dayChangePct: 1.235,
+      price: 2912.123456785,
+    });
+
+    expect(store.getState().cashEntries[0]?.amount).toBe(10000.01);
+    expect(store.getState().openingPositions[0]).toMatchObject({
+      averageCostPrice: 1450.12345679,
+      currentPrice: 1678.12345679,
+      quantity: 0.12345679,
+    });
+    expect(store.getState().quoteCache[asset.id]).toMatchObject({
+      dayChangeAbs: 1.005,
+      dayChangePct: 1.24,
+      price: 2912.12345679,
+    });
+  });
+
+  it("rejects a cash update that rounds below the supported money precision", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry(cashEntry);
+
+    expect(() =>
+      store.getState().updateCashEntry({ ...cashEntry, amount: 0.004 }),
+    ).toThrow("Cash entry amount is below supported precision.");
+    expect(store.getState().cashEntries).toEqual([cashEntry]);
+  });
+
+  it("rejects new records that collapse below their supported precision", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    expect(() =>
+      store.getState().addOpeningPosition({
+        ...openingPosition,
+        quantity: 0.000000004,
+      }),
+    ).toThrow("Opening position contains invalid financial values.");
+    expect(() =>
+      store.getState().upsertQuote({
+        ...quote,
+        price: 0.000000004,
+      }),
+    ).toThrow("Quote price is below supported precision.");
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().quoteCache).toEqual({});
+  });
+
+  it("loads legacy schema-v5 numbers without rewriting their representation", () => {
+    const storage = createMemoryJsonStorage();
+    const legacySnapshot = {
+      assets: [asset],
+      cashEntries: [{ ...cashEntry, amount: 10000.005 }],
+      monthlySnapshots: [],
+      openingPositions: [
+        {
+          ...openingPosition,
+          averageCostPrice: 1450.123456789,
+          quantity: 0.123456789,
+        },
+      ],
+      preferences: createDefaultPreferences(),
+      schemaVersion: 5,
+      trades: [],
+    };
+    const originalRaw = JSON.stringify(legacySnapshot);
+    storage.setRawItem(portfolioStorageKey, originalRaw);
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().cashEntries[0]?.amount).toBe(10000.005);
+    expect(store.getState().openingPositions[0]?.averageCostPrice).toBe(
+      1450.123456789,
+    );
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(originalRaw);
+  });
+
+  it("completes fractional buy and sell cycles at the quantity quantum", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 1000 });
+
+    for (const [id, quantity] of [
+      ["trade-fraction-1", 0.1],
+      ["trade-fraction-2", 0.2],
+    ] as const) {
+      expect(
+        store.getState().recordFundedBuy({
+          cashLabel: "Fractional buy",
+          trade: {
+            ...trade,
+            id,
+            pricePerUnit: 100,
+            quantity,
+            totalValue: quantity * 100,
+          },
+        }).isValid,
+      ).toBe(true);
+    }
+
+    const sale = store.getState().recordSaleWithProceeds({
+      cashLabel: "Full fractional sale",
+      trade: {
+        ...trade,
+        id: "trade-fraction-sale",
+        pricePerUnit: 110,
+        quantity: 0.3,
+        totalValue: 33,
+        type: "sell",
+      },
+    });
+
+    expect(sale.isValid).toBe(true);
+    expect(store.getState().trades.at(-1)).toMatchObject({
+      quantity: 0.3,
+      totalValue: 33,
+      type: "sell",
+    });
+    expect(getAvailableQuantity(store.getState().trades)).toBe(0);
   });
 
   it("rejects unsupported assets and quote currencies at write boundaries", () => {
@@ -1277,6 +1413,30 @@ describe("portfolio store", () => {
     ]);
   });
 
+  it("rejects a funded buy that exceeds available cash by exactly one paise", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ ...cashEntry, amount: 5000 });
+
+    expect(
+      store.getState().recordFundedBuy({
+        cashLabel: "One paise over",
+        trade: {
+          ...trade,
+          pricePerUnit: 5000.01,
+          quantity: 1,
+          totalValue: 5000.01,
+        },
+      }),
+    ).toEqual({
+      availableCash: 5000,
+      isValid: false,
+      reason: "insufficientCash",
+      requiredCash: 5000.01,
+    });
+    expect(store.getState().trades).toEqual([]);
+  });
+
   it("records sale proceeds as a linked cash addition", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const sale = {
@@ -1332,6 +1492,60 @@ describe("portfolio store", () => {
     expect(store.getState().cashEntries).toEqual([]);
   });
 
+  it("rejects a sale that exceeds available units by exactly one quantity quantum", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      ...openingPosition,
+      quantity: 1,
+    });
+
+    expect(
+      store.getState().recordSaleWithProceeds({
+        cashLabel: "One quantum over",
+        trade: {
+          ...trade,
+          id: "trade-sale-quantum",
+          pricePerUnit: 100,
+          quantity: 1.00000001,
+          totalValue: 100,
+          type: "sell",
+        },
+      }),
+    ).toEqual({
+      availableUnits: 1,
+      isValid: false,
+      reason: "insufficientUnits",
+      requiredUnits: 1.00000001,
+    });
+    expect(store.getState().trades).toEqual([]);
+  });
+
+  it("rejects non-finite linked trades without throwing or mutating", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry(cashEntry);
+
+    expect(
+      store.getState().recordFundedBuy({
+        cashLabel: "Invalid buy",
+        trade: { ...trade, quantity: Number.NaN },
+      }),
+    ).toEqual({ isValid: false, reason: "invalidTrade" });
+    expect(
+      store.getState().recordSaleWithProceeds({
+        cashLabel: "Invalid sale",
+        trade: {
+          ...trade,
+          id: "trade-invalid-sale",
+          pricePerUnit: Number.POSITIVE_INFINITY,
+          type: "sell",
+        },
+      }),
+    ).toEqual({ isValid: false, reason: "invalidTrade" });
+    expect(store.getState().trades).toEqual([]);
+  });
+
   it("rejects a linked trade whose total does not match its units and fees", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
@@ -1347,6 +1561,29 @@ describe("portfolio store", () => {
     expect(store.getState().cashEntries).toEqual([
       expect.objectContaining({ amount: 10000 }),
     ]);
+  });
+
+  it("rejects a linked sale that becomes invalid after record normalization", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+
+    expect(
+      store.getState().recordSaleWithProceeds({
+        cashLabel: "Rounded-away proceeds",
+        trade: {
+          ...trade,
+          fees: 799.999,
+          id: "trade-rounded-away-sale",
+          pricePerUnit: 800,
+          quantity: 1,
+          totalValue: 0.001,
+          type: "sell",
+        },
+      }),
+    ).toEqual({ isValid: false, reason: "invalidTrade" });
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().cashEntries).toEqual([]);
   });
 
   it("corrects a funded buy and its linked cash movement atomically", () => {
@@ -1503,6 +1740,15 @@ describe("portfolio store", () => {
     ).toEqual({ reason: "typeMismatch", status: "rejected" });
     expect(
       store.getState().correctTrade({ ...correction, quantity: 0 }),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(
+      store.getState().correctTrade({ ...correction, quantity: Number.NaN }),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(
+      store.getState().correctTrade({
+        ...correction,
+        pricePerUnit: Number.POSITIVE_INFINITY,
+      }),
     ).toEqual({ reason: "invalidEntry", status: "rejected" });
     expect(
       store.getState().correctTrade({ ...correction, date: "2026-07-23" }),

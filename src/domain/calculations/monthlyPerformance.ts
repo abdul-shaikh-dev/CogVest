@@ -4,6 +4,13 @@ import type {
   MonthlySnapshot,
   OpeningPosition,
 } from "@/src/types";
+import {
+  decimal,
+  type FinancialDecimalInstance,
+  normalizeMoney,
+  normalizePercentage,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 
 export type MonthlyPerformanceUnavailableReason =
   | "ambiguous-cash-flow"
@@ -23,15 +30,9 @@ export type MonthlyPerformanceResult = {
 };
 
 type ExternalFlow = {
-  amount: number;
+  amount: FinancialDecimalInstance;
   date: string;
 };
-
-function round(value: number, decimals = 2) {
-  const factor = 10 ** decimals;
-
-  return Math.round((value + Number.EPSILON) * factor) / factor;
-}
 
 function utcMonthKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(
@@ -51,7 +52,7 @@ function flowWeight(isoDate: string, targetMonth: string) {
     Date.UTC(Number(yearValue), Number(monthValue), 0),
   ).getUTCDate();
 
-  return (daysInMonth - date.getUTCDate() + 1) / daysInMonth;
+  return decimal(daysInMonth - date.getUTCDate() + 1).dividedBy(daysInMonth);
 }
 
 function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null {
@@ -59,11 +60,11 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
     entry.type === "addition" &&
     (entry.purpose === "capitalContribution" || entry.purpose === "income")
   ) {
-    return { amount: entry.amount, date: entry.date };
+    return { amount: decimal(entry.amount), date: entry.date };
   }
 
   if (entry.type === "withdrawal" && entry.purpose === "withdrawal") {
-    return { amount: -entry.amount, date: entry.date };
+    return { amount: decimal(entry.amount).negated(), date: entry.date };
   }
 
   if (
@@ -114,22 +115,24 @@ export function buildMonthlyPerformanceBasis({
     isWithinMonth(item.date, targetMonth),
   )) {
     externalFlows.push({
-      amount: position.quantity * position.averageCostPrice,
+      amount: decimal(position.quantity).times(position.averageCostPrice),
       date: position.date,
     });
   }
 
   return {
-    netExternalFlow: round(
-      externalFlows.reduce((total, flow) => total + flow.amount, 0),
+    netExternalFlow: normalizeMoney(
+      sumFinancialValues(externalFlows.map((flow) => flow.amount)),
     ),
     status: "complete",
     warnings: [],
-    weightedExternalFlow: round(
+    weightedExternalFlow: normalizeMoney(
       externalFlows.reduce(
         (total, flow) =>
-          total + flow.amount * flowWeight(flow.date, targetMonth),
-        0,
+          total.plus(
+            flow.amount.times(flowWeight(flow.date, targetMonth)),
+          ),
+        decimal(0),
       ),
     ),
   };
@@ -151,9 +154,10 @@ export function calculateMonthlyPerformance(
     };
   }
 
-  const totalValueChange = round(
-    snapshot.portfolioValue - previousSnapshot.portfolioValue,
+  const totalValueChangeDecimal = decimal(snapshot.portfolioValue).minus(
+    previousSnapshot.portfolioValue,
   );
+  const totalValueChange = normalizeMoney(totalValueChangeDecimal);
   const basis = snapshot.performanceBasis;
 
   if (!basis) {
@@ -180,19 +184,28 @@ export function calculateMonthlyPerformance(
     };
   }
 
-  const marketMovement = round(totalValueChange - basis.netExternalFlow);
-  const denominator = round(
-    previousSnapshot.portfolioValue + basis.weightedExternalFlow,
+  const marketMovementDecimal = totalValueChangeDecimal.minus(
+    basis.netExternalFlow,
   );
+  const denominatorDecimal = decimal(previousSnapshot.portfolioValue).plus(
+    basis.weightedExternalFlow,
+  );
+  const marketMovement = normalizeMoney(marketMovementDecimal);
+  const denominator = normalizeMoney(denominatorDecimal);
+  const hasValidDenominator = denominatorDecimal.greaterThan(0);
 
   return {
     denominator,
     marketMovement,
     marketMovementPct:
-      denominator > 0 ? round((marketMovement / denominator) * 100) : null,
+      hasValidDenominator
+        ? normalizePercentage(
+            marketMovementDecimal.dividedBy(denominatorDecimal).times(100),
+          )
+        : null,
     netExternalFlow: basis.netExternalFlow,
-    reason: denominator > 0 ? null : "invalid-denominator",
-    status: denominator > 0 ? "available" : "partial",
+    reason: hasValidDenominator ? null : "invalid-denominator",
+    status: hasValidDenominator ? "available" : "partial",
     totalValueChange,
   };
 }

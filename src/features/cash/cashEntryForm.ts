@@ -7,6 +7,7 @@ import type {
   CashEntryPurpose,
   CashEntryType,
 } from "@/src/types";
+import { normalizeMoney } from "@/src/domain/precision";
 
 export type ManualCashPurpose = Extract<
   CashEntryPurpose,
@@ -51,6 +52,8 @@ export function validateCashEntryForm({
     errors.amount = "Amount must be a valid number.";
   } else if (parsedAmount <= 0) {
     errors.amount = "Amount must be greater than zero.";
+  } else if (normalizeMoney(parsedAmount) === 0) {
+    errors.amount = "Amount precision is limited to paise.";
   }
 
   if (label.trim().length === 0) {
@@ -65,5 +68,10 @@ export function validateCashEntryForm({
     errors.date = "Date cannot be in the future.";
   }
 
-  return { errors, parsedAmount };
+  return {
+    errors,
+    parsedAmount: Number.isFinite(parsedAmount)
+      ? normalizeMoney(parsedAmount)
+      : parsedAmount,
+  };
 }

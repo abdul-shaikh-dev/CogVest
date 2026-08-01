@@ -14,6 +14,12 @@ import {
   type SellRedeemPreview,
 } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { normalizeTrade } from "@/src/domain/financialRecords";
+import {
+  normalizeMoney,
+  normalizeQuantity,
+  normalizeUnitPrice,
+} from "@/src/domain/precision";
 import {
   isFutureDate,
   isValidDateString,
@@ -238,17 +244,17 @@ export function useSellRedeemHolding({
     }
 
     const trimmedNotes = notes.trim();
-    const trade: Trade = {
+    const trade: Trade = normalizeTrade({
       assetId,
       date: date.trim(),
-      fees: feeValue || undefined,
+      fees: normalizeMoney(feeValue) || undefined,
       id: tradeIdRef.current,
       notes: trimmedNotes || undefined,
-      pricePerUnit: sellPriceValue,
-      quantity: quantityValue,
+      pricePerUnit: normalizeUnitPrice(sellPriceValue),
+      quantity: normalizeQuantity(quantityValue),
       totalValue: preview.netProceeds,
       type: "sell",
-    };
+    });
     isSavingRef.current = true;
     setIsSaving(true);
 
@@ -271,7 +277,7 @@ export function useSellRedeemHolding({
       const saveResult: SaveResult = {
         cashEntry: result.cashEntry,
         isValid: true,
-        trade,
+        trade: result.trade,
       };
 
       savedResultRef.current = saveResult;

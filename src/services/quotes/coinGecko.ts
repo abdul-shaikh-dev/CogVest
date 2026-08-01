@@ -70,9 +70,9 @@ export async function fetchCoinGeckoQuote({
         currency: "INR",
         dayChangePct:
           typeof coinPrice.inr_24h_change === "number"
-            ? roundQuoteNumber(coinPrice.inr_24h_change)
+            ? roundQuoteNumber(coinPrice.inr_24h_change, 2)
             : undefined,
-        price,
+        price: roundQuoteNumber(price),
         source: "coingecko",
       },
     };

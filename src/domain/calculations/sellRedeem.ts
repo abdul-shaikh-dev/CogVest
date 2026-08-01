@@ -1,3 +1,9 @@
+import {
+  decimal,
+  normalizeMoney,
+  normalizeQuantity,
+} from "@/src/domain/precision";
+
 export type SellRedeemPreviewInput = {
   availableUnits: number;
   currentPrice: number;
@@ -21,16 +27,25 @@ export function calculateSellRedeemPreview({
   quantity,
   sellPrice,
 }: SellRedeemPreviewInput): SellRedeemPreview {
-  const grossProceeds = quantity * sellPrice;
-  const netProceeds = grossProceeds - fees;
-  const remainingUnits = Math.max(0, availableUnits - quantity);
+  const normalizedFees = normalizeMoney(fees);
+  const grossValue = decimal(quantity).times(sellPrice);
+  const grossProceeds = normalizeMoney(grossValue);
+  const netProceeds = normalizeMoney(
+    grossValue.minus(normalizedFees),
+  );
+  const remainder = decimal(availableUnits).minus(quantity);
+  const remainingUnits = normalizeQuantity(
+    remainder.isNegative() ? 0 : remainder,
+  );
 
   return {
-    fees,
+    fees: normalizedFees,
     grossProceeds,
     netProceeds,
     remainingUnits,
-    remainingValue: remainingUnits * currentPrice,
+    remainingValue: normalizeMoney(
+      decimal(remainingUnits).times(currentPrice),
+    ),
   };
 }
 
@@ -41,10 +56,13 @@ export function validateSellRedeemFees({
   fees: number;
   grossProceeds: number;
 }) {
-  if (fees > grossProceeds) {
+  const normalizedFees = normalizeMoney(fees);
+  const normalizedGrossProceeds = normalizeMoney(grossProceeds);
+
+  if (decimal(normalizedFees).greaterThanOrEqualTo(normalizedGrossProceeds)) {
     return {
       isValid: false as const,
-      message: "Fees cannot exceed gross proceeds.",
+      message: "Fees must be less than gross proceeds.",
     };
   }
 

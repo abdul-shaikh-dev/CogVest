@@ -31,6 +31,11 @@ import {
   type MonthlyProgressChartData,
 } from "@/src/domain/calculations";
 import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
+import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+} from "@/src/domain/precision";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, spacing } from "@/src/theme";
@@ -94,7 +99,9 @@ function calculatePercentageChange(current: number, previous: number | undefined
     return null;
   }
 
-  return ((current - previous) / Math.abs(previous)) * 100;
+  return normalizePercentage(
+    decimal(current).minus(previous).dividedBy(decimal(previous).abs()).times(100),
+  );
 }
 
 function formatChangeDirection(value: number | null, hasPreviousValue: boolean) {
@@ -297,7 +304,9 @@ function getSelectedChange(
 
   return previousValue === 0
     ? null
-    : ((currentValue - previousValue) / previousValue) * 100;
+    : normalizePercentage(
+        decimal(currentValue).minus(previousValue).dividedBy(previousValue).times(100),
+      );
 }
 
 function SelectedMonthPanel({
@@ -318,9 +327,14 @@ function SelectedMonthPanel({
   if (isPortfolioChart) {
     const portfolioValue = getSeriesValue(series, "Portfolio", selectedIndex);
     const investedValue = getSeriesValue(series, "Invested", selectedIndex);
-    const difference = portfolioValue - investedValue;
+    const preciseDifference = decimal(portfolioValue).minus(investedValue);
+    const difference = normalizeMoney(preciseDifference);
     const differencePercentage =
-      investedValue === 0 ? null : (difference / investedValue) * 100;
+      investedValue === 0
+        ? null
+        : normalizePercentage(
+            preciseDifference.dividedBy(investedValue).times(100),
+          );
     const direction = difference >= 0 ? "ahead of invested" : "behind invested";
 
     return (

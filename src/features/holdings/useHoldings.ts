@@ -95,7 +95,7 @@ export function useHoldings({
     now,
   );
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
-  const rollupTotals = calculatePortfolioRollupTotals(rollupRows);
+  const rollupTotals = calculatePortfolioRollupTotals(rollupRows, 0, holdings);
 
   async function refresh() {
     setIsRefreshing(true);

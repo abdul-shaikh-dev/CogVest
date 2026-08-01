@@ -21,6 +21,12 @@ import {
   type MonthlyChartCustomRange,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
+import {
+  decimal,
+  normalizeMoney,
+  quantityQuantum,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
@@ -355,19 +361,23 @@ function needsHistoricalPrice({
   const openingQuantity = state.openingPositions.reduce(
     (quantity, position) =>
       position.assetId === assetId && isOnOrBefore(position.date, monthEnd)
-        ? quantity + position.quantity
+        ? quantity.plus(position.quantity)
         : quantity,
-    0,
+    decimal(0),
   );
   const tradedQuantity = state.trades.reduce((quantity, trade) => {
     if (trade.assetId !== assetId || !isOnOrBefore(trade.date, monthEnd)) {
       return quantity;
     }
 
-    return quantity + (trade.type === "buy" ? trade.quantity : -trade.quantity);
-  }, 0);
+    return trade.type === "buy"
+      ? quantity.plus(trade.quantity)
+      : quantity.minus(trade.quantity);
+  }, decimal(0));
 
-  return openingQuantity + tradedQuantity > 0;
+  return openingQuantity
+    .plus(tradedQuantity)
+    .greaterThanOrEqualTo(quantityQuantum);
 }
 
 export function useProgress({
@@ -424,9 +434,13 @@ export function useProgress({
     snapshot.cashEntries,
     now,
   );
-  const totalInvested = holdings.reduce(
-    (total, holding) => total + holding.totalInvested,
-    0,
+  const totalInvested = normalizeMoney(
+    sumFinancialValues(
+      holdings.map(
+        (holding) =>
+          holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+      ),
+    ),
   );
   const monthlyMetrics = calculateCashMonthlyMetrics({
     cashEntries: snapshot.cashEntries,
