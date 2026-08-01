@@ -21,7 +21,6 @@ appId: com.abdulshaikh.cogvest
     timeout: 5000
 - tapOn:
     id: "asset-lookup-result-visual-qa-lookup-hdfc"
-- assertVisible: "Live price autofilled from Visual QA seed."
 - tapOn:
     id: "continue-class-button"
 - tapOn:
@@ -32,50 +31,46 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "average-cost-input"
 - inputText: "1500"
-- hideKeyboard
 - tapOn:
-    id: "review-holding-button"
-- assertVisible:
-    id: "review-quote-provenance"
+    id: "conviction-4"
 - scrollUntilVisible:
     element:
-      id: "save-holding-button"
+      id: "notes-input"
     direction: DOWN
 - tapOn:
-    id: "save-holding-button"
-- assertVisible:
-    id: "holding-save-complete"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
-- assertVisible: "Asset count: 1"
-- assertVisible: "Opening position count: 1"
-- assertVisible: "Duplicate identity count: 0"
-- assertVisible: "Identity: HDFCBANK | HDFCBANK.NS"
-- assertVisible: "Classification: stock | stock | other"
-- assertVisible: "Market: INR | NSE | HDFCBANK.NS"
-- assertVisible: "Quote: yahoo | ₹1,678.25"
-- assertVisible: "Values: invested ₹3,000.00 | current ₹3,356.50 | quantity 2"
-
-# Select the same provider candidate again. Persistence must reuse the asset.
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+    id: "notes-input"
+- inputText: "STALE HDFC NOTE"
+- hideKeyboard
+- tapOn:
+    id: "back-button"
+- tapOn:
+    id: "back-button"
+- tapOn:
+    id: "selected-asset-change"
 - tapOn:
     id: "asset-lookup-input"
-- inputText: "hdfc"
+- inputText: "nifty"
 - hideKeyboard
 - extendedWaitUntil:
     visible:
-      id: "existing-asset-results"
+      id: "asset-lookup-result-visual-qa-lookup-niftybees"
     timeout: 5000
-- tapOn: "Use HDFC Bank"
+- tapOn:
+    id: "asset-lookup-result-visual-qa-lookup-niftybees"
 - tapOn:
     id: "continue-class-button"
 - tapOn:
     id: "continue-position-button"
 - tapOn:
+    id: "review-holding-button"
+- assertVisible: "Quantity must be greater than zero."
+- assertVisible: "Average cost must be greater than zero."
+- tapOn:
     id: "quantity-input"
-- inputText: "1"
+- inputText: "3"
 - tapOn:
     id: "average-cost-input"
-- inputText: "1600"
+- inputText: "250"
 - hideKeyboard
 - tapOn:
     id: "review-holding-button"
@@ -89,7 +84,10 @@ appId: com.abdulshaikh.cogvest
     id: "holding-save-complete"
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 1"
-- assertVisible: "Opening position count: 2"
-- assertVisible: "Duplicate identity count: 0"
-- assertVisible: "Position count: 2"
-- assertVisible: "Values: invested ₹4,600.00 | current ₹5,034.75 | quantity 3"
+- assertVisible: "Identity: NIFTYBEES | NIFTYBEES.NS"
+- assertVisible: "Classification: etf | etf | diversified"
+- assertVisible: "Quote: yahoo | ₹255.32"
+- assertVisible: "Values: invested ₹750.00 | current ₹765.96 | quantity 3"
+- assertVisible: "Position 1: quantity 3 | average ₹250.00 | note none | conviction none"
+- assertNotVisible: "HDFC Bank"
+- assertNotVisible: "STALE HDFC NOTE"

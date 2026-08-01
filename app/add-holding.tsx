@@ -4,7 +4,7 @@ import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import {
   canUseVisualQaHarness,
   visualQaAssetLookupResults,
-  visualQaQuotes,
+  resolveVisualQaQuote,
 } from "@/src/testing/visualQaSeed";
 
 export default function AddHoldingScreen() {
@@ -24,13 +24,7 @@ export default function AddHoldingScreen() {
       onComplete={() => router.replace("/(tabs)/holdings")}
       resolveQuote={
         visualQaState === "lookup"
-          ? async ({ asset }) => {
-              const quote =
-                visualQaQuotes.find((candidate) => candidate.assetId === asset.id) ??
-                visualQaQuotes[0];
-
-              return { ok: true, quote };
-            }
+          ? async ({ asset }) => resolveVisualQaQuote(asset)
           : undefined
       }
       searchAssetLookupResults={

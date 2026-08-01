@@ -71,6 +71,10 @@ export default function RootLayout() {
                 name="visual-qa-seed"
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="e2e-evidence"
+                options={{ headerShown: false }}
+              />
             </Stack>
           </>
         )}

@@ -41,6 +41,10 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-holding-button"
 - assertVisible:
+    id: "holding-save-complete"
+- tapOn:
+    id: "view-holding-button"
+- assertVisible:
     id: "holdings-screen"
 - tapOn:
     id: "holding-row-.*"

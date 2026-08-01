@@ -1,0 +1,52 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "hdfc"
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "asset-lookup-result-visual-qa-lookup-hdfc"
+    timeout: 5000
+- tapOn:
+    id: "asset-lookup-result-visual-qa-lookup-hdfc"
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "1500"
+- tapOn:
+    id: "price-input"
+- eraseText: 50
+- inputText: "1700"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Quote: manual | ₹1,700.00"
+- assertVisible: "Values: invested ₹3,000.00 | current ₹3,400.00 | quantity 2"
+- assertVisible: "Duplicate identity count: 0"
