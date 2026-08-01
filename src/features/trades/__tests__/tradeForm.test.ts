@@ -45,6 +45,50 @@ describe("trade form validation", () => {
     });
   });
 
+  it("normalizes quantity and unit price to the V1 precision contract", () => {
+    expect(
+      validateTradeForm(
+        {
+          assetId: "asset-1",
+          date: "2026-04-20",
+          pricePerUnit: "0.123456785",
+          quantity: "0.123456785",
+          type: "buy",
+        },
+        [],
+        new Date("2026-04-20T12:00:00.000Z"),
+      ),
+    ).toMatchObject({
+      isValid: true,
+      value: {
+        pricePerUnit: 0.12345679,
+        quantity: 0.12345679,
+      },
+    });
+  });
+
+  it("rejects positive values below the supported quantity and price quantum", () => {
+    expect(
+      validateTradeForm(
+        {
+          assetId: "asset-1",
+          date: "2026-04-20",
+          pricePerUnit: "0.000000001",
+          quantity: "0.000000001",
+          type: "buy",
+        },
+        [],
+        new Date("2026-04-20T12:00:00.000Z"),
+      ),
+    ).toEqual({
+      errors: {
+        pricePerUnit: "Price precision is limited to 8 decimals.",
+        quantity: "Quantity precision is limited to 8 decimals.",
+      },
+      isValid: false,
+    });
+  });
+
   it("returns actionable field errors for invalid buy values", () => {
     expect(
       validateTradeForm(

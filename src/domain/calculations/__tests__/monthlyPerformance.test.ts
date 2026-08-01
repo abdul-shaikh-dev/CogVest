@@ -125,6 +125,29 @@ describe("buildMonthlyPerformanceBasis", () => {
     });
   });
 
+  it("rounds fractional opening-position flows only after aggregation", () => {
+    const positions: OpeningPosition[] = ["one", "two"].map((id) => ({
+      assetId: `asset-${id}`,
+      averageCostPrice: 1.005,
+      date: "2026-05-31T00:00:00.000Z",
+      id: `opening-${id}`,
+      quantity: 0.005,
+    }));
+
+    expect(
+      buildMonthlyPerformanceBasis({
+        cashEntries: [],
+        openingPositions: positions,
+        targetMonth: "2026-05",
+      }),
+    ).toEqual({
+      netExternalFlow: 0.01,
+      status: "complete",
+      warnings: [],
+      weightedExternalFlow: 0,
+    });
+  });
+
   it("marks legacy or inconsistent cash semantics unavailable", () => {
     expect(
       buildMonthlyPerformanceBasis({
@@ -161,6 +184,26 @@ describe("buildMonthlyPerformanceBasis", () => {
 });
 
 describe("calculateMonthlyPerformance", () => {
+  it("calculates percentage from unrounded legacy snapshot intermediates", () => {
+    const previous = snapshot("2026-04", 100.004);
+    const current = snapshot("2026-05", 100.009, {
+      netExternalFlow: 0.001,
+      status: "complete",
+      warnings: [],
+      weightedExternalFlow: 0.001,
+    });
+
+    expect(calculateMonthlyPerformance(previous, current)).toEqual({
+      denominator: 100.01,
+      marketMovement: 0,
+      marketMovementPct: 0,
+      netExternalFlow: 0.001,
+      reason: null,
+      status: "available",
+      totalValueChange: 0.01,
+    });
+  });
+
   it("removes external contribution from total value change", () => {
     const previous = snapshot("2026-04", 500000);
     const current = snapshot("2026-05", 600000, {

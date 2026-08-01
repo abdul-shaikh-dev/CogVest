@@ -138,6 +138,27 @@ All domain calculations must be pure functions under `src/domain/`.
 - General foreign-asset portfolios, FX conversion, and user-selectable reporting
   currency remain outside V1.
 
+### V1 Financial Precision Contract
+
+- Persisted financial fields remain finite JavaScript numbers under schema v5.
+  V1 does not rewrite legacy records or migrate their representation.
+- New and edited quantities are normalized to 8 decimal places. Unit prices,
+  quote prices, and weighted average cost use 8 decimal places.
+- INR cash amounts, fees, linked trade totals, and monthly snapshot values are
+  normalized to 2 decimal places.
+- Domain calculations use base-10 decimal arithmetic and do not round
+  intermediate values. `ROUND_HALF_UP` applies only at defined record or output
+  boundaries.
+- Percentages are calculated from unrounded values and normalized to 2 decimal
+  places at their output boundary.
+- Sell and oversell comparisons use a `0.00000001` unit quantum. Cash and linked
+  total comparisons use a `₹0.01` quantum.
+- Legacy schema-v5 numbers remain readable as stored and are normalized only
+  when the user creates or edits the owning record.
+- Invariant tests must cover fractional crypto operations, fees, weighted
+  average cost, complete sell/redeem cycles, positive and negative half
+  boundaries, and representative Excel-parity totals.
+
 ## Screen Contract
 
 Primary tabs:

@@ -136,7 +136,7 @@ describe("useSellRedeemHolding", () => {
       result.current.save();
     });
 
-    expect(result.current.errors.fees).toBe("Fees cannot exceed gross proceeds.");
+    expect(result.current.errors.fees).toBe("Fees must be less than gross proceeds.");
     expect(store.getState().trades).toEqual([]);
   });
 

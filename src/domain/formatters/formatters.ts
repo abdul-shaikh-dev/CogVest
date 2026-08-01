@@ -1,6 +1,14 @@
+import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+  roundHalfUp,
+} from "@/src/domain/precision";
+
 export function formatINR(value: number) {
-  const sign = value < 0 ? "-" : "";
-  const absoluteValue = Math.abs(value);
+  const normalizedValue = normalizeMoney(value);
+  const sign = normalizedValue < 0 ? "-" : "";
+  const absoluteValue = Math.abs(normalizedValue);
   const formatted = new Intl.NumberFormat("en-IN", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
@@ -18,7 +26,7 @@ export function formatCompactINR(value: number) {
   const absoluteValue = Math.abs(value);
 
   if (absoluteValue < 1000) {
-    return `${sign}₹${Math.round(absoluteValue)}`;
+    return `${sign}₹${roundHalfUp(absoluteValue, 0)}`;
   }
 
   const compactScales = [
@@ -27,16 +35,17 @@ export function formatCompactINR(value: number) {
     { suffix: "K", value: 1000 },
   ];
   const scale = compactScales.find((item) => absoluteValue >= item.value);
-  const scaledValue = absoluteValue / (scale?.value ?? 1);
-  const rounded = scaledValue.toFixed(2);
+  const scaledValue = decimal(absoluteValue).dividedBy(scale?.value ?? 1);
+  const rounded = roundHalfUp(scaledValue, 2).toFixed(2);
 
   return `${sign}₹${trimTrailingZeros(rounded)}${scale?.suffix ?? ""}`;
 }
 
 export function formatPercentage(value: number) {
-  const sign = value > 0 ? "+" : "";
+  const normalizedValue = normalizePercentage(value);
+  const sign = normalizedValue > 0 ? "+" : "";
 
-  return `${sign}${value.toFixed(2)}%`;
+  return `${sign}${normalizedValue.toFixed(2)}%`;
 }
 
 export function formatDate(isoDate: string) {

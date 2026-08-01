@@ -1,4 +1,10 @@
 import type { ConsolidatedHoldingRow } from "@/src/domain/calculations";
+import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 import type { AssetClass, Holding } from "@/src/types";
 
 export type HoldingWithQuoteMetadata = Holding & {
@@ -56,13 +62,16 @@ export function getHoldingReviewSummary(items: HoldingReviewItem[]) {
     )[0];
   const topThreeAllocationPct = [...items]
     .sort((left, right) => right.allocationPct - left.allocationPct)
-    .slice(0, 3)
-    .reduce((total, item) => total + item.allocationPct, 0);
+    .slice(0, 3);
 
   return {
     bestReturn,
     dominant,
-    topThreeAllocationPct,
+    topThreeAllocationPct: normalizePercentage(
+      sumFinancialValues(
+        topThreeAllocationPct.map((item) => item.allocationPct),
+      ),
+    ),
   };
 }
 
@@ -95,9 +104,15 @@ export function getExposureSegments(
       value: 0,
     },
   ];
-  const totalValue = items.reduce(
-    (total, item) => total + item.holding.currentValue,
-    0,
+  const totalValue = sumFinancialValues(
+    items.map(
+      (item) =>
+        item.holding.calculationBasis?.currentValue ??
+        item.holding.currentValue,
+    ),
+  );
+  const preciseValues = new Map(
+    groups.map((group) => [group.key, decimal(0)] as const),
   );
 
   for (const item of items) {
@@ -106,16 +121,31 @@ export function getExposureSegments(
 
     if (group) {
       group.count += 1;
-      group.value += item.holding.currentValue;
+      preciseValues.set(
+        group.key,
+        preciseValues
+          .get(group.key)!
+          .plus(
+            item.holding.calculationBasis?.currentValue ??
+              item.holding.currentValue,
+          ),
+      );
     }
   }
 
   return groups
     .filter((group) => group.count > 0)
-    .map((group) => ({
-      ...group,
-      percentage: totalValue === 0 ? 0 : (group.value / totalValue) * 100,
-    }));
+    .map((group) => {
+      const preciseValue = preciseValues.get(group.key)!;
+
+      return {
+        ...group,
+        percentage: totalValue.isZero()
+          ? 0
+          : normalizePercentage(preciseValue.dividedBy(totalValue).times(100)),
+        value: normalizeMoney(preciseValue),
+      };
+    });
 }
 
 export function filterHoldingReviewItems(

@@ -25,6 +25,12 @@ import {
   type PortfolioCurrencyIssue,
 } from "@/src/domain/portfolioCurrency";
 import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+  sumFinancialValues,
+} from "@/src/domain/precision";
+import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
@@ -119,14 +125,16 @@ function calculateMonthlyMetrics(
   now: Date,
   supportedAssetIds: Set<string>,
 ): DashboardMonthlyMetrics {
-  const tradeInvestment = state.trades
-    .filter(
-      (trade) =>
-        supportedAssetIds.has(trade.assetId) &&
-        trade.type === "buy" &&
-        isSameMonth(trade.date, now),
-    )
-    .reduce((total, trade) => total + trade.totalValue, 0);
+  const tradeInvestment = sumFinancialValues(
+    state.trades
+      .filter(
+        (trade) =>
+          supportedAssetIds.has(trade.assetId) &&
+          trade.type === "buy" &&
+          isSameMonth(trade.date, now),
+      )
+      .map((trade) => trade.totalValue),
+  );
   const openingInvestment = state.openingPositions
     .filter(
       (position) =>
@@ -135,24 +143,32 @@ function calculateMonthlyMetrics(
     )
     .reduce(
       (total, position) =>
-        total + position.quantity * position.averageCostPrice,
-      0,
+        total.plus(decimal(position.quantity).times(position.averageCostPrice)),
+      decimal(0),
     );
-  const cashAdded = state.cashEntries
-    .filter((entry) => entry.type === "addition" && isSameMonth(entry.date, now))
-    .reduce((total, entry) => total + entry.amount, 0);
-  const cashWithdrawn = state.cashEntries
-    .filter((entry) => entry.type === "withdrawal" && isSameMonth(entry.date, now))
-    .reduce((total, entry) => total + entry.amount, 0);
-  const investment = tradeInvestment + openingInvestment;
+  const cashAdded = sumFinancialValues(
+    state.cashEntries
+      .filter(
+        (entry) => entry.type === "addition" && isSameMonth(entry.date, now),
+      )
+      .map((entry) => entry.amount),
+  );
+  const cashWithdrawn = sumFinancialValues(
+    state.cashEntries
+      .filter(
+        (entry) => entry.type === "withdrawal" && isSameMonth(entry.date, now),
+      )
+      .map((entry) => entry.amount),
+  );
+  const investment = tradeInvestment.plus(openingInvestment);
 
   return {
-    cashAdded,
-    cashChange: cashAdded - cashWithdrawn,
-    investment,
+    cashAdded: normalizeMoney(cashAdded),
+    cashChange: normalizeMoney(cashAdded.minus(cashWithdrawn)),
+    investment: normalizeMoney(investment),
     savingsRate:
-      cashAdded > 0
-        ? Number(((investment / cashAdded) * 100).toFixed(2))
+      cashAdded.greaterThan(0)
+        ? normalizePercentage(investment.dividedBy(cashAdded).times(100))
         : null,
   };
 }
@@ -189,7 +205,11 @@ export function useDashboard({
   );
   const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
-  const rollupTotals = calculatePortfolioRollupTotals(rollupRows, cashBalance);
+  const rollupTotals = calculatePortfolioRollupTotals(
+    rollupRows,
+    cashBalance,
+    holdings,
+  );
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
       .filter((holding) => holding.asset.assetClass !== "cash")

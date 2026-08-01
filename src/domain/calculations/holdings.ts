@@ -10,6 +10,16 @@ import type {
 } from "@/src/types";
 import { isV1CompatibleQuote } from "@/src/domain/portfolioCurrency";
 import { getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
+import {
+  decimal,
+  type FinancialDecimalInstance,
+  normalizeMoney,
+  normalizePercentage,
+  normalizeQuantity,
+  normalizeUnitPrice,
+  roundHalfUp,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 
 import {
   calculateMonthlyPerformance,
@@ -106,9 +116,7 @@ export type ConvictionReadiness = {
 const defaultConvictionTradeCount = 5;
 
 function round(value: number, decimals = 2) {
-  const factor = 10 ** decimals;
-
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  return roundHalfUp(value, decimals);
 }
 
 function sortTradesByDate(trades: Trade[]) {
@@ -124,8 +132,8 @@ export function calculateHolding({
   openingPositions = [],
   trades,
 }: CalculateHoldingInput): Holding {
-  let averageCostPrice = 0;
-  let totalUnits = 0;
+  let averageCostPrice = decimal(0);
+  let totalUnits = decimal(0);
   const costBasisEvents = [
     ...openingPositions.map((position) => ({
       date: position.date,
@@ -148,37 +156,50 @@ export function calculateHolding({
 
   for (const event of costBasisEvents) {
     if (event.type === "buy" || event.type === "opening") {
-      const existingCost = totalUnits * averageCostPrice;
-      const buyCost = event.pricePerUnit * event.quantity + event.fees;
-      const nextUnits = totalUnits + event.quantity;
+      const existingCost = totalUnits.times(averageCostPrice);
+      const buyCost = decimal(event.pricePerUnit)
+        .times(event.quantity)
+        .plus(event.fees);
+      const nextUnits = totalUnits.plus(event.quantity);
 
-      averageCostPrice = nextUnits > 0 ? (existingCost + buyCost) / nextUnits : 0;
+      averageCostPrice = nextUnits.greaterThan(0)
+        ? existingCost.plus(buyCost).dividedBy(nextUnits)
+        : decimal(0);
       totalUnits = nextUnits;
       continue;
     }
 
-    totalUnits = Math.max(0, totalUnits - event.quantity);
+    const remainingUnits = totalUnits.minus(event.quantity);
+    totalUnits = remainingUnits.isNegative() ? decimal(0) : remainingUnits;
 
-    if (totalUnits === 0) {
-      averageCostPrice = 0;
+    if (totalUnits.isZero()) {
+      averageCostPrice = decimal(0);
     }
   }
 
-  const totalInvested = totalUnits * averageCostPrice;
-  const currentValue = totalUnits * currentPrice;
-  const unrealisedPnL = currentValue - totalInvested;
-  const unrealisedPnLPct =
-    totalInvested === 0 ? 0 : (unrealisedPnL / totalInvested) * 100;
+  const totalInvested = totalUnits.times(averageCostPrice);
+  const currentValue = totalUnits.times(currentPrice);
+  const unrealisedPnL = currentValue.minus(totalInvested);
+  const unrealisedPnLPct = totalInvested.isZero()
+    ? decimal(0)
+    : unrealisedPnL.dividedBy(totalInvested).times(100);
 
   return {
     asset,
-    averageCostPrice,
-    currentPrice,
-    currentValue,
-    totalInvested,
-    totalUnits,
-    unrealisedPnL,
-    unrealisedPnLPct,
+    averageCostPrice: normalizeUnitPrice(averageCostPrice),
+    calculationBasis: {
+      averageCostPrice: averageCostPrice.toString(),
+      currentValue: currentValue.toString(),
+      totalInvested: totalInvested.toString(),
+      totalUnits: totalUnits.toString(),
+      unrealisedPnL: unrealisedPnL.toString(),
+    },
+    currentPrice: normalizeUnitPrice(currentPrice),
+    currentValue: normalizeMoney(currentValue),
+    totalInvested: normalizeMoney(totalInvested),
+    totalUnits: normalizeQuantity(totalUnits),
+    unrealisedPnL: normalizeMoney(unrealisedPnL),
+    unrealisedPnLPct: normalizePercentage(unrealisedPnLPct),
   };
 }
 
@@ -235,15 +256,17 @@ export function calculateCashBalance(
   cashEntries: CashEntry[],
   now = new Date(),
 ) {
-  return cashEntries
+  const balance = cashEntries
     .filter((entry) => isEffectiveCalendarDate(entry.date, now))
-    .reduce((balance, entry) => {
-    if (entry.type === "withdrawal") {
-      return balance - entry.amount;
-    }
+    .reduce(
+      (balance, entry) =>
+        entry.type === "withdrawal"
+          ? balance.minus(entry.amount)
+          : balance.plus(entry.amount),
+      decimal(0),
+    );
 
-    return balance + entry.amount;
-    }, 0);
+  return balance.toNumber();
 }
 
 function isSameMonth(isoDate: string, now: Date) {
@@ -269,23 +292,31 @@ export function calculateCashMonthlyMetrics({
     (entry) =>
       isEffectiveCalendarDate(entry.date, now) && isSameMonth(entry.date, now),
   );
-  const income = monthlyEntries
-    .filter(
-      (entry) => entry.type === "addition" && entry.purpose === "income",
-    )
-    .reduce((total, entry) => total + entry.amount, 0);
-  const contributions = monthlyEntries
-    .filter(
-      (entry) =>
-        entry.type === "addition" && entry.purpose === "capitalContribution",
-    )
-    .reduce((total, entry) => total + entry.amount, 0);
-  const legacyAdded = monthlyEntries
-    .filter(
-      (entry) =>
-        entry.type === "addition" && entry.purpose === "legacyUncategorized",
-    )
-    .reduce((total, entry) => total + entry.amount, 0);
+  const income = sumFinancialValues(
+    monthlyEntries
+      .filter(
+        (entry) => entry.type === "addition" && entry.purpose === "income",
+      )
+      .map((entry) => entry.amount),
+  );
+  const contributions = sumFinancialValues(
+    monthlyEntries
+      .filter(
+        (entry) =>
+          entry.type === "addition" &&
+          entry.purpose === "capitalContribution",
+      )
+      .map((entry) => entry.amount),
+  );
+  const legacyAdded = sumFinancialValues(
+    monthlyEntries
+      .filter(
+        (entry) =>
+          entry.type === "addition" &&
+          entry.purpose === "legacyUncategorized",
+      )
+      .map((entry) => entry.amount),
+  );
   const monthlyBuyTrades = trades.filter(
     (trade) =>
       trade.type === "buy" &&
@@ -295,31 +326,36 @@ export function calculateCashMonthlyMetrics({
   const allBuyTradeIds = new Set(
     trades.filter((trade) => trade.type === "buy").map((trade) => trade.id),
   );
-  const investedFromTrades = monthlyBuyTrades.reduce(
-    (total, trade) => total + trade.totalValue,
-    0,
+  const investedFromTrades = sumFinancialValues(
+    monthlyBuyTrades.map((trade) => trade.totalValue),
   );
-  const unmatchedPurchaseFunding = monthlyEntries
-    .filter(
-      (entry) =>
-        entry.type === "withdrawal" &&
-        entry.purpose === "purchaseFunding" &&
-        (!entry.linkedTradeId || !allBuyTradeIds.has(entry.linkedTradeId)),
-    )
-    .reduce((total, entry) => total + entry.amount, 0);
-  const invested = investedFromTrades + unmatchedPurchaseFunding;
+  const unmatchedPurchaseFunding = sumFinancialValues(
+    monthlyEntries
+      .filter(
+        (entry) =>
+          entry.type === "withdrawal" &&
+          entry.purpose === "purchaseFunding" &&
+          (!entry.linkedTradeId || !allBuyTradeIds.has(entry.linkedTradeId)),
+      )
+      .map((entry) => entry.amount),
+  );
+  const invested = investedFromTrades.plus(unmatchedPurchaseFunding);
   const incomeStatus =
-    income > 0 && legacyAdded === 0 ? "available" : "unavailable";
+    income.greaterThan(0) && legacyAdded.isZero()
+      ? "available"
+      : "unavailable";
 
   return {
-    added: income + contributions + legacyAdded,
+    added: normalizeMoney(income.plus(contributions).plus(legacyAdded)),
     available: calculateCashBalance(cashEntries, now),
-    contributions,
-    income,
+    contributions: normalizeMoney(contributions),
+    income: normalizeMoney(income),
     incomeStatus,
     investmentRate:
-      incomeStatus === "available" ? round((invested / income) * 100) : null,
-    invested,
+      incomeStatus === "available"
+        ? round(invested.dividedBy(income).times(100).toNumber())
+        : null,
+    invested: normalizeMoney(invested),
   };
 }
 
@@ -328,36 +364,50 @@ export function calculatePortfolioTotal(
   cashEntries: CashEntry[],
   now = new Date(),
 ) {
-  const holdingsValue = holdings.reduce(
-    (total, holding) => total + holding.currentValue,
-    0,
+  const holdingsValue = sumFinancialValues(
+    holdings.map(
+      (holding) =>
+        holding.calculationBasis?.currentValue ?? holding.currentValue,
+    ),
   );
 
-  return holdingsValue + calculateCashBalance(cashEntries, now);
+  return normalizeMoney(
+    holdingsValue.plus(calculateCashBalance(cashEntries, now)),
+  );
 }
 
 export function calculatePortfolioDayChange(
   holdings: Holding[],
 ): PortfolioDayChange {
-  const currentValue = holdings.reduce(
-    (total, holding) => total + holding.currentValue,
-    0,
+  const currentValue = sumFinancialValues(
+    holdings.map(
+      (holding) =>
+        holding.calculationBasis?.currentValue ?? holding.currentValue,
+    ),
   );
   const absolute = holdings.reduce((total, holding) => {
-    if (!holding.dayChangePct) {
-      return total;
-    }
+    if (!holding.dayChangePct) return total;
 
-    const previousValue = holding.currentValue / (1 + holding.dayChangePct / 100);
+    const preciseCurrentValue = decimal(
+      holding.calculationBasis?.currentValue ?? holding.currentValue,
+    );
+    const changeMultiplier = decimal(1).plus(
+      decimal(holding.dayChangePct).dividedBy(100),
+    );
+    if (changeMultiplier.lessThanOrEqualTo(0)) return total;
 
-    return total + (holding.currentValue - previousValue);
-  }, 0);
-  const previousValue = currentValue - absolute;
-  const percentage = previousValue === 0 ? 0 : (absolute / previousValue) * 100;
+    const previousValue = preciseCurrentValue.dividedBy(changeMultiplier);
+
+    return total.plus(preciseCurrentValue.minus(previousValue));
+  }, decimal(0));
+  const previousValue = currentValue.minus(absolute);
+  const percentage = previousValue.isZero()
+    ? decimal(0)
+    : absolute.dividedBy(previousValue).times(100);
 
   return {
-    absolute: round(absolute),
-    percentage: round(percentage),
+    absolute: normalizeMoney(absolute),
+    percentage: normalizePercentage(percentage),
   };
 }
 
@@ -368,31 +418,38 @@ export function calculateAllocation({
   cashBalance: number;
   holdings: Holding[];
 }): AllocationItem[] {
-  const values = new Map<AssetClass, number>();
+  const values = new Map<AssetClass, FinancialDecimalInstance>();
 
   for (const holding of holdings) {
     values.set(
       holding.asset.assetClass,
-      (values.get(holding.asset.assetClass) ?? 0) + holding.currentValue,
+      decimal(values.get(holding.asset.assetClass) ?? 0).plus(
+        holding.calculationBasis?.currentValue ?? holding.currentValue,
+      ),
     );
   }
 
   if (cashBalance !== 0) {
-    values.set("cash", (values.get("cash") ?? 0) + cashBalance);
+    values.set(
+      "cash",
+      decimal(values.get("cash") ?? 0).plus(cashBalance),
+    );
   }
 
   const allocationValues = [...values.values()];
-  const netTotal = allocationValues.reduce((sum, value) => sum + value, 0);
+  const netTotal = sumFinancialValues(allocationValues);
 
   if (allocationValues.length === 0) {
     return [];
   }
 
   return [...values.entries()]
-    .map(([assetClass, value]) => ({
+    .map(([assetClass, preciseValue]) => ({
       assetClass,
-      percentage: netTotal > 0 ? round((value / netTotal) * 100) : null,
-      value,
+      percentage: netTotal.greaterThan(0)
+        ? normalizePercentage(preciseValue.dividedBy(netTotal).times(100))
+        : null,
+      value: normalizeMoney(preciseValue),
     }))
     .sort((left, right) => right.value - left.value);
 }
@@ -400,13 +457,17 @@ export function calculateAllocation({
 export function calculateConsolidatedHoldingRows(
   holdings: Holding[],
 ): ConsolidatedHoldingRow[] {
-  const totalInvested = holdings.reduce(
-    (total, holding) => total + holding.totalInvested,
-    0,
+  const totalInvested = sumFinancialValues(
+    holdings.map(
+      (holding) =>
+        holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+    ),
   );
-  const totalCurrentValue = holdings.reduce(
-    (total, holding) => total + holding.currentValue,
-    0,
+  const totalCurrentValue = sumFinancialValues(
+    holdings.map(
+      (holding) =>
+        holding.calculationBasis?.currentValue ?? holding.currentValue,
+    ),
   );
 
   return holdings
@@ -414,14 +475,28 @@ export function calculateConsolidatedHoldingRows(
       asset: holding.asset,
       assetClass: holding.asset.assetClass,
       currentAllocationPct:
-        totalCurrentValue === 0
+        totalCurrentValue.isZero()
           ? 0
-          : round((holding.currentValue / totalCurrentValue) * 100),
+          : round(
+              decimal(
+                holding.calculationBasis?.currentValue ?? holding.currentValue,
+              )
+                .dividedBy(totalCurrentValue)
+                .times(100)
+                .toNumber(),
+            ),
       currentValue: holding.currentValue,
       initialAllocationPct:
-        totalInvested === 0
+        totalInvested.isZero()
           ? 0
-          : round((holding.totalInvested / totalInvested) * 100),
+          : round(
+              decimal(
+                holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+              )
+                .dividedBy(totalInvested)
+                .times(100)
+                .toNumber(),
+            ),
       instrumentType: holding.asset.instrumentType,
       investedValue: holding.totalInvested,
       pnl: holding.unrealisedPnL,
@@ -435,24 +510,37 @@ export function calculateConsolidatedHoldingRows(
 export function calculatePortfolioRollupTotals(
   rows: ConsolidatedHoldingRow[],
   cashBalance = 0,
+  holdings?: Holding[],
 ): PortfolioRollupTotals {
-  const totalInvested = rows.reduce(
-    (total, row) => total + row.investedValue,
-    0,
+  const totalInvested = sumFinancialValues(
+    holdings
+      ? holdings.map(
+          (holding) =>
+            holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+        )
+      : rows.map((row) => row.investedValue),
   );
-  const holdingsCurrentValue = rows.reduce(
-    (total, row) => total + row.currentValue,
-    0,
+  const holdingsCurrentValue = sumFinancialValues(
+    holdings
+      ? holdings.map(
+          (holding) =>
+            holding.calculationBasis?.currentValue ?? holding.currentValue,
+        )
+      : rows.map((row) => row.currentValue),
   );
-  const pnl = holdingsCurrentValue - totalInvested;
+  const pnl = holdingsCurrentValue.minus(totalInvested);
 
   return {
     cashBalance,
-    holdingsCurrentValue,
-    pnl,
-    pnlPct: totalInvested === 0 ? 0 : round((pnl / totalInvested) * 100),
-    totalCurrentValue: holdingsCurrentValue + cashBalance,
-    totalInvested,
+    holdingsCurrentValue: normalizeMoney(holdingsCurrentValue),
+    pnl: normalizeMoney(pnl),
+    pnlPct: totalInvested.isZero()
+      ? 0
+      : round(pnl.dividedBy(totalInvested).times(100).toNumber()),
+    totalCurrentValue: normalizeMoney(
+      holdingsCurrentValue.plus(cashBalance),
+    ),
+    totalInvested: normalizeMoney(totalInvested),
   };
 }
 
@@ -466,11 +554,12 @@ export function calculateMonthlyProgressSummaries(
   return chronological
     .map((snapshot, index) => {
       const previous = chronological[index - 1];
-      const assetTotal =
-        snapshot.equityValue +
-        snapshot.debtValue +
-        snapshot.cryptoValue +
-        snapshot.cashValue;
+      const assetTotal = sumFinancialValues([
+        snapshot.equityValue,
+        snapshot.debtValue,
+        snapshot.cryptoValue,
+        snapshot.cashValue,
+      ]);
       const assetValues: Array<Pick<MonthlyAssetSnapshotItem, "assetClass" | "value">> = [
         { assetClass: "stock", value: snapshot.equityValue },
         { assetClass: "debt", value: snapshot.debtValue },
@@ -482,7 +571,14 @@ export function calculateMonthlyProgressSummaries(
         .map((item) => ({
           ...item,
           percentage:
-            assetTotal === 0 ? 0 : round((item.value / assetTotal) * 100),
+            assetTotal.isZero()
+              ? 0
+              : round(
+                  decimal(item.value)
+                    .dividedBy(assetTotal)
+                    .times(100)
+                    .toNumber(),
+                ),
         }))
         .sort((left, right) => right.value - left.value);
 
@@ -491,12 +587,22 @@ export function calculateMonthlyProgressSummaries(
         expenseRate:
           !snapshot.salary || snapshot.monthlyExpense === undefined
             ? null
-            : round((snapshot.monthlyExpense / snapshot.salary) * 100),
+            : round(
+                decimal(snapshot.monthlyExpense)
+                  .dividedBy(snapshot.salary)
+                  .times(100)
+                  .toNumber(),
+              ),
         performance: calculateMonthlyPerformance(previous, snapshot),
         savingsRate:
           !snapshot.salary
             ? null
-            : round((snapshot.monthlyInvestment / snapshot.salary) * 100),
+            : round(
+                decimal(snapshot.monthlyInvestment)
+                  .dividedBy(snapshot.salary)
+                  .times(100)
+                  .toNumber(),
+              ),
         snapshot,
       };
     })
@@ -507,25 +613,32 @@ export function calculateMetadataAllocation(
   holdings: Holding[],
   metadataKey: "instrumentType" | "sectorType",
 ): MetadataAllocationItem[] {
-  const values = new Map<string, number>();
+  const values = new Map<string, FinancialDecimalInstance>();
 
   for (const holding of holdings) {
     const label = holding.asset[metadataKey] ?? "other";
 
-    values.set(label, (values.get(label) ?? 0) + holding.currentValue);
+    values.set(
+      label,
+      decimal(values.get(label) ?? 0).plus(
+        holding.calculationBasis?.currentValue ?? holding.currentValue,
+      ),
+    );
   }
 
-  const total = [...values.values()].reduce((sum, value) => sum + value, 0);
+  const total = sumFinancialValues([...values.values()]);
 
-  if (total === 0) {
+  if (total.isZero()) {
     return [];
   }
 
   return [...values.entries()]
-    .map(([label, value]) => ({
+    .map(([label, preciseValue]) => ({
       label,
-      percentage: round((value / total) * 100),
-      value,
+      percentage: normalizePercentage(
+        preciseValue.dividedBy(total).times(100),
+      ),
+      value: normalizeMoney(preciseValue),
     }))
     .sort((left, right) => right.value - left.value);
 }

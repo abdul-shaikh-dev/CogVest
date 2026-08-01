@@ -26,6 +26,12 @@ import {
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
+import {
+  decimal,
+  normalizeMoney,
+  normalizePercentage,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 import type {
   QuoteFreshnessSummary,
   QuoteRefreshResult,
@@ -33,7 +39,7 @@ import type {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
-import type { AssetClass } from "@/src/types";
+import type { Holding } from "@/src/types";
 
 import { useDashboard } from "./useDashboard";
 
@@ -75,37 +81,38 @@ type DisplayAllocationItem = {
 };
 
 function toDisplayAllocation(
-  allocation: Array<{
-    assetClass: AssetClass;
-    percentage: number | null;
-    value: number;
-  }>,
+  holdings: Holding[],
+  cashBalance: number,
 ): DisplayAllocationItem[] {
-  const values: Record<DisplayAllocationClass, number> = {
-    cash: 0,
-    crypto: 0,
-    debt: 0,
-    equity: 0,
+  const values = {
+    cash: decimal(cashBalance),
+    crypto: decimal(0),
+    debt: decimal(0),
+    equity: decimal(0),
   };
 
-  for (const item of allocation) {
+  for (const holding of holdings) {
     const displayClass =
-      item.assetClass === "stock" || item.assetClass === "etf"
+      holding.asset.assetClass === "stock" || holding.asset.assetClass === "etf"
         ? "equity"
-        : item.assetClass;
-    values[displayClass] += item.value;
+        : holding.asset.assetClass;
+    values[displayClass] = values[displayClass].plus(
+      holding.calculationBasis?.currentValue ?? holding.currentValue,
+    );
   }
 
-  const totalValue = Object.values(values).reduce((total, value) => total + value, 0);
+  const totalValue = sumFinancialValues(Object.values(values));
 
   return (["equity", "debt", "crypto", "cash"] as const)
     .map((assetClass) => ({
       assetClass,
       percentage:
-        totalValue > 0
-          ? Number(((values[assetClass] / totalValue) * 100).toFixed(2))
+        totalValue.greaterThan(0)
+          ? normalizePercentage(
+              values[assetClass].dividedBy(totalValue).times(100),
+            )
           : null,
-      value: values[assetClass],
+      value: normalizeMoney(values[assetClass]),
     }))
     .filter((item) => item.value !== 0);
 }
@@ -154,11 +161,13 @@ export function DashboardScreen({
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
   const dashboard = useDashboard({ now, refreshQuotes, store });
-  const displayAllocation = toDisplayAllocation(dashboard.allocation);
+  const displayAllocation = toDisplayAllocation(
+    dashboard.holdings,
+    dashboard.cashBalance,
+  );
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
-  const positiveAllocationTotal = positiveAllocation.reduce(
-    (total, item) => total + item.value,
-    0,
+  const positiveAllocationTotal = normalizeMoney(
+    sumFinancialValues(positiveAllocation.map((item) => item.value)),
   );
   const hasAllocation = displayAllocation.length > 0;
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);

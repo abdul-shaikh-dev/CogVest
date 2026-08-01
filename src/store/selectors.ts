@@ -6,6 +6,7 @@ import type {
   Trade,
 } from "@/src/types";
 import { isEffectiveCalendarDate } from "@/src/domain/dates";
+import { decimal, normalizeMoney } from "@/src/domain/precision";
 
 export function selectAssetById(assets: Asset[], assetId: string) {
   return assets.find((asset) => asset.id === assetId) ?? null;
@@ -23,15 +24,17 @@ export function selectOpeningPositionsForAsset(
 }
 
 export function selectCashBalance(cashEntries: CashEntry[], now = new Date()) {
-  return cashEntries
+  const balance = cashEntries
     .filter((entry) => isEffectiveCalendarDate(entry.date, now))
-    .reduce((balance, entry) => {
-    if (entry.type === "withdrawal") {
-      return balance - entry.amount;
-    }
+    .reduce(
+      (total, entry) =>
+        entry.type === "withdrawal"
+          ? total.minus(entry.amount)
+          : total.plus(entry.amount),
+      decimal(0),
+    );
 
-    return balance + entry.amount;
-    }, 0);
+  return normalizeMoney(balance);
 }
 
 export function selectQuoteForAsset(quoteCache: QuoteCache, assetId: string) {

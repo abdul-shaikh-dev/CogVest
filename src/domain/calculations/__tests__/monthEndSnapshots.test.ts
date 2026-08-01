@@ -587,7 +587,9 @@ describe("buildGeneratedMonthEndSnapshot", () => {
         assets: [],
         cashEntries: [cashEntry({ amount: 5000 })],
         openingPositions: [
-          openingPosition({ assetId: "missing-asset", quantity: 2 }),
+          openingPosition({ assetId: "missing-asset", quantity: 0.000000004 }),
+          openingPosition({ assetId: "missing-asset", quantity: 0.000000004 }),
+          openingPosition({ assetId: "missing-asset", quantity: 0.000000004 }),
         ],
       }),
     );

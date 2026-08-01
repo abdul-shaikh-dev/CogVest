@@ -35,6 +35,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@react-native-community/datetimepicker": "8.4.4",
     "@shopify/react-native-skia": "2.2.12",
+    "decimal.js-light": "^2.5.1",
     "expo": "~54.0.36",
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.12",

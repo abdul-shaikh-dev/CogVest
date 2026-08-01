@@ -6,6 +6,11 @@ import {
   isFutureCalendarDate,
 } from "@/src/domain/dates";
 import type { OpeningPosition, Trade, TradeType } from "@/src/types";
+import {
+  decimal,
+  normalizeQuantity,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 
 type ValidationResult =
   | { isValid: true }
@@ -61,22 +66,23 @@ export function getAvailableQuantity(
   openingPositions: OpeningPosition[] = [],
   now = new Date(),
 ) {
-  const openingQuantity = openingPositions
-    .filter((position) => isEffectiveCalendarDate(position.date, now))
-    .reduce(
-    (quantity, position) => quantity + position.quantity,
-    0,
+  const openingQuantity = sumFinancialValues(
+    openingPositions
+      .filter((position) => isEffectiveCalendarDate(position.date, now))
+      .map((position) => position.quantity),
   );
 
-  return trades
+  const availableQuantity = trades
     .filter((trade) => isEffectiveCalendarDate(trade.date, now))
     .reduce((quantity, trade) => {
-    if (trade.type === "sell") {
-      return quantity - trade.quantity;
-    }
+      if (trade.type === "sell") {
+        return quantity.minus(trade.quantity);
+      }
 
-    return quantity + trade.quantity;
+      return quantity.plus(trade.quantity);
     }, openingQuantity);
+
+  return normalizeQuantity(availableQuantity);
 }
 
 export function validateSellQuantity(
@@ -91,7 +97,11 @@ export function validateSellQuantity(
     now,
   );
 
-  if (sellQuantity > availableQuantity) {
+  if (
+    decimal(sellQuantity)
+      .minus(availableQuantity)
+      .greaterThan(0)
+  ) {
     return {
       availableQuantity,
       isValid: false,

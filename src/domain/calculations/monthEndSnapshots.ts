@@ -19,6 +19,14 @@ import {
   isV1CompatibleQuote,
   isV1SupportedAsset,
 } from "@/src/domain/portfolioCurrency";
+import { normalizeMonthlySnapshot } from "@/src/domain/financialRecords";
+import {
+  decimal,
+  normalizeMoney,
+  type FinancialDecimalInstance,
+  quantityQuantum,
+  sumFinancialValues,
+} from "@/src/domain/precision";
 
 import {
   calculateCashBalance,
@@ -63,11 +71,15 @@ export function deriveMonthlySnapshotSalary(
   const hasLegacyIncome = currentMonthAdditions.some(
     (entry) => entry.purpose === "legacyUncategorized",
   );
-  const typedIncome = currentMonthAdditions
-    .filter((entry) => entry.purpose === "income")
-    .reduce((total, entry) => total + entry.amount, 0);
+  const typedIncome = sumFinancialValues(
+    currentMonthAdditions
+      .filter((entry) => entry.purpose === "income")
+      .map((entry) => entry.amount),
+  );
 
-  return !hasLegacyIncome && typedIncome > 0 ? typedIncome : undefined;
+  return !hasLegacyIncome && typedIncome.greaterThan(0)
+    ? normalizeMoney(typedIncome)
+    : undefined;
 }
 
 export type MissingCompletedSnapshotMonthsInput = Pick<
@@ -539,14 +551,16 @@ export function buildGeneratedMonthEndSnapshot({
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
   );
-  const openQuantityByAssetId = new Map<string, number>();
+  const openQuantityByAssetId = new Map<string, FinancialDecimalInstance>();
 
   for (const position of openingPositions.filter((item) =>
     isOnOrBefore(item.date, monthEnd),
   )) {
     openQuantityByAssetId.set(
       position.assetId,
-      (openQuantityByAssetId.get(position.assetId) ?? 0) + position.quantity,
+      decimal(openQuantityByAssetId.get(position.assetId) ?? 0).plus(
+        position.quantity,
+      ),
     );
   }
 
@@ -555,13 +569,16 @@ export function buildGeneratedMonthEndSnapshot({
   )) {
     openQuantityByAssetId.set(
       trade.assetId,
-      (openQuantityByAssetId.get(trade.assetId) ?? 0) +
-        (trade.type === "buy" ? trade.quantity : -trade.quantity),
+      decimal(openQuantityByAssetId.get(trade.assetId) ?? 0).plus(
+        trade.type === "buy" ? trade.quantity : -trade.quantity,
+      ),
     );
   }
 
   const unresolvedOpenAssetCount = [...openQuantityByAssetId].filter(
-    ([assetId, quantity]) => quantity > 0 && !supportedAssetIds.has(assetId),
+    ([assetId, quantity]) =>
+      quantity.greaterThanOrEqualTo(quantityQuantum) &&
+      !supportedAssetIds.has(assetId),
   ).length;
 
   if (unresolvedOpenAssetCount > 0) {
@@ -649,30 +666,40 @@ export function buildGeneratedMonthEndSnapshot({
       },
   }));
   const cashValue = calculateCashBalance(monthCashEntries, monthEnd);
-  const equityValue = holdings.reduce((total, holding) => {
-    if (
-      holding.asset.assetClass === "stock" ||
-      holding.asset.assetClass === "etf"
-    ) {
-      return total + holding.currentValue;
-    }
-
-    return total;
-  }, 0);
-  const debtValue = holdings.reduce((total, holding) => {
-    if (holding.asset.assetClass === "debt") {
-      return total + holding.currentValue;
-    }
-
-    return total;
-  }, 0);
-  const cryptoValue = holdings.reduce((total, holding) => {
-    if (holding.asset.assetClass === "crypto") {
-      return total + holding.currentValue;
-    }
-
-    return total;
-  }, 0);
+  const equityValue = normalizeMoney(
+    sumFinancialValues(
+      holdings
+        .filter(
+          (holding) =>
+            holding.asset.assetClass === "stock" ||
+            holding.asset.assetClass === "etf",
+        )
+        .map(
+          (holding) =>
+            holding.calculationBasis?.currentValue ?? holding.currentValue,
+        ),
+    ),
+  );
+  const debtValue = normalizeMoney(
+    sumFinancialValues(
+      holdings
+        .filter((holding) => holding.asset.assetClass === "debt")
+        .map(
+          (holding) =>
+            holding.calculationBasis?.currentValue ?? holding.currentValue,
+        ),
+    ),
+  );
+  const cryptoValue = normalizeMoney(
+    sumFinancialValues(
+      holdings
+        .filter((holding) => holding.asset.assetClass === "crypto")
+        .map(
+          (holding) =>
+            holding.calculationBasis?.currentValue ?? holding.currentValue,
+        ),
+    ),
+  );
   const priceBases = pricedAssets.map((item) => item.selection.basis);
   const priceEvidence: MonthlySnapshotPriceEvidence[] = pricedAssets.map(
     ({ asset, selection }) => ({
@@ -702,25 +729,30 @@ export function buildGeneratedMonthEndSnapshot({
       warnings,
     },
     id: existingSnapshot?.id ?? `snapshot-${targetMonth}`,
-    investedValue: holdings.reduce(
-      (total, holding) => total + holding.totalInvested,
-      0,
+    investedValue: normalizeMoney(
+      sumFinancialValues(
+        holdings.map(
+          (holding) =>
+            holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+        ),
+      ),
     ),
     month: targetMonth,
-    monthlyInvestment:
-      monthOpeningPositions
-        .filter((position) => isWithinMonth(position.date, targetMonth))
-        .reduce(
-          (total, position) =>
-            total + position.quantity * position.averageCostPrice,
-          0,
-        ) +
-      monthTrades
-        .filter(
-          (trade) =>
-            trade.type === "buy" && isWithinMonth(trade.date, targetMonth),
-        )
-        .reduce((total, trade) => total + trade.totalValue, 0),
+    monthlyInvestment: normalizeMoney(
+      sumFinancialValues([
+        ...monthOpeningPositions
+          .filter((position) => isWithinMonth(position.date, targetMonth))
+          .map((position) =>
+            decimal(position.quantity).times(position.averageCostPrice),
+          ),
+        ...monthTrades
+          .filter(
+            (trade) =>
+              trade.type === "buy" && isWithinMonth(trade.date, targetMonth),
+          )
+          .map((trade) => trade.totalValue),
+      ]),
+    ),
     performanceBasis: buildMonthlyPerformanceBasis({
       cashEntries: monthCashEntries,
       openingPositions: monthOpeningPositions,
@@ -731,7 +763,7 @@ export function buildGeneratedMonthEndSnapshot({
   };
 
   return {
-    snapshot,
+    snapshot: normalizeMonthlySnapshot(snapshot),
     status: "created",
     warnings,
   };

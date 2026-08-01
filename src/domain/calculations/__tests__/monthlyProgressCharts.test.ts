@@ -311,7 +311,7 @@ describe("buildMonthlyProgressChartData", () => {
         totalValueChange: 72600,
       },
       valueGap: 204600,
-      valueGapPct: 14.772563176895307,
+      valueGapPct: 14.77,
     });
   });
 
@@ -324,29 +324,104 @@ describe("buildMonthlyProgressChartData", () => {
       latestDelta: 58000,
       latestValue: 1008000,
     });
-    expect(chartData.assetInsights[0]?.latestDeltaPct).toBeCloseTo(6.105);
-    expect(chartData.assetInsights[0]?.allocationPct).toBeCloseTo(63.412);
-    expect(chartData.assetInsights[0]?.allocationShiftPct).toBeCloseTo(0.789);
+    expect(chartData.assetInsights[0]?.latestDeltaPct).toBe(6.11);
+    expect(chartData.assetInsights[0]?.allocationPct).toBe(63.41);
+    expect(chartData.assetInsights[0]?.allocationShiftPct).toBe(0.79);
     expect(chartData.assetInsights[1]).toMatchObject({
       label: "Debt",
       latestDelta: 12000,
       latestValue: 324000,
     });
-    expect(chartData.assetInsights[1]?.latestDeltaPct).toBeCloseTo(3.846);
-    expect(chartData.assetInsights[1]?.allocationPct).toBeCloseTo(20.382);
-    expect(chartData.assetInsights[1]?.allocationShiftPct).toBeCloseTo(-0.184);
+    expect(chartData.assetInsights[1]?.latestDeltaPct).toBe(3.85);
+    expect(chartData.assetInsights[1]?.allocationPct).toBe(20.38);
+    expect(chartData.assetInsights[1]?.allocationShiftPct).toBe(-0.18);
     expect(chartData.assetInsights[2]).toMatchObject({
       label: "Crypto",
       latestDelta: -8000,
       latestValue: 92000,
     });
-    expect(chartData.assetInsights[2]?.latestDeltaPct).toBeCloseTo(-8);
-    expect(chartData.assetInsights[2]?.allocationPct).toBeCloseTo(5.788);
-    expect(chartData.assetInsights[2]?.allocationShiftPct).toBeCloseTo(-0.804);
+    expect(chartData.assetInsights[2]?.latestDeltaPct).toBe(-8);
+    expect(chartData.assetInsights[2]?.allocationPct).toBe(5.79);
+    expect(chartData.assetInsights[2]?.allocationShiftPct).toBe(-0.8);
     expect(chartData.largestAssetMove).toMatchObject({
       label: "Crypto",
       latestDelta: -8000,
       latestDeltaPct: -8,
+    });
+  });
+
+  it("rounds allocation shifts once after subtracting precise ratios", () => {
+    const chartData = buildMonthlyProgressChartData(
+      [
+        snapshot("2026-04", {
+          cashValue: 89996,
+          equityValue: 10004,
+          portfolioValue: 100000,
+        }),
+        snapshot("2026-05", {
+          cashValue: 89995,
+          equityValue: 10005,
+          portfolioValue: 100000,
+        }),
+      ],
+      "All",
+    );
+
+    expect(chartData.assetInsights[0]).toMatchObject({
+      allocationPct: 10.01,
+      allocationShiftPct: 0,
+      label: "Equity",
+    });
+  });
+
+  it("keeps legacy snapshot totals unrounded while deriving allocation shifts", () => {
+    const chartData = buildMonthlyProgressChartData(
+      [
+        snapshot("2026-04", {
+          cashValue: 89.996,
+          equityValue: 10.005,
+          portfolioValue: 100.001,
+        }),
+        snapshot("2026-05", {
+          cashValue: 90,
+          equityValue: 10,
+          portfolioValue: 100,
+        }),
+      ],
+      "All",
+    );
+
+    expect(chartData.assetInsights[0]).toMatchObject({
+      allocationPct: 10,
+      allocationShiftPct: 0,
+      label: "Equity",
+    });
+  });
+
+  it("derives percentages from precise legacy values before rounding display amounts", () => {
+    const chartData = buildMonthlyProgressChartData(
+      [
+        snapshot("2026-04", {
+          equityValue: 1,
+          investedValue: 1,
+          portfolioValue: 1,
+        }),
+        snapshot("2026-05", {
+          equityValue: 1.0049,
+          investedValue: 1,
+          portfolioValue: 1.0049,
+        }),
+      ],
+      "All",
+    );
+
+    expect(chartData.portfolioInsight).toMatchObject({
+      valueGap: 0,
+      valueGapPct: 0.49,
+    });
+    expect(chartData.assetInsights[0]).toMatchObject({
+      latestDelta: 0,
+      latestDeltaPct: 0.49,
     });
   });
 });

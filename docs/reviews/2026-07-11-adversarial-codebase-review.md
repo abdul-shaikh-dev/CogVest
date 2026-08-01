@@ -49,29 +49,27 @@ minimum verification is not complete.
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
 | High | H1, H2, H3, H4, H5, H6, H7, H8, H9, H10 | None | None |
-| Medium | None | M8 | M1, M2, M3, M4, M5, M6, M7, M9 |
+| Medium | M4, M9 | M8 | M1, M2, M3, M5, M6, M7 |
 | Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Issue Ownership
 
-Issues #188, #190, #192, #194, and #196 cover the completed correction and
-generated-income work. The 19 remaining open or partial findings are owned by:
+Issues #188, #190, #192, #194, #196, and #203 cover completed correction,
+generated-income, allocation, and numeric-integrity work. The 17 remaining open
+or partial findings are owned by:
 
 - #198: M5 privacy, Android backup, and storage guarantees.
 - #202: M1-M2 portfolio freshness and quote-refresh reliability.
 - #200: AH3-AH6 and AH13 canonical identity, transition state, and completion.
 - #201: M3, AH7-AH9, and AH12 metadata, review, and scalable search.
-- #203: M4 and M9 negative cash, allocation, and numeric precision.
 - #153: M6-M8 Android permissions, release identity, and visual-QA isolation.
 - #199: AH14 semantic Add Holding Android E2E after #200 and #201.
 
 Umbrella issue #136 remains useful for screen-level sequencing but does not
 replace the finding-specific contracts above.
 
-Issue #203 has two closure phases. Phase A (M4 negative cash) may merge
-independently and must reference rather than close #203. The issue remains open
-until Phase B (M9 precision) has an owner-approved policy and verified
-implementation.
+Issue #203 is complete after Phase A made negative cash visible and Phase B
+defined and verified the V1 financial-precision contract.
 
 ## Critical Findings
 
@@ -543,14 +541,16 @@ types.
 
 ### M4. Negative cash is hidden from allocation
 
-**Status (2026-07-22): Open.** Allocation still includes cash only when its
-balance is positive.
+**Status (2026-07-26): Remediated by #203 Phase A.** Allocation now preserves
+negative cash, including liability-only states where a meaningful percentage
+cannot be calculated.
 
 Cash is included in allocation only when the balance is positive. An overdraft or
 data error therefore disappears from allocation while still reducing portfolio
 value.
 
-**Evidence:** `src/domain/calculations/holdings.ts:301-333`.
+**Evidence:** `src/domain/calculations/holdings.ts` and its negative-cash
+allocation invariants in `src/domain/calculations/__tests__/holdings.test.ts`.
 
 ### M5. Local-only privacy messaging conflicts with Android backup
 
@@ -611,16 +611,19 @@ opening the route.
 
 ### M9. Financial calculations use binary floating-point numbers
 
-**Status (2026-07-22): Open.** Financial calculations still use JavaScript
-`number`; no explicit money/quantity precision policy or invariant coverage
-defines acceptable rounding behavior.
+**Status (2026-07-26): Remediated by #203 Phase B.** CogVest now uses
+base-10 decimal arithmetic for financial calculations, an explicit
+`ROUND_HALF_UP` boundary policy, and separate money, quantity, unit-price, and
+percentage precision.
 
-Quantities, prices, fees, cost basis, and currency totals all use JavaScript
-`number`. Fractional crypto quantities and repeated operations can accumulate
-rounding drift.
+Schema-v5 records remain persisted as finite JavaScript numbers to avoid a
+high-risk storage rewrite. New and edited records are normalized at their owning
+boundaries; legacy records remain readable unchanged until edited.
 
-**Required direction:** Define precision and rounding rules at domain boundaries,
-prefer integer minor units for currency, and add invariant/property tests.
+**Evidence:** `src/domain/precision.ts`, `src/domain/financialRecords.ts`,
+precision-aware domain calculations and store commands, plus invariant coverage
+for half boundaries, fractional crypto, fees, weighted cost, complete sell
+cycles, legacy hydration, and Excel-parity totals.
 
 ## Focused Add Holding Review
 
@@ -944,7 +947,7 @@ because the UI changed; the verification column must have evidence.
 | M6 | Remove external-storage and overlay permissions unless a documented runtime dependency proves they are required. | Release manifest inspection contains only approved permissions and app smoke tests still pass. |
 | M7 | Establish preview and production versioning with monotonic `versionCode`, meaningful `versionName`, and build metadata. | Upgrade installation succeeds from the previous signed APK and version information is recorded in release evidence. |
 | M8 | Compile the destructive visual-QA route out of release builds or require a non-public development-only capability. Never permit it to overwrite real data silently. | Release deep-link test cannot seed; development seeding requires explicit confirmation and isolated test storage. |
-| M9 | Define money and quantity precision. Prefer integer minor units for currency and a decimal-safe representation for fractional quantities and weighted cost. | Property/invariant tests cover repeated fractional crypto operations, fees, and rounding boundaries. |
+| M9 | Apply the approved schema-v5 precision contract: decimal-safe arithmetic, 2-decimal INR boundaries, 8-decimal quantity/unit-price boundaries, and `ROUND_HALF_UP`. | Invariant tests cover fractional crypto operations, fees, weighted cost, complete sell cycles, legacy hydration, and rounding boundaries. |
 
 ### Add Holding Findings
 
@@ -1039,9 +1042,7 @@ behavior before APK release work:
    review, and bounded/ranked lookup.
 3. **#202 - Quote reliability (M1, M2):** per-holding freshness, provider
    deadlines, cancellation, bounded concurrency, and partial completion.
-4. **#203 - Allocation and numeric integrity (M4, M9):** expose negative cash
-   and define money/quantity precision before changing representations.
-5. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
+4. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
    values, and duplicate absence after #200 and #201 land.
 
 ### Deferred Privacy And Release Gates

@@ -462,8 +462,8 @@ describe("useProgress", () => {
       "2026-03",
       "2026-04",
     ]);
-    expect(store.getState().monthlySnapshots).toContain(february);
-    expect(store.getState().monthlySnapshots).toContain(april);
+    expect(store.getState().monthlySnapshots).toContainEqual(february);
+    expect(store.getState().monthlySnapshots).toContainEqual(april);
     expect(
       historicalPriceFetcher.mock.calls.map(([{ targetMonth }]) => targetMonth),
     ).toEqual(["2026-01", "2026-03"]);

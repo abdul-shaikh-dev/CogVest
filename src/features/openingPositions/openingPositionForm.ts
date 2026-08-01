@@ -9,6 +9,10 @@ import {
   isFutureCalendarDate,
   parseCalendarDate,
 } from "@/src/domain/dates";
+import {
+  normalizeQuantity,
+  normalizeUnitPrice,
+} from "@/src/domain/precision";
 
 export type OpeningPositionFormValues = {
   assetClass: AssetClass;
@@ -63,9 +67,19 @@ export function validateOpeningPositionForm(
   now = new Date(),
 ): OpeningPositionFormResult {
   const errors: Partial<Record<keyof OpeningPositionFormValues, string>> = {};
-  const quantity = parsePositiveNumber(values.quantity);
-  const averageCostPrice = parsePositiveNumber(values.averageCostPrice);
-  const currentPrice = parsePositiveNumber(values.currentPrice);
+  const parsedQuantity = parsePositiveNumber(values.quantity);
+  const parsedAverageCostPrice = parsePositiveNumber(values.averageCostPrice);
+  const parsedCurrentPrice = parsePositiveNumber(values.currentPrice);
+  const quantity =
+    parsedQuantity === null ? null : normalizeQuantity(parsedQuantity);
+  const averageCostPrice =
+    parsedAverageCostPrice === null
+      ? null
+      : normalizeUnitPrice(parsedAverageCostPrice);
+  const currentPrice =
+    parsedCurrentPrice === null
+      ? null
+      : normalizeUnitPrice(parsedCurrentPrice);
   const conviction =
     values.conviction && values.conviction.trim().length > 0
       ? Number(values.conviction)
@@ -83,15 +97,15 @@ export function validateOpeningPositionForm(
     errors.ticker = "Ticker is required.";
   }
 
-  if (quantity === null) {
+  if (quantity === null || quantity === 0) {
     errors.quantity = "Quantity must be greater than zero.";
   }
 
-  if (averageCostPrice === null) {
+  if (averageCostPrice === null || averageCostPrice === 0) {
     errors.averageCostPrice = "Average cost must be greater than zero.";
   }
 
-  if (currentPrice === null) {
+  if (currentPrice === null || currentPrice === 0) {
     errors.currentPrice = "Current price must be greater than zero.";
   }
 

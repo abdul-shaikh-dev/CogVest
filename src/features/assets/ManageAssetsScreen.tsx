@@ -12,6 +12,11 @@ import {
   assetClassLabel,
   getPressedStateStyle,
 } from "@/src/components/common";
+import {
+  decimal,
+  normalizeQuantity,
+  quantityQuantum,
+} from "@/src/domain/precision";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
 
@@ -24,14 +29,18 @@ type ManageAssetsScreenProps = {
 function remainingUnits(state: PortfolioStoreState, assetId: string) {
   const openingUnits = state.openingPositions
     .filter((position) => position.assetId === assetId)
-    .reduce((sum, position) => sum + position.quantity, 0);
-  return state.trades
+    .reduce((sum, position) => sum.plus(position.quantity), decimal(0));
+  const remaining = state.trades
     .filter((trade) => trade.assetId === assetId)
     .reduce(
       (units, trade) =>
-        units + (trade.type === "buy" ? trade.quantity : -trade.quantity),
+        trade.type === "buy"
+          ? units.plus(trade.quantity)
+          : units.minus(trade.quantity),
       openingUnits,
     );
+
+  return normalizeQuantity(remaining);
 }
 
 export function ManageAssetsScreen({
@@ -59,7 +68,9 @@ export function ManageAssetsScreen({
         ) : (
           <PremiumCard style={styles.list}>
             {snapshot.assets.map((asset, index) => {
-              const isActive = remainingUnits(snapshot, asset.id) > 0.00000001;
+              const isActive = decimal(
+                remainingUnits(snapshot, asset.id),
+              ).greaterThanOrEqualTo(quantityQuantum);
               return (
                 <Pressable
                   accessibilityHint="Opens asset details and deletion impact"

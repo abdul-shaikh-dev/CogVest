@@ -82,8 +82,8 @@ export async function fetchYahooQuote({
         dayChangePct:
           dayChangePct === undefined
             ? undefined
-            : roundQuoteNumber(dayChangePct),
-        price,
+            : roundQuoteNumber(dayChangePct, 2),
+        price: roundQuoteNumber(price),
         source: "yahoo",
       },
     };

@@ -3,6 +3,13 @@ import type { Asset } from "./asset";
 export type Holding = {
   asset: Asset;
   averageCostPrice: number;
+  calculationBasis?: {
+    averageCostPrice: string;
+    currentValue: string;
+    totalInvested: string;
+    totalUnits: string;
+    unrealisedPnL: string;
+  };
   currentPrice: number;
   currentValue: number;
   dayChangePct?: number;

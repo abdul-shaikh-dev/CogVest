@@ -304,7 +304,7 @@ describe("historical CoinGecko quote service", () => {
         basis: "historical-close",
         currency: "INR",
         fetchedAt: "2026-08-01T04:00:00.000Z",
-        price: 5800000.56,
+        price: 5800000.555,
         source: "coingecko",
       },
     });
@@ -332,7 +332,7 @@ describe("historical CoinGecko quote service", () => {
     expect(result).toEqual({
       ok: true,
       quote: expect.objectContaining({
-        price: 5800000.56,
+        price: 5800000.555,
         source: "coingecko",
       }),
     });
