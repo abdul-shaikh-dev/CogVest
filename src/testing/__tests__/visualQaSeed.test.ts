@@ -1,6 +1,10 @@
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import { seedVisualQaPortfolio } from "@/src/testing/visualQaSeed";
+import {
+  resolveVisualQaQuote,
+  seedVisualQaPortfolio,
+  visualQaAssetLookupResults,
+} from "@/src/testing/visualQaSeed";
 
 describe("seedVisualQaPortfolio", () => {
   it("creates a deterministic V1 parity dataset", () => {
@@ -66,5 +70,26 @@ describe("seedVisualQaPortfolio", () => {
     expect(state.assets).toHaveLength(4);
     expect(state.cashEntries).toHaveLength(4);
     expect(state.monthlySnapshots).toHaveLength(7);
+  });
+
+  it("resolves the deterministic quote that belongs to each lookup identity", () => {
+    const niftyLookup = visualQaAssetLookupResults.find(
+      (result) => result.quoteSourceId === "NIFTYBEES.NS",
+    );
+
+    expect(niftyLookup).toBeDefined();
+    expect(
+      resolveVisualQaQuote({
+        ...niftyLookup!,
+        id: "generated-nifty-asset",
+      }),
+    ).toMatchObject({
+      ok: true,
+      quote: {
+        assetId: "generated-nifty-asset",
+        price: 255.32,
+        source: "yahoo",
+      },
+    });
   });
 });

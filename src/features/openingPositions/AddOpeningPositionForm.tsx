@@ -705,6 +705,7 @@ export function AddOpeningPositionForm({
             resetReview();
           }}
           placeholder="Optional note"
+          testID="notes-input"
           value={notes}
         />
       </PremiumCard>

@@ -1,0 +1,66 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "asset-input"
+- inputText: "Reliance Industries"
+- tapOn:
+    id: "symbol-input"
+- inputText: "RELIANCE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "RELIANCE.NS"
+- tapOn:
+    id: "quote-source-id-input"
+- inputText: "RELIANCE.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "1200"
+- tapOn:
+    id: "price-input"
+- inputText: "1300"
+- scrollUntilVisible:
+    element:
+      id: "notes-input"
+    direction: DOWN
+- tapOn:
+    id: "notes-input"
+- inputText: "Manual fallback evidence"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 1"
+- assertVisible: "Duplicate identity count: 0"
+- assertVisible: "Identity: RELIANCE | RELIANCE.NS"
+- assertVisible: "Classification: stock | stock | other"
+- assertVisible: "Market: INR | NSE | RELIANCE.NS"
+- assertVisible: "Quote: manual | ₹1,300.00"
+- assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"
+- assertVisible: "Position 1: quantity 2 | average ₹1,200.00 | note Manual fallback evidence | conviction none"

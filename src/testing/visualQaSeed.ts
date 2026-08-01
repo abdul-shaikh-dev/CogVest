@@ -1,6 +1,7 @@
 import type { StoreApi } from "zustand/vanilla";
 
 import type { AssetLookupResult } from "@/src/services/assetLookup";
+import type { QuoteResult } from "@/src/services/quotes";
 import type { PortfolioStoreState } from "@/src/store";
 import type {
   Asset,
@@ -368,6 +369,24 @@ export const visualQaAssetLookupResults: AssetLookupResult[] = [
     ticker: "NIFTYBEES.NS",
   },
 ];
+
+export function resolveVisualQaQuote(asset: Asset): QuoteResult {
+  const fixtureAsset = visualQaAssets.find(
+    (candidate) => candidate.quoteSourceId === asset.quoteSourceId,
+  );
+  const fixtureQuote = visualQaQuotes.find(
+    (candidate) => candidate.assetId === fixtureAsset?.id,
+  );
+
+  if (!fixtureQuote) {
+    return { error: "No deterministic quote fixture.", ok: false };
+  }
+
+  return {
+    ok: true,
+    quote: { ...fixtureQuote, assetId: asset.id },
+  };
+}
 
 function resetPortfolioStoreForVisualQa(
   store: StoreApi<PortfolioStoreState>,
