@@ -1,0 +1,12 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: "settings-screen"
+- assertVisible: "Android backup"
+- assertVisible: "Excluded"
+- assertVisible: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
+- assertVisible: ".*CogVest does not add separate app encryption in V1.*"
