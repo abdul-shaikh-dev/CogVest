@@ -56,6 +56,10 @@ appId: com.abdulshaikh.cogvest
     id: "save-holding-button"
 - assertVisible:
     id: "holding-save-complete"
+- scrollUntilVisible:
+    element:
+      id: "view-holding-button"
+    direction: DOWN
 - tapOn:
     id: "view-holding-button"
 - assertVisible:
