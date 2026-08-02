@@ -163,6 +163,8 @@ try {
   ensureReady();
 
   openDeepLink(`visual-qa-seed?token=${visualQaToken}`);
+  waitForUiMarkers(["Replace local developer data?"], { timeoutMs: 25000 });
+  tapNodeContaining("Replace with visual QA data", { x: 640, y: 696 });
   waitForUiMarkers(["Visual QA portfolio seeded."], { timeoutMs: 25000 });
   prepareArtifactDir();
   openDeepLink("dashboard");

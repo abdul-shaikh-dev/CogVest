@@ -11,18 +11,16 @@ import type {
   Quote,
 } from "@/src/types";
 
-declare const process: {
-  env: Record<string, string | undefined>;
-};
-
 export const visualQaSeedToken = "cogvest-local-visual-qa";
 
-export function canUseVisualQaHarness(token?: string) {
-  return (
-    __DEV__ ||
-    (process.env.EXPO_PUBLIC_COGVEST_VISUAL_QA === "1" &&
-      token === visualQaSeedToken)
-  );
+export function canUseVisualQaHarness({
+  isDevelopment,
+  token,
+}: {
+  isDevelopment: boolean;
+  token?: string;
+}) {
+  return isDevelopment && token === visualQaSeedToken;
 }
 
 export const visualQaAssets: Asset[] = [

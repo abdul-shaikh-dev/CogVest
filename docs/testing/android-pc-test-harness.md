@@ -160,10 +160,9 @@ This command requires the private signing values documented in
 `docs/release/android-release-process.md`. It must fail when they are absent;
 never work around that failure by restoring debug signing.
 
-For seeded visual QA or chart inspection, use the seed-enabled bundled APK flow
-in `docs/testing/seeded-visual-qa.md`. That flow documents the
-`EXPO_PUBLIC_COGVEST_VISUAL_QA=1` build, visual QA deep link, emulator
-screenshot capture, and Windows Gradle/Kotlin fallback commands.
+For seeded visual QA or chart inspection, use the development-build flow in
+`docs/testing/seeded-visual-qa.md`. Release builds cannot enable or run the
+destructive seed harness.
 
 ## Install a Preview APK
 

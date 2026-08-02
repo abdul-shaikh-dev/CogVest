@@ -2,59 +2,43 @@
 
 ## Purpose
 
-This harness seeds a deterministic V1 portfolio on the Android Emulator and
-captures screenshots for screen-to-contract comparison against:
+This development-only harness replaces local emulator data with a deterministic
+V1 portfolio and captures screenshots for comparison with `DESIGN.md` and
+`docs/design/v1-screen-baseline.md`. It does not require EAS or a physical phone.
 
-- `DESIGN.md`
-- `docs/design/v1-screen-baseline.md`
+## Safety Contract
 
-It is local-only. It does not require a physical phone, EAS cloud builds, or
-default GitHub Actions.
+- The seed and E2E fixture routes work only when `__DEV__` is true and the local
+  token is present.
+- Release builds cannot enable the routes through an environment variable or a
+  known token.
+- Opening the seed deep link never changes data by itself.
+- The developer must explicitly choose `Replace with visual QA data` before the
+  store is reset.
+- The route is not linked from production UI and must not run in default PR CI.
 
 ## Prerequisites
 
-- Android Emulator running and visible in `adb devices`.
-- CogVest local Android build installed with either:
+1. Start an Android emulator and confirm it with `adb devices`.
+2. Build and install the current development APK with
+   `npm run android:apk:emulator` and `adb install -r`.
+3. Start Metro with `npm run start:clear`.
+4. Configure `adb reverse tcp:8081 tcp:8081` when needed.
 
-```powershell
-npm run android
-```
-
-or a local debug APK installed with `adb install -r` while Metro is running.
-
-The seed route is hidden and only writes data in development builds. A local
-release APK visual QA run additionally requires private release signing,
-`EXPO_PUBLIC_COGVEST_VISUAL_QA=1`, and the local visual QA token supplied by
-`npm run visual-qa:android`.
-
-## Run
+## Capture The Standard Screen Set
 
 ```powershell
 npm run visual-qa:android
 ```
 
-To verify the installed custom-range controls against the same seeded data:
-
-```powershell
-npm run maestro:test -- e2e/progress-chart-range.yaml
-```
-
-To verify compact snapshot history and older-month selection:
-
-```powershell
-npm run maestro:test -- e2e/progress-snapshot-history.yaml
-```
-
-This optional flow requires the development visual-QA route to be enabled as
-described above. It is not part of default PR CI or the default Maestro suite.
-
-Output is written to:
+The script opens the token-gated route, waits for the destructive confirmation,
+accepts it explicitly, and captures screenshots under:
 
 ```text
 docs/testing/artifacts/visual-qa/latest
 ```
 
-Expected screenshots:
+Expected files:
 
 - `dashboard.png`
 - `holdings.png`
@@ -66,117 +50,20 @@ Expected screenshots:
 - `progress-assets-chart.png`
 - `settings.png`
 
-Issue #206 also records focused Progress evidence:
-
-- `progress-custom-range.png`
-- `progress-first-point-masked.png`
-- `progress-middle-point.png`
-- `progress-masked.png`
-- `progress-invalid-range.png`
-- `progress-snapshot-history.png`
-- `progress-snapshot-history-older-month.png`
-
-These focused screenshots are captured after the corresponding Maestro or
-manual pointer interaction. They verify the custom range, first/middle/latest
-selection states, masking, invalid-range guidance, and fixed-height snapshot
-history with an older selected month.
-
-## Manual Bundled APK Flow
-
-Use this flow when you specifically need to populate and inspect seeded visual
-QA data on an installed emulator APK without depending on Metro. This is useful
-for chart review because release-style bundles load their JavaScript from the
-APK instead of requiring a running dev server. This is not the default local
-test path. Configure the private signing values from
-`docs/release/android-release-process.md` first; the build must fail if they
-are absent.
-
-### 1. Confirm Emulator
+## Focused Maestro Evidence
 
 ```powershell
-adb devices
+npm run maestro:test -- e2e/progress-chart-range.yaml
+npm run maestro:test -- e2e/progress-snapshot-history.yaml
+npm run maestro:test -- e2e/workflow-exit-navigation.yaml
 ```
 
-Expected:
+Each seed-dependent flow must assert the native `Replace local developer data?`
+dialog and tap `Replace with visual QA data` before expecting seeded data.
 
-```text
-emulator-5554    device
-```
+## Manual Development Flow
 
-### 2. Build a Seed-Enabled Release APK
-
-The seed route only works in release-style builds when the JavaScript bundle was
-built with `EXPO_PUBLIC_COGVEST_VISUAL_QA=1`.
-
-If the normal Gradle command works on the machine, use:
-
-```powershell
-$env:EXPO_PUBLIC_COGVEST_VISUAL_QA = "1"
-$env:NODE_ENV = "production"
-.\android\gradlew.bat -p android app:assembleRelease -x lint -x test `
-  --configure-on-demand --build-cache `
-  -PreactNativeDevServerPort=8081 `
-  "-PreactNativeArchitectures=x86_64" `
-  --console=plain
-```
-
-If Gradle or Kotlin tries to write outside the workspace and fails with access
-errors, redirect temp/cache paths into ignored workspace folders and disable the
-Kotlin daemon:
-
-```powershell
-New-Item -ItemType Directory -Force ".expo\tmp", ".expo\localappdata", ".expo\kotlin-home" | Out-Null
-
-$jdk17 = "G:\tmp\gradle-cogvest\jdks\eclipse_adoptium-17-amd64-windows.2"
-$workspace = (Get-Location).Path
-
-$env:JAVA_HOME = $jdk17
-$env:PATH = "$jdk17\bin;$env:PATH"
-$env:GRADLE_USER_HOME = "$workspace\.g"
-$env:TEMP = "$workspace\.expo\tmp"
-$env:TMP = "$workspace\.expo\tmp"
-$env:LOCALAPPDATA = "$workspace\.expo\localappdata"
-$env:KOTLIN_USER_HOME = "$workspace\.expo\kotlin-home"
-$env:EXPO_PUBLIC_COGVEST_VISUAL_QA = "1"
-$env:NODE_ENV = "production"
-
-.\android\gradlew.bat -p android app:assembleRelease -x lint -x test `
-  --no-daemon --configure-on-demand --build-cache `
-  "-Dkotlin.compiler.execution.strategy=in-process" `
-  "-Dkotlin.daemon.enabled=false" `
-  "-Dorg.gradle.java.installations.paths=$jdk17" `
-  "-Dorg.gradle.java.installations.auto-download=false" `
-  -PreactNativeDevServerPort=8081 `
-  "-PreactNativeArchitectures=x86_64" `
-  --console=plain
-```
-
-Expected output includes:
-
-```text
-> Task :app:createBundleReleaseJsAndAssets
-Android Bundled ... index.ts
-> Task :app:assembleRelease
-BUILD SUCCESSFUL
-```
-
-The APK is written to:
-
-```text
-android/app/build/outputs/apk/release/app-release.apk
-```
-
-### 3. Install the APK
-
-If a debug build is currently installed, uninstall first to avoid Android
-signature mismatch errors:
-
-```powershell
-adb -s emulator-5554 uninstall com.abdulshaikh.cogvest
-adb -s emulator-5554 install -r android\app\build\outputs\apk\release\app-release.apk
-```
-
-### 4. Seed the Visual QA Portfolio
+Open the gated route:
 
 ```powershell
 adb -s emulator-5554 shell am start -W `
@@ -184,183 +71,22 @@ adb -s emulator-5554 shell am start -W `
   -d "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 ```
 
-Verify the route succeeded:
-
-```powershell
-adb -s emulator-5554 shell uiautomator dump /sdcard/window.xml
-adb -s emulator-5554 shell cat /sdcard/window.xml
-```
-
-Expected text:
-
-```text
-Visual QA portfolio seeded.
-```
-
-If the screen says visual QA seeding is unavailable, the APK was not bundled
-with `EXPO_PUBLIC_COGVEST_VISUAL_QA=1`. Rebuild the APK with that environment
-variable set before Gradle runs `createBundleReleaseJsAndAssets`.
-
-### 5. Open Progress and Capture Chart Evidence
-
-```powershell
-adb -s emulator-5554 shell am start -W `
-  -a android.intent.action.VIEW `
-  -d "cogvest:///progress"
-
-Start-Sleep -Seconds 3
-
-adb -s emulator-5554 exec-out screencap -p > .expo\progress-charts-seeded.png
-```
-
-Scroll down and capture the asset chart:
-
-```powershell
-adb -s emulator-5554 shell input swipe 640 2350 640 1100 600
-Start-Sleep -Seconds 1
-adb -s emulator-5554 exec-out screencap -p > .expo\progress-asset-trend-seeded.png
-```
-
-Expected Progress evidence:
-
-- Portfolio Growth chart renders Portfolio vs Invested, with a selected-month
-  summary showing the percentage and amount ahead or behind invested capital.
-- Portfolio Growth has y-axis INR labels, sparse chart-native x-axis month
-  labels (`Dec`, `Mar`, `May` for the seeded 6M window), and chart-local `3M`,
-  `6M`, `1Y`, `All`, and `Custom` controls.
-- Asset Momentum chart renders Equity, Debt, and Crypto lines with cash excluded.
-- Asset Momentum has y-axis INR labels, sparse chart-native x-axis month labels,
-  chart-local timeframe controls, an interactive legend, selected-month values,
-  and per-asset insight rows.
-- Each chart's custom range uses only available stored snapshot months, applies
-  inclusively, and does not alter the other chart's selected range.
-- Seeded Progress defaults to the `6M` range while keeping `All` available.
-- Seeded chart data should stay calm and preview-like: latest Progress values
-  should be around Portfolio `₹19.87L`, Market change `+₹13K`, Net contribution
-  `+₹45K`, Monthly investment `₹45K`, total value change `+₹58K`, Portfolio
-  Growth around `+15.5%`, and Asset Momentum led by Equity around `+4.9%`.
-
-### 6. Clean Local Build Cache
-
-The `.g/` Gradle home is only a local cache. It must not be committed.
-
-```powershell
-$target = [System.IO.Path]::GetFullPath(".g")
-$workspace = [System.IO.Path]::GetFullPath(".")
-if ($target.StartsWith($workspace, [System.StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $target)) {
-  Remove-Item -LiteralPath $target -Recurse -Force
-}
-
-git status --short
-```
-
-Expected:
-
-```text
-# no .g/ entry
-```
+Review the warning in the emulator. Choose `Cancel` to preserve data or
+`Replace with visual QA data` to continue. A missing/wrong token or any release
+build shows `Visual QA seeding is unavailable.`
 
 ## Seeded Dataset
 
-The visual QA seed includes:
+The fixture includes equity, ETF, debt, crypto, cash entries, mixed quote
+provenance, an optional conviction score, and seven monthly snapshots. It is
+test data only and must never be interpreted as a production portfolio.
 
-- Equity: HDFC Bank
-- ETF: Nifty 50 ETF
-- Debt: Sovereign Gold Bond
-- Crypto: Bitcoin
-- Cash ledger additions and withdrawals
-- Yahoo, CoinGecko, and manual quote metadata
-- Optional conviction on one opening position
-- Seven monthly snapshots so Progress defaults to the latest `6M` range while
-  still allowing the `All` range
+## Troubleshooting
 
-## Compare
-
-Open the latest screenshots beside the HTML preview and V1 screen baseline.
-Check:
-
-- Dashboard hierarchy and density
-- Holdings populated row layout
-- Add Holding initial, lookup selection, and review states
-- Cash Ledger hero, metrics, entry form, and ledger rows
-- Monthly Progress `Portfolio Growth` and `Asset Momentum` charts
-- Settings local-first trust sections
-
-Log any mismatch as a focused GitHub issue with screenshot evidence.
-
-## Safety
-
-The route `cogvest:///visual-qa-seed` only seeds data when `__DEV__` is true or
-when `EXPO_PUBLIC_COGVEST_VISUAL_QA=1` was set at build time and the local
-visual QA token is provided by the harness script. Do not link this route from
-the UI. Do not add this command to default PR CI. Do not ship Play Store builds
-with `EXPO_PUBLIC_COGVEST_VISUAL_QA=1`.
-
-## Troubleshooting Notes
-
-### Debug APK Shows "Unable to Load Script"
-
-A debug APK usually expects Metro. If Metro is not running, Android shows a
-React Native redbox:
-
-```text
-Unable to load script.
-Make sure you're running Metro or that your bundle index.android.bundle is packaged correctly.
-```
-
-For routine visual QA, prefer the debug APK with Metro. Run:
-
-```powershell
-adb -s emulator-5554 reverse tcp:8081 tcp:8081
-$env:EXPO_PUBLIC_COGVEST_VISUAL_QA = "1"
-npm run start:clear
-```
-
-Then run `npm run android:apk`, install the debug APK, reload the app, and open
-the seed route. Use the bundled release flow only when standalone behavior is
-specifically under review and private signing is configured.
-
-### Background Metro Starts but Port 8081 Is Closed
-
-Hidden `Start-Process` attempts can exit silently because of quoting or process
-lifetime issues. Verify Metro before relying on it:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8081/status
-```
-
-If it refuses the connection, do not assume the app is broken. Run Metro in the
-foreground. Use the bundled release APK flow only with private signing.
-
-### Kotlin Daemon Access Denied
-
-If the build fails with an error like:
-
-```text
-java.nio.file.AccessDeniedException:
-C:\Users\<user>\AppData\Local\kotlin\daemon\...
-Could not connect to Kotlin compile daemon
-```
-
-Use the fallback build command above with:
-
-- workspace-local `TEMP`, `TMP`, `LOCALAPPDATA`, and `KOTLIN_USER_HOME`
-- `--no-daemon`
-- `-Dkotlin.compiler.execution.strategy=in-process`
-- `-Dkotlin.daemon.enabled=false`
-
-PowerShell treats dotted `-D...` arguments strangely unless they are quoted.
-Always quote those Gradle system properties.
-
-### Signature Mismatch on Install
-
-If `adb install -r` fails because the installed APK has a different signature,
-uninstall first:
-
-```powershell
-adb -s emulator-5554 uninstall com.abdulshaikh.cogvest
-adb -s emulator-5554 install -r android\app\build\outputs\apk\release\app-release.apk
-```
-
-This clears local app data, which is acceptable for seeded visual QA because
-the next step repopulates deterministic test data.
+- `Unable to load script`: start Metro and configure `adb reverse`.
+- Package missing: install the freshly built development APK.
+- Confirmation not found: verify the installed APK is current.
+- Seed unavailable: verify this is a development build and the exact token is
+  present in the deep link.
+- Signature mismatch: do not uninstall if upgrade/data-retention evidence is
+  required; rebuild with the same signing key instead.

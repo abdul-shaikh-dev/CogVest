@@ -116,9 +116,9 @@ cogvest:///e2e-evidence?token=cogvest-local-visual-qa
 That route projects the actual persisted store into stable evidence for asset
 identity, classification, market/currency, quote source and price, opening
 positions, aggregate invested/current values, and canonical-identity conflicts.
-It does not seed or mutate data. The harness is available in development builds,
-or only when a release build explicitly opts in with
-`EXPO_PUBLIC_COGVEST_VISUAL_QA=1` and supplies the matching local token.
+It does not seed or mutate data. The harness is available only in development
+builds with the matching local token. Release builds cannot opt into test
+routes through public environment variables.
 
 Run these flows only against a freshly built and installed local APK when using
 their output as PR evidence. A passing flow against an older installed build is

@@ -214,6 +214,19 @@ Future versions may add EAS Submit after manual release flow is proven.
 
 ## Versioning
 
-- `versionName`: user-facing app version, e.g. `0.1.0`.
-- `versionCode`: monotonically increasing Android integer.
+- `versionName`: semantic user-facing version shared by `app.json`,
+  `package.json`, and the current release-history entry.
+- `versionCode`: strictly increasing Android integer for every APK or AAB
+  distributed outside the developer machine, including previews.
+- Record every distributed identity in
+  `docs/release/android-version-history.json` before building it.
+- Never reuse a `versionCode`, even when a preview is discarded.
 - Git tag format: `v0.1.0`.
+
+## Release Permissions
+
+The durable Expo permission plugin removes legacy external-storage permissions
+and `SYSTEM_ALERT_WINDOW` from the main/release manifest. Expo debug manifests
+may add `SYSTEM_ALERT_WINDOW` for developer tooling; it must not appear in the
+merged release manifest. V1 release permissions are limited to documented
+runtime needs such as internet access and vibration.

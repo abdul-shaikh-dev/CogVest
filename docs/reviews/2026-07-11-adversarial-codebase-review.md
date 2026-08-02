@@ -28,15 +28,15 @@ have merged remediation evidence. The highest remaining risks are:
 1. Duplicate save attempts and non-atomic Add Holding writes can create partial
    or repeated financial records.
 2. Impossible or future-dated records can affect current portfolio totals.
-3. Android backup, permissions, and release-version policy remain unresolved.
+3. Android backup and at-rest storage guarantees remain unresolved.
 
 As of 2026-07-22, C1-C4 and H1-H4 have merged remediation evidence through
 issues #161, #167, #169, #171, #173, #175, #178, and #150. H7 was also
 substantively remediated by the atomic linked-command work in #161. Issue #182
 reopened the `V1 Adversarial Stabilization` milestone for H6. Issue #194 completes
 the remaining H10 asset correction/cascade slice, and #196 resolves H5 income
-semantics. Another 19 finding IDs remain open or partial. They now have focused
-issue ownership under #153 and #198-#203. The milestone must not be treated as
+semantics. Another 14 finding IDs remain open or partial. They now have focused
+issue ownership under #198-#202. The milestone must not be treated as
 complete until those issues are verified and merged.
 
 ## Current Finding Ledger
@@ -49,20 +49,19 @@ minimum verification is not complete.
 | --- | --- | --- | --- |
 | Critical | C1, C2, C3, C4 | None | None |
 | High | H1, H2, H3, H4, H5, H6, H7, H8, H9, H10 | None | None |
-| Medium | M4, M9 | M8 | M1, M2, M3, M5, M6, M7 |
+| Medium | M4, M6, M7, M8, M9 | None | M1, M2, M3, M5 |
 | Add Holding | AH1, AH2, AH10, AH11 | AH13, AH14 | AH3, AH4, AH5, AH6, AH7, AH8, AH9, AH12 |
 
 ### Current Issue Ownership
 
 Issues #188, #190, #192, #194, #196, and #203 cover completed correction,
-generated-income, allocation, and numeric-integrity work. The 17 remaining open
-or partial findings are owned by:
+generated-income, allocation, and numeric-integrity work. Issue #153 remediates
+M6-M8 on this branch. The 14 remaining open or partial findings are owned by:
 
 - #198: M5 privacy, Android backup, and storage guarantees.
 - #202: M1-M2 portfolio freshness and quote-refresh reliability.
 - #200: AH3-AH6 and AH13 canonical identity, transition state, and completion.
 - #201: M3, AH7-AH9, and AH12 metadata, review, and scalable search.
-- #153: M6-M8 Android permissions, release identity, and visual-QA isolation.
 - #199: AH14 semantic Add Holding Android E2E after #200 and #201.
 
 Umbrella issue #136 remains useful for screen-level sequencing but does not
@@ -572,42 +571,49 @@ whether at-rest encryption is required by the product's privacy promise.
 
 ### M6. Android manifest contains unnecessary-looking permissions
 
-**Status (2026-07-22): Open.** `READ_EXTERNAL_STORAGE`,
-`WRITE_EXTERNAL_STORAGE`, and `SYSTEM_ALERT_WINDOW` remain in the main manifest.
+**Status (2026-08-02): Remediated by #153.** A durable Expo config plugin
+blocks `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, and
+`SYSTEM_ALERT_WINDOW` from the merged release manifest. The overlay permission
+remains isolated to Expo's debug manifest for developer tooling.
 
 `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, and `SYSTEM_ALERT_WINDOW` are
 present without an evident V1 requirement. They undermine least privilege and
 may complicate Play review.
 
-**Evidence:** `android/app/src/main/AndroidManifest.xml:2-6`.
+**Evidence:** `plugins/withLeastPrivilegeAndroidPermissions.js`,
+`src/__tests__/androidPermissions.test.ts`, and a regenerated merged release
+manifest containing only internet, vibration, and Android's generated receiver
+permission.
 
 ### M7. Android release identity is not ready for updates
 
-**Status (2026-07-22): Open.** `versionCode` remains `1` and `versionName`
-remains `1.0.0`; release documentation describes a manual step but does not
-enforce monotonic versioning.
+**Status (2026-08-02): Remediated by #153.** The current identity is
+`versionCode` 2 and `versionName` 1.0.1. Repository history and tests enforce a
+strictly increasing code and aligned app/package version.
 
 `versionCode` remains 1 and `versionName` remains 1.0.0. Successive distributed
 builds are indistinguishable and cannot follow proper Android upgrade ordering.
 
-**Evidence:** `android/app/build.gradle:91-96` and `app.json:21`.
+**Evidence:** `app.json`, `docs/release/android-version-history.json`, and
+`src/__tests__/androidIdentity.test.ts`. An emulator upgrade from 1.0.0/code 1
+to 1.0.1/code 2 retained an app-private marker.
 
 ### M8. Visual-QA route can erase development data
 
-**Status (2026-07-22): Partial.** The route is hidden and production-default
-configuration does not enable it, but development seeding can still replace all
-local data without confirmation. A public build flag plus static token can also
-enable the route in a release build, so exclusion is procedural rather than
-enforced.
+**Status (2026-08-02): Remediated by #153.** Test fixtures now require both
+`__DEV__` and the local token; no public environment flag can enable them in a
+release bundle. The destructive seed route displays a non-cancelable native
+confirmation and mutates only after the developer approves.
 
-In development, the seed route is permitted without a token and replaces the
-local portfolio. A development build containing real records can be erased by
-opening the route.
+**Original finding:** In development, the seed route was permitted without a
+token and replaced the local portfolio immediately. A development build
+containing real records could be erased by opening the route.
 
 **Evidence:**
 
-- `src/testing/visualQaSeed.ts:17-25`.
-- `app/visual-qa-seed.tsx:11-23`.
+- `src/testing/visualQaSeed.ts` and its release-denial tests.
+- `app/visual-qa-seed.tsx` and its deep-link confirmation tests.
+- `scripts/android-visual-qa.mjs` and confirmation-aware Maestro flows.
 
 ### M9. Financial calculations use binary floating-point numbers
 
@@ -1045,17 +1051,15 @@ behavior before APK release work:
 4. **#199 - Semantic E2E (AH14):** assert persisted identity, provenance,
    values, and duplicate absence after #200 and #201 land.
 
-### Deferred Privacy And Release Gates
+### Deferred Privacy Gate
 
 Deferral changes sequencing only. These issues remain mandatory before the
 corresponding V1 usage or release gate:
 
 - **#198 - Privacy contract (M5):** complete before sensitive real portfolio
   data is used on a personal device.
-- **#153 - Android release hardening (M6-M8):** complete before preparing an
-  installable APK or V1 release candidate.
-
-All seven issues remain required by the final adversarial gate.
+Android release hardening under #153 is complete on this branch. All remaining
+owner issues remain required by the final adversarial gate.
 
 ### Final Adversarial Gate
 
@@ -1149,8 +1153,7 @@ The remaining suite gaps correspond to the open and partial findings:
    partial refresh.
 7. Unsupported Yahoo quote-type rejection.
 8. Negative cash allocation and decimal/rounding invariants.
-9. Android backup/encryption policy, least-privilege permissions, monotonic
-   versioning, and release exclusion of destructive visual-QA capabilities.
+9. Android backup and at-rest encryption policy.
 10. Add Holding canonical identity, race ordering, state reset, metadata
     selectors, complete review, result scaling, and persisted-outcome E2E.
 
