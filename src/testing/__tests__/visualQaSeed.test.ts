@@ -1,10 +1,35 @@
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import {
+  canUseVisualQaHarness,
   resolveVisualQaQuote,
   seedVisualQaPortfolio,
   visualQaAssetLookupResults,
+  visualQaSeedToken,
 } from "@/src/testing/visualQaSeed";
+
+describe("visual QA harness access", () => {
+  it("requires both a development build and the local token", () => {
+    expect(
+      canUseVisualQaHarness({
+        isDevelopment: true,
+        token: visualQaSeedToken,
+      }),
+    ).toBe(true);
+    expect(
+      canUseVisualQaHarness({ isDevelopment: true, token: "wrong" }),
+    ).toBe(false);
+  });
+
+  it("cannot be enabled in a release build with the known token", () => {
+    expect(
+      canUseVisualQaHarness({
+        isDevelopment: false,
+        token: visualQaSeedToken,
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("seedVisualQaPortfolio", () => {
   it("creates a deterministic V1 parity dataset", () => {

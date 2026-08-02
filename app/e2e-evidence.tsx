@@ -25,7 +25,9 @@ export default function E2eEvidenceScreen() {
     store.getState,
   );
 
-  if (!canUseVisualQaHarness(params.token)) {
+  if (
+    !canUseVisualQaHarness({ isDevelopment: __DEV__, token: params.token })
+  ) {
     return (
       <ScreenContainer testID="e2e-evidence-unavailable">
         <ScreenHeader subtitle="Unavailable" title="Test evidence" />

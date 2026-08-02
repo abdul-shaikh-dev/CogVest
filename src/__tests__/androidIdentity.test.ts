@@ -1,4 +1,5 @@
 import appConfig from "../../app.json";
+import versionHistory from "../../docs/release/android-version-history.json";
 import packageJson from "../../package.json";
 
 describe("Android app identity", () => {
@@ -18,6 +19,27 @@ describe("Android app identity", () => {
     expect(Number.isInteger(expo.android.versionCode)).toBe(true);
     expect(expo.android.allowBackup).toBe(false);
     expect(expo.android.predictiveBackGestureEnabled).toBe(true);
+  });
+
+  it("records a strictly increasing distributable build identity", () => {
+    const releases = versionHistory.releases;
+    const current = releases.at(-1);
+
+    expect(releases.length).toBeGreaterThanOrEqual(2);
+    releases.slice(1).forEach((release, index) => {
+      expect(release.versionCode).toBeGreaterThan(
+        releases[index].versionCode,
+      );
+    });
+    expect(new Set(releases.map((release) => release.versionCode)).size).toBe(
+      releases.length,
+    );
+    expect(current).toMatchObject({
+      status: "current",
+      versionCode: expo.android.versionCode,
+      versionName: expo.version,
+    });
+    expect(packageJson.version).toBe(expo.version);
   });
 
   it("links the Expo project for EAS builds", () => {

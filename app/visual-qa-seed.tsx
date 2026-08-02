@@ -1,5 +1,6 @@
-import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 
 import { AppText, ScreenContainer } from "@/src/components/common";
 import { getPortfolioStore } from "@/src/store";
@@ -7,19 +8,50 @@ import {
   canUseVisualQaHarness,
   seedVisualQaPortfolio,
 } from "@/src/testing/visualQaSeed";
+import { colors, spacing } from "@/src/theme";
 
 export default function VisualQaSeedRoute() {
   const params = useLocalSearchParams<{ token?: string }>();
-  const canSeed = canUseVisualQaHarness(params.token);
+  const canSeed = canUseVisualQaHarness({
+    isDevelopment: __DEV__,
+    token: params.token,
+  });
   const [seeded, setSeeded] = useState(false);
+  const [seedError, setSeedError] = useState("");
+  const hasPrompted = useRef(false);
 
   useEffect(() => {
-    if (!canSeed) {
+    if (!canSeed || hasPrompted.current) {
       return;
     }
 
-    seedVisualQaPortfolio(getPortfolioStore());
-    setSeeded(true);
+    hasPrompted.current = true;
+    Alert.alert(
+      "Replace local developer data?",
+      "This visual QA tool permanently replaces holdings, transactions, cash entries, quotes, and monthly snapshots stored by this development build.",
+      [
+        {
+          onPress: () => router.replace("/dashboard"),
+          style: "cancel",
+          text: "Cancel",
+        },
+        {
+          onPress: () => {
+            try {
+              seedVisualQaPortfolio(getPortfolioStore());
+              setSeeded(true);
+            } catch (error) {
+              setSeedError(
+                error instanceof Error ? error.message : "Unknown error",
+              );
+            }
+          },
+          style: "destructive",
+          text: "Replace with visual QA data",
+        },
+      ],
+      { cancelable: false },
+    );
   }, [canSeed]);
 
   if (!canSeed) {
@@ -33,11 +65,40 @@ export default function VisualQaSeedRoute() {
     );
   }
 
+  if (seeded) {
+    return (
+      <ScreenContainer testID="visual-qa-seed-screen">
+        <AppText weight="bold">Visual QA portfolio seeded.</AppText>
+      </ScreenContainer>
+    );
+  }
+
   return (
-    <ScreenContainer testID="visual-qa-seed-screen">
-      <AppText weight="bold">
-        {seeded ? "Visual QA portfolio seeded." : "Seeding visual QA portfolio..."}
-      </AppText>
+    <ScreenContainer testID="visual-qa-seed-confirmation">
+      <View style={styles.content}>
+        <AppText variant="title" weight="bold">
+          Visual QA confirmation required
+        </AppText>
+        <AppText color="secondary">
+          Approve or cancel the Android confirmation dialog. No local data is
+          changed until you approve the destructive action.
+        </AppText>
+        {seedError ? (
+          <AppText style={styles.error} testID="visual-qa-seed-error">
+            Visual QA data could not be installed: {seedError}
+          </AppText>
+        ) : null}
+      </View>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    gap: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  error: {
+    color: colors.loss,
+  },
+});

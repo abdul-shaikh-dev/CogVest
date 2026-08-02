@@ -2,7 +2,7 @@
   "expo": {
     "name": "CogVest",
     "slug": "cogvest",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "platforms": [
       "android"
     ],
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.abdulshaikh.cogvest",
-      "versionCode": 1,
+      "versionCode": 2,
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -32,6 +32,7 @@
       "expo-font",
       "./plugins/withPrivateReleaseSigning",
       "./plugins/withPrivateDataBackupPolicy",
+      "./plugins/withLeastPrivilegeAndroidPermissions",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

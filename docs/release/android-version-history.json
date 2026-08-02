@@ -1,0 +1,18 @@
+{
+  "policy": {
+    "versionCode": "Increment for every APK or AAB distributed outside the developer machine.",
+    "versionName": "Use semantic versioning and keep app.json, package.json, and the latest history entry aligned."
+  },
+  "releases": [
+    {
+      "versionCode": 1,
+      "versionName": "1.0.0",
+      "status": "baseline"
+    },
+    {
+      "versionCode": 2,
+      "versionName": "1.0.1",
+      "status": "current"
+    }
+  ]
+}
