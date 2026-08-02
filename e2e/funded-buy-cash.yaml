@@ -46,10 +46,11 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "quantity-input"
 - inputText: "2"
+- pressKey: BACK
 - tapOn:
     id: "price-input"
 - inputText: "100"
-- hideKeyboard
+- pressKey: BACK
 - scrollUntilVisible:
     element:
       id: "review-trade-button"
