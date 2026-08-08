@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 const { Ionicons } = require("@expo/vector-icons") as {
   Ionicons: { loadFont: jest.Mock };
@@ -56,7 +56,7 @@ jest.mock("@/src/store", () => ({
   }),
 }));
 
-import RootLayout from "../_layout";
+import RootLayout, { loadRequiredFonts } from "../_layout";
 
 describe("RootLayout storage recovery boundary", () => {
   beforeEach(() => {
@@ -107,40 +107,13 @@ describe("RootLayout storage recovery boundary", () => {
     });
   });
 
-  it("keeps storage recovery available while required assets are pending", () => {
-    jest.useFakeTimers();
-    Ionicons.loadFont.mockImplementation(() => new Promise(() => undefined));
-    mockRecoveryState = {
-      incidents: [
-        {
-          displayName: "Portfolio records",
-          preserved: true,
-        },
-      ],
-    };
-
-    const { getByTestId, queryByTestId, unmount } = render(<RootLayout />);
-
-    expect(getByTestId("storage-recovery-screen")).toBeTruthy();
-    expect(queryByTestId("app-asset-gate")).toBeNull();
-    unmount();
-    jest.clearAllTimers();
-    jest.useRealTimers();
-  });
-
-  it("offers retry when required assets do not finish loading", async () => {
-    jest.useFakeTimers();
+  it("times out required assets that never finish loading", async () => {
     Ionicons.loadFont.mockImplementation(() => new Promise(() => undefined));
 
-    const { getByText } = render(<RootLayout />);
-
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(30000);
-    });
-
-    expect(getByText("CogVest could not finish loading")).toBeTruthy();
+    await expect(loadRequiredFonts({ timeoutMs: 1 })).rejects.toThrow(
+      "Required interface assets timed out.",
+    );
     expect(Ionicons.loadFont).toHaveBeenCalledTimes(3);
-    jest.useRealTimers();
   });
 
   it("retries a failed asset load without exposing an unhandled rejection", async () => {

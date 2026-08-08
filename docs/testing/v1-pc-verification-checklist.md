@@ -54,7 +54,7 @@ Android Emulator, not a physical Android phone.
   visible after restart.
 - Full canonical `npm run maestro:test` passed all 15 flows, including semantic
   Add Holding stored-outcome assertions.
-- `npm run test:v1:pc` passed: 67 suites, 582 tests, Expo Doctor 17/17,
+- `npm run test:v1:pc` passed: 67 suites, 581 tests, Expo Doctor 17/17,
   Android readiness, and strict installed-package smoke.
 - The capture harness keeps one app process, resets Add Holding between fixture
   states, rejects any visible LogBox warning, and uses an unsaved deterministic

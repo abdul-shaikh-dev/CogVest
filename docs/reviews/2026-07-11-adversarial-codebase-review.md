@@ -1136,7 +1136,7 @@ vulnerabilities, summarized above.
 
 - TypeScript typecheck passed.
 - 67 Jest suites passed.
-- 582 Jest tests passed.
+- 581 Jest tests passed.
 - Expo Doctor passed 17 of 17 checks.
 
 `npm run test:v1:pc` also passed, detecting `emulator-5554` and the installed

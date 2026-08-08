@@ -27,7 +27,7 @@ function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
 const FONT_LOAD_ATTEMPTS = 3;
 const FONT_LOAD_TIMEOUT_MS = 10000;
 
-async function loadFontWithTimeout() {
+async function loadFontWithTimeout(timeoutMs: number) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
@@ -36,7 +36,7 @@ async function loadFontWithTimeout() {
       new Promise<never>((_, reject) => {
         timeoutId = setTimeout(
           () => reject(new Error("Required interface assets timed out.")),
-          FONT_LOAD_TIMEOUT_MS,
+          timeoutMs,
         );
       }),
     ]);
@@ -45,12 +45,14 @@ async function loadFontWithTimeout() {
   }
 }
 
-async function loadRequiredFonts() {
+export async function loadRequiredFonts({
+  timeoutMs = FONT_LOAD_TIMEOUT_MS,
+}: { timeoutMs?: number } = {}) {
   let lastError: unknown;
 
   for (let attempt = 0; attempt < FONT_LOAD_ATTEMPTS; attempt += 1) {
     try {
-      await loadFontWithTimeout();
+      await loadFontWithTimeout(timeoutMs);
       return;
     } catch (error) {
       lastError = error;
