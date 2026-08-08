@@ -60,7 +60,7 @@ export const assetClasses: AssetClass[] = ["stock", "etf", "debt", "crypto"];
 export const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 export const phases: Array<{ key: AddHoldingPhase; label: string }> = [
   { key: "asset", label: "Asset" },
-  { key: "class", label: "Metadata" },
+  { key: "class", label: "Confirm details" },
   { key: "position", label: "Position" },
   { key: "review", label: "Review" },
 ];

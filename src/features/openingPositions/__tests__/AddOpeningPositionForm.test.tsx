@@ -37,6 +37,12 @@ function selectOption(
   fireEvent.press(getByTestId(`${prefix}-${value}`));
 }
 
+function openManualAssetEntry(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+) {
+  fireEvent.press(getByTestId("toggle-manual-asset-entry"));
+}
+
 describe("AddOpeningPositionForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -69,7 +75,9 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-screen")).toBeTruthy();
     expect(getByTestId("add-holding-step-asset")).toBeTruthy();
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
-    expect(getByText("Continue to classification")).toBeTruthy();
+    expect(getByText("Can't find your asset? Add manually")).toBeTruthy();
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
+    expect(queryByTestId("continue-class-button")).toBeNull();
     expect(queryByTestId("add-holding-phase-class")).toBeNull();
     expect(queryByTestId("add-holding-phase-position")).toBeNull();
     expect(queryByTestId("derived-preview")).toBeNull();
@@ -78,11 +86,12 @@ describe("AddOpeningPositionForm", () => {
 
   it("validates the Asset phase before continuing", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    fireEvent.press(getByText("Continue to classification"));
+    openManualAssetEntry(getByTestId);
+    fireEvent.press(getByText("Continue to confirm details"));
 
     expect(queryByTestId("add-holding-phase-class")).toBeNull();
     expect(getByText("Asset name is required.")).toBeTruthy();
@@ -192,20 +201,20 @@ describe("AddOpeningPositionForm", () => {
     });
   });
 
-  it("moves through Asset, Metadata, Position, and Review phases", () => {
+  it("moves through Asset, Confirm details, Position, and Review phases", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
+    openManualAssetEntry(getByTestId);
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
     fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
     fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
 
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
-    expect(getByText("Confirm details")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     expect(queryByTestId("add-holding-phase-asset")).toBeNull();
 
@@ -237,11 +246,12 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm store={store} />,
     );
 
+    openManualAssetEntry(getByTestId);
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
     fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
     fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByText("Continue to position"));
     fireEvent.press(getByText("Back"));
 
@@ -263,16 +273,16 @@ describe("AddOpeningPositionForm", () => {
     );
 
     expect(getByTestId("add-holding-screen")).toBeTruthy();
+    openManualAssetEntry(getByTestId);
     expect(getByTestId("asset-input")).toBeTruthy();
     expect(getByTestId("symbol-input")).toBeTruthy();
     expect(getByTestId("ticker-input")).toBeTruthy();
     expect(getByTestId("quote-source-id-input")).toBeTruthy();
-
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
     fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
     fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
 
     expect(getByTestId("asset-class-stock")).toBeTruthy();
     expect(getByTestId("instrument-type-picker")).toBeTruthy();
@@ -364,7 +374,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByTestId(`existing-asset-${savedAssetId}`));
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
 
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     selectOption(getByTestId, "sector-type", "technology");
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "25");
@@ -406,10 +416,11 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm onComplete={onComplete} store={store} />,
     );
 
+    openManualAssetEntry(getByTestId);
     fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
     fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
     fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "2");
     fireEvent.changeText(getByLabelText("Average cost"), "100");
@@ -429,7 +440,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByTestId("add-another-holding-button"));
 
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
-    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(queryByTestId("holding-save-complete")).toBeNull();
   });
 
@@ -500,11 +511,12 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm store={store} />,
     );
 
+    openManualAssetEntry(getByTestId);
     fireEvent.changeText(getByLabelText("Asset name"), "Sovereign Gold Bond");
     fireEvent.changeText(getByLabelText("Symbol"), "SGB");
     fireEvent.changeText(getByLabelText("Ticker"), "SGB");
     fireEvent.changeText(getByLabelText("Quote source ID"), "SGB");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByTestId("asset-class-debt"));
     expect(queryByTestId("sector-type-picker")).toBeNull();
     expect(getByTestId("sector-not-applicable")).toBeTruthy();
@@ -534,11 +546,12 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm store={store} />,
     );
 
+    openManualAssetEntry(getByTestId);
     fireEvent.changeText(getByLabelText("Asset name"), "Bitcoin");
     fireEvent.changeText(getByLabelText("Symbol"), "BTC");
     fireEvent.changeText(getByLabelText("Ticker"), "bitcoin");
     fireEvent.changeText(getByLabelText("Quote source ID"), "bitcoin");
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByTestId("asset-class-crypto"));
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "0.05");
@@ -620,22 +633,17 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
 
     await waitFor(() => {
-      expect(getByLabelText("Asset name")).toHaveProp(
-        "value",
-        "HDFC Bank Limited",
-      );
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
-    expect(getByTestId("selected-asset-summary")).toBeTruthy();
+    expect(getByText("HDFC Bank Limited")).toBeTruthy();
+    expect(
+      getByText("HDFCBANK • HDFCBANK.NS • Yahoo Finance suggestion"),
+    ).toBeTruthy();
     expect(queryByTestId("asset-lookup-results")).toBeNull();
-    expect(getByLabelText("Symbol")).toHaveProp("value", "HDFCBANK");
-    expect(getByLabelText("Ticker")).toHaveProp("value", "HDFCBANK.NS");
-    expect(getByLabelText("Quote source ID")).toHaveProp(
-      "value",
-      "HDFCBANK.NS",
-    );
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(getByText("Live price autofilled from Yahoo Finance.")).toBeTruthy();
-    fireEvent.press(getByText("Continue to classification"));
-    expect(getByText("Confirm details")).toBeTruthy();
+    fireEvent.press(getByText("Continue to confirm details"));
+    expect(getByTestId("add-holding-step-class")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
@@ -683,7 +691,7 @@ describe("AddOpeningPositionForm", () => {
       );
 
       fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
-      fireEvent.press(getByText("Continue to classification"));
+      fireEvent.press(getByText("Continue to confirm details"));
       fireEvent.press(getByText("Continue to position"));
       fireEvent.changeText(getByLabelText("Quantity"), "25");
       fireEvent.changeText(getByLabelText("Average cost"), "1450");
@@ -792,7 +800,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -812,7 +820,7 @@ describe("AddOpeningPositionForm", () => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
 
     expect(
       getByText("Suggested details. Confirm anything marked for review."),
@@ -862,7 +870,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -882,7 +890,7 @@ describe("AddOpeningPositionForm", () => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     selectOption(getByTestId, "sector-type", "financialServices");
     fireEvent.press(getByText("Asset"));
 
@@ -943,7 +951,7 @@ describe("AddOpeningPositionForm", () => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to classification"));
+    fireEvent.press(getByText("Continue to confirm details"));
     expect(getByText("Unknown")).toBeTruthy();
     selectOption(getByTestId, "sector-type", "financialServices");
     fireEvent.press(getByText("Continue to position"));
@@ -1009,7 +1017,7 @@ describe("AddOpeningPositionForm", () => {
         source: "coingecko",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1026,28 +1034,20 @@ describe("AddOpeningPositionForm", () => {
       expect(getByText("Bitcoin")).toBeTruthy();
     });
 
-    expect(getByLabelText("Asset name")).toHaveProp("value", "");
-    expect(getByLabelText("Symbol")).toHaveProp("value", "");
-    expect(getByLabelText("Ticker")).toHaveProp("value", "");
-    expect(getByLabelText("Quote source ID")).toHaveProp("value", "");
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(resolveQuote).not.toHaveBeenCalled();
 
     fireEvent(getByLabelText("Search asset"), "submitEditing");
 
-    expect(getByLabelText("Asset name")).toHaveProp("value", "");
-    expect(getByLabelText("Symbol")).toHaveProp("value", "");
-    expect(getByLabelText("Ticker")).toHaveProp("value", "");
-    expect(getByLabelText("Quote source ID")).toHaveProp("value", "");
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(resolveQuote).not.toHaveBeenCalled();
 
     fireEvent.press(getByTestId("asset-lookup-result-coingecko:bitcoin"));
 
     await waitFor(() => {
-      expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
-    expect(getByLabelText("Symbol")).toHaveProp("value", "BTC");
-    expect(getByLabelText("Ticker")).toHaveProp("value", "bitcoin");
-    expect(getByLabelText("Quote source ID")).toHaveProp("value", "bitcoin");
+    expect(getByText("BTC • bitcoin • CoinGecko suggestion")).toBeTruthy();
     expect(resolveQuote).toHaveBeenCalledTimes(1);
   });
 
@@ -1079,7 +1079,7 @@ describe("AddOpeningPositionForm", () => {
       error: "CoinGecko quote response did not include an INR price.",
       ok: false,
     });
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1095,20 +1095,18 @@ describe("AddOpeningPositionForm", () => {
     await waitFor(() => {
       expect(getByText("Bitcoin")).toBeTruthy();
     });
-    expect(getByLabelText("Asset name")).toHaveProp("value", "");
+    expect(queryByTestId("manual-asset-fields")).toBeNull();
 
     fireEvent.press(getByText("Bitcoin"));
 
     await waitFor(() => {
-      expect(getByLabelText("Asset name")).toHaveProp("value", "Bitcoin");
+      expect(getByTestId("selected-asset-summary")).toBeTruthy();
       expect(
         getByText("Live price unavailable. Enter current price manually."),
       ).toBeTruthy();
     });
-    expect(getByLabelText("Symbol")).toHaveProp("value", "BTC");
-    expect(getByLabelText("Ticker")).toHaveProp("value", "bitcoin");
-    expect(getByLabelText("Quote source ID")).toHaveProp("value", "bitcoin");
-    fireEvent.press(getByText("Continue to classification"));
+    expect(getByText("BTC • bitcoin • CoinGecko suggestion")).toBeTruthy();
+    fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "");
   });

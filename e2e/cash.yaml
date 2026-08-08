@@ -9,6 +9,8 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "cash-screen"
 - tapOn:
+    id: "cash-entry-deposit"
+- tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
 - hideKeyboard

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 
 import {
@@ -190,6 +191,7 @@ export function AddOpeningPositionForm({
     updateTicker,
     viewSavedHolding,
   } = holding;
+  const [isManualEntryExpanded, setIsManualEntryExpanded] = useState(false);
   const hasSelectedAssetSummary = Boolean(selectedAssetId || selectedLookupResult);
   const selectedAssetSourceLabel = selectedLookupResult
     ? `${selectedLookupResult.sourceLabel} suggestion`
@@ -319,7 +321,10 @@ export function AddOpeningPositionForm({
             <TouchableOpacity
               accessibilityRole="button"
               activeOpacity={0.74}
-              onPress={changeSelectedAsset}
+              onPress={() => {
+                setIsManualEntryExpanded(false);
+                changeSelectedAsset();
+              }}
               testID="selected-asset-change"
             >
               <AppText color="secondary" variant="caption" weight="bold">
@@ -335,7 +340,7 @@ export function AddOpeningPositionForm({
                 setLookupQuery(value);
                 setQuoteStatus("");
               }}
-              placeholder="Search HDFC Bank, NIFTYBEES, Bitcoin..."
+              placeholder="Search name, symbol, or ticker"
               returnKeyType="search"
               testID="asset-lookup-input"
               value={lookupQuery}
@@ -354,7 +359,10 @@ export function AddOpeningPositionForm({
                     accessibilityRole="button"
                     activeOpacity={0.74}
                     key={asset.id}
-                    onPress={() => selectAsset(asset)}
+                    onPress={() => {
+                      setIsManualEntryExpanded(false);
+                      selectAsset(asset);
+                    }}
                     style={styles.lookupResult}
                     testID={`existing-asset-${asset.id}`}
                   >
@@ -394,6 +402,7 @@ export function AddOpeningPositionForm({
                         activeOpacity={0.74}
                         key={result.id}
                         onPress={() => {
+                          setIsManualEntryExpanded(false);
                           void selectLookupResult(result);
                         }}
                         style={styles.lookupResult}
@@ -426,10 +435,22 @@ export function AddOpeningPositionForm({
             {quoteStatus}
           </AppText>
         ) : null}
-        <View style={styles.manualFields}>
-          <AppText color="secondary" variant="caption" weight="medium">
-            Manual fallback
-          </AppText>
+        {!hasSelectedAssetSummary ? (
+          <AppButton
+            accessibilityState={{ expanded: isManualEntryExpanded }}
+            onPress={() => setIsManualEntryExpanded((expanded) => !expanded)}
+            testID="toggle-manual-asset-entry"
+            title={
+              isManualEntryExpanded
+                ? "Use asset search instead"
+                : "Can't find your asset? Add manually"
+            }
+            variant="ghost"
+          />
+        ) : null}
+        {!hasSelectedAssetSummary && isManualEntryExpanded ? (
+        <View style={styles.manualFields} testID="manual-asset-fields">
+          <SectionHeader title="Manual asset details" />
           <FormTextField
             error={errors.assetName}
             label="Asset name"
@@ -474,6 +495,7 @@ export function AddOpeningPositionForm({
             value={quoteSourceId}
           />
         </View>
+        ) : null}
       </PremiumCard>
       ) : null}
 
@@ -890,7 +912,10 @@ export function AddOpeningPositionForm({
               title="View holding"
             />
             <AppButton
-              onPress={startAnotherHolding}
+              onPress={() => {
+                setIsManualEntryExpanded(false);
+                startAnotherHolding();
+              }}
               testID="add-another-holding-button"
               title="Add another"
               variant="secondary"
@@ -901,11 +926,13 @@ export function AddOpeningPositionForm({
 
       <View style={styles.actions}>
         {currentPhase === "asset" ? (
-          <AppButton
-            onPress={continueFromAsset}
-            testID="continue-class-button"
-            title="Continue to classification"
-          />
+          hasSelectedAssetSummary || isManualEntryExpanded ? (
+            <AppButton
+              onPress={continueFromAsset}
+              testID="continue-class-button"
+              title="Continue to confirm details"
+            />
+          ) : null
         ) : null}
         {currentPhase === "class" ? (
           <>
@@ -1061,10 +1088,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   manualFields: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingTop: spacing.xs,
   },
   negativeText: {
     color: colors.loss,

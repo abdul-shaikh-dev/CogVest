@@ -7,6 +7,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "tab-cash"
 - tapOn:
+    id: "cash-entry-deposit"
+- tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
 - hideKeyboard

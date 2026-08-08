@@ -14,4 +14,6 @@ const monthNames = [
   "Dec",
 ];
 
-output.currentLocalDate = `${now.getDate()} ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+const day = String(now.getDate()).padStart(2, "0");
+
+output.currentLocalDate = `${day} ${monthNames[now.getMonth()]} ${now.getFullYear()}`;

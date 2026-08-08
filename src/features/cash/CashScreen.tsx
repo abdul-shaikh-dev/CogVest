@@ -91,7 +91,7 @@ export function CashScreen({
     monthlyMetrics,
     monthlyMovementSummary,
   } = useCash({ now, store });
-  const [mode, setMode] = useState<CashEntryMode>("addition");
+  const [mode, setMode] = useState<CashEntryMode | null>(null);
   const [additionPurpose, setAdditionPurpose] =
     useState<AdditionPurpose>("capitalContribution");
   const [amount, setAmount] = useState("");
@@ -102,7 +102,7 @@ export function CashScreen({
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
   const entryIdRef = useRef(createId("cash"));
-  const modeCopy = getCashEntryModeCopy(mode);
+  const modeCopy = mode ? getCashEntryModeCopy(mode) : null;
 
   function resetForm() {
     setAmount("");
@@ -113,7 +113,7 @@ export function CashScreen({
   }
 
   async function submit() {
-    if (isSavingRef.current) {
+    if (isSavingRef.current || !mode) {
       return;
     }
 
@@ -145,6 +145,7 @@ export function CashScreen({
       await Promise.resolve();
       entryIdRef.current = createId("cash");
       resetForm();
+      setMode(null);
     } catch {
       setErrors({
         save: "This cash entry could not be saved safely. Review it and try again.",
@@ -215,9 +216,10 @@ export function CashScreen({
           </AppText>
         </View>
 
-        <View style={styles.segmentedControl}>
+        <View style={styles.entryActions}>
           {manualEntryModes.map((entryMode) => (
             <Pressable
+              accessibilityHint={`Opens the ${getCashEntryModeLabel(entryMode).toLowerCase()} form`}
               accessibilityRole="button"
               accessibilityState={{ selected: mode === entryMode }}
               key={entryMode}
@@ -226,14 +228,22 @@ export function CashScreen({
                 setErrors({});
               }}
               style={({ pressed }) => [
-                styles.segment,
-                mode === entryMode && styles.segmentActive,
+                styles.entryAction,
+                mode === entryMode &&
+                  (entryMode === "addition"
+                    ? styles.depositActionActive
+                    : styles.withdrawActionActive),
                 pressed && styles.pressed,
               ]}
+              testID={`cash-entry-${entryMode === "addition" ? "deposit" : "withdraw"}`}
             >
               <AppText
-                color={mode === entryMode ? "primary" : "secondary"}
-                style={mode === entryMode && styles.segmentActiveText}
+                color="primary"
+                style={
+                  mode === entryMode && entryMode === "addition"
+                    ? styles.depositActionText
+                    : undefined
+                }
                 weight="bold"
               >
                 {getCashEntryModeLabel(entryMode)}
@@ -242,7 +252,8 @@ export function CashScreen({
           ))}
         </View>
 
-        <PremiumCard>
+        {mode && modeCopy ? (
+          <PremiumCard testID="cash-entry-form">
           <View style={styles.entryHeader}>
             <View style={styles.entryHeaderCopy}>
               <SectionHeader title={modeCopy.title} />
@@ -332,6 +343,13 @@ export function CashScreen({
             testID="cash-label-input"
             value={label}
           />
+          <FormTextField
+            label="Notes"
+            multiline
+            onChangeText={setNotes}
+            placeholder="Optional note"
+            value={notes}
+          />
           <AppButton
             accessibilityState={{ busy: isSaving, disabled: isSaving }}
             disabled={isSaving}
@@ -344,14 +362,8 @@ export function CashScreen({
               {errors.save}
             </AppText>
           ) : null}
-          <FormTextField
-            label="Notes"
-            multiline
-            onChangeText={setNotes}
-            placeholder="Optional note"
-            value={notes}
-          />
-        </PremiumCard>
+          </PremiumCard>
+        ) : null}
 
         {entries.length === 0 ? (
           <EmptyState
@@ -413,6 +425,26 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  entryAction: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  entryActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  depositActionActive: {
+    backgroundColor: "rgba(52,199,89,0.12)",
+  },
+  depositActionText: {
+    color: colors.profit,
+  },
   errorText: {
     color: colors.loss,
   },
@@ -466,5 +498,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     flexDirection: "row",
     padding: spacing.xs,
+  },
+  withdrawActionActive: {
+    backgroundColor: colors.surface.elevated,
   },
 });
