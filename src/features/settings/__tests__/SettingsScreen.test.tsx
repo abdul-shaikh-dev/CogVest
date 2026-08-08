@@ -27,12 +27,18 @@ describe("SettingsScreen", () => {
     expect(getByTestId("value-mask-toggle")).toBeTruthy();
     expect(getByText("Settings")).toBeTruthy();
     expect(getByText("Local only")).toBeTruthy();
-    expect(getByText("Your portfolio stays here")).toBeTruthy();
+    expect(getByText("Privacy & storage")).toBeTruthy();
     expect(getByText("Local storage")).toBeTruthy();
     expect(getByText("Active")).toBeTruthy();
     expect(
-      getByText("Portfolio records use CogVest's app-private Android storage."),
+      getByText("Records stay in CogVest's app-private Android storage."),
     ).toBeTruthy();
+    expect(getByText("No account • No cloud sync • No analytics")).toBeTruthy();
+    expect(queryByText("Android backup")).toBeNull();
+
+    fireEvent.press(getByTestId("privacy-details-toggle"));
+
+    expect(getByTestId("privacy-storage-details")).toBeTruthy();
     expect(getByText("Android backup")).toBeTruthy();
     expect(getByText("Excluded")).toBeTruthy();
     expect(
@@ -42,7 +48,7 @@ describe("SettingsScreen", () => {
     ).toBeTruthy();
     expect(
       getByText(
-        "Records use Android app-private storage and device security. CogVest does not add separate app encryption in V1.",
+        "Protected by Android app-private storage and device security. Separate app encryption is not included in V1.",
       ),
     ).toBeTruthy();
     expect(getByText("Account")).toBeTruthy();
@@ -78,7 +84,7 @@ describe("SettingsScreen", () => {
       source: "manual",
     });
 
-    const { getByText, queryByTestId, queryByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <SettingsScreen store={store} />,
     );
 
@@ -98,14 +104,15 @@ describe("SettingsScreen", () => {
     expect(queryByText("USD & crypto fallback")).toBeNull();
     expect(queryByText("Density changes")).toBeNull();
     expect(queryByText(/Export/i)).toBeNull();
+    fireEvent.press(getByTestId("privacy-details-toggle"));
     expect(getByText("Android backup")).toBeTruthy();
     expect(queryByText(/Minimal Mode/i)).toBeNull();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(getByText("Clear local data")).toBeTruthy();
     expect(
-      getByText("Disabled until confirmation and backup guidance exist."),
+      getByText("Not available in V1. No data is changed from this screen."),
     ).toBeTruthy();
-    expect(getByText("Deferred")).toBeTruthy();
+    expect(getByText("Unavailable")).toBeTruthy();
     expect(queryByTestId("clear-local-data-button")).toBeNull();
   });
 });

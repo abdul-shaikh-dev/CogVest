@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -22,6 +23,8 @@ type SettingsScreenProps = {
 export function SettingsScreen({
   store = getPortfolioStore(),
 }: SettingsScreenProps) {
+  const [isPrivacyDetailsExpanded, setIsPrivacyDetailsExpanded] =
+    useState(false);
   const { maskWealthValues, quoteStatus, toggleMaskWealthValues } = useSettings({
     store,
   });
@@ -96,48 +99,67 @@ export function SettingsScreen({
           </View>
         </Pressable>
 
-        <PremiumCard>
-          <View style={styles.trustIntro}>
-            <View style={styles.trustCopy}>
-              <AppText variant="title" weight="bold">
-                Your portfolio stays here
-              </AppText>
-              <AppText color="secondary">
-                Records use Android app-private storage and device security.
-                CogVest does not add separate app encryption in V1.
-              </AppText>
-            </View>
-          </View>
+        <PremiumCard testID="privacy-storage-card">
+          <SectionHeader title="Privacy & storage" />
           <GroupedListRow
             icon="phone-portrait-outline"
             title="Local storage"
-            meta="Portfolio records use CogVest's app-private Android storage."
+            meta="Records stay in CogVest's app-private Android storage."
             value="Active"
           />
-          <GroupedListRow
-            icon="cloud-offline-outline"
-            title="Android backup"
-            meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
-            value="Excluded"
-          />
-          <GroupedListRow
-            icon="person-circle-outline"
-            title="Account"
-            meta="No sign-in or remote profile is required in V1."
-            value="Not required"
-          />
-          <GroupedListRow
-            icon="cloud-offline-outline"
-            title="Cloud sync"
-            meta="No portfolio data is sent to a backend."
-            value="Off"
-          />
-          <GroupedListRow
-            icon="analytics-outline"
-            title="Analytics"
-            meta="No product telemetry is enabled in V1."
-            value="Off"
-          />
+          <Pressable
+            accessibilityLabel="Privacy and storage details"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isPrivacyDetailsExpanded }}
+            onPress={() => setIsPrivacyDetailsExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [
+              styles.disclosureRow,
+              pressed && styles.pressed,
+            ]}
+            testID="privacy-details-toggle"
+          >
+            <View style={styles.disclosureCopy}>
+              <AppText weight="medium">Privacy details</AppText>
+              <AppText color="secondary" variant="caption">
+                No account • No cloud sync • No analytics
+              </AppText>
+            </View>
+            <AppText color="secondary" variant="caption" weight="bold">
+              {isPrivacyDetailsExpanded ? "Hide" : "Show"}
+            </AppText>
+          </Pressable>
+          {isPrivacyDetailsExpanded ? (
+            <View style={styles.privacyDetails} testID="privacy-storage-details">
+              <AppText color="secondary" variant="caption">
+                Protected by Android app-private storage and device security.
+                Separate app encryption is not included in V1.
+              </AppText>
+              <GroupedListRow
+                icon="cloud-offline-outline"
+                title="Android backup"
+                meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
+                value="Excluded"
+              />
+              <GroupedListRow
+                icon="person-circle-outline"
+                title="Account"
+                meta="No sign-in or remote profile is required in V1."
+                value="Not required"
+              />
+              <GroupedListRow
+                icon="cloud-offline-outline"
+                title="Cloud sync"
+                meta="No portfolio data is sent to a backend."
+                value="Off"
+              />
+              <GroupedListRow
+                icon="analytics-outline"
+                title="Analytics"
+                meta="No product telemetry is enabled in V1."
+                value="Off"
+              />
+            </View>
+          ) : null}
         </PremiumCard>
 
         <PremiumCard>
@@ -183,13 +205,12 @@ export function SettingsScreen({
         </PremiumCard>
 
         <PremiumCard>
-          <SectionHeader title="Data" />
+          <SectionHeader title="Data availability" />
           <GroupedListRow
-            destructive
             icon="trash-outline"
             title="Clear local data"
-            meta="Disabled until confirmation and backup guidance exist."
-            value="Deferred"
+            meta="Not available in V1. No data is changed from this screen."
+            value="Unavailable"
           />
         </PremiumCard>
       </View>
@@ -209,6 +230,17 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  disclosureCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  disclosureRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: interaction.minimumTouchTarget,
+    paddingVertical: spacing.xs,
   },
   localDot: {
     backgroundColor: colors.primary,
@@ -238,6 +270,10 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: interaction.pressedOpacity,
   },
+  privacyDetails: {
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+  },
   switchOn: {
     backgroundColor: colors.primary,
   },
@@ -266,11 +302,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "space-between",
-  },
-  trustCopy: {
-    gap: spacing.xs,
-  },
-  trustIntro: {
-    paddingBottom: spacing.xs,
   },
 });

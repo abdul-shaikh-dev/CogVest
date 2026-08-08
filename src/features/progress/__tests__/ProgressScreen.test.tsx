@@ -346,11 +346,11 @@ describe("ProgressScreen", () => {
   it("opens the dedicated snapshot review flow", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewSnapshot = jest.fn();
-    const { getByText, queryByTestId } = render(
+    const { getByLabelText, queryByTestId } = render(
       <ProgressScreen onReviewSnapshot={onReviewSnapshot} store={store} />,
     );
 
-    fireEvent.press(getByText("Review snapshot"));
+    fireEvent.press(getByLabelText("Review month-end snapshot"));
 
     expect(onReviewSnapshot).toHaveBeenCalledTimes(1);
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
