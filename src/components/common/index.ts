@@ -6,6 +6,8 @@ export { MASKED_INR_VALUE, MaskedValue } from "./MaskedValue";
 export {
   assetClassLabel,
   CategoryIcon,
+  getAdaptiveLayoutMode,
+  getMetricColumnCount,
   GroupedListRow,
   HeroMetric,
   IconButton,
@@ -14,6 +16,7 @@ export {
   ScreenHeader,
   SectionHeader,
 } from "./Premium";
+export type { AdaptiveLayoutMode } from "./Premium";
 export { PlaceholderScreen } from "./PlaceholderScreen";
 export {
   androidRipple,

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { render } from "@testing-library/react-native";
 
 import {
@@ -7,7 +8,9 @@ import {
   IconButton,
   MaskedValue,
   androidRipple,
+  getAdaptiveLayoutMode,
   getPressedStateStyle,
+  getMetricColumnCount,
   minimumTouchTargetStyle,
 } from "@/src/components/common";
 import { getButtonInteractionStyle } from "@/src/components/common/AppButton";
@@ -84,7 +87,7 @@ describe("common UI primitives", () => {
   });
 
   it("renders icon buttons with the minimum Android touch target", () => {
-    const { getByTestId } = render(
+    const { getByTestId, UNSAFE_getByType } = render(
       <IconButton
         accessibilityLabel="Mask values"
         icon="eye-outline"
@@ -98,6 +101,16 @@ describe("common UI primitives", () => {
       minWidth: interaction.minimumTouchTarget,
       width: 46,
     });
+    expect(UNSAFE_getByType(Ionicons).props.accessible).toBe(false);
+  });
+
+  it("selects adaptive shared layouts from the Android font scale", () => {
+    expect(getAdaptiveLayoutMode(1)).toBe("standard");
+    expect(getAdaptiveLayoutMode(1.3)).toBe("large");
+    expect(getAdaptiveLayoutMode(1.5)).toBe("accessibility");
+    expect(getMetricColumnCount(1)).toBe(4);
+    expect(getMetricColumnCount(1.3)).toBe(2);
+    expect(getMetricColumnCount(2)).toBe(1);
   });
 
   it("masks INR wealth values without masking percentages", () => {
