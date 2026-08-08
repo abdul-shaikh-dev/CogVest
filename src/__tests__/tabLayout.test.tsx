@@ -2,6 +2,20 @@ import React from "react";
 
 import TabLayout from "../../app/(tabs)/_layout";
 
+jest.mock("react-native", () => {
+  const actual = jest.requireActual("react-native");
+  const mocked = Object.create(actual);
+  Object.defineProperty(mocked, "useWindowDimensions", {
+    value: () => ({
+      fontScale: 1,
+      height: 800,
+      scale: 1,
+      width: 400,
+    }),
+  });
+  return mocked;
+});
+
 jest.mock("expo-router", () => {
   const React = require("react");
 
@@ -53,6 +67,7 @@ describe("TabLayout", () => {
     const progress = screens.find((screen) => screen.props.name === "progress");
 
     expect(progress?.props.options).toMatchObject({
+      tabBarAccessibilityLabel: "Progress",
       tabBarButtonTestID: "tab-progress",
       title: "Progress",
     });

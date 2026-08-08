@@ -1,6 +1,7 @@
 import {
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
   type DimensionValue,
 } from "react-native";
@@ -19,6 +20,7 @@ import {
   SectionHeader,
   assetClassLabel,
   CategoryIcon,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import {
   formatCompactINR,
@@ -160,6 +162,8 @@ export function DashboardScreen({
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
+  const { fontScale } = useWindowDimensions();
+  const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now, refreshQuotes, store });
   const displayAllocation = toDisplayAllocation(
     dashboard.holdings,
@@ -265,8 +269,21 @@ export function DashboardScreen({
               </AppText>
             </View>
           </View>
-          <View style={styles.heroMetrics} testID="dashboard-top-metrics">
-            <View style={styles.heroMetricCell}>
+          <View
+            style={[
+              styles.heroMetrics,
+              adaptiveLayoutMode !== "standard" && styles.heroMetricsWrapped,
+            ]}
+            testID="dashboard-top-metrics"
+          >
+            <View
+              style={[
+                styles.heroMetricCell,
+                adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
+                adaptiveLayoutMode === "accessibility" &&
+                  styles.heroMetricCellFull,
+              ]}
+            >
               <AppText color="secondary" variant="caption">
                 Invested
               </AppText>
@@ -276,7 +293,14 @@ export function DashboardScreen({
                 weight="bold"
               />
             </View>
-            <View style={styles.heroMetricCell}>
+            <View
+              style={[
+                styles.heroMetricCell,
+                adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
+                adaptiveLayoutMode === "accessibility" &&
+                  styles.heroMetricCellFull,
+              ]}
+            >
               <AppText color="secondary" variant="caption">
                 Holdings P&L
               </AppText>
@@ -287,7 +311,14 @@ export function DashboardScreen({
                 weight="bold"
               />
             </View>
-            <View style={styles.heroMetricCell}>
+            <View
+              style={[
+                styles.heroMetricCell,
+                adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
+                adaptiveLayoutMode === "accessibility" &&
+                  styles.heroMetricCellFull,
+              ]}
+            >
               <AppText color="secondary" variant="caption">
                 Holdings P&L %
               </AppText>
@@ -659,11 +690,22 @@ const styles = StyleSheet.create({
   },
   heroMetricCell: {
     flex: 1,
+    flexBasis: 0,
     gap: spacing.xs,
+    minWidth: 0,
+  },
+  heroMetricCellFull: {
+    flexBasis: "100%",
+  },
+  heroMetricCellHalf: {
+    flexBasis: "45%",
   },
   heroMetrics: {
     flexDirection: "row",
     gap: spacing.cardInner,
+  },
+  heroMetricsWrapped: {
+    flexWrap: "wrap",
   },
   heroValue: {
     fontSize: 36,
