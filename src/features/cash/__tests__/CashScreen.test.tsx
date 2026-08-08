@@ -23,13 +23,12 @@ describe("CashScreen", () => {
   it("shows an empty cash state with zero balance", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
-    const { getAllByText, getByTestId, getByText } = render(<CashScreen store={store} />);
+    const { getAllByText, getByTestId, getByText, queryByTestId } = render(<CashScreen store={store} />);
 
     expect(getByTestId("cash-screen")).toBeTruthy();
-    expect(getByTestId("cash-amount-input")).toBeTruthy();
-    expect(getByTestId("cash-label-input")).toBeTruthy();
-    expect(getByTestId("cash-date-input")).toBeTruthy();
-    expect(getByTestId("save-cash-entry-button")).toBeTruthy();
+    expect(getByTestId("cash-entry-deposit")).toBeTruthy();
+    expect(getByTestId("cash-entry-withdraw")).toBeTruthy();
+    expect(queryByTestId("cash-entry-form")).toBeNull();
     expect(getAllByText("₹0.00").length).toBeGreaterThan(0);
     expect(getByText("No cash movement yet")).toBeTruthy();
     expect(getByText("Add broker or bank cash only when it should count toward portfolio value.")).toBeTruthy();
@@ -39,6 +38,7 @@ describe("CashScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getAllByText, getByLabelText, getByTestId, getByText } = render(<CashScreen store={store} />);
 
+    fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "Broker cash");
     selectDate(getByTestId, "2026-04-20");
@@ -50,6 +50,7 @@ describe("CashScreen", () => {
       expect(getByText("Capital added to deployable cash")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
     });
+    expect(() => getByTestId("cash-entry-form")).toThrow();
 
     fireEvent.press(getByText("Withdraw"));
     fireEvent.changeText(getByLabelText("Amount"), "250");
@@ -72,6 +73,11 @@ describe("CashScreen", () => {
     expect(getByText("Included in portfolio")).toBeTruthy();
     expect(queryByText("Balance ₹0")).toBeNull();
     expect(getByText("No movement yet")).toBeTruthy();
+    expect(queryByText("Deposit cash")).toBeNull();
+    expect(queryByText("Save deposit")).toBeNull();
+
+    fireEvent.press(getByText("Deposit"));
+
     expect(getByText("Deposit cash")).toBeTruthy();
     expect(getByText("Add money that is available for future investment.")).toBeTruthy();
     expect(getByText("Adds balance")).toBeTruthy();
@@ -91,6 +97,7 @@ describe("CashScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
 
+    fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.press(getByTestId("cash-purpose-income"));
     fireEvent.changeText(getByLabelText("Amount"), "50000");
     fireEvent.changeText(getByLabelText("Label"), "Salary");
@@ -113,6 +120,7 @@ describe("CashScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
 
+    fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "One deposit");
     fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -142,6 +150,7 @@ describe("CashScreen", () => {
 
       originalSetItem(key, value);
     };
+    fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
     fireEvent.changeText(getByLabelText("Label"), "Retry deposit");
     fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -295,6 +304,7 @@ describe("CashScreen", () => {
       <CashScreen now={new Date(2026, 6, 22, 12)} store={store} />,
     );
 
+    fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     expect(getByText("Amount must be a valid number.")).toBeTruthy();

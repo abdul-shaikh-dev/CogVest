@@ -7,6 +7,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "tab-cash"
 - tapOn:
+    id: "cash-entry-deposit"
+- tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
 - hideKeyboard
@@ -28,6 +30,8 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///add-trade"
 - assertVisible:
     id: "add-trade-screen"
+- tapOn:
+    id: "toggle-manual-asset-entry"
 - tapOn:
     id: "asset-input"
 - inputText: "Accounting Test Asset"

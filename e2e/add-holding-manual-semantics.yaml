@@ -12,6 +12,8 @@ appId: com.abdulshaikh.cogvest
       id: "add-holding-phase-asset"
     timeout: 30000
 - tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
 - tapOn:

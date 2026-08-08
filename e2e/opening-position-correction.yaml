@@ -8,6 +8,8 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "add-holding-phase-asset"
 - tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
     id: "asset-input"
 - inputText: "Reliance Industries"
 - hideKeyboard
