@@ -39,7 +39,7 @@ import {
 import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
-import { colors, interaction, spacing } from "@/src/theme";
+import { colors, interaction, radii, spacing } from "@/src/theme";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
 type ProgressScreenProps = {
@@ -523,6 +523,7 @@ function TrendChart({
             <AppText
               key={`${label}-${index}`}
               color="secondary"
+              numberOfLines={1}
               testID={`${testIDPrefix}-y-axis-${index}`}
               variant="caption"
             >
@@ -1318,20 +1319,33 @@ function SnapshotStatusCard({
     ? getMonthlySnapshotPriceConfidence(status.snapshot)
     : null;
   const provisionalMonthLabels = status.provisionalMonths.map(formatMonth);
+  const latestProvisionalMonth =
+    provisionalMonthLabels[provisionalMonthLabels.length - 1];
   const provisionalMonthCopy = provisionalMonthLabels.length
-    ? `Estimated prices remain for ${provisionalMonthLabels.join(", ")}. Review if you have better month-end values.`
+    ? provisionalMonthLabels.length > 2
+      ? `Estimated prices remain for ${provisionalMonthLabels.length} months, latest ${latestProvisionalMonth}. Review if you have better month-end values.`
+      : `Estimated prices remain for ${provisionalMonthLabels.join(", ")}. Review if you have better month-end values.`
     : null;
 
   return (
-    <PremiumCard testID="month-end-snapshot-status-card">
+    <View
+      style={styles.snapshotStatusCard}
+      testID="month-end-snapshot-status-card"
+    >
       <View style={styles.snapshotStatusHeader}>
         <View style={styles.snapshotCopy}>
-          <SectionHeader title="Month-end snapshot" />
+          <AppText weight="bold">Month-end snapshot</AppText>
           <AppText color="secondary" variant="caption">
             {status.message}
           </AppText>
         </View>
-        <AppButton title="Review snapshot" onPress={onReview} variant="secondary" />
+        <AppButton
+          accessibilityLabel="Review month-end snapshot"
+          onPress={onReview}
+          style={styles.snapshotReviewAction}
+          title="Review"
+          variant="secondary"
+        />
       </View>
       {status.warnings.map((warning) => (
         <AppText color="secondary" key={warning} variant="caption">
@@ -1353,7 +1367,7 @@ function SnapshotStatusCard({
           Reviewed values saved manually.
         </AppText>
       ) : null}
-    </PremiumCard>
+    </View>
   );
 }
 
@@ -1390,11 +1404,6 @@ export function ProgressScreen({
               : getMonthLabel()
           }
         />
-        <SnapshotStatusCard
-          onReview={reviewSnapshot}
-          status={progress.snapshotAutomationStatus}
-        />
-
         {progress.latestSummary ? (
           <>
             <MetricGroup
@@ -1432,6 +1441,11 @@ export function ProgressScreen({
                   ),
                 },
               ]}
+            />
+
+            <SnapshotStatusCard
+              onReview={reviewSnapshot}
+              status={progress.snapshotAutomationStatus}
             />
 
             <ProgressTrendCards
@@ -1483,6 +1497,11 @@ export function ProgressScreen({
                       : `${progress.investmentRate.toFixed(2)}%`,
                 },
               ]}
+            />
+
+            <SnapshotStatusCard
+              onReview={reviewSnapshot}
+              status={progress.snapshotAutomationStatus}
             />
 
             <PremiumCard>
@@ -1551,10 +1570,16 @@ export function ProgressScreen({
             </PremiumCard>
           </>
         ) : (
-          <EmptyState
-            title="No monthly snapshots yet"
-            message="Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."
-          />
+          <>
+            <EmptyState
+              title="No monthly snapshots yet"
+              message="Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."
+            />
+            <SnapshotStatusCard
+              onReview={reviewSnapshot}
+              status={progress.snapshotAutomationStatus}
+            />
+          </>
         )}
 
       </View>
@@ -1819,9 +1844,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: "space-between",
   },
+  snapshotReviewAction: {
+    alignSelf: "flex-start",
+  },
+  snapshotStatusCard: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.sm,
+  },
   snapshotStatusHeader: {
     alignItems: "center",
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "space-between",
   },
@@ -1850,7 +1886,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
-    width: 30,
+    width: 52,
   },
   assetInsightGrid: {
     borderTopColor: colors.border.subtle,
