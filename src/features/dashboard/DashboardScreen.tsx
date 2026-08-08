@@ -398,8 +398,14 @@ export function DashboardScreen({
 
         {hasAllocation ? (
           <PremiumCard testID="dashboard-allocation-card">
-            <View style={styles.allocationHeader}>
-              <AppText variant="title" weight="bold">
+            <View
+              style={[
+                styles.allocationHeader,
+                adaptiveLayoutMode !== "standard" &&
+                  styles.allocationHeaderStacked,
+              ]}
+            >
+              <AppText style={styles.allocationTitle} variant="title" weight="bold">
                 {hasNegativeCash
                   ? hasPositiveNetPortfolio
                     ? "Net exposure"
@@ -491,25 +497,41 @@ export function DashboardScreen({
           />
         )}
 
-        <PremiumCard testID="dashboard-quote-card">
-          <View style={styles.infoCardRow}>
-            <CategoryIcon assetClass="neutral" />
+        <PremiumCard style={styles.supportCard} testID="dashboard-support-card">
+          <View
+            accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
+            style={styles.supportRow}
+            testID="dashboard-quote-card"
+          >
+            <CategoryIcon assetClass="neutral" size={18} />
             <View style={styles.infoCardCopy}>
-              <AppText weight="bold">{quoteStatus.title}</AppText>
+              <AppText
+                style={quoteStatus.prominent ? styles.warningText : undefined}
+                variant="caption"
+                weight="bold"
+              >
+                {quoteStatus.title}
+              </AppText>
               <AppText color="secondary" variant="caption">
                 {quoteStatus.detail}
               </AppText>
             </View>
           </View>
-        </PremiumCard>
-
-        <PremiumCard testID="dashboard-next-review-card">
-          <View style={styles.reviewCardRow}>
-            <CategoryIcon assetClass="neutral" />
+          <View style={styles.supportDivider} />
+          <View
+            style={[
+              styles.supportRow,
+              adaptiveLayoutMode !== "standard" && styles.supportRowStacked,
+            ]}
+            testID="dashboard-next-review-card"
+          >
+            <CategoryIcon assetClass="neutral" size={18} />
             <View style={styles.infoCardCopy}>
-              <AppText weight="bold">Review month-end snapshot</AppText>
+              <AppText variant="caption" weight="bold">
+                Month-end snapshot
+              </AppText>
               <AppText color="secondary" variant="caption">
-                Your snapshot is generated automatically. Review it in Progress only if a correction is needed.
+                Generated automatically. Review only if a correction is needed.
               </AppText>
             </View>
             <Pressable
@@ -585,6 +607,7 @@ function getQuoteStatus({
   if (isRefreshing) {
     return {
       detail: counts,
+      prominent: false,
       title: "Refreshing quotes...",
     };
   }
@@ -603,6 +626,7 @@ function getQuoteStatus({
           ? "Existing prices remain available."
           : "No usable prices are available."
       }`,
+      prominent: usablePriceCount === 0 || quoteFreshness.missing > 0,
       title:
         usablePriceCount > 0
           ? "Refresh partially completed"
@@ -613,21 +637,22 @@ function getQuoteStatus({
   if (quoteFreshness.status === "empty") {
     return {
       detail: "Quote coverage appears after your first holding.",
+      prominent: false,
       title: "No holdings to price",
     };
   }
 
-  const titles = {
-    current: "Quotes current",
-    manual: "Manual prices in use",
-    missing: "Prices missing",
-    partial: "Quote coverage needs attention",
-    stale: "Quotes are stale",
-  } as const;
+  const prominent = quoteFreshness.missing > 0;
+  const title = prominent
+    ? "Price coverage needs attention"
+    : quoteFreshness.status === "current"
+      ? "Prices up to date"
+      : "Using saved prices";
 
   return {
     detail: counts,
-    title: titles[quoteFreshness.status],
+    prominent,
+    title,
   };
 }
 
@@ -636,6 +661,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  allocationHeaderStacked: {
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  allocationTitle: {
+    flexShrink: 1,
   },
   allocationDot: {
     borderRadius: radii.pill,
@@ -730,11 +763,6 @@ const styles = StyleSheet.create({
   liabilityHeader: {
     flexDirection: "row",
   },
-  reviewCardRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.cardInner,
-  },
   inlineAction: {
     alignItems: "center",
     justifyContent: "center",
@@ -756,6 +784,23 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
+  },
+  supportCard: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  supportDivider: {
+    backgroundColor: colors.border.subtle,
+    height: StyleSheet.hairlineWidth,
+  },
+  supportRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  supportRowStacked: {
+    alignItems: "flex-start",
+    flexWrap: "wrap",
   },
   warningText: {
     color: colors.warning,

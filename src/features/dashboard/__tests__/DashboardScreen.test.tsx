@@ -151,7 +151,7 @@ describe("DashboardScreen", () => {
     await waitFor(() => {
       expect(refreshQuotes).toHaveBeenCalledTimes(1);
     });
-    expect(getByText("Quotes current")).toBeTruthy();
+    expect(getByText("Prices up to date")).toBeTruthy();
     expect(getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
   });
 
@@ -196,7 +196,7 @@ describe("DashboardScreen", () => {
         "Current 0 · Stale 1 · Manual 0 · Missing 0. 1 failed. Existing prices remain available.",
       ),
     ).toBeTruthy();
-    expect(queryByText(/Quotes current/u)).toBeNull();
+    expect(queryByText(/Prices up to date/u)).toBeNull();
   });
 
   it("does not promise cached prices when the first refresh fails", async () => {
@@ -253,7 +253,7 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    expect(getByText("Quote coverage needs attention")).toBeTruthy();
+    expect(getByText("Price coverage needs attention")).toBeTruthy();
     expect(
       getByText("Current 1 · Stale 0 · Manual 0 · Missing 1"),
     ).toBeTruthy();
@@ -329,9 +329,9 @@ describe("DashboardScreen", () => {
     expect(getByText("Equity")).toBeTruthy();
     expect(getByText("Open Holdings")).toBeTruthy();
     expect(getByText("Cash")).toBeTruthy();
-    expect(getByText("Quotes are stale")).toBeTruthy();
+    expect(getByText("Using saved prices")).toBeTruthy();
     expect(getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
-    expect(getByText("Review month-end snapshot")).toBeTruthy();
+    expect(getByText("Month-end snapshot")).toBeTruthy();
     expect(getByText("Open Progress")).toBeTruthy();
     expect(getByText("This Month")).toBeTruthy();
     expect(getByText("Cash change")).toBeTruthy();
@@ -513,13 +513,11 @@ describe("DashboardScreen", () => {
     const heroIndex = indexOfText(testIds, "dashboard-portfolio-hero");
     const metricsIndex = indexOfText(testIds, "dashboard-top-metrics");
     const allocationIndex = indexOfText(testIds, "dashboard-allocation-card");
-    const quotesIndex = indexOfText(testIds, "dashboard-quote-card");
-    const reviewIndex = indexOfText(testIds, "dashboard-next-review-card");
+    const supportIndex = indexOfText(testIds, "dashboard-support-card");
 
     expect(metricsIndex).toBeGreaterThan(heroIndex);
     expect(allocationIndex).toBeGreaterThan(metricsIndex);
-    expect(quotesIndex).toBeGreaterThan(allocationIndex);
-    expect(reviewIndex).toBeGreaterThan(quotesIndex);
+    expect(supportIndex).toBeGreaterThan(allocationIndex);
   });
 
   it("masks wealth values when value masking is enabled", () => {
