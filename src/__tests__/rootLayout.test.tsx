@@ -1,5 +1,5 @@
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { render, waitFor } from "@testing-library/react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
@@ -34,7 +34,7 @@ jest.mock("expo-router", () => {
       testID: `stack-screen-${name}`,
     });
 
-  return { Stack };
+  return { Stack, usePathname: () => "/dashboard" };
 });
 
 jest.mock("expo-status-bar", () => {
@@ -68,25 +68,27 @@ describe("RootLayout", () => {
     jest.clearAllMocks();
   });
 
-  it("wraps navigation with the gesture handler root required by native navigation", () => {
-    const { UNSAFE_getByType } = render(<RootLayout />);
+  it("wraps navigation with the gesture handler root required by native navigation", async () => {
+    const { getByTestId, UNSAFE_getByType } = render(<RootLayout />);
     const layout = UNSAFE_getByType(GestureHandlerRootView);
 
     expect(layout.props.style).toEqual({ flex: 1 });
+    await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
   });
 
-  it("registers the add holding route used by dashboard and holdings actions", () => {
+  it("registers the add holding route used by dashboard and holdings actions", async () => {
     const { getByTestId } = render(<RootLayout />);
 
-    expect(getByTestId("stack-screen-(tabs)")).toBeTruthy();
+    await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
     expect(getByTestId("stack-screen-settings")).toBeTruthy();
     expect(getByTestId("stack-screen-add-holding")).toBeTruthy();
     expect(getByTestId("stack-screen-visual-qa-seed")).toBeTruthy();
   });
 
-  it("lets app screens own their premium headers", () => {
+  it("lets app screens own their premium headers", async () => {
     const { getByTestId } = render(<RootLayout />);
 
+    await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
     expect(getByTestId("stack-screen-add-holding").props.options).toEqual({
       headerShown: false,
     });
@@ -95,9 +97,14 @@ describe("RootLayout", () => {
     });
   });
 
-  it("runs month-end snapshot automation on app launch", () => {
+  it("runs month-end snapshot automation on app launch", async () => {
     render(<RootLayout />);
 
-    expect(useMonthEndSnapshotAutomation).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(useMonthEndSnapshotAutomation).toHaveBeenCalledTimes(1),
+    );
+    expect(useMonthEndSnapshotAutomation).toHaveBeenCalledWith({
+      enabled: true,
+    });
   });
 });

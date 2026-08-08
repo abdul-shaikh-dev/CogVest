@@ -41,8 +41,10 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "save-holding-button"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
@@ -83,8 +85,10 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "save-holding-button"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"

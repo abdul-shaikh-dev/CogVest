@@ -1,8 +1,13 @@
-import { render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+
+const { Ionicons } = require("@expo/vector-icons") as {
+  Ionicons: { loadFont: jest.Mock };
+};
 
 const mockUseMonthEndSnapshotAutomation = jest.fn();
 const mockResetAffectedStorage = jest.fn();
 let mockRecoveryState: { incidents: Array<Record<string, unknown>> } | undefined;
+let mockPathname = "/dashboard";
 
 jest.mock("expo-router", () => {
   const React = require("react");
@@ -11,7 +16,7 @@ jest.mock("expo-router", () => {
     React.createElement(View, { testID: "app-stack" }, children);
   Stack.Screen = () => null;
 
-  return { Stack };
+  return { Stack, usePathname: () => mockPathname };
 });
 
 jest.mock("react-native-gesture-handler", () => {
@@ -37,7 +42,8 @@ jest.mock("react-native-safe-area-context", () => {
 });
 
 jest.mock("@/src/features/progress", () => ({
-  useMonthEndSnapshotAutomation: () => mockUseMonthEndSnapshotAutomation(),
+  useMonthEndSnapshotAutomation: (options: unknown) =>
+    mockUseMonthEndSnapshotAutomation(options),
 }));
 
 jest.mock("@/src/store", () => ({
@@ -55,18 +61,23 @@ import RootLayout from "../_layout";
 describe("RootLayout storage recovery boundary", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Ionicons.loadFont.mockResolvedValue(undefined);
     mockRecoveryState = undefined;
+    mockPathname = "/dashboard";
   });
 
-  it("renders normal routes and month-end automation when storage is healthy", () => {
+  it("loads required assets before rendering normal routes", async () => {
     const { getByTestId, queryByTestId } = render(<RootLayout />);
 
-    expect(getByTestId("app-stack")).toBeTruthy();
+    expect(getByTestId("app-asset-gate")).toBeTruthy();
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+
     expect(queryByTestId("storage-recovery-screen")).toBeNull();
     expect(mockUseMonthEndSnapshotAutomation).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks routes and automation when recovery is required", () => {
+  it("blocks routes and automation when recovery is required", async () => {
     mockRecoveryState = {
       incidents: [
         {
@@ -78,8 +89,74 @@ describe("RootLayout storage recovery boundary", () => {
 
     const { getByTestId, queryByTestId } = render(<RootLayout />);
 
-    expect(getByTestId("storage-recovery-screen")).toBeTruthy();
+    await waitFor(() =>
+      expect(getByTestId("storage-recovery-screen")).toBeTruthy(),
+    );
     expect(queryByTestId("app-stack")).toBeNull();
     expect(mockUseMonthEndSnapshotAutomation).not.toHaveBeenCalled();
+  });
+
+  it("does not run month-end automation on the visual QA seed route", async () => {
+    mockPathname = "/visual-qa-seed";
+
+    const { getByTestId } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(mockUseMonthEndSnapshotAutomation).toHaveBeenCalledWith({
+      enabled: false,
+    });
+  });
+
+  it("keeps storage recovery available while required assets are pending", () => {
+    jest.useFakeTimers();
+    Ionicons.loadFont.mockImplementation(() => new Promise(() => undefined));
+    mockRecoveryState = {
+      incidents: [
+        {
+          displayName: "Portfolio records",
+          preserved: true,
+        },
+      ],
+    };
+
+    const { getByTestId, queryByTestId, unmount } = render(<RootLayout />);
+
+    expect(getByTestId("storage-recovery-screen")).toBeTruthy();
+    expect(queryByTestId("app-asset-gate")).toBeNull();
+    unmount();
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  it("offers retry when required assets do not finish loading", async () => {
+    jest.useFakeTimers();
+    Ionicons.loadFont.mockImplementation(() => new Promise(() => undefined));
+
+    const { getByText } = render(<RootLayout />);
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(30000);
+    });
+
+    expect(getByText("CogVest could not finish loading")).toBeTruthy();
+    expect(Ionicons.loadFont).toHaveBeenCalledTimes(3);
+    jest.useRealTimers();
+  });
+
+  it("retries a failed asset load without exposing an unhandled rejection", async () => {
+    Ionicons.loadFont.mockRejectedValue(new Error("asset unavailable"));
+
+    const { getByTestId, getByText } = render(<RootLayout />);
+
+    await waitFor(() =>
+      expect(getByText("CogVest could not finish loading")).toBeTruthy(),
+    );
+    expect(Ionicons.loadFont).toHaveBeenCalledTimes(3);
+
+    Ionicons.loadFont.mockResolvedValue(undefined);
+    fireEvent.press(getByTestId("retry-app-assets"));
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(Ionicons.loadFont).toHaveBeenCalledTimes(4);
   });
 });

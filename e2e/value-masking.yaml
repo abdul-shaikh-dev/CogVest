@@ -38,16 +38,20 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "save-holding-button"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
 - scrollUntilVisible:
     element:
       id: "view-holding-button"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "view-holding-button"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "holdings-screen"
 - openLink: "cogvest:///settings"

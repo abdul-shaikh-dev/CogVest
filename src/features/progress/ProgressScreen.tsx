@@ -38,6 +38,7 @@ import {
 } from "@/src/domain/precision";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { colors, interaction, spacing } from "@/src/theme";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
@@ -1366,7 +1367,7 @@ export function ProgressScreen({
   const hasRunAutomationRef = useRef(false);
 
   useEffect(() => {
-    if (hasRunAutomationRef.current) {
+    if (hasRunAutomationRef.current || isVisualQaSessionActive()) {
       return;
     }
 
