@@ -73,6 +73,14 @@ describe("seedVisualQaPortfolio", () => {
     ]);
     expect(state.preferences.maskWealthValues).toBe(false);
     expect(state.preferences.hasCompletedOnboarding).toBe(true);
+    expect(
+      visualQaAssetLookupResults.find(
+        (result) => result.quoteSourceId === "TCS.NS",
+      ),
+    ).toMatchObject({ name: "Tata Consultancy Services", provider: "yahoo" });
+    expect(
+      state.assets.some((asset) => asset.quoteSourceId === "TCS.NS"),
+    ).toBe(false);
   });
 
   it("resets existing raw state before seeding", () => {
@@ -85,6 +93,25 @@ describe("seedVisualQaPortfolio", () => {
       purpose: "capitalContribution",
       type: "addition",
     });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      id: "old-asset",
+      instrumentType: "stock",
+      name: "Old asset",
+      sectorType: "other",
+      symbol: "OLD",
+      ticker: "OLD.NS",
+    });
+    store.getState().upsertHistoricalQuote({
+      asOfMonth: "2026-01",
+      assetId: "old-asset",
+      basis: "historical-close",
+      currency: "INR",
+      fetchedAt: "2026-02-01T00:00:00.000Z",
+      price: 999,
+      source: "yahoo",
+    });
 
     seedVisualQaPortfolio(store);
     seedVisualQaPortfolio(store);
@@ -95,6 +122,7 @@ describe("seedVisualQaPortfolio", () => {
     expect(state.assets).toHaveLength(4);
     expect(state.cashEntries).toHaveLength(4);
     expect(state.monthlySnapshots).toHaveLength(7);
+    expect(state.historicalQuoteCache).toEqual({});
   });
 
   it("resolves the deterministic quote that belongs to each lookup identity", () => {
@@ -113,6 +141,25 @@ describe("seedVisualQaPortfolio", () => {
       quote: {
         assetId: "generated-nifty-asset",
         price: 255.32,
+        source: "yahoo",
+      },
+    });
+
+    const tcsLookup = visualQaAssetLookupResults.find(
+      (result) => result.quoteSourceId === "TCS.NS",
+    );
+
+    expect(tcsLookup).toBeDefined();
+    expect(
+      resolveVisualQaQuote({
+        ...tcsLookup!,
+        id: "generated-tcs-asset",
+      }),
+    ).toMatchObject({
+      ok: true,
+      quote: {
+        assetId: "generated-tcs-asset",
+        price: 3150.25,
         source: "yahoo",
       },
     });

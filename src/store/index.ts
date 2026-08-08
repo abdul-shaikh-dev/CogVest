@@ -97,6 +97,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addTrade: (trade: Trade) => void;
+  clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
   correctAsset: (asset: Asset) => AssetCorrectionResult;
   correctTrade: (trade: TradeCorrectionInput) => TradeCorrectionResult;
@@ -1253,6 +1254,10 @@ export function createPortfolioStore({
     clearQuoteCache: () => {
       set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
+    },
+    clearHistoricalQuoteCache: () => {
+      set({ historicalQuoteCache: {} });
+      storage.removeItem(historicalQuoteCacheStorageKey);
     },
     correctAsset: (input) => {
       const state = get();

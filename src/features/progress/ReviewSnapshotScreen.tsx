@@ -5,6 +5,7 @@ import type { StoreApi } from "zustand/vanilla";
 import { AppButton, AppText, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
 
@@ -48,7 +49,7 @@ export function ReviewSnapshotScreen({
   const hasPrefilledFormRef = useRef(false);
 
   useEffect(() => {
-    if (hasRunAutomationRef.current) {
+    if (hasRunAutomationRef.current || isVisualQaSessionActive()) {
       return;
     }
 

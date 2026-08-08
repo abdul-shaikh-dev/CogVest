@@ -12,6 +12,11 @@ import type {
 } from "@/src/types";
 
 export const visualQaSeedToken = "cogvest-local-visual-qa";
+let visualQaSessionActive = false;
+
+export function isVisualQaSessionActive() {
+  return visualQaSessionActive;
+}
 
 export function canUseVisualQaHarness({
   isDevelopment,
@@ -336,6 +341,23 @@ export const visualQaAssetLookupResults: AssetLookupResult[] = [
     assetClass: "stock",
     currency: "INR",
     exchange: "NSE",
+    id: "visual-qa-lookup-tcs",
+    instrumentType: "stock",
+    instrumentTypeConfidence: "inferred",
+    metadataReviewMessage: "Sector needs review. Yahoo did not provide a sector.",
+    name: "Tata Consultancy Services",
+    provider: "yahoo",
+    quoteSourceId: "TCS.NS",
+    sectorType: "other",
+    sectorTypeConfidence: "reviewRequired",
+    sourceLabel: "Visual QA seed",
+    symbol: "TCS",
+    ticker: "TCS.NS",
+  },
+  {
+    assetClass: "stock",
+    currency: "INR",
+    exchange: "NSE",
     id: "visual-qa-lookup-hdfc",
     instrumentType: "stock",
     instrumentTypeConfidence: "inferred",
@@ -372,9 +394,19 @@ export function resolveVisualQaQuote(asset: Asset): QuoteResult {
   const fixtureAsset = visualQaAssets.find(
     (candidate) => candidate.quoteSourceId === asset.quoteSourceId,
   );
-  const fixtureQuote = visualQaQuotes.find(
-    (candidate) => candidate.assetId === fixtureAsset?.id,
-  );
+  const fixtureQuote =
+    visualQaQuotes.find((candidate) => candidate.assetId === fixtureAsset?.id) ??
+    (asset.quoteSourceId === "TCS.NS"
+      ? {
+          asOf: "2026-05-29T10:15:00.000Z",
+          assetId: asset.id,
+          currency: "INR" as const,
+          dayChangeAbs: 18.5,
+          dayChangePct: 0.59,
+          price: 3150.25,
+          source: "yahoo" as const,
+        }
+      : undefined);
 
   if (!fixtureQuote) {
     return { error: "No deterministic quote fixture.", ok: false };
@@ -398,6 +430,7 @@ function resetPortfolioStoreForVisualQa(
     openingPositions: [],
     trades: [],
   });
+  state.clearHistoricalQuoteCache();
   state.clearQuoteCache();
   state.updatePreferences({
     hasCompletedOnboarding: true,
@@ -406,6 +439,7 @@ function resetPortfolioStoreForVisualQa(
 }
 
 export function seedVisualQaPortfolio(store: StoreApi<PortfolioStoreState>) {
+  visualQaSessionActive = true;
   resetPortfolioStoreForVisualQa(store);
 
   const state = store.getState();

@@ -49,11 +49,13 @@ function ensureReady() {
   console.log("PASS adb reverse configured: tcp:8081");
 }
 
-function openDeepLink(path) {
+function openDeepLink(path, options = {}) {
   const url = `cogvest:///${path}`;
   const shellSafeUrl = url.replaceAll("&", "\\&");
   console.log(`OPEN ${url}`);
-  runAdb(["shell", "am", "force-stop", appId]);
+  if (options.restart) {
+    runAdb(["shell", "am", "force-stop", appId]);
+  }
   const result = spawnSync("adb", [
     "shell",
     "am",
@@ -105,6 +107,12 @@ function waitForUiMarkers(markers, options = {}) {
       );
     }
 
+    if (latestXml.includes("Open debugger to view warnings")) {
+      throw new Error(
+        "React Native LogBox is visible; visual QA capture is invalid. Inspect device logs before rerunning.",
+      );
+    }
+
     const missing = markers.filter((marker) => !hasUiMarker(latestXml, marker));
     if (missing.length === 0) {
       return latestXml;
@@ -123,7 +131,7 @@ function captureWhenReady(name, markers) {
   capture(name);
 }
 
-function tapNodeContaining(needle, fallback) {
+function tapNodeContaining(needle) {
   const xml = dumpUi();
   const nodePattern = new RegExp(
     `<node[^>]*(?:text|content-desc|resource-id)="[^"]*${needle}[^"]*"[^>]*bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"`,
@@ -132,9 +140,7 @@ function tapNodeContaining(needle, fallback) {
   const match = xml.match(nodePattern);
 
   if (!match) {
-    console.log(`WARNING UI node not found for ${needle}; using fallback tap`);
-    runAdb(["shell", "input", "tap", String(fallback.x), String(fallback.y)]);
-    return;
+    throw new Error(`Required UI node not found for tap: ${needle}`);
   }
 
   const [, left, top, right, bottom] = match.map(Number);
@@ -152,6 +158,18 @@ function scrollDown() {
   sleep(900);
 }
 
+function scrollDownShort() {
+  runAdb(["shell", "input", "swipe", "540", "1250", "540", "950", "350"]);
+  sleep(600);
+}
+
+function scrollToTop() {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    runAdb(["shell", "input", "swipe", "540", "650", "540", "2300", "650"]);
+    sleep(500);
+  }
+}
+
 function prepareArtifactDir() {
   if (existsSync(artifactDir)) {
     rmSync(artifactDir, { force: true, recursive: true });
@@ -162,9 +180,9 @@ function prepareArtifactDir() {
 try {
   ensureReady();
 
-  openDeepLink(`visual-qa-seed?token=${visualQaToken}`);
+  openDeepLink(`visual-qa-seed?token=${visualQaToken}`, { restart: true });
   waitForUiMarkers(["Replace local developer data?"], { timeoutMs: 25000 });
-  tapNodeContaining("Replace with visual QA data", { x: 640, y: 696 });
+  tapNodeContaining("Replace with visual QA data");
   waitForUiMarkers(["Visual QA portfolio seeded."], { timeoutMs: 25000 });
   prepareArtifactDir();
   openDeepLink("dashboard");
@@ -176,13 +194,24 @@ try {
   openDeepLink("add-holding");
   captureWhenReady("add-holding-initial", ["Add Holding", "Search asset"]);
 
+  openDeepLink("dashboard");
+  waitForUiMarkers(["Dashboard", "Portfolio value"]);
   openDeepLink(`add-holding?visualQaState=lookup&token=${visualQaToken}`);
   waitForUiMarkers(["Add Holding", "Search asset"]);
-  tapNodeContaining("asset-lookup-input", { x: 260, y: 360 });
-  typeText("HDFC");
+  tapNodeContaining("asset-lookup-input");
+  typeText("TCS");
   runAdb(["shell", "input", "keyevent", "111"]);
-  captureWhenReady("add-holding-lookup", ["HDFC Bank", "HDFCBANK.NS"]);
+  waitForUiMarkers(["Tata Consultancy Services", "TCS.NS"]);
+  scrollToTop();
+  captureWhenReady("add-holding-lookup", [
+    "Add Holding",
+    "Search asset",
+    "Tata Consultancy Services",
+    "TCS.NS",
+  ]);
 
+  openDeepLink("dashboard");
+  waitForUiMarkers(["Dashboard", "Portfolio value"]);
   openDeepLink(`add-holding?visualQaState=review&token=${visualQaToken}`);
   captureWhenReady("add-holding-review", ["Add Holding", "Derived preview"]);
 
@@ -192,6 +221,8 @@ try {
   openDeepLink("progress");
   captureWhenReady("progress", ["Monthly Progress", "Portfolio Growth"]);
   scrollDown();
+  scrollDown();
+  scrollDownShort();
   captureWhenReady("progress-assets-chart", [
     "Asset Momentum",
     "Absolute value trend",
@@ -199,7 +230,7 @@ try {
 
   openDeepLink("dashboard");
   waitForUiMarkers(["Dashboard", "Portfolio value"]);
-  tapNodeContaining("tab-settings", { x: 1150, y: 2720 });
+  tapNodeContaining("tab-settings");
   captureWhenReady("settings", ["Settings", "Local-first controls"]);
 
   console.log("DONE Android seeded visual QA screenshots captured");
