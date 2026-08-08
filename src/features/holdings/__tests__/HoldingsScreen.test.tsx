@@ -128,9 +128,9 @@ describe("HoldingsScreen", () => {
     );
 
     expect(getByText("Dominant position")).toBeTruthy();
-    expect(getByText("Best return")).toBeTruthy();
-    expect(getByText("Exposure mix")).toBeTruthy();
-    expect(getByText("Top 3")).toBeTruthy();
+    expect(queryByText("Best return")).toBeNull();
+    expect(getByText("Asset mix")).toBeTruthy();
+    expect(queryByText("Top 3")).toBeNull();
     expect(getByText("All 1")).toBeTruthy();
     expect(getByText("Winners 1")).toBeTruthy();
     expect(getByText("Losers 0")).toBeTruthy();
@@ -357,6 +357,52 @@ describe("HoldingsScreen", () => {
     });
   });
 
+  it("keeps complete stale and manual price coverage calm", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const secondAsset: Asset = {
+      ...asset,
+      id: "asset-nifty-etf",
+      name: "Nifty 50 ETF",
+      symbol: "NIFTYBEES",
+      ticker: "NIFTYBEES.NS",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addAsset(secondAsset);
+    store.getState().addTrade(buyTrade);
+    store.getState().addTrade({
+      ...buyTrade,
+      assetId: secondAsset.id,
+      id: "trade-nifty-etf",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-20T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 125,
+      source: "yahoo",
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-04-21T10:00:00.000Z",
+      assetId: secondAsset.id,
+      currency: "INR",
+      price: 110,
+      source: "manual",
+    });
+
+    const { getByText, queryByText } = render(
+      <HoldingsScreen
+        now={new Date("2026-04-21T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Using saved prices")).toBeTruthy();
+    expect(
+      getByText("Current 0 · Stale 1 · Manual 1 · Missing 0"),
+    ).toBeTruthy();
+    expect(queryByText("Price coverage needs attention")).toBeNull();
+  });
+
   it("shows aggregate freshness and partial refresh outcomes", async () => {
     const store = seedMixedHoldings();
     const refreshQuotes = jest
@@ -380,7 +426,7 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    expect(getByText("Quote coverage needs attention")).toBeTruthy();
+    expect(getByText("Price coverage needs attention")).toBeTruthy();
     expect(
       getByText("Current 1 · Stale 0 · Manual 0 · Missing 2"),
     ).toBeTruthy();

@@ -118,6 +118,10 @@ export function HoldingsScreen({
     searchQuery,
   );
   const summary = getHoldingReviewSummary(reviewItems);
+  const distinctBestReturn =
+    summary.bestReturn?.holding.asset.id === summary.dominant?.holding.asset.id
+      ? undefined
+      : summary.bestReturn;
   const exposureSegments = getExposureSegments(reviewItems);
   const filterCounts = getFilterCounts(reviewItems);
   const subtitle = `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · local data`;
@@ -186,12 +190,28 @@ export function HoldingsScreen({
         ) : null}
 
         {holdings.length > 0 ? (
-          <PremiumCard style={styles.statusCard} testID="holdings-quote-health">
-            <AppText weight="bold">{quoteStatus.title}</AppText>
-            <AppText color="secondary" variant="caption">
-              {quoteStatus.detail}
-            </AppText>
-          </PremiumCard>
+          <View
+            accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
+            style={[
+              styles.quoteStatus,
+              quoteStatus.prominent && styles.quoteStatusProminent,
+            ]}
+            testID="holdings-quote-health"
+          >
+            <CategoryIcon assetClass="neutral" size={18} />
+            <View style={styles.quoteStatusCopy}>
+              <AppText
+                style={quoteStatus.prominent ? styles.warningText : undefined}
+                variant="caption"
+                weight="bold"
+              >
+                {quoteStatus.title}
+              </AppText>
+              <AppText color="secondary" numberOfLines={2} variant="caption">
+                {quoteStatus.detail}
+              </AppText>
+            </View>
+          </View>
         ) : null}
 
         {onManageAssets || (onReviewAllTrades && trades.length > 0) ? (
@@ -202,7 +222,8 @@ export function HoldingsScreen({
                 style={styles.recordAction}
                 testID="holdings-transactions-button"
                 title="Transactions"
-                variant="secondary"
+                textColor="primary"
+                variant="ghost"
               />
             ) : null}
             {onManageAssets ? (
@@ -211,7 +232,8 @@ export function HoldingsScreen({
                 style={styles.recordAction}
                 testID="holdings-manage-assets-button"
                 title="Manage assets"
-                variant="secondary"
+                textColor="primary"
+                variant="ghost"
               />
             ) : null}
           </View>
@@ -247,22 +269,17 @@ export function HoldingsScreen({
                     : "Add holdings to compare exposure"
                 }
               />
-              <InsightCard
-                eyebrow="Best return"
-                title={summary.bestReturn?.holding.asset.name ?? "Not enough data"}
-                detail={
-                  summary.bestReturn
-                    ? `${formatPercentage(summary.bestReturn.holding.unrealisedPnLPct)} return`
-                    : "Returns appear after prices are available"
-                }
-                positive={(summary.bestReturn?.holding.unrealisedPnL ?? 0) >= 0}
-              />
+              {distinctBestReturn ? (
+                <InsightCard
+                  eyebrow="Best return"
+                  title={distinctBestReturn.holding.asset.name}
+                  detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct)} return`}
+                  positive={distinctBestReturn.holding.unrealisedPnL >= 0}
+                />
+              ) : null}
             </View>
 
-            <ExposurePanel
-              segments={exposureSegments}
-              topThreeAllocationPct={summary.topThreeAllocationPct}
-            />
+            <ExposurePanel segments={exposureSegments} />
 
             <FilterRow
               counts={filterCounts}
@@ -327,6 +344,7 @@ function getQuoteStatus({
   if (isRefreshing) {
     return {
       detail: counts,
+      prominent: false,
       title: "Refreshing quotes...",
     };
   }
@@ -345,6 +363,7 @@ function getQuoteStatus({
           ? "Existing prices remain available."
           : "No usable prices are available."
       }`,
+      prominent: usablePriceCount === 0 || quoteFreshness.missing > 0,
       title:
         usablePriceCount > 0
           ? "Refresh partially completed"
@@ -352,18 +371,25 @@ function getQuoteStatus({
     };
   }
 
-  const titles = {
-    current: "Quotes current",
-    empty: "No holdings to price",
-    manual: "Manual prices in use",
-    missing: "Prices missing",
-    partial: "Quote coverage needs attention",
-    stale: "Quotes are stale",
-  } as const;
+  if (quoteFreshness.status === "empty") {
+    return {
+      detail: "Quote coverage appears after your first holding.",
+      prominent: false,
+      title: "No holdings to price",
+    };
+  }
+
+  const prominent = quoteFreshness.missing > 0;
+  const title = prominent
+    ? "Price coverage needs attention"
+    : quoteFreshness.status === "current"
+      ? "Prices up to date"
+      : "Using saved prices";
 
   return {
     detail: counts,
-    title: titles[quoteFreshness.status],
+    prominent,
+    title,
   };
 }
 
@@ -399,26 +425,16 @@ function InsightCard({
 
 function ExposurePanel({
   segments,
-  topThreeAllocationPct,
 }: {
   segments: ExposureSegment[];
-  topThreeAllocationPct: number;
 }) {
   return (
     <PremiumCard style={styles.exposureCard}>
       <View style={styles.sectionHeading}>
-        <View>
-          <AppText color="secondary" variant="caption" weight="medium">
-            Exposure mix
-          </AppText>
-          <AppText weight="bold">Asset-class concentration</AppText>
-        </View>
-        <View style={styles.topThree}>
+        <View style={styles.sectionHeadingCopy}>
+          <AppText weight="bold">Asset mix</AppText>
           <AppText color="secondary" variant="caption">
-            Top 3
-          </AppText>
-          <AppText variant="title" weight="bold">
-            {formatPercentage(topThreeAllocationPct).replace("+", "")}
+            Portfolio split by asset class
           </AppText>
         </View>
       </View>
@@ -450,9 +466,6 @@ function ExposurePanel({
             <View style={styles.legendCopy}>
               <AppText variant="caption" weight="bold">
                 {segment.label} {segment.percentage.toFixed(0)}%
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                {segment.count} {segment.count === 1 ? "position" : "positions"}
               </AppText>
             </View>
           </View>
@@ -893,7 +906,7 @@ const styles = StyleSheet.create({
   insightCard: {
     flex: 1,
     gap: spacing.xs,
-    minHeight: 102,
+    minHeight: 88,
   },
   insightGrid: {
     flexDirection: "row",
@@ -943,17 +956,38 @@ const styles = StyleSheet.create({
   positiveText: {
     color: colors.profit,
   },
-  recordAction: {
+  quoteStatus: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  quoteStatusCopy: {
     flex: 1,
+    gap: 2,
+  },
+  quoteStatusProminent: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.card,
+    padding: spacing.cardInner,
+  },
+  recordAction: {
+    flexGrow: 0,
   },
   recordActions: {
+    alignSelf: "flex-start",
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   sectionHeading: {
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  sectionHeadingCopy: {
+    gap: 2,
   },
   sourceRow: {
     alignItems: "flex-end",
@@ -967,11 +1001,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.card,
     paddingVertical: spacing.sm,
   },
-  topThree: {
-    alignItems: "flex-end",
-  },
   valueColumn: {
     alignItems: "flex-end",
     minWidth: 72,
+  },
+  warningText: {
+    color: colors.warning,
   },
 });
