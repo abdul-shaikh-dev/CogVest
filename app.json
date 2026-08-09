@@ -7,22 +7,24 @@
       "android"
     ],
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/brand/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "scheme": "cogvest",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/brand/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1C1B1F"
+      "backgroundColor": "#11181C"
     },
     "android": {
       "package": "com.abdulshaikh.cogvest",
       "versionCode": 2,
+      "icon": "./assets/brand/icon.png",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1C1B1F"
+        "foregroundImage": "./assets/brand/adaptive-icon-foreground.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/brand/android-monochrome-icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true

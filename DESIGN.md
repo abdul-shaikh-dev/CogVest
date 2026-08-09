@@ -19,6 +19,22 @@ behavior. A newer issue-approved preview supersedes older visual assets for
 that screen. Update only the canonical screen contract and assets
 that materially remain useful; do not synchronize every historical mockup.
 
+## Brand Identity
+
+The approved CogVest mark is the asymmetric open C with a heavier lower
+crescent and three integrated rising bars. Use the production assets documented
+in `docs/design/brand-assets.md`; do not redraw, recolour, crop, rotate, or
+independently reposition parts of the mark.
+
+- Brand Green is `#0E6B4F`; Private Ink is `#11181C`.
+- Brand Green belongs to identity artwork. It is not interchangeable with the
+  product's semantic action or profit greens.
+- Use flat artwork without gradients, bevels, outlines, or decorative shadows.
+- Keep clear space equal to at least one quarter of the mark width.
+- Use the tagline only in marketing or repository artwork, never inside the app.
+- Android launcher masks are applied by the operating system; do not ship a
+  pre-rounded launcher icon.
+
 ## 1. Visual Theme & Atmosphere
 
 CogVest should feel like a private portfolio room, not a trading floor.
