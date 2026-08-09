@@ -550,6 +550,7 @@ function HoldingRow({
       accessibilityHint={expanded ? "Collapses position details" : "Shows position details"}
       accessibilityLabel={`${holding.asset.name}, ${formatPercentage(holding.unrealisedPnLPct)} return`}
       accessibilityRole="button"
+      accessibilityState={{ expanded }}
       android_ripple={androidRipple()}
       onPress={onPress}
       style={({ pressed }) => [

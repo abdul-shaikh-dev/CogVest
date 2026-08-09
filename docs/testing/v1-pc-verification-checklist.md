@@ -78,3 +78,48 @@ Maestro status: 15 flows passed
 Result: PASS - V1 developer gate complete
 Defects logged: none remaining; first visual capture was rejected and recaptured cleanly
 ```
+
+### 2026-08-09 Android UI Hardening Verification (#222)
+
+- Branch: `v1/issue-222-final-android-qa` at baseline `927a58d`.
+- Emulator: `emulator-5554`, Android 16; package
+  `com.abdulshaikh.cogvest`.
+- A fresh local x86_64 debug APK was built, installed, and verified. APK
+  SHA-256: `D0EB24C0F189DE4ADABBDD6D1EC973B0D1742FCC0AC32F8366F7578F58F4DBCB`.
+- `npm run visual-qa:android` passed at font scales `1.0`, `1.3`, and `1.5`.
+  All nine normal-scale artifacts were refreshed. Dashboard, Holdings, Add
+  Holding, Cash, Progress, and Settings were inspected at the larger scales.
+- At font scale `2.0`, navigation, Add Holding save, Cash add/review/delete,
+  and snapshot review/cancel completed through adaptive wrapping and scrolling.
+- Android accessibility hierarchy inspection confirmed clean bottom-tab labels,
+  selected-tab state, and labelled Dashboard icon actions. Holding rows expose
+  expanded/collapsed state in React Native and tests; device hierarchy confirmed
+  the expanded details appear only after disclosure.
+- One genuine adaptive-layout defect was fixed: Dashboard's Allocation heading
+  and action now stack instead of overlapping at increased font scales.
+- The visual-QA harness now waits on current Holdings and Add Holding contracts.
+  Canonical correction/accounting flows no longer expect the opening-position
+  manual-entry toggle on the internal buy/sell route.
+- All 16 registered Maestro journeys passed. Outcome assertions covered saved
+  holdings, cash accounting and deletion, correction persistence, value masking,
+  snapshot review exit, and app-process persistence.
+- `npm run test:v1:pc` passed: 67 suites, 583 tests, Expo Doctor 17/17,
+  Android readiness, and strict installed-package smoke.
+- A transient Metro-connect LogBox during one capture was rejected; adb reverse
+  was restored and the clean capture rerun passed. Initial APK installation also
+  required Android's external install-location option because emulator data
+  storage was low; neither condition was an app defect.
+
+```text
+Date: 2026-08-09
+Branch/commit: v1/issue-222-final-android-qa / baseline 927a58d
+Emulator: emulator-5554
+Android version: Android 16
+APK source: android/app/build/outputs/apk/debug/app-debug.apk
+APK SHA-256: D0EB24C0F189DE4ADABBDD6D1EC973B0D1742FCC0AC32F8366F7578F58F4DBCB
+Installed package: com.abdulshaikh.cogvest
+Commands run: npm run visual-qa:android at 1.0/1.3/1.5; focused Maestro at 2.0; npm run maestro:test; npm run test:v1:pc
+Maestro status: 16 flows passed
+Result: PASS - issue #222 final Android UI verification complete
+Defects fixed: Dashboard font-scale overlap and stale Android QA selectors
+```

@@ -1,0 +1,27 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- tapOn:
+    id: "tab-progress"
+- assertVisible:
+    id: "progress-screen"
+- tapOn: "Review month-end snapshot"
+- assertVisible:
+    id: "review-snapshot-screen"
+- scrollUntilVisible:
+    element:
+      id: "snapshot-month-input"
+    direction: DOWN
+- assertVisible:
+    id: "snapshot-month-input"
+- scrollUntilVisible:
+    element:
+      id: "cancel-snapshot-review-button"
+    direction: DOWN
+- tapOn:
+    id: "cancel-snapshot-review-button"
+- assertVisible:
+    id: "progress-screen"
