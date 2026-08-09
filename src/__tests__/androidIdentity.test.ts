@@ -2,6 +2,20 @@ import appConfig from "../../app.json";
 import versionHistory from "../../docs/release/android-version-history.json";
 import packageJson from "../../package.json";
 
+const { readFileSync } = jest.requireActual("fs");
+
+function readPngMetadata(relativePath: string) {
+  const png = readFileSync(relativePath);
+
+  expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+
+  return {
+    colorType: png.readUInt8(25),
+    height: png.readUInt32BE(20),
+    width: png.readUInt32BE(16),
+  };
+}
+
 describe("Android app identity", () => {
   const expo = appConfig.expo;
 
@@ -50,12 +64,35 @@ describe("Android app identity", () => {
   });
 
   it("configures Android icon and splash assets", () => {
-    expect(expo.icon).toBe("./assets/icon.png");
-    expect(expo.splash.image).toBe("./assets/splash-icon.png");
-    expect(expo.splash.backgroundColor).toBe("#1C1B1F");
+    expect(expo.icon).toBe("./assets/brand/icon.png");
+    expect(expo.splash.image).toBe("./assets/brand/splash-icon.png");
+    expect(expo.splash.backgroundColor).toBe("#11181C");
+    expect(expo.android.icon).toBe("./assets/brand/icon.png");
     expect(expo.android.adaptiveIcon.foregroundImage).toBe(
-      "./assets/adaptive-icon.png",
+      "./assets/brand/adaptive-icon-foreground.png",
     );
-    expect(expo.android.adaptiveIcon.backgroundColor).toBe("#1C1B1F");
+    expect(expo.android.adaptiveIcon.backgroundColor).toBe("#FFFFFF");
+    expect(expo.android.adaptiveIcon.monochromeImage).toBe(
+      "./assets/brand/android-monochrome-icon.png",
+    );
+  });
+
+  it("uses production-sized brand artwork with the required alpha layers", () => {
+    expect(readPngMetadata("assets/brand/icon.png")).toEqual({
+      colorType: 2,
+      height: 1024,
+      width: 1024,
+    });
+    expect(
+      readPngMetadata("assets/brand/adaptive-icon-foreground.png"),
+    ).toEqual({ colorType: 6, height: 1024, width: 1024 });
+    expect(readPngMetadata("assets/brand/splash-icon.png")).toEqual({
+      colorType: 6,
+      height: 1024,
+      width: 1024,
+    });
+    expect(readPngMetadata("assets/brand/android-monochrome-icon.png")).toEqual(
+      { colorType: 6, height: 432, width: 432 },
+    );
   });
 });
