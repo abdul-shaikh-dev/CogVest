@@ -53,6 +53,18 @@ eas build --platform android --profile preview
 
 Output: APK.
 
+The GitHub workflow `.github/workflows/android-preview.yml` also builds this
+profile. Push an annotated tag matching `v<version>-preview.<number>` to build
+that immutable revision automatically, for example:
+
+```bash
+git tag -a v1.0.1-preview.2 -m "CogVest 1.0.1 preview 2"
+git push origin v1.0.1-preview.2
+```
+
+Increment `android.versionCode` before creating another externally distributed
+preview. The workflow can also be dispatched manually against an existing tag.
+
 ### Production Build
 
 Purpose: Google Play Store release candidate.
@@ -119,9 +131,13 @@ MMKV.
 
 Configured in root `eas.json`:
 
+- `cli.appVersionSource` is `local`, so committed `app.json` values remain the
+  source of truth and EAS does not silently change release identity.
+
 ```json
 {
   "cli": {
+    "appVersionSource": "local",
     "version": ">= 13.0.0"
   },
   "build": {
