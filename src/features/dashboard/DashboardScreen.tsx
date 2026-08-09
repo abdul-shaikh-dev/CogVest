@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   },
   allocationHeaderStacked: {
     alignItems: "flex-start",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: spacing.xs,
   },
   allocationTitle: {

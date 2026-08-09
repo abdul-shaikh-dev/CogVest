@@ -156,10 +156,16 @@ describe("HoldingsScreen", () => {
 
     expect(queryByTestId(`holding-expanded-${asset.id}`)).toBeNull();
     expect(queryByText("Quantity")).toBeNull();
+    expect(
+      getByTestId(`holding-row-${asset.id}`).props.accessibilityState,
+    ).toEqual({ expanded: false });
 
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
 
     expect(getByTestId(`holding-expanded-${asset.id}`)).toBeTruthy();
+    expect(
+      getByTestId(`holding-row-${asset.id}`).props.accessibilityState,
+    ).toEqual({ expanded: true });
     expect(getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
     expect(getByText("Quantity")).toBeTruthy();
     expect(getByText("Avg cost")).toBeTruthy();
@@ -170,7 +176,13 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
 
     expect(queryByTestId(`holding-expanded-${asset.id}`)).toBeNull();
+    expect(
+      getByTestId(`holding-row-${asset.id}`).props.accessibilityState,
+    ).toEqual({ expanded: false });
     expect(getByTestId(`holding-expanded-${debtAsset.id}`)).toBeTruthy();
+    expect(
+      getByTestId(`holding-row-${debtAsset.id}`).props.accessibilityState,
+    ).toEqual({ expanded: true });
   });
 
   it("exposes a Sell / redeem action from expanded holding details", () => {

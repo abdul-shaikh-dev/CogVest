@@ -189,7 +189,7 @@ try {
   captureWhenReady("dashboard", ["Dashboard", "Portfolio value"]);
 
   openDeepLink("holdings");
-  captureWhenReady("holdings", ["Holdings", "Exposure mix"]);
+  captureWhenReady("holdings", ["Holdings", "Dominant position"]);
 
   openDeepLink("add-holding");
   captureWhenReady("add-holding-initial", ["Add Holding", "Search asset"]);
@@ -213,7 +213,10 @@ try {
   openDeepLink("dashboard");
   waitForUiMarkers(["Dashboard", "Portfolio value"]);
   openDeepLink(`add-holding?visualQaState=review&token=${visualQaToken}`);
-  captureWhenReady("add-holding-review", ["Add Holding", "Derived preview"]);
+  captureWhenReady("add-holding-review", [
+    "Add Holding",
+    "add-holding-phase-review",
+  ]);
 
   openDeepLink("cash");
   captureWhenReady("cash", ["Cash Ledger", "Deployable cash"]);

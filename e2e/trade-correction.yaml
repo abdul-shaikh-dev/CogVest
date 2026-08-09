@@ -26,8 +26,6 @@ appId: com.abdulshaikh.cogvest
     id: "save-cash-entry-button"
 - openLink: "cogvest:///add-trade"
 - tapOn:
-    id: "toggle-manual-asset-entry"
-- tapOn:
     id: "asset-input"
 - inputText: "Correction Test Asset"
 - hideKeyboard

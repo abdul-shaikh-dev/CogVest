@@ -10,6 +10,10 @@ appId: com.abdulshaikh.cogvest
     id: "cash-screen"
 - tapOn:
     id: "cash-entry-deposit"
+- scrollUntilVisible:
+    element:
+      id: "cash-amount-input"
+    direction: DOWN
 - tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
@@ -29,7 +33,7 @@ appId: com.abdulshaikh.cogvest
 - doubleTapOn:
     id: "save-cash-entry-button"
 - assertVisible: "Broker cash"
-- assertVisible: "₹1,000.00"
+- assertVisible: "+₹1,000.00"
 - assertNotVisible: "₹2,000.00"
 - runScript:
     file: scripts/current-local-date.js
