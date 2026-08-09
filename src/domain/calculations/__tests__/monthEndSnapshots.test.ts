@@ -219,6 +219,42 @@ describe("getMissingCompletedSnapshotMonths", () => {
 });
 
 describe("buildGeneratedMonthEndSnapshot", () => {
+  it("uses record time only as the history boundary for an unknown purchase date", () => {
+    const unknownPosition = openingPosition({
+      averageCostPrice: 100,
+      currentPrice: 120,
+      date: null,
+      quantity: 10,
+      recordedAt: "2026-07-10T09:30:00.000Z",
+    });
+    const beforeRecorded = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        now: new Date("2026-08-15T10:00:00.000Z"),
+        openingPositions: [unknownPosition],
+        targetMonth: "2026-06",
+      }),
+    );
+    const afterRecorded = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        now: new Date("2026-08-15T10:00:00.000Z"),
+        openingPositions: [unknownPosition],
+        targetMonth: "2026-07",
+      }),
+    );
+
+    expect(beforeRecorded.snapshot?.equityValue ?? 0).toBe(0);
+    expect(beforeRecorded.snapshot?.investedValue ?? 0).toBe(0);
+    expect(afterRecorded.snapshot).toMatchObject({
+      equityValue: 1200,
+      investedValue: 1000,
+      monthlyInvestment: 0,
+      performanceBasis: {
+        reason: "unknown-opening-position-date",
+        status: "unavailable",
+      },
+    });
+  });
+
   it.each(["not-a-month", "2026-08", "2026-09"])(
     "rejects an explicit target that is not a completed month: %s",
     (targetMonth) => {

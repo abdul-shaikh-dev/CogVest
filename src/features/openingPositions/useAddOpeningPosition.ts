@@ -13,7 +13,6 @@ import {
   getDefaultAssetMetadata,
 } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -148,7 +147,10 @@ export function useAddOpeningPosition({
     initialReviewPosition?.currentPrice?.toString() ?? "",
   );
   const [date, setDate] = useState(
-    initialReviewPosition?.date.slice(0, 10) ?? formatLocalCalendarDate(now),
+    initialReviewPosition?.date?.slice(0, 10) ?? "",
+  );
+  const [dateUnknown, setDateUnknown] = useState(
+    initialReviewPosition?.date === null,
   );
   const [conviction, setConviction] = useState(
     initialReviewPosition?.conviction?.toString() ?? "",
@@ -210,7 +212,8 @@ export function useAddOpeningPosition({
     setQuantity("");
     setAverageCostPrice("");
     setCurrentPrice("");
-    setDate(formatLocalCalendarDate(now));
+    setDate("");
+    setDateUnknown(false);
     setConviction("");
     setNotes("");
   }
@@ -262,6 +265,7 @@ export function useAddOpeningPosition({
       conviction,
       currentPrice: currentPrice || "1",
       date,
+      dateUnknown,
       instrumentType,
       notes,
       quoteSourceId,
@@ -293,6 +297,7 @@ export function useAddOpeningPosition({
       conviction,
       currentPrice,
       date,
+      dateUnknown,
       instrumentType: instrumentType || "stock",
       notes,
       quoteSourceId,
@@ -629,6 +634,7 @@ export function useAddOpeningPosition({
       conviction,
       currentPrice,
       date,
+      dateUnknown,
       instrumentType,
       notes,
       quoteSourceId,
@@ -779,6 +785,7 @@ export function useAddOpeningPosition({
     currentPhase,
     currentPrice,
     date,
+    dateUnknown,
     errors,
     getPhaseIndex,
     handleConfirm,
@@ -814,6 +821,7 @@ export function useAddOpeningPosition({
     setConviction,
     setCurrentPrice,
     setDate,
+    setDateUnknown,
     setInstrumentType,
     setLookupQuery,
     setNotes,

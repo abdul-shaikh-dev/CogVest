@@ -140,6 +140,7 @@ export function AddOpeningPositionForm({
     currentPhase,
     currentPrice,
     date,
+    dateUnknown,
     errors,
     getPhaseIndex,
     handleConfirm,
@@ -174,6 +175,7 @@ export function AddOpeningPositionForm({
     setConviction,
     setCurrentPrice,
     setDate,
+    setDateUnknown,
     setInstrumentType,
     setLookupQuery,
     setNotes,
@@ -664,17 +666,50 @@ export function AddOpeningPositionForm({
             />
           </View>
           <View style={styles.flex}>
-            <DatePickerField
-              error={errors.date}
-              label="Date acquired"
-              maximumDate={now}
-              onChange={(value) => {
-                setDate(value);
+            {dateUnknown ? (
+              <View style={styles.unknownDateSummary}>
+                <AppText color="secondary" variant="caption">
+                  First purchase date (optional)
+                </AppText>
+                <AppText weight="bold">Unknown</AppText>
+              </View>
+            ) : (
+              <DatePickerField
+                error={errors.date}
+                label="First purchase date (optional)"
+                maximumDate={now}
+                onChange={(value) => {
+                  setDate(value);
+                  resetReview();
+                }}
+                testID="date-input"
+                value={date}
+              />
+            )}
+            <Pressable
+              accessibilityLabel="First purchase date unknown"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: dateUnknown }}
+              onPress={() => {
+                setDateUnknown(!dateUnknown);
+                setDate("");
                 resetReview();
               }}
-              testID="date-input"
-              value={date}
-            />
+              style={({ pressed }) => [
+                styles.unknownDateControl,
+                dateUnknown && styles.unknownDateControlSelected,
+                pressed && styles.pressed,
+              ]}
+              testID="first-purchase-date-unknown"
+            >
+              <AppText
+                color={dateUnknown ? "primary" : "secondary"}
+                variant="caption"
+                weight="bold"
+              >
+                I don't know
+              </AppText>
+            </Pressable>
           </View>
         </View>
         <View style={styles.convictionGroup}>
@@ -810,8 +845,8 @@ export function AddOpeningPositionForm({
             value={formatINR(reviewOpeningPosition.currentPrice ?? 0)}
           />
           <ReviewDetailRow
-            label="Date acquired"
-            value={reviewOpeningPosition.date.slice(0, 10)}
+            label="First purchase date"
+            value={reviewOpeningPosition.date?.slice(0, 10) ?? "Unknown"}
           />
           <ReviewDetailRow
             label="Note"
@@ -1202,5 +1237,21 @@ const styles = StyleSheet.create({
   summaryCopy: {
     flex: 1,
     gap: spacing.xs,
+  },
+  unknownDateControl: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: radii.pill,
+    minHeight: interaction.minimumTouchTarget,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  unknownDateControlSelected: {
+    backgroundColor: "rgba(46,125,82,0.16)",
+  },
+  unknownDateSummary: {
+    gap: spacing.xs,
+    minHeight: interaction.minimumTouchTarget,
+    justifyContent: "center",
   },
 });

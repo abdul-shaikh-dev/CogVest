@@ -90,6 +90,31 @@ function openingPosition(
 }
 
 describe("holding calculations", () => {
+  it("includes an unknown-date opening position in current totals after it was recorded", () => {
+    const holdings = calculateHoldings({
+      assets: [reliance],
+      now: new Date("2026-07-20T10:00:00.000Z"),
+      openingPositions: [
+        openingPosition({
+          averageCostPrice: 100,
+          currentPrice: 120,
+          date: null,
+          quantity: 2,
+          recordedAt: "2026-07-10T09:30:00.000Z",
+        }),
+      ],
+      quoteCache: {},
+      trades: [],
+    });
+
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0]).toMatchObject({
+      currentValue: 240,
+      totalInvested: 200,
+      totalUnits: 2,
+    });
+  });
+
   it("calculates weighted average cost for buy trades", () => {
     const holding = calculateHolding({
       asset: reliance,

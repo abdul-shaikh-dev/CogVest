@@ -139,6 +139,7 @@ function calculateMonthlyMetrics(
     .filter(
       (position) =>
         supportedAssetIds.has(position.assetId) &&
+        position.date !== null &&
         isSameMonth(position.date, now),
     )
     .reduce(

@@ -425,6 +425,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Quantity"), "2");
     fireEvent.changeText(getByLabelText("Average cost"), "100");
     fireEvent.changeText(getByLabelText("Current price"), "120");
+    fireEvent.press(getByLabelText("First purchase date unknown"));
     fireEvent.press(getByText("Review and save"));
     fireEvent.press(getByText("Save Holding"));
 

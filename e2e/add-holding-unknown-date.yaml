@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Unknown Date Holding"
+- tapOn:
+    id: "symbol-input"
+- inputText: "UNKNOWNDATE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "UNKNOWNDATE"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- tapOn:
+    id: "price-input"
+- inputText: "125"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "first-purchase-date-unknown"
+    direction: DOWN
+- tapOn:
+    id: "first-purchase-date-unknown"
+- tapOn:
+    id: "review-holding-button"
+- assertVisible: "First purchase date"
+- assertVisible: "Unknown"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "save-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holding-save-complete"

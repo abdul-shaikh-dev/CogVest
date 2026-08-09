@@ -11,12 +11,14 @@ import {
   normalizePercentage,
   sumFinancialValues,
 } from "@/src/domain/precision";
+import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 
 export type MonthlyPerformanceUnavailableReason =
   | "ambiguous-cash-flow"
   | "invalid-denominator"
   | "legacy-snapshot"
   | "manual-snapshot"
+  | "unknown-opening-position-date"
   | "missing-previous-snapshot";
 
 export type MonthlyPerformanceResult = {
@@ -111,9 +113,26 @@ export function buildMonthlyPerformanceBasis({
     };
   }
 
+  const unknownDatePositionRecordedThisMonth = openingPositions.some(
+    (position) =>
+      position.date === null &&
+      getOpeningPositionHistoryDate(position)?.slice(0, 7) === targetMonth,
+  );
+
+  if (unknownDatePositionRecordedThisMonth) {
+    return {
+      reason: "unknown-opening-position-date",
+      status: "unavailable",
+      warnings: [
+        "Monthly performance is unavailable because an opening position has an unknown first-purchase date.",
+      ],
+    };
+  }
+
   for (const position of openingPositions.filter((item) =>
-    isWithinMonth(item.date, targetMonth),
+    item.date !== null && isWithinMonth(item.date, targetMonth),
   )) {
+    if (position.date === null) continue;
     externalFlows.push({
       amount: decimal(position.quantity).times(position.averageCostPrice),
       date: position.date,

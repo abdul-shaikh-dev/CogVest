@@ -1,10 +1,15 @@
 import { z } from "zod";
 
+import { getCalendarDatePart } from "@/src/domain/dates";
+
 const finiteNumberSchema = z.number().finite();
 const nonEmptyStringSchema = z
   .string()
   .min(1)
   .refine((value) => value.trim().length > 0);
+const calendarDateSchema = nonEmptyStringSchema.refine(
+  (value) => getCalendarDatePart(value) === value,
+);
 const convictionScoreSchema = z.union([
   z.literal(1),
   z.literal(2),
@@ -83,16 +88,33 @@ const cashEntrySchema = z.object({
   type: z.enum(["addition", "withdrawal"]),
 });
 
-const openingPositionSchema = z.object({
-  assetId: nonEmptyStringSchema,
-  averageCostPrice: finiteNumberSchema,
-  conviction: convictionScoreSchema.optional(),
-  currentPrice: finiteNumberSchema.optional(),
-  date: nonEmptyStringSchema,
-  id: nonEmptyStringSchema,
-  notes: z.string().optional(),
-  quantity: finiteNumberSchema,
-});
+const openingPositionSchema = z
+  .object({
+    assetId: nonEmptyStringSchema,
+    averageCostPrice: finiteNumberSchema,
+    conviction: convictionScoreSchema.optional(),
+    currentPrice: finiteNumberSchema.optional(),
+    date: nonEmptyStringSchema.nullable(),
+    id: nonEmptyStringSchema,
+    notes: z.string().optional(),
+    quantity: finiteNumberSchema,
+    recordedAt: z.string().datetime({ offset: true }).optional(),
+    recordedOn: calendarDateSchema.optional(),
+  })
+  .superRefine((position, context) => {
+    if (
+      position.date === null &&
+      (position.recordedAt === undefined || position.recordedOn === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Unknown acquisition dates require stable record-time provenance.",
+        path: [
+          position.recordedAt === undefined ? "recordedAt" : "recordedOn",
+        ],
+      });
+    }
+  });
 
 const tradeSchema = z.object({
   assetId: nonEmptyStringSchema,
@@ -159,6 +181,7 @@ const monthlySnapshotSchema = z.object({
           "ambiguous-cash-flow",
           "legacy-snapshot",
           "manual-snapshot",
+          "unknown-opening-position-date",
         ]),
         status: z.literal("unavailable"),
         warnings: z.array(z.string()),
@@ -185,6 +208,7 @@ const schemaVersionSchema = z.union([
   z.literal(3),
   z.literal(4),
   z.literal(5),
+  z.literal(6),
 ]);
 
 const persistedPortfolioSchema = z.object({
@@ -273,7 +297,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5].includes(
+    ![1, 2, 3, 4, 5, 6].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {
