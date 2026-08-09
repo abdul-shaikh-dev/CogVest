@@ -679,7 +679,9 @@ function HoldingRow({
                 <View key={position.id} style={styles.openingRecordRow}>
                   <View style={styles.openingRecordCopy}>
                     <AppText variant="caption" weight="bold">
-                      {formatDate(position.date)}
+                      {position.date === null
+                        ? "First purchase date unknown"
+                        : formatDate(position.date)}
                     </AppText>
                     <AppText color="secondary" variant="caption">
                       {formatQuantity(position.quantity)} units · avg{" "}

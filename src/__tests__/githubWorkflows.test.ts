@@ -9,10 +9,12 @@ const path = require("path") as {
 };
 
 function readWorkflow(name: string) {
-  return fs.readFileSync(
-    path.join(process.cwd(), ".github", "workflows", name),
-    "utf8",
-  );
+  return fs
+    .readFileSync(
+      path.join(process.cwd(), ".github", "workflows", name),
+      "utf8",
+    )
+    .replace(/\r\n/g, "\n");
 }
 
 describe("GitHub workflows", () => {

@@ -6,6 +6,7 @@ import {
   isFutureCalendarDate,
 } from "@/src/domain/dates";
 import type { OpeningPosition, Trade, TradeType } from "@/src/types";
+import { isOpeningPositionEffective } from "@/src/domain/openingPositions";
 import {
   decimal,
   normalizeQuantity,
@@ -68,7 +69,7 @@ export function getAvailableQuantity(
 ) {
   const openingQuantity = sumFinancialValues(
     openingPositions
-      .filter((position) => isEffectiveCalendarDate(position.date, now))
+      .filter((position) => isOpeningPositionEffective(position, now))
       .map((position) => position.quantity),
   );
 

@@ -27,6 +27,7 @@ import {
   quantityQuantum,
   sumFinancialValues,
 } from "@/src/domain/precision";
+import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
@@ -360,7 +361,8 @@ function needsHistoricalPrice({
   const monthEnd = getMonthEndDate(targetMonth);
   const openingQuantity = state.openingPositions.reduce(
     (quantity, position) =>
-      position.assetId === assetId && isOnOrBefore(position.date, monthEnd)
+      position.assetId === assetId &&
+      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd)
         ? quantity.plus(position.quantity)
         : quantity,
     decimal(0),
@@ -622,9 +624,15 @@ export function useProgress({
       .sort((left, right) => right.month.localeCompare(left.month))[0] ?? null;
     const hasCompletedPortfolioRecord = [
       ...completedState.cashEntries.map((entry) => entry.date),
-      ...completedState.openingPositions.map((position) => position.date),
+      ...completedState.openingPositions.map((position) =>
+        getOpeningPositionHistoryDate(position),
+      ),
       ...completedState.trades.map((trade) => trade.date),
-    ].some((date) => isOnOrBefore(date, getMonthEndDate(lastCompletedMonth)));
+    ].some(
+      (date) =>
+        date !== null &&
+        isOnOrBefore(date, getMonthEndDate(lastCompletedMonth)),
+    );
     const provisionalMonths = getProvisionalSnapshotMonths({
       lastCompletedMonth,
       snapshots: completedState.monthlySnapshots,
@@ -671,10 +679,17 @@ export function useProgress({
             .sort((left, right) => right.month.localeCompare(left.month))[0] ?? null;
           const hasCompletedPortfolioRecord = [
             ...state.cashEntries.map((entry) => entry.date),
-            ...state.openingPositions.map((position) => position.date),
+            ...state.openingPositions.map((position) =>
+              getOpeningPositionHistoryDate(position),
+            ),
             ...state.trades.map((trade) => trade.date),
-          ].some((date) =>
-            isOnOrBefore(date, getMonthEndDate(requestedLastCompletedMonth)),
+          ].some(
+            (date) =>
+              date !== null &&
+              isOnOrBefore(
+                date,
+                getMonthEndDate(requestedLastCompletedMonth),
+              ),
           );
           const provisionalMonths = getProvisionalSnapshotMonths({
             lastCompletedMonth: requestedLastCompletedMonth,

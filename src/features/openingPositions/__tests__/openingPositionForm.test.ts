@@ -136,4 +136,25 @@ describe("validateOpeningPositionForm", () => {
       isValid: false,
     });
   });
+
+  it("accepts an explicitly unknown first-purchase date without inventing one", () => {
+    const result = validateOpeningPositionForm({
+      assetClass: "stock",
+      assetName: "Reliance Industries",
+      averageCostPrice: "100",
+      currentPrice: "120",
+      date: "",
+      dateUnknown: true,
+      instrumentType: "stock",
+      quantity: "2",
+      sectorType: "energy",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { date: null },
+    });
+  });
 });

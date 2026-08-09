@@ -20,9 +20,11 @@ import {
   getMonthlySnapshotPriceConfidence,
 } from "@/src/domain/calculations";
 import {
+  formatLocalCalendarDate,
   getCalendarDatePart,
   isFutureCalendarDate,
 } from "@/src/domain/dates";
+import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -76,7 +78,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 5;
+export const portfolioSchemaVersion = 6;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -615,11 +617,36 @@ function isValidOpeningPosition(
     openingPosition.currentPrice !== undefined &&
     Number.isFinite(openingPosition.currentPrice) &&
     openingPosition.currentPrice > 0 &&
-    Boolean(getCalendarDatePart(openingPosition.date)) &&
-    !isFutureCalendarDate(openingPosition.date, now) &&
+    hasValidOpeningPositionDateState(openingPosition, now) &&
     (conviction === undefined ||
       (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5))
   );
+}
+
+function hasValidOpeningPositionDateState(
+  openingPosition: OpeningPosition,
+  now: Date,
+) {
+  const acquisitionDate =
+    openingPosition.date === null
+      ? null
+      : getCalendarDatePart(openingPosition.date);
+  const recordedAt = new Date(openingPosition.recordedAt ?? "");
+  const hasValidRecordedAt =
+    Number.isFinite(recordedAt.getTime()) &&
+    recordedAt.getTime() <= now.getTime();
+  const recordedOn = getCalendarDatePart(openingPosition.recordedOn ?? "");
+  const hasValidRecordedOn =
+    recordedOn !== null &&
+    recordedOn === openingPosition.recordedOn &&
+    !isFutureCalendarDate(recordedOn, now);
+  const hasValidDateState =
+    openingPosition.date === null
+      ? hasValidRecordedAt && hasValidRecordedOn
+      : acquisitionDate !== null &&
+        !isFutureCalendarDate(openingPosition.date, now);
+
+  return hasValidDateState;
 }
 
 function hasSupportedOpeningPositionPrecision(
@@ -637,7 +664,39 @@ function hasSupportedOpeningPositionPrecision(
 }
 
 function openingPositionMonth(openingPosition: OpeningPosition) {
-  return getCalendarDatePart(openingPosition.date)?.slice(0, 7) ?? null;
+  return getOpeningPositionHistoryDate(openingPosition)?.slice(0, 7) ?? null;
+}
+
+function prepareOpeningPositionForWrite(
+  openingPosition: OpeningPosition,
+  currentDate: Date,
+  existingPosition?: OpeningPosition,
+) {
+  if (openingPosition.date !== null) {
+    const {
+      recordedAt: _recordedAt,
+      recordedOn: _recordedOn,
+      ...knownDatePosition
+    } = openingPosition;
+    return knownDatePosition;
+  }
+
+  if (existingPosition?.date === null) {
+    return {
+      ...openingPosition,
+      recordedAt: existingPosition.recordedAt,
+      recordedOn:
+        existingPosition.recordedOn ??
+        getOpeningPositionHistoryDate(existingPosition) ??
+        formatLocalCalendarDate(currentDate),
+    };
+  }
+
+  return {
+    ...openingPosition,
+    recordedAt: currentDate.toISOString(),
+    recordedOn: formatLocalCalendarDate(currentDate),
+  };
 }
 
 function rebuildPortfolioSnapshots({
@@ -1006,7 +1065,7 @@ function wouldOversellAsset(
     ...openingPositions
       .filter((item) => item.assetId === assetId)
       .map((position) => ({
-        date: getCalendarDatePart(position.date) ?? "",
+        date: getOpeningPositionHistoryDate(position) ?? "",
         delta: position.quantity,
         id: position.id,
         priority: 0,
@@ -1226,7 +1285,18 @@ export function createPortfolioStore({
         return;
       }
 
-      const normalizedPosition = normalizeOpeningPosition(openingPosition);
+      const currentDate = now();
+      const preparedPosition = prepareOpeningPositionForWrite(
+        openingPosition,
+        currentDate,
+      );
+      if (
+        !hasSupportedOpeningPositionPrecision(preparedPosition) ||
+        !hasValidOpeningPositionDateState(preparedPosition, currentDate)
+      ) {
+        throw new Error("Opening position contains invalid financial values.");
+      }
+      const normalizedPosition = normalizeOpeningPosition(preparedPosition);
       if (!hasSupportedOpeningPositionPrecision(normalizedPosition)) {
         throw new Error("Opening position contains invalid financial values.");
       }
@@ -1447,10 +1517,15 @@ export function createPortfolioStore({
 
       const currentDate = now();
 
-      if (!isValidOpeningPosition(openingPosition, currentDate)) {
+      const preparedPosition = prepareOpeningPositionForWrite(
+        openingPosition,
+        currentDate,
+        existingPosition,
+      );
+      if (!isValidOpeningPosition(preparedPosition, currentDate)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
-      const normalizedPosition = normalizeOpeningPosition(openingPosition);
+      const normalizedPosition = normalizeOpeningPosition(preparedPosition);
       if (!isValidOpeningPosition(normalizedPosition, currentDate)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
@@ -1879,6 +1954,7 @@ export function createPortfolioStore({
     },
     recordOpeningPosition: (input) => {
       const state = get();
+      const currentDate = now();
 
       if (
         input.commandId.trim().length === 0 ||
@@ -1909,9 +1985,6 @@ export function createPortfolioStore({
         };
       }
 
-      if (!isValidOpeningPosition(input.openingPosition, now())) {
-        throw new Error("Opening position contains invalid financial values.");
-      }
       if (
         input.quote &&
         (!Number.isFinite(input.quote.price) ||
@@ -1923,14 +1996,21 @@ export function createPortfolioStore({
         throw new Error("Opening position quote contains invalid financial values.");
       }
 
-      const normalizedInputPosition = normalizeOpeningPosition(
+      const preparedInputPosition = prepareOpeningPositionForWrite(
         input.openingPosition,
+        currentDate,
+      );
+      if (!isValidOpeningPosition(preparedInputPosition, currentDate)) {
+        throw new Error("Opening position contains invalid financial values.");
+      }
+      const normalizedInputPosition = normalizeOpeningPosition(
+        preparedInputPosition,
       );
       const normalizedInputQuote = input.quote
         ? normalizeQuote(input.quote)
         : undefined;
 
-      if (!isValidOpeningPosition(normalizedInputPosition, now())) {
+      if (!isValidOpeningPosition(normalizedInputPosition, currentDate)) {
         throw new Error("Opening position is below supported precision.");
       }
       if (normalizedInputQuote && normalizedInputQuote.price <= 0) {

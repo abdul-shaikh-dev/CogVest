@@ -21,6 +21,7 @@ export type OpeningPositionFormValues = {
   conviction?: string;
   currentPrice: string;
   date: string;
+  dateUnknown?: boolean;
   instrumentType: string;
   notes?: string;
   quoteSourceId?: string;
@@ -36,7 +37,7 @@ export type ValidOpeningPositionForm = {
   averageCostPrice: number;
   conviction?: ConvictionScore;
   currentPrice: number;
-  date: string;
+  date: string | null;
   instrumentType: InstrumentType;
   notes?: string;
   quoteSourceId: string;
@@ -109,9 +110,9 @@ export function validateOpeningPositionForm(
     errors.currentPrice = "Current price must be greater than zero.";
   }
 
-  if (!parseCalendarDate(values.date)) {
+  if (!values.dateUnknown && !parseCalendarDate(values.date)) {
     errors.date = "Date must use YYYY-MM-DD.";
-  } else if (isFutureCalendarDate(values.date, now)) {
+  } else if (!values.dateUnknown && isFutureCalendarDate(values.date, now)) {
     errors.date = "Date cannot be in the future.";
   }
 
@@ -145,7 +146,7 @@ export function validateOpeningPositionForm(
       averageCostPrice: averageCostPrice as number,
       conviction: conviction as ConvictionScore | undefined,
       currentPrice: currentPrice as number,
-      date: values.date,
+      date: values.dateUnknown ? null : values.date,
       instrumentType: values.instrumentType as InstrumentType,
       notes: values.notes?.trim() || undefined,
       quoteSourceId:

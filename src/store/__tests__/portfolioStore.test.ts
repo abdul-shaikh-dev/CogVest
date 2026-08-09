@@ -1118,6 +1118,139 @@ describe("portfolio store", () => {
     expect(restartedStore.getState().quoteCache).toEqual({ [asset.id]: quote });
   });
 
+  it("persists, reloads, corrects, and deletes an unknown-date opening position", () => {
+    const storage = createMemoryJsonStorage();
+    const unknownPosition: OpeningPosition = {
+      ...openingPosition,
+      date: null,
+      id: "opening-unknown-date",
+    };
+    const store = createPortfolioStore({
+      now: () => new Date("2026-07-20T10:00:00.000Z"),
+      storage,
+    });
+
+    expect(
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: unknownPosition.id,
+        openingPosition: unknownPosition,
+      }).status,
+    ).toBe("applied");
+
+    const rehydrated = createPortfolioStore({
+      now: () => new Date("2026-07-20T10:00:00.000Z"),
+      storage,
+    });
+    expect(rehydrated.getState().openingPositions).toEqual([
+      {
+        ...unknownPosition,
+        recordedAt: "2026-07-20T10:00:00.000Z",
+        recordedOn: "2026-07-20",
+      },
+    ]);
+
+    expect(
+      rehydrated.getState().correctOpeningPosition({
+        ...unknownPosition,
+        date: "2024-04-15",
+      }).status,
+    ).toBe("applied");
+    expect(rehydrated.getState().openingPositions[0]?.date).toBe("2024-04-15");
+    expect(
+      rehydrated.getState().deleteOpeningPosition(unknownPosition.id).status,
+    ).toBe("applied");
+    expect(rehydrated.getState().openingPositions).toEqual([]);
+  });
+
+  it("owns unknown-date provenance at the durable write boundary", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2026-07-20T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+
+    expect(
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: "opening-invalid-unknown",
+        openingPosition: {
+          ...openingPosition,
+          date: null,
+          id: "opening-invalid-unknown",
+          recordedAt: "2020-01-01T00:00:00.000Z",
+          recordedOn: "2020-01-01",
+        },
+      }).status,
+    ).toBe("applied");
+    expect(store.getState().openingPositions[0]).toMatchObject({
+      date: null,
+      recordedAt: "2026-07-20T10:00:00.000Z",
+      recordedOn: "2026-07-20",
+    });
+  });
+
+  it("rebuilds automatic history when a known date becomes unknown", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-april-unknown-correction",
+      month: "2026-04",
+    };
+
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+
+    const result = store.getState().correctOpeningPosition({
+      ...openingPosition,
+      date: null,
+    });
+
+    expect(result).toMatchObject({ refreshedMonths: [], status: "applied" });
+    expect(store.getState().monthlySnapshots).toEqual([]);
+    expect(store.getState().openingPositions[0]).toMatchObject({
+      date: null,
+      recordedOn: "2026-07-22",
+    });
+  });
+
+  it("rebuilds automatic history when an unknown date becomes known", () => {
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage: createMemoryJsonStorage(),
+    });
+
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({ ...openingPosition, date: null });
+
+    const result = store.getState().correctOpeningPosition({
+      ...store.getState().openingPositions[0],
+      date: "2026-04-15",
+    });
+
+    expect(result).toMatchObject({
+      refreshedMonths: expect.arrayContaining([
+        "2026-04",
+        "2026-05",
+        "2026-06",
+      ]),
+      status: "applied",
+    });
+    expect(store.getState().openingPositions[0]).toEqual({
+      ...openingPosition,
+      date: "2026-04-15",
+    });
+  });
+
   it("reuses and updates a canonical asset when recording an opening position", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
@@ -1989,7 +2122,7 @@ describe("portfolio store", () => {
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 5,
+      schemaVersion: 6,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -2184,7 +2317,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(5);
+    expect(store.getState().schemaVersion).toBe(6);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -2219,7 +2352,7 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(5);
+    expect(store.getState().schemaVersion).toBe(6);
   });
 
   it("migrates V3 snapshots by defaulting monthly snapshots", () => {
@@ -2236,7 +2369,7 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().monthlySnapshots).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(5);
+    expect(store.getState().schemaVersion).toBe(6);
   });
 
   it("migrates V4 additions without inventing income semantics", () => {
@@ -2267,7 +2400,7 @@ describe("portfolio store", () => {
         purpose: "legacyUncategorized",
       }),
     ]);
-    expect(store.getState().schemaVersion).toBe(5);
+    expect(store.getState().schemaVersion).toBe(6);
   });
 
   it("migrates legacy automatic zero income to unknown without changing manual values", () => {

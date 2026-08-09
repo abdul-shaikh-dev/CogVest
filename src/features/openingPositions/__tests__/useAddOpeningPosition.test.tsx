@@ -47,7 +47,7 @@ describe("useAddOpeningPosition", () => {
     jest.clearAllMocks();
   });
 
-  it("defaults acquisition to the injected local calendar day", () => {
+  it("does not invent a first-purchase date", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-21T19:15:00.000Z");
     jest.spyOn(now, "getFullYear").mockReturnValue(2026);
@@ -58,7 +58,8 @@ describe("useAddOpeningPosition", () => {
       useAddOpeningPosition({ now, store }),
     );
 
-    expect(result.current.date).toBe("2026-07-22");
+    expect(result.current.date).toBe("");
+    expect(result.current.dateUnknown).toBe(false);
   });
 
   it("reviews and confirms a manual opening position through the feature controller", async () => {
@@ -75,6 +76,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setQuantity("2");
       result.current.setAverageCostPrice("100");
       result.current.setCurrentPrice("120");
+      result.current.setDateUnknown(true);
     });
 
     act(() => {
@@ -85,7 +87,9 @@ describe("useAddOpeningPosition", () => {
       averageCostPrice: 100,
       currentPrice: 120,
       quantity: 2,
+      date: null,
     });
+    expect(result.current.reviewOpeningPosition?.recordedAt).toBeUndefined();
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -93,6 +97,11 @@ describe("useAddOpeningPosition", () => {
 
     expect(store.getState().assets).toHaveLength(1);
     expect(store.getState().openingPositions).toHaveLength(1);
+    expect(store.getState().openingPositions[0]).toMatchObject({
+      date: null,
+      recordedAt: expect.any(String),
+      recordedOn: expect.any(String),
+    });
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
       price: 120,
@@ -142,6 +151,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setQuantity("1");
       result.current.setAverageCostPrice("100");
       result.current.setCurrentPrice("120");
+      result.current.setDate("2026-07-20");
     });
     act(() => {
       result.current.handleReview();
@@ -171,6 +181,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setQuantity("2");
       result.current.setAverageCostPrice("100");
       result.current.setCurrentPrice("120");
+      result.current.setDate("2026-07-20");
     });
 
     act(() => {
@@ -377,6 +388,7 @@ describe("useAddOpeningPosition", () => {
     act(() => {
       result.current.setQuantity("25");
       result.current.setAverageCostPrice("1450");
+      result.current.setDate("2026-07-20");
     });
     act(() => {
       result.current.handleReview();
@@ -428,7 +440,8 @@ describe("useAddOpeningPosition", () => {
     expect(result.current.quantity).toBe("");
     expect(result.current.averageCostPrice).toBe("");
     expect(result.current.currentPrice).toBe("");
-    expect(result.current.date).toBe("2026-07-20");
+    expect(result.current.date).toBe("");
+    expect(result.current.dateUnknown).toBe(false);
     expect(result.current.conviction).toBe("");
     expect(result.current.notes).toBe("");
     expect(result.current.quoteStatus).toBe(
@@ -449,6 +462,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setQuantity("2");
       result.current.setAverageCostPrice("100");
       result.current.setCurrentPrice("120");
+      result.current.setDate("2026-07-20");
       result.current.setConviction("5");
       result.current.setNotes("Reset me");
     });

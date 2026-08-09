@@ -18,6 +18,7 @@ import {
   sectorTypeLabel,
   sectorTypeOptions,
 } from "@/src/domain/assets";
+import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
@@ -178,7 +179,10 @@ export function ReviewAssetScreen({
   const earliestAffectedMonth = [
     ...snapshot.openingPositions
       .filter((position) => position.assetId === assetId)
-      .map((position) => position.date.slice(0, 7)),
+      .map((position) =>
+        getOpeningPositionHistoryDate(position)?.slice(0, 7),
+      )
+      .filter((month): month is string => month !== undefined),
     ...snapshot.trades
       .filter((trade) => trade.assetId === assetId)
       .map((trade) => trade.date.slice(0, 7)),

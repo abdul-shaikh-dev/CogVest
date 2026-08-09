@@ -20,6 +20,10 @@ import {
   roundHalfUp,
   sumFinancialValues,
 } from "@/src/domain/precision";
+import {
+  getOpeningPositionHistoryDate,
+  isOpeningPositionEffective,
+} from "@/src/domain/openingPositions";
 
 import {
   calculateMonthlyPerformance,
@@ -136,7 +140,7 @@ export function calculateHolding({
   let totalUnits = decimal(0);
   const costBasisEvents = [
     ...openingPositions.map((position) => ({
-      date: position.date,
+      date: getOpeningPositionHistoryDate(position) ?? "",
       fees: 0,
       pricePerUnit: position.averageCostPrice,
       quantity: position.quantity,
@@ -226,7 +230,7 @@ export function calculateHoldings({
       const assetOpeningPositions = openingPositions.filter(
         (position) =>
           position.assetId === asset.id &&
-          isEffectiveCalendarDate(position.date, now),
+          isOpeningPositionEffective(position, now),
       );
 
       if (assetTrades.length === 0 && assetOpeningPositions.length === 0) {
@@ -237,7 +241,9 @@ export function calculateHoldings({
         .filter((position) => position.currentPrice !== undefined)
         .sort(
           (left, right) =>
-            new Date(right.date).getTime() - new Date(left.date).getTime(),
+            (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
+              getOpeningPositionHistoryDate(left) ?? "",
+            ),
         )[0]?.currentPrice;
       const currentPrice = quote?.price ?? latestManualPrice ?? 0;
       const holding = calculateHolding({

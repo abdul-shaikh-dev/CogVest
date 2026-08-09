@@ -5,8 +5,10 @@ export type OpeningPosition = {
   averageCostPrice: number;
   conviction?: ConvictionScore;
   currentPrice?: number;
-  date: string;
+  date: string | null;
   id: string;
   notes?: string;
   quantity: number;
+  recordedAt?: string;
+  recordedOn?: string;
 };

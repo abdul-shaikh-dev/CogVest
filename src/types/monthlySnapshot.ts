@@ -28,7 +28,8 @@ export type MonthlyPerformanceBasis =
       reason:
         | "ambiguous-cash-flow"
         | "legacy-snapshot"
-        | "manual-snapshot";
+        | "manual-snapshot"
+        | "unknown-opening-position-date";
       status: "unavailable";
       warnings: string[];
     };

@@ -10,6 +10,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
+import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import {
   formatLocalCalendarDate,
   getCalendarDatePart,
@@ -376,7 +377,9 @@ function selectAssetPrice({
     .filter((position) => position.currentPrice !== undefined)
     .sort(
       (left, right) =>
-        new Date(right.date).getTime() - new Date(left.date).getTime(),
+        (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
+          getOpeningPositionHistoryDate(left) ?? "",
+        ),
     )[0]?.currentPrice;
 
   if (latestManualPrice !== undefined) {
@@ -429,9 +432,11 @@ export function getMissingCompletedSnapshotMonths({
 }: MissingCompletedSnapshotMonthsInput) {
   const recordMonthIndexes = [
     ...cashEntries.map((entry) => entry.date),
-    ...openingPositions.map((position) => position.date),
+    ...openingPositions.map((position) =>
+      getOpeningPositionHistoryDate(position),
+    ),
     ...trades.map((trade) => trade.date),
-  ]
+  ].filter((date): date is string => date !== null)
     .map((date) => new Date(date))
     .filter((date) => Number.isFinite(date.getTime()))
     .map((date) => monthIndex(formatMonth(date)))
@@ -541,7 +546,7 @@ export function buildGeneratedMonthEndSnapshot({
   const monthOpeningPositions = openingPositions.filter(
     (position) =>
       supportedAssetIds.has(position.assetId) &&
-      isOnOrBefore(position.date, monthEnd),
+      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd),
   );
   const monthTrades = trades.filter(
     (trade) =>
@@ -554,7 +559,7 @@ export function buildGeneratedMonthEndSnapshot({
   const openQuantityByAssetId = new Map<string, FinancialDecimalInstance>();
 
   for (const position of openingPositions.filter((item) =>
-    isOnOrBefore(item.date, monthEnd),
+    isOnOrBefore(getOpeningPositionHistoryDate(item) ?? "", monthEnd),
   )) {
     openQuantityByAssetId.set(
       position.assetId,
@@ -741,7 +746,11 @@ export function buildGeneratedMonthEndSnapshot({
     monthlyInvestment: normalizeMoney(
       sumFinancialValues([
         ...monthOpeningPositions
-          .filter((position) => isWithinMonth(position.date, targetMonth))
+          .filter(
+            (position) =>
+              position.date !== null &&
+              isWithinMonth(position.date, targetMonth),
+          )
           .map((position) =>
             decimal(position.quantity).times(position.averageCostPrice),
           ),

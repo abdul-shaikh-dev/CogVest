@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5])(
+  it.each([1, 2, 3, 4, 5, 6])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,7 +51,7 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 6 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 7 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });
@@ -74,6 +74,45 @@ describe("persisted portfolio schema", () => {
     );
 
     expect(result).toEqual({ reason: "invalid-shape", success: false });
+  });
+
+  it("requires durable provenance for an unknown opening-position date", () => {
+    const basePosition = {
+      assetId: "asset-reliance",
+      averageCostPrice: 100,
+      currentPrice: 120,
+      date: null,
+      id: "opening-unknown",
+      quantity: 2,
+    };
+
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          openingPositions: [
+            {
+              ...basePosition,
+              recordedAt: "2026-07-10T09:30:00.000Z",
+            },
+          ],
+          schemaVersion: 6,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          openingPositions: [
+            {
+              ...basePosition,
+              recordedAt: "2026-07-10T09:30:00.000Z",
+              recordedOn: "2026-07-10",
+            },
+          ],
+          schemaVersion: 6,
+        }),
+      ),
+    ).toMatchObject({ success: true });
   });
 
   it("accepts snapshots with explicitly unknown income", () => {

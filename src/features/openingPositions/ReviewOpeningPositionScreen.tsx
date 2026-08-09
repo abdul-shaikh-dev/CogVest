@@ -85,6 +85,9 @@ export function ReviewOpeningPositionScreen({
   const [date, setDate] = useState(
     () => getCalendarDatePart(initialPosition?.date ?? "") ?? "",
   );
+  const [dateUnknown, setDateUnknown] = useState(
+    () => initialPosition?.date === null,
+  );
   const [notes, setNotes] = useState(() => initialPosition?.notes ?? "");
   const [conviction, setConviction] = useState(
     () => initialPosition?.conviction?.toString() ?? "",
@@ -118,6 +121,7 @@ export function ReviewOpeningPositionScreen({
       conviction,
       currentPrice,
       date,
+      dateUnknown,
       instrumentType: positionAsset.instrumentType ?? "other",
       notes,
       quoteSourceId: positionAsset.quoteSourceId,
@@ -260,14 +264,44 @@ export function ReviewOpeningPositionScreen({
             Live quotes remain managed at the holding level. This value is used
             when a live quote is unavailable.
           </AppText>
-          <DatePickerField
-            error={errors.date}
-            label="Date acquired"
-            maximumDate={now}
-            onChange={setDate}
-            testID="opening-correction-date-input"
-            value={date}
-          />
+          {dateUnknown ? (
+            <AppText color="secondary">
+              First purchase date: Unknown
+            </AppText>
+          ) : (
+            <DatePickerField
+              error={errors.date}
+              label="First purchase date (optional)"
+              maximumDate={now}
+              onChange={setDate}
+              testID="opening-correction-date-input"
+              value={date}
+            />
+          )}
+          <Pressable
+            accessibilityLabel="First purchase date unknown"
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: dateUnknown }}
+            onPress={() => {
+              setDateUnknown(!dateUnknown);
+              setDate("");
+              setErrors((current) => ({ ...current, date: undefined }));
+            }}
+            style={({ pressed }) => [
+              styles.unknownDateControl,
+              dateUnknown && styles.unknownDateControlSelected,
+              pressed && styles.pressed,
+            ]}
+            testID="opening-correction-date-unknown"
+          >
+            <AppText
+              color={dateUnknown ? "primary" : "secondary"}
+              variant="caption"
+              weight="bold"
+            >
+              I don't know
+            </AppText>
+          </Pressable>
           <FormTextField
             label="Notes"
             multiline
@@ -428,5 +462,16 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: interaction.pressedOpacity,
+  },
+  unknownDateControl: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  unknownDateControlSelected: {
+    backgroundColor: "rgba(46,125,82,0.16)",
   },
 });
