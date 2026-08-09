@@ -82,7 +82,7 @@ export default function E2eEvidenceScreen() {
             Position count: {openingPositions.length}
           </EvidenceText>
           <EvidenceText testID={`e2e-asset-${key}-values`}>
-            Values: invested {holding ? formatINR(holding.totalInvested) : "missing"} | current {holding ? formatINR(holding.currentValue) : "missing"} | quantity {holding?.totalUnits ?? 0}
+            Values: invested {holding ? formatINR(holding.totalInvested) : "missing"} | current {holding?.currentValue === null ? "pending" : holding ? formatINR(holding.currentValue) : "missing"} | quantity {holding?.totalUnits ?? 0}
           </EvidenceText>
           {openingPositions.map((position, index) => (
             <EvidenceText

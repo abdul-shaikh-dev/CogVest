@@ -46,21 +46,30 @@ export function createHoldingReviewItems(
     })
     .sort(
       (left, right) =>
-        right.holding.currentValue - left.holding.currentValue,
+        (right.holding.currentValue ?? -1) -
+        (left.holding.currentValue ?? -1),
     );
 }
 
 export function getHoldingReviewSummary(items: HoldingReviewItem[]) {
-  const dominant = [...items].sort(
+  const valuedItems = items.filter(
+    (item) => item.holding.valuation.status !== "pending",
+  );
+  const dominant = [...valuedItems].sort(
     (left, right) => right.allocationPct - left.allocationPct,
   )[0];
-  const bestReturn = items
-    .filter((item) => item.holding.unrealisedPnL > 0)
+  const bestReturn = valuedItems
+    .filter(
+      (item) =>
+        item.holding.unrealisedPnL !== null &&
+        item.holding.unrealisedPnL > 0,
+    )
     .sort(
       (left, right) =>
-        right.holding.unrealisedPnLPct - left.holding.unrealisedPnLPct,
+        (right.holding.unrealisedPnLPct ?? 0) -
+        (left.holding.unrealisedPnLPct ?? 0),
     )[0];
-  const topThreeAllocationPct = [...items]
+  const topThreeAllocationPct = [...valuedItems]
     .sort((left, right) => right.allocationPct - left.allocationPct)
     .slice(0, 3);
 
@@ -78,6 +87,10 @@ export function getHoldingReviewSummary(items: HoldingReviewItem[]) {
 export function getExposureSegments(
   items: HoldingReviewItem[],
 ): ExposureSegment[] {
+  if (items.some((item) => item.holding.valuation.status === "pending")) {
+    return [];
+  }
+
   const groups: ExposureSegment[] = [
     {
       color: "green",
@@ -108,7 +121,7 @@ export function getExposureSegments(
     items.map(
       (item) =>
         item.holding.calculationBasis?.currentValue ??
-        item.holding.currentValue,
+        item.holding.currentValue ?? 0,
     ),
   );
   const preciseValues = new Map(
@@ -127,7 +140,7 @@ export function getExposureSegments(
           .get(group.key)!
           .plus(
             item.holding.calculationBasis?.currentValue ??
-              item.holding.currentValue,
+              item.holding.currentValue ?? 0,
           ),
       );
     }
@@ -170,11 +183,14 @@ function getExposureKey(assetClass: AssetClass) {
 
 function matchesFilter(item: HoldingReviewItem, filter: HoldingFilter) {
   if (filter === "winners") {
-    return item.holding.unrealisedPnL >= 0;
+    return (
+      item.holding.unrealisedPnL !== null &&
+      item.holding.unrealisedPnL >= 0
+    );
   }
 
   if (filter === "losers") {
-    return item.holding.unrealisedPnL < 0;
+    return item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0;
   }
 
   if (filter === "high-allocation") {

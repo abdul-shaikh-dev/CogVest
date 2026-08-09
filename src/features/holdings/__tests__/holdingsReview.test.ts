@@ -32,6 +32,13 @@ function createReviewItem({
     totalUnits: 1,
     unrealisedPnL: pnl,
     unrealisedPnLPct: pnl,
+    valuation: {
+      asOf: "2026-08-01T00:00:00.000Z",
+      currency: "INR",
+      price: 100 + pnl,
+      source: "yahoo",
+      status: "fetched",
+    },
   };
 
   return {

@@ -374,18 +374,24 @@ function selectAssetPrice({
   }
 
   const latestManualPrice = [...openingPositions]
-    .filter((position) => position.currentPrice !== undefined)
+    .filter(
+      (position) =>
+        position.manualValuation !== undefined ||
+        position.currentPrice !== undefined,
+    )
     .sort(
       (left, right) =>
         (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
           getOpeningPositionHistoryDate(left) ?? "",
         ),
-    )[0]?.currentPrice;
+    )[0];
+  const manualPrice =
+    latestManualPrice?.manualValuation?.price ?? latestManualPrice?.currentPrice;
 
-  if (latestManualPrice !== undefined) {
+  if (manualPrice !== undefined) {
     return {
       basis: "manual-fallback",
-      price: latestManualPrice,
+      price: manualPrice,
     };
   }
 
@@ -663,6 +669,19 @@ export function buildGeneratedMonthEndSnapshot({
     quoteCache: snapshotQuoteCache,
     trades: monthTrades,
   });
+  const pendingHoldings = holdings.filter(
+    (holding) => holding.valuation.status === "pending",
+  );
+
+  if (pendingHoldings.length > 0) {
+    return {
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        `${pendingHoldings.length} holding${pendingHoldings.length === 1 ? "" : "s"} could not be valued for ${targetMonth}. Refresh prices or enter a manual fallback before creating this snapshot.`,
+      ],
+    };
+  }
   const pricedAssets = holdings.map((holding) => ({
     asset: holding.asset,
     selection:
@@ -681,7 +700,7 @@ export function buildGeneratedMonthEndSnapshot({
         )
         .map(
           (holding) =>
-            holding.calculationBasis?.currentValue ?? holding.currentValue,
+            holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
         ),
     ),
   );
@@ -691,7 +710,7 @@ export function buildGeneratedMonthEndSnapshot({
         .filter((holding) => holding.asset.assetClass === "debt")
         .map(
           (holding) =>
-            holding.calculationBasis?.currentValue ?? holding.currentValue,
+            holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
         ),
     ),
   );
@@ -701,7 +720,7 @@ export function buildGeneratedMonthEndSnapshot({
         .filter((holding) => holding.asset.assetClass === "crypto")
         .map(
           (holding) =>
-            holding.calculationBasis?.currentValue ?? holding.currentValue,
+            holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
         ),
     ),
   );
@@ -720,6 +739,16 @@ export function buildGeneratedMonthEndSnapshot({
     : "provisional";
   const warnings = buildWarnings(priceBases);
   const salary = deriveMonthlySnapshotSalary(monthCashEntries, targetMonth);
+  const portfolioValue = calculatePortfolioTotal(holdings, monthCashEntries);
+
+  if (portfolioValue === null) {
+    return {
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: ["Portfolio valuation is incomplete for this month."],
+    };
+  }
+
   const snapshot: MonthlySnapshot = {
     cashValue,
     cryptoValue,
@@ -767,7 +796,7 @@ export function buildGeneratedMonthEndSnapshot({
       openingPositions: monthOpeningPositions,
       targetMonth,
     }),
-    portfolioValue: calculatePortfolioTotal(holdings, monthCashEntries),
+    portfolioValue,
     ...(salary === undefined ? {} : { salary }),
   };
 

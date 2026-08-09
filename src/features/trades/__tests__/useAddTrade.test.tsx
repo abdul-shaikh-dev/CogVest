@@ -6,7 +6,7 @@ import { createPortfolioStore } from "@/src/store";
 import { useAddTrade } from "../useAddTrade";
 
 describe("useAddTrade", () => {
-  it("reviews and confirms a manual buy trade through the feature controller", async () => {
+  it("records a buy without treating its transaction price as a current quote", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 1000,
@@ -51,9 +51,6 @@ describe("useAddTrade", () => {
         type: "withdrawal",
       }),
     ]);
-    expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
-      price: 100,
-      source: "manual",
-    });
+    expect(store.getState().quoteCache).toEqual({});
   });
 });

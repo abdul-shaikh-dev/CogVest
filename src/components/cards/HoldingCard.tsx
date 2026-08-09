@@ -13,7 +13,7 @@ import type { Holding } from "@/src/types";
 import { AppText, MaskedValue } from "../common";
 
 type HoldingCardProps = {
-  allocationPct?: number;
+  allocationPct?: number | null;
   initialAllocationPct?: number;
   holding: Holding;
   masked?: boolean;
@@ -24,6 +24,10 @@ function formatQuantity(value: number) {
 }
 
 function formatPnLAmount(holding: Holding) {
+  if (holding.unrealisedPnL === null) {
+    return "Unavailable";
+  }
+
   const amount = formatCompactINR(holding.unrealisedPnL);
 
   return `${holding.unrealisedPnL > 0 ? "+" : ""}${amount}`;
@@ -35,7 +39,8 @@ export function HoldingCard({
   holding,
   masked = false,
 }: HoldingCardProps) {
-  const isProfit = holding.unrealisedPnL >= 0;
+  const isPending = holding.valuation.status === "pending";
+  const isProfit = (holding.unrealisedPnL ?? 0) >= 0;
 
   return (
     <PremiumCard style={styles.card}>
@@ -63,9 +68,14 @@ export function HoldingCard({
             masked={masked}
             minimumFontScale={0.8}
             numberOfLines={1}
-            value={formatCompactINR(holding.currentValue)}
+            value={
+              isPending || holding.currentValue === null
+                ? "Valuation pending"
+                : formatCompactINR(holding.currentValue)
+            }
             weight="bold"
           />
+          {!isPending && holding.unrealisedPnLPct !== null ? (
           <View style={styles.pnlLine}>
             <MaskedValue
               align="right"
@@ -84,6 +94,7 @@ export function HoldingCard({
               {formatPercentage(holding.unrealisedPnLPct)}
             </AppText>
           </View>
+          ) : null}
         </View>
       </View>
 
@@ -101,9 +112,9 @@ export function HoldingCard({
           Avg {formatCompactINR(holding.averageCostPrice)}
         </AppText>
         <AppText color="secondary">
-          Current {formatCompactINR(holding.currentPrice)}
+          Current {holding.currentPrice === null ? "Unavailable" : formatCompactINR(holding.currentPrice)}
         </AppText>
-        {allocationPct !== undefined ? (
+        {allocationPct !== undefined && allocationPct !== null ? (
           <AppText color="secondary">
             Allocation {formatPercentage(allocationPct).replace("+", "")}
           </AppText>
@@ -111,7 +122,9 @@ export function HoldingCard({
       </View>
 
       <AppText color="muted" variant="caption">
-        {holding.lastUpdated
+        {isPending
+          ? "Refresh prices or review this holding to enter a manual value."
+          : holding.lastUpdated
           ? `Updated ${formatDate(holding.lastUpdated)}`
           : "Quote not refreshed yet"}
       </AppText>

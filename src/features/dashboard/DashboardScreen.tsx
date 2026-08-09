@@ -86,6 +86,10 @@ function toDisplayAllocation(
   holdings: Holding[],
   cashBalance: number,
 ): DisplayAllocationItem[] {
+  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+    return [];
+  }
+
   const values = {
     cash: decimal(cashBalance),
     crypto: decimal(0),
@@ -99,7 +103,7 @@ function toDisplayAllocation(
         ? "equity"
         : holding.asset.assetClass;
     values[displayClass] = values[displayClass].plus(
-      holding.calculationBasis?.currentValue ?? holding.currentValue,
+      holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
     );
   }
 
@@ -179,8 +183,10 @@ export function DashboardScreen({
   const totalPnL = dashboard.rollupTotals.pnl;
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
   const hasNegativeCash = dashboard.cashBalance < 0;
+  const hasCompleteValuation =
+    dashboard.rollupTotals.valuationCoverage.status === "complete";
   const hasPositiveNetPortfolio =
-    dashboard.rollupTotals.totalCurrentValue > 0;
+    (dashboard.rollupTotals.totalCurrentValue ?? 0) > 0;
   const quoteStatus = getQuoteStatus({
     isRefreshing: dashboard.isRefreshing,
     quoteFailed: dashboard.quoteFailed.length,
@@ -245,10 +251,24 @@ export function DashboardScreen({
             minimumFontScale={0.74}
             numberOfLines={1}
             style={styles.heroValue}
-            value={formatCompactINR(dashboard.totalValue)}
+            value={
+              dashboard.totalValue === null
+                ? "Valuation pending"
+                : formatCompactINR(dashboard.totalValue)
+            }
             weight="bold"
           />
           <View style={styles.heroContextRow}>
+            {!hasCompleteValuation ? (
+              <AppText color="secondary" variant="caption">
+                {dashboard.rollupTotals.valuationCoverage.pendingHoldings} holding
+                {dashboard.rollupTotals.valuationCoverage.pendingHoldings === 1
+                  ? ""
+                  : "s"}{" "}
+                need a price. Invested value remains available.
+              </AppText>
+            ) : null}
+            {hasCompleteValuation ? (
             <View
               style={[
                 styles.metricPill,
@@ -268,6 +288,7 @@ export function DashboardScreen({
                 {" today"}
               </AppText>
             </View>
+            ) : null}
           </View>
           <View
             style={[
@@ -304,12 +325,16 @@ export function DashboardScreen({
               <AppText color="secondary" variant="caption">
                 Holdings P&L
               </AppText>
-              <MaskedValue
-                masked={dashboard.maskWealthValues}
-                style={totalPnL >= 0 ? styles.positiveText : styles.negativeText}
-                value={formatSignedCompactINR(totalPnL)}
-                weight="bold"
-              />
+              {totalPnL === null ? (
+                <AppText color="secondary" weight="bold">Unavailable</AppText>
+              ) : (
+                <MaskedValue
+                  masked={dashboard.maskWealthValues}
+                  style={totalPnL >= 0 ? styles.positiveText : styles.negativeText}
+                  value={formatSignedCompactINR(totalPnL)}
+                  weight="bold"
+                />
+              )}
             </View>
             <View
               style={[
@@ -322,17 +347,21 @@ export function DashboardScreen({
               <AppText color="secondary" variant="caption">
                 Holdings P&L %
               </AppText>
-              <AppText
-                style={totalPnLPct >= 0 ? styles.positiveText : styles.negativeText}
-                weight="bold"
-              >
-                {formatPercentage(totalPnLPct)}
-              </AppText>
+              {totalPnLPct === null ? (
+                <AppText color="secondary" weight="bold">Unavailable</AppText>
+              ) : (
+                <AppText
+                  style={totalPnLPct >= 0 ? styles.positiveText : styles.negativeText}
+                  weight="bold"
+                >
+                  {formatPercentage(totalPnLPct)}
+                </AppText>
+              )}
             </View>
           </View>
         </PremiumCard>
 
-        {dashboard.cashBalance < 0 ? (
+        {dashboard.cashBalance < 0 && hasCompleteValuation ? (
           <PremiumCard
             style={styles.liabilityCard}
             testID="dashboard-cash-liability"
@@ -357,7 +386,7 @@ export function DashboardScreen({
                   masked={dashboard.maskWealthValues}
                   testID="dashboard-liability-gross"
                   value={formatCompactINR(
-                    dashboard.rollupTotals.holdingsCurrentValue,
+                    dashboard.rollupTotals.holdingsCurrentValue ?? 0,
                   )}
                   weight="bold"
                 />
@@ -381,13 +410,13 @@ export function DashboardScreen({
                 <MaskedValue
                   masked={dashboard.maskWealthValues}
                   style={
-                    dashboard.rollupTotals.totalCurrentValue < 0
+                    (dashboard.rollupTotals.totalCurrentValue ?? 0) < 0
                       ? styles.negativeText
                       : undefined
                   }
                   testID="dashboard-liability-net"
                   value={formatCompactINR(
-                    dashboard.rollupTotals.totalCurrentValue,
+                    dashboard.rollupTotals.totalCurrentValue ?? 0,
                   )}
                   weight="bold"
                 />
@@ -489,11 +518,33 @@ export function DashboardScreen({
           </PremiumCard>
         ) : (
           <EmptyState
-            actionLabel={onAddTrade ? "Add Holding" : undefined}
-            actionTestID="add-trade-button"
-            message="Add your first portfolio entry to build holdings automatically."
-            title="No allocation yet"
-            onAction={onAddTrade}
+            actionLabel={
+              hasCompleteValuation
+                ? onAddTrade
+                  ? "Add Holding"
+                  : undefined
+                : "Refresh prices"
+            }
+            actionTestID={
+              hasCompleteValuation
+                ? "add-trade-button"
+                : "dashboard-refresh-pending-prices"
+            }
+            message={
+              hasCompleteValuation
+                ? "Add your first portfolio entry to build holdings automatically."
+                : "Allocation will appear after every holding has a current valuation."
+            }
+            title={
+              hasCompleteValuation ? "No allocation yet" : "Allocation unavailable"
+            }
+            onAction={
+              hasCompleteValuation
+                ? onAddTrade
+                : () => {
+                    void dashboard.refresh();
+                  }
+            }
           />
         )}
 

@@ -260,11 +260,16 @@ function automationMessage({
 }
 
 function automationWarningMessage(targetMonth: string, warning: string) {
-  if (
-    warning.includes("fallback") ||
-    warning.includes("could not be priced")
-  ) {
+  if (warning.includes("fallback")) {
     return null;
+  }
+
+  if (warning.includes("could not be priced")) {
+    return `${targetMonth}: ${warning} Refresh prices or enter a manual price to complete this snapshot.`;
+  }
+
+  if (warning.includes("could not be valued")) {
+    return `${targetMonth}: ${warning}`;
   }
 
   return `${targetMonth}: Some portfolio records need review before this month can be completed.`;
@@ -637,10 +642,26 @@ export function useProgress({
       lastCompletedMonth,
       snapshots: completedState.monthlySnapshots,
     });
+    const unresolvedTargetMonths = targetMonths.filter(
+      (targetMonth) =>
+        !completedState.monthlySnapshots.some(
+          (monthlySnapshot) => monthlySnapshot.month === targetMonth,
+        ),
+    );
+    if (warnings.length === 0 && unresolvedTargetMonths.length > 0) {
+      warnings.push(
+        ...unresolvedTargetMonths.map(
+          (targetMonth) =>
+            `${targetMonth}: This snapshot could not be completed. Refresh prices or enter a manual price for holdings with pending valuation.`,
+        ),
+      );
+    }
     const provisionalCount = provisionalMonths.length;
     const status: GeneratedSnapshotStatus =
       createdSnapshots.length > 0 || refreshedSnapshots.length > 0
         ? "created"
+        : unresolvedTargetMonths.length > 0
+          ? "insufficient-data"
         : hasCompletedPortfolioRecord
           ? "already-exists"
           : "insufficient-data";

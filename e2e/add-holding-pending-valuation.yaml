@@ -1,0 +1,101 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "reliance"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Lookup unavailable. You can enter details manually."
+    timeout: 5000
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Reliance Industries"
+- tapOn:
+    id: "symbol-input"
+- inputText: "RELIANCE"
+- tapOn:
+    id: "ticker-input"
+- inputText: "RELIANCE.NS"
+- tapOn:
+    id: "quote-source-id-input"
+- inputText: "RELIANCE.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "1200"
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- assertVisible: "Valuation pending"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "save-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holding-save-complete"
+- scrollUntilVisible:
+    element:
+      id: "view-holding-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "view-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible: "Valuation pending"
+- tapOn:
+    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      id: "holding-enter-manual-price-.*"
+    direction: DOWN
+- tapOn:
+    id: "holding-enter-manual-price-.*"
+- assertVisible:
+    id: "review-opening-position-screen"
+- tapOn:
+    id: "opening-correction-current-price-input"
+- inputText: "1300"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "save-opening-correction-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "save-opening-correction-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holdings-screen"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Quote: missing | missing"
+- assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"
+- openLink: "cogvest:///"
+- assertVisible:
+    id: "dashboard-screen"
+- assertVisible: "₹2.6K"

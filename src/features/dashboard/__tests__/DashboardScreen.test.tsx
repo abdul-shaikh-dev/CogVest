@@ -62,6 +62,48 @@ const etfBuyTrade: Trade = {
 };
 
 describe("DashboardScreen", () => {
+  it("shows incomplete valuation honestly and resolves it after quote refresh", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      assetId: asset.id,
+      averageCostPrice: 100,
+      date: "2026-04-20",
+      id: "opening-pending",
+      quantity: 2,
+    });
+    const refreshQuotes = jest.fn().mockResolvedValue({
+      failed: [],
+      quoteCache: {
+        [asset.id]: {
+          asOf: "2026-08-09T10:00:00.000Z",
+          assetId: asset.id,
+          currency: "INR",
+          price: 125,
+          source: "yahoo",
+        },
+      },
+      timedOut: [],
+    });
+    const { getAllByText, getByTestId, getByText, queryByText } = render(
+      <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
+    );
+
+    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText("Allocation unavailable")).toBeTruthy();
+    expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
+
+    fireEvent.press(getByTestId("dashboard-mask-toggle"));
+    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+
+    fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
+
+    await waitFor(() => {
+      expect(refreshQuotes).toHaveBeenCalledTimes(1);
+      expect(queryByText(/holding need a price/u)).toBeNull();
+    });
+  });
+
   it("shows the empty dashboard with a zero total and Add Holding action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();

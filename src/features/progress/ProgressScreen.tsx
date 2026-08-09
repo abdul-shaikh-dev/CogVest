@@ -1477,7 +1477,10 @@ export function ProgressScreen({
                 {
                   label: "Portfolio",
                   masked: progress.preferences.maskWealthValues,
-                  value: formatCompactINR(progress.portfolioValue),
+                  value:
+                    progress.portfolioValue === null
+                      ? "Valuation pending"
+                      : formatCompactINR(progress.portfolioValue),
                 },
                 {
                   label: "Invested",

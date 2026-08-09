@@ -91,6 +91,35 @@ function seedMixedHoldings() {
 }
 
 describe("HoldingsScreen", () => {
+  it("shows pending valuation actions without presenting zero as current value", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onReviewOpeningPosition = jest.fn();
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      assetId: asset.id,
+      averageCostPrice: 100,
+      date: "2026-04-20",
+      id: "opening-pending",
+      quantity: 2,
+    });
+    const { getByTestId, getByText } = render(
+      <HoldingsScreen
+        onReviewOpeningPosition={onReviewOpeningPosition}
+        store={store}
+      />,
+    );
+
+    expect(getByTestId("holdings-pending-valuations")).toBeTruthy();
+    expect(getByText("1 valuation pending")).toBeTruthy();
+    expect(getByText("Valuation pending")).toBeTruthy();
+    expect(getByText("Invested ₹200")).toBeTruthy();
+
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(getByTestId(`holding-enter-manual-price-${asset.id}`));
+
+    expect(onReviewOpeningPosition).toHaveBeenCalledWith("opening-pending");
+  });
+
   it("shows an empty state with an Add Holding action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();

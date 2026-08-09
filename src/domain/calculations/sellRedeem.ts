@@ -6,7 +6,7 @@ import {
 
 export type SellRedeemPreviewInput = {
   availableUnits: number;
-  currentPrice: number;
+  currentPrice: number | null;
   fees?: number;
   quantity: number;
   sellPrice: number;
@@ -17,7 +17,7 @@ export type SellRedeemPreview = {
   grossProceeds: number;
   netProceeds: number;
   remainingUnits: number;
-  remainingValue: number;
+  remainingValue: number | null;
 };
 
 export function calculateSellRedeemPreview({
@@ -43,9 +43,10 @@ export function calculateSellRedeemPreview({
     grossProceeds,
     netProceeds,
     remainingUnits,
-    remainingValue: normalizeMoney(
-      decimal(remainingUnits).times(currentPrice),
-    ),
+    remainingValue:
+      currentPrice === null
+        ? null
+        : normalizeMoney(decimal(remainingUnits).times(currentPrice)),
   };
 }
 

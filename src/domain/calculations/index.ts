@@ -46,6 +46,7 @@ export {
   calculateMonthlyProgressSummaries,
   calculateMetadataAllocation,
   calculatePortfolioRollupTotals,
+  calculatePortfolioValuationCoverage,
   calculatePortfolioDayChange,
   calculatePortfolioTotal,
   calculateSectorAllocation,
@@ -61,6 +62,7 @@ export type {
   MonthlyProgressSummary,
   MetadataAllocationItem,
   PortfolioRollupTotals,
+  PortfolioValuationCoverage,
   PortfolioDayChange,
 } from "./holdings";
 export {

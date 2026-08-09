@@ -31,6 +31,14 @@ export function normalizeOpeningPosition(
     ...(position.currentPrice === undefined
       ? {}
       : { currentPrice: normalizeUnitPrice(position.currentPrice) }),
+    ...(position.manualValuation === undefined
+      ? {}
+      : {
+          manualValuation: {
+            ...position.manualValuation,
+            price: normalizeUnitPrice(position.manualValuation.price),
+          },
+        }),
     quantity: normalizeQuantity(position.quantity),
   };
 }

@@ -96,6 +96,15 @@ const openingPositionSchema = z
     currentPrice: finiteNumberSchema.optional(),
     date: nonEmptyStringSchema.nullable(),
     id: nonEmptyStringSchema,
+    manualValuation: z
+      .object({
+        asOf: z.string().datetime({ offset: true }).nullable(),
+        currency: z.enum(["INR", "USD"]),
+        price: finiteNumberSchema,
+        provenance: z.enum(["legacy", "user"]),
+        source: z.literal("manual"),
+      })
+      .optional(),
     notes: z.string().optional(),
     quantity: finiteNumberSchema,
     recordedAt: z.string().datetime({ offset: true }).optional(),
@@ -113,6 +122,45 @@ const openingPositionSchema = z
           position.recordedAt === undefined ? "recordedAt" : "recordedOn",
         ],
       });
+    }
+
+    if (position.currentPrice !== undefined && position.manualValuation) {
+      context.addIssue({
+        code: "custom",
+        message: "Opening positions cannot store two manual valuations.",
+        path: ["manualValuation"],
+      });
+    }
+
+    if (position.currentPrice !== undefined && position.currentPrice <= 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Legacy opening-position prices must be positive.",
+        path: ["currentPrice"],
+      });
+    }
+
+    if (position.manualValuation) {
+      const valuation = position.manualValuation;
+
+      if (valuation.price <= 0) {
+        context.addIssue({
+          code: "custom",
+          message: "Manual valuation prices must be positive.",
+          path: ["manualValuation", "price"],
+        });
+      }
+
+      if (
+        (valuation.provenance === "user" && valuation.asOf === null) ||
+        (valuation.provenance === "legacy" && valuation.asOf !== null)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Manual valuation provenance does not match its as-of date.",
+          path: ["manualValuation", "asOf"],
+        });
+      }
     }
   });
 
@@ -209,17 +257,40 @@ const schemaVersionSchema = z.union([
   z.literal(4),
   z.literal(5),
   z.literal(6),
+  z.literal(7),
 ]);
 
-const persistedPortfolioSchema = z.object({
-  assets: z.array(assetSchema).optional(),
-  cashEntries: z.array(cashEntrySchema).optional(),
-  monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
-  openingPositions: z.array(openingPositionSchema).optional(),
-  preferences: preferencesSchema,
-  schemaVersion: schemaVersionSchema,
-  trades: z.array(tradeSchema).optional(),
-});
+const persistedPortfolioSchema = z
+  .object({
+    assets: z.array(assetSchema).optional(),
+    cashEntries: z.array(cashEntrySchema).optional(),
+    monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
+    openingPositions: z.array(openingPositionSchema).optional(),
+    preferences: preferencesSchema,
+    schemaVersion: schemaVersionSchema,
+    trades: z.array(tradeSchema).optional(),
+  })
+  .superRefine((portfolio, context) => {
+    const currencyByAssetId = new Map(
+      (portfolio.assets ?? []).map((asset) => [asset.id, asset.currency]),
+    );
+
+    (portfolio.openingPositions ?? []).forEach((position, index) => {
+      const assetCurrency = currencyByAssetId.get(position.assetId);
+
+      if (
+        position.manualValuation &&
+        assetCurrency !== undefined &&
+        position.manualValuation.currency !== assetCurrency
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Manual valuation currency must match its asset.",
+          path: ["openingPositions", index, "manualValuation", "currency"],
+        });
+      }
+    });
+  });
 
 const quoteSchema = z.object({
   assetId: nonEmptyStringSchema,
@@ -297,7 +368,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6].includes(
+    ![1, 2, 3, 4, 5, 6, 7].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

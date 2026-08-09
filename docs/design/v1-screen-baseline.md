@@ -91,14 +91,18 @@ Each holding card should expose:
 
 - asset name and symbol
 - asset class and useful metadata
-- current value
+- current value, or an explicit valuation-pending state
 - invested value
 - quantity
 - average cost
-- current price or last traded price
+- current price or last traded price when available
 - P&L and P&L %
 - allocation percentage
 - live/manual/stale quote state where relevant
+
+When current valuation is pending, keep invested value visible but show current
+value, P&L, P&L %, and allocation as unavailable rather than zero. Portfolio
+totals must clearly remain incomplete until all material holdings are valued.
 
 Rules:
 
@@ -157,11 +161,15 @@ Required concepts:
 - sector/type metadata
 - quantity
 - average cost
-- current price
+- current price when fetched, or an optional manual fallback
 - live/manual price source
 - acquisition date
 - optional conviction
 - optional note
+
+Current price is not required to preserve ownership. If lookup and manual
+fallback are both unavailable, save the holding with valuation pending and give
+the user clear refresh and manual-price recovery actions later.
 
 ## Progress
 

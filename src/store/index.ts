@@ -45,6 +45,7 @@ import type {
   Asset,
   CashEntry,
   CashEntryPurpose,
+  Currency,
   HistoricalQuote,
   HistoricalQuoteCache,
   MonthlySnapshot,
@@ -78,7 +79,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 6;
+export const portfolioSchemaVersion = 7;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -340,10 +341,18 @@ type StoredCashEntry = Omit<CashEntry, "purpose"> & {
   purpose?: CashEntryPurpose;
 };
 
+type StoredOpeningPosition = OpeningPosition & {
+  currentPrice?: number;
+};
+
 type StoredPortfolioSnapshot = Partial<
-  Omit<RawPortfolioSnapshot, "cashEntries" | "schemaVersion">
+  Omit<
+    RawPortfolioSnapshot,
+    "cashEntries" | "openingPositions" | "schemaVersion"
+  >
 > & {
   cashEntries?: StoredCashEntry[];
+  openingPositions?: StoredOpeningPosition[];
   schemaVersion?: number;
 };
 
@@ -363,6 +372,30 @@ function normalizeMonthlySnapshot(snapshot: MonthlySnapshot): MonthlySnapshot {
 
   const { salary: _legacyUnknownSalary, ...normalized } = snapshot;
   return normalized;
+}
+
+function migrateOpeningPosition(
+  position: StoredOpeningPosition,
+  assets: Asset[],
+): OpeningPosition {
+  const { currentPrice, ...current } = position;
+
+  if (current.manualValuation || currentPrice === undefined) {
+    return current;
+  }
+
+  const asset = assets.find((item) => item.id === position.assetId);
+
+  return {
+    ...current,
+    manualValuation: {
+      asOf: null,
+      currency: asset?.currency ?? "INR",
+      price: currentPrice,
+      provenance: "legacy",
+      source: "manual",
+    },
+  };
 }
 
 type PersistedReadResult<T> = {
@@ -411,14 +444,17 @@ function migratePortfolioSnapshot(
 ): RawPortfolioSnapshot {
   const stored = parsedSnapshot as StoredPortfolioSnapshot &
     PersistedPortfolioSnapshot;
+  const assets = (stored.assets ?? []).map(normalizeAssetMetadata);
 
   return {
-    assets: (stored.assets ?? []).map(normalizeAssetMetadata),
+    assets,
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
     monthlySnapshots: (stored.monthlySnapshots ?? []).map(
       normalizeMonthlySnapshot,
     ),
-    openingPositions: stored.openingPositions ?? [],
+    openingPositions: (stored.openingPositions ?? []).map((position) =>
+      migrateOpeningPosition(position, assets),
+    ),
     preferences: {
       ...createDefaultPreferences(),
       ...stored.preferences,
@@ -605,6 +641,7 @@ function isValidManualCashEntry(entry: CashEntry, now = new Date()) {
 function isValidOpeningPosition(
   openingPosition: OpeningPosition,
   now: Date,
+  assetCurrency?: Currency,
 ) {
   const conviction = openingPosition.conviction;
 
@@ -614,12 +651,47 @@ function isValidOpeningPosition(
     openingPosition.quantity > 0 &&
     Number.isFinite(openingPosition.averageCostPrice) &&
     openingPosition.averageCostPrice > 0 &&
-    openingPosition.currentPrice !== undefined &&
-    Number.isFinite(openingPosition.currentPrice) &&
-    openingPosition.currentPrice > 0 &&
+    hasValidManualValuation(openingPosition, now, assetCurrency) &&
     hasValidOpeningPositionDateState(openingPosition, now) &&
     (conviction === undefined ||
       (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5))
+  );
+}
+
+function hasValidManualValuation(
+  openingPosition: OpeningPosition,
+  now: Date,
+  assetCurrency?: Currency,
+) {
+  const valuation = openingPosition.manualValuation;
+
+  if (valuation && openingPosition.currentPrice !== undefined) {
+    return false;
+  }
+
+  if (!valuation) {
+    return (
+      openingPosition.currentPrice === undefined ||
+      (Number.isFinite(openingPosition.currentPrice) &&
+        openingPosition.currentPrice > 0)
+    );
+  }
+
+  const asOf = valuation.asOf === null ? null : new Date(valuation.asOf);
+  const hasValidAsOf =
+    valuation.provenance === "legacy"
+      ? valuation.asOf === null
+      : asOf !== null &&
+        Number.isFinite(asOf.getTime()) &&
+        asOf.getTime() <= now.getTime();
+
+  return (
+    valuation.source === "manual" &&
+    (valuation.currency === "INR" || valuation.currency === "USD") &&
+    (assetCurrency === undefined || valuation.currency === assetCurrency) &&
+    Number.isFinite(valuation.price) &&
+    valuation.price > 0 &&
+    hasValidAsOf
   );
 }
 
@@ -652,14 +724,18 @@ function hasValidOpeningPositionDateState(
 function hasSupportedOpeningPositionPrecision(
   openingPosition: OpeningPosition,
 ) {
+  const manualPrice = openingPosition.manualValuation?.price;
+  const legacyPrice = openingPosition.currentPrice;
+
   return (
     Number.isFinite(openingPosition.quantity) &&
     openingPosition.quantity > 0 &&
     Number.isFinite(openingPosition.averageCostPrice) &&
     openingPosition.averageCostPrice > 0 &&
-    (openingPosition.currentPrice === undefined ||
-      (Number.isFinite(openingPosition.currentPrice) &&
-        openingPosition.currentPrice > 0))
+    (manualPrice === undefined ||
+      (Number.isFinite(manualPrice) && manualPrice > 0)) &&
+    (legacyPrice === undefined ||
+      (Number.isFinite(legacyPrice) && legacyPrice > 0))
   );
 }
 
@@ -1286,18 +1362,18 @@ export function createPortfolioStore({
       }
 
       const currentDate = now();
+      const assetCurrency = state.assets.find(
+        (asset) => asset.id === openingPosition.assetId,
+      )?.currency;
       const preparedPosition = prepareOpeningPositionForWrite(
         openingPosition,
         currentDate,
       );
-      if (
-        !hasSupportedOpeningPositionPrecision(preparedPosition) ||
-        !hasValidOpeningPositionDateState(preparedPosition, currentDate)
-      ) {
+      if (!isValidOpeningPosition(preparedPosition, currentDate, assetCurrency)) {
         throw new Error("Opening position contains invalid financial values.");
       }
       const normalizedPosition = normalizeOpeningPosition(preparedPosition);
-      if (!hasSupportedOpeningPositionPrecision(normalizedPosition)) {
+      if (!isValidOpeningPosition(normalizedPosition, currentDate, assetCurrency)) {
         throw new Error("Opening position contains invalid financial values.");
       }
       const openingPositions = [...state.openingPositions, normalizedPosition];
@@ -1516,17 +1592,20 @@ export function createPortfolioStore({
       }
 
       const currentDate = now();
+      const assetCurrency = state.assets.find(
+        (asset) => asset.id === openingPosition.assetId,
+      )?.currency;
 
       const preparedPosition = prepareOpeningPositionForWrite(
         openingPosition,
         currentDate,
         existingPosition,
       );
-      if (!isValidOpeningPosition(preparedPosition, currentDate)) {
+      if (!isValidOpeningPosition(preparedPosition, currentDate, assetCurrency)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
       const normalizedPosition = normalizeOpeningPosition(preparedPosition);
-      if (!isValidOpeningPosition(normalizedPosition, currentDate)) {
+      if (!isValidOpeningPosition(normalizedPosition, currentDate, assetCurrency)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
 
@@ -2000,7 +2079,13 @@ export function createPortfolioStore({
         input.openingPosition,
         currentDate,
       );
-      if (!isValidOpeningPosition(preparedInputPosition, currentDate)) {
+      if (
+        !isValidOpeningPosition(
+          preparedInputPosition,
+          currentDate,
+          input.asset.currency,
+        )
+      ) {
         throw new Error("Opening position contains invalid financial values.");
       }
       const normalizedInputPosition = normalizeOpeningPosition(
@@ -2010,7 +2095,13 @@ export function createPortfolioStore({
         ? normalizeQuote(input.quote)
         : undefined;
 
-      if (!isValidOpeningPosition(normalizedInputPosition, currentDate)) {
+      if (
+        !isValidOpeningPosition(
+          normalizedInputPosition,
+          currentDate,
+          input.asset.currency,
+        )
+      ) {
         throw new Error("Opening position is below supported precision.");
       }
       if (normalizedInputQuote && normalizedInputQuote.price <= 0) {

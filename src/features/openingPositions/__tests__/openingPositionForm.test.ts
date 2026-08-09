@@ -88,6 +88,46 @@ describe("validateOpeningPositionForm", () => {
     });
   });
 
+  it("accepts ownership details while current valuation is pending", () => {
+    const result = validateOpeningPositionForm({
+      assetClass: "stock",
+      assetName: "Reliance Industries",
+      averageCostPrice: "100",
+      currentPrice: "",
+      date: "2026-04-15",
+      instrumentType: "stock",
+      quantity: "2",
+      sectorType: "energy",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { currentPrice: undefined, date: "2026-04-15" },
+    });
+  });
+
+  it("treats a blank optional first-purchase date as unknown", () => {
+    const result = validateOpeningPositionForm({
+      assetClass: "stock",
+      assetName: "Reliance Industries",
+      averageCostPrice: "100",
+      currentPrice: "",
+      date: "",
+      instrumentType: "stock",
+      quantity: "2",
+      sectorType: "energy",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { currentPrice: undefined, date: null },
+    });
+  });
+
   it.each(["2026-02-30", "2025-02-29"])(
     "rejects impossible acquisition date %s",
     (date) => {

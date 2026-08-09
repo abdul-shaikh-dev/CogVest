@@ -49,9 +49,15 @@ const cashEntry: CashEntry = {
 const openingPosition: OpeningPosition = {
   assetId: asset.id,
   averageCostPrice: 1450,
-  currentPrice: 1678.25,
   date: "2026-04-15T00:00:00.000Z",
   id: "opening-1",
+  manualValuation: {
+    asOf: "2026-04-26T00:00:00.000Z",
+    currency: "INR",
+    price: 1678.25,
+    provenance: "user",
+    source: "manual",
+  },
   quantity: 25,
 };
 
@@ -100,7 +106,10 @@ describe("portfolio store", () => {
     store.getState().addOpeningPosition({
       ...openingPosition,
       averageCostPrice: 1450.123456785,
-      currentPrice: 1678.123456785,
+      manualValuation: {
+        ...openingPosition.manualValuation!,
+        price: 1678.123456785,
+      },
       quantity: 0.123456785,
     });
     store.getState().upsertQuote({
@@ -113,7 +122,7 @@ describe("portfolio store", () => {
     expect(store.getState().cashEntries[0]?.amount).toBe(10000.01);
     expect(store.getState().openingPositions[0]).toMatchObject({
       averageCostPrice: 1450.12345679,
-      currentPrice: 1678.12345679,
+      manualValuation: { price: 1678.12345679 },
       quantity: 0.12345679,
     });
     expect(store.getState().quoteCache[asset.id]).toMatchObject({
@@ -446,7 +455,8 @@ describe("portfolio store", () => {
       .getState()
       .monthlySnapshots.find((snapshot) => snapshot.month === "2026-04");
     expect(rebuiltApril).toMatchObject({
-      debtValue: openingPosition.quantity * openingPosition.currentPrice!,
+      debtValue:
+        openingPosition.quantity * openingPosition.manualValuation!.price,
       equityValue: 0,
       id: automaticApril.id,
     });
@@ -1116,6 +1126,98 @@ describe("portfolio store", () => {
     expect(restartedStore.getState().assets).toEqual([asset]);
     expect(restartedStore.getState().openingPositions).toEqual([openingPosition]);
     expect(restartedStore.getState().quoteCache).toEqual({ [asset.id]: quote });
+  });
+
+  it("persists pending valuation and resolves it later with manual provenance", () => {
+    const storage = createMemoryJsonStorage();
+    const now = () => new Date("2026-08-09T10:00:00.000Z");
+    const pendingPosition: OpeningPosition = {
+      assetId: asset.id,
+      averageCostPrice: 1450,
+      date: "2026-04-15",
+      id: "opening-pending",
+      quantity: 25,
+    };
+    const store = createPortfolioStore({ now, storage });
+
+    expect(
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: pendingPosition.id,
+        openingPosition: pendingPosition,
+      }),
+    ).toMatchObject({ quoteCacheStatus: "notRequested", status: "applied" });
+
+    const rehydrated = createPortfolioStore({ now, storage });
+    expect(rehydrated.getState().openingPositions).toEqual([pendingPosition]);
+    expect(rehydrated.getState().quoteCache).toEqual({});
+
+    expect(
+      rehydrated.getState().correctOpeningPosition({
+        ...pendingPosition,
+        manualValuation: {
+          asOf: now().toISOString(),
+          currency: "INR",
+          price: 1678.25,
+          provenance: "user",
+          source: "manual",
+        },
+      }).status,
+    ).toBe("applied");
+    expect(createPortfolioStore({ now, storage }).getState().openingPositions[0])
+      .toMatchObject({
+        manualValuation: {
+          asOf: "2026-08-09T10:00:00.000Z",
+          currency: "INR",
+          price: 1678.25,
+          provenance: "user",
+          source: "manual",
+        },
+      });
+  });
+
+  it("rejects contradictory legacy and explicit manual valuations", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-09T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+
+    expect(() =>
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: "opening-contradictory",
+        openingPosition: {
+          ...openingPosition,
+          currentPrice: 1600,
+          id: "opening-contradictory",
+        },
+      }),
+    ).toThrow("Opening position contains invalid financial values.");
+  });
+
+  it("rejects a manual valuation whose currency differs from its asset", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-09T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+
+    expect(() =>
+      store.getState().recordOpeningPosition({
+        asset,
+        commandId: "opening-currency-mismatch",
+        openingPosition: {
+          ...openingPosition,
+          id: "opening-currency-mismatch",
+          manualValuation: {
+            asOf: "2026-08-09T10:00:00.000Z",
+            currency: "USD",
+            price: 1600,
+            provenance: "user",
+            source: "manual",
+          },
+        },
+      }),
+    ).toThrow("Opening position contains invalid financial values.");
   });
 
   it("persists, reloads, corrects, and deletes an unknown-date opening position", () => {
@@ -1940,6 +2042,7 @@ describe("portfolio store", () => {
       notes: "Keep reviewed values",
     };
     store.getState().addAsset(asset);
+    store.getState().upsertQuote(quote);
     store.getState().addTrade(trade);
     store.getState().addMonthlySnapshot(autoSnapshot);
     store.getState().addMonthlySnapshot(manualSnapshot);
@@ -2122,7 +2225,7 @@ describe("portfolio store", () => {
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       preferences: createDefaultPreferences(),
-      schemaVersion: 6,
+      schemaVersion: 7,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -2301,6 +2404,44 @@ describe("portfolio store", () => {
     );
   });
 
+  it("migrates legacy opening prices without changing their value", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      assets: [asset],
+      openingPositions: [
+        {
+          assetId: asset.id,
+          averageCostPrice: 1450,
+          currentPrice: 1678.25,
+          date: "2026-04-15",
+          id: "opening-legacy-price",
+          quantity: 25,
+        },
+      ],
+      schemaVersion: 6,
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().openingPositions).toEqual([
+      {
+        assetId: asset.id,
+        averageCostPrice: 1450,
+        date: "2026-04-15",
+        id: "opening-legacy-price",
+        manualValuation: {
+          asOf: null,
+          currency: "INR",
+          price: 1678.25,
+          provenance: "legacy",
+          source: "manual",
+        },
+        quantity: 25,
+      },
+    ]);
+    expect(store.getState().schemaVersion).toBe(7);
+  });
+
   it("migrates V1 persisted snapshots by adding empty opening positions", () => {
     const storage = createMemoryJsonStorage();
     storage.setItem(portfolioStorageKey, {
@@ -2317,7 +2458,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(6);
+    expect(store.getState().schemaVersion).toBe(7);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -2352,7 +2493,7 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(6);
+    expect(store.getState().schemaVersion).toBe(7);
   });
 
   it("migrates V3 snapshots by defaulting monthly snapshots", () => {
@@ -2369,7 +2510,7 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().monthlySnapshots).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(6);
+    expect(store.getState().schemaVersion).toBe(7);
   });
 
   it("migrates V4 additions without inventing income semantics", () => {
@@ -2400,7 +2541,7 @@ describe("portfolio store", () => {
         purpose: "legacyUncategorized",
       }),
     ]);
-    expect(store.getState().schemaVersion).toBe(6);
+    expect(store.getState().schemaVersion).toBe(7);
   });
 
   it("migrates legacy automatic zero income to unknown without changing manual values", () => {

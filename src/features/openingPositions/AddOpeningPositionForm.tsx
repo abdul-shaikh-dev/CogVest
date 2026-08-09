@@ -233,7 +233,9 @@ export function AddOpeningPositionForm({
     candidateProviderQuote !== undefined &&
     Number.isFinite(currentPriceNumber) &&
     candidateProviderQuote.price === currentPriceNumber;
-  const reviewQuoteSourceLabel = selectedLookupResult
+  const reviewQuoteSourceLabel = currentPrice.trim().length === 0
+    ? "Valuation pending"
+    : selectedLookupResult
     ? selectedLookupQuote && preservesProviderQuote
       ? `Live quote • ${selectedLookupResult.sourceLabel}`
       : `Manual price • ${selectedLookupResult.sourceLabel} identity`
@@ -664,6 +666,9 @@ export function AddOpeningPositionForm({
               testID="price-input"
               value={currentPrice}
             />
+            <AppText color="secondary" variant="caption">
+              If unavailable, save now and refresh or enter a manual price later.
+            </AppText>
           </View>
           <View style={styles.flex}>
             {dateUnknown ? (
@@ -842,7 +847,13 @@ export function AddOpeningPositionForm({
           />
           <ReviewDetailRow
             label="Current price"
-            value={formatINR(reviewOpeningPosition.currentPrice ?? 0)}
+            value={
+              reviewOpeningPosition.manualValuation
+                ? formatINR(reviewOpeningPosition.manualValuation.price)
+                : selectedLookupQuote
+                  ? formatINR(selectedLookupQuote.price)
+                  : "Valuation pending"
+            }
           />
           <ReviewDetailRow
             label="First purchase date"
@@ -888,38 +899,48 @@ export function AddOpeningPositionForm({
                 Current
               </AppText>
               <AppText weight="bold">
-                {formatINR(previewHolding.currentValue)}
+                {previewHolding.currentValue === null
+                  ? "Unavailable"
+                  : formatINR(previewHolding.currentValue)}
               </AppText>
             </View>
             <View style={styles.previewCell}>
               <AppText color="secondary" variant="caption">
                 P&L
               </AppText>
-              <AppText
-                style={[
-                  previewHolding.unrealisedPnL >= 0
-                    ? styles.positiveText
-                    : styles.negativeText,
-                ]}
-                weight="bold"
-              >
-                {formatSignedINR(previewHolding.unrealisedPnL)}
-              </AppText>
+              {previewHolding.unrealisedPnL === null ? (
+                <AppText color="secondary" weight="bold">Unavailable</AppText>
+              ) : (
+                <AppText
+                  style={[
+                    previewHolding.unrealisedPnL >= 0
+                      ? styles.positiveText
+                      : styles.negativeText,
+                  ]}
+                  weight="bold"
+                >
+                  {formatSignedINR(previewHolding.unrealisedPnL)}
+                </AppText>
+              )}
             </View>
             <View style={styles.previewCell}>
               <AppText color="secondary" variant="caption">
                 P&L %
               </AppText>
-              <AppText
-                style={[
-                  previewHolding.unrealisedPnL >= 0
-                    ? styles.positiveText
-                    : styles.negativeText,
-                ]}
-                weight="bold"
-              >
-                {formatPercentage(previewHolding.unrealisedPnLPct)}
-              </AppText>
+              {previewHolding.unrealisedPnLPct === null ? (
+                <AppText color="secondary" weight="bold">Unavailable</AppText>
+              ) : (
+                <AppText
+                  style={[
+                    previewHolding.unrealisedPnLPct >= 0
+                      ? styles.positiveText
+                      : styles.negativeText,
+                  ]}
+                  weight="bold"
+                >
+                  {formatPercentage(previewHolding.unrealisedPnLPct)}
+                </AppText>
+              )}
             </View>
           </View>
           <View style={styles.cashImpact}>

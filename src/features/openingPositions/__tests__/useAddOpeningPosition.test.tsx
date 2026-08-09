@@ -85,7 +85,12 @@ describe("useAddOpeningPosition", () => {
 
     expect(result.current.reviewOpeningPosition).toMatchObject({
       averageCostPrice: 100,
-      currentPrice: 120,
+      manualValuation: {
+        currency: "INR",
+        price: 120,
+        provenance: "user",
+        source: "manual",
+      },
       quantity: 2,
       date: null,
     });
@@ -103,10 +108,7 @@ describe("useAddOpeningPosition", () => {
       recordedOn: expect.any(String),
     });
     expect(store.getState().trades).toEqual([]);
-    expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
-      price: 120,
-      source: "manual",
-    });
+    expect(store.getState().quoteCache).toEqual({});
     expect(onComplete).not.toHaveBeenCalled();
     expect(result.current.savedAssetId).toBe(store.getState().assets[0].id);
 
@@ -115,6 +117,42 @@ describe("useAddOpeningPosition", () => {
     });
 
     expect(onComplete).toHaveBeenCalledWith(store.getState().assets[0].id);
+  });
+
+  it("saves ownership with pending valuation when no current price is available", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { result } = renderHook(() =>
+      useAddOpeningPosition({
+        now: new Date("2026-08-09T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    act(() => {
+      result.current.setAssetName("Reliance Industries");
+      result.current.setSymbol("RELIANCE");
+      result.current.setTicker("RELIANCE.NS");
+      result.current.setQuantity("2");
+      result.current.setAverageCostPrice("100");
+      result.current.setDateUnknown(true);
+    });
+    act(() => {
+      result.current.handleReview();
+    });
+
+    expect(result.current.reviewOpeningPosition).toMatchObject({
+      averageCostPrice: 100,
+      quantity: 2,
+    });
+    expect(result.current.reviewOpeningPosition?.manualValuation).toBeUndefined();
+
+    await act(async () => {
+      await result.current.handleConfirm();
+    });
+
+    expect(store.getState().openingPositions[0]?.manualValuation).toBeUndefined();
+    expect(store.getState().quoteCache).toEqual({});
+    expect(result.current.successMessage).toBe("Opening position saved.");
   });
 
   it("detaches incompatible provider identity when the asset class changes", async () => {

@@ -155,7 +155,12 @@ export function useSellRedeemHolding({
       : null;
 
   useEffect(() => {
-    if (holding && sellPrice.trim().length === 0 && holding.currentPrice > 0) {
+    if (
+      holding?.currentPrice !== null &&
+      holding &&
+      sellPrice.trim().length === 0 &&
+      holding.currentPrice > 0
+    ) {
       setSellPrice(String(holding.currentPrice));
     }
   }, [holding, sellPrice]);

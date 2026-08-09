@@ -36,7 +36,7 @@ export type ValidOpeningPositionForm = {
   assetName: string;
   averageCostPrice: number;
   conviction?: ConvictionScore;
-  currentPrice: number;
+  currentPrice?: number;
   date: string | null;
   instrumentType: InstrumentType;
   notes?: string;
@@ -85,6 +85,7 @@ export function validateOpeningPositionForm(
     values.conviction && values.conviction.trim().length > 0
       ? Number(values.conviction)
       : undefined;
+  const dateUnknown = values.dateUnknown || values.date.trim().length === 0;
 
   if (values.assetName.trim().length === 0) {
     errors.assetName = "Asset name is required.";
@@ -106,13 +107,13 @@ export function validateOpeningPositionForm(
     errors.averageCostPrice = "Average cost must be greater than zero.";
   }
 
-  if (currentPrice === null || currentPrice === 0) {
+  if (values.currentPrice.trim().length > 0 && currentPrice === null) {
     errors.currentPrice = "Current price must be greater than zero.";
   }
 
-  if (!values.dateUnknown && !parseCalendarDate(values.date)) {
+  if (!dateUnknown && !parseCalendarDate(values.date)) {
     errors.date = "Date must use YYYY-MM-DD.";
-  } else if (!values.dateUnknown && isFutureCalendarDate(values.date, now)) {
+  } else if (!dateUnknown && isFutureCalendarDate(values.date, now)) {
     errors.date = "Date cannot be in the future.";
   }
 
@@ -145,8 +146,8 @@ export function validateOpeningPositionForm(
       assetName: values.assetName.trim(),
       averageCostPrice: averageCostPrice as number,
       conviction: conviction as ConvictionScore | undefined,
-      currentPrice: currentPrice as number,
-      date: values.dateUnknown ? null : values.date,
+      currentPrice: currentPrice ?? undefined,
+      date: dateUnknown ? null : values.date,
       instrumentType: values.instrumentType as InstrumentType,
       notes: values.notes?.trim() || undefined,
       quoteSourceId:

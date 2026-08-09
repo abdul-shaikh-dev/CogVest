@@ -203,7 +203,12 @@ describe("AddOpeningPositionForm", () => {
 
   it("moves through Asset, Confirm details, Position, and Review phases", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const {
+      getByLabelText,
+      getByTestId,
+      getByText,
+      queryByTestId,
+    } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -337,15 +342,17 @@ describe("AddOpeningPositionForm", () => {
       assetId: store.getState().assets[0].id,
       averageCostPrice: 1450,
       conviction: 4,
-      currentPrice: 1678.25,
+      manualValuation: {
+        currency: "INR",
+        price: 1678.25,
+        provenance: "user",
+        source: "manual",
+      },
       notes: "Excel opening position",
       quantity: 25,
     });
     expect(store.getState().trades).toEqual([]);
-    expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
-      price: 1678.25,
-      source: "manual",
-    });
+    expect(store.getState().quoteCache).toEqual({});
     expect(Haptics.notificationAsync).toHaveBeenCalledWith("success");
     expect(getByText("Opening position saved.")).toBeTruthy();
     expect(getByTestId("view-holding-button")).toBeTruthy();
@@ -476,7 +483,7 @@ describe("AddOpeningPositionForm", () => {
     expect(store.getState().openingPositions).toHaveLength(1);
   });
 
-  it("confirms the durable holding when optional quote caching is unavailable", async () => {
+  it("persists a manual valuation without depending on optional quote caching", async () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
     const originalSetItem = storage.setItem;
@@ -499,7 +506,7 @@ describe("AddOpeningPositionForm", () => {
 
     await waitFor(() => {
       expect(
-        getByText("Opening position saved. Live quote will refresh later."),
+        getByText("Opening position saved."),
       ).toBeTruthy();
     });
     expect(store.getState().openingPositions).toHaveLength(1);
@@ -613,7 +620,12 @@ describe("AddOpeningPositionForm", () => {
         },
       }),
     );
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const {
+      getByLabelText,
+      getByTestId,
+      getByText,
+      queryByTestId,
+    } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1080,7 +1092,13 @@ describe("AddOpeningPositionForm", () => {
       error: "CoinGecko quote response did not include an INR price.",
       ok: false,
     });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const {
+      getAllByText,
+      getByLabelText,
+      getByTestId,
+      getByText,
+      queryByTestId,
+    } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1110,5 +1128,10 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByText("Continue to confirm details"));
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "");
+    fireEvent.changeText(getByLabelText("Quantity"), "2");
+    fireEvent.changeText(getByLabelText("Average cost"), "5000000");
+    fireEvent.press(getByText("I don't know"));
+    fireEvent.press(getByText("Review and save"));
+    expect(getAllByText("Valuation pending").length).toBeGreaterThan(1);
   });
 });

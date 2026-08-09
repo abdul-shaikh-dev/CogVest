@@ -535,14 +535,6 @@ describe("buildGeneratedMonthEndSnapshot", () => {
         quoteCache: {},
       },
       {
-        expectedBasis: "unavailable",
-        expectedConfidence: "provisional",
-        expectedWarnings: ["1 holding could not be priced."],
-        historicalQuotes: {},
-        openingPositions: [openingPosition({ currentPrice: undefined })],
-        quoteCache: {},
-      },
-      {
         expectedBasis: "mixed",
         expectedConfidence: "provisional",
         expectedWarnings: [
@@ -615,6 +607,26 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       );
       expect(result.warnings).toEqual(scenario.expectedWarnings);
     }
+  });
+
+  it("blocks an automatic snapshot instead of treating an unvalued holding as zero", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [stockAsset],
+        historicalQuotes: {},
+        now: new Date("2026-08-15T10:00:00.000Z"),
+        openingPositions: [openingPosition({ currentPrice: undefined })],
+        quoteCache: {},
+      }),
+    );
+
+    expect(result).toEqual({
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        "1 holding could not be valued for 2026-07. Refresh prices or enter a manual fallback before creating this snapshot.",
+      ],
+    });
   });
 
   it("does not confirm a snapshot while an open holding lacks supported asset metadata", () => {

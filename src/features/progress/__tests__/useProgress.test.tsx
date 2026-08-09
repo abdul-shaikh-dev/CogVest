@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react-native";
 
+import { getMissingCompletedSnapshotMonths } from "@/src/domain/calculations";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type {
@@ -316,6 +317,54 @@ describe("useProgress", () => {
     expect(result.current.snapshotAutomationStatus).toMatchObject({
       status: "already-exists",
       targetMonth: "2026-07",
+    });
+  });
+
+  it("blocks an automatic snapshot until every holding can be valued", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 1450,
+      date: "2026-07-15T00:00:00.000Z",
+      id: "opening-hdfc-pending",
+      quantity: 10,
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      error: "Historical price is temporarily unavailable.",
+      ok: false,
+    });
+    expect(
+      getMissingCompletedSnapshotMonths({
+        cashEntries: store.getState().cashEntries,
+        existingSnapshots: store.getState().monthlySnapshots,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        openingPositions: store.getState().openingPositions,
+        trades: store.getState().trades,
+      }),
+    ).toEqual(["2026-07"]);
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    let automationResult:
+      | Awaited<ReturnType<typeof result.current.ensureMonthEndSnapshot>>
+      | undefined;
+    await act(async () => {
+      automationResult = await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(store.getState().monthlySnapshots).toEqual([]);
+    expect(automationResult?.warnings).toEqual([
+      "2026-07: This snapshot could not be completed. Refresh prices or enter a manual price for holdings with pending valuation.",
+    ]);
+    expect(automationResult).toMatchObject({
+      status: "insufficient-data",
+      lastCompletedMonth: "2026-07",
     });
   });
 
