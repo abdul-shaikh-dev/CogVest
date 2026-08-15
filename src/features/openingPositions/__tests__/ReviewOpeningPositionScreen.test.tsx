@@ -93,7 +93,7 @@ describe("ReviewOpeningPositionScreen", () => {
     const { store } = createStore();
     const { getByTestId } = render(
       <ReviewOpeningPositionScreen
-        now={new Date(2026, 6, 22, 12)}
+        now={new Date("2026-07-22T06:30:00.000Z")}
         onCancel={jest.fn()}
         onComplete={jest.fn()}
         openingPositionId={openingPosition.id}
