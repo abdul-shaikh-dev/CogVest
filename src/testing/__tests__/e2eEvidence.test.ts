@@ -44,6 +44,12 @@ describe("buildE2ePortfolioEvidence", () => {
       assetCount: 1,
       duplicateIdentityCount: 0,
       openingPositionCount: 1,
+      ppfCount: 0,
+      rollupTotals: {
+        totalCurrentValue: 3356.5,
+        totalInvested: 3000,
+        valuationCoverage: { status: "complete" },
+      },
       tradeCount: 0,
     });
     expect(evidence.assets[0]).toMatchObject({
@@ -58,6 +64,40 @@ describe("buildE2ePortfolioEvidence", () => {
         source: "yahoo",
       },
     });
+  });
+
+  it("projects PPF balances into Debt allocation without a synthetic asset", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    store.getState().addPpfAccount({
+      balanceAsOf: "2026-01-01",
+      confirmedBalance: 100000,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    });
+
+    const evidence = buildE2ePortfolioEvidence(
+      store.getState(),
+      new Date("2026-02-01T00:00:00.000Z"),
+    );
+
+    expect(evidence).toMatchObject({
+      assetCount: 0,
+      ppfConfirmedBalance: 100000,
+      ppfCount: 1,
+      rollupTotals: {
+        totalCurrentValue: 100000,
+        totalInvested: 100000,
+      },
+    });
+    expect(evidence.allocation).toEqual([
+      { assetClass: "debt", percentage: 100, value: 100000 },
+    ]);
+    expect(evidence.ppfAccounts[0]?.account.legacyAssetId).toBeUndefined();
   });
 
   it("reports every stored asset that conflicts with a canonical identity", () => {

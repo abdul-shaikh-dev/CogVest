@@ -16,6 +16,8 @@ import {
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { AddOpeningPositionForm } from "@/src/features/openingPositions/AddOpeningPositionForm";
 import { useDashboard } from "@/src/features/dashboard";
+import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
+import type { QuoteResult, ResolveQuoteInput } from "@/src/services/quotes";
 import {
   getPortfolioStore,
   type OpeningPositionCommandResult,
@@ -31,9 +33,14 @@ import {
 
 type QuickPortfolioSetupScreenProps = {
   hardwareBackEnabled?: boolean;
+  now?: Date;
   onAddPpfAccount: () => void;
   onComplete: () => void;
   onExit: () => void;
+  resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
+  searchAssetLookupResults?: (input: {
+    query: string;
+  }) => Promise<AssetLookupSearchResult>;
   sessionStore?: StoreApi<QuickSetupSessionState>;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -45,9 +52,12 @@ function formatSignedINR(value: number) {
 
 export function QuickPortfolioSetupScreen({
   hardwareBackEnabled = true,
+  now,
   onAddPpfAccount,
   onComplete,
   onExit,
+  resolveQuote,
+  searchAssetLookupResults,
   sessionStore = getQuickSetupSessionStore(),
   store = getPortfolioStore(),
 }: QuickPortfolioSetupScreenProps) {
@@ -219,11 +229,14 @@ export function QuickPortfolioSetupScreen({
   return (
     <AddOpeningPositionForm
       hardwareBackEnabled={hardwareBackEnabled}
+      now={now}
       onAddPpfAccount={onAddPpfAccount}
       onCancel={onExit}
       onQuickSetupItemSaved={recordSavedHolding}
       quickSetup
       quickSetupSavedCount={savedCount}
+      resolveQuote={resolveQuote}
+      searchAssetLookupResults={searchAssetLookupResults}
       store={store}
     />
   );

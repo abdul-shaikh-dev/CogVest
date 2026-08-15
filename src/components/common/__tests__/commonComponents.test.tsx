@@ -40,6 +40,12 @@ describe("common UI primitives", () => {
     ).toBeUndefined();
   });
 
+  it("exposes button semantics and a readable default label", () => {
+    const { getByRole } = render(<AppButton title="Save holding" />);
+
+    expect(getByRole("button", { name: "Save holding" })).toBeTruthy();
+  });
+
   it("uses disabled opacity instead of pressed feedback", () => {
     const { getByTestId } = render(
       <AppButton

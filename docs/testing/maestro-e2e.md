@@ -107,7 +107,7 @@ checks and Android smoke checks should still work.
 - Flow cannot find a control: verify the installed build is current, confirm
   the stable testID still exists in source, and rerun from a clean app state.
 
-## Add Holding Persistence Evidence
+## Add Holding And Quick Setup Evidence
 
 The Add Holding semantic flows use deterministic lookup and quote fixtures so
 they do not depend on provider availability or changing market prices. After a
@@ -119,11 +119,19 @@ cogvest:///e2e-evidence?token=cogvest-local-visual-qa
 
 That route projects the actual persisted store into stable evidence for asset
 identity, classification, market/currency, quote source and price, opening
-positions, aggregate invested/current values, and canonical-identity conflicts.
-It does not seed or mutate data. The harness is available only in development
-builds with the matching local token. Release builds cannot opt into test
-routes through public environment variables.
+positions, PPF balances, aggregate invested/current values, valuation
+completeness, allocation, and canonical-identity conflicts. It does not seed or
+mutate data. The harness is available only in development builds with the
+matching local token. Release builds cannot opt into test routes through public
+environment variables.
 
 Run these flows only against a freshly built and installed local APK when using
 their output as PR evidence. A passing flow against an older installed build is
 not valid verification.
+
+`e2e/quick-portfolio-setup.yaml` proves multiple explicit provider selections,
+immediate persistence, restart recovery, known and unknown dates, provider
+failure with manual fallback, dedicated PPF capture, final review, and derived
+Dashboard totals. Set `MAESTRO_TEST_OUTPUT_DIR` to retain its named screenshots.
+The latest complete run is recorded in
+[`quick-portfolio-setup-evidence.md`](quick-portfolio-setup-evidence.md).

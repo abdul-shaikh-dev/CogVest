@@ -84,7 +84,10 @@ for (const flow of flows) {
 
 for (const flow of flows) {
   console.log(`RUN maestro test ${flow}`);
-  const result = run(maestroPath, ["test", flow]);
+  const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR
+    ? [`--test-output-dir=${process.env.MAESTRO_TEST_OUTPUT_DIR}`]
+    : [];
+  const result = run(maestroPath, ["test", flow, ...outputArgs]);
   if (result.status !== 0) {
     console.log(`FAIL Maestro flow failed: ${flow}`);
     process.exit(result.status ?? 1);
