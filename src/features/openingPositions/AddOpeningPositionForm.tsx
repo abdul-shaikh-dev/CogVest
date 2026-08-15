@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  BackHandler,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import {
   AppButton,
@@ -31,6 +38,7 @@ import type {
   InstrumentType,
   Quote,
 } from "@/src/types";
+import type { OpeningPositionCommandResult } from "@/src/store";
 
 import {
   assetClasses,
@@ -42,8 +50,14 @@ import {
 } from "./useAddOpeningPosition";
 
 type AddOpeningPositionFormProps = AddOpeningPositionControllerInput & {
+  hardwareBackEnabled?: boolean;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onCancel?: () => void;
+  onQuickSetupItemSaved?: (
+    result: OpeningPositionCommandResult,
+    action: "addNext" | "finish",
+  ) => void;
+  quickSetupSavedCount?: number;
 };
 
 function formatSignedINR(value: number) {
@@ -114,11 +128,15 @@ function ReviewSectionHeader({
 }
 
 export function AddOpeningPositionForm({
+  hardwareBackEnabled = true,
   initialVisualQaState,
   now,
   onAddPpfAccount,
   onCancel,
   onComplete,
+  onQuickSetupItemSaved,
+  quickSetup = false,
+  quickSetupSavedCount = 0,
   resolveQuote,
   searchAssetLookupResults,
   store,
@@ -127,6 +145,7 @@ export function AddOpeningPositionForm({
     initialVisualQaState,
     now,
     onComplete,
+    quickSetup,
     resolveQuote,
     searchAssetLookupResults,
     store,
@@ -162,6 +181,7 @@ export function AddOpeningPositionForm({
     quantity,
     quoteSourceId,
     quoteStatus,
+    quickSetupDuplicate,
     resetReview,
     reviewAsset,
     reviewOpeningPosition,
@@ -197,6 +217,11 @@ export function AddOpeningPositionForm({
     viewSavedHolding,
   } = holding;
   const [isManualEntryExpanded, setIsManualEntryExpanded] = useState(false);
+  const [isExitConfirmationVisible, setIsExitConfirmationVisible] =
+    useState(false);
+  const displayPhases = quickSetup
+    ? phases.filter((phase) => phase.key !== "class")
+    : phases;
   const hasSelectedAssetSummary = Boolean(selectedAssetId || selectedLookupResult);
   const selectedAssetSourceLabel = selectedLookupResult
     ? `${selectedLookupResult.sourceLabel} suggestion`
@@ -249,16 +274,53 @@ export function AddOpeningPositionForm({
         ? "Saved manual price"
         : `Saved live quote • ${quoteSourceLabel(selectedSavedQuote)}`
       : "Manual price";
+  const hasUnfinishedQuickSetupDraft = Boolean(
+    hasSelectedAssetSummary ||
+      isManualEntryExpanded ||
+      lookupQuery.trim() ||
+      quantity.trim() ||
+      averageCostPrice.trim() ||
+      currentPrice.trim(),
+  );
+
+  useEffect(() => {
+    if (!hardwareBackEnabled || !quickSetup || !onCancel) {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (hasUnfinishedQuickSetupDraft) {
+          setIsExitConfirmationVisible(true);
+        } else {
+          onCancel();
+        }
+
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [
+    hardwareBackEnabled,
+    hasUnfinishedQuickSetupDraft,
+    onCancel,
+    quickSetup,
+  ]);
 
   function renderStepper() {
     const currentIndex = getPhaseIndex(currentPhase);
 
     return (
       <View style={styles.stepper}>
-        {phases.map((phase, index) => {
+        {displayPhases.map((phase, index) => {
           const isActive = phase.key === currentPhase;
-          const isComplete = index < currentIndex;
-          const isDisabled = Boolean(savedAssetId) || index > currentIndex;
+          const displayIndex = displayPhases.findIndex(
+            (item) => item.key === currentPhase,
+          );
+          const isComplete = index < displayIndex;
+          const isDisabled = Boolean(savedAssetId) || index > displayIndex;
 
           return (
             <Pressable
@@ -303,15 +365,28 @@ export function AddOpeningPositionForm({
         leading={
           onCancel ? (
             <IconButton
-              accessibilityLabel="Back to Holdings"
+              accessibilityLabel={
+                quickSetup ? "Exit portfolio setup" : "Back to Holdings"
+              }
               icon="arrow-back"
-              onPress={onCancel}
+              onPress={() => {
+                if (quickSetup && hasUnfinishedQuickSetupDraft) {
+                  setIsExitConfirmationVisible(true);
+                  return;
+                }
+
+                onCancel();
+              }}
               testID="add-holding-exit"
             />
           ) : null
         }
-        title="Add Holding"
-        subtitle="Opening position • local only"
+        title={quickSetup ? "Set up portfolio" : "Add Holding"}
+        subtitle={
+          quickSetup
+            ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding" : "holdings"} saved locally`
+            : "Opening position • local only"
+        }
       />
       {renderStepper()}
 
@@ -444,6 +519,18 @@ export function AddOpeningPositionForm({
             {quoteStatus}
           </AppText>
         ) : null}
+        {quickSetupDuplicate.kind !== "new" ? (
+          <AppText
+            color={
+              quickSetupDuplicate.kind === "blocked" ? "secondary" : "primary"
+            }
+            selectable
+            testID={`quick-setup-duplicate-${quickSetupDuplicate.kind}`}
+            variant="caption"
+          >
+            {quickSetupDuplicate.message}
+          </AppText>
+        ) : null}
         {instrumentType === "ppf" ? (
           <PremiumCard elevated testID="ppf-dedicated-flow-notice">
             <AppText weight="bold">PPF uses a dedicated account ledger</AppText>
@@ -525,6 +612,18 @@ export function AddOpeningPositionForm({
             value={quoteSourceId}
           />
         </View>
+        ) : null}
+        {quickSetup &&
+        onAddPpfAccount &&
+        !hasSelectedAssetSummary &&
+        !isManualEntryExpanded &&
+        lookupQuery.trim().length === 0 ? (
+          <AppButton
+            onPress={() => onAddPpfAccount()}
+            testID="quick-setup-add-ppf"
+            title="Add a PPF account"
+            variant="secondary"
+          />
         ) : null}
       </PremiumCard>
       ) : null}
@@ -743,7 +842,7 @@ export function AddOpeningPositionForm({
             </Pressable>
           </View>
         </View>
-        <View style={styles.convictionGroup}>
+        {!quickSetup ? <View style={styles.convictionGroup}>
           <AppText color="secondary" variant="caption" weight="medium">
             Conviction optional
           </AppText>
@@ -784,8 +883,8 @@ export function AddOpeningPositionForm({
               {errors.conviction}
             </AppText>
           ) : null}
-        </View>
-        <FormTextField
+        </View> : null}
+        {!quickSetup ? <FormTextField
           label="Note"
           multiline
           onChangeText={(value) => {
@@ -795,7 +894,7 @@ export function AddOpeningPositionForm({
           placeholder="Optional note"
           testID="notes-input"
           value={notes}
-        />
+        /> : null}
       </PremiumCard>
       ) : null}
 
@@ -833,7 +932,7 @@ export function AddOpeningPositionForm({
           />
         </PremiumCard>
 
-        <PremiumCard testID="review-classification">
+        {!quickSetup ? <PremiumCard testID="review-classification">
           <ReviewSectionHeader
             onEdit={() => moveToPhase("class")}
             testID="review-edit-classification"
@@ -855,7 +954,7 @@ export function AddOpeningPositionForm({
               value={sectorTypeLabel(reviewAsset.sectorType ?? "other")}
             />
           ) : null}
-        </PremiumCard>
+        </PremiumCard> : null}
 
         <PremiumCard testID="review-position">
           <ReviewSectionHeader
@@ -885,18 +984,18 @@ export function AddOpeningPositionForm({
             label="First purchase date"
             value={reviewOpeningPosition.date?.slice(0, 10) ?? "Unknown"}
           />
-          <ReviewDetailRow
+          {!quickSetup ? <ReviewDetailRow
             label="Note"
             value={reviewOpeningPosition.notes || "None"}
-          />
-          <ReviewDetailRow
+          /> : null}
+          {!quickSetup ? <ReviewDetailRow
             label="Conviction"
             value={
               reviewOpeningPosition.conviction
                 ? `${reviewOpeningPosition.conviction} of 5`
                 : "Not set"
             }
-          />
+          /> : null}
         </PremiumCard>
 
         <PremiumCard elevated testID="derived-preview-card">
@@ -981,7 +1080,7 @@ export function AddOpeningPositionForm({
         </View>
       ) : null}
 
-      {savedAssetId ? (
+      {savedAssetId && !quickSetup ? (
         <PremiumCard elevated testID="holding-save-complete">
           <SectionHeader title="Holding saved" />
           <AppText selectable style={styles.successText}>
@@ -1011,9 +1110,10 @@ export function AddOpeningPositionForm({
           (hasSelectedAssetSummary || isManualEntryExpanded) &&
           instrumentType !== "ppf" ? (
             <AppButton
+              disabled={quickSetupDuplicate.kind === "blocked"}
               onPress={continueFromAsset}
               testID="continue-class-button"
-              title="Continue to confirm details"
+              title={quickSetup ? "Continue to position" : "Continue to confirm details"}
             />
           ) : null
         ) : null}
@@ -1040,7 +1140,7 @@ export function AddOpeningPositionForm({
               title="Review and save"
             />
             <AppButton
-              onPress={() => moveToPhase("class")}
+              onPress={() => moveToPhase(quickSetup ? "asset" : "class")}
               testID="back-button"
               title="Back"
               variant="secondary"
@@ -1054,13 +1154,45 @@ export function AddOpeningPositionForm({
                 {errors.save}
               </AppText>
             ) : null}
-            <AppButton
-              accessibilityState={{ busy: isSaving, disabled: isSaving }}
-              disabled={!reviewOpeningPosition || isSaving}
-              onPress={handleConfirm}
-              testID="save-holding-button"
-              title={isSaving ? "Saving..." : "Save Holding"}
-            />
+            {quickSetup ? (
+              <>
+                <AppButton
+                  accessibilityState={{ busy: isSaving, disabled: isSaving }}
+                  disabled={!reviewOpeningPosition || isSaving}
+                  onPress={async () => {
+                    const result = await handleConfirm();
+                    if (result) {
+                      onQuickSetupItemSaved?.(result, "addNext");
+                      setIsManualEntryExpanded(false);
+                      startAnotherHolding();
+                    }
+                  }}
+                  testID="quick-setup-save-add-next"
+                  title={isSaving ? "Saving..." : "Save & add next"}
+                />
+                <AppButton
+                  accessibilityState={{ busy: isSaving, disabled: isSaving }}
+                  disabled={!reviewOpeningPosition || isSaving}
+                  onPress={async () => {
+                    const result = await handleConfirm();
+                    if (result) {
+                      onQuickSetupItemSaved?.(result, "finish");
+                    }
+                  }}
+                  testID="quick-setup-save-finish"
+                  title="Save & finish"
+                  variant="secondary"
+                />
+              </>
+            ) : (
+              <AppButton
+                accessibilityState={{ busy: isSaving, disabled: isSaving }}
+                disabled={!reviewOpeningPosition || isSaving}
+                onPress={handleConfirm}
+                testID="save-holding-button"
+                title={isSaving ? "Saving..." : "Save Holding"}
+              />
+            )}
             <AppButton
               disabled={isSaving}
               onPress={() => moveToPhase("position")}
@@ -1071,6 +1203,42 @@ export function AddOpeningPositionForm({
           </>
         ) : null}
       </View>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsExitConfirmationVisible(false)}
+        transparent
+        visible={isExitConfirmationVisible}
+      >
+        <View style={styles.exitBackdrop}>
+          <Pressable
+            accessibilityLabel="Keep editing portfolio setup"
+            accessibilityRole="button"
+            onPress={() => setIsExitConfirmationVisible(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View accessibilityViewIsModal style={styles.exitSheet}>
+            <SectionHeader title="Leave portfolio setup?" />
+            <AppText color="secondary">
+              Confirmed holdings are already saved. Unfinished details on this screen will be discarded.
+            </AppText>
+            <AppButton
+              onPress={() => setIsExitConfirmationVisible(false)}
+              testID="quick-setup-keep-editing"
+              title="Keep editing"
+            />
+            <AppButton
+              onPress={() => {
+                setIsExitConfirmationVisible(false);
+                onCancel?.();
+              }}
+              testID="quick-setup-confirm-exit"
+              title="Leave setup"
+              variant="secondary"
+            />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -1145,6 +1313,18 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.loss,
+  },
+  exitBackdrop: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: spacing.md,
+  },
+  exitSheet: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.sheet,
+    gap: spacing.md,
+    padding: spacing.md,
   },
   flex: {
     flex: 1,

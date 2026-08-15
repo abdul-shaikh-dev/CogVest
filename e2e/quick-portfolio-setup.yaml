@@ -1,0 +1,111 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- tapOn:
+    id: "quick-setup-button"
+- assertVisible:
+    id: "add-holding-phase-asset"
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Setup Equity"
+- tapOn:
+    id: "symbol-input"
+- inputText: "SETUPEQ"
+- tapOn:
+    id: "ticker-input"
+- inputText: "SETUPEQ.NS"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- tapOn:
+    id: "price-input"
+- inputText: "125"
+- hideKeyboard
+- tapOn:
+    id: "first-purchase-date-unknown"
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "quick-setup-save-add-next"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "quick-setup-save-add-next"
+    retryTapIfNoChange: true
+- assertVisible: "1 holding saved locally"
+- assertVisible:
+    id: "add-holding-phase-asset"
+- tapOn:
+    id: "add-holding-exit"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-continue-setup-button"
+    timeout: 10000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-continue-setup-button"
+    timeout: 30000
+- tapOn:
+    id: "dashboard-continue-setup-button"
+- assertVisible: "1 holding saved locally"
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Setup Debt"
+- tapOn:
+    id: "symbol-input"
+- inputText: "SETUPDEBT"
+- tapOn:
+    id: "ticker-input"
+- inputText: "SETUPDEBT"
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "3"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "200"
+- hideKeyboard
+- tapOn:
+    id: "first-purchase-date-unknown"
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "quick-setup-save-finish"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "quick-setup-save-finish"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "quick-setup-review-screen"
+- assertVisible: "2 holdings confirmed locally"
+- assertVisible: "Setup Equity"
+- assertVisible: "Setup Debt"
+- assertVisible: "1 current price is still needed"
+- tapOn:
+    id: "quick-setup-complete"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 10000

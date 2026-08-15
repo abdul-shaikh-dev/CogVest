@@ -184,6 +184,28 @@ Current price is not required to preserve ownership. If lookup and manual
 fallback are both unavailable, save the holding with valuation pending and give
 the user clear refresh and manual-price recovery actions later.
 
+### Quick Portfolio Setup
+
+Use Quick Portfolio Setup when the user is entering several existing holdings.
+It is a focused full-screen flow, not a modal and not a spreadsheet grid.
+
+- Empty Dashboard leads with `Set up your portfolio` and keeps `Add one holding`
+  as a secondary action.
+- The Holdings `+` action offers `Add one holding` and `Add multiple holdings`.
+- An active session uses `Continue portfolio setup` and states how many
+  confirmed holdings are already saved.
+- Reuse explicit search-result selection, provider quote/metadata provenance,
+  manual fallback, optional current price, and optional/unknown first purchase
+  date from Add Holding.
+- Keep the setup path to Asset, Position, and Review. Do not show conviction,
+  notes, or detailed metadata controls unless correction is required elsewhere.
+- `Save & add next` and `Save & finish` persist the confirmed financial record
+  before moving on. Never keep confirmed holdings only in draft state.
+- Exiting preserves confirmed records and clearly warns that the unfinished
+  on-screen entry will be discarded.
+- Final review leads with aggregate portfolio values, calls out pending current
+  prices, lists records confirmed in this setup, and ends at Dashboard.
+
 ## Progress
 
 The V1 screen title is `Monthly Progress`; the tab label can be `Progress`.

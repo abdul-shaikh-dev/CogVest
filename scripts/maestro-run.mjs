@@ -11,6 +11,7 @@ const defaultFlows = [
   "e2e/add-holding-pending-valuation.yaml",
   "e2e/add-holding-edited-quote.yaml",
   "e2e/add-holding-asset-switch.yaml",
+  "e2e/quick-portfolio-setup.yaml",
   "e2e/holdings.yaml",
   "e2e/ppf-account.yaml",
   "e2e/opening-position-correction.yaml",

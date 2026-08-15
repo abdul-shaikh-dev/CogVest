@@ -2,11 +2,13 @@ import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings";
+import { useQuickSetupSession } from "@/src/features/quickSetup";
 
 export default function HoldingsScreen() {
   const params = useLocalSearchParams<{ statusMessage?: string }>();
   const navigation = useNavigation();
   const [statusMessage, setStatusMessage] = useState<string>();
+  const quickSetup = useQuickSetupSession();
 
   useEffect(() => {
     if (!params.statusMessage) {
@@ -50,6 +52,10 @@ export default function HoldingsScreen() {
       onSellRedeem={(assetId) => {
         router.push({ pathname: "/sell-redeem", params: { assetId } });
       }}
+      onQuickSetup={() => {
+        router.push("/quick-portfolio-setup");
+      }}
+      quickSetupSavedCount={quickSetup.session?.items.length ?? 0}
       onReviewOpeningPosition={(openingPositionId) => {
         router.push({
           pathname: "/opening-position",

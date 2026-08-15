@@ -54,6 +54,8 @@ type DashboardScreenProps = {
   onAddTrade?: () => void;
   onOpenHoldings?: () => void;
   onOpenProgress?: () => void;
+  onQuickSetup?: () => void;
+  quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -163,6 +165,8 @@ export function DashboardScreen({
   onAddTrade,
   onOpenHoldings,
   onOpenProgress,
+  onQuickSetup,
+  quickSetupSavedCount = 0,
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
@@ -361,6 +365,23 @@ export function DashboardScreen({
           </View>
         </PremiumCard>
 
+        {quickSetupSavedCount > 0 &&
+        onQuickSetup &&
+        dashboard.rollupRows.length > 0 ? (
+          <PremiumCard elevated testID="dashboard-continue-setup">
+            <AppText weight="bold">Continue portfolio setup</AppText>
+            <AppText color="secondary" variant="caption">
+              {quickSetupSavedCount} confirmed {quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved. Add the rest when ready.
+            </AppText>
+            <AppButton
+              onPress={onQuickSetup}
+              testID="dashboard-continue-setup-button"
+              title="Continue setup"
+              variant="secondary"
+            />
+          </PremiumCard>
+        ) : null}
+
         {dashboard.cashBalance < 0 && hasCompleteValuation ? (
           <PremiumCard
             style={styles.liabilityCard}
@@ -520,19 +541,29 @@ export function DashboardScreen({
           <EmptyState
             actionLabel={
               hasCompleteValuation
-                ? onAddTrade
-                  ? "Add Holding"
+                ? onQuickSetup
+                  ? quickSetupSavedCount > 0
+                    ? "Continue portfolio setup"
+                    : "Set up your portfolio"
+                  : onAddTrade
+                    ? "Add Holding"
                   : undefined
                 : "Refresh prices"
             }
             actionTestID={
               hasCompleteValuation
-                ? "add-trade-button"
+                ? onQuickSetup
+                  ? "quick-setup-button"
+                  : "add-trade-button"
                 : "dashboard-refresh-pending-prices"
             }
             message={
               hasCompleteValuation
-                ? "Add your first portfolio entry to build holdings automatically."
+                ? quickSetupSavedCount > 0
+                  ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} already saved. Continue when ready.`
+                  : onQuickSetup
+                    ? "Add existing holdings one after another. Each confirmed holding is saved locally."
+                    : "Add your first portfolio entry to build holdings automatically."
                 : "Allocation will appear after every holding has a current valuation."
             }
             title={
@@ -540,11 +571,18 @@ export function DashboardScreen({
             }
             onAction={
               hasCompleteValuation
-                ? onAddTrade
+                ? onQuickSetup ?? onAddTrade
                 : () => {
                     void dashboard.refresh();
                   }
             }
+            onSecondaryAction={
+              hasCompleteValuation && onQuickSetup ? onAddTrade : undefined
+            }
+            secondaryActionLabel={
+              hasCompleteValuation && onQuickSetup ? "Add one holding" : undefined
+            }
+            secondaryActionTestID="add-trade-button"
           />
         )}
 

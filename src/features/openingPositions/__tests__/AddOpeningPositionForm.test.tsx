@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { BackHandler } from "react-native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -450,6 +451,283 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
     expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(queryByTestId("holding-save-complete")).toBeNull();
+  });
+
+  it("uses the simplified quick-setup flow and saves immediately for the chosen action", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onQuickSetupItemSaved = jest.fn();
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm
+        onQuickSetupItemSaved={onQuickSetupItemSaved}
+        quickSetup
+        store={store}
+      />,
+    );
+
+    expect(getByText("Set up portfolio")).toBeTruthy();
+    expect(queryByTestId("add-holding-step-class")).toBeNull();
+    openManualAssetEntry(getByTestId);
+    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    fireEvent.press(getByText("Continue to position"));
+
+    expect(getByTestId("add-holding-phase-position")).toBeTruthy();
+    expect(queryByTestId("conviction-1")).toBeNull();
+    expect(queryByTestId("notes-input")).toBeNull();
+    fireEvent.changeText(getByLabelText("Quantity"), "2");
+    fireEvent.changeText(getByLabelText("Average cost"), "100");
+    fireEvent.press(getByLabelText("First purchase date unknown"));
+    fireEvent.press(getByText("Review and save"));
+    fireEvent.press(getByTestId("quick-setup-save-add-next"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions).toHaveLength(1);
+      expect(onQuickSetupItemSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "applied" }),
+        "addNext",
+      );
+    });
+    expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
+  });
+
+  it("explains that only unfinished quick-setup input is discarded on exit", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCancel = jest.fn();
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm onCancel={onCancel} quickSetup store={store} />,
+    );
+
+    openManualAssetEntry(getByTestId);
+    fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
+    fireEvent.press(getByLabelText("Exit portfolio setup"));
+
+    expect(getByText("Leave portfolio setup?")).toBeTruthy();
+    expect(
+      getByText(
+        "Confirmed holdings are already saved. Unfinished details on this screen will be discarded.",
+      ),
+    ).toBeTruthy();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId("quick-setup-confirm-exit"));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("guards an unfinished quick-setup draft from Android system back", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCancel = jest.fn();
+    let hardwareBack: (() => boolean | null | undefined) | undefined;
+    const backHandlerSpy = jest
+      .spyOn(BackHandler, "addEventListener")
+      .mockImplementation((_event, handler) => {
+        hardwareBack = handler;
+        return { remove: jest.fn() };
+      });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm onCancel={onCancel} quickSetup store={store} />,
+    );
+
+    openManualAssetEntry(getByTestId);
+    fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
+    act(() => {
+      expect(hardwareBack?.()).toBe(true);
+    });
+
+    expect(getByText("Leave portfolio setup?")).toBeTruthy();
+    expect(onCancel).not.toHaveBeenCalled();
+    backHandlerSpy.mockRestore();
+  });
+
+  it("does not register the setup back guard while its route is unfocused", () => {
+    const backHandlerSpy = jest.spyOn(BackHandler, "addEventListener");
+
+    render(
+      <AddOpeningPositionForm
+        hardwareBackEnabled={false}
+        onCancel={jest.fn()}
+        quickSetup
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    expect(backHandlerSpy).not.toHaveBeenCalled();
+    backHandlerSpy.mockRestore();
+  });
+
+  it("prefills and explicitly updates one safe aggregate opening position", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const assetId = "asset-hdfc";
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: assetId,
+      instrumentType: "stock",
+      name: "HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    });
+    store.getState().addOpeningPosition({
+      assetId,
+      averageCostPrice: 100,
+      date: null,
+      id: "opening-hdfc",
+      quantity: 2,
+    });
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm quickSetup store={store} />,
+    );
+
+    fireEvent.press(getByTestId(`existing-asset-${assetId}`));
+    expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
+    fireEvent.press(getByText("Continue to position"));
+    expect(getByLabelText("Quantity").props.value).toBe("2");
+    fireEvent.changeText(getByLabelText("Quantity"), "3");
+    fireEvent.press(getByText("Review and save"));
+    fireEvent.press(getByTestId("quick-setup-save-finish"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions).toHaveLength(1);
+      expect(store.getState().openingPositions[0]).toMatchObject({
+        id: "opening-hdfc",
+        quantity: 3,
+      });
+    });
+  });
+
+  it("rechecks manual identity and prefills a safe existing aggregate", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "asset-manual-existing",
+      instrumentType: "stock",
+      name: "Reliance Industries",
+      sectorType: "energy",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    });
+    store.getState().addOpeningPosition({
+      assetId: "asset-manual-existing",
+      averageCostPrice: 100,
+      date: null,
+      id: "opening-manual-existing",
+      quantity: 2,
+    });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm quickSetup store={store} />,
+    );
+
+    openManualAssetEntry(getByTestId);
+    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    fireEvent.press(getByText("Continue to position"));
+
+    expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
+    expect(queryByTestId("add-holding-phase-position")).toBeNull();
+    fireEvent.press(getByText("Continue to position"));
+    expect(getByLabelText("Quantity").props.value).toBe("2");
+  });
+
+  it("rechecks a provider selection when the same asset is saved during lookup", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const result: AssetLookupResult = {
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: "yahoo:HDFCBANK.NS",
+      instrumentType: "stock",
+      instrumentTypeConfidence: "provider",
+      metadataReviewMessage: "Provider details available.",
+      name: "HDFC Bank",
+      provider: "yahoo",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices",
+      sectorTypeConfidence: "provider",
+      sourceLabel: "Yahoo Finance",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: [result],
+    });
+    const { getByLabelText, getByTestId } = render(
+      <AddOpeningPositionForm
+        quickSetup
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(getByLabelText("Search asset"), "hdfc");
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(getByTestId(`asset-lookup-result-${result.id}`)).toBeTruthy();
+    });
+    act(() => {
+      store.getState().addAsset({
+        assetClass: "stock",
+        currency: "INR",
+        exchange: "NSE",
+        id: "asset-race-hdfc",
+        instrumentType: "stock",
+        name: "HDFC Bank",
+        sectorType: "financialServices",
+        symbol: "HDFCBANK",
+        ticker: "HDFCBANK.NS",
+      });
+      store.getState().addOpeningPosition({
+        assetId: "asset-race-hdfc",
+        averageCostPrice: 100,
+        date: null,
+        id: "opening-race-hdfc",
+        quantity: 2,
+      });
+    });
+    fireEvent.press(getByTestId(`asset-lookup-result-${result.id}`));
+
+    expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
+  });
+
+  it("blocks quick-setup overwrite when an asset has transaction history", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const assetId = "asset-history";
+    store.getState().addAsset({
+      assetClass: "stock",
+      currency: "INR",
+      exchange: "NSE",
+      id: assetId,
+      name: "History Asset",
+      symbol: "HISTORY",
+      ticker: "HISTORY.NS",
+    });
+    store.getState().addTrade({
+      assetId,
+      date: "2026-01-10",
+      id: "trade-history",
+      pricePerUnit: 100,
+      quantity: 1,
+      totalValue: 100,
+      type: "buy",
+    });
+    const { getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm quickSetup store={store} />,
+    );
+
+    fireEvent.press(getByTestId(`existing-asset-${assetId}`));
+
+    expect(getByTestId("quick-setup-duplicate-blocked")).toBeTruthy();
+    fireEvent.press(getByText("Continue to position"));
+    expect(queryByTestId("add-holding-phase-position")).toBeNull();
   });
 
   it("ignores repeated save presses while the holding command is completing", async () => {

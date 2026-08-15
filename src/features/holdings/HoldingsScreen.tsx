@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Modal, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -63,6 +63,8 @@ type HoldingsScreenProps = {
   onReviewPpfAccount?: (accountId: string) => void;
   onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
+  onQuickSetup?: () => void;
+  quickSetupSavedCount?: number;
   statusMessage?: string;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
@@ -91,10 +93,13 @@ export function HoldingsScreen({
   onReviewPpfAccount,
   onReviewTrades,
   onSellRedeem,
+  onQuickSetup,
+  quickSetupSavedCount = 0,
   refreshQuotes,
   statusMessage,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
+  const [isAddMenuVisible, setIsAddMenuVisible] = useState(false);
   const {
     failed,
     holdings,
@@ -171,9 +176,11 @@ export function HoldingsScreen({
               />
               {onAddTrade ? (
                 <IconButton
-                  accessibilityLabel="Add Holding"
+                  accessibilityLabel={onQuickSetup ? "Add holdings" : "Add Holding"}
                   icon="add-outline"
-                  onPress={onAddTrade}
+                  onPress={() =>
+                    onQuickSetup ? setIsAddMenuVisible(true) : onAddTrade()
+                  }
                   testID="holdings-add-button"
                 />
               ) : null}
@@ -198,6 +205,23 @@ export function HoldingsScreen({
               </AppText>
             </PremiumCard>
           </View>
+        ) : null}
+
+        {quickSetupSavedCount > 0 &&
+        onQuickSetup &&
+        (holdings.length > 0 || ppfSummary.accounts.length > 0) ? (
+          <PremiumCard elevated testID="holdings-continue-setup">
+            <AppText weight="bold">Continue portfolio setup</AppText>
+            <AppText color="secondary" variant="caption">
+              {quickSetupSavedCount} confirmed {quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.
+            </AppText>
+            <AppButton
+              onPress={onQuickSetup}
+              testID="holdings-continue-setup-button"
+              title="Continue setup"
+              variant="secondary"
+            />
+          </PremiumCard>
         ) : null}
 
         {holdings.length > 0 ? (
@@ -358,11 +382,28 @@ export function HoldingsScreen({
 
         {holdings.length === 0 ? (
           <EmptyState
-            actionLabel={onAddTrade ? "Add Holding" : undefined}
-            actionTestID="add-trade-button"
-            message="Holdings are created automatically from your portfolio entries."
+            actionLabel={
+              onQuickSetup
+                ? quickSetupSavedCount > 0
+                  ? "Continue portfolio setup"
+                  : "Set up your portfolio"
+                : onAddTrade
+                  ? "Add Holding"
+                  : undefined
+            }
+            actionTestID={onQuickSetup ? "quick-setup-button" : "add-trade-button"}
+            message={
+              quickSetupSavedCount > 0
+                ? `${quickSetupSavedCount} confirmed ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.`
+                : onQuickSetup
+                  ? "Add existing holdings in one focused setup, or record a single holding."
+                  : "Holdings are created automatically from your portfolio entries."
+            }
             title={ppfSummary.accounts.length > 0 ? "No market holdings yet" : "No holdings yet"}
-            onAction={onAddTrade}
+            onAction={onQuickSetup ?? onAddTrade}
+            onSecondaryAction={onQuickSetup ? onAddTrade : undefined}
+            secondaryActionLabel={onQuickSetup ? "Add one holding" : undefined}
+            secondaryActionTestID="add-trade-button"
           />
         ) : (
           <>
@@ -430,6 +471,48 @@ export function HoldingsScreen({
           </>
         )}
 
+        <Modal
+          animationType="fade"
+          onRequestClose={() => setIsAddMenuVisible(false)}
+          transparent
+          visible={isAddMenuVisible}
+        >
+          <View style={styles.addMenuBackdrop}>
+            <Pressable
+              accessibilityLabel="Close add holdings menu"
+              accessibilityRole="button"
+              onPress={() => setIsAddMenuVisible(false)}
+              style={StyleSheet.absoluteFill}
+            />
+            <View accessibilityViewIsModal style={styles.addMenuSheet}>
+              <SectionHeader title="Add holdings" />
+              <AppText color="secondary" variant="caption">
+                Choose a focused single entry or set up several existing holdings.
+              </AppText>
+              <AppButton
+                onPress={() => {
+                  setIsAddMenuVisible(false);
+                  onAddTrade?.();
+                }}
+                testID="add-one-holding-option"
+                title="Add one holding"
+                variant="secondary"
+              />
+              <AppButton
+                onPress={() => {
+                  setIsAddMenuVisible(false);
+                  onQuickSetup?.();
+                }}
+                testID="add-multiple-holdings-option"
+                title={
+                  quickSetupSavedCount > 0
+                    ? `Continue setup (${quickSetupSavedCount} saved)`
+                    : "Add multiple holdings"
+                }
+              />
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScreenContainer>
   );
@@ -946,6 +1029,18 @@ function formatSource(source?: string) {
 }
 
 const styles = StyleSheet.create({
+  addMenuBackdrop: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: spacing.md,
+  },
+  addMenuSheet: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.sheet,
+    gap: spacing.md,
+    padding: spacing.md,
+  },
   allocationBlock: {
     gap: spacing.sm,
   },

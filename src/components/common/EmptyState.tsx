@@ -10,6 +10,9 @@ type EmptyStateProps = {
   actionTestID?: string;
   message: string;
   onAction?: () => void;
+  onSecondaryAction?: () => void;
+  secondaryActionLabel?: string;
+  secondaryActionTestID?: string;
   title: string;
 };
 
@@ -18,6 +21,9 @@ export function EmptyState({
   actionTestID,
   message,
   onAction,
+  onSecondaryAction,
+  secondaryActionLabel,
+  secondaryActionTestID,
   title,
 }: EmptyStateProps) {
   return (
@@ -30,6 +36,14 @@ export function EmptyState({
       </AppText>
       {actionLabel && onAction ? (
         <AppButton title={actionLabel} testID={actionTestID} onPress={onAction} />
+      ) : null}
+      {secondaryActionLabel && onSecondaryAction ? (
+        <AppButton
+          onPress={onSecondaryAction}
+          testID={secondaryActionTestID}
+          title={secondaryActionLabel}
+          variant="secondary"
+        />
       ) : null}
     </View>
   );

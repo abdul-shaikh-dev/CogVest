@@ -317,6 +317,44 @@ describe("HoldingsScreen", () => {
     expect(store.getState().preferences.maskWealthValues).toBe(true);
   });
 
+  it("lets the user choose one or multiple holdings from the header action", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onAddTrade = jest.fn();
+    const onQuickSetup = jest.fn();
+    const { getByLabelText, getByTestId, getByText } = render(
+      <HoldingsScreen
+        onAddTrade={onAddTrade}
+        onQuickSetup={onQuickSetup}
+        quickSetupSavedCount={2}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Add holdings"));
+    expect(getByText("Continue setup (2 saved)")).toBeTruthy();
+    fireEvent.press(getByTestId("add-one-holding-option"));
+    expect(onAddTrade).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByLabelText("Add holdings"));
+    fireEvent.press(getByTestId("add-multiple-holdings-option"));
+    expect(onQuickSetup).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps active setup visible above a populated holdings list", () => {
+    const store = seedMixedHoldings();
+    const onQuickSetup = jest.fn();
+    const { getByTestId } = render(
+      <HoldingsScreen
+        onQuickSetup={onQuickSetup}
+        quickSetupSavedCount={2}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("holdings-continue-setup-button"));
+    expect(onQuickSetup).toHaveBeenCalledTimes(1);
+  });
+
   it("filters visible holdings by winners, losers, high allocation, and search", () => {
     const store = seedMixedHoldings();
 
