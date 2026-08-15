@@ -450,6 +450,7 @@ export function calculatePortfolioTotal(
   holdings: Holding[],
   cashEntries: CashEntry[],
   now = new Date(),
+  ppfConfirmedBalance = 0,
 ) {
   if (holdings.some((holding) => holding.valuation.status === "pending")) {
     return null;
@@ -463,7 +464,9 @@ export function calculatePortfolioTotal(
   );
 
   return normalizeMoney(
-    holdingsValue.plus(calculateCashBalance(cashEntries, now)),
+    holdingsValue
+      .plus(calculateCashBalance(cashEntries, now))
+      .plus(ppfConfirmedBalance),
   );
 }
 
@@ -508,9 +511,11 @@ export function calculatePortfolioDayChange(
 export function calculateAllocation({
   cashBalance,
   holdings,
+  ppfConfirmedBalance = 0,
 }: {
   cashBalance: number;
   holdings: Holding[];
+  ppfConfirmedBalance?: number;
 }): AllocationItem[] {
   if (holdings.some((holding) => holding.valuation.status === "pending")) {
     return [];
@@ -524,6 +529,13 @@ export function calculateAllocation({
       decimal(values.get(holding.asset.assetClass) ?? 0).plus(
         holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
       ),
+    );
+  }
+
+  if (ppfConfirmedBalance !== 0) {
+    values.set(
+      "debt",
+      decimal(values.get("debt") ?? 0).plus(ppfConfirmedBalance),
     );
   }
 
@@ -644,6 +656,10 @@ export function calculatePortfolioRollupTotals(
   rows: ConsolidatedHoldingRow[],
   cashBalance = 0,
   holdings?: Holding[],
+  ppfPosition: { confirmedBalance: number; investedBasis: number } = {
+    confirmedBalance: 0,
+    investedBasis: 0,
+  },
 ): PortfolioRollupTotals {
   const valuationCoverage = holdings
     ? calculatePortfolioValuationCoverage(holdings)
@@ -672,7 +688,7 @@ export function calculatePortfolioRollupTotals(
             holding.calculationBasis?.totalInvested ?? holding.totalInvested,
         )
       : rows.map((row) => row.investedValue),
-  );
+  ).plus(ppfPosition.investedBasis);
   const holdingsCurrentValue = sumFinancialValues(
     holdings
       ? holdings
@@ -682,7 +698,7 @@ export function calculatePortfolioRollupTotals(
             holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
           )
       : rows.map((row) => row.currentValue ?? 0),
-  );
+  ).plus(ppfPosition.confirmedBalance);
   const pnl = holdingsCurrentValue.minus(totalInvested);
   const complete = valuationCoverage.status === "complete";
 

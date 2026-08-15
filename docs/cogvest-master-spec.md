@@ -52,6 +52,8 @@ V1 includes:
   and sale proceeds must use explicit linked accounting rather than a confusing
   manual transfer mode
 - monthly snapshots
+- dedicated PPF accounts with confirmed balances and a contribution, official
+  interest, withdrawal, and reconciliation ledger
 - value masking
 - optional conviction capture and not-enough-data state
 - PC-only Android emulator verification
@@ -65,6 +67,7 @@ V1 does not include:
 - Excel import/export
 - backend, auth, cloud sync, analytics, or push notifications
 - Play Store auto-submit
+- PPF loans or loan repayment tracking
 
 ### V1 Local Privacy Contract
 
@@ -90,6 +93,7 @@ Persist raw records:
 - monthly snapshots
 - quote/manual price records
 - preferences
+- PPF accounts and their confirmed ledger entries
 
 Derive:
 
@@ -104,6 +108,37 @@ Derive:
 - dashboard rollups
 
 All domain calculations must be pure functions under `src/domain/`.
+
+### V1 PPF Contract
+
+- PPF is an INR-only account product and contributes to the Debt allocation.
+- A confirmed balance and its `balance as of` date form the account baseline.
+  CogVest does not invent earlier deposits, interest credits, units, prices, or
+  market quotes.
+- Contributions increase confirmed value and invested capital. Official
+  passbook or provider interest credits increase confirmed value but not
+  invested capital. Withdrawals reduce confirmed value and invested capital,
+  with invested capital floored at zero. Reconciliation sets an absolute
+  confirmed balance and records the reason for the correction.
+- Estimated interest is informational and visually separate. It uses published
+  Government of India rate periods and the statutory fifth-day/month-end
+  balance rule only when sufficient ledger history exists. It never enters
+  Dashboard, Holdings, allocation, or monthly snapshots until recorded as an
+  official interest credit.
+- The annual contribution minimum, maximum, and multiples-of-₹50 rules are
+  presented as tracked context. Existing valid records are not silently changed.
+- Maturity follows the 15-year scheme lifecycle. Contribution extensions use
+  confirmed five-year blocks; continuation without contributions is a distinct
+  state.
+- Stored entries are ordered deterministically by date, recorded time, and ID.
+  Entries on or before the confirmed baseline date are rejected so the baseline
+  cannot be counted twice.
+- Existing synthetic PPF holdings are never deleted during migration. An
+  explicit link preserves the original record for audit while excluding it
+  from current and later portfolio totals once the dedicated confirmed baseline
+  takes effect.
+- PPF loans are outside V1. CogVest does not expose loan eligibility, balances,
+  repayments, or interest calculations.
 
 ### V1 Cash Accounting Contract
 

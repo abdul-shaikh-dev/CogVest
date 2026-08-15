@@ -55,6 +55,7 @@ Do not add:
 | Excel tracker capability | CogVest V1 feature | Automated coverage | PC verification |
 | --- | --- | --- | --- |
 | Opening positions / holdings inventory | Add Holding opening-position records | `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | Add an opening position on emulator; Holdings shows quantity, invested value, current value, and P&L. |
+| PPF balance and activity | Dedicated PPF account plus confirmed ledger | `src/domain/ppf/__tests__`, PPF screen tests, store/schema tests | Create a confirmed baseline, add a contribution, and verify the account updates Dashboard, Debt allocation, Holdings, and future snapshots without a synthetic quote. |
 | Asset metadata | Asset class, instrument type, sector type, quote source metadata | `src/domain/assets/__tests__/metadata.test.ts`, store migration tests | Add or inspect equity, debt, crypto, and cash-like records; metadata appears without spreadsheet columns. |
 | Debt / liquid / cash-like instruments | Debt and manual-price asset support | `src/services/quotes/__tests__/quotes.test.ts`, holdings calculation tests | Add a manual debt/liquid holding; app keeps manual price fallback and allocation. |
 | Consolidated `All` view | Dashboard/Holdings rollups and allocation details | Dashboard, Holdings, and calculation tests | Dashboard and Holdings answer invested/current/P&L/allocation without a grid. |

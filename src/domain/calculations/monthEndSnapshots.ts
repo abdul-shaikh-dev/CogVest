@@ -7,9 +7,16 @@ import type {
   MonthlySnapshotPriceConfidence,
   MonthlySnapshotPriceEvidence,
   OpeningPosition,
+  PpfAccount,
+  PpfLedgerEntry,
   QuoteCache,
   Trade,
 } from "@/src/types";
+import {
+  calculatePpfPortfolioSummary,
+  getPpfAccountOpeningDate,
+  getLinkedLegacyPpfAssetIds,
+} from "@/src/domain/ppf";
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import {
   formatLocalCalendarDate,
@@ -54,6 +61,8 @@ export type BuildGeneratedMonthEndSnapshotInput = {
   historicalQuotes: HistoricalQuoteCache;
   now: Date;
   openingPositions: OpeningPosition[];
+  ppfAccounts?: PpfAccount[];
+  ppfLedgerEntries?: PpfLedgerEntry[];
   quoteCache: QuoteCache;
   refreshIncome?: boolean;
   refreshProvisional?: boolean;
@@ -85,7 +94,12 @@ export function deriveMonthlySnapshotSalary(
 
 export type MissingCompletedSnapshotMonthsInput = Pick<
   BuildGeneratedMonthEndSnapshotInput,
-  "cashEntries" | "existingSnapshots" | "now" | "openingPositions" | "trades"
+  | "cashEntries"
+  | "existingSnapshots"
+  | "now"
+  | "openingPositions"
+  | "ppfAccounts"
+  | "trades"
 >;
 
 type PriceSelectionBasis = HistoricalPriceBasis;
@@ -434,6 +448,7 @@ export function getMissingCompletedSnapshotMonths({
   existingSnapshots,
   now,
   openingPositions,
+  ppfAccounts = [],
   trades,
 }: MissingCompletedSnapshotMonthsInput) {
   const recordMonthIndexes = [
@@ -442,6 +457,7 @@ export function getMissingCompletedSnapshotMonths({
       getOpeningPositionHistoryDate(position),
     ),
     ...trades.map((trade) => trade.date),
+    ...ppfAccounts.map((account) => account.balanceAsOf),
   ].filter((date): date is string => date !== null)
     .map((date) => new Date(date))
     .filter((date) => Number.isFinite(date.getTime()))
@@ -482,6 +498,8 @@ export function buildGeneratedMonthEndSnapshot({
   historicalQuotes,
   now,
   openingPositions,
+  ppfAccounts = [],
+  ppfLedgerEntries = [],
   quoteCache,
   refreshIncome = false,
   refreshProvisional = false,
@@ -534,20 +552,51 @@ export function buildGeneratedMonthEndSnapshot({
   if (
     openingPositions.length === 0 &&
     trades.length === 0 &&
-    cashEntries.length === 0
+    cashEntries.length === 0 &&
+    ppfAccounts.length === 0
   ) {
     return {
       snapshot: null,
       status: "insufficient-data",
       warnings: [
-        "No holdings, trades, or cash entries were available to generate the previous month-end snapshot.",
+        "No holdings, PPF accounts, trades, or cash entries were available to generate the previous month-end snapshot.",
       ],
     };
   }
 
   const monthEnd = getMonthEndDate(targetMonth);
+  const monthEndCalendarDate = formatLocalCalendarDate(monthEnd);
+  const unavailablePpfAccounts = ppfAccounts.filter(
+    (account) =>
+      account.legacyAssetId === undefined &&
+      getPpfAccountOpeningDate(account) <= monthEndCalendarDate &&
+      account.balanceAsOf > monthEndCalendarDate,
+  );
+  if (unavailablePpfAccounts.length > 0) {
+    return {
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        `${unavailablePpfAccounts.length} PPF account${unavailablePpfAccounts.length === 1 ? " lacks" : "s lack"} a confirmed balance checkpoint for ${targetMonth}.`,
+      ],
+    };
+  }
+  const ppfSummary = calculatePpfPortfolioSummary({
+    accounts: ppfAccounts,
+    asOf: monthEndCalendarDate,
+    entries: ppfLedgerEntries,
+  });
+  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
+    ppfAccounts,
+    monthEndCalendarDate,
+  );
   const supportedAssetIds = new Set(
-    assets.filter(isV1SupportedAsset).map((asset) => asset.id),
+    assets
+      .filter(
+        (asset) =>
+          isV1SupportedAsset(asset) && !linkedLegacyAssetIds.has(asset.id),
+      )
+      .map((asset) => asset.id),
   );
   const monthOpeningPositions = openingPositions.filter(
     (position) =>
@@ -564,8 +613,10 @@ export function buildGeneratedMonthEndSnapshot({
   );
   const openQuantityByAssetId = new Map<string, FinancialDecimalInstance>();
 
-  for (const position of openingPositions.filter((item) =>
-    isOnOrBefore(getOpeningPositionHistoryDate(item) ?? "", monthEnd),
+  for (const position of openingPositions.filter(
+    (item) =>
+      !linkedLegacyAssetIds.has(item.assetId) &&
+      isOnOrBefore(getOpeningPositionHistoryDate(item) ?? "", monthEnd),
   )) {
     openQuantityByAssetId.set(
       position.assetId,
@@ -575,8 +626,10 @@ export function buildGeneratedMonthEndSnapshot({
     );
   }
 
-  for (const trade of trades.filter((item) =>
-    isOnOrBefore(item.date, monthEnd),
+  for (const trade of trades.filter(
+    (item) =>
+      !linkedLegacyAssetIds.has(item.assetId) &&
+      isOnOrBefore(item.date, monthEnd),
   )) {
     openQuantityByAssetId.set(
       trade.assetId,
@@ -608,13 +661,14 @@ export function buildGeneratedMonthEndSnapshot({
   if (
     monthOpeningPositions.length === 0 &&
     monthTrades.length === 0 &&
-    monthCashEntries.length === 0
+    monthCashEntries.length === 0 &&
+    ppfSummary.accounts.length === 0
   ) {
     return {
       snapshot: null,
       status: "insufficient-data",
       warnings: [
-        `No holdings, trades, or cash entries were available to derive for target month ${targetMonth}.`,
+        `No holdings, PPF accounts, trades, or cash entries were available to derive for target month ${targetMonth}.`,
       ],
     };
   }
@@ -706,12 +760,15 @@ export function buildGeneratedMonthEndSnapshot({
   );
   const debtValue = normalizeMoney(
     sumFinancialValues(
-      holdings
-        .filter((holding) => holding.asset.assetClass === "debt")
-        .map(
-          (holding) =>
-            holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
-        ),
+      [
+        ...holdings
+          .filter((holding) => holding.asset.assetClass === "debt")
+          .map(
+            (holding) =>
+              holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
+          ),
+        ppfSummary.confirmedBalance,
+      ],
     ),
   );
   const cryptoValue = normalizeMoney(
@@ -739,7 +796,12 @@ export function buildGeneratedMonthEndSnapshot({
     : "provisional";
   const warnings = buildWarnings(priceBases);
   const salary = deriveMonthlySnapshotSalary(monthCashEntries, targetMonth);
-  const portfolioValue = calculatePortfolioTotal(holdings, monthCashEntries);
+  const portfolioValue = calculatePortfolioTotal(
+    holdings,
+    monthCashEntries,
+    monthEnd,
+    ppfSummary.confirmedBalance,
+  );
 
   if (portfolioValue === null) {
     return {
@@ -765,10 +827,13 @@ export function buildGeneratedMonthEndSnapshot({
     id: existingSnapshot?.id ?? `snapshot-${targetMonth}`,
     investedValue: normalizeMoney(
       sumFinancialValues(
-        holdings.map(
-          (holding) =>
-            holding.calculationBasis?.totalInvested ?? holding.totalInvested,
-        ),
+        [
+          ...holdings.map(
+            (holding) =>
+              holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+          ),
+          ppfSummary.investedBasis,
+        ],
       ),
     ),
     month: targetMonth,
@@ -789,11 +854,21 @@ export function buildGeneratedMonthEndSnapshot({
               trade.type === "buy" && isWithinMonth(trade.date, targetMonth),
           )
           .map((trade) => trade.totalValue),
+        ...ppfLedgerEntries
+          .filter(
+            (entry) =>
+              entry.type === "contribution" &&
+              isWithinMonth(entry.date, targetMonth),
+          )
+          .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
       ]),
     ),
     performanceBasis: buildMonthlyPerformanceBasis({
       cashEntries: monthCashEntries,
       openingPositions: monthOpeningPositions,
+      ppfLedgerEntries: ppfLedgerEntries.filter((entry) =>
+        isOnOrBefore(entry.date, monthEnd),
+      ),
       targetMonth,
     }),
     portfolioValue,

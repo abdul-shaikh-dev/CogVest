@@ -1,0 +1,50 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///ppf-account"
+- assertVisible:
+    id: "ppf-account-form-screen"
+- tapOn:
+    id: "ppf-provider-input"
+- inputText: "India Post"
+- hideKeyboard
+- tapOn:
+    id: "ppf-balance-input"
+- inputText: "100000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "review-ppf-account"
+- assertVisible:
+    id: "ppf-account-review-screen"
+- scrollUntilVisible:
+    element:
+      id: "save-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "save-ppf-account"
+- assertVisible:
+    id: "ppf-confirmed-balance-card"
+- assertVisible: "₹1,00,000.00"
+- tapOn:
+    id: "ppf-account-back"
+- assertVisible:
+    id: "dashboard-screen"
+- tapOn:
+    id: "tab-holdings"
+- assertVisible:
+    id: "holdings-screen"
+- assertVisible:
+    id: "holdings-ppf-section"
+- assertVisible: "My PPF"
+- assertVisible: "₹1L"
+- tapOn: "My PPF"
+- assertVisible:
+    id: "ppf-confirmed-balance-card"
+- assertVisible: "₹1,00,000.00"

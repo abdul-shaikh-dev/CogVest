@@ -8,6 +8,12 @@ import {
   type ConsolidatedHoldingRow,
   type PortfolioRollupTotals,
 } from "@/src/domain/calculations";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
+import {
+  calculatePpfPortfolioSummary,
+  getLinkedLegacyPpfAssetIds,
+  type PpfPortfolioSummary,
+} from "@/src/domain/ppf";
 import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
@@ -40,6 +46,7 @@ export type UseHoldingsResult = {
   isRefreshing: boolean;
   maskWealthValues: boolean;
   openingPositions: OpeningPosition[];
+  ppfSummary: PpfPortfolioSummary;
   refresh: () => Promise<QuoteRefreshResult>;
   quoteFreshness: QuoteFreshnessSummary;
   timedOut: QuoteRefreshTimeout[];
@@ -84,6 +91,13 @@ export function useHoldings({
   const [failed, setFailed] = useState<QuoteRefreshFailure[]>([]);
   const [timedOut, setTimedOut] = useState<QuoteRefreshTimeout[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const asOf = formatLocalCalendarDate(now);
+  const ppfSummary = calculatePpfPortfolioSummary({
+    accounts: snapshot.ppfAccounts,
+    asOf,
+    entries: snapshot.ppfLedgerEntries,
+  });
+  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
   const holdings = withQuoteMetadata(
     calculateHoldings({
       assets: snapshot.assets,
@@ -92,6 +106,8 @@ export function useHoldings({
       trades: snapshot.trades,
     }),
     snapshot.quoteCache,
+  ).filter(
+    (holding) => !linkedLegacyAssetIds.has(holding.asset.id),
   );
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
@@ -101,13 +117,23 @@ export function useHoldings({
     now,
   );
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
-  const rollupTotals = calculatePortfolioRollupTotals(rollupRows, 0, holdings);
+  const rollupTotals = calculatePortfolioRollupTotals(
+    rollupRows,
+    0,
+    holdings,
+    ppfSummary,
+  );
 
   async function refresh() {
     setIsRefreshing(true);
 
     try {
       const currentState = store.getState();
+      const currentAsOf = formatLocalCalendarDate(now);
+      const currentLinkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
+        currentState.ppfAccounts,
+        currentAsOf,
+      );
       const heldAssetIds = new Set(
         calculateHoldings({
           assets: currentState.assets,
@@ -115,7 +141,9 @@ export function useHoldings({
           quoteCache: currentState.quoteCache,
           trades: currentState.trades,
           now,
-        }).map((holding) => holding.asset.id),
+        })
+          .filter((holding) => !currentLinkedLegacyAssetIds.has(holding.asset.id))
+          .map((holding) => holding.asset.id),
       );
       const result = await refreshQuotes({
         assets: currentState.assets.filter((asset) =>
@@ -149,6 +177,7 @@ export function useHoldings({
     isRefreshing,
     maskWealthValues: snapshot.preferences.maskWealthValues,
     openingPositions: snapshot.openingPositions,
+    ppfSummary,
     refresh,
     quoteFreshness,
     rollupRows,

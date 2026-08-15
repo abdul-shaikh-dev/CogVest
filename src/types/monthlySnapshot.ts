@@ -29,6 +29,7 @@ export type MonthlyPerformanceBasis =
         | "ambiguous-cash-flow"
         | "legacy-snapshot"
         | "manual-snapshot"
+        | "ppf-reconciliation"
         | "unknown-opening-position-date";
       status: "unavailable";
       warnings: string[];

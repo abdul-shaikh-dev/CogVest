@@ -24,6 +24,17 @@ export default function AddHoldingScreen() {
         visualQaState === "review" ? "review" : undefined
       }
       onCancel={() => router.back()}
+      onAddPpfAccount={(legacy) =>
+        router.replace({
+          pathname: "/ppf-account",
+          params: legacy
+            ? {
+                ...(legacy.assetId ? { legacyAssetId: legacy.assetId } : {}),
+                ...(legacy.name ? { legacyName: legacy.name } : {}),
+              }
+            : {},
+        })
+      }
       onComplete={() => router.replace("/(tabs)/holdings")}
       resolveQuote={
         visualQaState === "lookup"

@@ -11,7 +11,15 @@ import {
 import { getMonthlySnapshotPriceConfidence } from "@/src/domain/calculations";
 import { getAvailableQuantity } from "@/src/domain/validators/trade";
 import { createMemoryJsonStorage } from "@/src/services/storage";
-import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
+import type {
+  Asset,
+  CashEntry,
+  OpeningPosition,
+  PpfAccount,
+  PpfLedgerEntry,
+  Quote,
+  Trade,
+} from "@/src/types";
 import type { MonthlySnapshot } from "@/src/types";
 
 const asset: Asset = {
@@ -45,6 +53,32 @@ const cashEntry: CashEntry = {
   purpose: "capitalContribution",
   type: "addition",
 };
+
+const ppfAccount: PpfAccount = {
+  balanceAsOf: "2026-07-31",
+  confirmedBalance: 100_000,
+  createdAt: "2026-08-01T10:00:00.000Z",
+  id: "ppf-1",
+  nickname: "Primary PPF",
+  opening: { financialYearStart: 2020, kind: "financialYear" },
+  provider: "India Post",
+  status: "active",
+};
+
+function ppfContribution(
+  id: string,
+  amount: number,
+  date = "2026-08-01",
+): PpfLedgerEntry {
+  return {
+    accountId: ppfAccount.id,
+    amount,
+    date,
+    id,
+    recordedAt: `${date}T10:00:00.000Z`,
+    type: "contribution",
+  };
+}
 
 const openingPosition: OpeningPosition = {
   assetId: asset.id,
@@ -2224,8 +2258,10 @@ describe("portfolio store", () => {
       cashEntries: [cashEntry],
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
+      ppfAccounts: [],
+      ppfLedgerEntries: [],
       preferences: createDefaultPreferences(),
-      schemaVersion: 7,
+      schemaVersion: 8,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -2439,7 +2475,7 @@ describe("portfolio store", () => {
         quantity: 25,
       },
     ]);
-    expect(store.getState().schemaVersion).toBe(7);
+    expect(store.getState().schemaVersion).toBe(8);
   });
 
   it("migrates V1 persisted snapshots by adding empty opening positions", () => {
@@ -2458,7 +2494,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(7);
+    expect(store.getState().schemaVersion).toBe(8);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -2493,7 +2529,7 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(7);
+    expect(store.getState().schemaVersion).toBe(8);
   });
 
   it("migrates V3 snapshots by defaulting monthly snapshots", () => {
@@ -2510,7 +2546,7 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().monthlySnapshots).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(7);
+    expect(store.getState().schemaVersion).toBe(8);
   });
 
   it("migrates V4 additions without inventing income semantics", () => {
@@ -2541,7 +2577,7 @@ describe("portfolio store", () => {
         purpose: "legacyUncategorized",
       }),
     ]);
-    expect(store.getState().schemaVersion).toBe(7);
+    expect(store.getState().schemaVersion).toBe(8);
   });
 
   it("migrates legacy automatic zero income to unknown without changing manual values", () => {
@@ -2746,5 +2782,181 @@ describe("portfolio store", () => {
 
     expect(store.getState().storageRecovery).toBeDefined();
     expect(storage.getRawItem(portfolioStorageKey)).toBe(corruptPortfolio);
+  });
+
+  it("migrates V7 portfolios with empty PPF collections", () => {
+    const storage = createMemoryJsonStorage({
+      [portfolioStorageKey]: {
+        assets: [],
+        cashEntries: [],
+        monthlySnapshots: [],
+        openingPositions: [],
+        preferences: createDefaultPreferences(),
+        schemaVersion: 7,
+        trades: [],
+      },
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState()).toMatchObject({
+      ppfAccounts: [],
+      ppfLedgerEntries: [],
+      schemaVersion: 8,
+    });
+  });
+
+  it("persists PPF accounts and ledger entries across restart", () => {
+    const storage = createMemoryJsonStorage();
+    const now = () => new Date("2026-08-15T10:00:00.000Z");
+    const store = createPortfolioStore({ now, storage });
+
+    expect(store.getState().addPpfAccount(ppfAccount)).toMatchObject({
+      status: "applied",
+    });
+    expect(
+      store.getState().addPpfLedgerEntry(ppfContribution("ppf-entry-1", 500)),
+    ).toMatchObject({ status: "applied" });
+
+    const restarted = createPortfolioStore({ now, storage });
+    expect(restarted.getState().ppfAccounts).toEqual([ppfAccount]);
+    expect(restarted.getState().ppfLedgerEntries).toEqual([
+      ppfContribution("ppf-entry-1", 500),
+    ]);
+  });
+
+  it("rejects orphan, checkpoint-hidden, and negative PPF ledger events", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-15T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+
+    expect(
+      store.getState().addPpfLedgerEntry(ppfContribution("orphan", 500)),
+    ).toEqual({ reason: "accountNotFound", status: "rejected" });
+    store.getState().addPpfAccount(ppfAccount);
+    expect(
+      store
+        .getState()
+        .addPpfLedgerEntry(ppfContribution("hidden", 500, "2026-07-31")),
+    ).toEqual({ reason: "invalidEntry", status: "rejected" });
+    expect(
+      store.getState().addPpfLedgerEntry({
+        accountId: ppfAccount.id,
+        amount: 100_050,
+        date: "2026-08-01",
+        id: "too-large-withdrawal",
+        recordedAt: "2026-08-01T10:00:00.000Z",
+        type: "withdrawal",
+      }),
+    ).toEqual({ reason: "invalidTimeline", status: "rejected" });
+    expect(store.getState().ppfLedgerEntries).toEqual([]);
+  });
+
+  it("rejects corrections and deletions that would invalidate the PPF timeline", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-15T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+    store.getState().addPpfAccount(ppfAccount);
+    const contribution = ppfContribution("contribution", 500);
+    const withdrawal: PpfLedgerEntry = {
+      accountId: ppfAccount.id,
+      amount: 100_200,
+      date: "2026-08-02",
+      id: "withdrawal",
+      recordedAt: "2026-08-02T10:00:00.000Z",
+      type: "withdrawal",
+    };
+    store.getState().addPpfLedgerEntry(contribution);
+    store.getState().addPpfLedgerEntry(withdrawal);
+
+    expect(store.getState().deletePpfLedgerEntry(contribution.id)).toEqual({
+      reason: "invalidTimeline",
+      status: "rejected",
+    });
+    expect(
+      store.getState().correctPpfLedgerEntry({ ...withdrawal, amount: 101_000 }),
+    ).toEqual({ reason: "invalidTimeline", status: "rejected" });
+    expect(store.getState().ppfLedgerEntries).toEqual([contribution, withdrawal]);
+  });
+
+  it("preserves a completed contribution extension when lifecycle status changes", () => {
+    const store = createPortfolioStore({
+      now: () => new Date("2042-04-01T10:00:00.000Z"),
+      storage: createMemoryJsonStorage(),
+    });
+    const extendedAccount: PpfAccount = {
+      ...ppfAccount,
+      balanceAsOf: "2036-03-31",
+      confirmedExtensionStartFinancialYear: 2036,
+      status: "extendedWithContributions",
+    };
+    expect(store.getState().addPpfAccount(extendedAccount)).toMatchObject({
+      status: "applied",
+    });
+    expect(
+      store.getState().addPpfLedgerEntry({
+        accountId: extendedAccount.id,
+        amount: 500,
+        date: "2036-04-01",
+        id: "extension-contribution",
+        recordedAt: "2036-04-01T10:00:00.000Z",
+        type: "contribution",
+      }),
+    ).toMatchObject({ status: "applied" });
+
+    expect(
+      store.getState().correctPpfAccount({
+        ...extendedAccount,
+        status: "matured",
+      }),
+    ).toMatchObject({ status: "applied" });
+    expect(store.getState().ppfAccounts[0]).toMatchObject({
+      confirmedExtensionStartFinancialYear: 2036,
+      status: "matured",
+    });
+  });
+
+  it("deletes a PPF account and its ledger atomically", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-15T10:00:00.000Z"),
+      storage,
+    });
+    store.getState().addPpfAccount(ppfAccount);
+    store.getState().addPpfLedgerEntry(ppfContribution("entry", 500));
+
+    expect(store.getState().deletePpfAccount(ppfAccount.id)).toMatchObject({
+      deletedEntries: 1,
+      status: "applied",
+    });
+    expect(store.getState()).toMatchObject({
+      ppfAccounts: [],
+      ppfLedgerEntries: [],
+    });
+    expect(createPortfolioStore({ storage }).getState()).toMatchObject({
+      ppfAccounts: [],
+      ppfLedgerEntries: [],
+    });
+  });
+
+  it("keeps PPF memory unchanged when persistence fails", () => {
+    const baseStorage = createMemoryJsonStorage();
+    const storage = {
+      ...baseStorage,
+      setItem: () => {
+        throw new Error("storage full");
+      },
+    };
+    const store = createPortfolioStore({
+      now: () => new Date("2026-08-15T10:00:00.000Z"),
+      storage,
+    });
+
+    expect(() => store.getState().addPpfAccount(ppfAccount)).toThrow(
+      "storage full",
+    );
+    expect(store.getState().ppfAccounts).toEqual([]);
   });
 });

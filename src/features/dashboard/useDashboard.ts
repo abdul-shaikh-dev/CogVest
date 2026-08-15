@@ -43,8 +43,13 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Holding } from "@/src/types";
 import {
   getCalendarDatePart,
+  formatLocalCalendarDate,
   isEffectiveCalendarDate,
 } from "@/src/domain/dates";
+import {
+  calculatePpfPortfolioSummary,
+  getLinkedLegacyPpfAssetIds,
+} from "@/src/domain/ppf";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -168,14 +173,22 @@ function calculateMonthlyMetrics(
       .map((entry) => entry.amount),
   );
   const investment = tradeInvestment.plus(openingInvestment);
+  const ppfInvestment = sumFinancialValues(
+    state.ppfLedgerEntries
+      .filter(
+        (entry) => entry.type === "contribution" && isSameMonth(entry.date, now),
+      )
+      .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
+  );
+  const totalInvestment = investment.plus(ppfInvestment);
 
   return {
     cashAdded: normalizeMoney(cashAdded),
     cashChange: normalizeMoney(cashAdded.minus(cashWithdrawn)),
-    investment: normalizeMoney(investment),
+    investment: normalizeMoney(totalInvestment),
     savingsRate:
       cashAdded.greaterThan(0)
-        ? normalizePercentage(investment.dividedBy(cashAdded).times(100))
+        ? normalizePercentage(totalInvestment.dividedBy(cashAdded).times(100))
         : null,
   };
 }
@@ -193,13 +206,25 @@ export function useDashboard({
     snapshot.assets,
     snapshot.quoteCache,
   );
+  const asOf = formatLocalCalendarDate(now);
+  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
+    snapshot.ppfAccounts,
+    asOf,
+  );
   const supportedAssetIds = new Set(
     snapshot.assets
-      .filter((asset) =>
-        isV1CompatibleQuote(asset, snapshot.quoteCache[asset.id]),
+      .filter(
+        (asset) =>
+          !linkedLegacyAssetIds.has(asset.id) &&
+          isV1CompatibleQuote(asset, snapshot.quoteCache[asset.id]),
       )
       .map((asset) => asset.id),
   );
+  const ppfSummary = calculatePpfPortfolioSummary({
+    accounts: snapshot.ppfAccounts,
+    asOf,
+    entries: snapshot.ppfLedgerEntries,
+  });
   const holdings = withQuoteMetadata(
     calculateHoldings({
       assets: snapshot.assets,
@@ -209,6 +234,8 @@ export function useDashboard({
       now,
     }),
     snapshot.quoteCache,
+  ).filter(
+    (holding) => !linkedLegacyAssetIds.has(holding.asset.id),
   );
   const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
@@ -216,6 +243,7 @@ export function useDashboard({
     rollupRows,
     cashBalance,
     holdings,
+    ppfSummary,
   );
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
@@ -230,6 +258,10 @@ export function useDashboard({
 
     try {
       const currentState = store.getState();
+      const currentLinkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
+        currentState.ppfAccounts,
+        formatLocalCalendarDate(now),
+      );
       const heldAssetIds = new Set(
         calculateHoldings({
           assets: currentState.assets,
@@ -237,7 +269,9 @@ export function useDashboard({
           quoteCache: currentState.quoteCache,
           trades: currentState.trades,
           now,
-        }).map((holding) => holding.asset.id),
+        })
+          .filter((holding) => !currentLinkedLegacyAssetIds.has(holding.asset.id))
+          .map((holding) => holding.asset.id),
       );
       const result = await refreshQuotes({
         assets: currentState.assets.filter((asset) =>
@@ -269,6 +303,7 @@ export function useDashboard({
     allocation: calculateAllocation({
       cashBalance,
       holdings,
+      ppfConfirmedBalance: ppfSummary.confirmedBalance,
     }),
     cashBalance,
     convictionReadiness: getConvictionReadiness(
@@ -293,6 +328,11 @@ export function useDashboard({
     rollupTotals,
     sectorAllocation: calculateSectorAllocation(holdings),
     toggleMaskWealthValues,
-    totalValue: calculatePortfolioTotal(holdings, snapshot.cashEntries, now),
+    totalValue: calculatePortfolioTotal(
+      holdings,
+      snapshot.cashEntries,
+      now,
+      ppfSummary.confirmedBalance,
+    ),
   };
 }
