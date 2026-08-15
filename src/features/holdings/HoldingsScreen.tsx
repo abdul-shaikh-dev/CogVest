@@ -99,6 +99,7 @@ export function HoldingsScreen({
     quoteFreshness,
     refresh,
     rollupRows,
+    rollupTotals,
     timedOut,
     toggleMaskWealthValues,
     trades,
@@ -131,6 +132,7 @@ export function HoldingsScreen({
     quoteFreshness,
     timedOut: timedOut.length,
   });
+  const pendingValuations = rollupTotals.valuationCoverage.pendingHoldings;
 
   return (
     <ScreenContainer
@@ -214,6 +216,24 @@ export function HoldingsScreen({
           </View>
         ) : null}
 
+        {pendingValuations > 0 ? (
+          <PremiumCard testID="holdings-pending-valuations">
+            <AppText weight="bold">
+              {pendingValuations} valuation{pendingValuations === 1 ? "" : "s"} pending
+            </AppText>
+            <AppText color="secondary" variant="caption">
+              Invested values remain available. Current totals, returns, and allocation stay unavailable until every holding has a price.
+            </AppText>
+            <AppButton
+              title="Refresh prices"
+              testID="holdings-refresh-pending-prices"
+              onPress={() => {
+                void refresh();
+              }}
+            />
+          </PremiumCard>
+        ) : null}
+
         {onManageAssets || (onReviewAllTrades && trades.length > 0) ? (
           <View style={styles.recordActions}>
             {onReviewAllTrades && trades.length > 0 ? (
@@ -273,8 +293,8 @@ export function HoldingsScreen({
                 <InsightCard
                   eyebrow="Best return"
                   title={distinctBestReturn.holding.asset.name}
-                  detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct)} return`}
-                  positive={distinctBestReturn.holding.unrealisedPnL >= 0}
+                  detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
+                  positive={(distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0}
                 />
               ) : null}
             </View>
@@ -543,12 +563,17 @@ function HoldingRow({
   trades: Trade[];
 }) {
   const { holding } = item;
-  const positive = holding.unrealisedPnL >= 0;
+  const isPending = holding.valuation.status === "pending";
+  const positive = (holding.unrealisedPnL ?? 0) >= 0;
 
   return (
     <Pressable
       accessibilityHint={expanded ? "Collapses position details" : "Shows position details"}
-      accessibilityLabel={`${holding.asset.name}, ${formatPercentage(holding.unrealisedPnLPct)} return`}
+      accessibilityLabel={
+        isPending
+          ? `${holding.asset.name}, valuation pending, invested ${formatCompactINR(holding.totalInvested)}`
+          : `${holding.asset.name}, ${formatPercentage(holding.unrealisedPnLPct ?? 0)} return`
+      }
       accessibilityRole="button"
       accessibilityState={{ expanded }}
       android_ripple={androidRipple()}
@@ -575,9 +600,14 @@ function HoldingRow({
           <MaskedValue
             align="right"
             masked={masked}
-            value={formatCompactINR(holding.currentValue)}
+            value={
+              isPending || holding.currentValue === null
+                ? "Valuation pending"
+                : formatCompactINR(holding.currentValue)
+            }
             weight="bold"
           />
+          {!isPending && holding.unrealisedPnLPct !== null ? (
           <AppText
             align="right"
             style={positive ? styles.positiveText : styles.negativeText}
@@ -586,6 +616,7 @@ function HoldingRow({
           >
             {formatPercentage(holding.unrealisedPnLPct)}
           </AppText>
+          ) : null}
         </View>
         <Ionicons
           color={colors.text.secondary}
@@ -602,7 +633,7 @@ function HoldingRow({
           variant="caption"
         />
         <AppText color="secondary" variant="caption">
-          Alloc. {item.allocationPct.toFixed(2)}%
+          {isPending ? "Allocation unavailable" : `Alloc. ${item.allocationPct.toFixed(2)}%`}
         </AppText>
       </View>
 
@@ -625,16 +656,25 @@ function HoldingRow({
             <Detail
               label="Current price"
               masked={masked}
-              value={formatCompactINR(holding.currentPrice)}
+              value={
+                holding.currentPrice === null
+                  ? "Unavailable"
+                  : formatCompactINR(holding.currentPrice)
+              }
             />
             <Detail
               label="P&L"
               masked={masked}
               tone={positive ? "positive" : "negative"}
-              value={formatSignedCompactINR(holding.unrealisedPnL)}
+              value={
+                holding.unrealisedPnL === null
+                  ? "Unavailable"
+                  : formatSignedCompactINR(holding.unrealisedPnL)
+              }
             />
           </View>
 
+          {!isPending ? (
           <View style={styles.allocationBlock}>
             <View style={styles.allocationHeading}>
               <AppText color="secondary" variant="caption">
@@ -653,6 +693,7 @@ function HoldingRow({
               />
             </View>
           </View>
+          ) : null}
 
           <View style={styles.sourceRow}>
             <View>
@@ -660,15 +701,26 @@ function HoldingRow({
                 Price source
               </AppText>
               <AppText variant="caption" weight="bold">
-                {formatSource(holding.quoteSource)}
+                {isPending ? "Valuation pending" : formatSource(holding.quoteSource)}
               </AppText>
             </View>
             <AppText color="secondary" align="right" variant="caption">
-              {holding.lastUpdated
+              {isPending
+                ? "Refresh or enter manually"
+                : holding.lastUpdated
                 ? `Updated ${formatDate(holding.lastUpdated)}`
                 : "Local position price"}
             </AppText>
           </View>
+
+          {isPending && onReviewOpeningPosition && openingPositions[0] ? (
+            <AppButton
+              title="Enter manual price"
+              variant="secondary"
+              testID={`holding-enter-manual-price-${holding.asset.id}`}
+              onPress={() => onReviewOpeningPosition(openingPositions[0].id)}
+            />
+          ) : null}
 
           {onReviewOpeningPosition && openingPositions.length > 0 ? (
             <View style={styles.openingRecords}>
@@ -761,8 +813,14 @@ function getFilterCounts(items: HoldingReviewItem[]) {
   return {
     all: items.length,
     "high-allocation": items.filter((item) => item.allocationPct >= 10).length,
-    losers: items.filter((item) => item.holding.unrealisedPnL < 0).length,
-    winners: items.filter((item) => item.holding.unrealisedPnL >= 0).length,
+    losers: items.filter(
+      (item) =>
+        item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0,
+    ).length,
+    winners: items.filter(
+      (item) =>
+        item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL >= 0,
+    ).length,
   };
 }
 

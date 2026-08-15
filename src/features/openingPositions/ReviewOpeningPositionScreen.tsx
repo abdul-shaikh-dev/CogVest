@@ -78,9 +78,11 @@ export function ReviewOpeningPositionScreen({
     initialPosition ? String(initialPosition.averageCostPrice) : "",
   );
   const [currentPrice, setCurrentPrice] = useState(() =>
-    initialPosition?.currentPrice !== undefined
-      ? String(initialPosition.currentPrice)
-      : "",
+    initialPosition?.manualValuation?.price !== undefined
+      ? String(initialPosition.manualValuation.price)
+      : initialPosition?.currentPrice !== undefined
+        ? String(initialPosition.currentPrice)
+        : "",
   );
   const [date, setDate] = useState(
     () => getCalendarDatePart(initialPosition?.date ?? "") ?? "",
@@ -156,12 +158,26 @@ export function ReviewOpeningPositionScreen({
     let completed = false;
 
     try {
+      const initialCurrentPrice =
+        position.manualValuation?.price ?? position.currentPrice;
+      const currentPriceChanged = value.currentPrice !== initialCurrentPrice;
       const result = store.getState().correctOpeningPosition({
         ...position,
         averageCostPrice: value.averageCostPrice,
         conviction: value.conviction,
-        currentPrice: value.currentPrice,
+        currentPrice: currentPriceChanged ? undefined : position.currentPrice,
         date: value.date,
+        manualValuation: currentPriceChanged
+          ? value.currentPrice === undefined
+            ? undefined
+            : {
+                asOf: now.toISOString(),
+                currency: positionAsset.currency,
+                price: value.currentPrice,
+                provenance: "user",
+                source: "manual",
+              }
+          : position.manualValuation,
         notes: value.notes,
         quantity: value.quantity,
       });
@@ -255,14 +271,14 @@ export function ReviewOpeningPositionScreen({
           <FormTextField
             error={errors.currentPrice}
             keyboardType="decimal-pad"
-            label="Stored fallback price"
+            label="Manual fallback price (optional)"
             onChangeText={setCurrentPrice}
             testID="opening-correction-current-price-input"
             value={currentPrice}
           />
           <AppText color="secondary" variant="caption">
-            Live quotes remain managed at the holding level. This value is used
-            when a live quote is unavailable.
+            Leave blank to rely on live quotes. If a quote is unavailable, the
+            holding remains saved with valuation pending.
           </AppText>
           {dateUnknown ? (
             <AppText color="secondary">

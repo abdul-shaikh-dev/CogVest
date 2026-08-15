@@ -22,9 +22,15 @@ const openingPosition: OpeningPosition = {
   assetId: asset.id,
   averageCostPrice: 1450,
   conviction: 4,
-  currentPrice: 1678.25,
   date: "2026-04-15",
   id: "opening-hdfc",
+  manualValuation: {
+    asOf: "2026-07-01T09:30:00.000Z",
+    currency: "INR",
+    price: 1678.25,
+    provenance: "user",
+    source: "manual",
+  },
   notes: "Long-term holding",
   quantity: 25,
 };
@@ -60,7 +66,7 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    expect(getByText(/Live quotes remain managed/)).toBeTruthy();
+    expect(getByText(/holding remains saved with valuation pending/)).toBeTruthy();
     fireEvent.changeText(
       getByTestId("opening-correction-quantity-input"),
       "30",
@@ -75,8 +81,41 @@ describe("ReviewOpeningPositionScreen", () => {
     });
     expect(correctionSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().openingPositions).toEqual([
-      expect.objectContaining({ conviction: 5, quantity: 30 }),
+      expect.objectContaining({
+        conviction: 5,
+        manualValuation: openingPosition.manualValuation,
+        quantity: 30,
+      }),
     ]);
+  });
+
+  it("records new provenance only when the manual price changes", async () => {
+    const { store } = createStore();
+    const { getByTestId } = render(
+      <ReviewOpeningPositionScreen
+        now={new Date("2026-07-22T06:30:00.000Z")}
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        openingPositionId={openingPosition.id}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(
+      getByTestId("opening-correction-current-price-input"),
+      "1700",
+    );
+    fireEvent.press(getByTestId("save-opening-correction-button"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions[0]?.manualValuation).toEqual({
+        asOf: "2026-07-22T06:30:00.000Z",
+        currency: "INR",
+        price: 1700,
+        provenance: "user",
+        source: "manual",
+      });
+    });
   });
 
   it("validates correction fields before touching the store", () => {

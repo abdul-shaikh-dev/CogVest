@@ -33,6 +33,8 @@ export default function AddHoldingScreen() {
       searchAssetLookupResults={
         visualQaState === "lookup"
           ? async () => ({ failures: [], results: visualQaAssetLookupResults })
+          : visualQaState === "lookup-failure"
+            ? async () => ({ failures: ["Provider unavailable"], results: [] })
           : undefined
       }
     />

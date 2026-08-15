@@ -134,10 +134,7 @@ describe("AddTradeForm", () => {
       purpose: "purchaseFunding",
       type: "withdrawal",
     });
-    expect(store.getState().quoteCache[store.getState().assets[0].id]).toMatchObject({
-      price: 100,
-      source: "manual",
-    });
+    expect(store.getState().quoteCache[store.getState().assets[0].id]).toBeUndefined();
     expect(Haptics.notificationAsync).toHaveBeenCalledWith("success");
     expect(getByText("Holding saved.")).toBeTruthy();
   });

@@ -234,13 +234,6 @@ export function useAddTrade({
       return;
     }
 
-    store.getState().upsertQuote({
-      asOf: new Date().toISOString(),
-      assetId: reviewAsset.id,
-      currency: "INR",
-      price: reviewTrade.pricePerUnit,
-      source: "manual",
-    });
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setErrors({});
     setSuccessMessage("Holding saved.");

@@ -60,13 +60,19 @@ describe("useHoldings", () => {
       unrealisedPnL: 50,
       unrealisedPnLPct: 25,
     });
-    expect(result.current.rollupTotals).toEqual({
+    expect(result.current.rollupTotals).toMatchObject({
       cashBalance: 0,
       holdingsCurrentValue: 250,
       pnl: 50,
       pnlPct: 25,
       totalCurrentValue: 250,
       totalInvested: 200,
+      valuationCoverage: {
+        pendingHoldings: 0,
+        status: "complete",
+        totalHoldings: 1,
+        valuedHoldings: 1,
+      },
     });
     expect(result.current.rollupRows[0]).toMatchObject({
       currentAllocationPct: 100,

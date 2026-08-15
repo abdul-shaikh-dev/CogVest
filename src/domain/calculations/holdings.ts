@@ -3,6 +3,7 @@ import type {
   AssetClass,
   CashEntry,
   Holding,
+  HoldingValuation,
   MonthlySnapshot,
   OpeningPosition,
   QuoteCache,
@@ -32,9 +33,10 @@ import {
 
 type CalculateHoldingInput = {
   asset: Asset;
-  currentPrice: number;
+  currentPrice: number | null;
   openingPositions?: OpeningPosition[];
   trades: Trade[];
+  valuation?: HoldingValuation;
 };
 
 type CalculateHoldingsInput = {
@@ -60,24 +62,35 @@ export type MetadataAllocationItem = {
 export type ConsolidatedHoldingRow = {
   asset: Asset;
   assetClass: AssetClass;
-  currentAllocationPct: number;
-  currentValue: number;
+  currentAllocationPct: number | null;
+  currentValue: number | null;
   initialAllocationPct: number;
   instrumentType?: Asset["instrumentType"];
   investedValue: number;
-  pnl: number;
-  pnlPct: number;
+  pnl: number | null;
+  pnlPct: number | null;
   sectorType?: Asset["sectorType"];
   units: number;
 };
 
 export type PortfolioRollupTotals = {
   cashBalance: number;
-  holdingsCurrentValue: number;
-  pnl: number;
-  pnlPct: number;
-  totalCurrentValue: number;
+  holdingsCurrentValue: number | null;
+  pnl: number | null;
+  pnlPct: number | null;
+  totalCurrentValue: number | null;
   totalInvested: number;
+  valuationCoverage: PortfolioValuationCoverage;
+  valuedHoldingsSubtotal: number;
+};
+
+export type PortfolioValuationCoverage = {
+  pendingAssetIds: string[];
+  pendingHoldings: number;
+  pendingInvestedValue: number;
+  status: "complete" | "incomplete";
+  totalHoldings: number;
+  valuedHoldings: number;
 };
 
 export type MonthlyAssetSnapshotItem = {
@@ -135,6 +148,7 @@ export function calculateHolding({
   currentPrice,
   openingPositions = [],
   trades,
+  valuation,
 }: CalculateHoldingInput): Holding {
   let averageCostPrice = decimal(0);
   let totalUnits = decimal(0);
@@ -182,28 +196,52 @@ export function calculateHolding({
   }
 
   const totalInvested = totalUnits.times(averageCostPrice);
-  const currentValue = totalUnits.times(currentPrice);
-  const unrealisedPnL = currentValue.minus(totalInvested);
-  const unrealisedPnLPct = totalInvested.isZero()
-    ? decimal(0)
-    : unrealisedPnL.dividedBy(totalInvested).times(100);
+  const resolvedValuation: HoldingValuation =
+    valuation ??
+    (currentPrice === null
+      ? { status: "pending" }
+      : {
+          asOf: null,
+          currency: asset.currency,
+          price: currentPrice,
+          source: "manual",
+          status: "manual",
+        });
+  const currentValue =
+    currentPrice === null ? null : totalUnits.times(currentPrice);
+  const unrealisedPnL =
+    currentValue === null ? null : currentValue.minus(totalInvested);
+  const unrealisedPnLPct =
+    unrealisedPnL === null
+      ? null
+      : totalInvested.isZero()
+        ? decimal(0)
+        : unrealisedPnL.dividedBy(totalInvested).times(100);
 
   return {
     asset,
     averageCostPrice: normalizeUnitPrice(averageCostPrice),
     calculationBasis: {
       averageCostPrice: averageCostPrice.toString(),
-      currentValue: currentValue.toString(),
+      ...(currentValue === null ? {} : { currentValue: currentValue.toString() }),
       totalInvested: totalInvested.toString(),
       totalUnits: totalUnits.toString(),
-      unrealisedPnL: unrealisedPnL.toString(),
+      ...(unrealisedPnL === null
+        ? {}
+        : { unrealisedPnL: unrealisedPnL.toString() }),
     },
-    currentPrice: normalizeUnitPrice(currentPrice),
-    currentValue: normalizeMoney(currentValue),
+    currentPrice:
+      currentPrice === null ? null : normalizeUnitPrice(currentPrice),
+    currentValue: currentValue === null ? null : normalizeMoney(currentValue),
     totalInvested: normalizeMoney(totalInvested),
     totalUnits: normalizeQuantity(totalUnits),
-    unrealisedPnL: normalizeMoney(unrealisedPnL),
-    unrealisedPnLPct: normalizePercentage(unrealisedPnLPct),
+    unrealisedPnL:
+      unrealisedPnL === null ? null : normalizeMoney(unrealisedPnL),
+    unrealisedPnLPct:
+      unrealisedPnLPct === null
+        ? null
+        : normalizePercentage(unrealisedPnLPct),
+    valuation: resolvedValuation,
   };
 }
 
@@ -237,20 +275,63 @@ export function calculateHoldings({
         return null;
       }
 
-      const latestManualPrice = [...assetOpeningPositions]
-        .filter((position) => position.currentPrice !== undefined)
+      const latestManualValuation = [...assetOpeningPositions]
+        .filter((position) => position.manualValuation !== undefined)
         .sort(
           (left, right) =>
-            (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
-              getOpeningPositionHistoryDate(left) ?? "",
+            (
+              right.manualValuation?.asOf ??
+              getOpeningPositionHistoryDate(right) ??
+              ""
+            ).localeCompare(
+              left.manualValuation?.asOf ??
+                getOpeningPositionHistoryDate(left) ??
+                "",
             ),
+        )[0]?.manualValuation;
+      const latestLegacyPrice = [...assetOpeningPositions]
+        .filter((position) => position.currentPrice !== undefined)
+        .sort((left, right) =>
+          (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
+            getOpeningPositionHistoryDate(left) ?? "",
+          ),
         )[0]?.currentPrice;
-      const currentPrice = quote?.price ?? latestManualPrice ?? 0;
+      const currentPrice =
+        quote?.price ??
+        latestManualValuation?.price ??
+        latestLegacyPrice ??
+        null;
+      const valuation: HoldingValuation = quote
+        ? {
+            asOf: quote.asOf,
+            currency: quote.currency,
+            price: quote.price,
+            source: quote.source,
+            status: quote.source === "manual" ? "manual" : "fetched",
+          }
+        : latestManualValuation
+          ? {
+              asOf: latestManualValuation.asOf,
+              currency: latestManualValuation.currency,
+              price: latestManualValuation.price,
+              source: "manual",
+              status: "manual",
+            }
+          : latestLegacyPrice !== undefined
+            ? {
+                asOf: null,
+                currency: asset.currency,
+                price: latestLegacyPrice,
+                source: "manual",
+                status: "manual",
+              }
+            : { status: "pending" };
       const holding = calculateHolding({
         asset,
         currentPrice,
         openingPositions: assetOpeningPositions,
         trades: assetTrades,
+        valuation,
       });
 
       return holding.totalUnits > 0 ? holding : null;
@@ -370,10 +451,14 @@ export function calculatePortfolioTotal(
   cashEntries: CashEntry[],
   now = new Date(),
 ) {
+  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+    return null;
+  }
+
   const holdingsValue = sumFinancialValues(
     holdings.map(
       (holding) =>
-        holding.calculationBasis?.currentValue ?? holding.currentValue,
+        holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
     ),
   );
 
@@ -385,17 +470,20 @@ export function calculatePortfolioTotal(
 export function calculatePortfolioDayChange(
   holdings: Holding[],
 ): PortfolioDayChange {
+  const valuedHoldings = holdings.filter(
+    (holding) => holding.valuation.status !== "pending",
+  );
   const currentValue = sumFinancialValues(
-    holdings.map(
+    valuedHoldings.map(
       (holding) =>
-        holding.calculationBasis?.currentValue ?? holding.currentValue,
+        holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
     ),
   );
-  const absolute = holdings.reduce((total, holding) => {
+  const absolute = valuedHoldings.reduce((total, holding) => {
     if (!holding.dayChangePct) return total;
 
     const preciseCurrentValue = decimal(
-      holding.calculationBasis?.currentValue ?? holding.currentValue,
+      holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
     );
     const changeMultiplier = decimal(1).plus(
       decimal(holding.dayChangePct).dividedBy(100),
@@ -424,13 +512,17 @@ export function calculateAllocation({
   cashBalance: number;
   holdings: Holding[];
 }): AllocationItem[] {
+  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+    return [];
+  }
+
   const values = new Map<AssetClass, FinancialDecimalInstance>();
 
   for (const holding of holdings) {
     values.set(
       holding.asset.assetClass,
       decimal(values.get(holding.asset.assetClass) ?? 0).plus(
-        holding.calculationBasis?.currentValue ?? holding.currentValue,
+        holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
       ),
     );
   }
@@ -470,10 +562,12 @@ export function calculateConsolidatedHoldingRows(
     ),
   );
   const totalCurrentValue = sumFinancialValues(
-    holdings.map(
+    holdings
+      .filter((holding) => holding.valuation.status !== "pending")
+      .map(
       (holding) =>
-        holding.calculationBasis?.currentValue ?? holding.currentValue,
-    ),
+        holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
+      ),
   );
 
   return holdings
@@ -481,11 +575,13 @@ export function calculateConsolidatedHoldingRows(
       asset: holding.asset,
       assetClass: holding.asset.assetClass,
       currentAllocationPct:
-        totalCurrentValue.isZero()
-          ? 0
+        holding.valuation.status === "pending" || totalCurrentValue.isZero()
+          ? null
           : round(
               decimal(
-                holding.calculationBasis?.currentValue ?? holding.currentValue,
+                holding.calculationBasis?.currentValue ??
+                  holding.currentValue ??
+                  0,
               )
                 .dividedBy(totalCurrentValue)
                 .times(100)
@@ -506,11 +602,42 @@ export function calculateConsolidatedHoldingRows(
       instrumentType: holding.asset.instrumentType,
       investedValue: holding.totalInvested,
       pnl: holding.unrealisedPnL,
-      pnlPct: round(holding.unrealisedPnLPct),
+      pnlPct:
+        holding.unrealisedPnLPct === null
+          ? null
+          : round(holding.unrealisedPnLPct),
       sectorType: holding.asset.sectorType,
       units: holding.totalUnits,
     }))
-    .sort((left, right) => right.currentValue - left.currentValue);
+    .sort((left, right) => {
+      if (left.currentValue === null) return 1;
+      if (right.currentValue === null) return -1;
+      return right.currentValue - left.currentValue;
+    });
+}
+
+export function calculatePortfolioValuationCoverage(
+  holdings: Holding[],
+): PortfolioValuationCoverage {
+  const pending = holdings.filter(
+    (holding) => holding.valuation.status === "pending",
+  );
+
+  return {
+    pendingAssetIds: pending.map((holding) => holding.asset.id),
+    pendingHoldings: pending.length,
+    pendingInvestedValue: normalizeMoney(
+      sumFinancialValues(
+        pending.map(
+          (holding) =>
+            holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+        ),
+      ),
+    ),
+    status: pending.length > 0 ? "incomplete" : "complete",
+    totalHoldings: holdings.length,
+    valuedHoldings: holdings.length - pending.length,
+  };
 }
 
 export function calculatePortfolioRollupTotals(
@@ -518,6 +645,26 @@ export function calculatePortfolioRollupTotals(
   cashBalance = 0,
   holdings?: Holding[],
 ): PortfolioRollupTotals {
+  const valuationCoverage = holdings
+    ? calculatePortfolioValuationCoverage(holdings)
+    : {
+        pendingAssetIds: rows
+          .filter((row) => row.currentValue === null)
+          .map((row) => row.asset.id),
+        pendingHoldings: rows.filter((row) => row.currentValue === null).length,
+        pendingInvestedValue: normalizeMoney(
+          sumFinancialValues(
+            rows
+              .filter((row) => row.currentValue === null)
+              .map((row) => row.investedValue),
+          ),
+        ),
+        status: rows.some((row) => row.currentValue === null)
+          ? ("incomplete" as const)
+          : ("complete" as const),
+        totalHoldings: rows.length,
+        valuedHoldings: rows.filter((row) => row.currentValue !== null).length,
+      };
   const totalInvested = sumFinancialValues(
     holdings
       ? holdings.map(
@@ -528,25 +675,32 @@ export function calculatePortfolioRollupTotals(
   );
   const holdingsCurrentValue = sumFinancialValues(
     holdings
-      ? holdings.map(
+      ? holdings
+          .filter((holding) => holding.valuation.status !== "pending")
+          .map(
           (holding) =>
-            holding.calculationBasis?.currentValue ?? holding.currentValue,
-        )
-      : rows.map((row) => row.currentValue),
+            holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
+          )
+      : rows.map((row) => row.currentValue ?? 0),
   );
   const pnl = holdingsCurrentValue.minus(totalInvested);
+  const complete = valuationCoverage.status === "complete";
 
   return {
     cashBalance,
-    holdingsCurrentValue: normalizeMoney(holdingsCurrentValue),
-    pnl: normalizeMoney(pnl),
-    pnlPct: totalInvested.isZero()
-      ? 0
-      : round(pnl.dividedBy(totalInvested).times(100).toNumber()),
-    totalCurrentValue: normalizeMoney(
-      holdingsCurrentValue.plus(cashBalance),
-    ),
+    holdingsCurrentValue: complete ? normalizeMoney(holdingsCurrentValue) : null,
+    pnl: complete ? normalizeMoney(pnl) : null,
+    pnlPct: complete
+      ? totalInvested.isZero()
+        ? 0
+        : round(pnl.dividedBy(totalInvested).times(100).toNumber())
+      : null,
+    totalCurrentValue: complete
+      ? normalizeMoney(holdingsCurrentValue.plus(cashBalance))
+      : null,
     totalInvested: normalizeMoney(totalInvested),
+    valuationCoverage,
+    valuedHoldingsSubtotal: normalizeMoney(holdingsCurrentValue),
   };
 }
 
@@ -619,6 +773,10 @@ export function calculateMetadataAllocation(
   holdings: Holding[],
   metadataKey: "instrumentType" | "sectorType",
 ): MetadataAllocationItem[] {
+  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+    return [];
+  }
+
   const values = new Map<string, FinancialDecimalInstance>();
 
   for (const holding of holdings) {
@@ -627,7 +785,7 @@ export function calculateMetadataAllocation(
     values.set(
       label,
       decimal(values.get(label) ?? 0).plus(
-        holding.calculationBasis?.currentValue ?? holding.currentValue,
+        holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
       ),
     );
   }

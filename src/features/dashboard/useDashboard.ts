@@ -86,7 +86,7 @@ export type DashboardState = {
   rollupTotals: PortfolioRollupTotals;
   sectorAllocation: MetadataAllocationItem[];
   toggleMaskWealthValues: () => void;
-  totalValue: number;
+  totalValue: number | null;
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -103,8 +103,14 @@ function withQuoteMetadata(
     return {
       ...holding,
       dayChangePct: quote?.dayChangePct,
-      lastUpdated: quote?.asOf,
-      quoteSource: quote?.source,
+      lastUpdated:
+        quote?.asOf ??
+        (holding.valuation.status === "manual"
+          ? holding.valuation.asOf ?? undefined
+          : undefined),
+      quoteSource:
+        quote?.source ??
+        (holding.valuation.status === "manual" ? "manual" : undefined),
     };
   });
 }

@@ -1,17 +1,30 @@
-import type { Asset } from "./asset";
+import type { Asset, Currency } from "./asset";
+import type { QuoteSource } from "./quote";
+
+export type HoldingValuation =
+  | {
+      asOf: string | null;
+      currency: Currency;
+      price: number;
+      source: QuoteSource;
+      status: "fetched" | "manual";
+    }
+  | {
+      status: "pending";
+    };
 
 export type Holding = {
   asset: Asset;
   averageCostPrice: number;
   calculationBasis?: {
     averageCostPrice: string;
-    currentValue: string;
+    currentValue?: string;
     totalInvested: string;
     totalUnits: string;
-    unrealisedPnL: string;
+    unrealisedPnL?: string;
   };
-  currentPrice: number;
-  currentValue: number;
+  currentPrice: number | null;
+  currentValue: number | null;
   dayChangePct?: number;
   daysToLtcg?: number;
   heldDays?: number;
@@ -19,6 +32,7 @@ export type Holding = {
   ltcgEligible?: boolean;
   totalInvested: number;
   totalUnits: number;
-  unrealisedPnL: number;
-  unrealisedPnLPct: number;
+  unrealisedPnL: number | null;
+  unrealisedPnLPct: number | null;
+  valuation: HoldingValuation;
 };

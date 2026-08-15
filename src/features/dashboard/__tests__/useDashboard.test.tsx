@@ -86,13 +86,19 @@ describe("useDashboard", () => {
     );
 
     expect(result.current.totalValue).toBe(550);
-    expect(result.current.rollupTotals).toEqual({
+    expect(result.current.rollupTotals).toMatchObject({
       cashBalance: 50,
       holdingsCurrentValue: 500,
       pnl: 200,
       pnlPct: 66.67,
       totalCurrentValue: 550,
       totalInvested: 300,
+      valuationCoverage: {
+        pendingHoldings: 0,
+        status: "complete",
+        totalHoldings: 2,
+        valuedHoldings: 2,
+      },
     });
     expect(result.current.cashBalance).toBe(50);
     expect(result.current.dayChange).toEqual({

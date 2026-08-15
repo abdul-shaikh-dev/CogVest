@@ -90,6 +90,70 @@ function openingPosition(
 }
 
 describe("holding calculations", () => {
+  it("keeps ownership and invested value explicit while valuation is pending", () => {
+    const position = openingPosition({ currentPrice: undefined });
+    const pendingHoldings = calculateHoldings({
+      assets: [reliance],
+      openingPositions: [position],
+      quoteCache: {},
+      trades: [],
+    });
+
+    expect(pendingHoldings).toHaveLength(1);
+    expect(pendingHoldings[0]).toMatchObject({
+      currentPrice: null,
+      currentValue: null,
+      totalInvested: 35000,
+      unrealisedPnL: null,
+      unrealisedPnLPct: null,
+      valuation: { status: "pending" },
+    });
+    expect(calculatePortfolioTotal(pendingHoldings, [])).toBeNull();
+    expect(calculateAllocation({ cashBalance: 0, holdings: pendingHoldings })).toEqual([]);
+    expect(
+      calculatePortfolioRollupTotals(
+        calculateConsolidatedHoldingRows(pendingHoldings),
+        0,
+        pendingHoldings,
+      ),
+    ).toMatchObject({
+      holdingsCurrentValue: null,
+      pnl: null,
+      pnlPct: null,
+      totalCurrentValue: null,
+      totalInvested: 35000,
+      valuationCoverage: {
+        pendingAssetIds: [reliance.id],
+        pendingHoldings: 1,
+        pendingInvestedValue: 35000,
+        status: "incomplete",
+        totalHoldings: 1,
+        valuedHoldings: 0,
+      },
+      valuedHoldingsSubtotal: 0,
+    });
+
+    const resolved = calculateHoldings({
+      assets: [reliance],
+      openingPositions: [position],
+      quoteCache: {
+        [reliance.id]: {
+          asOf: "2026-08-09T10:00:00.000Z",
+          assetId: reliance.id,
+          currency: "INR",
+          price: 1600,
+          source: "yahoo",
+        },
+      },
+      trades: [],
+    });
+
+    expect(resolved[0]).toMatchObject({
+      currentValue: 40000,
+      valuation: { source: "yahoo", status: "fetched" },
+    });
+  });
+
   it("includes an unknown-date opening position in current totals after it was recorded", () => {
     const holdings = calculateHoldings({
       assets: [reliance],
@@ -171,11 +235,11 @@ describe("holding calculations", () => {
     expect(holding.averageCostPrice).toBeCloseTo(expectedAverageCost, 7);
     expect(holding.totalInvested).toBe(300000.63);
     expect(holding.currentValue).toBeCloseTo(
-      holding.totalUnits * holding.currentPrice,
+      holding.totalUnits * holding.currentPrice!,
       8,
     );
     expect(holding.unrealisedPnL).toBeCloseTo(
-      holding.currentValue - holding.totalInvested,
+      holding.currentValue! - holding.totalInvested,
       8,
     );
   });
@@ -975,6 +1039,15 @@ describe("portfolio calculations", () => {
       pnlPct: 10.34,
       totalCurrentValue: 3500,
       totalInvested: 2900,
+      valuationCoverage: {
+        pendingAssetIds: [],
+        pendingHoldings: 0,
+        pendingInvestedValue: 0,
+        status: "complete",
+        totalHoldings: 2,
+        valuedHoldings: 2,
+      },
+      valuedHoldingsSubtotal: 3200,
     });
   });
 
@@ -1021,6 +1094,15 @@ describe("portfolio calculations", () => {
       pnlPct: 0,
       totalCurrentValue: 0.01,
       totalInvested: 0.01,
+      valuationCoverage: {
+        pendingAssetIds: [],
+        pendingHoldings: 0,
+        pendingInvestedValue: 0,
+        status: "complete",
+        totalHoldings: 2,
+        valuedHoldings: 2,
+      },
+      valuedHoldingsSubtotal: 0.01,
     });
   });
 

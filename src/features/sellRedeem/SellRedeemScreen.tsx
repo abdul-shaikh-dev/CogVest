@@ -114,12 +114,18 @@ export function SellRedeemScreen({
               },
               {
                 label: "Current price",
-                value: formatCompactINR(holding.currentPrice),
+                value:
+                  holding.currentPrice === null
+                    ? "Unavailable"
+                    : formatCompactINR(holding.currentPrice),
               },
               {
                 label: "Current value",
                 masked: false,
-                value: formatCompactINR(holding.currentValue),
+                value:
+                  holding.currentValue === null
+                    ? "Unavailable"
+                    : formatCompactINR(holding.currentValue),
               },
             ]}
           />
@@ -202,7 +208,11 @@ export function SellRedeemScreen({
               />
               <PreviewValue
                 label="Remaining value"
-                value={formatINR(flow.preview.remainingValue)}
+                value={
+                  flow.preview.remainingValue === null
+                    ? "Unavailable"
+                    : formatINR(flow.preview.remainingValue)
+                }
               />
             </View>
           ) : (

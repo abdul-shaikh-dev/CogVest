@@ -144,7 +144,10 @@ export function useAddOpeningPosition({
     initialReviewPosition?.averageCostPrice.toString() ?? "",
   );
   const [currentPrice, setCurrentPrice] = useState(
-    initialReviewPosition?.currentPrice?.toString() ?? "",
+    (
+      initialReviewPosition?.manualValuation?.price ??
+      initialReviewPosition?.currentPrice
+    )?.toString() ?? "",
   );
   const [date, setDate] = useState(
     initialReviewPosition?.date?.slice(0, 10) ?? "",
@@ -195,9 +198,32 @@ export function useAddOpeningPosition({
     reviewAsset && reviewOpeningPosition
       ? calculateHolding({
           asset: reviewAsset,
-          currentPrice: reviewOpeningPosition.currentPrice ?? 0,
+          currentPrice:
+            reviewOpeningPosition.manualValuation?.price ??
+            selectedLookupQuote?.price ??
+            null,
           openingPositions: [reviewOpeningPosition],
           trades: [],
+          valuation: reviewOpeningPosition.manualValuation
+            ? {
+                asOf: reviewOpeningPosition.manualValuation.asOf,
+                currency: reviewOpeningPosition.manualValuation.currency,
+                price: reviewOpeningPosition.manualValuation.price,
+                source: "manual",
+                status: "manual",
+              }
+            : selectedLookupQuote
+              ? {
+                  asOf: selectedLookupQuote.asOf,
+                  currency: selectedLookupQuote.currency,
+                  price: selectedLookupQuote.price,
+                  source: selectedLookupQuote.source,
+                  status:
+                    selectedLookupQuote.source === "manual"
+                      ? "manual"
+                      : "fetched",
+                }
+              : { status: "pending" },
         })
       : undefined;
 
@@ -660,14 +686,32 @@ export function useAddOpeningPosition({
     setErrors({});
     setReviewAsset(asset);
     const commandId = createId("opening");
+    const providerQuote =
+      selectedLookupQuote ??
+      (selectedAsset ? snapshot.quoteCache[selectedAsset.id] : undefined);
+    const usesProviderQuote =
+      result.value.currentPrice !== undefined &&
+      providerQuote !== undefined &&
+      providerQuote.currency === asset.currency &&
+      providerQuote.price === result.value.currentPrice;
 
     setReviewOpeningPosition({
       assetId: asset.id,
       averageCostPrice: result.value.averageCostPrice,
       conviction: result.value.conviction,
-      currentPrice: result.value.currentPrice,
       date: result.value.date,
       id: commandId,
+      ...(result.value.currentPrice === undefined || usesProviderQuote
+        ? {}
+        : {
+            manualValuation: {
+              asOf: now.toISOString(),
+              currency: asset.currency,
+              price: result.value.currentPrice,
+              provenance: "user" as const,
+              source: "manual" as const,
+            },
+          }),
       notes: result.value.notes,
       quantity: result.value.quantity,
     });
@@ -687,14 +731,14 @@ export function useAddOpeningPosition({
 
     isSavingRef.current = true;
     setIsSaving(true);
-    const storedPrice = reviewOpeningPosition.currentPrice ?? 0;
     const providerQuote =
       selectedLookupQuote ??
       (selectedAsset ? snapshot.quoteCache[selectedAsset.id] : undefined);
     const shouldPreserveProviderQuote =
+      reviewOpeningPosition.manualValuation === undefined &&
       providerQuote !== undefined &&
       providerQuote.currency === reviewAsset.currency &&
-      providerQuote.price === storedPrice;
+      providerQuote.price === Number(currentPrice);
 
     try {
       const quote = shouldPreserveProviderQuote
@@ -702,13 +746,7 @@ export function useAddOpeningPosition({
             ...providerQuote,
             assetId: reviewAsset.id,
           }
-        : {
-            asOf: new Date().toISOString(),
-            assetId: reviewAsset.id,
-            currency: "INR" as const,
-            price: storedPrice,
-            source: "manual" as const,
-          };
+        : undefined;
 
       const commandResult = store.getState().recordOpeningPosition({
         asset: reviewAsset,

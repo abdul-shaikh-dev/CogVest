@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5, 6])(
+  it.each([1, 2, 3, 4, 5, 6, 7])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,7 +51,7 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 7 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 8 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });
@@ -113,6 +113,73 @@ describe("persisted portfolio schema", () => {
         }),
       ),
     ).toMatchObject({ success: true });
+  });
+
+  it("rejects contradictory or incomplete manual valuation provenance", () => {
+    const basePosition = {
+      assetId: "asset-reliance",
+      averageCostPrice: 100,
+      date: "2026-07-10",
+      id: "opening-valued",
+      quantity: 2,
+    };
+
+    for (const openingPosition of [
+      {
+        ...basePosition,
+        currentPrice: 120,
+        manualValuation: {
+          asOf: "2026-08-09T10:00:00.000Z",
+          currency: "INR",
+          price: 120,
+          provenance: "user",
+          source: "manual",
+        },
+      },
+      {
+        ...basePosition,
+        manualValuation: {
+          asOf: null,
+          currency: "INR",
+          price: 120,
+          provenance: "user",
+          source: "manual",
+        },
+      },
+    ]) {
+      expect(
+        parsePersistedPortfolio(
+          serialize({ openingPositions: [openingPosition], schemaVersion: 7 }),
+        ),
+      ).toEqual({ reason: "invalid-shape", success: false });
+    }
+  });
+
+  it("rejects a persisted manual valuation in a different currency from its asset", () => {
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          assets: [validAsset],
+          openingPositions: [
+            {
+              assetId: validAsset.id,
+              averageCostPrice: 100,
+              date: "2026-07-10",
+              id: "opening-valued-usd",
+              manualValuation: {
+                asOf: "2026-08-09T10:00:00.000Z",
+                currency: "USD",
+                price: 120,
+                provenance: "user",
+                source: "manual",
+              },
+              quantity: 2,
+            },
+          ],
+          schemaVersion: 7,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
   });
 
   it("accepts snapshots with explicitly unknown income", () => {

@@ -7,7 +7,7 @@ export type {
   SectorType,
 } from "./asset";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
-export type { Holding } from "./holding";
+export type { Holding, HoldingValuation } from "./holding";
 export type {
   MonthlyPerformanceBasis,
   MonthlySnapshot,
@@ -15,7 +15,10 @@ export type {
   MonthlySnapshotPriceConfidence,
   MonthlySnapshotPriceEvidence,
 } from "./monthlySnapshot";
-export type { OpeningPosition } from "./openingPosition";
+export type {
+  OpeningPosition,
+  OpeningPositionManualValuation,
+} from "./openingPosition";
 export type { ChartRange, Preferences } from "./preferences";
 export { historicalQuoteCacheKey } from "./quote";
 export type {

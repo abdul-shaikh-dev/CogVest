@@ -154,7 +154,7 @@ All domain calculations must be pure functions under `src/domain/`.
 
 ### V1 Financial Precision Contract
 
-- Persisted financial fields remain finite JavaScript numbers under schema v5.
+- Persisted financial fields remain finite JavaScript numbers under schema v7.
   V1 does not rewrite legacy records or migrate their representation.
 - New and edited quantities are normalized to 8 decimal places. Unit prices,
   quote prices, and weighted average cost use 8 decimal places.
@@ -193,6 +193,11 @@ rows.
 
 Add Holding owns assisted capture: search, explicit result selection, provider
 metadata review, position details, derived preview, and manual fallback.
+An opening position can be saved without a current price when lookup is
+unavailable. CogVest must preserve invested value, mark current valuation as
+pending, and avoid presenting partial current value, P&L, allocation, or
+month-end totals as complete. A later fetched quote or explicit manual price
+resolves the pending state with source, currency, and as-of provenance.
 
 Monthly Progress owns statement-style progress: `Portfolio Growth`,
 `Asset Momentum`, `Monthly Change Breakdown`, month selection, and a compact
