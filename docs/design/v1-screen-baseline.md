@@ -23,7 +23,8 @@ CogVest V1 should feel like a premium private investment ledger:
 - statement-summary screens that answer first, show evidence second, and place
   actions last
 
-Do not add Minimal Mode, LTCG UI, advanced market-price history, import/export,
+Do not add Minimal Mode, LTCG UI, advanced market-price history, arbitrary
+spreadsheet import, full-record export/restore,
 multi-portfolio behavior, auth, cloud sync, analytics, or trading-app visuals in
 V1 design or implementation unless a later issue explicitly changes scope.
 
@@ -39,6 +40,11 @@ V1 primary tabs:
 
 Add Holding is a secondary flow launched from Dashboard/Holdings, not a main
 bottom tab in the accepted V1 baseline.
+
+Holdings may also launch the constrained V1 CSV onboarding flow. Its screen must
+use the same calm hierarchy as Quick Setup: select one file, resolve rows in
+place, show currencies and valuation completeness, then expose one atomic import
+action. It must never resemble an editable spreadsheet grid.
 
 ## Dashboard
 

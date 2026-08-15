@@ -57,6 +57,7 @@ type HoldingsScreenProps = {
   now?: Date;
   onAddTrade?: () => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
+  onImportHoldings?: () => void;
   onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
@@ -87,6 +88,7 @@ export function HoldingsScreen({
   now,
   onAddTrade,
   onAddPpfAccount,
+  onImportHoldings,
   onManageAssets,
   onReviewAllTrades,
   onReviewOpeningPosition,
@@ -509,6 +511,15 @@ export function HoldingsScreen({
                     ? `Continue setup (${quickSetupSavedCount} saved)`
                     : "Add multiple holdings"
                 }
+              />
+              <AppButton
+                onPress={() => {
+                  setIsAddMenuVisible(false);
+                  onImportHoldings?.();
+                }}
+                testID="import-holdings-csv-option"
+                title="Import holdings CSV"
+                variant="secondary"
               />
             </View>
           </View>

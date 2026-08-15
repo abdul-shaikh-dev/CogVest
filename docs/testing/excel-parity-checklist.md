@@ -44,7 +44,8 @@ Do not add:
 - editable grid/table UI
 - formula editor
 - macro support
-- Excel import/export
+- arbitrary Excel import/export or spreadsheet reconstruction; the constrained
+  V1 aggregate-holdings CSV onboarding template is permitted
 - advanced tax calculations
 - Minimal Mode
 - full behaviour insight engine
@@ -115,7 +116,8 @@ Fail when:
 - a required Excel tracker question cannot be answered
 - data disappears after restart
 - derived values are persisted instead of calculated from raw records
-- the app introduces Excel import/export or spreadsheet UI in V1
+- the app introduces arbitrary Excel import/export or spreadsheet UI in V1;
+  the constrained aggregate-holdings CSV onboarding flow is not a failure
 - any parity row has no test, no manual evidence, and no linked defect
 
 ## Defect Logging

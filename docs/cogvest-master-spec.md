@@ -47,6 +47,8 @@ V1 includes:
 - manual asset/price fallback
 - live current quote fetching
 - opening positions and holding records
+- versioned aggregate-holdings CSV onboarding with preview, explicit identity
+  resolution, and one atomic commit
 - derived Holdings, Dashboard, Cash Ledger, and Monthly Progress views
 - cash ledger entries for typed additions and withdrawals; investment funding
   and sale proceeds must use explicit linked accounting rather than a confusing
@@ -64,7 +66,7 @@ V1 does not include:
 - Minimal Mode
 - LTCG/tax UI
 - advanced historical market charts
-- Excel import/export
+- arbitrary Excel or broker-format import, full-record export, or restore
 - backend, auth, cloud sync, analytics, or push notifications
 - Play Store auto-submit
 - PPF loans or loan repayment tracking
@@ -221,6 +223,13 @@ Primary tabs:
 Add Holding is a secondary flow launched from Dashboard/Holdings actions.
 Quick Portfolio Setup is the first-run and multi-holding variant for entering an
 existing portfolio without repeatedly returning to Holdings.
+
+The V1 holdings CSV importer is a constrained Quick Setup entry path. It accepts
+only the published versioned aggregate-opening-position template, requires
+explicit correction of ambiguous/manual/existing rows, derives preview totals
+through the same domain functions as manual setup, and commits all rows or none.
+It is not arbitrary Excel import, broker statement ingestion, transaction
+history import, or backup/restore.
 
 Dashboard owns portfolio-level answers.
 

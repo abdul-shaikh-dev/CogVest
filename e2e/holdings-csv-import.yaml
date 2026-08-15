@@ -1,0 +1,114 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///import-holdings?visualQaState=lookup&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "holding-import-screen"
+    timeout: 30000
+- tapOn:
+    id: "save-holdings-csv-template"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Documents"
+    timeout: 5000
+- tapOn:
+    text: "Documents"
+    retryTapIfNoChange: true
+- tapOn:
+    point: "82%,50%"
+- tapOn: "NEW FOLDER"
+- inputText: "CogVestTemplateTest"
+- tapOn: "OK"
+- tapOn: "Use this folder"
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- extendedWaitUntil:
+    visible: "cogvest-holdings-v1.csv saved. Replace the example rows, then choose the completed CSV."
+    timeout: 10000
+- tapOn:
+    id: "select-holdings-csv"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 5000
+- tapOn:
+    text: "Downloads"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "holdings-import-v1.csv"
+    timeout: 10000
+- tapOn: "holdings-import-v1.csv"
+- extendedWaitUntil:
+    visible:
+      id: "holding-import-row-3-candidate-visual-qa-lookup-tcs"
+    timeout: 10000
+- assertVisible: "HDFC Bank • HDFCBANK.NS • Equity • INR"
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "93%,92%"
+- tapOn:
+    id: "holding-import-row-3-candidate-visual-qa-lookup-tcs"
+- scrollUntilVisible:
+    element:
+      id: "holding-import-summary"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Row 3 • 1 unit"
+- assertVisible: "₹6,000.00"
+- assertVisible: "₹6,506.75"
+- scrollUntilVisible:
+    element:
+      text: "Skipped"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "Skipped"
+- takeScreenshot:
+    path: holdings-csv-import-preview
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "93%,92%"
+- scrollUntilVisible:
+    element:
+      id: "confirm-holdings-import"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    text: "Import all holdings"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "quick-setup-review-screen"
+    timeout: 10000
+- assertVisible: "2 holdings confirmed locally"
+- tapOn:
+    id: "quick-setup-complete"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 10000
+- assertVisible: "Portfolio value"
+- assertVisible: "₹6.51K"
+- assertVisible: "Invested"
+- assertVisible: "₹6K"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 2"
+- assertVisible: "Opening position count: 2"
+- assertVisible: "Duplicate identity count: 0"
+- assertVisible: "Total invested: ₹6,000.00"
+- assertVisible: "Total current: ₹6,506.75"
+- assertVisible: "Valuation: complete | pending 0"

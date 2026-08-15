@@ -155,6 +155,10 @@ export default function RootLayout() {
                 name="quick-portfolio-setup"
                 options={{ headerShown: false }}
               />
+              <Stack.Screen
+                name="import-holdings"
+                options={{ headerShown: false }}
+              />
               <Stack.Screen name="ppf-account" options={{ headerShown: false }} />
               <Stack.Screen name="ppf-entry" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
