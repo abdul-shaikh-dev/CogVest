@@ -321,9 +321,11 @@ describe("HoldingsScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
     const onQuickSetup = jest.fn();
+    const onImportHoldings = jest.fn();
     const { getByLabelText, getByTestId, getByText } = render(
       <HoldingsScreen
         onAddTrade={onAddTrade}
+        onImportHoldings={onImportHoldings}
         onQuickSetup={onQuickSetup}
         quickSetupSavedCount={2}
         store={store}
@@ -338,6 +340,10 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByLabelText("Add holdings"));
     fireEvent.press(getByTestId("add-multiple-holdings-option"));
     expect(onQuickSetup).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByLabelText("Add holdings"));
+    fireEvent.press(getByTestId("import-holdings-csv-option"));
+    expect(onImportHoldings).toHaveBeenCalledTimes(1);
   });
 
   it("keeps active setup visible above a populated holdings list", () => {

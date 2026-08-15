@@ -109,6 +109,11 @@ checks and Android smoke checks should still work.
 
 ## Add Holding And Quick Setup Evidence
 
+`e2e/holdings-csv-import.yaml` uses Android's real system document picker. The
+Maestro runner first copies `e2e/fixtures/holdings-import-v1.csv` to Android's
+Downloads folder with `adb push`, then verifies preview correction, one atomic
+confirmation, Quick Setup review, and exact persisted Dashboard totals.
+
 The Add Holding semantic flows use deterministic lookup and quote fixtures so
 they do not depend on provider availability or changing market prices. After a
 save, they open the gated, read-only route:

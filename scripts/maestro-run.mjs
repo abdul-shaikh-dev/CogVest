@@ -12,6 +12,7 @@ const defaultFlows = [
   "e2e/add-holding-edited-quote.yaml",
   "e2e/add-holding-asset-switch.yaml",
   "e2e/quick-portfolio-setup.yaml",
+  "e2e/holdings-csv-import.yaml",
   "e2e/holdings.yaml",
   "e2e/ppf-account.yaml",
   "e2e/opening-position-correction.yaml",
@@ -74,6 +75,8 @@ if (!maestroPath) {
 
 const requestedFlows = process.argv.slice(2);
 const flows = requestedFlows.length > 0 ? requestedFlows : defaultFlows;
+const holdingsCsvFlow = "e2e/holdings-csv-import.yaml";
+const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
 
 for (const flow of flows) {
   if (!existsSync(flow)) {
@@ -83,6 +86,35 @@ for (const flow of flows) {
 }
 
 for (const flow of flows) {
+  if (flow.replaceAll("\\", "/") === holdingsCsvFlow) {
+    const adbPath = findExecutable("adb");
+    if (!adbPath || !existsSync(holdingsCsvFixture)) {
+      console.log("FAIL holdings CSV fixture or adb not found");
+      process.exit(1);
+    }
+    const push = run(adbPath, [
+      "push",
+      holdingsCsvFixture,
+      "/sdcard/Download/holdings-import-v1.csv",
+    ]);
+    if (push.status !== 0) {
+      console.log("FAIL unable to copy the holdings CSV fixture to Android Downloads");
+      process.exit(push.status ?? 1);
+    }
+    const scan = run(adbPath, [
+      "shell",
+      "am",
+      "broadcast",
+      "-a",
+      "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+      "-d",
+      "file:///sdcard/Download/holdings-import-v1.csv",
+    ]);
+    if (scan.status !== 0) {
+      console.log("FAIL unable to register the holdings CSV fixture with Android");
+      process.exit(scan.status ?? 1);
+    }
+  }
   console.log(`RUN maestro test ${flow}`);
   const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR
     ? [`--test-output-dir=${process.env.MAESTRO_TEST_OUTPUT_DIR}`]

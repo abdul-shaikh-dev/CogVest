@@ -1162,6 +1162,212 @@ describe("portfolio store", () => {
     expect(restartedStore.getState().quoteCache).toEqual({ [asset.id]: quote });
   });
 
+  it("records a holdings import batch through one replay-safe asset transition", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const secondAsset: Asset = {
+      assetClass: "etf",
+      currency: "INR",
+      exchange: "NSE",
+      id: "asset-niftybees",
+      instrumentType: "etf",
+      name: "Nifty 50 ETF",
+      quoteSourceId: "NIFTYBEES.NS",
+      sectorType: "diversified",
+      symbol: "NIFTYBEES",
+      ticker: "NIFTYBEES.NS",
+    };
+    const secondPosition: OpeningPosition = {
+      assetId: secondAsset.id,
+      averageCostPrice: 200,
+      date: null,
+      id: "opening-2",
+      quantity: 40,
+    };
+    const command = {
+      commandId: "csv-import-1",
+      items: [
+        {
+          asset,
+          commandId: openingPosition.id,
+          existingPosition: "add" as const,
+          openingPosition,
+          quote,
+        },
+        {
+          asset: secondAsset,
+          commandId: secondPosition.id,
+          existingPosition: "add" as const,
+          openingPosition: secondPosition,
+        },
+      ],
+    };
+
+    expect(store.getState().recordOpeningPositionBatch(command)).toMatchObject({
+      added: 2,
+      status: "applied",
+      updated: 0,
+    });
+    expect(store.getState().assets).toHaveLength(2);
+    expect(store.getState().openingPositions).toHaveLength(2);
+    expect(store.getState().quoteCache).toEqual({ [asset.id]: quote });
+
+    const restarted = createPortfolioStore({ storage });
+    expect(restarted.getState().recordOpeningPositionBatch(command)).toMatchObject({
+      added: 0,
+      status: "alreadyApplied",
+      updated: 0,
+    });
+    expect(restarted.getState().openingPositions).toHaveLength(2);
+  });
+
+  it("applies an explicit CSV replacement and refreshes automatic history", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    const autoSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      generated: {
+        generatedAt: "2026-05-01T00:00:00.000Z",
+        priceBasis: "latest-local-fallback",
+        source: "auto",
+        warnings: [],
+      },
+      id: "snapshot-auto-april-import",
+      month: "2026-04",
+    };
+    const manualSnapshot: MonthlySnapshot = {
+      ...monthlySnapshot,
+      id: "snapshot-manual-may-import",
+      month: "2026-05",
+      notes: "Keep manual review",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition(openingPosition);
+    store.getState().addMonthlySnapshot(autoSnapshot);
+    store.getState().addMonthlySnapshot(manualSnapshot);
+
+    const replacement = { ...openingPosition, quantity: 50 };
+    const command = {
+      commandId: "csv-import-replacement",
+      items: [
+        {
+          asset,
+          commandId: replacement.id,
+          existingPosition: "replace" as const,
+          openingPosition: replacement,
+          quote,
+        },
+      ],
+    };
+
+    expect(store.getState().recordOpeningPositionBatch(command)).toMatchObject({
+      added: 0,
+      status: "applied",
+      updated: 1,
+    });
+    expect(store.getState().openingPositions[0]).toMatchObject({ quantity: 50 });
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-04"),
+    ).toMatchObject({
+      id: autoSnapshot.id,
+      investedValue: 72500,
+      portfolioValue: 145625,
+    });
+    expect(
+      store.getState().monthlySnapshots.find(({ month }) => month === "2026-05"),
+    ).toEqual(manualSnapshot);
+    expect(store.getState().recordOpeningPositionBatch(command)).toMatchObject({
+      status: "alreadyApplied",
+    });
+    const restarted = createPortfolioStore({
+      now: () => new Date(2026, 6, 22, 12),
+      storage,
+    });
+    expect(restarted.getState().openingPositions[0]).toMatchObject({
+      quantity: 50,
+    });
+    expect(restarted.getState().recordOpeningPositionBatch(command)).toMatchObject({
+      status: "alreadyApplied",
+    });
+  });
+
+  it("rejects an invalid import row before exposing any batch mutation", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+
+    expect(() =>
+      store.getState().recordOpeningPositionBatch({
+        commandId: "csv-import-invalid",
+        items: [
+          {
+            asset,
+            commandId: openingPosition.id,
+            existingPosition: "add",
+            openingPosition,
+            quote,
+          },
+          {
+            asset: {
+              ...asset,
+              id: "bad-asset",
+              name: "Bad Asset",
+              quoteSourceId: "BAD.NS",
+              symbol: "BAD",
+              ticker: "BAD.NS",
+            },
+            commandId: "bad-position",
+            existingPosition: "add",
+            openingPosition: {
+              ...openingPosition,
+              assetId: "bad-asset",
+              id: "bad-position",
+              quantity: 0,
+            },
+          },
+        ],
+      }),
+    ).toThrow("Opening position contains invalid financial values.");
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(storage.getItem(portfolioStorageKey)).toBeNull();
+  });
+
+  it("rolls back the complete import batch when journaled persistence fails", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const originalSetItem = storage.setItem;
+    let failed = false;
+    storage.setItem = (key, value) => {
+      if (key === historicalQuoteCacheStorageKey && !failed) {
+        failed = true;
+        throw new Error("simulated import persistence failure");
+      }
+      originalSetItem(key, value);
+    };
+
+    expect(() =>
+      store.getState().recordOpeningPositionBatch({
+        commandId: "csv-import-failure",
+        items: [
+          {
+            asset,
+            commandId: openingPosition.id,
+            existingPosition: "add",
+            openingPosition,
+            quote,
+          },
+        ],
+      }),
+    ).toThrow("simulated import persistence failure");
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+    expect(store.getState().quoteCache).toEqual({});
+    expect(createPortfolioStore({ storage }).getState().assets).toEqual([]);
+  });
+
   it("persists pending valuation and resolves it later with manual provenance", () => {
     const storage = createMemoryJsonStorage();
     const now = () => new Date("2026-08-09T10:00:00.000Z");

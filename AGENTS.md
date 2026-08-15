@@ -44,9 +44,11 @@ V1 includes holdings/opening positions, buy/sell records, cash tracking, current
 quotes with honest manual fallback, Dashboard, Holdings, Add Holding, Progress,
 Settings, value masking, and optional lightweight conviction state.
 
-Stored monthly-snapshot trend charts are in V1. Advanced market-price history,
-Minimal Mode, LTCG UI, behavior analysis, import/export, cloud features, and
-advanced tax logic remain outside V1 unless an issue explicitly changes scope.
+Stored monthly-snapshot trend charts and the constrained versioned aggregate-
+holdings CSV onboarding flow are in V1. Advanced market-price history, Minimal
+Mode, LTCG UI, behavior analysis, arbitrary import/export, full backup/restore,
+cloud features, and advanced tax logic remain outside V1 unless an issue
+explicitly changes scope.
 
 User-facing language should prefer Dashboard, Holdings, Add Holding, Progress,
 Cash, and Settings. Keep trade terminology internal where practical.
