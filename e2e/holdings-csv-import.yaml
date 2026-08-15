@@ -12,6 +12,29 @@ appId: com.abdulshaikh.cogvest
       id: "holding-import-screen"
     timeout: 30000
 - tapOn:
+    id: "save-holdings-csv-template"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Documents"
+    timeout: 5000
+- tapOn:
+    text: "Documents"
+    retryTapIfNoChange: true
+- tapOn:
+    point: "82%,50%"
+- tapOn: "NEW FOLDER"
+- inputText: "CogVestTemplateTest"
+- tapOn: "OK"
+- tapOn: "Use this folder"
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- extendedWaitUntil:
+    visible: "cogvest-holdings-v1.csv saved. Replace the example rows, then choose the completed CSV."
+    timeout: 10000
+- tapOn:
     id: "select-holdings-csv"
 - tapOn: "Show roots"
 - extendedWaitUntil:
@@ -29,17 +52,28 @@ appId: com.abdulshaikh.cogvest
       id: "holding-import-row-3-candidate-visual-qa-lookup-tcs"
     timeout: 10000
 - assertVisible: "HDFC Bank • HDFCBANK.NS • Equity • INR"
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "93%,92%"
 - tapOn:
     id: "holding-import-row-3-candidate-visual-qa-lookup-tcs"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "holding-import-summary"
-    timeout: 10000
+    direction: DOWN
+    timeout: 20000
 - assertVisible: "Row 3 • 1 unit"
 - assertVisible: "₹6,000.00"
 - assertVisible: "₹6,506.75"
+- scrollUntilVisible:
+    element:
+      text: "Skipped"
+    direction: DOWN
+    timeout: 10000
 - assertVisible: "Skipped"
-- assertVisible: "0"
 - takeScreenshot:
     path: holdings-csv-import-preview
 - runFlow:

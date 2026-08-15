@@ -1,10 +1,14 @@
-import { File } from "expo-file-system";
+import { Directory, File } from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
 
 import {
   HoldingImportScreen,
   holdingsCsvMaxBytes,
 } from "@/src/features/holdingImport";
+import {
+  holdingsCsvTemplate,
+  holdingsCsvTemplateFileName,
+} from "@/src/domain/holdingsCsvTemplate";
 import { getQuickSetupSessionStore } from "@/src/features/quickSetup";
 import {
   canUseVisualQaHarness,
@@ -43,6 +47,19 @@ async function pickCsvFile() {
   }
 }
 
+async function saveCsvTemplate() {
+  try {
+    const directory = await Directory.pickDirectoryAsync();
+    const file = directory.createFile(holdingsCsvTemplateFileName, "text/csv");
+    file.write(holdingsCsvTemplate);
+    return holdingsCsvTemplateFileName;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/cancelled|canceled/iu.test(message)) return undefined;
+    throw error;
+  }
+}
+
 export default function ImportHoldingsRoute() {
   const params = useLocalSearchParams<{
     token?: string;
@@ -73,6 +90,7 @@ export default function ImportHoldingsRoute() {
         router.replace("/quick-portfolio-setup");
       }}
       pickCsvFile={pickCsvFile}
+      saveCsvTemplate={saveCsvTemplate}
       resolveQuote={
         visualQaState === "lookup"
           ? async ({ asset }) => resolveVisualQaQuote(asset)

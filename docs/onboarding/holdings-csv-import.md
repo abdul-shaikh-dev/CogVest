@@ -11,16 +11,21 @@ Keep the header unchanged and save the file as UTF-8 CSV.
 ## Android Flow
 
 1. Open **Holdings**, tap **Add holdings**, then **Import holdings CSV**.
-2. Choose the `.csv` file through Android's system document picker.
-3. Review every row. Exact identities resolve automatically; ambiguous matches
+2. Tap **Save CSV template**, choose a writable local folder such as
+   `Documents/CogVest`, replace the two example rows with your holdings, and
+   keep the header unchanged. Android may not allow apps to select the root
+   Downloads folder; choose or create a subfolder when needed.
+3. Tap **Choose CSV** and select the completed file through Android's system
+   document picker.
+4. Review every row. Exact identities resolve automatically; ambiguous matches
    require an explicit provider selection.
-4. If lookup has no result, choose **Use CSV details as manual asset**. Manual
+5. If lookup has no result, choose **Use CSV details as manual asset**. Manual
    stocks and ETFs require `asset_class` and `exchange` in the file.
-5. Explicitly approve any replacement of an existing aggregate opening
+6. Explicitly approve any replacement of an existing aggregate opening
    position. Holdings with transaction history cannot be replaced.
-6. Review additions, updates, currencies, pending valuations, skipped-row count,
+7. Review additions, updates, currencies, pending valuations, skipped-row count,
    and portfolio totals, then choose **Import all holdings**.
-7. CogVest commits the complete batch atomically and opens Quick Portfolio Setup
+8. CogVest commits the complete batch atomically and opens Quick Portfolio Setup
    review. If any required row is invalid or persistence fails, nothing imports.
 
 ## Columns

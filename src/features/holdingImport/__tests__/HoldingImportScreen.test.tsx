@@ -32,6 +32,56 @@ function fileWith(row: string) {
 }
 
 describe("HoldingImportScreen", () => {
+  it("confirms when the user saves the CSV template", async () => {
+    const saveCsvTemplate = jest
+      .fn()
+      .mockResolvedValue("cogvest-holdings-v1.csv");
+    const { getByTestId, getByText } = render(
+      <HoldingImportScreen
+        onCancel={jest.fn()}
+        onImported={jest.fn()}
+        pickCsvFile={async () => undefined}
+        saveCsvTemplate={saveCsvTemplate}
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    fireEvent.press(getByTestId("save-holdings-csv-template"));
+
+    await waitFor(() =>
+      expect(
+        getByText(
+          "cogvest-holdings-v1.csv saved. Replace the example rows, then choose the completed CSV.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(saveCsvTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a recoverable message when the template cannot be saved", async () => {
+    const { getByTestId, getByText } = render(
+      <HoldingImportScreen
+        onCancel={jest.fn()}
+        onImported={jest.fn()}
+        pickCsvFile={async () => undefined}
+        saveCsvTemplate={async () => {
+          throw new Error("folder unavailable");
+        }}
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    fireEvent.press(getByTestId("save-holdings-csv-template"));
+
+    await waitFor(() =>
+      expect(
+        getByText(
+          "The template could not be saved. Choose another folder and try again.",
+        ),
+      ).toBeTruthy(),
+    );
+  });
+
   it("previews and atomically imports an exact provider holding", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onImported = jest.fn();

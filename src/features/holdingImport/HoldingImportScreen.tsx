@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -35,6 +36,7 @@ type HoldingImportScreenProps = {
     pendingValuations: number;
   }) => void;
   pickCsvFile: () => Promise<PickedHoldingsCsv | undefined>;
+  saveCsvTemplate?: () => Promise<string | undefined>;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
@@ -45,6 +47,28 @@ type HoldingImportScreenProps = {
 export function HoldingImportScreen(props: HoldingImportScreenProps) {
   const controller = useHoldingImport(props);
   const masked = controller.snapshot.preferences.maskWealthValues;
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateStatus, setTemplateStatus] = useState<string>();
+
+  async function saveTemplate() {
+    if (isSavingTemplate || !props.saveCsvTemplate) return;
+    setIsSavingTemplate(true);
+    setTemplateStatus(undefined);
+    try {
+      const fileName = await props.saveCsvTemplate();
+      if (fileName) {
+        setTemplateStatus(
+          `${fileName} saved. Replace the example rows, then choose the completed CSV.`,
+        );
+      }
+    } catch {
+      setTemplateStatus(
+        "The template could not be saved. Choose another folder and try again.",
+      );
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  }
 
   return (
     <ScreenContainer scroll testID="holding-import-screen">
@@ -70,6 +94,18 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
         <AppText color="secondary" variant="caption">
           Required: version, asset name or ticker, quantity, and average cost. Up to {controller.maxRows} rows.
         </AppText>
+        <AppButton
+          disabled={!props.saveCsvTemplate || isSavingTemplate || controller.isResolving || controller.isSaving}
+          onPress={saveTemplate}
+          testID="save-holdings-csv-template"
+          title={isSavingTemplate ? "Saving template..." : "Save CSV template"}
+          variant="secondary"
+        />
+        {templateStatus ? (
+          <AppText color="secondary" testID="holdings-csv-template-status" variant="caption">
+            {templateStatus}
+          </AppText>
+        ) : null}
         <AppButton
           disabled={controller.isResolving || controller.isSaving}
           onPress={controller.selectFile}

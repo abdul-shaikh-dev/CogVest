@@ -1,10 +1,13 @@
 import { act, render } from "@testing-library/react-native";
 
 const mockBack = jest.fn();
+const mockCreateFile = jest.fn();
+const mockPickDirectoryAsync = jest.fn();
 const mockReplace = jest.fn();
 const mockPickFileAsync = jest.fn();
 const mockRecordItem = jest.fn();
 const mockShowReview = jest.fn();
+const mockWrite = jest.fn();
 let capturedProps: Record<string, unknown> | undefined;
 
 jest.mock("expo-router", () => ({
@@ -16,6 +19,11 @@ jest.mock("expo-router", () => ({
 }));
 
 jest.mock("expo-file-system", () => ({
+  Directory: class MockDirectory {
+    static pickDirectoryAsync(...args: unknown[]) {
+      return mockPickDirectoryAsync(...args);
+    }
+  },
   File: class MockFile {
     static pickFileAsync(...args: unknown[]) {
       return mockPickFileAsync(...args);
@@ -54,6 +62,24 @@ describe("Import holdings route", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedProps = undefined;
+    mockCreateFile.mockReturnValue({ write: mockWrite });
+    mockPickDirectoryAsync.mockResolvedValue({ createFile: mockCreateFile });
+  });
+
+  it("writes the published template to a user-selected Android folder", async () => {
+    render(<ImportHoldingsRoute />);
+
+    await expect(
+      (capturedProps?.saveCsvTemplate as () => Promise<unknown>)(),
+    ).resolves.toBe("cogvest-holdings-v1.csv");
+    expect(mockPickDirectoryAsync).toHaveBeenCalledWith();
+    expect(mockCreateFile).toHaveBeenCalledWith(
+      "cogvest-holdings-v1.csv",
+      "text/csv",
+    );
+    expect(mockWrite).toHaveBeenCalledWith(
+      expect.stringMatching(/^cogvest_version,name,ticker/u),
+    );
   });
 
   it("reads the selected Android CSV and enters Quick Setup review after import", async () => {

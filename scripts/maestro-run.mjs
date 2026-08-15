@@ -92,6 +92,16 @@ for (const flow of flows) {
       console.log("FAIL holdings CSV fixture or adb not found");
       process.exit(1);
     }
+    const directory = run(adbPath, [
+      "shell",
+      "rm",
+      "-rf",
+      "/sdcard/Documents/CogVestTemplateTest",
+    ]);
+    if (directory.status !== 0) {
+      console.log("FAIL unable to reset the Android CSV template test folder");
+      process.exit(directory.status ?? 1);
+    }
     const push = run(adbPath, [
       "push",
       holdingsCsvFixture,
