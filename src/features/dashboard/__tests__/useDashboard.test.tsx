@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react-native";
 import { useDashboard } from "@/src/features/dashboard/useDashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import type { Asset, Trade } from "@/src/types";
+import type { Asset, PpfAccount, Trade } from "@/src/types";
 
 const stockAsset: Asset = {
   assetClass: "stock",
@@ -399,5 +399,79 @@ describe("useDashboard", () => {
       price: 175,
       source: "yahoo",
     });
+  });
+
+  it("includes confirmed PPF value in portfolio totals and Debt allocation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    store.getState().addPpfAccount(account);
+
+    const { result } = renderHook(() =>
+      useDashboard({ now: new Date("2026-08-15T10:00:00.000Z"), store }),
+    );
+
+    expect(result.current.totalValue).toBe(100_000);
+    expect(result.current.rollupTotals).toMatchObject({
+      holdingsCurrentValue: 100_000,
+      totalCurrentValue: 100_000,
+      totalInvested: 100_000,
+    });
+    expect(result.current.allocation).toEqual([
+      { assetClass: "debt", percentage: 100, value: 100_000 },
+    ]);
+  });
+
+  it("replaces a linked legacy PPF holding instead of double counting it", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const legacyPpf: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "legacy-ppf",
+      instrumentType: "ppf",
+      name: "Old PPF",
+      sectorType: "other",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    store.getState().addAsset(legacyPpf);
+    store.getState().addOpeningPosition({
+      assetId: legacyPpf.id,
+      averageCostPrice: 100_000,
+      currentPrice: 100_000,
+      date: "2026-07-01",
+      id: "legacy-opening",
+      quantity: 1,
+    });
+    store.getState().addPpfAccount({
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-linked",
+      legacyAssetId: legacyPpf.id,
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    });
+
+    const { result } = renderHook(() =>
+      useDashboard({ now: new Date("2026-08-15T10:00:00.000Z"), store }),
+    );
+
+    expect(result.current.totalValue).toBe(100_000);
+    expect(result.current.rollupTotals.totalInvested).toBe(100_000);
+    expect(result.current.monthlyMetrics.investment).toBe(0);
+    expect(result.current.allocation).toEqual([
+      { assetClass: "debt", percentage: 100, value: 100_000 },
+    ]);
   });
 });

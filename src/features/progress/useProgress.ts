@@ -28,6 +28,11 @@ import {
   sumFinancialValues,
 } from "@/src/domain/precision";
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
+import {
+  calculatePpfPortfolioSummary,
+  getLinkedLegacyPpfAssetIds,
+} from "@/src/domain/ppf";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
@@ -288,6 +293,7 @@ function getSnapshotAutomationTargetMonths({
     existingSnapshots: state.monthlySnapshots,
     now,
     openingPositions: state.openingPositions,
+    ppfAccounts: state.ppfAccounts,
     trades: state.trades,
   });
   const provisionalMonths = state.monthlySnapshots
@@ -428,18 +434,26 @@ export function useProgress({
       normalizeCustomChartRange(current, snapshot.monthlySnapshots),
     );
   }, [snapshot.monthlySnapshots]);
+  const asOf = formatLocalCalendarDate(now);
+  const ppfSummary = calculatePpfPortfolioSummary({
+    accounts: snapshot.ppfAccounts,
+    asOf,
+    entries: snapshot.ppfLedgerEntries,
+  });
+  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
   const holdings = calculateHoldings({
     assets: snapshot.assets,
     openingPositions: snapshot.openingPositions,
     quoteCache: snapshot.quoteCache,
     trades: snapshot.trades,
     now,
-  });
+  }).filter((holding) => !linkedLegacyAssetIds.has(holding.asset.id));
   const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const portfolioValue = calculatePortfolioTotal(
     holdings,
     snapshot.cashEntries,
     now,
+    ppfSummary.confirmedBalance,
   );
   const totalInvested = normalizeMoney(
     sumFinancialValues(
@@ -447,16 +461,55 @@ export function useProgress({
         (holding) =>
           holding.calculationBasis?.totalInvested ?? holding.totalInvested,
       ),
-    ),
+    ).plus(ppfSummary.investedBasis),
   );
-  const monthlyMetrics = calculateCashMonthlyMetrics({
+  const baseMonthlyMetrics = calculateCashMonthlyMetrics({
     cashEntries: snapshot.cashEntries,
     now,
-    openingPositions: snapshot.openingPositions,
-    trades: snapshot.trades,
+    openingPositions: snapshot.openingPositions.filter(
+      (position) => !linkedLegacyAssetIds.has(position.assetId),
+    ),
+    trades: snapshot.trades.filter(
+      (trade) => !linkedLegacyAssetIds.has(trade.assetId),
+    ),
   });
-  const allocation = calculateAllocation({ cashBalance, holdings });
-  const hasData = holdings.length > 0 || snapshot.cashEntries.length > 0;
+  const currentMonth = formatLocalCalendarDate(now).slice(0, 7);
+  const ppfMonthlyInvestment = normalizeMoney(
+    sumFinancialValues(
+      snapshot.ppfLedgerEntries
+        .filter(
+          (entry) =>
+            entry.type === "contribution" &&
+            entry.date.slice(0, 7) === currentMonth,
+        )
+        .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
+    ),
+  );
+  const monthlyInvested = normalizeMoney(
+    decimal(baseMonthlyMetrics.invested).plus(ppfMonthlyInvestment),
+  );
+  const monthlyMetrics = {
+    ...baseMonthlyMetrics,
+    invested: monthlyInvested,
+    investmentRate:
+      baseMonthlyMetrics.incomeStatus === "available" &&
+      baseMonthlyMetrics.income > 0
+        ? normalizeMoney(
+            decimal(monthlyInvested)
+              .dividedBy(baseMonthlyMetrics.income)
+              .times(100),
+          )
+        : null,
+  };
+  const allocation = calculateAllocation({
+    cashBalance,
+    holdings,
+    ppfConfirmedBalance: ppfSummary.confirmedBalance,
+  });
+  const hasData =
+    holdings.length > 0 ||
+    snapshot.cashEntries.length > 0 ||
+    ppfSummary.accounts.length > 0;
   const monthlySummaries = calculateMonthlyProgressSummaries(
     snapshot.monthlySnapshots,
   );
@@ -571,6 +624,8 @@ export function useProgress({
         historicalQuotes: refreshedState.historicalQuoteCache,
         now,
         openingPositions: refreshedState.openingPositions,
+        ppfAccounts: refreshedState.ppfAccounts,
+        ppfLedgerEntries: refreshedState.ppfLedgerEntries,
         quoteCache: refreshedState.quoteCache,
         refreshIncome: true,
         refreshProvisional: true,
@@ -633,6 +688,7 @@ export function useProgress({
         getOpeningPositionHistoryDate(position),
       ),
       ...completedState.trades.map((trade) => trade.date),
+      ...completedState.ppfAccounts.map((account) => account.balanceAsOf),
     ].some(
       (date) =>
         date !== null &&
@@ -704,6 +760,7 @@ export function useProgress({
               getOpeningPositionHistoryDate(position),
             ),
             ...state.trades.map((trade) => trade.date),
+            ...state.ppfAccounts.map((account) => account.balanceAsOf),
           ].some(
             (date) =>
               date !== null &&

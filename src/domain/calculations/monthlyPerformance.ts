@@ -3,6 +3,7 @@ import type {
   MonthlyPerformanceBasis,
   MonthlySnapshot,
   OpeningPosition,
+  PpfLedgerEntry,
 } from "@/src/types";
 import {
   decimal,
@@ -18,6 +19,7 @@ export type MonthlyPerformanceUnavailableReason =
   | "invalid-denominator"
   | "legacy-snapshot"
   | "manual-snapshot"
+  | "ppf-reconciliation"
   | "unknown-opening-position-date"
   | "missing-previous-snapshot";
 
@@ -82,10 +84,12 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
 export function buildMonthlyPerformanceBasis({
   cashEntries,
   openingPositions,
+  ppfLedgerEntries = [],
   targetMonth,
 }: {
   cashEntries: CashEntry[];
   openingPositions: OpeningPosition[];
+  ppfLedgerEntries?: PpfLedgerEntry[];
   targetMonth: string;
 }): MonthlyPerformanceBasis {
   const externalFlows: ExternalFlow[] = [];
@@ -111,6 +115,31 @@ export function buildMonthlyPerformanceBasis({
         "Monthly performance is unavailable because at least one cash flow has unknown semantics.",
       ],
     };
+  }
+
+  const monthPpfEntries = ppfLedgerEntries.filter((entry) =>
+    isWithinMonth(entry.date, targetMonth),
+  );
+  if (monthPpfEntries.some((entry) => entry.type === "reconciliation")) {
+    return {
+      reason: "ppf-reconciliation",
+      status: "unavailable",
+      warnings: [
+        "Monthly performance is unavailable because a PPF balance was reconciled during this month.",
+      ],
+    };
+  }
+
+  for (const entry of monthPpfEntries) {
+    if (entry.type === "contribution" || entry.type === "withdrawal") {
+      externalFlows.push({
+        amount:
+          entry.type === "contribution"
+            ? decimal(entry.amount)
+            : decimal(entry.amount).negated(),
+        date: entry.date,
+      });
+    }
   }
 
   const unknownDatePositionRecordedThisMonth = openingPositions.some(

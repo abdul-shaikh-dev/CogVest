@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import { getCalendarDatePart } from "@/src/domain/dates";
+import {
+  calculatePpfConfirmedBalance,
+  comparePpfLedgerEntries,
+  validatePpfAccount,
+  validatePpfLedgerEntryForAccount,
+} from "@/src/domain/ppf";
 
 const finiteNumberSchema = z.number().finite();
 const nonEmptyStringSchema = z
@@ -229,6 +235,7 @@ const monthlySnapshotSchema = z.object({
           "ambiguous-cash-flow",
           "legacy-snapshot",
           "manual-snapshot",
+          "ppf-reconciliation",
           "unknown-opening-position-date",
         ]),
         status: z.literal("unavailable"),
@@ -239,6 +246,81 @@ const monthlySnapshotSchema = z.object({
   portfolioValue: finiteNumberSchema,
   salary: finiteNumberSchema.optional(),
 });
+
+const ppfOpeningSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("date"),
+      openedOn: calendarDateSchema,
+    })
+    .strict(),
+  z
+    .object({
+      financialYearStart: z.number().int(),
+      kind: z.literal("financialYear"),
+    })
+    .strict(),
+]);
+
+const ppfAccountSchema = z
+  .object({
+    accountNumberSuffix: z.string().regex(/^\d{2,4}$/).optional(),
+    balanceAsOf: calendarDateSchema,
+    baselineFinancialYearContributions: z
+      .object({
+        amount: finiteNumberSchema.nonnegative(),
+        financialYearStart: z.number().int(),
+      })
+      .strict()
+      .optional(),
+    confirmedBalance: finiteNumberSchema.nonnegative(),
+    confirmedExtensionStartFinancialYear: z.number().int().optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    id: nonEmptyStringSchema,
+    legacyAssetId: nonEmptyStringSchema.optional(),
+    nickname: nonEmptyStringSchema,
+    opening: ppfOpeningSchema,
+    provider: nonEmptyStringSchema,
+    status: z.enum([
+      "active",
+      "discontinued",
+      "matured",
+      "extendedWithContributions",
+      "continuedWithoutContributions",
+    ]),
+  })
+  .strict();
+
+const ppfLedgerBaseSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  date: calendarDateSchema,
+  id: nonEmptyStringSchema,
+  notes: z.string().optional(),
+  recordedAt: z.string().datetime({ offset: true }),
+});
+
+const ppfLedgerEntrySchema = z.discriminatedUnion("type", [
+  ppfLedgerBaseSchema
+    .extend({ amount: finiteNumberSchema.positive(), type: z.literal("contribution") })
+    .strict(),
+  ppfLedgerBaseSchema
+    .extend({
+      amount: finiteNumberSchema.positive(),
+      financialYearStart: z.number().int(),
+      type: z.literal("interestCredit"),
+    })
+    .strict(),
+  ppfLedgerBaseSchema
+    .extend({ amount: finiteNumberSchema.positive(), type: z.literal("withdrawal") })
+    .strict(),
+  ppfLedgerBaseSchema
+    .extend({
+      confirmedBalance: finiteNumberSchema.nonnegative(),
+      reason: nonEmptyStringSchema,
+      type: z.literal("reconciliation"),
+    })
+    .strict(),
+]);
 
 const preferencesSchema = z
   .object({
@@ -258,6 +340,7 @@ const schemaVersionSchema = z.union([
   z.literal(5),
   z.literal(6),
   z.literal(7),
+  z.literal(8),
 ]);
 
 const persistedPortfolioSchema = z
@@ -266,6 +349,8 @@ const persistedPortfolioSchema = z
     cashEntries: z.array(cashEntrySchema).optional(),
     monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
     openingPositions: z.array(openingPositionSchema).optional(),
+    ppfAccounts: z.array(ppfAccountSchema).optional(),
+    ppfLedgerEntries: z.array(ppfLedgerEntrySchema).optional(),
     preferences: preferencesSchema,
     schemaVersion: schemaVersionSchema,
     trades: z.array(tradeSchema).optional(),
@@ -290,6 +375,98 @@ const persistedPortfolioSchema = z
         });
       }
     });
+
+    const ppfAccountIds = new Set(
+      (portfolio.ppfAccounts ?? []).map((account) => account.id),
+    );
+    if (ppfAccountIds.size !== (portfolio.ppfAccounts ?? []).length) {
+      context.addIssue({
+        code: "custom",
+        message: "PPF account IDs must be unique.",
+        path: ["ppfAccounts"],
+      });
+    }
+    const ppfEntryIds = new Set(
+      (portfolio.ppfLedgerEntries ?? []).map((entry) => entry.id),
+    );
+    if (ppfEntryIds.size !== (portfolio.ppfLedgerEntries ?? []).length) {
+      context.addIssue({
+        code: "custom",
+        message: "PPF ledger entry IDs must be unique.",
+        path: ["ppfLedgerEntries"],
+      });
+    }
+    const linkedLegacyAssetIds = (portfolio.ppfAccounts ?? [])
+      .map((account) => account.legacyAssetId)
+      .filter((assetId): assetId is string => assetId !== undefined);
+    if (new Set(linkedLegacyAssetIds).size !== linkedLegacyAssetIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "A legacy PPF holding can be linked to only one account.",
+        path: ["ppfAccounts"],
+      });
+    }
+    const assetsById = new Map(
+      (portfolio.assets ?? []).map((asset) => [asset.id, asset]),
+    );
+    (portfolio.ppfAccounts ?? []).forEach((account, index) => {
+      if (!validatePpfAccount(account).isValid) {
+        context.addIssue({
+          code: "custom",
+          message: "PPF account lifecycle is invalid.",
+          path: ["ppfAccounts", index],
+        });
+      }
+      if (
+        account.legacyAssetId !== undefined &&
+        assetsById.get(account.legacyAssetId)?.instrumentType !== "ppf"
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Linked legacy asset must be a persisted PPF holding.",
+          path: ["ppfAccounts", index, "legacyAssetId"],
+        });
+      }
+    });
+    (portfolio.ppfLedgerEntries ?? []).forEach((entry, index) => {
+      if (!ppfAccountIds.has(entry.accountId)) {
+        context.addIssue({
+          code: "custom",
+          message: "PPF ledger entries must reference a persisted account.",
+          path: ["ppfLedgerEntries", index, "accountId"],
+        });
+      }
+    });
+    for (const account of portfolio.ppfAccounts ?? []) {
+      const accountEntries = (portfolio.ppfLedgerEntries ?? [])
+        .filter((entry) => entry.accountId === account.id)
+        .sort(comparePpfLedgerEntries);
+      for (let index = 0; index < accountEntries.length; index += 1) {
+        const entry = accountEntries[index];
+        if (!validatePpfLedgerEntryForAccount(account, entry).isValid) {
+          context.addIssue({
+            code: "custom",
+            message: "PPF ledger timeline is invalid.",
+            path: ["ppfLedgerEntries"],
+          });
+          break;
+        }
+        if (
+          calculatePpfConfirmedBalance(
+            account,
+            accountEntries.slice(0, index + 1),
+            entry.date,
+          ).confirmedBalance < 0
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: "PPF ledger cannot produce a negative balance.",
+            path: ["ppfLedgerEntries"],
+          });
+          break;
+        }
+      }
+    }
   });
 
 const quoteSchema = z.object({
@@ -368,7 +545,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

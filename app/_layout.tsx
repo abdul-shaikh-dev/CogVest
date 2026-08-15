@@ -151,6 +151,8 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="add-holding" options={{ headerShown: false }} />
+              <Stack.Screen name="ppf-account" options={{ headerShown: false }} />
+              <Stack.Screen name="ppf-entry" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen
                 name="opening-position"

@@ -30,6 +30,17 @@ export default function HoldingsScreen() {
       onAddTrade={() => {
         router.push("/add-holding");
       }}
+      onAddPpfAccount={(legacy) => {
+        router.push({
+          pathname: "/ppf-account",
+          params: legacy
+            ? {
+                ...(legacy.assetId ? { legacyAssetId: legacy.assetId } : {}),
+                ...(legacy.name ? { legacyName: legacy.name } : {}),
+              }
+            : {},
+        });
+      }}
       onReviewAllTrades={() => {
         router.push("/holding-transactions");
       }}
@@ -44,6 +55,9 @@ export default function HoldingsScreen() {
           pathname: "/opening-position",
           params: { openingPositionId },
         });
+      }}
+      onReviewPpfAccount={(accountId) => {
+        router.push({ pathname: "/ppf-account", params: { accountId } });
       }}
       onReviewTrades={(assetId) => {
         router.push({ pathname: "/holding-transactions", params: { assetId } });

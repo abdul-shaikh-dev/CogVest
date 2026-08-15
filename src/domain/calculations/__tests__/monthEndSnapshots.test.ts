@@ -13,6 +13,8 @@ import type {
   HistoricalQuoteCache,
   MonthlySnapshot,
   OpeningPosition,
+  PpfAccount,
+  PpfLedgerEntry,
   QuoteCache,
   Trade,
 } from "@/src/types";
@@ -125,6 +127,8 @@ function buildInput(overrides: {
   now?: Date;
   openingPositions?: OpeningPosition[];
   quoteCache?: QuoteCache;
+  ppfAccounts?: PpfAccount[];
+  ppfLedgerEntries?: PpfLedgerEntry[];
   targetMonth?: string;
   trades?: Trade[];
 } = {}) {
@@ -135,6 +139,8 @@ function buildInput(overrides: {
     historicalQuotes: overrides.historicalQuotes ?? {},
     now: overrides.now ?? new Date("2026-08-15T10:00:00.000Z"),
     openingPositions: overrides.openingPositions ?? [],
+    ppfAccounts: overrides.ppfAccounts ?? [],
+    ppfLedgerEntries: overrides.ppfLedgerEntries ?? [],
     quoteCache: overrides.quoteCache ?? {},
     targetMonth: overrides.targetMonth,
     trades: overrides.trades ?? [],
@@ -316,7 +322,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.status).toBe("insufficient-data");
     expect(result.snapshot).toBeNull();
     expect(result.warnings).toEqual([
-      "No holdings, trades, or cash entries were available to generate the previous month-end snapshot.",
+      "No holdings, PPF accounts, trades, or cash entries were available to generate the previous month-end snapshot.",
     ]);
   });
 
@@ -345,7 +351,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.status).toBe("insufficient-data");
     expect(result.snapshot).toBeNull();
     expect(result.warnings).toEqual([
-      "No holdings, trades, or cash entries were available to derive for target month 2026-07.",
+      "No holdings, PPF accounts, trades, or cash entries were available to derive for target month 2026-07.",
     ]);
   });
 
@@ -1092,5 +1098,177 @@ describe("buildGeneratedMonthEndSnapshot", () => {
 
     expect(result.status).toBe("insufficient-data");
     expect(result.snapshot).toBeNull();
+  });
+
+  it("includes confirmed PPF value in Debt, invested capital, and monthly investment", () => {
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-01",
+      confirmedBalance: 100_000,
+      createdAt: "2026-07-01T10:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    const contribution: PpfLedgerEntry = {
+      accountId: account.id,
+      amount: 10_000,
+      date: "2026-07-05",
+      id: "ppf-contribution",
+      recordedAt: "2026-07-05T10:00:00.000Z",
+      type: "contribution",
+    };
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [],
+        ppfAccounts: [account],
+        ppfLedgerEntries: [contribution],
+        targetMonth: "2026-07",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      snapshot: {
+        debtValue: 110_000,
+        investedValue: 110_000,
+        monthlyInvestment: 10_000,
+        portfolioValue: 110_000,
+        performanceBasis: {
+          netExternalFlow: 10_000,
+          status: "complete",
+        },
+      },
+      status: "created",
+    });
+  });
+
+  it("does not invent PPF history before the first confirmed checkpoint", () => {
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [],
+        ppfAccounts: [account],
+        targetMonth: "2026-06",
+      }),
+    );
+
+    expect(result).toEqual({
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: ["1 PPF account lacks a confirmed balance checkpoint for 2026-06."],
+    });
+  });
+
+  it("replaces a linked legacy PPF holding in snapshots without double counting", () => {
+    const legacyPpf: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "legacy-ppf",
+      instrumentType: "ppf",
+      name: "Old PPF",
+      sectorType: "other",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-01",
+      confirmedBalance: 100_000,
+      createdAt: "2026-07-01T10:00:00.000Z",
+      id: "ppf-linked",
+      legacyAssetId: legacyPpf.id,
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [legacyPpf],
+        openingPositions: [
+          openingPosition({
+            assetId: legacyPpf.id,
+            averageCostPrice: 100_000,
+            currentPrice: 100_000,
+            date: "2026-07-01",
+            id: "legacy-opening",
+            quantity: 1,
+          }),
+        ],
+        ppfAccounts: [account],
+        targetMonth: "2026-07",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      snapshot: {
+        debtValue: 100_000,
+        investedValue: 100_000,
+        monthlyInvestment: 0,
+        portfolioValue: 100_000,
+      },
+      status: "created",
+    });
+  });
+
+  it("uses a linked legacy PPF holding for history before the confirmed checkpoint", () => {
+    const legacyPpf: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "legacy-ppf-history",
+      instrumentType: "ppf",
+      name: "Old PPF",
+      sectorType: "other",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-linked-history",
+      legacyAssetId: legacyPpf.id,
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        assets: [legacyPpf],
+        openingPositions: [
+          openingPosition({
+            assetId: legacyPpf.id,
+            averageCostPrice: 90_000,
+            currentPrice: 95_000,
+            date: "2026-06-01",
+            id: "legacy-opening-history",
+            quantity: 1,
+          }),
+        ],
+        ppfAccounts: [account],
+        targetMonth: "2026-06",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      snapshot: {
+        debtValue: 95_000,
+        investedValue: 90_000,
+        portfolioValue: 95_000,
+      },
+      status: "created",
+    });
   });
 });

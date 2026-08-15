@@ -513,7 +513,7 @@ describe("AddOpeningPositionForm", () => {
     expect(store.getState().quoteCache).toEqual({});
   });
 
-  it("creates a debt opening position without trade records", async () => {
+  it("creates a non-PPF debt opening position without trade records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
@@ -528,7 +528,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByTestId("asset-class-debt"));
     expect(queryByTestId("sector-type-picker")).toBeNull();
     expect(getByTestId("sector-not-applicable")).toBeTruthy();
-    selectOption(getByTestId, "instrument-type", "ppf");
+    selectOption(getByTestId, "instrument-type", "bond");
     fireEvent.press(getByText("Continue to position"));
     fireEvent.changeText(getByLabelText("Quantity"), "10");
     fireEvent.changeText(getByLabelText("Average cost"), "5300");
@@ -543,7 +543,7 @@ describe("AddOpeningPositionForm", () => {
     });
 
     expect(store.getState().assets[0]?.assetClass).toBe("debt");
-    expect(store.getState().assets[0]?.instrumentType).toBe("ppf");
+    expect(store.getState().assets[0]?.instrumentType).toBe("bond");
     expect(store.getState().assets[0]?.sectorType).toBe("fixedIncome");
     expect(store.getState().trades).toEqual([]);
   });

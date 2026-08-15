@@ -39,6 +39,12 @@ import {
   quantityQuantum,
   sumFinancialValues,
 } from "@/src/domain/precision";
+import {
+  calculatePpfConfirmedBalance,
+  comparePpfLedgerEntries,
+  validatePpfAccount,
+  validatePpfLedgerEntryForAccount,
+} from "@/src/domain/ppf";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
@@ -51,6 +57,8 @@ import type {
   MonthlySnapshot,
   OpeningPosition,
   Preferences,
+  PpfAccount,
+  PpfLedgerEntry,
   Quote,
   QuoteCache,
   Trade,
@@ -79,7 +87,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 7;
+export const portfolioSchemaVersion = 8;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -89,6 +97,8 @@ export type RawPortfolioSnapshot = {
   cashEntries: CashEntry[];
   monthlySnapshots: MonthlySnapshot[];
   openingPositions: OpeningPosition[];
+  ppfAccounts: PpfAccount[];
+  ppfLedgerEntries: PpfLedgerEntry[];
   preferences: Preferences;
   schemaVersion: typeof portfolioSchemaVersion;
   trades: Trade[];
@@ -99,6 +109,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addCashEntry: (cashEntry: CashEntry) => void;
   addMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
+  addPpfAccount: (account: PpfAccount) => PpfAccountMutationResult;
+  addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
   clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
@@ -107,6 +119,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   correctOpeningPosition: (
     openingPosition: OpeningPosition,
   ) => OpeningPositionCorrectionResult;
+  correctPpfAccount: (account: PpfAccount) => PpfAccountMutationResult;
+  correctPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   correctManualCashEntry: (
     cashEntry: CashEntry,
   ) => ManualCashCorrectionResult;
@@ -117,6 +131,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deleteOpeningPosition: (
     openingPositionId: string,
   ) => OpeningPositionDeletionResult;
+  deletePpfAccount: (accountId: string) => PpfAccountDeletionResult;
+  deletePpfLedgerEntry: (entryId: string) => PpfLedgerMutationResult;
   deleteTrade: (tradeId: string) => TradeDeletionResult;
   historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
@@ -175,6 +191,29 @@ export type OpeningPositionCommandInput = {
   openingPosition: OpeningPosition;
   quote?: Quote;
 };
+
+export type PpfAccountMutationResult =
+  | { account: PpfAccount; status: "alreadyApplied" | "applied" }
+  | {
+      reason: "invalidAccount" | "invalidTimeline" | "notFound";
+      status: "rejected";
+    };
+
+export type PpfAccountDeletionResult =
+  | { account: PpfAccount; deletedEntries: number; status: "applied" }
+  | { reason: "notFound"; status: "rejected" };
+
+export type PpfLedgerMutationResult =
+  | { entry: PpfLedgerEntry; status: "alreadyApplied" | "applied" }
+  | {
+      reason:
+        | "accountMismatch"
+        | "accountNotFound"
+        | "invalidEntry"
+        | "invalidTimeline"
+        | "notFound";
+      status: "rejected";
+    };
 
 export type ManualCashCorrectionResult =
   | { entry: CashEntry; status: "applied" }
@@ -331,6 +370,8 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
     cashEntries: [],
     monthlySnapshots: [],
     openingPositions: [],
+    ppfAccounts: [],
+    ppfLedgerEntries: [],
     preferences: createDefaultPreferences(),
     schemaVersion: portfolioSchemaVersion,
     trades: [],
@@ -455,6 +496,8 @@ function migratePortfolioSnapshot(
     openingPositions: (stored.openingPositions ?? []).map((position) =>
       migrateOpeningPosition(position, assets),
     ),
+    ppfAccounts: stored.ppfAccounts ?? [],
+    ppfLedgerEntries: stored.ppfLedgerEntries ?? [],
     preferences: {
       ...createDefaultPreferences(),
       ...stored.preferences,
@@ -571,6 +614,8 @@ function selectRawSnapshot(
     cashEntries: state.cashEntries,
     monthlySnapshots: state.monthlySnapshots,
     openingPositions: state.openingPositions,
+    ppfAccounts: state.ppfAccounts,
+    ppfLedgerEntries: state.ppfLedgerEntries,
     preferences: state.preferences,
     schemaVersion: portfolioSchemaVersion,
     trades: state.trades,
@@ -635,6 +680,54 @@ function isValidManualCashEntry(entry: CashEntry, now = new Date()) {
     !isFutureCalendarDate(entry.date, now) &&
     entry.label.trim().length > 0 &&
     hasValidPurpose
+  );
+}
+
+function sortPpfLedgerEntries(entries: readonly PpfLedgerEntry[]) {
+  return [...entries].sort(comparePpfLedgerEntries);
+}
+
+function isValidPpfTimeline(
+  account: PpfAccount,
+  entries: readonly PpfLedgerEntry[],
+  currentDate: Date,
+) {
+  if (!validatePpfAccount(account, currentDate).isValid) return false;
+
+  const ordered = sortPpfLedgerEntries(entries);
+  for (let index = 0; index < ordered.length; index += 1) {
+    const entry = ordered[index];
+    if (
+      !validatePpfLedgerEntryForAccount(account, entry, currentDate).isValid
+    ) {
+      return false;
+    }
+
+    const balance = calculatePpfConfirmedBalance(
+      account,
+      ordered.slice(0, index + 1),
+      entry.date,
+    ).confirmedBalance;
+    if (balance < 0) return false;
+  }
+
+  return true;
+}
+
+function isValidPpfLegacyLink(
+  account: PpfAccount,
+  state: Pick<PortfolioStoreState, "assets" | "ppfAccounts">,
+) {
+  if (account.legacyAssetId === undefined) return true;
+  return (
+    state.assets.some(
+      (asset) =>
+        asset.id === account.legacyAssetId && asset.instrumentType === "ppf",
+    ) &&
+    !state.ppfAccounts.some(
+      (item) =>
+        item.id !== account.id && item.legacyAssetId === account.legacyAssetId,
+    )
   );
 }
 
@@ -781,6 +874,8 @@ function rebuildPortfolioSnapshots({
   earliestAffectedMonth,
   now,
   openingPositions,
+  ppfAccounts,
+  ppfLedgerEntries,
   state,
   trades,
 }: {
@@ -789,12 +884,16 @@ function rebuildPortfolioSnapshots({
   earliestAffectedMonth: string;
   now: Date;
   openingPositions?: OpeningPosition[];
+  ppfAccounts?: PpfAccount[];
+  ppfLedgerEntries?: PpfLedgerEntry[];
   state: PortfolioStoreState;
   trades?: Trade[];
 }) {
   const nextAssets = assets ?? state.assets;
   const nextCashEntries = cashEntries ?? state.cashEntries;
   const nextOpeningPositions = openingPositions ?? state.openingPositions;
+  const nextPpfAccounts = ppfAccounts ?? state.ppfAccounts;
+  const nextPpfLedgerEntries = ppfLedgerEntries ?? state.ppfLedgerEntries;
   const nextTrades = trades ?? state.trades;
   const affectedAutoSnapshots = new Map(
     state.monthlySnapshots
@@ -815,6 +914,7 @@ function rebuildPortfolioSnapshots({
     existingSnapshots: monthlySnapshots,
     now,
     openingPositions: nextOpeningPositions,
+    ppfAccounts: nextPpfAccounts,
     trades: nextTrades,
   }).filter((month) => month >= earliestAffectedMonth);
   const pendingMonths: string[] = [];
@@ -828,6 +928,8 @@ function rebuildPortfolioSnapshots({
       historicalQuotes: state.historicalQuoteCache,
       now,
       openingPositions: nextOpeningPositions,
+      ppfAccounts: nextPpfAccounts,
+      ppfLedgerEntries: nextPpfLedgerEntries,
       quoteCache: state.quoteCache,
       targetMonth,
       trades: nextTrades,
@@ -1381,6 +1483,65 @@ export function createPortfolioStore({
       persistPortfolioTransition(storage, state, { openingPositions });
       set({ openingPositions });
     },
+    addPpfAccount: (account) => {
+      const state = get();
+      const currentDate = now();
+      const existing = state.ppfAccounts.find((item) => item.id === account.id);
+      if (existing) return { account: existing, status: "alreadyApplied" };
+      if (
+        !isValidPpfTimeline(account, [], currentDate) ||
+        !isValidPpfLegacyLink(account, state)
+      ) {
+        return { reason: "invalidAccount", status: "rejected" };
+      }
+
+      const ppfAccounts = [...state.ppfAccounts, account];
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: account.balanceAsOf.slice(0, 7),
+        now: currentDate,
+        ppfAccounts,
+        state,
+      });
+      persistPortfolioTransition(storage, state, { monthlySnapshots, ppfAccounts });
+      set({ monthlySnapshots, ppfAccounts });
+      return { account, status: "applied" };
+    },
+    addPpfLedgerEntry: (entry) => {
+      const state = get();
+      const currentDate = now();
+      const existing = state.ppfLedgerEntries.find((item) => item.id === entry.id);
+      if (existing) return { entry: existing, status: "alreadyApplied" };
+
+      const account = state.ppfAccounts.find((item) => item.id === entry.accountId);
+      if (!account) return { reason: "accountNotFound", status: "rejected" };
+
+      const accountEntries = [
+        ...state.ppfLedgerEntries.filter((item) => item.accountId === account.id),
+        entry,
+      ];
+      if (!isValidPpfTimeline(account, accountEntries, currentDate)) {
+        return {
+          reason: validatePpfLedgerEntryForAccount(account, entry, currentDate).isValid
+            ? "invalidTimeline"
+            : "invalidEntry",
+          status: "rejected",
+        };
+      }
+
+      const ppfLedgerEntries = [...state.ppfLedgerEntries, entry];
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: entry.date.slice(0, 7),
+        now: currentDate,
+        ppfLedgerEntries,
+        state,
+      });
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots,
+        ppfLedgerEntries,
+      });
+      set({ monthlySnapshots, ppfLedgerEntries });
+      return { entry, status: "applied" };
+    },
     addTrade: (trade) => {
       const state = get();
 
@@ -1404,6 +1565,145 @@ export function createPortfolioStore({
     clearHistoricalQuoteCache: () => {
       set({ historicalQuoteCache: {} });
       storage.removeItem(historicalQuoteCacheStorageKey);
+    },
+    correctPpfAccount: (account) => {
+      const state = get();
+      const currentDate = now();
+      const existing = state.ppfAccounts.find((item) => item.id === account.id);
+      if (!existing) {
+        return { reason: "notFound", status: "rejected" };
+      }
+      const entries = state.ppfLedgerEntries.filter(
+        (entry) => entry.accountId === account.id,
+      );
+      if (
+        !validatePpfAccount(account, currentDate).isValid ||
+        !isValidPpfLegacyLink(account, state)
+      ) {
+        return { reason: "invalidAccount", status: "rejected" };
+      }
+      if (!isValidPpfTimeline(account, entries, currentDate)) {
+        return { reason: "invalidTimeline", status: "rejected" };
+      }
+
+      const ppfAccounts = state.ppfAccounts.map((item) =>
+        item.id === account.id ? account : item,
+      );
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: [existing.balanceAsOf, account.balanceAsOf]
+          .sort()[0]
+          .slice(0, 7),
+        now: currentDate,
+        ppfAccounts,
+        state,
+      });
+      persistPortfolioTransition(storage, state, { monthlySnapshots, ppfAccounts });
+      set({ monthlySnapshots, ppfAccounts });
+      return { account, status: "applied" };
+    },
+    correctPpfLedgerEntry: (entry) => {
+      const state = get();
+      const currentDate = now();
+      const existing = state.ppfLedgerEntries.find((item) => item.id === entry.id);
+      if (!existing) return { reason: "notFound", status: "rejected" };
+      if (existing.accountId !== entry.accountId) {
+        return { reason: "accountMismatch", status: "rejected" };
+      }
+      const account = state.ppfAccounts.find((item) => item.id === entry.accountId);
+      if (!account) return { reason: "accountNotFound", status: "rejected" };
+
+      const candidateEntries = state.ppfLedgerEntries
+        .filter((item) => item.accountId === account.id)
+        .map((item) => (item.id === entry.id ? entry : item));
+      if (!validatePpfLedgerEntryForAccount(account, entry, currentDate).isValid) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+      if (!isValidPpfTimeline(account, candidateEntries, currentDate)) {
+        return { reason: "invalidTimeline", status: "rejected" };
+      }
+
+      const ppfLedgerEntries = state.ppfLedgerEntries.map((item) =>
+        item.id === entry.id ? entry : item,
+      );
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: [existing.date, entry.date]
+          .sort()[0]
+          .slice(0, 7),
+        now: currentDate,
+        ppfLedgerEntries,
+        state,
+      });
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots,
+        ppfLedgerEntries,
+      });
+      set({ monthlySnapshots, ppfLedgerEntries });
+      return { entry, status: "applied" };
+    },
+    deletePpfAccount: (accountId) => {
+      const state = get();
+      const currentDate = now();
+      const account = state.ppfAccounts.find((item) => item.id === accountId);
+      if (!account) return { reason: "notFound", status: "rejected" };
+
+      const deletedEntries = state.ppfLedgerEntries.filter(
+        (entry) => entry.accountId === accountId,
+      ).length;
+      const ppfAccounts = state.ppfAccounts.filter((item) => item.id !== accountId);
+      const ppfLedgerEntries = state.ppfLedgerEntries.filter(
+        (entry) => entry.accountId !== accountId,
+      );
+      const earliestDate = [
+        account.balanceAsOf,
+        ...state.ppfLedgerEntries
+          .filter((entry) => entry.accountId === accountId)
+          .map((entry) => entry.date),
+      ].sort()[0];
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: earliestDate.slice(0, 7),
+        now: currentDate,
+        ppfAccounts,
+        ppfLedgerEntries,
+        state,
+      });
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots,
+        ppfAccounts,
+        ppfLedgerEntries,
+      });
+      set({ monthlySnapshots, ppfAccounts, ppfLedgerEntries });
+      return { account, deletedEntries, status: "applied" };
+    },
+    deletePpfLedgerEntry: (entryId) => {
+      const state = get();
+      const currentDate = now();
+      const entry = state.ppfLedgerEntries.find((item) => item.id === entryId);
+      if (!entry) return { reason: "notFound", status: "rejected" };
+      const account = state.ppfAccounts.find((item) => item.id === entry.accountId);
+      if (!account) return { reason: "accountNotFound", status: "rejected" };
+
+      const candidateEntries = state.ppfLedgerEntries.filter(
+        (item) => item.accountId === account.id && item.id !== entry.id,
+      );
+      if (!isValidPpfTimeline(account, candidateEntries, currentDate)) {
+        return { reason: "invalidTimeline", status: "rejected" };
+      }
+
+      const ppfLedgerEntries = state.ppfLedgerEntries.filter(
+        (item) => item.id !== entry.id,
+      );
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: entry.date.slice(0, 7),
+        now: currentDate,
+        ppfLedgerEntries,
+        state,
+      });
+      persistPortfolioTransition(storage, state, {
+        monthlySnapshots,
+        ppfLedgerEntries,
+      });
+      set({ monthlySnapshots, ppfLedgerEntries });
+      return { entry, status: "applied" };
     },
     correctAsset: (input) => {
       const state = get();

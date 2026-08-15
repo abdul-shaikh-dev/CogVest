@@ -20,6 +20,18 @@ export type {
   OpeningPositionManualValuation,
 } from "./openingPosition";
 export type { ChartRange, Preferences } from "./preferences";
+export type {
+  PpfAccount,
+  PpfAccountStatus,
+  PpfBaselineContributionContext,
+  PpfContributionEntry,
+  PpfInterestCreditEntry,
+  PpfInterestRatePeriod,
+  PpfLedgerEntry,
+  PpfOpeningBasis,
+  PpfReconciliationEntry,
+  PpfWithdrawalEntry,
+} from "./ppf";
 export { historicalQuoteCacheKey } from "./quote";
 export type {
   HistoricalPriceBasis,

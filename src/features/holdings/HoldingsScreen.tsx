@@ -13,6 +13,7 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SectionHeader,
   androidRipple,
   assetClassLabel,
   getPressedStateStyle,
@@ -55,9 +56,11 @@ type RefreshQuotes = (
 type HoldingsScreenProps = {
   now?: Date;
   onAddTrade?: () => void;
+  onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
+  onReviewPpfAccount?: (accountId: string) => void;
   onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
   statusMessage?: string;
@@ -81,9 +84,11 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 export function HoldingsScreen({
   now,
   onAddTrade,
+  onAddPpfAccount,
   onManageAssets,
   onReviewAllTrades,
   onReviewOpeningPosition,
+  onReviewPpfAccount,
   onReviewTrades,
   onSellRedeem,
   refreshQuotes,
@@ -96,6 +101,7 @@ export function HoldingsScreen({
     isRefreshing,
     maskWealthValues,
     openingPositions,
+    ppfSummary,
     quoteFreshness,
     refresh,
     rollupRows,
@@ -125,7 +131,10 @@ export function HoldingsScreen({
       : summary.bestReturn;
   const exposureSegments = getExposureSegments(reviewItems);
   const filterCounts = getFilterCounts(reviewItems);
-  const subtitle = `${holdings.length} ${holdings.length === 1 ? "position" : "positions"} · local data`;
+  const subtitle = `${holdings.length} market ${holdings.length === 1 ? "position" : "positions"} • ${ppfSummary.accounts.length} PPF ${ppfSummary.accounts.length === 1 ? "account" : "accounts"}`;
+  const legacyPpfHoldings = holdings.filter(
+    (holding) => holding.asset.instrumentType === "ppf",
+  );
   const quoteStatus = getQuoteStatus({
     failed: failed.length,
     isRefreshing,
@@ -269,12 +278,90 @@ export function HoldingsScreen({
           />
         ) : null}
 
+        <View style={styles.ppfSection} testID="holdings-ppf-section">
+          <View style={styles.sectionActionHeader}>
+            <SectionHeader title="PPF accounts" />
+            {onAddPpfAccount ? (
+              <AppButton
+                onPress={() => onAddPpfAccount()}
+                testID="add-ppf-account"
+                title="Add account"
+                variant="secondary"
+              />
+            ) : null}
+          </View>
+          {ppfSummary.accounts.length === 0 ? (
+            <PremiumCard>
+              <View style={styles.ppfEmptyRow}>
+                <CategoryIcon assetClass="debt" size={20} />
+                <View style={styles.flex}>
+                  <AppText weight="bold">Track PPF as an account</AppText>
+                  <AppText color="secondary" variant="caption">
+                    Use confirmed balances and a contribution ledger, not units or market prices.
+                  </AppText>
+                </View>
+              </View>
+            </PremiumCard>
+          ) : (
+            ppfSummary.accounts.map((item) => (
+              <Pressable
+                accessibilityLabel={`Open ${item.account.nickname}`}
+                accessibilityRole="button"
+                key={item.account.id}
+                onPress={() => onReviewPpfAccount?.(item.account.id)}
+                style={({ pressed }) => [
+                  styles.ppfAccountCard,
+                  getPressedStateStyle({ pressed }),
+                ]}
+                testID={`ppf-account-${item.account.id}`}
+              >
+                <CategoryIcon assetClass="debt" size={22} />
+                <View style={styles.flex}>
+                  <AppText weight="bold">{item.account.nickname}</AppText>
+                  <AppText color="secondary" variant="caption">
+                    {item.account.provider} • {item.contributionContext.financialYearContributions > 0 ? `${formatCompactINR(item.contributionContext.financialYearContributions)} contributed this FY` : "No contribution recorded this FY"}
+                  </AppText>
+                </View>
+                <View style={styles.ppfValue}>
+                  <MaskedValue
+                    masked={maskWealthValues}
+                    value={formatCompactINR(item.confirmedBalance)}
+                    weight="bold"
+                  />
+                  <AppText color="secondary" variant="caption">Confirmed</AppText>
+                </View>
+              </Pressable>
+            ))
+          )}
+          {legacyPpfHoldings.map((holding) => (
+            <PremiumCard elevated key={holding.asset.id} testID={`legacy-ppf-${holding.asset.id}`}>
+              <AppText weight="bold">Move {holding.asset.name} to the PPF ledger</AppText>
+              <AppText color="secondary" variant="caption">
+                This older holding uses market-style fields. Linking it preserves the original record for audit and replaces it in portfolio totals with the confirmed account balance.
+              </AppText>
+              {onAddPpfAccount ? (
+                <AppButton
+                onPress={() =>
+                  onAddPpfAccount({
+                    assetId: holding.asset.id,
+                    name: holding.asset.name,
+                  })
+                }
+                  testID={`convert-legacy-ppf-${holding.asset.id}`}
+                  title="Set up PPF account"
+                  variant="secondary"
+                />
+              ) : null}
+            </PremiumCard>
+          ))}
+        </View>
+
         {holdings.length === 0 ? (
           <EmptyState
             actionLabel={onAddTrade ? "Add Holding" : undefined}
             actionTestID="add-trade-button"
             message="Holdings are created automatically from your portfolio entries."
-            title="No holdings yet"
+            title={ppfSummary.accounts.length > 0 ? "No market holdings yet" : "No holdings yet"}
             onAction={onAddTrade}
           />
         ) : (
@@ -954,6 +1041,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  flex: {
+    flex: 1,
+  },
   holdingCard: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.card,
@@ -1017,6 +1107,26 @@ const styles = StyleSheet.create({
   positiveText: {
     color: colors.profit,
   },
+  ppfAccountCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.card,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 72,
+    padding: spacing.cardInner,
+  },
+  ppfEmptyRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  ppfSection: {
+    gap: spacing.sm,
+  },
+  ppfValue: {
+    alignItems: "flex-end",
+  },
   quoteStatus: {
     alignItems: "center",
     flexDirection: "row",
@@ -1044,6 +1154,11 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     alignItems: "flex-start",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sectionActionHeader: {
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
   },

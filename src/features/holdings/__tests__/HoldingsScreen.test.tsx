@@ -12,7 +12,7 @@ import { HoldingsScreen } from "@/src/features/holdings";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import type { Asset, Trade } from "@/src/types";
+import type { Asset, PpfAccount, Trade } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -543,5 +543,34 @@ describe("HoldingsScreen", () => {
 
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(getByText("2")).toBeTruthy();
+  });
+
+  it("shows dedicated PPF accounts and opens their account detail", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    store.getState().addPpfAccount(account);
+    const onReviewPpfAccount = jest.fn();
+    const { getByTestId, getByText } = render(
+      <HoldingsScreen
+        now={new Date("2026-08-15T10:00:00.000Z")}
+        onReviewPpfAccount={onReviewPpfAccount}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Primary PPF")).toBeTruthy();
+    expect(getByText("₹1L")).toBeTruthy();
+    expect(getByText("No market holdings yet")).toBeTruthy();
+    fireEvent.press(getByTestId(`ppf-account-${account.id}`));
+    expect(onReviewPpfAccount).toHaveBeenCalledWith(account.id);
   });
 });

@@ -8,6 +8,7 @@ import type {
   CashEntry,
   MonthlySnapshot,
   OpeningPosition,
+  PpfAccount,
 } from "@/src/types";
 
 import { useCash } from "../../cash/useCash";
@@ -204,6 +205,55 @@ describe("useProgress", () => {
     expect(result.current.monthlyIncome).toBeNull();
     expect(result.current.monthlyInvestment).toBe(10000);
     expect(result.current.investmentRate).toBeNull();
+  });
+
+  it("excludes linked legacy PPF activity from current-month investment", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const now = new Date("2026-08-15T10:00:00.000Z");
+    const legacyPpf: Asset = {
+      assetClass: "debt",
+      currency: "INR",
+      id: "legacy-ppf",
+      instrumentType: "ppf",
+      name: "Old PPF",
+      sectorType: "other",
+      symbol: "PPF",
+      ticker: "PPF",
+    };
+    const account: PpfAccount = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100_000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-linked",
+      legacyAssetId: legacyPpf.id,
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    store.getState().addAsset(legacyPpf);
+    store.getState().addPpfAccount(account);
+    store.getState().addTrade({
+      assetId: legacyPpf.id,
+      date: "2026-08-05",
+      id: "legacy-buy",
+      pricePerUnit: 10_000,
+      quantity: 1,
+      totalValue: 10_000,
+      type: "buy",
+    });
+    store.getState().addPpfLedgerEntry({
+      accountId: account.id,
+      amount: 5_000,
+      date: "2026-08-06",
+      id: "ppf-contribution",
+      recordedAt: "2026-08-06T10:00:00.000Z",
+      type: "contribution",
+    });
+
+    const { result } = renderHook(() => useProgress({ now, store }));
+
+    expect(result.current.monthlyInvestment).toBe(5_000);
   });
 
   it("saves and updates monthly snapshots through the feature controller", () => {

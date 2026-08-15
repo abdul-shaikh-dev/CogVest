@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5, 6, 7])(
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,10 +51,134 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 8 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 9 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });
+  });
+
+  it("accepts strict PPF accounts and account-scoped ledger entries in V8", () => {
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          ppfAccounts: [
+            {
+              balanceAsOf: "2026-07-31",
+              confirmedBalance: 100000,
+              createdAt: "2026-08-01T10:00:00.000Z",
+              id: "ppf-1",
+              nickname: "Primary PPF",
+              opening: { financialYearStart: 2020, kind: "financialYear" },
+              provider: "India Post",
+              status: "active",
+            },
+          ],
+          ppfLedgerEntries: [
+            {
+              accountId: "ppf-1",
+              amount: 500,
+              date: "2026-08-01",
+              id: "ppf-entry-1",
+              recordedAt: "2026-08-01T10:00:00.000Z",
+              type: "contribution",
+            },
+          ],
+          schemaVersion: 8,
+        }),
+      ),
+    ).toMatchObject({ success: true });
+  });
+
+  it("rejects orphan or structurally loose PPF records", () => {
+    const entry = {
+      accountId: "missing-account",
+      amount: 500,
+      date: "2026-08-01",
+      id: "ppf-entry-1",
+      recordedAt: "2026-08-01T10:00:00.000Z",
+      type: "contribution",
+    };
+
+    expect(
+      parsePersistedPortfolio(
+        serialize({ ppfLedgerEntries: [entry], schemaVersion: 8 }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          ppfAccounts: [
+            {
+              balanceAsOf: "2026-07-31",
+              confirmedBalance: 100000,
+              createdAt: "2026-08-01T10:00:00.000Z",
+              extraField: "not persisted",
+              id: "ppf-1",
+              nickname: "Primary PPF",
+              opening: { financialYearStart: 2020, kind: "financialYear" },
+              provider: "India Post",
+              status: "active",
+            },
+          ],
+          schemaVersion: 8,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+  });
+
+  it("rejects duplicate and semantically invalid persisted PPF timelines", () => {
+    const account = {
+      balanceAsOf: "2026-07-31",
+      confirmedBalance: 100000,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      id: "ppf-1",
+      nickname: "Primary PPF",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      provider: "India Post",
+      status: "active",
+    };
+    const hiddenEntry = {
+      accountId: account.id,
+      amount: 500,
+      date: account.balanceAsOf,
+      id: "entry-1",
+      recordedAt: "2026-08-01T10:00:00.000Z",
+      type: "contribution",
+    };
+
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          ppfAccounts: [account, { ...account }],
+          schemaVersion: 8,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          ppfAccounts: [account],
+          ppfLedgerEntries: [hiddenEntry],
+          schemaVersion: 8,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          ppfAccounts: [account],
+          ppfLedgerEntries: [
+            {
+              ...hiddenEntry,
+              amount: 100050,
+              date: "2026-08-01",
+              type: "withdrawal",
+            },
+          ],
+          schemaVersion: 8,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
   });
 
   it("rejects invalid record values before migration", () => {

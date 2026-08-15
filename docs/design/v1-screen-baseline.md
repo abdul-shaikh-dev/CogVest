@@ -79,6 +79,19 @@ Dashboard refinement:
 Holdings replaces Excel rows with a durable position-review screen. It should
 not repeat Dashboard's portfolio-value hero.
 
+PPF accounts use a dedicated section rather than pretending to be market-priced
+holdings. Each row leads with nickname/provider and confirmed balance, then
+shows balance date, invested basis, and lifecycle context. The account detail
+uses progressive disclosure for financial-year contribution capacity, official
+interest, a separately labelled estimate, maturity/extension state, and ledger
+history. Add/edit and ledger actions require a review step before saving.
+
+Legacy PPF-like records remain stored non-destructively. Before linking, show a
+clear action to set up the dedicated account. After linking, exclude the legacy
+record from visible holdings and totals so the confirmed account replaces it
+without double counting. Do not show synthetic ticker, units, average cost,
+live quote, market P&L, or loan controls for PPF.
+
 Holdings should answer:
 
 - What do I own?

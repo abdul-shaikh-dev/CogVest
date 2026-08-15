@@ -28,6 +28,7 @@ import { colors, interaction, radii, spacing } from "@/src/theme";
 import type {
   AssetClass,
   ConvictionScore,
+  InstrumentType,
   Quote,
 } from "@/src/types";
 
@@ -41,6 +42,7 @@ import {
 } from "./useAddOpeningPosition";
 
 type AddOpeningPositionFormProps = AddOpeningPositionControllerInput & {
+  onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onCancel?: () => void;
 };
 
@@ -114,6 +116,7 @@ function ReviewSectionHeader({
 export function AddOpeningPositionForm({
   initialVisualQaState,
   now,
+  onAddPpfAccount,
   onCancel,
   onComplete,
   resolveQuote,
@@ -200,7 +203,9 @@ export function AddOpeningPositionForm({
     : selectedAssetId
       ? "Existing asset"
       : "";
-  const availableInstrumentTypes = getInstrumentTypeOptions(assetClass);
+  const availableInstrumentTypes: InstrumentType[] = getInstrumentTypeOptions(
+    assetClass,
+  ).filter((value) => value !== "ppf");
   const instrumentOptions = (
     availableInstrumentTypes.includes(instrumentType)
       ? availableInstrumentTypes
@@ -438,6 +443,27 @@ export function AddOpeningPositionForm({
           <AppText color="secondary" variant="caption">
             {quoteStatus}
           </AppText>
+        ) : null}
+        {instrumentType === "ppf" ? (
+          <PremiumCard elevated testID="ppf-dedicated-flow-notice">
+            <AppText weight="bold">PPF uses a dedicated account ledger</AppText>
+            <AppText color="secondary" variant="caption">
+              PPF has no units, average cost, or market price. Set it up with a confirmed balance instead.
+            </AppText>
+            {onAddPpfAccount ? (
+              <AppButton
+                onPress={() =>
+                  onAddPpfAccount({
+                    assetId: selectedAssetId || undefined,
+                    name: assetName || undefined,
+                  })
+                }
+                testID="open-ppf-account-flow"
+                title="Add PPF account"
+                variant="secondary"
+              />
+            ) : null}
+          </PremiumCard>
         ) : null}
         {!hasSelectedAssetSummary ? (
           <AppButton
@@ -982,7 +1008,8 @@ export function AddOpeningPositionForm({
 
       <View style={styles.actions}>
         {currentPhase === "asset" ? (
-          hasSelectedAssetSummary || isManualEntryExpanded ? (
+          (hasSelectedAssetSummary || isManualEntryExpanded) &&
+          instrumentType !== "ppf" ? (
             <AppButton
               onPress={continueFromAsset}
               testID="continue-class-button"
