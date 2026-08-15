@@ -512,6 +512,8 @@ describe("AddOpeningPositionForm", () => {
 
     fireEvent.press(getByTestId("quick-setup-confirm-exit"));
     expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().assets).toHaveLength(0);
+    expect(store.getState().openingPositions).toHaveLength(0);
   });
 
   it("guards an unfinished quick-setup draft from Android system back", () => {

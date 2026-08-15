@@ -12,7 +12,10 @@ import {
 } from "@/src/components/common";
 import { formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore } from "@/src/store";
-import { buildE2ePortfolioEvidence } from "@/src/testing/e2eEvidence";
+import {
+  buildE2ePortfolioEvidence,
+  toEvidenceKey,
+} from "@/src/testing/e2eEvidence";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 import { spacing } from "@/src/theme";
 
@@ -54,10 +57,47 @@ export default function E2eEvidenceScreen() {
         <EvidenceText testID="e2e-trade-count">
           Trade count: {evidence.tradeCount}
         </EvidenceText>
+        <EvidenceText testID="e2e-ppf-count">
+          PPF account count: {evidence.ppfCount}
+        </EvidenceText>
         <EvidenceText testID="e2e-duplicate-identity-count">
           Duplicate identity count: {evidence.duplicateIdentityCount}
         </EvidenceText>
       </PremiumCard>
+
+      <PremiumCard style={styles.card} testID="e2e-portfolio-totals">
+        <SectionHeader title="Derived portfolio" />
+        <EvidenceText testID="e2e-total-invested">
+          Total invested: {formatINR(evidence.rollupTotals.totalInvested)}
+        </EvidenceText>
+        <EvidenceText testID="e2e-total-current">
+          Total current: {evidence.rollupTotals.totalCurrentValue === null ? "incomplete" : formatINR(evidence.rollupTotals.totalCurrentValue)}
+        </EvidenceText>
+        <EvidenceText testID="e2e-valuation-coverage">
+          Valuation: {evidence.rollupTotals.valuationCoverage.status} | pending {evidence.rollupTotals.valuationCoverage.pendingHoldings}
+        </EvidenceText>
+        {evidence.allocation.map((item) => (
+          <EvidenceText
+            key={item.assetClass}
+            testID={`e2e-allocation-${item.assetClass}`}
+          >
+            Allocation {item.assetClass}: {formatINR(item.value)} | {item.percentage === null ? "unavailable" : `${item.percentage}%`}
+          </EvidenceText>
+        ))}
+      </PremiumCard>
+
+      {evidence.ppfAccounts.map(({ account, confirmedBalance }) => (
+        <PremiumCard
+          key={account.id}
+          style={styles.card}
+          testID={`e2e-ppf-${toEvidenceKey(account.nickname)}`}
+        >
+          <SectionHeader title={account.nickname} />
+          <EvidenceText testID={`e2e-ppf-${toEvidenceKey(account.nickname)}-balance`}>
+            PPF balance: {formatINR(confirmedBalance)} | synthetic asset {account.legacyAssetId ? "linked" : "none"}
+          </EvidenceText>
+        </PremiumCard>
+      ))}
 
       {evidence.assets.map(({ asset, holding, key, openingPositions, quote }) => (
         <PremiumCard
@@ -89,7 +129,7 @@ export default function E2eEvidenceScreen() {
               key={position.id}
               testID={`e2e-asset-${key}-position-${index}`}
             >
-              Position {index + 1}: quantity {position.quantity} | average {formatINR(position.averageCostPrice)} | note {position.notes ?? "none"} | conviction {position.conviction ?? "none"}
+              Position {index + 1}: quantity {position.quantity} | average {formatINR(position.averageCostPrice)} | date {position.date ?? "unknown"} | note {position.notes ?? "none"} | conviction {position.conviction ?? "none"}
             </EvidenceText>
           ))}
         </PremiumCard>

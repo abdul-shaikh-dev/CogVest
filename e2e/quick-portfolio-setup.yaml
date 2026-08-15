@@ -6,22 +6,28 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 30000
+- takeScreenshot:
+    path: quick-setup-empty-launch
+
+# Add a provider-backed holding after explicit result selection.
+- openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
 - tapOn:
-    id: "quick-setup-button"
-- assertVisible:
-    id: "add-holding-phase-asset"
-- tapOn:
-    id: "toggle-manual-asset-entry"
-- tapOn:
-    id: "asset-input"
-- inputText: "Setup Equity"
-- tapOn:
-    id: "symbol-input"
-- inputText: "SETUPEQ"
-- tapOn:
-    id: "ticker-input"
-- inputText: "SETUPEQ.NS"
+    id: "asset-lookup-input"
+- inputText: "hdfc"
 - hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "asset-lookup-result-visual-qa-lookup-hdfc"
+    timeout: 5000
+- tapOn:
+    id: "asset-lookup-result-visual-qa-lookup-hdfc"
+- assertVisible: "Live price autofilled from Visual QA seed."
+- takeScreenshot:
+    path: quick-setup-selected-asset
 - tapOn:
     id: "continue-class-button"
 - tapOn:
@@ -29,11 +35,53 @@ appId: com.abdulshaikh.cogvest
 - inputText: "2"
 - tapOn:
     id: "average-cost-input"
-- inputText: "100"
-- tapOn:
-    id: "price-input"
-- inputText: "125"
+- inputText: "1500"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "date-input"
+    direction: DOWN
+- tapOn:
+    id: "date-input"
+- tapOn: "OK"
+- tapOn:
+    id: "review-holding-button"
+- assertVisible: "2026-05-29"
+- scrollUntilVisible:
+    element:
+      id: "quick-setup-save-add-next"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "quick-setup-save-add-next"
+    retryTapIfNoChange: true
+- assertVisible: "1 holding saved locally"
+
+# Select and save a second provider result in the same uninterrupted loop.
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "niftybees"
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "asset-lookup-result-visual-qa-lookup-niftybees"
+    timeout: 5000
+- tapOn:
+    id: "asset-lookup-result-visual-qa-lookup-niftybees"
+- assertVisible: "Live price autofilled from Visual QA seed."
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "4"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "200"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "first-purchase-date-unknown"
+    direction: DOWN
 - tapOn:
     id: "first-purchase-date-unknown"
 - tapOn:
@@ -46,9 +94,9 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "quick-setup-save-add-next"
     retryTapIfNoChange: true
-- assertVisible: "1 holding saved locally"
-- assertVisible:
-    id: "add-holding-phase-asset"
+- assertVisible: "2 holdings saved locally"
+
+# Exit and relaunch to prove only the confirmed holding resumes.
 - tapOn:
     id: "add-holding-exit"
 - extendedWaitUntil:
@@ -63,7 +111,68 @@ appId: com.abdulshaikh.cogvest
     timeout: 30000
 - tapOn:
     id: "dashboard-continue-setup-button"
-- assertVisible: "1 holding saved locally"
+- assertVisible: "2 holdings saved locally"
+- takeScreenshot:
+    path: quick-setup-resumed
+
+# Add PPF through its account-balance model, then return to setup.
+- tapOn:
+    id: "quick-setup-add-ppf"
+- assertVisible:
+    id: "ppf-account-form-screen"
+- tapOn:
+    id: "ppf-provider-input"
+- inputText: "India Post"
+- hideKeyboard
+- tapOn:
+    id: "ppf-balance-input"
+- inputText: "100000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "review-ppf-account"
+- assertVisible:
+    id: "ppf-account-review-screen"
+- scrollUntilVisible:
+    element:
+      id: "save-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "save-ppf-account"
+- assertVisible: "3 holdings saved locally"
+
+# Prove the dedicated account contributes to Debt allocation without a synthetic asset.
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 2"
+- assertVisible: "Opening position count: 2"
+- assertVisible: "PPF account count: 1"
+- assertVisible: "Total invested: ₹1,03,800.00"
+- assertVisible: "Total current: ₹1,04,377.78"
+- assertVisible: "Valuation: complete | pending 0"
+- scrollUntilVisible:
+    element:
+      id: "e2e-allocation-debt"
+    direction: DOWN
+- assertVisible: "Allocation debt: ₹1,00,000.00 | 95.81%"
+- scrollUntilVisible:
+    element:
+      id: "e2e-ppf-my-ppf-balance"
+    direction: DOWN
+- assertVisible: "PPF balance: ₹1,00,000.00 | synthetic asset none"
+
+# Exercise provider failure, explicit manual fallback, unknown date, and pending valuation.
+- openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- assertVisible: "3 holdings saved locally"
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "setup debt"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Lookup unavailable. You can enter details manually."
+    timeout: 5000
 - tapOn:
     id: "toggle-manual-asset-entry"
 - tapOn:
@@ -85,10 +194,17 @@ appId: com.abdulshaikh.cogvest
     id: "average-cost-input"
 - inputText: "200"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "first-purchase-date-unknown"
+    direction: DOWN
 - tapOn:
     id: "first-purchase-date-unknown"
+- takeScreenshot:
+    path: quick-setup-unknown-date
 - tapOn:
     id: "review-holding-button"
+- assertVisible: "Valuation pending"
 - scrollUntilVisible:
     element:
       id: "quick-setup-save-finish"
@@ -99,13 +215,47 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "quick-setup-review-screen"
-- assertVisible: "2 holdings confirmed locally"
-- assertVisible: "Setup Equity"
+- assertVisible: "4 holdings confirmed locally"
+- assertVisible: "HDFC Bank"
+- assertVisible: "Nifty 50 ETF"
+- assertVisible: "My PPF"
 - assertVisible: "Setup Debt"
 - assertVisible: "1 current price is still needed"
+- takeScreenshot:
+    path: quick-setup-final-review
 - tapOn:
     id: "quick-setup-complete"
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
     timeout: 10000
+- takeScreenshot:
+    path: quick-setup-populated-dashboard
+
+# Assert persisted records and financial derivations, not success copy alone.
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 3"
+- assertVisible: "Opening position count: 3"
+- assertVisible: "Trade count: 0"
+- assertVisible: "PPF account count: 1"
+- assertVisible: "Duplicate identity count: 0"
+- assertVisible: "Total invested: ₹1,04,400.00"
+- assertVisible: "Total current: incomplete"
+- assertVisible: "Valuation: incomplete | pending 1"
+- scrollUntilVisible:
+    element:
+      id: "e2e-ppf-my-ppf-balance"
+    direction: DOWN
+- assertVisible: "PPF balance: ₹1,00,000.00 | synthetic asset none"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-hdfcbank-ns-position-0"
+    direction: DOWN
+- assertVisible: "Position 1: quantity 2 | average ₹1,500.00 | date 2026-05-29 | note none | conviction none"
+- assertVisible: "Quote: yahoo | ₹1,678.25"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-setupdebt-position-0"
+    direction: DOWN
+- assertVisible: "Position 1: quantity 3 | average ₹200.00 | date unknown | note none | conviction none"
+- assertVisible: "Values: invested ₹600.00 | current pending | quantity 3"

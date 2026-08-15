@@ -32,6 +32,8 @@ export function getButtonInteractionStyle({
 }
 
 export function AppButton({
+  accessibilityLabel,
+  accessibilityRole = "button",
   disabled,
   style,
   textColor,
@@ -49,6 +51,8 @@ export function AppButton({
   return (
     <Pressable
       {...props}
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityRole={accessibilityRole}
       android_ripple={androidRipple(
         variant === "primary"
           ? interaction.primaryRippleColor

@@ -41,7 +41,7 @@ describe("QuickPortfolioSetupScreen", () => {
     });
     sessionStore.getState().showReview();
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByRole, getByTestId, getByText } = render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={onComplete}
@@ -54,6 +54,8 @@ describe("QuickPortfolioSetupScreen", () => {
     expect(getByTestId("quick-setup-review-screen")).toBeTruthy();
     expect(getByText("HDFC Bank")).toBeTruthy();
     expect(getByText(/1 current price is still needed/u)).toBeTruthy();
+    expect(getByRole("button", { name: "Add another holding" })).toBeTruthy();
+    expect(getByRole("button", { name: "Open Dashboard" })).toBeTruthy();
     fireEvent.press(getByTestId("quick-setup-complete"));
 
     expect(onComplete).toHaveBeenCalledTimes(1);
