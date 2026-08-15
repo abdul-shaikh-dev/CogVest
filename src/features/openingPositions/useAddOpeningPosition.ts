@@ -27,7 +27,11 @@ import {
   type QuoteResult,
   type ResolveQuoteInput,
 } from "@/src/services/quotes";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import {
+  getPortfolioStore,
+  type OpeningPositionCommandResult,
+  type PortfolioStoreState,
+} from "@/src/store";
 import type {
   Asset,
   AssetClass,
@@ -48,12 +52,18 @@ export type AddOpeningPositionControllerInput = {
   initialVisualQaState?: "review";
   now?: Date;
   onComplete?: (assetId: string) => void;
+  quickSetup?: boolean;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
   }) => Promise<AssetLookupSearchResult>;
   store?: StoreApi<PortfolioStoreState>;
 };
+
+export type QuickSetupDuplicateState =
+  | { kind: "blocked"; message: string }
+  | { kind: "new" }
+  | { kind: "update"; message: string; openingPositionId: string };
 
 export const assetClasses: AssetClass[] = ["stock", "etf", "debt", "crypto"];
 export const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
@@ -72,6 +82,7 @@ export function useAddOpeningPosition({
   initialVisualQaState,
   now = new Date(),
   onComplete,
+  quickSetup = false,
   resolveQuote = defaultResolveQuote,
   searchAssetLookupResults = defaultSearchAssetLookupResults,
   store = getPortfolioStore(),
@@ -168,6 +179,8 @@ export function useAddOpeningPosition({
   const [successMessage, setSuccessMessage] = useState("");
   const [savedAssetId, setSavedAssetId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [quickSetupDuplicate, setQuickSetupDuplicate] =
+    useState<QuickSetupDuplicateState>({ kind: "new" });
   const isSavingRef = useRef(false);
   const quoteRequestIdRef = useRef(0);
   const reviewCommandIdRef = useRef<string | undefined>(
@@ -242,6 +255,10 @@ export function useAddOpeningPosition({
     setDateUnknown(false);
     setConviction("");
     setNotes("");
+  }
+
+  function resetQuickSetupDuplicate() {
+    setQuickSetupDuplicate({ kind: "new" });
   }
 
   function invalidateQuoteRequest() {
@@ -357,8 +374,23 @@ export function useAddOpeningPosition({
   }
 
   function continueFromAsset() {
-    if (validateAssetPhase()) {
-      moveToPhase("class");
+    if (quickSetupDuplicate.kind === "blocked") {
+      setErrors({ assetName: quickSetupDuplicate.message });
+      return;
+    }
+
+    if (quickSetup && quickSetupDuplicate.kind === "new") {
+      const candidate = buildReviewedAsset();
+      const canonicalAsset = findCanonicalAsset(snapshot.assets, candidate);
+
+      if (canonicalAsset) {
+        selectAsset(canonicalAsset);
+        return;
+      }
+    }
+
+    if (validateAssetPhase() && (!quickSetup || validateClassPhase())) {
+      moveToPhase(quickSetup ? "position" : "class");
     }
   }
 
@@ -471,6 +503,7 @@ export function useAddOpeningPosition({
     setErrors({});
     resetPositionFields();
     resetReview();
+    resetQuickSetupDuplicate();
   }
 
   function selectAsset(asset: Asset) {
@@ -483,9 +516,14 @@ export function useAddOpeningPosition({
     }
 
     const quote = snapshot.quoteCache[asset.id];
+    const openingPositions = snapshot.openingPositions.filter(
+      (position) => position.assetId === asset.id,
+    );
+    const trades = snapshot.trades.filter((trade) => trade.assetId === asset.id);
 
     invalidateQuoteRequest();
     resetPositionFields();
+    resetQuickSetupDuplicate();
     setSelectedAssetId(asset.id);
     setSelectedLookupResult(undefined);
     setSelectedLookupQuote(undefined);
@@ -507,6 +545,28 @@ export function useAddOpeningPosition({
     );
     setErrors({});
     resetReview();
+
+    if (quickSetup && openingPositions.length === 1 && trades.length === 0) {
+      const existing = openingPositions[0];
+      setQuantity(existing.quantity.toString());
+      setAverageCostPrice(existing.averageCostPrice.toString());
+      setCurrentPrice(
+        existing.manualValuation?.price.toString() ?? quote?.price.toString() ?? "",
+      );
+      setDate(existing.date?.slice(0, 10) ?? "");
+      setDateUnknown(existing.date === null);
+      setQuickSetupDuplicate({
+        kind: "update",
+        message: "This aggregate opening position will be updated, not duplicated.",
+        openingPositionId: existing.id,
+      });
+    } else if (quickSetup && (openingPositions.length > 0 || trades.length > 0)) {
+      setQuickSetupDuplicate({
+        kind: "blocked",
+        message:
+          "This asset has detailed history. Add or correct it from Holdings to avoid overwriting records.",
+      });
+    }
   }
 
   function buildLookupAsset(result: AssetLookupResult): Asset {
@@ -534,10 +594,17 @@ export function useAddOpeningPosition({
     }
 
     const canonicalAsset = findCanonicalAsset(snapshot.assets, lookupAsset);
+
+    if (quickSetup && canonicalAsset) {
+      selectAsset(canonicalAsset);
+      setLookupStatus("This saved asset was loaded for a safe duplicate check.");
+      return;
+    }
     const quoteRequestId = quoteRequestIdRef.current + 1;
 
     quoteRequestIdRef.current = quoteRequestId;
     resetPositionFields();
+    resetQuickSetupDuplicate();
     setSelectedAssetId(canonicalAsset?.id ?? "");
     setSelectedLookupResult(result);
     setSelectedLookupQuote(undefined);
@@ -685,7 +752,10 @@ export function useAddOpeningPosition({
 
     setErrors({});
     setReviewAsset(asset);
-    const commandId = createId("opening");
+    const commandId =
+      quickSetupDuplicate.kind === "update"
+        ? quickSetupDuplicate.openingPositionId
+        : createId("opening");
     const providerQuote =
       selectedLookupQuote ??
       (selectedAsset ? snapshot.quoteCache[selectedAsset.id] : undefined);
@@ -719,7 +789,7 @@ export function useAddOpeningPosition({
     setCurrentPhase("review");
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(): Promise<OpeningPositionCommandResult | undefined> {
     if (
       !reviewAsset ||
       !reviewOpeningPosition ||
@@ -748,12 +818,35 @@ export function useAddOpeningPosition({
           }
         : undefined;
 
-      const commandResult = store.getState().recordOpeningPosition({
-        asset: reviewAsset,
-        commandId: reviewCommandIdRef.current,
-        openingPosition: reviewOpeningPosition,
-        quote,
-      });
+      const commandResult =
+        quickSetupDuplicate.kind === "update"
+          ? (() => {
+              const correction = store
+                .getState()
+                .correctOpeningPosition(reviewOpeningPosition);
+
+              if (correction.status !== "applied") {
+                throw new Error("Existing opening position could not be updated.");
+              }
+
+              if (quote) {
+                store.getState().upsertQuote(quote);
+              }
+
+              return {
+                asset: reviewAsset,
+                openingPosition: correction.openingPosition,
+                quote,
+                quoteCacheStatus: quote ? ("cached" as const) : ("notRequested" as const),
+                status: "applied" as const,
+              };
+            })()
+          : store.getState().recordOpeningPosition({
+              asset: reviewAsset,
+              commandId: reviewCommandIdRef.current,
+              openingPosition: reviewOpeningPosition,
+              quote,
+            });
 
       try {
         await Haptics.notificationAsync(
@@ -769,6 +862,7 @@ export function useAddOpeningPosition({
           : "Opening position saved.",
       );
       setSavedAssetId(commandResult.asset.id);
+      return commandResult;
     } catch {
       setErrors({
         save: "This holding could not be saved safely. Review it and try again.",
@@ -777,6 +871,8 @@ export function useAddOpeningPosition({
       isSavingRef.current = false;
       setIsSaving(false);
     }
+
+    return undefined;
   }
 
   function viewSavedHolding() {
@@ -808,6 +904,7 @@ export function useAddOpeningPosition({
     setErrors({});
     resetPositionFields();
     resetReview();
+    resetQuickSetupDuplicate();
     setCurrentPhase("asset");
   }
 
@@ -843,6 +940,7 @@ export function useAddOpeningPosition({
     quantity,
     quoteSourceId,
     quoteStatus,
+    quickSetupDuplicate,
     resetReview,
     reviewAsset,
     reviewOpeningPosition,

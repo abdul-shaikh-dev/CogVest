@@ -219,6 +219,8 @@ Primary tabs:
 - Settings
 
 Add Holding is a secondary flow launched from Dashboard/Holdings actions.
+Quick Portfolio Setup is the first-run and multi-holding variant for entering an
+existing portfolio without repeatedly returning to Holdings.
 
 Dashboard owns portfolio-level answers.
 
@@ -233,6 +235,16 @@ unavailable. CogVest must preserve invested value, mark current valuation as
 pending, and avoid presenting partial current value, P&L, allocation, or
 month-end totals as complete. A later fetched quote or explicit manual price
 resolves the pending state with source, currency, and as-of provenance.
+
+Quick Portfolio Setup reuses the same lookup, quote provenance, validation, and
+opening-position command, but removes conviction, notes, and detailed metadata
+review from the primary path. Each confirmed holding is persisted immediately.
+The resumable setup session stores only references to confirmed records; an
+unfinished on-screen entry is discarded only after a clear exit warning.
+Selecting an existing asset may update one unambiguous aggregate opening
+position, but transaction history or multiple opening records must block any
+silent merge or overwrite. The final review shows aggregate invested value,
+current value, P&L, pending valuations, and a direct path to Dashboard.
 
 Monthly Progress owns statement-style progress: `Portfolio Growth`,
 `Asset Momentum`, `Monthly Change Breakdown`, month selection, and a compact

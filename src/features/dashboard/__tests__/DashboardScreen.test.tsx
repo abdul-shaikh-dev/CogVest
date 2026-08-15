@@ -125,6 +125,58 @@ describe("DashboardScreen", () => {
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });
 
+  it("offers resumable setup before the single-holding action", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onAddTrade = jest.fn();
+    const onQuickSetup = jest.fn();
+    const { getByTestId, getByText } = render(
+      <DashboardScreen
+        onAddTrade={onAddTrade}
+        onQuickSetup={onQuickSetup}
+        quickSetupSavedCount={2}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Continue portfolio setup")).toBeTruthy();
+    expect(getByText("2 holdings are already saved. Continue when ready.")).toBeTruthy();
+    fireEvent.press(getByTestId("quick-setup-button"));
+    fireEvent.press(getByTestId("add-trade-button"));
+
+    expect(onQuickSetup).toHaveBeenCalledTimes(1);
+    expect(onAddTrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps active setup discoverable after the portfolio is populated", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      assetId: asset.id,
+      averageCostPrice: 100,
+      date: null,
+      id: "opening-visible-setup",
+      quantity: 2,
+    });
+    store.getState().upsertQuote({
+      asOf: "2026-08-15T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 125,
+      source: "yahoo",
+    });
+    const onQuickSetup = jest.fn();
+    const { getByTestId } = render(
+      <DashboardScreen
+        onQuickSetup={onQuickSetup}
+        quickSetupSavedCount={1}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("dashboard-continue-setup-button"));
+    expect(onQuickSetup).toHaveBeenCalledTimes(1);
+  });
+
   it("warns about retained foreign data and excludes it from INR totals", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.setState({
