@@ -58,6 +58,7 @@ type HoldingsScreenProps = {
   onAddTrade?: () => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onImportHoldings?: () => void;
+  onImportTransactions?: () => void;
   onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
@@ -89,6 +90,7 @@ export function HoldingsScreen({
   onAddTrade,
   onAddPpfAccount,
   onImportHoldings,
+  onImportTransactions,
   onManageAssets,
   onReviewAllTrades,
   onReviewOpeningPosition,
@@ -519,6 +521,15 @@ export function HoldingsScreen({
                 }}
                 testID="import-holdings-csv-option"
                 title="Import holdings CSV"
+                variant="secondary"
+              />
+              <AppButton
+                onPress={() => {
+                  setIsAddMenuVisible(false);
+                  onImportTransactions?.();
+                }}
+                testID="import-transactions-csv-option"
+                title="Import transaction history"
                 variant="secondary"
               />
             </View>

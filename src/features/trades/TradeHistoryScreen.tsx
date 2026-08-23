@@ -12,7 +12,8 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { formatDate, formatINR } from "@/src/domain/formatters";
+import { formatCurrency, formatDate } from "@/src/domain/formatters";
+import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
 
@@ -72,24 +73,48 @@ export function TradeHistoryScreen({
           <PremiumCard>
             <SectionHeader title="Transaction history" />
             {trades.map((trade) => (
-              <GroupedListRow
-                icon={trade.type === "buy" ? "arrow-down-circle-outline" : "arrow-up-circle-outline"}
-                key={trade.id}
-                meta={snapshot.preferences.maskWealthValues
+              (() => {
+                const isManual = isManualTrade(trade);
+                const title = isManual
+                  ? trade.type === "buy" ? "Purchase" : "Sale"
+                  : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
+                const description = snapshot.preferences.maskWealthValues
                   ? `${formatDate(trade.date)} · values masked`
-                  : `${formatDate(trade.date)} · ${trade.quantity} units at ${formatINR(trade.pricePerUnit)}`}
-                title={`${trade.type === "buy" ? "Purchase" : "Sale"}${asset ? "" : ` · ${snapshot.assets.find((item) => item.id === trade.assetId)?.name ?? "Unknown holding"}`}`}
-                value={snapshot.preferences.maskWealthValues
-                  ? undefined
-                  : formatINR(trade.totalValue)}
-                testID={`review-trade-${trade.id}`}
-                onPress={() => onReviewTrade(trade.id)}
-              />
+                  : isManual
+                    ? `${formatDate(trade.date)} · ${trade.quantity} units at ${formatCurrency(trade.pricePerUnit, asset?.currency ?? "INR")}`
+                    : `${formatDate(trade.date)} · ${trade.quantity} units · ${
+                        trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
+                          ? `acquisition basis ${trade.acquisitionCostPerUnit} per unit`
+                          : "no execution price"
+                      }`;
+
+                return (
+                  <GroupedListRow
+                    icon={
+                      isManual
+                        ? trade.type === "buy"
+                          ? "arrow-down-circle-outline"
+                          : "arrow-up-circle-outline"
+                          : "swap-horizontal-outline"
+                    }
+                    key={trade.id}
+                    meta={description}
+                    title={`${title}${asset ? "" : ` · ${snapshot.assets.find((item) => item.id === trade.assetId)?.name ?? "Unknown holding"}`}`}
+                    value={
+                      snapshot.preferences.maskWealthValues || !isManual
+                        ? undefined
+                        : formatCurrency(trade.totalValue, asset?.currency ?? "INR")
+                    }
+                    testID={`review-trade-${trade.id}`}
+                    onPress={() => onReviewTrade(trade.id)}
+                  />
+                );
+              })()
             ))}
           </PremiumCard>
         )}
         <AppText color="secondary" variant="caption">
-          Edits keep investment and cash records in sync.
+          Purchases and sales keep cash records in sync. Imported transfers are read-only.
         </AppText>
       </View>
     </ScreenContainer>

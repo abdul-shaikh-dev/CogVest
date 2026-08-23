@@ -43,10 +43,32 @@ export function normalizeOpeningPosition(
   };
 }
 
-export function normalizeTrade(trade: Trade): Trade {
+export function normalizeTrade<T extends Trade>(trade: T): T {
+  const quantity = normalizeQuantity(trade.quantity);
+
+  if (trade.type === "transferOut") {
+    return {
+      ...trade,
+      quantity,
+    } as T;
+  }
+
+  if (trade.type === "transferIn") {
+    return {
+      ...trade,
+      ...(trade.acquisitionCostPerUnit === undefined
+        ? {}
+        : {
+            acquisitionCostPerUnit: normalizeUnitPrice(
+              trade.acquisitionCostPerUnit,
+            ),
+          }),
+      quantity,
+    } as T;
+  }
+
   const fees = normalizeMoney(trade.fees ?? 0);
   const pricePerUnit = normalizeUnitPrice(trade.pricePerUnit);
-  const quantity = normalizeQuantity(trade.quantity);
   const grossValue = decimal(quantity).times(pricePerUnit);
   const totalValue = normalizeMoney(
     trade.type === "buy" ? grossValue.plus(fees) : grossValue.minus(fees),
@@ -58,7 +80,7 @@ export function normalizeTrade(trade: Trade): Trade {
     pricePerUnit,
     quantity,
     totalValue,
-  };
+  } as T;
 }
 
 export function normalizeMonthlySnapshot(

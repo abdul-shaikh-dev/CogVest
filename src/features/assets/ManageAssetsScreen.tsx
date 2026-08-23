@@ -17,6 +17,8 @@ import {
   normalizeQuantity,
   quantityQuantum,
 } from "@/src/domain/precision";
+import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
+import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
 
@@ -27,16 +29,20 @@ type ManageAssetsScreenProps = {
 };
 
 function remainingUnits(state: PortfolioStoreState, assetId: string) {
-  const openingUnits = state.openingPositions
-    .filter((position) => position.assetId === assetId)
+  const assetOpenings = state.openingPositions.filter(
+    (position) => position.assetId === assetId,
+  );
+  const openingUnits = assetOpenings
     .reduce((sum, position) => sum.plus(position.quantity), decimal(0));
   const remaining = state.trades
-    .filter((trade) => trade.assetId === assetId)
+    .filter(
+      (trade) =>
+        trade.assetId === assetId &&
+        isTransactionAfterOpeningCutover(trade.date, assetOpenings),
+    )
     .reduce(
       (units, trade) =>
-        trade.type === "buy"
-          ? units.plus(trade.quantity)
-          : units.minus(trade.quantity),
+        units.plus(getTradeQuantityDelta(trade)),
       openingUnits,
     );
 

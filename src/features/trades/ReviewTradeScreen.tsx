@@ -13,7 +13,8 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
-import { formatINR } from "@/src/domain/formatters";
+import { formatCurrency, formatINR } from "@/src/domain/formatters";
+import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
@@ -54,10 +55,11 @@ export function ReviewTradeScreen({
   const currentTrade = snapshot.trades.find((item) => item.id === tradeId);
   const initialTradeRef = useRef(currentTrade);
   const trade = initialTradeRef.current;
+  const editableTrade = trade && isManualTrade(trade) ? trade : undefined;
   const asset = trade ? snapshot.assets.find((item) => item.id === trade.assetId) : undefined;
-  const [quantity, setQuantity] = useState(() => trade ? String(trade.quantity) : "");
-  const [price, setPrice] = useState(() => trade ? String(trade.pricePerUnit) : "");
-  const [fees, setFees] = useState(() => trade?.fees !== undefined ? String(trade.fees) : "0");
+  const [quantity, setQuantity] = useState(() => editableTrade ? String(editableTrade.quantity) : "");
+  const [price, setPrice] = useState(() => editableTrade ? String(editableTrade.pricePerUnit) : "");
+  const [fees, setFees] = useState(() => editableTrade?.fees !== undefined ? String(editableTrade.fees) : "0");
   const [date, setDate] = useState(() => getCalendarDatePart(trade?.date ?? "") ?? "");
   const [notes, setNotes] = useState(() => trade?.notes ?? "");
   const [conviction, setConviction] = useState(() => trade?.conviction?.toString() ?? "");
@@ -92,11 +94,6 @@ export function ReviewTradeScreen({
     );
   }
 
-  const stableTrade = trade;
-  const linkedCashEntry = snapshot.cashEntries.find(
-    (entry) => entry.linkedTradeId === stableTrade.id,
-  );
-
   if (!isRevealed) {
     return (
       <ScreenContainer testID="review-trade-screen">
@@ -121,6 +118,46 @@ export function ReviewTradeScreen({
       </ScreenContainer>
     );
   }
+
+  if (!editableTrade) {
+    const transferLabel = trade.type === "transferIn" ? "Transfer in" : "Transfer out";
+    const provenance = trade.importProvenance;
+
+    return (
+      <ScreenContainer scroll testID="review-trade-screen">
+        <View style={styles.content}>
+          <ScreenHeader title="Review Transaction" subtitle={`${asset.name} · imported record`} />
+          <PremiumCard>
+            <SectionHeader title="Read-only transaction" />
+            <AppText color="secondary">
+              {transferLabel} records preserve ownership movement without inventing an execution price or cash value.
+            </AppText>
+            <View style={styles.identityRow}>
+              <View><AppText color="secondary" variant="caption">Type</AppText><AppText weight="bold">{transferLabel}</AppText></View>
+              <View><AppText color="secondary" variant="caption">Quantity</AppText><AppText weight="bold">{trade.quantity}</AppText></View>
+            </View>
+            <View style={styles.identityRow}>
+              <View><AppText color="secondary" variant="caption">Date</AppText><AppText weight="bold">{getCalendarDatePart(trade.date) ?? trade.date}</AppText></View>
+              {trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined ? (
+                <View><AppText color="secondary" variant="caption">Acquisition basis</AppText><AppText weight="bold">{formatCurrency(trade.acquisitionCostPerUnit, asset.currency)} / unit</AppText></View>
+              ) : null}
+            </View>
+            {provenance ? (
+              <AppText color="secondary" variant="caption">
+                Imported from {provenance.sourceFormat} · batch {provenance.importBatchId}
+              </AppText>
+            ) : null}
+          </PremiumCard>
+          <AppButton title="Back to Holdings" variant="secondary" onPress={onCancel} />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const stableTrade = editableTrade;
+  const linkedCashEntry = snapshot.cashEntries.find(
+    (entry) => entry.linkedTradeId === stableTrade.id,
+  );
 
   const parsedQuantity = parsePositive(quantity);
   const parsedPrice = parsePositive(price);

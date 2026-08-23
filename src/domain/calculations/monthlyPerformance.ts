@@ -145,6 +145,7 @@ export function buildMonthlyPerformanceBasis({
   const unknownDatePositionRecordedThisMonth = openingPositions.some(
     (position) =>
       position.date === null &&
+      !position.measuredAsOf &&
       getOpeningPositionHistoryDate(position)?.slice(0, 7) === targetMonth,
   );
 
@@ -158,13 +159,12 @@ export function buildMonthlyPerformanceBasis({
     };
   }
 
-  for (const position of openingPositions.filter((item) =>
-    item.date !== null && isWithinMonth(item.date, targetMonth),
-  )) {
-    if (position.date === null) continue;
+  for (const position of openingPositions) {
+    const effectiveDate = getOpeningPositionHistoryDate(position);
+    if (!effectiveDate || !isWithinMonth(effectiveDate, targetMonth)) continue;
     externalFlows.push({
       amount: decimal(position.quantity).times(position.averageCostPrice),
-      date: position.date,
+      date: effectiveDate,
     });
   }
 

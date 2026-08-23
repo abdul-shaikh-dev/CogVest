@@ -13,4 +13,5 @@ export {
 export {
   findCanonicalAsset,
   hasCanonicalAssetConflict,
+  normalizeIsin,
 } from "./identity";

@@ -103,6 +103,60 @@ describe("buildMonthlyPerformanceBasis", () => {
     });
   });
 
+  it("uses the confirmed baseline measurement date for performance flows", () => {
+    const openingPosition: OpeningPosition = {
+      assetId: "asset-one",
+      averageCostPrice: 800,
+      currentPrice: 900,
+      date: "2020-01-10T00:00:00.000Z",
+      id: "opening-one",
+      measuredAsOf: "2026-05-10",
+      quantity: 100,
+    };
+
+    expect(
+      buildMonthlyPerformanceBasis({
+        cashEntries: [],
+        openingPositions: [openingPosition],
+        targetMonth: "2026-05",
+      }),
+    ).toMatchObject({
+      netExternalFlow: 80000,
+      status: "complete",
+    });
+    expect(
+      buildMonthlyPerformanceBasis({
+        cashEntries: [],
+        openingPositions: [openingPosition],
+        targetMonth: "2020-01",
+      }),
+    ).toMatchObject({ netExternalFlow: 0, status: "complete" });
+  });
+
+  it("uses an explicit measurement date when first-purchase date is unknown", () => {
+    const openingPosition: OpeningPosition = {
+      assetId: "asset-one",
+      averageCostPrice: 800,
+      date: null,
+      id: "opening-one",
+      measuredAsOf: "2026-05-10",
+      quantity: 100,
+      recordedAt: "2026-06-01T00:00:00.000Z",
+      recordedOn: "2026-06-01",
+    };
+
+    expect(
+      buildMonthlyPerformanceBasis({
+        cashEntries: [],
+        openingPositions: [openingPosition],
+        targetMonth: "2026-05",
+      }),
+    ).toMatchObject({
+      netExternalFlow: 80000,
+      status: "complete",
+    });
+  });
+
   it("weights intramonth external flow by its time in the portfolio", () => {
     expect(
       buildMonthlyPerformanceBasis({

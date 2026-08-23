@@ -27,7 +27,11 @@ import {
   quantityQuantum,
   sumFinancialValues,
 } from "@/src/domain/precision";
-import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import {
+  getOpeningPositionHistoryDate,
+  isTransactionAfterOpeningCutover,
+} from "@/src/domain/openingPositions";
+import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   calculatePpfPortfolioSummary,
@@ -370,6 +374,11 @@ function needsHistoricalPrice({
   }
 
   const monthEnd = getMonthEndDate(targetMonth);
+  const effectiveOpenings = state.openingPositions.filter(
+    (position) =>
+      position.assetId === assetId &&
+      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd),
+  );
   const openingQuantity = state.openingPositions.reduce(
     (quantity, position) =>
       position.assetId === assetId &&
@@ -379,13 +388,15 @@ function needsHistoricalPrice({
     decimal(0),
   );
   const tradedQuantity = state.trades.reduce((quantity, trade) => {
-    if (trade.assetId !== assetId || !isOnOrBefore(trade.date, monthEnd)) {
+    if (
+      trade.assetId !== assetId ||
+      !isOnOrBefore(trade.date, monthEnd) ||
+      !isTransactionAfterOpeningCutover(trade.date, effectiveOpenings)
+    ) {
       return quantity;
     }
 
-    return trade.type === "buy"
-      ? quantity.plus(trade.quantity)
-      : quantity.minus(trade.quantity);
+    return quantity.plus(getTradeQuantityDelta(trade));
   }, decimal(0));
 
   return openingQuantity

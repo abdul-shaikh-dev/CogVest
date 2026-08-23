@@ -52,6 +52,13 @@ describe("asset metadata", () => {
       quoteSourceId: "custom-source",
       sectorType: "technology",
     });
+
+    expect(
+      normalizeAssetMetadata({
+        ...baseAsset,
+        isin: " ine040a01034 ",
+      }),
+    ).toMatchObject({ isin: "INE040A01034" });
   });
 
   it("uses user-facing labels and class-specific choices", () => {

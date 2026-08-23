@@ -4,6 +4,18 @@ import {
   normalizePercentage,
   roundHalfUp,
 } from "@/src/domain/precision";
+import type { Currency } from "@/src/types";
+
+export function formatCurrency(value: number, currency: Currency) {
+  const normalizedValue = normalizeMoney(value);
+  return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+    currency,
+    currencyDisplay: "symbol",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }).format(normalizedValue);
+}
 
 export function formatINR(value: number) {
   const normalizedValue = normalizeMoney(value);

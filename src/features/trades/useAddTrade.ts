@@ -13,10 +13,11 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type {
   Asset,
+  BuyTrade,
   ConvictionScore,
   InstrumentType,
   SectorType,
-  Trade,
+  SellTrade,
   TradeType,
 } from "@/src/types";
 import { createId } from "@/src/utils";
@@ -54,7 +55,7 @@ export function useAddTrade({
   const [conviction, setConviction] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [reviewTrade, setReviewTrade] = useState<Trade | undefined>();
+  const [reviewTrade, setReviewTrade] = useState<BuyTrade | SellTrade | undefined>();
   const [reviewAsset, setReviewAsset] = useState<Asset | undefined>();
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -186,7 +187,7 @@ export function useAddTrade({
     setErrors({});
     setReviewAsset(asset);
     setReviewTrade(
-      normalizeTrade({
+      normalizeTrade<BuyTrade | SellTrade>({
         assetId: asset.id,
         conviction: result.value.conviction as ConvictionScore | undefined,
         date: result.value.date,

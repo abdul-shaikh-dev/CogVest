@@ -1,0 +1,10 @@
+export const transactionCsvTemplateFileName = "cogvest-transactions-v1.csv";
+
+export const transactionCsvTemplate = [
+  "cogvest_version,transaction_type,trade_date,isin,exchange,symbol,currency,quantity,unit_price,acquisition_cost,settlement_date,external_id,account,fees,taxes,description,notes",
+  "1,buy,2025-01-15,,NSE,EXAMPLE,INR,10,100,,,example-buy-001,Example account,0,0,Example buy,Replace this example row",
+  "1,sell,2025-06-15,,NSE,EXAMPLE,INR,2,120,,,example-sell-001,Example account,1.5,0.5,Example sell,Replace this example row",
+  "1,transferIn,2024-04-01,IN0000000001,,,INR,5,,4500,,,,,,,Example costed transfer in",
+  "1,transferOut,2025-02-01,,NSE,EXAMPLE,INR,1,,,,example-transfer-out-001,Example account,,,Example transfer out,Replace this example row",
+  "",
+].join("\n");

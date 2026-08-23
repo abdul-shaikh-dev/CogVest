@@ -41,4 +41,14 @@ export type {
   QuoteCache,
   QuoteSource,
 } from "./quote";
-export type { ConvictionScore, Trade, TradeType } from "./trade";
+export type {
+  BuyTrade,
+  ConvictionScore,
+  ImportedTransactionProvenance,
+  SellTrade,
+  Trade,
+  TradeType,
+  TransactionType,
+  TransferInTrade,
+  TransferOutTrade,
+} from "./trade";

@@ -25,8 +25,10 @@ export type E2ePortfolioEvidence = {
   allocation: ReturnType<typeof calculateAllocation>;
   assets: E2eAssetEvidence[];
   assetCount: number;
+  cashEntryCount: number;
   duplicateIdentityCount: number;
   openingPositionCount: number;
+  importedTransactionCount: number;
   ppfAccounts: ReturnType<typeof calculatePpfPortfolioSummary>["accounts"];
   ppfConfirmedBalance: number;
   ppfCount: number;
@@ -89,6 +91,10 @@ export function buildE2ePortfolioEvidence(
     })),
     duplicateIdentityCount: state.assets.filter((asset) =>
       hasCanonicalAssetConflict(state.assets, asset),
+    ).length,
+    cashEntryCount: state.cashEntries.length,
+    importedTransactionCount: state.trades.filter(
+      (trade) => trade.importProvenance !== undefined,
     ).length,
     openingPositionCount: state.openingPositions.length,
     ppfAccounts: ppfSummary.accounts,

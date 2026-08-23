@@ -322,10 +322,12 @@ describe("HoldingsScreen", () => {
     const onAddTrade = jest.fn();
     const onQuickSetup = jest.fn();
     const onImportHoldings = jest.fn();
+    const onImportTransactions = jest.fn();
     const { getByLabelText, getByTestId, getByText } = render(
       <HoldingsScreen
         onAddTrade={onAddTrade}
         onImportHoldings={onImportHoldings}
+        onImportTransactions={onImportTransactions}
         onQuickSetup={onQuickSetup}
         quickSetupSavedCount={2}
         store={store}
@@ -344,6 +346,10 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByLabelText("Add holdings"));
     fireEvent.press(getByTestId("import-holdings-csv-option"));
     expect(onImportHoldings).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByLabelText("Add holdings"));
+    fireEvent.press(getByTestId("import-transactions-csv-option"));
+    expect(onImportTransactions).toHaveBeenCalledTimes(1);
   });
 
   it("keeps active setup visible above a populated holdings list", () => {

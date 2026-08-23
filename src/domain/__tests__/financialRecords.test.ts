@@ -34,6 +34,34 @@ describe("financial record normalization", () => {
     });
   });
 
+  it("normalizes transfer quantities without inventing prices or totals", () => {
+    const costedTransfer: Trade = {
+      acquisitionCostPerUnit: 0.123456785,
+      assetId: "btc",
+      date: "2026-07-26",
+      id: "transfer-in-1",
+      quantity: 3.123456785,
+      type: "transferIn",
+    };
+    const transferOut: Trade = {
+      assetId: "btc",
+      date: "2026-07-27",
+      id: "transfer-out-1",
+      quantity: 1.123456785,
+      type: "transferOut",
+    };
+
+    expect(normalizeTrade(costedTransfer)).toEqual({
+      ...costedTransfer,
+      acquisitionCostPerUnit: 0.12345679,
+      quantity: 3.12345679,
+    });
+    expect(normalizeTrade(transferOut)).toEqual({
+      ...transferOut,
+      quantity: 1.12345679,
+    });
+  });
+
   it("normalizes new records without changing their identity metadata", () => {
     const cashEntry: CashEntry = {
       amount: 10.005,

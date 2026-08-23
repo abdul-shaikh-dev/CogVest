@@ -13,6 +13,9 @@ export function getOpeningPositionAcquisitionDate(
 }
 
 export function getOpeningPositionHistoryDate(position: OpeningPosition) {
+  const measuredAsOf = getCalendarDatePart(position.measuredAsOf ?? "");
+  if (measuredAsOf !== null) return measuredAsOf;
+
   const acquisitionDate = getOpeningPositionAcquisitionDate(position);
   if (acquisitionDate !== null) return acquisitionDate;
 
@@ -23,6 +26,28 @@ export function getOpeningPositionHistoryDate(position: OpeningPosition) {
   return Number.isFinite(recordedAt.getTime())
     ? formatLocalCalendarDate(recordedAt)
     : null;
+}
+
+export function getLatestOpeningPositionCutover(
+  positions: OpeningPosition[],
+) {
+  return (
+    positions
+      .map((position) => getCalendarDatePart(position.measuredAsOf ?? ""))
+      .filter((date): date is string => date !== null)
+      .sort()
+      .at(-1) ?? null
+  );
+}
+
+export function isTransactionAfterOpeningCutover(
+  transactionDate: string,
+  positions: OpeningPosition[],
+) {
+  const cutover = getLatestOpeningPositionCutover(positions);
+  const date = getCalendarDatePart(transactionDate);
+
+  return cutover === null || (date !== null && date > cutover);
 }
 
 export function isOpeningPositionEffective(

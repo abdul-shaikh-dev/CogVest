@@ -63,6 +63,29 @@ describe("trade validators", () => {
     });
   });
 
+  it("uses transfer direction when calculating available quantity", () => {
+    const transferIn: Trade = {
+      acquisitionCostPerUnit: 100,
+      assetId: "asset-1",
+      date: "2026-04-20T00:00:00.000Z",
+      id: "transfer-in-1",
+      quantity: 5,
+      type: "transferIn",
+    };
+    const transferOut: Trade = {
+      assetId: "asset-1",
+      date: "2026-04-21T00:00:00.000Z",
+      id: "transfer-out-1",
+      quantity: 2,
+      type: "transferOut",
+    };
+
+    expect(validateSellQuantity([transferIn, transferOut], 3)).toEqual({
+      availableQuantity: 3,
+      isValid: true,
+    });
+  });
+
   it("validates positive trade quantity and price", () => {
     expect(
       validateTradeInput({

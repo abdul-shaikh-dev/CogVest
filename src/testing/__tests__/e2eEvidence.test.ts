@@ -42,8 +42,10 @@ describe("buildE2ePortfolioEvidence", () => {
 
     expect(evidence).toMatchObject({
       assetCount: 1,
+      cashEntryCount: 0,
       duplicateIdentityCount: 0,
       openingPositionCount: 1,
+      importedTransactionCount: 0,
       ppfCount: 0,
       rollupTotals: {
         totalCurrentValue: 3356.5,

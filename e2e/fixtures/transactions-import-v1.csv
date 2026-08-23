@@ -1,0 +1,4 @@
+cogvest_version,transaction_type,trade_date,isin,exchange,symbol,currency,quantity,unit_price,acquisition_cost,settlement_date,external_id,account,fees,taxes,description,notes
+1,buy,2023-01-15,,NSE,HDFCBANK,INR,10,1000,,,e2e-buy-1,E2E broker,0,0,Historical purchase,
+1,buy,2024-03-20,,NSE,HDFCBANK,INR,10,1500,,,e2e-buy-2,E2E broker,10,2,Historical purchase with metadata,
+1,transferIn,2025-02-10,,NSE,HDFCBANK,INR,5,,2250,,e2e-transfer-1,E2E broker,,,Costed transfer in,

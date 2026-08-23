@@ -23,8 +23,15 @@ import {
 } from "@/src/domain/precision";
 import {
   getOpeningPositionHistoryDate,
+  isTransactionAfterOpeningCutover,
   isOpeningPositionEffective,
 } from "@/src/domain/openingPositions";
+import {
+  compareTransactionsChronologically,
+  getTradeCostBasisAcquisition,
+  getTradeQuantityDelta,
+  isTradeCashPurchase,
+} from "@/src/domain/transactionSemantics";
 
 import {
   calculateMonthlyPerformance,
@@ -137,10 +144,7 @@ function round(value: number, decimals = 2) {
 }
 
 function sortTradesByDate(trades: Trade[]) {
-  return [...trades].sort(
-    (left, right) =>
-      new Date(left.date).getTime() - new Date(right.date).getTime(),
-  );
+  return [...trades].sort(compareTransactionsChronologically);
 }
 
 export function calculateHolding({
@@ -155,17 +159,18 @@ export function calculateHolding({
   const costBasisEvents = [
     ...openingPositions.map((position) => ({
       date: getOpeningPositionHistoryDate(position) ?? "",
-      fees: 0,
       pricePerUnit: position.averageCostPrice,
       quantity: position.quantity,
       type: "opening" as const,
     })),
-    ...sortTradesByDate(trades).map((trade) => ({
+    ...sortTradesByDate(
+      trades.filter((trade) =>
+        isTransactionAfterOpeningCutover(trade.date, openingPositions),
+      ),
+    ).map((trade) => ({
       date: trade.date,
-      fees: trade.fees ?? 0,
-      pricePerUnit: trade.pricePerUnit,
-      quantity: trade.quantity,
-      type: trade.type,
+      trade,
+      type: "trade" as const,
     })),
   ].sort(
     (left, right) =>
@@ -173,11 +178,9 @@ export function calculateHolding({
   );
 
   for (const event of costBasisEvents) {
-    if (event.type === "buy" || event.type === "opening") {
+    if (event.type === "opening") {
       const existingCost = totalUnits.times(averageCostPrice);
-      const buyCost = decimal(event.pricePerUnit)
-        .times(event.quantity)
-        .plus(event.fees);
+      const buyCost = decimal(event.pricePerUnit).times(event.quantity);
       const nextUnits = totalUnits.plus(event.quantity);
 
       averageCostPrice = nextUnits.greaterThan(0)
@@ -187,7 +190,36 @@ export function calculateHolding({
       continue;
     }
 
-    const remainingUnits = totalUnits.minus(event.quantity);
+    const acquisition = getTradeCostBasisAcquisition(event.trade);
+
+    if (acquisition) {
+      const existingCost = totalUnits.times(averageCostPrice);
+      const acquisitionCost = decimal(acquisition.pricePerUnit)
+        .times(acquisition.quantity)
+        .plus(acquisition.fees);
+      const nextUnits = totalUnits.plus(acquisition.quantity);
+
+      averageCostPrice = nextUnits.greaterThan(0)
+        ? existingCost.plus(acquisitionCost).dividedBy(nextUnits)
+        : decimal(0);
+      totalUnits = nextUnits;
+      continue;
+    }
+
+    const quantityDelta = getTradeQuantityDelta(event.trade);
+
+    if (quantityDelta > 0) {
+      // Uncosted transfer-ins remain visible in quantity while later import
+      // reconciliation prevents them from being committed as complete history.
+      const knownCost = totalUnits.times(averageCostPrice);
+      totalUnits = totalUnits.plus(quantityDelta);
+      averageCostPrice = totalUnits.greaterThan(0)
+        ? knownCost.dividedBy(totalUnits)
+        : decimal(0);
+      continue;
+    }
+
+    const remainingUnits = totalUnits.plus(quantityDelta);
     totalUnits = remainingUnits.isNegative() ? decimal(0) : remainingUnits;
 
     if (totalUnits.isZero()) {
@@ -260,15 +292,16 @@ export function calculateHoldings({
         return null;
       }
 
-      const assetTrades = trades.filter(
-        (trade) =>
-          trade.assetId === asset.id &&
-          isEffectiveCalendarDate(trade.date, now),
-      );
       const assetOpeningPositions = openingPositions.filter(
         (position) =>
           position.assetId === asset.id &&
           isOpeningPositionEffective(position, now),
+      );
+      const assetTrades = trades.filter(
+        (trade) =>
+          trade.assetId === asset.id &&
+          isEffectiveCalendarDate(trade.date, now) &&
+          isTransactionAfterOpeningCutover(trade.date, assetOpeningPositions),
       );
 
       if (assetTrades.length === 0 && assetOpeningPositions.length === 0) {
@@ -368,6 +401,7 @@ function isSameMonth(isoDate: string, now: Date) {
 export function calculateCashMonthlyMetrics({
   cashEntries,
   now = new Date(),
+  openingPositions,
   trades,
 }: {
   cashEntries: CashEntry[];
@@ -404,14 +438,21 @@ export function calculateCashMonthlyMetrics({
       )
       .map((entry) => entry.amount),
   );
-  const monthlyBuyTrades = trades.filter(
-    (trade) =>
-      trade.type === "buy" &&
-      isEffectiveCalendarDate(trade.date, now) &&
-      isSameMonth(trade.date, now),
-  );
+  const monthlyBuyTrades = trades
+    .filter(isTradeCashPurchase)
+    .filter(
+      (trade) =>
+        isEffectiveCalendarDate(trade.date, now) &&
+        isSameMonth(trade.date, now) &&
+        isTransactionAfterOpeningCutover(
+          trade.date,
+          openingPositions.filter(
+            (position) => position.assetId === trade.assetId,
+          ),
+        ),
+    );
   const allBuyTradeIds = new Set(
-    trades.filter((trade) => trade.type === "buy").map((trade) => trade.id),
+    trades.filter(isTradeCashPurchase).map((trade) => trade.id),
   );
   const investedFromTrades = sumFinancialValues(
     monthlyBuyTrades.map((trade) => trade.totalValue),

@@ -24,7 +24,10 @@ import {
   getCalendarDatePart,
   isFutureCalendarDate,
 } from "@/src/domain/dates";
-import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import {
+  getOpeningPositionHistoryDate,
+  isTransactionAfterOpeningCutover,
+} from "@/src/domain/openingPositions";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -45,15 +48,27 @@ import {
   validatePpfAccount,
   validatePpfLedgerEntryForAccount,
 } from "@/src/domain/ppf";
+import {
+  getTradeQuantityDelta,
+  hasAmbiguousSameDayTransactionOrder,
+  isManualTrade,
+  isTradeAcquisition,
+} from "@/src/domain/transactionSemantics";
+import {
+  matchesOpeningPosition,
+  reconcileTransactions,
+} from "@/src/domain/transactionReconciliation";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import type {
   Asset,
+  BuyTrade,
   CashEntry,
   CashEntryPurpose,
   Currency,
   HistoricalQuote,
   HistoricalQuoteCache,
+  ImportedTransactionProvenance,
   MonthlySnapshot,
   OpeningPosition,
   Preferences,
@@ -61,6 +76,7 @@ import type {
   PpfLedgerEntry,
   Quote,
   QuoteCache,
+  SellTrade,
   Trade,
 } from "@/src/types";
 import { historicalQuoteCacheKey } from "@/src/types";
@@ -87,7 +103,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 8;
+export const portfolioSchemaVersion = 9;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -153,6 +169,9 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   recordSaleWithProceeds: (
     input: LinkedTradeCommandInput,
   ) => LinkedTradeCommandResult;
+  recordTransactionImport: (
+    input: TransactionImportCommandInput,
+  ) => TransactionImportCommandResult;
   resetAffectedStorage: () => void;
   storageRecovery?: StorageRecoveryState;
   updateAsset: (asset: Asset) => void;
@@ -169,7 +188,7 @@ export type LinkedTradeCommandInput = {
   asset?: Asset;
   cashLabel: string;
   cashNotes?: string;
-  trade: Trade;
+  trade: BuyTrade | SellTrade;
 };
 
 export type LinkedTradeCommandResult =
@@ -209,6 +228,22 @@ export type OpeningPositionBatchCommandResult = {
   items: OpeningPositionCommandResult[];
   status: "alreadyApplied" | "applied";
   updated: number;
+};
+
+export type TransactionImportCommandInput = {
+  assets: Asset[];
+  commandId: string;
+  cutovers: Array<{ measuredAsOf: string; openingPositionId: string }>;
+  mode: "fullHistory" | "supplemental";
+  replaceOpeningPositionIds: string[];
+  transactions: Trade[];
+};
+
+export type TransactionImportCommandResult = {
+  added: number;
+  removedOpeningPositions: number;
+  status: "alreadyApplied" | "applied";
+  updatedCutovers: number;
 };
 
 export type PpfAccountMutationResult =
@@ -322,7 +357,7 @@ type TradeMutationRejectionReason =
   | "oversold"
   | "typeMismatch";
 
-export type TradeCorrectionInput = Omit<Trade, "totalValue">;
+export type TradeCorrectionInput = Omit<BuyTrade | SellTrade, "totalValue">;
 
 type TradeHistoryResult = {
   pendingMonths: string[];
@@ -522,6 +557,8 @@ function migratePortfolioSnapshot(
       ...stored.preferences,
     },
     schemaVersion: portfolioSchemaVersion,
+    // Migration preserves stored financial values exactly; normalization applies
+    // only at write boundaries for new or corrected records.
     trades: stored.trades ?? [],
   };
 }
@@ -1193,10 +1230,35 @@ function tradeMonth(trade: Trade) {
 }
 
 function isValidTradeRecord(trade: Trade, now: Date) {
-  const fees = trade.fees ?? 0;
   if (
+    trade.assetId.trim().length === 0 ||
+    trade.id.trim().length === 0 ||
     !Number.isFinite(trade.quantity) ||
     trade.quantity <= 0 ||
+    !getCalendarDatePart(trade.date) ||
+    isFutureCalendarDate(trade.date, now) ||
+    (trade.conviction !== undefined &&
+      (!Number.isInteger(trade.conviction) ||
+        trade.conviction < 1 ||
+        trade.conviction > 5)) ||
+    (trade.intendedHoldDays !== undefined &&
+      (!Number.isInteger(trade.intendedHoldDays) ||
+        trade.intendedHoldDays <= 0))
+  ) {
+    return false;
+  }
+
+  if (trade.type === "transferOut") return true;
+  if (trade.type === "transferIn") {
+    return (
+      trade.acquisitionCostPerUnit === undefined ||
+      (Number.isFinite(trade.acquisitionCostPerUnit) &&
+        trade.acquisitionCostPerUnit >= 0)
+    );
+  }
+
+  const fees = trade.fees ?? 0;
+  if (
     !Number.isFinite(trade.pricePerUnit) ||
     trade.pricePerUnit <= 0 ||
     !Number.isFinite(fees) ||
@@ -1206,27 +1268,65 @@ function isValidTradeRecord(trade: Trade, now: Date) {
   ) {
     return false;
   }
-
   const grossValue = decimal(trade.quantity).times(trade.pricePerUnit);
   const expectedTotal =
     trade.type === "buy" ? grossValue.plus(fees) : grossValue.minus(fees);
 
+  return isWithinQuantum(trade.totalValue, expectedTotal, moneyQuantum);
+}
+
+function isValidImportProvenance(
+  provenance: ImportedTransactionProvenance,
+  commandId: string,
+) {
   return (
-    trade.assetId.trim().length > 0 &&
-    (trade.type === "buy" || trade.type === "sell") &&
-    isWithinQuantum(trade.totalValue, expectedTotal, moneyQuantum) &&
-    Boolean(getCalendarDatePart(trade.date)) &&
-    !isFutureCalendarDate(trade.date, now) &&
-    (trade.conviction === undefined ||
-      (Number.isInteger(trade.conviction) &&
-        trade.conviction >= 1 &&
-        trade.conviction <= 5)) &&
-    (trade.intendedHoldDays === undefined ||
-      (Number.isInteger(trade.intendedHoldDays) && trade.intendedHoldDays > 0))
+    provenance.importBatchId === commandId &&
+    provenance.importBatchId.trim().length > 0 &&
+    provenance.sourceFormat.trim().length > 0 &&
+    provenance.sourceVersion.trim().length > 0 &&
+    Number.isInteger(provenance.originalRowNumber) &&
+    provenance.originalRowNumber > 0 &&
+    Boolean(provenance.fingerprint?.trim()) &&
+    (provenance.externalId === undefined ||
+      provenance.externalId.trim().length > 0) &&
+    (provenance.settlementDate === undefined ||
+      getCalendarDatePart(provenance.settlementDate) ===
+        provenance.settlementDate) &&
+    (provenance.fees === undefined ||
+      (Number.isFinite(provenance.fees) && provenance.fees >= 0)) &&
+    (provenance.taxes === undefined ||
+      (Number.isFinite(provenance.taxes) && provenance.taxes >= 0))
   );
 }
 
-function deriveTrade(input: TradeCorrectionInput): Trade {
+function transactionImportIdentity(trade: Trade) {
+  return JSON.stringify({
+    acquisitionCostPerUnit:
+      trade.type === "transferIn" ? trade.acquisitionCostPerUnit ?? null : null,
+    account: trade.importProvenance?.account?.trim().toUpperCase() ?? null,
+    assetId: trade.assetId,
+    date: trade.date,
+    externalId:
+      trade.importProvenance?.externalId?.trim().toUpperCase() ?? null,
+    fingerprint: trade.importProvenance?.fingerprint ?? null,
+    fees: trade.importProvenance?.fees ?? null,
+    notes: trade.notes ?? null,
+    originalDescription:
+      trade.importProvenance?.originalDescription ?? null,
+    pricePerUnit:
+      trade.type === "buy" || trade.type === "sell"
+        ? trade.pricePerUnit
+        : null,
+    quantity: trade.quantity,
+    settlementDate: trade.importProvenance?.settlementDate ?? null,
+    sourceFormat: trade.importProvenance?.sourceFormat ?? null,
+    sourceVersion: trade.importProvenance?.sourceVersion ?? null,
+    taxes: trade.importProvenance?.taxes ?? null,
+    type: trade.type,
+  });
+}
+
+function deriveTrade(input: TradeCorrectionInput): BuyTrade | SellTrade {
   return normalizeTrade({
     ...input,
     totalValue: 0,
@@ -1258,32 +1358,49 @@ function wouldOversellAsset(
   openingPositions: OpeningPosition[],
   trades: Trade[],
 ) {
+  const assetOpenings = openingPositions.filter(
+    (item) => item.assetId === assetId,
+  );
   const events = [
-    ...openingPositions
-      .filter((item) => item.assetId === assetId)
+    ...assetOpenings
       .map((position) => ({
         date: getOpeningPositionHistoryDate(position) ?? "",
         delta: position.quantity,
         id: position.id,
+        importBatchId: undefined as string | undefined,
+        originalRowNumber: undefined as number | undefined,
         priority: 0,
       })),
     ...trades
-      .filter((item) => item.assetId === assetId)
+      .filter(
+        (item) =>
+          item.assetId === assetId &&
+          isTransactionAfterOpeningCutover(item.date, assetOpenings),
+      )
       .map((trade) => ({
         date: getCalendarDatePart(trade.date) ?? "",
-        delta: trade.type === "buy" ? trade.quantity : -trade.quantity,
+        delta: getTradeQuantityDelta(trade),
         id: trade.id,
-        priority: trade.type === "buy" ? 1 : 2,
+        importBatchId: trade.importProvenance?.importBatchId,
+        originalRowNumber: trade.importProvenance?.originalRowNumber,
+        priority: isTradeAcquisition(trade) ? 1 : 2,
       })),
   ].filter((event) => event.date);
 
-  // V1 stores calendar dates, not intraday timestamps. Acquisitions therefore
-  // become effective before disposals on the same date, with IDs as a stable tie-break.
   events.sort(
-    (left, right) =>
-      left.date.localeCompare(right.date) ||
-      left.priority - right.priority ||
-      left.id.localeCompare(right.id),
+    (left, right) => {
+      const dateOrder = left.date.localeCompare(right.date);
+      if (dateOrder !== 0) return dateOrder;
+      if (
+        left.importBatchId &&
+        left.importBatchId === right.importBatchId &&
+        left.originalRowNumber !== undefined &&
+        right.originalRowNumber !== undefined
+      ) {
+        return left.originalRowNumber - right.originalRowNumber;
+      }
+      return left.priority - right.priority || left.id.localeCompare(right.id);
+    },
   );
 
   let units = decimal(0);
@@ -1300,6 +1417,7 @@ function linkedCashEntriesForTrade(state: PortfolioStoreState, tradeId: string) 
 }
 
 function isConsistentTradeCashLink(trade: Trade, entry: CashEntry) {
+  if (!isManualTrade(trade)) return false;
   return trade.type === "buy"
     ? entry.type === "withdrawal" && entry.purpose === "purchaseFunding"
     : entry.type === "addition" && entry.purpose === "saleProceeds";
@@ -1325,9 +1443,9 @@ function validateLinkedTrade(
   state: PortfolioStoreState,
   input: LinkedTradeCommandInput,
   trade: Trade,
-  expectedType: Trade["type"],
+  expectedType: "buy" | "sell",
 ): LinkedTradeCommandResult | null {
-  if (trade.type !== expectedType) {
+  if (!isManualTrade(trade) || trade.type !== expectedType) {
     return { isValid: false, reason: "invalidTradeType" };
   }
 
@@ -1809,6 +1927,9 @@ export function createPortfolioStore({
       const existingTrade = state.trades.find((item) => item.id === input.id);
 
       if (!existingTrade) return { reason: "notFound", status: "rejected" };
+      if (!isManualTrade(existingTrade)) {
+        return { reason: "typeMismatch", status: "rejected" };
+      }
       if (existingTrade.assetId !== input.assetId) {
         return { reason: "assetMismatch", status: "rejected" };
       }
@@ -2770,6 +2891,293 @@ export function createPortfolioStore({
 
       return { added, items: results, status: "applied", updated };
     },
+    recordTransactionImport: (input) => {
+      const state = get();
+      const currentDate = now();
+      if (!input.commandId.trim() || input.transactions.length === 0) {
+        throw new Error("Transaction import command is empty.");
+      }
+      if (input.mode !== "fullHistory" && input.mode !== "supplemental") {
+        throw new Error("Transaction import mode is invalid.");
+      }
+
+      const existingBatch = state.trades.filter(
+        (trade) =>
+          trade.importProvenance?.importBatchId === input.commandId,
+      );
+      if (existingBatch.length > 0) {
+        const expectedById = new Map(
+          input.transactions.map((trade) => [trade.id, normalizeTrade(trade)]),
+        );
+        if (
+          existingBatch.length === input.transactions.length &&
+          existingBatch.every((trade) => {
+            const expected = expectedById.get(trade.id);
+            return (
+              expected !== undefined &&
+              transactionImportIdentity(trade) ===
+                transactionImportIdentity(expected)
+            );
+          })
+        ) {
+          return {
+            added: 0,
+            removedOpeningPositions: 0,
+            status: "alreadyApplied" as const,
+            updatedCutovers: 0,
+          };
+        }
+        throw new Error("A partial transaction import batch already exists.");
+      }
+
+      const inputIds = new Set<string>();
+      const normalizedTransactions = input.transactions.map((transaction) => {
+        if (inputIds.has(transaction.id)) {
+          throw new Error("Transaction import contains duplicate record IDs.");
+        }
+        inputIds.add(transaction.id);
+        const normalized = normalizeTrade(transaction);
+        const provenance = normalized.importProvenance;
+        if (
+          !provenance ||
+          !isValidImportProvenance(provenance, input.commandId) ||
+          !isValidTradeRecord(normalized, currentDate) ||
+          (normalized.type === "transferIn" &&
+            normalized.acquisitionCostPerUnit === undefined)
+        ) {
+          throw new Error("Transaction import contains an invalid record.");
+        }
+        return normalized;
+      });
+      if (
+        normalizedTransactions.some((transaction) =>
+          state.trades.some((existing) => existing.id === transaction.id),
+        )
+      ) {
+        throw new Error("Transaction import record ID already exists.");
+      }
+
+      const identityKeys = new Map<string, string>();
+      for (const transaction of [...state.trades, ...normalizedTransactions]) {
+        const provenance = transaction.importProvenance;
+        if (!provenance) continue;
+        const keys = [
+          provenance.externalId
+            ? [
+                "external",
+                provenance.sourceFormat,
+                provenance.account?.trim().toUpperCase() ?? "",
+                provenance.externalId.trim().toUpperCase(),
+              ].join("|")
+            : undefined,
+          provenance.fingerprint
+            ? [
+                "fingerprint",
+                provenance.sourceFormat,
+                provenance.account?.trim().toUpperCase() ?? "",
+                provenance.fingerprint,
+              ].join("|")
+            : undefined,
+        ].filter((key): key is string => Boolean(key));
+        for (const key of keys) {
+          const priorId = identityKeys.get(key);
+          if (priorId && priorId !== transaction.id) {
+            throw new Error("Transaction import identity conflicts with existing data.");
+          }
+          identityKeys.set(key, transaction.id);
+        }
+      }
+
+      let assets = [...state.assets];
+      for (const rawAsset of input.assets) {
+        const candidate = normalizeAssetMetadata(rawAsset);
+        const existingById = assets.find((asset) => asset.id === candidate.id);
+        if (existingById) {
+          if (
+            candidate.isin &&
+            existingById.isin &&
+            candidate.isin !== existingById.isin
+          ) {
+            throw new Error("Transaction import asset identity conflicts with existing data.");
+          }
+          if (candidate.isin && !existingById.isin) {
+            assets = assets.map((asset) =>
+              asset.id === candidate.id ? { ...asset, isin: candidate.isin } : asset,
+            );
+          }
+          continue;
+        }
+        if (
+          getV1AssetCurrencyIssue(candidate) ||
+          hasDuplicateAssetIdentity(assets, candidate)
+        ) {
+          throw new Error("Transaction import asset identity is invalid.");
+        }
+        assets.push(candidate);
+      }
+      if (
+        normalizedTransactions.some(
+          (transaction) => !assets.some((asset) => asset.id === transaction.assetId),
+        )
+      ) {
+        throw new Error("Transaction import references an unknown asset.");
+      }
+
+      const cutoverIds = new Set<string>();
+      let openingPositions = state.openingPositions.map((position) => {
+        const update = input.cutovers.find(
+          (cutover) => cutover.openingPositionId === position.id,
+        );
+        if (!update) return position;
+        if (
+          cutoverIds.has(update.openingPositionId) ||
+          !getCalendarDatePart(update.measuredAsOf) ||
+          isFutureCalendarDate(update.measuredAsOf, currentDate)
+        ) {
+          throw new Error("Transaction import cutover is invalid.");
+        }
+        cutoverIds.add(update.openingPositionId);
+        return { ...position, measuredAsOf: update.measuredAsOf };
+      });
+      if (cutoverIds.size !== input.cutovers.length) {
+        throw new Error("Transaction import cutover references an unknown holding.");
+      }
+
+      if (input.mode === "supplemental") {
+        for (const transaction of normalizedTransactions) {
+          const baselines = openingPositions.filter(
+            (position) => position.assetId === transaction.assetId,
+          );
+          if (
+            baselines.length > 0 &&
+            !isTransactionAfterOpeningCutover(transaction.date, baselines)
+          ) {
+            throw new Error(
+              "Supplemental transactions must be after the confirmed holdings cutoff.",
+            );
+          }
+        }
+      }
+
+      const replacementIds = new Set(input.replaceOpeningPositionIds);
+      if (replacementIds.size !== input.replaceOpeningPositionIds.length) {
+        throw new Error("Transaction import contains duplicate replacements.");
+      }
+      if (input.mode === "supplemental" && replacementIds.size > 0) {
+        throw new Error("Supplemental imports cannot replace opening positions.");
+      }
+      const affectedAssetIds = new Set(
+        normalizedTransactions.map((transaction) => transaction.assetId),
+      );
+      if (
+        input.mode === "fullHistory" &&
+        openingPositions.some(
+          (position) =>
+            affectedAssetIds.has(position.assetId) &&
+            !replacementIds.has(position.id),
+        )
+      ) {
+        throw new Error(
+          "Full-history imports must exactly replace every affected opening position.",
+        );
+      }
+      if (
+        [...replacementIds].some((openingPositionId) => {
+          const position = openingPositions.find(
+            (item) => item.id === openingPositionId,
+          );
+          return !position || !affectedAssetIds.has(position.assetId);
+        })
+      ) {
+        throw new Error(
+          "Transaction import replacement does not match an affected holding.",
+        );
+      }
+      if (hasAmbiguousSameDayTransactionOrder(state.trades, normalizedTransactions)) {
+        throw new Error(
+          "Transaction import has ambiguous same-day ordering with existing data.",
+        );
+      }
+      const nextTrades = [...state.trades, ...normalizedTransactions];
+      for (const openingPositionId of replacementIds) {
+        const openingPosition = openingPositions.find(
+          (position) => position.id === openingPositionId,
+        );
+        if (!openingPosition?.measuredAsOf) {
+          throw new Error("Full-history replacement requires a confirmed cutover.");
+        }
+        const reconciliation = reconcileTransactions({
+          transactions: nextTrades.filter(
+            (trade) =>
+              trade.assetId === openingPosition.assetId &&
+              (getCalendarDatePart(trade.date) ?? trade.date) <=
+                openingPosition.measuredAsOf!,
+          ),
+        });
+        if (!matchesOpeningPosition(reconciliation, openingPosition)) {
+          throw new Error("Full-history replacement no longer matches its baseline.");
+        }
+      }
+      openingPositions = openingPositions.filter(
+        (position) => !replacementIds.has(position.id),
+      );
+
+      if (
+        [...affectedAssetIds].some((assetId) =>
+          wouldOversellAsset(assetId, openingPositions, nextTrades),
+        )
+      ) {
+        throw new Error("Transaction import would oversell a holding.");
+      }
+
+      const affectedMonths = [
+        ...normalizedTransactions.map(tradeMonth),
+        ...state.openingPositions
+          .filter((position) => replacementIds.has(position.id))
+          .map(openingPositionMonth),
+        ...input.cutovers.flatMap((cutover) => {
+          const previous = state.openingPositions.find(
+            (position) => position.id === cutover.openingPositionId,
+          );
+          return [
+            previous ? openingPositionMonth(previous) : null,
+            cutover.measuredAsOf.slice(0, 7),
+          ];
+        }),
+      ].filter((month): month is string => Boolean(month));
+      const earliestAffectedMonth = affectedMonths.sort()[0];
+      const monthlySnapshots = earliestAffectedMonth
+        ? rebuildPortfolioSnapshots({
+            assets,
+            earliestAffectedMonth,
+            now: currentDate,
+            openingPositions,
+            state,
+            trades: nextTrades,
+          }).monthlySnapshots
+        : state.monthlySnapshots;
+      const portfolio = {
+        ...selectRawSnapshot(state),
+        assets,
+        monthlySnapshots,
+        openingPositions,
+        trades: nextTrades,
+      };
+      persistAssetGraphTransition({
+        historicalQuoteCache: state.historicalQuoteCache,
+        portfolio,
+        quoteCache: state.quoteCache,
+        storage,
+      });
+      set({ assets, monthlySnapshots, openingPositions, trades: nextTrades });
+
+      return {
+        added: normalizedTransactions.length,
+        removedOpeningPositions: replacementIds.size,
+        status: "applied" as const,
+        updatedCutovers: input.cutovers.length,
+      };
+    },
     recordSaleWithProceeds: (input) => {
       const state = get();
       const invalidResult = validateLinkedTrade(
@@ -2804,9 +3212,7 @@ export function createPortfolioStore({
             .map((position) => position.quantity),
           ...state.trades
             .filter((trade) => trade.assetId === input.trade.assetId)
-            .map((trade) =>
-              trade.type === "buy" ? trade.quantity : -trade.quantity,
-            ),
+            .map(getTradeQuantityDelta),
         ]),
       );
 
@@ -2921,6 +3327,7 @@ export function createPortfolioStore({
       persistPortfolio(storage, get());
     },
     updateTrade: (trade) => {
+      if (!isManualTrade(trade)) return;
       const { totalValue: _totalValue, ...input } = trade;
       get().correctTrade(input);
     },

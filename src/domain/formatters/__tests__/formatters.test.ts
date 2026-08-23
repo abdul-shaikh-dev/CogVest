@@ -1,11 +1,17 @@
 import {
   formatCompactINR,
+  formatCurrency,
   formatDate,
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
 
 describe("formatters", () => {
+  it("formats native INR and USD values explicitly", () => {
+    expect(formatCurrency(1234.5, "INR")).toBe("₹1,234.50");
+    expect(formatCurrency(1234.5, "USD")).toBe("$1,234.50");
+  });
+
   it("formats INR values with Indian grouping", () => {
     expect(formatINR(1234567.8)).toBe("₹12,34,567.80");
   });

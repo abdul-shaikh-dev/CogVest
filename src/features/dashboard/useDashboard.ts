@@ -30,6 +30,8 @@ import {
   normalizePercentage,
   sumFinancialValues,
 } from "@/src/domain/precision";
+import { isTradeCashPurchase } from "@/src/domain/transactionSemantics";
+import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import {
   refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
@@ -138,11 +140,17 @@ function calculateMonthlyMetrics(
 ): DashboardMonthlyMetrics {
   const tradeInvestment = sumFinancialValues(
     state.trades
+      .filter(isTradeCashPurchase)
       .filter(
         (trade) =>
           supportedAssetIds.has(trade.assetId) &&
-          trade.type === "buy" &&
-          isSameMonth(trade.date, now),
+          isSameMonth(trade.date, now) &&
+          isTransactionAfterOpeningCutover(
+            trade.date,
+            state.openingPositions.filter(
+              (position) => position.assetId === trade.assetId,
+            ),
+          ),
       )
       .map((trade) => trade.totalValue),
   );

@@ -57,6 +57,12 @@ export default function E2eEvidenceScreen() {
         <EvidenceText testID="e2e-trade-count">
           Trade count: {evidence.tradeCount}
         </EvidenceText>
+        <EvidenceText testID="e2e-imported-transaction-count">
+          Imported transaction count: {evidence.importedTransactionCount}
+        </EvidenceText>
+        <EvidenceText testID="e2e-cash-entry-count">
+          Cash entry count: {evidence.cashEntryCount}
+        </EvidenceText>
         <EvidenceText testID="e2e-ppf-count">
           PPF account count: {evidence.ppfCount}
         </EvidenceText>
@@ -129,7 +135,7 @@ export default function E2eEvidenceScreen() {
               key={position.id}
               testID={`e2e-asset-${key}-position-${index}`}
             >
-              Position {index + 1}: quantity {position.quantity} | average {formatINR(position.averageCostPrice)} | date {position.date ?? "unknown"} | note {position.notes ?? "none"} | conviction {position.conviction ?? "none"}
+              Position {index + 1}: quantity {position.quantity} | average {formatINR(position.averageCostPrice)} | date {position.date ?? "unknown"} | measured {position.measuredAsOf ?? "unset"} | note {position.notes ?? "none"} | conviction {position.conviction ?? "none"}
             </EvidenceText>
           ))}
         </PremiumCard>

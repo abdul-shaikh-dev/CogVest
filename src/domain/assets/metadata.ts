@@ -1,5 +1,7 @@
 import type { Asset, InstrumentType, SectorType } from "@/src/types";
 
+import { normalizeIsin } from "./identity";
+
 export const instrumentTypeOptions: InstrumentType[] = [
   "stock",
   "etf",
@@ -141,10 +143,12 @@ export function getInstrumentTypeOptions(assetClass: Asset["assetClass"]) {
 
 export function normalizeAssetMetadata(asset: Asset): Asset {
   const defaults = getDefaultAssetMetadata(asset.assetClass);
+  const isin = normalizeIsin(asset.isin);
 
   return {
     ...asset,
     instrumentType: asset.instrumentType ?? defaults.instrumentType,
+    ...(isin === undefined ? {} : { isin }),
     quoteSourceId: asset.quoteSourceId ?? asset.ticker,
     sectorType: asset.sectorType ?? defaults.sectorType,
   };
