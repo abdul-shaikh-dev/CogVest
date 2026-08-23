@@ -1,0 +1,3 @@
+symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time
+HDFCBANK,INE040A01034,2024-01-15,NSE,EQ,EQ,buy,false,10,1000,ZV-E2E-TRADE-001,ZV-E2E-ORDER-001,2024-01-15T10:05:30
+HDFCBANK,INE040A01034,2025-02-10,NSE,EQ,EQ,buy,false,15,1750,ZV-E2E-TRADE-002,ZV-E2E-ORDER-002,2025-02-10T14:22:45

@@ -2,8 +2,37 @@
 
 CogVest V1 can import a constrained, broker-neutral transaction history from
 [`docs/templates/cogvest-transactions-v1.csv`](../templates/cogvest-transactions-v1.csv).
-It is an onboarding aid for existing portfolios, not a broker statement
-adapter, spreadsheet importer, tax-lot importer, or cash reconstruction tool.
+It can also read the current Zerodha Equity Tradebook CSV format. These are
+onboarding aids for existing portfolios, not arbitrary spreadsheet, tax-lot,
+or cash-reconstruction tools.
+
+## Zerodha Equity Tradebook
+
+1. In Zerodha Console, open **Reports → Tradebook**.
+2. Select the **Equity** segment and a date range of up to 365 days.
+3. Generate the report and download **CSV**, without editing its columns.
+4. In CogVest, choose **Zerodha Tradebook** and add each annual CSV. Expo's
+   Android picker selects one file at a time, but CogVest reviews up to ten
+   files as one ordered batch.
+5. Remove or reorder files before confirming. Repeated trades from overlapping
+   exports are detected by Zerodha's execution-level `trade_id`.
+
+V1 supports delivery-equity `buy` and `sell` rows from the proven current
+Tradebook layout. Each execution remains separate even when partial fills share
+an `order_id`. NSE/BSE equity identity, ISIN, symbol, execution timestamp, trade
+and order IDs, and local source-file provenance are retained.
+
+Zerodha stores IPO/OFS allotments, buybacks, transfers, and corporate actions
+in a separate **Equity (external trades)** report. Supplemental imports keep the
+opening balance and do not require a statement about those events. Full-history
+replacement requires an explicit confirmation that the selected account and
+date ranges had no external activity. If uncertain, use Supplemental. CogVest
+does not infer or silently ignore missing external history.
+
+Changed headers, non-equity segments or series, auction rows, unsupported trade
+types, malformed values, and unknown exchanges fail closed or remain visible
+for review. Zerodha login, API access, XLSX, intraday, MTF, F&O, commodities,
+and corporate-action reconstruction are not supported.
 
 ## Prepare The File
 
@@ -30,19 +59,20 @@ silently discard them.
 ## Import And Review
 
 1. Open the transaction-history import action from the Holdings/onboarding flow.
-2. Choose **Supplemental** to keep existing opening balances and add only
+2. Choose **CogVest CSV** or **Zerodha Tradebook** before selecting files.
+3. Choose **Supplemental** to keep existing opening balances and add only
    transactions after their measured-as-of date.
-3. Choose **Full history** only when the file contains the complete history for
+4. Choose **Full history** only when the file contains the complete history for
    an affected holding and you want to reconcile it against the opening balance.
-4. Save the template from the app if needed, then choose the completed CSV
+5. Save the CogVest template from the app if needed, then choose the completed CSV
    through Android's document picker.
-5. Select the intended asset whenever lookup returns multiple results. Provider
+6. Select the intended asset whenever lookup returns multiple results. Provider
    results are never selected silently.
-6. Confirm **Holdings measured as of** for each existing opening position. One
+7. Confirm **Holdings measured as of** for each existing opening position. One
    shared date can be used, with a per-holding correction when required.
-7. Read the dry-run totals, duplicate/conflict messages, unsupported rows, and
+8. Read the dry-run totals, duplicate/conflict messages, unsupported rows, and
    per-holding reconciliation before confirming the import.
-8. Confirm only when the review is correct. The batch is atomic; a validation,
+9. Confirm only when the review is correct. The batch is atomic; a validation,
    reconciliation, or persistence failure imports nothing.
 
 Supplemental imports reject rows on or before the cutover so the opening
@@ -60,7 +90,9 @@ events together rather than letting CogVest guess.
 - Current quote values are ignored by the CSV import. Quotes are refreshed or
   entered manually through the normal quote workflow after import.
 - Imported transactions retain source/version, batch, row, fingerprint, and
-  supplied external/account/description/fees/taxes metadata.
+  supplied external/account/description/fees/taxes metadata. Zerodha imports
+  additionally retain local file, execution, order, exchange, segment, and
+  symbol provenance.
 - Repeating the same file is idempotent. A changed row with an existing external
   ID or fingerprint is a conflict and blocks the batch.
 - Historical imports never create, modify, or reconstruct Cash Ledger entries.

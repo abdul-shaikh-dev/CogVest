@@ -97,7 +97,9 @@ function plan(input: {
   openingPositions?: OpeningPosition[];
   resolutions: TransactionCsvResolution[];
   sharedCutover?: string;
+  sourceCoverageConfirmed?: boolean;
   trades?: Trade[];
+  unsupportedCount?: number;
 }) {
   return buildTransactionImportPlan({
     batchId: "batch-1",
@@ -105,15 +107,97 @@ function plan(input: {
     now: new Date("2026-08-23T00:00:00.000Z"),
     resolutions: input.resolutions,
     sharedCutover: input.sharedCutover,
+    sourceCoverageConfirmed: input.sourceCoverageConfirmed,
     state: state({
       assets: input.assets,
       openingPositions: input.openingPositions,
       trades: input.trades,
     }),
+    unsupportedCount: input.unsupportedCount,
   });
 }
 
 describe("transaction import planner", () => {
+  it("keeps distinct executions when reliable external IDs differ", () => {
+    const first = resolution(
+      csvRow({
+        date: "2025-04-01",
+        externalId: "trade-1",
+        price: "100",
+        quantity: "1",
+        type: "buy",
+      }),
+    );
+    const second = resolution(
+      csvRow({
+        date: "2025-04-01",
+        externalId: "trade-2",
+        price: "100",
+        quantity: "1",
+        type: "buy",
+      }),
+    );
+
+    const result = plan({
+      mode: "supplemental",
+      resolutions: [first, second],
+      sharedCutover: "2025-03-01",
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.command?.transactions).toHaveLength(2);
+  });
+
+  it("blocks Zerodha full-history replacement until source coverage is confirmed", () => {
+    const row = resolution(
+      csvRow({
+        date: "2024-01-01",
+        externalId: "exchange-trade-1",
+        price: "100",
+        quantity: "10",
+        type: "buy",
+      }),
+    );
+    row.row.source = {
+      format: "zerodha-tradebook",
+      version: "eq-v1",
+    };
+
+    const missing = plan({
+      mode: "fullHistory",
+      resolutions: [row],
+      sharedCutover: "2025-01-01",
+    });
+    expect(missing.command).toBeUndefined();
+    expect(missing.errors).toContainEqual(
+      expect.objectContaining({ code: "missingSourceCoverage" }),
+    );
+
+    const confirmed = plan({
+      mode: "fullHistory",
+      resolutions: [row],
+      sharedCutover: "2025-01-01",
+      sourceCoverageConfirmed: true,
+    });
+    expect(confirmed.errors).toEqual([]);
+    expect(confirmed.command?.sourceCoverage).toEqual({
+      externalActivity: "noneConfirmed",
+      sourceFormat: "zerodha-tradebook",
+    });
+
+    const unsupported = plan({
+      mode: "fullHistory",
+      resolutions: [row],
+      sharedCutover: "2025-01-01",
+      sourceCoverageConfirmed: true,
+      unsupportedCount: 1,
+    });
+    expect(unsupported.command).toBeUndefined();
+    expect(unsupported.errors).toContainEqual(
+      expect.objectContaining({ code: "unsupportedSourceEvents" }),
+    );
+  });
+
   it("requires an explicit cutover and rejects supplemental pre-cutover rows", () => {
     const row = resolution(csvRow({ date: "2025-02-01", price: "100", quantity: "1", type: "buy" }));
     const missing = plan({ mode: "supplemental", resolutions: [row] });
@@ -131,6 +215,29 @@ describe("transaction import planner", () => {
     expect(preCutover.errors).toEqual([
       expect.objectContaining({ code: "preCutoverTransaction", rowNumber: 2 }),
     ]);
+  });
+
+  it("treats a same-day execution timestamp as pre-cutover", () => {
+    const row = resolution(
+      csvRow({
+        date: "2025-03-01",
+        price: "100",
+        quantity: "1",
+        type: "buy",
+      }),
+    );
+    row.row = { ...row.row, tradeDate: "2025-03-01T10:00:00" };
+
+    const result = plan({
+      mode: "supplemental",
+      resolutions: [row],
+      sharedCutover: "2025-03-01",
+    });
+
+    expect(result.command).toBeUndefined();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "preCutoverTransaction", rowNumber: 2 }),
+    );
   });
 
   it("keeps the baseline and stages only post-cutover supplemental activity", () => {
@@ -374,6 +481,52 @@ describe("transaction import planner", () => {
     expect(result.errors).toEqual([
       expect.objectContaining({ code: "conflictingIdentity" }),
     ]);
+  });
+
+  it("treats changed execution provenance as a conflicting external-ID reuse", () => {
+    const original = resolution(
+      csvRow({
+        date: "2025-04-01",
+        externalId: "trade-1",
+        price: "120",
+        quantity: "2",
+        type: "buy",
+      }),
+    );
+    original.row = { ...original.row, tradeDate: "2025-04-01T10:00:00" };
+    original.row.source = {
+      exchange: "NSE",
+      executedAt: "2025-04-01T10:00:00",
+      format: "zerodha-tradebook",
+      orderId: "order-1",
+      segment: "EQ",
+      symbol: "EXAMPLE",
+      version: "eq-v1",
+    };
+    const first = plan({
+      mode: "supplemental",
+      resolutions: [original],
+      sharedCutover: "2025-03-01",
+    });
+    const changed: TransactionCsvResolution = {
+      ...original,
+      row: {
+        ...original.row,
+        source: { ...original.row.source!, orderId: "order-corrected" },
+      },
+    };
+
+    const result = plan({
+      mode: "supplemental",
+      resolutions: [changed],
+      sharedCutover: "2025-03-01",
+      trades: [first.command!.transactions[0]],
+    });
+
+    expect(result.command).toBeUndefined();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "conflictingIdentity" }),
+    );
   });
 
   it("treats metadata corrections without an external ID as fingerprint conflicts", () => {

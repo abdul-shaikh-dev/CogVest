@@ -14,6 +14,10 @@ describe("transaction CSV parser", () => {
     );
 
     expect(result.errors).toEqual([]);
+    expect(result.rows[0]?.source).toEqual({
+      format: "cogvest-transactions",
+      version: "1",
+    });
     expect(result.rows[0]).toEqual(
       expect.objectContaining({
         description: 'Buy, "quoted"',

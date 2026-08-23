@@ -236,6 +236,10 @@ export type TransactionImportCommandInput = {
   cutovers: Array<{ measuredAsOf: string; openingPositionId: string }>;
   mode: "fullHistory" | "supplemental";
   replaceOpeningPositionIds: string[];
+  sourceCoverage?: {
+    externalActivity: "noneConfirmed";
+    sourceFormat: string;
+  };
   transactions: Trade[];
 };
 
@@ -1292,6 +1296,21 @@ function isValidImportProvenance(
     (provenance.settlementDate === undefined ||
       getCalendarDatePart(provenance.settlementDate) ===
         provenance.settlementDate) &&
+    (provenance.sourceExchange === undefined ||
+      provenance.sourceExchange.trim().length > 0) &&
+    (provenance.sourceExecutedAt === undefined ||
+      provenance.sourceExecutedAt.trim().length > 0) &&
+    (provenance.sourceFileIndex === undefined ||
+      (Number.isInteger(provenance.sourceFileIndex) &&
+        provenance.sourceFileIndex >= 0)) &&
+    (provenance.sourceFileName === undefined ||
+      provenance.sourceFileName.trim().length > 0) &&
+    (provenance.sourceOrderId === undefined ||
+      provenance.sourceOrderId.trim().length > 0) &&
+    (provenance.sourceSegment === undefined ||
+      provenance.sourceSegment.trim().length > 0) &&
+    (provenance.sourceSymbol === undefined ||
+      provenance.sourceSymbol.trim().length > 0) &&
     (provenance.fees === undefined ||
       (Number.isFinite(provenance.fees) && provenance.fees >= 0)) &&
     (provenance.taxes === undefined ||
@@ -1319,7 +1338,14 @@ function transactionImportIdentity(trade: Trade) {
         : null,
     quantity: trade.quantity,
     settlementDate: trade.importProvenance?.settlementDate ?? null,
+    sourceExchange: trade.importProvenance?.sourceExchange ?? null,
+    sourceExecutedAt: trade.importProvenance?.sourceExecutedAt ?? null,
+    sourceFileIndex: trade.importProvenance?.sourceFileIndex ?? null,
+    sourceFileName: trade.importProvenance?.sourceFileName ?? null,
     sourceFormat: trade.importProvenance?.sourceFormat ?? null,
+    sourceOrderId: trade.importProvenance?.sourceOrderId ?? null,
+    sourceSegment: trade.importProvenance?.sourceSegment ?? null,
+    sourceSymbol: trade.importProvenance?.sourceSymbol ?? null,
     sourceVersion: trade.importProvenance?.sourceVersion ?? null,
     taxes: trade.importProvenance?.taxes ?? null,
     type: trade.type,
@@ -2900,6 +2926,20 @@ export function createPortfolioStore({
       if (input.mode !== "fullHistory" && input.mode !== "supplemental") {
         throw new Error("Transaction import mode is invalid.");
       }
+      const includesZerodha = input.transactions.some(
+        (transaction) =>
+          transaction.importProvenance?.sourceFormat === "zerodha-tradebook",
+      );
+      if (
+        input.mode === "fullHistory" &&
+        includesZerodha &&
+        (input.sourceCoverage?.sourceFormat !== "zerodha-tradebook" ||
+          input.sourceCoverage.externalActivity !== "noneConfirmed")
+      ) {
+        throw new Error(
+          "Zerodha full-history import requires external-activity coverage confirmation.",
+        );
+      }
 
       const existingBatch = state.trades.filter(
         (trade) =>
@@ -2961,24 +3001,25 @@ export function createPortfolioStore({
       for (const transaction of [...state.trades, ...normalizedTransactions]) {
         const provenance = transaction.importProvenance;
         if (!provenance) continue;
-        const keys = [
-          provenance.externalId
+        const keys = provenance.externalId
+          ? [
+              [
+                  "external",
+                  provenance.sourceFormat,
+                  provenance.account?.trim().toUpperCase() ?? "",
+                  provenance.externalId.trim().toUpperCase(),
+              ].join("|"),
+            ]
+          : provenance.fingerprint
             ? [
-                "external",
-                provenance.sourceFormat,
-                provenance.account?.trim().toUpperCase() ?? "",
-                provenance.externalId.trim().toUpperCase(),
-              ].join("|")
-            : undefined,
-          provenance.fingerprint
-            ? [
-                "fingerprint",
-                provenance.sourceFormat,
-                provenance.account?.trim().toUpperCase() ?? "",
-                provenance.fingerprint,
-              ].join("|")
-            : undefined,
-        ].filter((key): key is string => Boolean(key));
+                [
+                    "fingerprint",
+                    provenance.sourceFormat,
+                    provenance.account?.trim().toUpperCase() ?? "",
+                    provenance.fingerprint,
+                ].join("|"),
+              ]
+            : [];
         for (const key of keys) {
           const priorId = identityKeys.get(key);
           if (priorId && priorId !== transaction.id) {

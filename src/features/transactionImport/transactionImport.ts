@@ -41,9 +41,11 @@ export type TransactionImportPlanError = {
     | "futureDate"
     | "invalidCutover"
     | "missingCutover"
+    | "missingSourceCoverage"
     | "multipleBaselines"
     | "preCutoverTransaction"
     | "reconciliationMismatch"
+    | "unsupportedSourceEvents"
     | "unresolvedAsset"
     | "unresolvedTransfer"
     | "wouldOversell";
@@ -81,6 +83,7 @@ type BuildTransactionImportPlanInput = {
   now?: Date;
   resolutions: TransactionCsvResolution[];
   sharedCutover?: string;
+  sourceCoverageConfirmed?: boolean;
   state: PortfolioStoreState;
   unsupportedCount?: number;
 };
@@ -142,6 +145,11 @@ function materialTransactionKey(transaction: Trade) {
           fees: provenance.fees ?? null,
           originalDescription: provenance.originalDescription ?? null,
           settlementDate: provenance.settlementDate ?? null,
+          sourceExchange: provenance.sourceExchange ?? null,
+          sourceExecutedAt: provenance.sourceExecutedAt ?? null,
+          sourceOrderId: provenance.sourceOrderId ?? null,
+          sourceSegment: provenance.sourceSegment ?? null,
+          sourceSymbol: provenance.sourceSymbol ?? null,
           taxes: provenance.taxes ?? null,
         }
       : null,
@@ -199,14 +207,26 @@ function transactionFromRow(
     ...(row.description ? { originalDescription: row.description } : {}),
     originalRowNumber: row.rowNumber,
     ...(row.settlementDate ? { settlementDate: row.settlementDate } : {}),
-    sourceFormat: transactionImportSourceFormat,
-    sourceVersion: transactionImportSourceVersion,
+    ...(row.source?.exchange ? { sourceExchange: row.source.exchange } : {}),
+    ...(row.source?.executedAt ? { sourceExecutedAt: row.source.executedAt } : {}),
+    ...(row.source?.fileIndex === undefined
+      ? {}
+      : { sourceFileIndex: row.source.fileIndex }),
+    ...(row.source?.fileName ? { sourceFileName: row.source.fileName } : {}),
+    sourceFormat: row.source?.format ?? transactionImportSourceFormat,
+    ...(row.source?.orderId ? { sourceOrderId: row.source.orderId } : {}),
+    ...(row.source?.segment ? { sourceSegment: row.source.segment } : {}),
+    ...(row.source?.symbol ? { sourceSymbol: row.source.symbol } : {}),
+    sourceVersion: row.source?.version ?? transactionImportSourceVersion,
     ...(row.taxes === undefined ? {} : { taxes: row.taxes }),
   };
   const base = {
     assetId,
     date: row.tradeDate,
-    id: `${batchId}:row-${row.rowNumber}`,
+    id:
+      row.source?.fileIndex === undefined
+        ? `${batchId}:row-${row.rowNumber}`
+        : `${batchId}:file-${row.source.fileIndex}:row-${row.rowNumber}`,
     importProvenance,
     ...(row.notes ? { notes: row.notes } : {}),
     quantity: row.quantity,
@@ -267,6 +287,7 @@ export function buildTransactionImportPlan({
   now = new Date(),
   resolutions,
   sharedCutover,
+  sourceCoverageConfirmed = false,
   state,
   unsupportedCount = 0,
 }: BuildTransactionImportPlanInput): TransactionImportPlan {
@@ -403,7 +424,7 @@ export function buildTransactionImportPlan({
       const stagedFingerprintMatch = stagedFingerprints.get(fingerprintKey);
       const fingerprintMatch =
         existingFingerprintMatch ?? stagedFingerprintMatch;
-      const match = externalMatch ?? fingerprintMatch;
+      const match = externalKey ? externalMatch : fingerprintMatch;
 
       if (match) {
         const exact = materialTransactionKey(match) === materialTransactionKey(item.transaction);
@@ -503,7 +524,9 @@ export function buildTransactionImportPlan({
     let replacementExact = false;
 
     if (mode === "supplemental" && baseline) {
-      const preCutover = items.filter((item) => item.row.tradeDate <= cutover!);
+      const preCutover = items.filter(
+        (item) => transactionCalendarDate(item.transaction) <= cutover!,
+      );
       if (preCutover.length > 0) {
         for (const item of preCutover) {
           errors.push({
@@ -581,6 +604,25 @@ export function buildTransactionImportPlan({
     });
   }
 
+  const includesZerodha = additions.some(
+    (transaction) =>
+      transaction.importProvenance?.sourceFormat === "zerodha-tradebook",
+  );
+  if (mode === "fullHistory" && includesZerodha && !sourceCoverageConfirmed) {
+    errors.push({
+      code: "missingSourceCoverage",
+      message:
+        "Confirm that this account and date range had no Zerodha external trades before replacing opening balances.",
+    });
+  }
+  if (mode === "fullHistory" && includesZerodha && unsupportedCount > 0) {
+    errors.push({
+      code: "unsupportedSourceEvents",
+      message:
+        "Resolve or exclude unsupported Zerodha events before replacing opening balances.",
+    });
+  }
+
   const summary = {
     additions: additions.length,
     affectedHoldings: holdings.length,
@@ -597,6 +639,16 @@ export function buildTransactionImportPlan({
       cutovers,
       mode,
       replaceOpeningPositionIds,
+      ...(mode === "fullHistory" &&
+      sourceCoverageConfirmed &&
+      includesZerodha
+        ? {
+            sourceCoverage: {
+              externalActivity: "noneConfirmed" as const,
+              sourceFormat: "zerodha-tradebook",
+            },
+          }
+        : {}),
       transactions: additions,
     },
     conflicts,

@@ -35,6 +35,7 @@ export const visualQaAssets: Asset[] = [
     exchange: "NSE",
     id: "visual-qa-asset-hdfc",
     instrumentType: "stock",
+    isin: "INE040A01034",
     name: "HDFC Bank",
     quoteSourceId: "HDFCBANK.NS",
     sectorType: "financialServices",

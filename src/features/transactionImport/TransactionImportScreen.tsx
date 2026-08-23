@@ -13,6 +13,7 @@ import {
 } from "@/src/components/common";
 import { DatePickerField } from "@/src/components/forms";
 import { formatCurrency } from "@/src/domain/formatters";
+import { transactionImportSources } from "@/src/domain/transactionImportSources";
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import type { PortfolioStoreState, TransactionImportCommandResult } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
@@ -59,19 +60,57 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       />
 
       <PremiumCard style={styles.card}>
-        <SectionHeader title="Choose the import" />
-        <AppText color="secondary">Import historical buys, sells, and costed transfers. CogVest will never recreate historical Cash Ledger entries.</AppText>
+        <SectionHeader title="Choose a source" />
+        <AppText color="secondary">Files stay on this device. Select the export format before adding history.</AppText>
         <View style={styles.modeRow}>
-          <ModeButton active={controller.mode === "supplemental"} description="Keep your opening balances; add only later activity." onPress={() => controller.setMode("supplemental")} testID="transaction-import-mode-supplemental" title="Supplemental" />
-          <ModeButton active={controller.mode === "fullHistory"} description="Replace an opening balance only after exact reconciliation." onPress={() => controller.setMode("fullHistory")} testID="transaction-import-mode-full-history" title="Full history" />
+          {transactionImportSources.map((source) => (
+            <ModeButton
+              active={controller.sourceId === source.id}
+              description={source.description}
+              key={source.id}
+              onPress={() => controller.setSourceId(source.id)}
+              testID={`transaction-import-source-${source.id}`}
+              title={source.label}
+            />
+          ))}
         </View>
-        <AppText color="secondary" variant="caption">Up to {controller.maxRows} rows and 1 MB. Unsupported events are listed for review and never guessed.</AppText>
-        <AppButton disabled={!props.saveCsvTemplate || isSavingTemplate || controller.isResolving || controller.isSaving} onPress={saveTemplate} testID="save-transaction-csv-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
-        {templateStatus ? <AppText color="secondary" testID="transaction-csv-template-status" variant="caption">{templateStatus}</AppText> : null}
-        <AppButton disabled={controller.isResolving || controller.isSaving} onPress={controller.selectFile} testID="select-transaction-csv" title={controller.fileName ? "Choose another CSV" : "Choose CSV"} />
+        <View style={styles.divider} />
+        <SectionHeader title="How should history be applied?" />
+        <View style={styles.modeRow}>
+          <ModeButton
+            active={controller.mode === "supplemental"}
+            description="Keep your opening balances; add only later activity."
+            onPress={() => controller.setMode("supplemental")}
+            testID="transaction-import-mode-supplemental"
+            title="Supplemental"
+          />
+          <ModeButton
+            active={controller.mode === "fullHistory"}
+            description="Replace an opening balance only after exact reconciliation."
+            onPress={() => controller.setMode("fullHistory")}
+            testID="transaction-import-mode-full-history"
+            title="Full history"
+          />
+        </View>
+        <AppText color="secondary" variant="caption">Each file can contain up to {controller.maxRows} rows and 1 MB. Unsupported events stay visible and are never guessed.</AppText>
+        {controller.sourceId === "cogvestCsvV1" ? <>
+          <AppButton disabled={!props.saveCsvTemplate || isSavingTemplate || controller.isResolving || controller.isSaving} onPress={saveTemplate} testID="save-transaction-csv-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
+          {templateStatus ? <AppText color="secondary" testID="transaction-csv-template-status" variant="caption">{templateStatus}</AppText> : null}
+        </> : <AppText color="secondary" variant="caption">Console exports at most 365 days per Tradebook. Add up to {controller.maxFiles} annual files; overlapping trades are detected before import.</AppText>}
+        {controller.files.length > 0 ? <View style={styles.fileList}>
+          {controller.files.map((file, index) => <View key={file.id} style={styles.fileRow} testID={`transaction-import-file-${index}`}>
+            <View style={styles.fileDetails}>
+              <AppText numberOfLines={1} weight="bold">{index + 1}. {file.name}</AppText>
+              <AppText color="secondary" variant="caption">{Math.max(1, Math.ceil(file.size / 1024))} KB</AppText>
+            </View>
+            {index > 0 ? <IconButton accessibilityLabel={`Move ${file.name} earlier`} icon="chevron-up" onPress={() => controller.moveFile(file.id, -1)} testID={`transaction-import-file-${index}-up`} /> : null}
+            {index < controller.files.length - 1 ? <IconButton accessibilityLabel={`Move ${file.name} later`} icon="chevron-down" onPress={() => controller.moveFile(file.id, 1)} testID={`transaction-import-file-${index}-down`} /> : null}
+            <IconButton accessibilityLabel={`Remove ${file.name}`} icon="trash-outline" onPress={() => controller.removeFile(file.id)} testID={`transaction-import-file-${index}-remove`} />
+          </View>)}
+        </View> : null}
+        <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={controller.selectFile} testID="select-transaction-csv" title={controller.sourceId === "zerodhaTradebookEqV1" ? (controller.files.length > 0 ? "Add another Tradebook" : "Add Tradebook CSV") : (controller.files.length > 0 ? "Choose another CSV" : "Choose CSV")} />
       </PremiumCard>
 
-      {controller.fileName ? <AppText color="secondary" variant="caption">Selected: {controller.fileName}</AppText> : null}
       {controller.isResolving ? <PremiumCard testID="transaction-import-resolving"><AppText weight="bold">Checking transaction rows and matching holdings...</AppText><AppText color="secondary" variant="caption">Nothing changes until you confirm the dry run.</AppText></PremiumCard> : null}
       {controller.screenError ? <ErrorCard message={controller.screenError} testID="transaction-import-screen-error" /> : null}
       {controller.parseErrors.map((error, index) => <ErrorCard key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
@@ -98,17 +137,33 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         {affectedWithoutCutover.filter(({ position }) => position.measuredAsOf || controller.sharedCutover).map(({ asset, position }) => <DatePickerField key={position.id} label={`${asset.name} measured as of`} maximumDate={controller.today} onChange={(value) => controller.setCutover(position.id, value)} testID={`transaction-import-cutover-${position.id}`} value={controller.cutoverByOpeningPositionId[position.id] ?? position.measuredAsOf ?? controller.sharedCutover} />)}
       </PremiumCard> : null}
 
+      {controller.sourceId === "zerodhaTradebookEqV1" && controller.mode === "fullHistory" && controller.files.length > 0 ? <PremiumCard style={styles.card} testID="transaction-import-source-coverage">
+        <SectionHeader title="Confirm history coverage" />
+        <AppText color="secondary">Zerodha stores IPO/OFS allotments, buybacks, transfers, and corporate actions outside the normal Tradebook.</AppText>
+        <Pressable
+          accessibilityLabel="Confirm no Zerodha external activity"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: controller.externalActivityConfirmed }}
+          onPress={() => controller.setExternalActivityConfirmed(!controller.externalActivityConfirmed)}
+          style={({ pressed }) => [styles.coverageControl, controller.externalActivityConfirmed && styles.coverageControlSelected, pressed && styles.pressed]}
+          testID="transaction-import-no-external-activity"
+        >
+          <AppText color={controller.externalActivityConfirmed ? "primary" : "secondary"} weight="bold">I confirm these date ranges had no external trades or corporate actions.</AppText>
+        </Pressable>
+        <AppText color="secondary" variant="caption">If that is uncertain, use Supplemental so existing opening balances stay intact.</AppText>
+      </PremiumCard> : null}
+
       {controller.groups.length > 0 || controller.unsupportedEvents.length > 0 ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
         <SectionHeader title="Review before importing" />
         <View style={styles.summaryGrid}>
-          <Summary label="New transactions" value={`${controller.plan.summary.additions}`} />
-          <Summary label="Duplicate rows" value={`${controller.plan.duplicates}`} />
-          <Summary label="Conflicts" value={`${controller.plan.conflicts}`} />
-          <Summary label="Unsupported" value={`${controller.unsupportedCount}`} />
+          <Summary label="New transactions" testID="transaction-import-summary-additions" value={`${controller.plan.summary.additions}`} />
+          <Summary label="Duplicate rows" testID="transaction-import-summary-duplicates" value={`${controller.plan.duplicates}`} />
+          <Summary label="Conflicts" testID="transaction-import-summary-conflicts" value={`${controller.plan.conflicts}`} />
+          <Summary label="Unsupported" testID="transaction-import-summary-unsupported" value={`${controller.unsupportedCount}`} />
         </View>
         {controller.unsupportedEvents.length > 0 ? <View style={styles.unsupported}>
           <AppText color="secondary" variant="caption" weight="bold">Skipped unsupported events</AppText>
-          {controller.unsupportedEvents.map((event) => <AppText key={`${event.rowNumber}-${event.transactionType}`} color="secondary" variant="caption">Row {event.rowNumber}: {event.transactionType}</AppText>)}
+          {controller.unsupportedEvents.map((event) => <AppText key={`${event.rowNumber}-${event.transactionType}`} color="secondary" variant="caption">Row {event.rowNumber}: {event.transactionType}{event.reason ? ` • ${event.reason}` : ""}</AppText>)}
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
         <AppText color="secondary" variant="caption">Cash Ledger is unchanged. Fees and taxes stay with imported transaction metadata; V1 does not calculate tax lots.</AppText>
@@ -129,8 +184,25 @@ function ModeButton({ active, description, onPress, testID, title }: { active: b
   return <Pressable accessibilityRole="radio" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.modeButton, active && styles.modeButtonActive]} testID={testID}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></Pressable>;
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
-  return <View style={styles.summary}><AppText color="secondary" variant="caption">{label}</AppText><AppText weight="bold">{value}</AppText></View>;
+function Summary({
+  label,
+  testID,
+  value,
+}: {
+  label: string;
+  testID: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.summary}>
+      <AppText color="secondary" variant="caption">
+        {label}
+      </AppText>
+      <AppText testID={testID} weight="bold">
+        {value}
+      </AppText>
+    </View>
+  );
 }
 
 function ErrorCard({ message, testID }: { message: string; testID?: string }) {
@@ -140,11 +212,18 @@ function ErrorCard({ message, testID }: { message: string; testID?: string }) {
 const styles = StyleSheet.create({
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   card: { gap: spacing.md },
+  coverageControl: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minHeight: 56, padding: spacing.md },
+  coverageControlSelected: { borderColor: colors.primary, borderWidth: 1 },
+  divider: { backgroundColor: colors.border.subtle, height: StyleSheet.hairlineWidth },
   error: { color: colors.loss },
+  fileDetails: { flex: 1, gap: spacing.xs },
+  fileList: { gap: spacing.sm },
+  fileRow: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.xs, minHeight: 64, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   holdingPreview: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingTop: spacing.sm },
   modeButton: { backgroundColor: colors.surface.elevated, borderRadius: radii.card, flex: 1, gap: spacing.xs, minHeight: 96, padding: spacing.md },
   modeButtonActive: { borderColor: colors.primary, borderWidth: 1 },
   modeRow: { flexDirection: "row", gap: spacing.sm },
+  pressed: { opacity: 0.78 },
   section: { gap: spacing.cardGap },
   summary: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
