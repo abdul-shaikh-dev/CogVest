@@ -1,0 +1,173 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace with visual QA data"
+    timeout: 10000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible:
+      id: "visual-qa-seed-screen"
+    timeout: 10000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: "transaction-import-screen"
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-source-zerodhaTradebookEqV1"
+- tapOn:
+    id: "transaction-import-mode-full-history"
+- tapOn:
+    id: "select-transaction-csv"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 5000
+- tapOn:
+    text: "Downloads"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "zerodha-tradebook-2024.csv"
+    timeout: 10000
+- tapOn: "zerodha-tradebook-2024.csv"
+- extendedWaitUntil:
+    visible: "Add another Tradebook"
+    timeout: 15000
+- tapOn:
+    id: "select-transaction-csv"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 5000
+- tapOn:
+    text: "Downloads"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "zerodha-tradebook-2025.csv"
+    timeout: 10000
+- tapOn: "zerodha-tradebook-2025.csv"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-shared-cutover"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-shared-cutover"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-no-external-activity"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-no-external-activity"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-dry-run"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "transaction-import-summary-additions"
+    text: "2"
+- assertVisible:
+    id: "transaction-import-summary-duplicates"
+    text: "1"
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- scrollUntilVisible:
+    element:
+      text: "Confirm transaction import"
+    direction: DOWN
+    centerElement: false
+    visibilityPercentage: 50
+    timeout: 10000
+- takeScreenshot:
+    path: zerodha-tradebook-import-preview
+- tapOn:
+    text: "Confirm transaction import"
+- extendedWaitUntil:
+    visible:
+      id: "holdings-screen"
+    timeout: 10000
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-evidence-screen"
+    timeout: 10000
+- assertVisible: "Trade count: 2"
+- assertVisible: "Imported transaction count: 2"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Opening position count: 3"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-hdfcbank-ns-values"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "Values: invested ₹36,250.00 | current ₹41,956.25 | quantity 25"
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: "transaction-import-screen"
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-source-zerodhaTradebookEqV1"
+- tapOn:
+    id: "transaction-import-mode-full-history"
+- tapOn:
+    id: "select-transaction-csv"
+- tapOn: "Show roots"
+- tapOn: "Downloads"
+- tapOn: "zerodha-tradebook-2024.csv"
+- extendedWaitUntil:
+    visible: "Add another Tradebook"
+    timeout: 15000
+- tapOn:
+    id: "select-transaction-csv"
+- tapOn: "Show roots"
+- tapOn: "Downloads"
+- tapOn: "zerodha-tradebook-2025.csv"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-no-external-activity"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-no-external-activity"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-dry-run"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "transaction-import-summary-additions"
+    text: "0"
+- assertVisible:
+    id: "transaction-import-summary-duplicates"
+    text: "3"
+- scrollUntilVisible:
+    element:
+      id: "confirm-transaction-import"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-evidence-screen"
+    timeout: 10000
+- assertVisible: "Trade count: 2"
+- assertVisible: "Imported transaction count: 2"

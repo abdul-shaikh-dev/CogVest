@@ -54,7 +54,12 @@ function importedTrade(input: Partial<Trade> = {}): Trade {
       fingerprint: "fingerprint-1",
       importBatchId: "batch-1",
       originalRowNumber: 2,
+      sourceExchange: "NSE",
+      sourceExecutedAt: "2025-04-01T10:00:00",
       sourceFormat: "cogvest-transactions",
+      sourceOrderId: "exchange-order-1",
+      sourceSegment: "EQ",
+      sourceSymbol: "EXAMPLE",
       sourceVersion: "1",
     },
     pricePerUnit: 120,
@@ -121,6 +126,9 @@ describe("transaction import persistence", () => {
     expect(restarted.getState().schemaVersion).toBe(portfolioSchemaVersion);
     expect(restarted.getState().cashEntries).toEqual(cashBefore);
     expect(restarted.getState().trades).toEqual([importedTrade()]);
+    expect(restarted.getState().recordTransactionImport(command).status).toBe(
+      "alreadyApplied",
+    );
   });
 
   it("independently rejects supplemental transactions at or before the cutoff", () => {
@@ -256,6 +264,76 @@ describe("transaction import persistence", () => {
     );
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().cashEntries).toEqual([cashEntry]);
+  });
+
+  it("requires source coverage before replacing a baseline from Zerodha history", () => {
+    const { store } = seedStore();
+    const zerodhaTrade = importedTrade({
+      date: "2024-01-01T10:00:00",
+      importProvenance: {
+        externalId: "exchange-trade-1",
+        fingerprint: "fingerprint-1",
+        importBatchId: "batch-1",
+        originalRowNumber: 2,
+        sourceFormat: "zerodha-tradebook",
+        sourceVersion: "eq-v1",
+      },
+      pricePerUnit: 100,
+      quantity: 10,
+      totalValue: 1000,
+    });
+    const command: TransactionImportCommandInput = {
+      assets: [asset],
+      commandId: "batch-1",
+      cutovers: [
+        { measuredAsOf: "2025-03-01", openingPositionId: openingPosition.id },
+      ],
+      mode: "fullHistory",
+      replaceOpeningPositionIds: [openingPosition.id],
+      transactions: [zerodhaTrade],
+    };
+
+    expect(() => store.getState().recordTransactionImport(command)).toThrow(
+      "external-activity coverage confirmation",
+    );
+    expect(store.getState().trades).toEqual([]);
+
+    expect(
+      store.getState().recordTransactionImport({
+        ...command,
+        sourceCoverage: {
+          externalActivity: "noneConfirmed",
+          sourceFormat: "zerodha-tradebook",
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({ removedOpeningPositions: 1, status: "applied" }),
+    );
+  });
+
+  it("keeps distinct executions with different reliable external IDs", () => {
+    const { store } = seedStore();
+    const second = importedTrade({
+      id: "batch-1:row-3",
+      importProvenance: {
+        ...importedTrade().importProvenance!,
+        externalId: "order-2",
+        originalRowNumber: 3,
+      },
+    });
+
+    expect(
+      store.getState().recordTransactionImport({
+        assets: [asset],
+        commandId: "batch-1",
+        cutovers: [
+          { measuredAsOf: "2025-03-01", openingPositionId: openingPosition.id },
+        ],
+        mode: "supplemental",
+        replaceOpeningPositionIds: [],
+        transactions: [importedTrade(), second],
+      }),
+    ).toEqual(expect.objectContaining({ added: 2, status: "applied" }));
   });
 
   it("rejects a full-history command that leaves an affected baseline in place", () => {

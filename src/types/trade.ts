@@ -13,7 +13,14 @@ export type ImportedTransactionProvenance = {
   originalDescription?: string;
   originalRowNumber: number;
   settlementDate?: string;
+  sourceExchange?: string;
+  sourceExecutedAt?: string;
+  sourceFileIndex?: number;
+  sourceFileName?: string;
   sourceFormat: string;
+  sourceOrderId?: string;
+  sourceSegment?: string;
+  sourceSymbol?: string;
   sourceVersion: string;
   taxes?: number;
 };

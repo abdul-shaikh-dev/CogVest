@@ -3,12 +3,15 @@ import type { StoreApi } from "zustand/vanilla";
 
 import { normalizeIsin } from "@/src/domain/assets";
 import {
-  parseTransactionCsv,
   transactionCsvMaxBytes,
   transactionCsvMaxRows,
   type TransactionCsvError,
   type UnsupportedTransactionCsvEvent,
 } from "@/src/domain/transactionCsv";
+import {
+  parseTransactionImportFile,
+  type TransactionImportSourceId,
+} from "@/src/domain/transactionImportSources";
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { searchAssetLookupResults as searchAssetLookupResultsService } from "@/src/services/assetLookup";
 import {
@@ -27,10 +30,16 @@ import {
 
 export { transactionCsvMaxBytes };
 
+export const transactionImportMaxFiles = 10;
+
 export type PickedTransactionCsv = {
   name: string;
   size: number;
   text: string;
+};
+
+export type SelectedTransactionImportFile = PickedTransactionCsv & {
+  id: string;
 };
 
 type UseTransactionImportOptions = {
@@ -105,7 +114,6 @@ function findExistingAsset(
   }
 
   const { exchange, symbol } = row.identity;
-
   return assets.find(
     (asset) =>
       normalized(asset.exchange) === normalized(exchange) &&
@@ -181,7 +189,12 @@ export function useTransactionImport({
     store.getState,
   );
   const batchIdRef = useRef(createId("transactions-csv"));
-  const [fileName, setFileName] = useState<string>();
+  const analysisIdRef = useRef(0);
+  const [files, setFiles] = useState<SelectedTransactionImportFile[]>([]);
+  const [sourceId, setSourceIdState] =
+    useState<TransactionImportSourceId>("cogvestCsvV1");
+  const [externalActivityConfirmed, setExternalActivityConfirmed] =
+    useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [mode, setMode] = useState<TransactionImportMode>("supplemental");
@@ -197,33 +210,80 @@ export function useTransactionImport({
     UnsupportedTransactionCsvEvent[]
   >([]);
 
-  async function selectFile() {
+  function clearAnalysis() {
+    setParseErrors([]);
+    setResolutions([]);
+    setUnsupportedCount(0);
+    setUnsupportedEvents([]);
+    setSharedCutover("");
+    setCutoverByOpeningPositionId({});
+  }
+
+  async function analyzeFiles(
+    nextFiles: SelectedTransactionImportFile[],
+    nextSourceId: TransactionImportSourceId,
+  ) {
+    const analysisId = ++analysisIdRef.current;
     setScreenError(undefined);
+    clearAnalysis();
+    batchIdRef.current = createId("transactions-csv");
+    if (nextFiles.length === 0) {
+      setIsResolving(false);
+      return;
+    }
+
     setIsResolving(true);
     try {
-      const file = await pickCsvFile();
-      if (!file) return;
-      setFileName(file.name);
-      setParseErrors([]);
-      setResolutions([]);
-      setUnsupportedCount(0);
-      setUnsupportedEvents([]);
-      setSharedCutover("");
-      setCutoverByOpeningPositionId({});
-      batchIdRef.current = createId("transactions-csv");
-      if (file.size > transactionCsvMaxBytes || file.text.length > transactionCsvMaxBytes) {
-        setParseErrors([{ code: "rowLimit", message: "CSV file is too large. Use at most 500 rows and a 1 MB file." }]);
+      const parsedFiles = nextFiles.map((file, fileIndex) => {
+        if (
+          file.size > transactionCsvMaxBytes ||
+          file.text.length > transactionCsvMaxBytes
+        ) {
+          return {
+            errors: [
+              {
+                code: "fileLimit" as const,
+                message: `${file.name}: CSV files may be at most 1 MB.`,
+              },
+            ],
+            rows: [],
+            unsupportedEvents: [],
+          };
+        }
+        const parsed = parseTransactionImportFile({
+          fileIndex,
+          fileName: file.name,
+          sourceId: nextSourceId,
+          text: file.text,
+        });
+        return {
+          errors: parsed.errors.map((error) => ({
+            ...error,
+            message: `${file.name}: ${error.message}`,
+          })),
+          rows: parsed.rows,
+          unsupportedEvents: parsed.unsupportedEvents.map((event) => ({
+            ...event,
+            transactionType: `${file.name} • ${event.transactionType}`,
+          })),
+        };
+      });
+      const errors = parsedFiles.flatMap((parsed) => parsed.errors);
+      const unsupported = parsedFiles.flatMap(
+        (parsed) => parsed.unsupportedEvents,
+      );
+      if (analysisId !== analysisIdRef.current) return;
+      setParseErrors(
+        errors.filter((error) => error.classification !== "unsupported"),
+      );
+      setUnsupportedCount(unsupported.length);
+      setUnsupportedEvents(unsupported);
+      if (errors.some((error) => error.classification !== "unsupported")) {
         return;
       }
 
-      const parsed = parseTransactionCsv(file.text);
-      setParseErrors(parsed.errors.filter((error) => error.classification !== "unsupported"));
-      setUnsupportedCount(parsed.unsupportedEvents.length);
-      setUnsupportedEvents(parsed.unsupportedEvents);
-      if (parsed.errors.some((error) => error.classification !== "unsupported")) return;
-
       const byKey = new Map<string, TransactionCsvResolution[]>();
-      for (const row of parsed.rows) {
+      for (const row of parsedFiles.flatMap((parsed) => parsed.rows)) {
         const seed: TransactionCsvResolution = { row, status: "unresolved" };
         const key = identityKey(seed);
         byKey.set(key, [...(byKey.get(key) ?? []), seed]);
@@ -233,41 +293,104 @@ export function useTransactionImport({
         [...byKey.values()],
         4,
         async (seeds) => {
-        const first = seeds[0];
-        const existing = findExistingAsset(first.row, snapshot.assets);
-        if (existing) {
-          return seeds.map((seed) => ({
-            ...seed,
-            asset: existing,
-            status: "ready" as const,
-          }));
-        }
-        try {
-          const lookup = await searchAssetLookupResults({ query: lookupQuery(first.row) });
-          const candidates = lookup.results.map(assetFromLookupResult);
-          const status = candidates.length > 0 ? "selectionRequired" as const : "unresolved" as const;
-          return seeds.map((seed) => ({
-            ...seed,
-            candidates,
-            status,
-          }));
-        } catch {
-          return seeds.map((seed) => ({
-            ...seed,
-            status: "unresolved" as const,
-          }));
-        }
+          const first = seeds[0];
+          const existing = findExistingAsset(first.row, snapshot.assets);
+          if (existing) {
+            return seeds.map((seed) => ({
+              ...seed,
+              asset: existing,
+              status: "ready" as const,
+            }));
+          }
+          try {
+            const lookup = await searchAssetLookupResults({
+              query: lookupQuery(first.row),
+            });
+            const candidates = lookup.results.map(assetFromLookupResult);
+            const status =
+              candidates.length > 0
+                ? ("selectionRequired" as const)
+                : ("unresolved" as const);
+            return seeds.map((seed) => ({
+              ...seed,
+              candidates,
+              status,
+            }));
+          } catch {
+            return seeds.map((seed) => ({
+              ...seed,
+              status: "unresolved" as const,
+            }));
+          }
         },
       );
-      setResolutions(resolvedGroups.flat());
+      if (analysisId === analysisIdRef.current) {
+        setResolutions(resolvedGroups.flat());
+      }
     } catch {
-      setFileName(undefined);
-      setParseErrors([]);
-      setResolutions([]);
-      setScreenError("This CSV could not be read. Choose the versioned template and try again.");
+      if (analysisId !== analysisIdRef.current) return;
+      clearAnalysis();
+      setScreenError(
+        "These files could not be read. Check the selected source and try again.",
+      );
     } finally {
-      setIsResolving(false);
+      if (analysisId === analysisIdRef.current) setIsResolving(false);
     }
+  }
+
+  async function replaceFiles(nextFiles: SelectedTransactionImportFile[]) {
+    setExternalActivityConfirmed(false);
+    setFiles(nextFiles);
+    await analyzeFiles(nextFiles, sourceId);
+  }
+
+  async function selectFile() {
+    setScreenError(undefined);
+    try {
+      const file = await pickCsvFile();
+      if (!file) return;
+      if (
+        sourceId === "zerodhaTradebookEqV1" &&
+        files.length >= transactionImportMaxFiles
+      ) {
+        setScreenError(
+          `Use at most ${transactionImportMaxFiles} Tradebook files in one batch.`,
+        );
+        return;
+      }
+      const selected = { ...file, id: createId("transaction-file") };
+      await replaceFiles(
+        sourceId === "cogvestCsvV1" ? [selected] : [...files, selected],
+      );
+    } catch {
+      setScreenError(
+        "This CSV could not be read. Choose another file and try again.",
+      );
+    }
+  }
+
+  async function removeFile(fileId: string) {
+    await replaceFiles(files.filter((file) => file.id !== fileId));
+  }
+
+  async function moveFile(fileId: string, direction: -1 | 1) {
+    const index = files.findIndex((file) => file.id === fileId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= files.length) return;
+    const next = [...files];
+    [next[index], next[target]] = [next[target], next[index]];
+    await replaceFiles(next);
+  }
+
+  function setSourceId(nextSourceId: TransactionImportSourceId) {
+    if (nextSourceId === sourceId) return;
+    analysisIdRef.current += 1;
+    setSourceIdState(nextSourceId);
+    setExternalActivityConfirmed(false);
+    setFiles([]);
+    clearAnalysis();
+    setScreenError(undefined);
+    setIsResolving(false);
   }
 
   function selectCandidate(key: string, asset: Asset) {
@@ -288,27 +411,37 @@ export function useTransactionImport({
     now: currentDate,
     resolutions,
     sharedCutover: sharedCutover || undefined,
+    sourceCoverageConfirmed: externalActivityConfirmed,
     state: snapshot,
     unsupportedCount,
   });
-  const cutoverHoldings = [...new Map(
-    resolutions
-      .filter((resolution) => resolution.status === "ready" && resolution.asset)
-      .flatMap((resolution) =>
-        snapshot.openingPositions
-          .filter(
-            (position) =>
-              position.assetId === resolution.asset!.id,
-          )
-          .map((position) => [position.id, { asset: resolution.asset!, position }] as const),
-      ),
-  ).values()];
+  const cutoverHoldings = [
+    ...new Map(
+      resolutions
+        .filter(
+          (resolution) => resolution.status === "ready" && resolution.asset,
+        )
+        .flatMap((resolution) =>
+          snapshot.openingPositions
+            .filter(
+              (position) => position.assetId === resolution.asset!.id,
+            )
+            .map(
+              (position) =>
+                [position.id, { asset: resolution.asset!, position }] as const,
+            ),
+        ),
+    ).values(),
+  ];
   const needsSharedCutover = cutoverHoldings.some(
     ({ position }) => !position.measuredAsOf,
   );
 
   function setCutover(openingPositionId: string, value: string) {
-    setCutoverByOpeningPositionId((current) => ({ ...current, [openingPositionId]: value }));
+    setCutoverByOpeningPositionId((current) => ({
+      ...current,
+      [openingPositionId]: value,
+    }));
   }
 
   function confirmImport() {
@@ -318,7 +451,9 @@ export function useTransactionImport({
     try {
       onImported(store.getState().recordTransactionImport(plan.command));
     } catch {
-      setScreenError("Nothing was imported. Your portfolio and Cash Ledger stayed unchanged; review the conflicts and try again.");
+      setScreenError(
+        "Nothing was imported. Your portfolio and Cash Ledger stayed unchanged; review the conflicts and try again.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -328,23 +463,30 @@ export function useTransactionImport({
     confirmImport,
     cutoverHoldings,
     cutoverByOpeningPositionId,
-    fileName,
+    externalActivityConfirmed,
+    files,
     groups: groupResolutions(resolutions),
     isResolving,
     isSaving,
+    maxFiles: transactionImportMaxFiles,
     maxRows: transactionCsvMaxRows,
     mode,
+    moveFile,
     needsSharedCutover,
     parseErrors,
     plan,
+    removeFile,
     screenError,
     selectCandidate,
     selectFile,
     setCutover,
+    setExternalActivityConfirmed,
     setMode,
     setSharedCutover,
+    setSourceId,
     sharedCutover,
     snapshot,
+    sourceId,
     unsupportedCount,
     unsupportedEvents,
     today: currentDate,

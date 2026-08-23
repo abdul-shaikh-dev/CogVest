@@ -14,6 +14,7 @@ const defaultFlows = [
   "e2e/quick-portfolio-setup.yaml",
   "e2e/holdings-csv-import.yaml",
   "e2e/transactions-csv-import.yaml",
+  "e2e/zerodha-tradebook-import.yaml",
   "e2e/holdings.yaml",
   "e2e/ppf-account.yaml",
   "e2e/opening-position-correction.yaml",
@@ -80,6 +81,38 @@ const holdingsCsvFlow = "e2e/holdings-csv-import.yaml";
 const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
 const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
 const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
+const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
+const zerodhaTradebookFixtures = [
+  "e2e/fixtures/zerodha-tradebook-2024.csv",
+  "e2e/fixtures/zerodha-tradebook-2025.csv",
+];
+
+function pushFixture(adbPath, fixture) {
+  if (!existsSync(fixture)) {
+    console.log(`FAIL fixture not found: ${fixture}`);
+    process.exit(1);
+  }
+  const fileName = fixture.split(/[\\/]/u).at(-1);
+  const destination = `/sdcard/Download/${fileName}`;
+  const push = run(adbPath, ["push", fixture, destination]);
+  if (push.status !== 0) {
+    console.log(`FAIL unable to copy ${fileName} to Android Downloads`);
+    process.exit(push.status ?? 1);
+  }
+  const scan = run(adbPath, [
+    "shell",
+    "am",
+    "broadcast",
+    "-a",
+    "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+    "-d",
+    `file://${destination}`,
+  ]);
+  if (scan.status !== 0) {
+    console.log(`FAIL unable to register ${fileName} with Android`);
+    process.exit(scan.status ?? 1);
+  }
+}
 
 for (const flow of flows) {
   if (!existsSync(flow)) {
@@ -156,6 +189,16 @@ for (const flow of flows) {
       console.log("FAIL unable to register the transaction CSV fixture with Android");
       process.exit(scan.status ?? 1);
     }
+  }
+  if (flow.replaceAll("\\", "/") === zerodhaTradebookFlow) {
+    const adbPath = findExecutable("adb");
+    if (!adbPath) {
+      console.log("FAIL adb not found");
+      process.exit(1);
+    }
+    zerodhaTradebookFixtures.forEach((fixture) =>
+      pushFixture(adbPath, fixture),
+    );
   }
   console.log(`RUN maestro test ${flow}`);
   const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR

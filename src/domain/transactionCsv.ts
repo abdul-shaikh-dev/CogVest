@@ -1,6 +1,7 @@
 import type { Currency } from "@/src/types";
 
 export const transactionCsvVersion = "1";
+export const transactionCsvSourceFormat = "cogvest-transactions";
 export const transactionCsvMaxRows = 500;
 export const transactionCsvMaxBytes = 1_000_000;
 
@@ -68,6 +69,18 @@ export type TransactionCsvIdentity =
   | { kind: "isin"; value: string }
   | { exchange: string; kind: "exchangeSymbol"; symbol: string };
 
+export type TransactionCsvSource = {
+  exchange?: string;
+  executedAt?: string;
+  fileIndex?: number;
+  fileName?: string;
+  format: string;
+  orderId?: string;
+  segment?: string;
+  symbol?: string;
+  version: string;
+};
+
 export type TransactionCsvCandidate = {
   account?: string;
   acquisitionCost?: number;
@@ -83,6 +96,7 @@ export type TransactionCsvCandidate = {
   quantity: number;
   rowNumber: number;
   settlementDate?: string;
+  source?: TransactionCsvSource;
   symbol?: string;
   taxes?: number;
   tradeDate: string;
@@ -104,18 +118,20 @@ export type TransactionCsvErrorCode =
   | "missingHeader"
   | "rowLimit"
   | "syntax"
+  | "unsupportedSourceField"
   | "unsupportedTransactionType"
   | "unsupportedVersion";
 
 export type TransactionCsvError = {
   classification?: "unsupported";
   code: TransactionCsvErrorCode;
-  column?: TransactionCsvHeader;
+  column?: string;
   message: string;
   rowNumber?: number;
 };
 
 export type UnsupportedTransactionCsvEvent = {
+  reason?: string;
   rowNumber: number;
   transactionType: string;
 };
@@ -126,17 +142,17 @@ export type TransactionCsvParseResult = {
   unsupportedEvents: UnsupportedTransactionCsvEvent[];
 };
 
-type CsvRecord = {
+export type CsvRecord = {
   fields: string[];
   rowNumber: number;
 };
 
-type CsvRecordsResult = {
+export type CsvRecordsResult = {
   error?: string;
   records: CsvRecord[];
 };
 
-function utf8ByteLength(value: string) {
+export function getUtf8ByteLength(value: string) {
   let bytes = 0;
   for (const character of value) {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -152,7 +168,7 @@ function utf8ByteLength(value: string) {
   return bytes;
 }
 
-function parseCsvRecords(text: string): CsvRecordsResult {
+export function parseCsvRecords(text: string): CsvRecordsResult {
   const records: CsvRecord[] = [];
   let field = "";
   let quoted = false;
@@ -356,7 +372,7 @@ export function getTransactionCsvFingerprint(
 }
 
 export function parseTransactionCsv(input: string): TransactionCsvParseResult {
-  if (utf8ByteLength(input) > transactionCsvMaxBytes) {
+  if (getUtf8ByteLength(input) > transactionCsvMaxBytes) {
     return {
       errors: [
         {
@@ -686,6 +702,10 @@ export function parseTransactionCsv(input: string): TransactionCsvParseResult {
         quantity,
         ...(settlementDate === undefined ? {} : { settlementDate }),
         ...(rawSymbol ? { symbol: rawSymbol.toUpperCase() } : {}),
+        source: {
+          format: transactionCsvSourceFormat,
+          version: transactionCsvVersion,
+        },
         ...(taxes === undefined ? {} : { taxes }),
         tradeDate,
         transactionType,
