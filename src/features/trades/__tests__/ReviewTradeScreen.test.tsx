@@ -3,7 +3,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { ReviewTradeScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
-import type { Asset, CashEntry, Trade } from "@/src/types";
+import type { Asset, BuyTrade, CashEntry, Trade } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -23,7 +23,7 @@ const contribution: CashEntry = {
   type: "addition",
 };
 
-const trade: Trade = {
+const trade: BuyTrade = {
   assetId: asset.id,
   conviction: 4,
   date: "2026-04-10",
@@ -204,5 +204,38 @@ describe("ReviewTradeScreen", () => {
     expect(
       getByText("No cash movement is linked to this legacy transaction."),
     ).toBeTruthy();
+  });
+
+  it("keeps imported transfers read-only", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const transfer: Trade = {
+      acquisitionCostPerUnit: 150,
+      assetId: asset.id,
+      date: "2026-04-11",
+      id: "transfer-in-hdfc",
+      importProvenance: {
+        importBatchId: "batch-1",
+        originalRowNumber: 2,
+        sourceFormat: "cogvest-transactions",
+        sourceVersion: "1",
+      },
+      quantity: 3,
+      type: "transferIn",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(transfer);
+    const { getByText, queryByTestId } = render(
+      <ReviewTradeScreen
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+        tradeId={transfer.id}
+      />,
+    );
+
+    expect(getByText("Read-only transaction")).toBeTruthy();
+    expect(getByText("Transfer in")).toBeTruthy();
+    expect(getByText("₹150.00 / unit")).toBeTruthy();
+    expect(queryByTestId("trade-correction-price-input")).toBeNull();
   });
 });

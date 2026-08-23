@@ -16,6 +16,11 @@ const nonEmptyStringSchema = z
 const calendarDateSchema = nonEmptyStringSchema.refine(
   (value) => getCalendarDatePart(value) === value,
 );
+const normalizedIsinSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9]{12}$/)
+  .transform((value) => value.toUpperCase());
 const convictionScoreSchema = z.union([
   z.literal(1),
   z.literal(2),
@@ -45,6 +50,7 @@ const assetSchema = z.object({
       "stock",
     ])
     .optional(),
+  isin: normalizedIsinSchema.optional(),
   isTaxEligible: z.boolean().optional(),
   logoUrl: z.string().optional(),
   name: nonEmptyStringSchema,
@@ -111,6 +117,7 @@ const openingPositionSchema = z
         source: z.literal("manual"),
       })
       .optional(),
+    measuredAsOf: calendarDateSchema.optional(),
     notes: z.string().optional(),
     quantity: finiteNumberSchema,
     recordedAt: z.string().datetime({ offset: true }).optional(),
@@ -170,20 +177,53 @@ const openingPositionSchema = z
     }
   });
 
-const tradeSchema = z.object({
+const importedTransactionProvenanceSchema = z.object({
+  account: z.string().optional(),
+  externalId: nonEmptyStringSchema.optional(),
+  fees: finiteNumberSchema.nonnegative().optional(),
+  fingerprint: nonEmptyStringSchema.optional(),
+  importBatchId: nonEmptyStringSchema,
+  originalDescription: z.string().optional(),
+  originalRowNumber: z.number().int().positive(),
+  settlementDate: calendarDateSchema.optional(),
+  sourceFormat: nonEmptyStringSchema,
+  sourceVersion: nonEmptyStringSchema,
+  taxes: finiteNumberSchema.nonnegative().optional(),
+});
+
+const tradeBaseSchema = z.object({
   assetId: nonEmptyStringSchema,
   conviction: convictionScoreSchema.optional(),
   date: nonEmptyStringSchema,
-  fees: finiteNumberSchema.optional(),
   id: nonEmptyStringSchema,
+  importProvenance: importedTransactionProvenanceSchema.optional(),
   intendedHoldDays: finiteNumberSchema.optional(),
   notes: z.string().optional(),
-  pricePerUnit: finiteNumberSchema,
   quantity: finiteNumberSchema,
-  totalValue: finiteNumberSchema,
-  type: z.enum(["buy", "sell"]),
   whyThisTrade: z.string().optional(),
 });
+
+const tradeSchema = z.discriminatedUnion("type", [
+  tradeBaseSchema.extend({
+    fees: finiteNumberSchema.optional(),
+    pricePerUnit: finiteNumberSchema,
+    totalValue: finiteNumberSchema,
+    type: z.literal("buy"),
+  }),
+  tradeBaseSchema.extend({
+    fees: finiteNumberSchema.optional(),
+    pricePerUnit: finiteNumberSchema,
+    totalValue: finiteNumberSchema,
+    type: z.literal("sell"),
+  }),
+  tradeBaseSchema.extend({
+    acquisitionCostPerUnit: finiteNumberSchema.nonnegative().optional(),
+    type: z.literal("transferIn"),
+  }),
+  tradeBaseSchema.extend({
+    type: z.literal("transferOut"),
+  }),
+]);
 
 const historicalPriceBasisSchema = z.enum([
   "historical-close",
@@ -341,6 +381,7 @@ const schemaVersionSchema = z.union([
   z.literal(6),
   z.literal(7),
   z.literal(8),
+  z.literal(9),
 ]);
 
 const persistedPortfolioSchema = z
@@ -545,7 +586,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

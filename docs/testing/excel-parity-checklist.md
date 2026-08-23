@@ -44,8 +44,9 @@ Do not add:
 - editable grid/table UI
 - formula editor
 - macro support
-- arbitrary Excel import/export or spreadsheet reconstruction; the constrained
-  V1 aggregate-holdings CSV onboarding template is permitted
+- arbitrary Excel import/export, broker-specific statement import, or
+  spreadsheet reconstruction; the constrained V1 holdings and transaction CSV
+  templates are permitted
 - advanced tax calculations
 - Minimal Mode
 - full behaviour insight engine
@@ -56,6 +57,7 @@ Do not add:
 | Excel tracker capability | CogVest V1 feature | Automated coverage | PC verification |
 | --- | --- | --- | --- |
 | Opening positions / holdings inventory | Add Holding opening-position records | `src/features/openingPositions/__tests__/AddOpeningPositionForm.test.tsx`, `src/domain/calculations/__tests__/holdings.test.ts` | Add an opening position on emulator; Holdings shows quantity, invested value, current value, and P&L. |
+| Historical buys, sells, and transfers | Versioned transaction CSV onboarding | `src/domain/__tests__/transactionCsv.test.ts`, transaction import planner/reconciliation tests, and atomic store tests | Import a reviewed transaction CSV; verify weighted-average holdings, explicit Supplemental/Full history reconciliation, idempotent retry, and unchanged Cash Ledger. |
 | PPF balance and activity | Dedicated PPF account plus confirmed ledger | `src/domain/ppf/__tests__`, PPF screen tests, store/schema tests | Create a confirmed baseline, add a contribution, and verify the account updates Dashboard, Debt allocation, Holdings, and future snapshots without a synthetic quote. |
 | Asset metadata | Asset class, instrument type, sector type, quote source metadata | `src/domain/assets/__tests__/metadata.test.ts`, store migration tests | Add or inspect equity, debt, crypto, and cash-like records; metadata appears without spreadsheet columns. |
 | Debt / liquid / cash-like instruments | Debt and manual-price asset support | `src/services/quotes/__tests__/quotes.test.ts`, holdings calculation tests | Add a manual debt/liquid holding; app keeps manual price fallback and allocation. |
@@ -116,8 +118,9 @@ Fail when:
 - a required Excel tracker question cannot be answered
 - data disappears after restart
 - derived values are persisted instead of calculated from raw records
-- the app introduces arbitrary Excel import/export or spreadsheet UI in V1;
-  the constrained aggregate-holdings CSV onboarding flow is not a failure
+- the app introduces arbitrary Excel/broker import or spreadsheet UI in V1;
+  the constrained versioned holdings and transaction CSV flows are not a
+  failure
 - any parity row has no test, no manual evidence, and no linked defect
 
 ## Defect Logging

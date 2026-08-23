@@ -261,6 +261,31 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     });
   });
 
+  it("uses a measured opening baseline and only post-cutover transactions", () => {
+    const result = buildGeneratedMonthEndSnapshot(
+      buildInput({
+        openingPositions: [
+          openingPosition({
+            averageCostPrice: 100,
+            date: null,
+            measuredAsOf: "2026-06-30",
+            quantity: 10,
+          }),
+        ],
+        targetMonth: "2026-07",
+        trades: [
+          trade({ date: "2026-06-01", pricePerUnit: 80, quantity: 10 }),
+          trade({ date: "2026-07-11", pricePerUnit: 110, quantity: 2 }),
+        ],
+      }),
+    );
+
+    expect(result.snapshot).toMatchObject({
+      investedValue: 1220,
+      monthlyInvestment: 220,
+    });
+  });
+
   it.each(["not-a-month", "2026-08", "2026-09"])(
     "rejects an explicit target that is not a completed month: %s",
     (targetMonth) => {

@@ -1,6 +1,7 @@
 import {
   findCanonicalAsset,
   hasCanonicalAssetConflict,
+  normalizeIsin,
 } from "@/src/domain/assets";
 import type { Asset } from "@/src/types";
 
@@ -41,6 +42,25 @@ describe("canonical asset identity", () => {
     expect(findCanonicalAsset([tickerMatch, providerMatch], candidate)).toBe(
       providerMatch,
     );
+  });
+
+  it("prioritizes a normalized ISIN before provider and ticker identity", () => {
+    const isinMatch = {
+      ...hdfc,
+      id: "asset-isin",
+      isin: "INE040A01034",
+      quoteSourceId: "DIFFERENT.NS",
+      ticker: "DIFFERENT.NS",
+    };
+    const candidate = {
+      ...hdfc,
+      id: "candidate",
+      isin: " ine040a01034 ",
+    };
+
+    expect(findCanonicalAsset([hdfc, isinMatch], candidate)).toBe(isinMatch);
+    expect(hasCanonicalAssetConflict([hdfc, isinMatch], candidate)).toBe(true);
+    expect(normalizeIsin(candidate.isin)).toBe("INE040A01034");
   });
 
   it("falls back to normalized exchange and ticker", () => {

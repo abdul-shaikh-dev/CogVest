@@ -17,7 +17,10 @@ import {
   getPpfAccountOpeningDate,
   getLinkedLegacyPpfAssetIds,
 } from "@/src/domain/ppf";
-import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import {
+  getOpeningPositionHistoryDate,
+  isTransactionAfterOpeningCutover,
+} from "@/src/domain/openingPositions";
 import {
   formatLocalCalendarDate,
   getCalendarDatePart,
@@ -28,6 +31,10 @@ import {
   isV1SupportedAsset,
 } from "@/src/domain/portfolioCurrency";
 import { normalizeMonthlySnapshot } from "@/src/domain/financialRecords";
+import {
+  getTradeQuantityDelta,
+  isTradeCashPurchase,
+} from "@/src/domain/transactionSemantics";
 import {
   decimal,
   normalizeMoney,
@@ -606,7 +613,13 @@ export function buildGeneratedMonthEndSnapshot({
   const monthTrades = trades.filter(
     (trade) =>
       supportedAssetIds.has(trade.assetId) &&
-      isOnOrBefore(trade.date, monthEnd),
+      isOnOrBefore(trade.date, monthEnd) &&
+      isTransactionAfterOpeningCutover(
+        trade.date,
+        monthOpeningPositions.filter(
+          (position) => position.assetId === trade.assetId,
+        ),
+      ),
   );
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
@@ -626,15 +639,20 @@ export function buildGeneratedMonthEndSnapshot({
     );
   }
 
-  for (const trade of trades.filter(
-    (item) =>
+  for (const trade of trades.filter((item) => {
+    const effectiveOpenings = monthOpeningPositions.filter(
+      (position) => position.assetId === item.assetId,
+    );
+    return (
       !linkedLegacyAssetIds.has(item.assetId) &&
-      isOnOrBefore(item.date, monthEnd),
-  )) {
+      isOnOrBefore(item.date, monthEnd) &&
+      isTransactionAfterOpeningCutover(item.date, effectiveOpenings)
+    );
+  })) {
     openQuantityByAssetId.set(
       trade.assetId,
       decimal(openQuantityByAssetId.get(trade.assetId) ?? 0).plus(
-        trade.type === "buy" ? trade.quantity : -trade.quantity,
+        getTradeQuantityDelta(trade),
       ),
     );
   }
@@ -849,10 +867,8 @@ export function buildGeneratedMonthEndSnapshot({
             decimal(position.quantity).times(position.averageCostPrice),
           ),
         ...monthTrades
-          .filter(
-            (trade) =>
-              trade.type === "buy" && isWithinMonth(trade.date, targetMonth),
-          )
+          .filter(isTradeCashPurchase)
+          .filter((trade) => isWithinMonth(trade.date, targetMonth))
           .map((trade) => trade.totalValue),
         ...ppfLedgerEntries
           .filter(

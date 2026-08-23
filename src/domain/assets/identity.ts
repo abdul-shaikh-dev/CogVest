@@ -4,6 +4,12 @@ function normalizeIdentityPart(value?: string) {
   return value?.trim().toUpperCase() ?? "";
 }
 
+export function normalizeIsin(value?: string) {
+  const normalized = normalizeIdentityPart(value);
+
+  return /^[A-Z0-9]{12}$/.test(normalized) ? normalized : undefined;
+}
+
 export function findCanonicalAsset(
   assets: Asset[],
   candidate: Asset,
@@ -12,6 +18,16 @@ export function findCanonicalAsset(
 
   if (exactAsset) {
     return exactAsset;
+  }
+
+  const isin = normalizeIsin(candidate.isin);
+
+  if (isin) {
+    const isinMatch = assets.find((asset) => normalizeIsin(asset.isin) === isin);
+
+    if (isinMatch) {
+      return isinMatch;
+    }
   }
 
   const providerId = normalizeIdentityPart(candidate.quoteSourceId);

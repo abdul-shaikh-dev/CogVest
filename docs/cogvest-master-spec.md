@@ -49,6 +49,8 @@ V1 includes:
 - opening positions and holding records
 - versioned aggregate-holdings CSV onboarding with preview, explicit identity
   resolution, and one atomic commit
+- constrained, versioned, broker-neutral transaction CSV onboarding with
+  preview, explicit identity resolution, reconciliation, and one atomic commit
 - derived Holdings, Dashboard, Cash Ledger, and Monthly Progress views
 - cash ledger entries for typed additions and withdrawals; investment funding
   and sale proceeds must use explicit linked accounting rather than a confusing
@@ -66,7 +68,8 @@ V1 does not include:
 - Minimal Mode
 - LTCG/tax UI
 - advanced historical market charts
-- arbitrary Excel or broker-format import, full-record export, or restore
+- arbitrary Excel or broker-specific statement import, full-record export, or
+  restore
 - backend, auth, cloud sync, analytics, or push notifications
 - Play Store auto-submit
 - PPF loans or loan repayment tracking
@@ -90,7 +93,8 @@ V1 does not include:
 Persist raw records:
 
 - holdings/opening positions
-- transactions where needed by existing domain APIs
+- buy, sell, transfer-in, and transfer-out transactions where supported by the
+  source record
 - cash entries
 - monthly snapshots
 - quote/manual price records
@@ -228,8 +232,67 @@ The V1 holdings CSV importer is a constrained Quick Setup entry path. It accepts
 only the published versioned aggregate-opening-position template, requires
 explicit correction of ambiguous/manual/existing rows, derives preview totals
 through the same domain functions as manual setup, and commits all rows or none.
-It is not arbitrary Excel import, broker statement ingestion, transaction
-history import, or backup/restore.
+It is not arbitrary Excel import, broker statement ingestion, or backup/restore.
+Transaction history uses the separate versioned transaction CSV contract below.
+
+### V1 Transaction History CSV Import
+
+Transaction history import is intentionally constrained and broker-neutral. It
+accepts the published `cogvest-transactions-v1.csv` format, not arbitrary Excel
+files, broker-specific statement adapters, PDFs, tax-lot files, or inferred
+corporate actions.
+
+Each row must provide:
+
+- `cogvest_version` equal to `1`
+- `transaction_type`: `buy`, `sell`, `transferIn`, or `transferOut`
+- `trade_date` as an exact ISO calendar date in `YYYY-MM-DD` form
+- the asset identity as either `isin`, or both `exchange` and `symbol`
+- the asset's native `currency`
+- a positive `quantity`
+
+`unit_price` is required for `buy` and `sell`. `acquisition_cost` is optional
+for `transferIn` and, when present, is the per-unit acquisition cost used for
+weighted-average reconciliation. `settlement_date`, `external_id`, `account`,
+`fees`, `taxes`, `description`, and `notes` are optional metadata. Fees and
+taxes are preserved as transaction metadata only in V1; they do not claim to
+implement tax lots, FIFO, or cash reconstruction.
+
+Recognized but unsupported event types, such as dividends, splits, bonuses,
+interest, cash movements, and corporate actions, are surfaced by row and skipped
+only after explicit dry-run review. CogVest never guesses an equivalent supported event. Current prices
+from the quote service or an explicit manual valuation are used for current
+value; transaction CSV data never overwrites current prices.
+
+The import has two explicit modes:
+
+- **Supplemental:** keep the existing opening position and add only rows after
+  its confirmed cutover. The user must confirm `Holdings measured as of` for
+  each affected opening position, using one shared date by default with
+  per-holding correction. Rows on or before the cutover are rejected for this
+  mode so the opening baseline is not counted twice.
+- **Full history:** treat the imported rows as the complete event history for
+  an affected holding. CogVest derives final quantity and moving weighted
+  average cost, then compares the quantity and average cost through the
+  cutover exactly with the existing opening position. The opening position is
+  replaced only after an explicit confirmation and an exact match. Mismatches,
+  oversells, multiple baselines, and unknown-cost `transferIn` rows remain a
+  dry-run error and cannot be committed.
+
+Reconciliation adds quantity and cost basis for buys and costed `transferIn`
+rows, reduces quantity for sells and `transferOut` rows, and keeps the moving
+average cost unchanged when units are disposed. A `transferIn` without
+`acquisition_cost` remains unresolved and cannot be committed in V1 because
+CogVest cannot derive a trustworthy average cost.
+V1 makes no FIFO, tax-lot, or realized-tax claim.
+
+Every imported row carries source/version, batch, row, fingerprint, and supplied
+external/account/description/fees/taxes metadata where present. Exact repeats
+are idempotent. A repeated external ID or fingerprint with different business
+data is a conflict and blocks the complete batch. Persistence is atomic and
+recoverable: a failed or rejected batch changes neither transactions nor
+opening positions. Historical transaction imports never create, update, or
+reconstruct Cash Ledger entries.
 
 Dashboard owns portfolio-level answers.
 

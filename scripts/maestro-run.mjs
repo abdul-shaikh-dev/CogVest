@@ -13,6 +13,7 @@ const defaultFlows = [
   "e2e/add-holding-asset-switch.yaml",
   "e2e/quick-portfolio-setup.yaml",
   "e2e/holdings-csv-import.yaml",
+  "e2e/transactions-csv-import.yaml",
   "e2e/holdings.yaml",
   "e2e/ppf-account.yaml",
   "e2e/opening-position-correction.yaml",
@@ -77,6 +78,8 @@ const requestedFlows = process.argv.slice(2);
 const flows = requestedFlows.length > 0 ? requestedFlows : defaultFlows;
 const holdingsCsvFlow = "e2e/holdings-csv-import.yaml";
 const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
+const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
+const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
 
 for (const flow of flows) {
   if (!existsSync(flow)) {
@@ -122,6 +125,35 @@ for (const flow of flows) {
     ]);
     if (scan.status !== 0) {
       console.log("FAIL unable to register the holdings CSV fixture with Android");
+      process.exit(scan.status ?? 1);
+    }
+  }
+  if (flow.replaceAll("\\", "/") === transactionsCsvFlow) {
+    const adbPath = findExecutable("adb");
+    if (!adbPath || !existsSync(transactionsCsvFixture)) {
+      console.log("FAIL transaction CSV fixture or adb not found");
+      process.exit(1);
+    }
+    const push = run(adbPath, [
+      "push",
+      transactionsCsvFixture,
+      "/sdcard/Download/transactions-import-v1.csv",
+    ]);
+    if (push.status !== 0) {
+      console.log("FAIL unable to copy the transaction CSV fixture to Android Downloads");
+      process.exit(push.status ?? 1);
+    }
+    const scan = run(adbPath, [
+      "shell",
+      "am",
+      "broadcast",
+      "-a",
+      "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+      "-d",
+      "file:///sdcard/Download/transactions-import-v1.csv",
+    ]);
+    if (scan.status !== 0) {
+      console.log("FAIL unable to register the transaction CSV fixture with Android");
       process.exit(scan.status ?? 1);
     }
   }

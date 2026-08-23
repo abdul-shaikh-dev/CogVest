@@ -1,6 +1,7 @@
 import {
   getOpeningPositionAcquisitionDate,
   getOpeningPositionHistoryDate,
+  isTransactionAfterOpeningCutover,
   isOpeningPositionEffective,
 } from "@/src/domain/openingPositions";
 import type { OpeningPosition } from "@/src/types";
@@ -52,6 +53,24 @@ describe("opening position dates", () => {
         unknownPosition,
         new Date("2026-07-10T12:00:00.000Z"),
       ),
+    ).toBe(true);
+  });
+
+  it("uses measured-as-of as the aggregate baseline boundary", () => {
+    const measuredPosition = {
+      ...knownPosition,
+      measuredAsOf: "2025-03-31",
+    };
+
+    expect(getOpeningPositionAcquisitionDate(measuredPosition)).toBe(
+      "2024-04-15",
+    );
+    expect(getOpeningPositionHistoryDate(measuredPosition)).toBe("2025-03-31");
+    expect(
+      isTransactionAfterOpeningCutover("2025-03-31", [measuredPosition]),
+    ).toBe(false);
+    expect(
+      isTransactionAfterOpeningCutover("2025-04-01", [measuredPosition]),
     ).toBe(true);
   });
 });

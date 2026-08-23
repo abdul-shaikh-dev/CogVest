@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])(
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,10 +51,100 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 9 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 10 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });
+  });
+
+  it("accepts V9 transfer records and normalizes optional ISIN identity", () => {
+    const result = parsePersistedPortfolio(
+      serialize({
+        assets: [{ ...validAsset, isin: " ine040a01034 " }],
+        openingPositions: [
+          {
+            assetId: validAsset.id,
+            averageCostPrice: 100,
+            date: "2026-07-10",
+            id: "opening-1",
+            measuredAsOf: "2026-07-31",
+            quantity: 2,
+          },
+        ],
+        schemaVersion: 9,
+        trades: [
+          {
+            acquisitionCostPerUnit: 120,
+            assetId: validAsset.id,
+            date: "2026-08-01",
+            id: "transfer-in-1",
+            importProvenance: {
+              fingerprint: "fingerprint-1",
+              importBatchId: "batch-1",
+              originalRowNumber: 2,
+              settlementDate: "2026-08-03",
+              sourceFormat: "cogvest-transaction-csv",
+              sourceVersion: "1",
+              taxes: 10,
+            },
+            quantity: 1,
+            type: "transferIn",
+          },
+          {
+            assetId: validAsset.id,
+            date: "2026-08-02",
+            id: "transfer-out-1",
+            quantity: 0.5,
+            type: "transferOut",
+          },
+        ],
+      }),
+    );
+
+    expect(result).toMatchObject({ success: true });
+    if (result.success) {
+      expect(result.data.assets?.[0]?.isin).toBe("INE040A01034");
+      expect(result.data.openingPositions?.[0]?.measuredAsOf).toBe("2026-07-31");
+      expect(result.data.trades).toEqual([
+        expect.objectContaining({
+          importProvenance: expect.objectContaining({
+            settlementDate: "2026-08-03",
+          }),
+          type: "transferIn",
+        }),
+        expect.objectContaining({ type: "transferOut" }),
+      ]);
+    }
+  });
+
+  it("preserves legacy buy and sell records without new import fields", () => {
+    const result = parsePersistedPortfolio(
+      serialize({
+        schemaVersion: 1,
+        trades: [
+          {
+            assetId: "asset-1",
+            date: "2026-07-22",
+            id: "buy-1",
+            pricePerUnit: 100,
+            quantity: 2,
+            totalValue: 200,
+            type: "buy",
+          },
+          {
+            assetId: "asset-1",
+            date: "2026-07-23",
+            id: "sell-1",
+            pricePerUnit: 120,
+            quantity: 1,
+            totalValue: 120,
+            type: "sell",
+          },
+        ],
+      }),
+    );
+
+    expect(result).toMatchObject({ success: true });
   });
 
   it("accepts strict PPF accounts and account-scoped ledger entries in V8", () => {

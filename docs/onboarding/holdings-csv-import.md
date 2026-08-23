@@ -4,6 +4,10 @@ CogVest V1 accepts one deliberately constrained CSV format for onboarding
 aggregate opening positions. It does not import arbitrary spreadsheets,
 transaction history, tax lots, formulas, or broker exports.
 
+For historical buys, sells, and transfers, use the separate
+[Transaction History CSV Import](transaction-csv-import.md) guide and its
+versioned template.
+
 Use the versioned template at
 [`docs/templates/cogvest-holdings-v1.csv`](../templates/cogvest-holdings-v1.csv).
 Keep the header unchanged and save the file as UTF-8 CSV.

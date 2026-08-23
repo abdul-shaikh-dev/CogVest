@@ -18,6 +18,8 @@ export type OpeningPosition = {
   date: string | null;
   id: string;
   manualValuation?: OpeningPositionManualValuation;
+  /** The date the aggregate position was measured for transaction cutover. */
+  measuredAsOf?: string;
   notes?: string;
   quantity: number;
   recordedAt?: string;

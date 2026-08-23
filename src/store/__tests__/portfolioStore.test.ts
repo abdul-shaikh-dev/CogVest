@@ -5,6 +5,7 @@ import {
   historicalQuoteCacheKey,
   historicalQuoteCacheStorageKey,
   portfolioStorageKey,
+  portfolioSchemaVersion,
   quoteCacheStorageKey,
   storageRecoveryKeyPrefix,
 } from "@/src/store";
@@ -210,7 +211,14 @@ describe("portfolio store", () => {
       ],
       preferences: createDefaultPreferences(),
       schemaVersion: 5,
-      trades: [],
+      trades: [
+        {
+          ...trade,
+          pricePerUnit: 2900.123456789,
+          quantity: 0.123456789,
+          totalValue: 358.024690245,
+        },
+      ],
     };
     const originalRaw = JSON.stringify(legacySnapshot);
     storage.setRawItem(portfolioStorageKey, originalRaw);
@@ -221,6 +229,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions[0]?.averageCostPrice).toBe(
       1450.123456789,
     );
+    expect(store.getState().trades).toEqual(legacySnapshot.trades);
     expect(storage.getRawItem(portfolioStorageKey)).toBe(originalRaw);
   });
 
@@ -2467,7 +2476,7 @@ describe("portfolio store", () => {
       ppfAccounts: [],
       ppfLedgerEntries: [],
       preferences: createDefaultPreferences(),
-      schemaVersion: 8,
+      schemaVersion: portfolioSchemaVersion,
       trades: [trade],
     });
     expect(persisted).not.toHaveProperty("holdings");
@@ -2681,7 +2690,7 @@ describe("portfolio store", () => {
         quantity: 25,
       },
     ]);
-    expect(store.getState().schemaVersion).toBe(8);
+    expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
   });
 
   it("migrates V1 persisted snapshots by adding empty opening positions", () => {
@@ -2700,7 +2709,7 @@ describe("portfolio store", () => {
     expect(store.getState().openingPositions).toEqual([]);
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(store.getState().trades).toEqual([trade]);
-    expect(store.getState().schemaVersion).toBe(8);
+    expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
     expect(store.getState().assets[0]).toMatchObject({
       instrumentType: "stock",
       quoteSourceId: "RELIANCE.NS",
@@ -2735,7 +2744,7 @@ describe("portfolio store", () => {
       quoteSourceId: "NIFTYBEES.NS",
       sectorType: "diversified",
     });
-    expect(store.getState().schemaVersion).toBe(8);
+    expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
   });
 
   it("migrates V3 snapshots by defaulting monthly snapshots", () => {
@@ -2752,7 +2761,7 @@ describe("portfolio store", () => {
     const store = createPortfolioStore({ storage });
 
     expect(store.getState().monthlySnapshots).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(8);
+    expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
   });
 
   it("migrates V4 additions without inventing income semantics", () => {
@@ -2783,7 +2792,7 @@ describe("portfolio store", () => {
         purpose: "legacyUncategorized",
       }),
     ]);
-    expect(store.getState().schemaVersion).toBe(8);
+    expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
   });
 
   it("migrates legacy automatic zero income to unknown without changing manual values", () => {
@@ -3008,7 +3017,7 @@ describe("portfolio store", () => {
     expect(store.getState()).toMatchObject({
       ppfAccounts: [],
       ppfLedgerEntries: [],
-      schemaVersion: 8,
+      schemaVersion: portfolioSchemaVersion,
     });
   });
 

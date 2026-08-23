@@ -93,4 +93,30 @@ describe("TradeHistoryScreen", () => {
     expect(getByText("1 record · local only")).toBeTruthy();
     expect(getByText("Purchase · HDFC Bank")).toBeTruthy();
   });
+
+  it("renders imported transfers without inventing a price or total", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const transfer: Trade = {
+      acquisitionCostPerUnit: 150,
+      assetId: asset.id,
+      date: "2026-04-11",
+      id: "transfer-in-hdfc",
+      quantity: 3,
+      type: "transferIn",
+    };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(transfer);
+    const { getByText, queryByText } = render(
+      <TradeHistoryScreen
+        assetId={asset.id}
+        onBack={jest.fn()}
+        onReviewTrade={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Transfer in")).toBeTruthy();
+    expect(getByText(/acquisition basis 150 per unit/)).toBeTruthy();
+    expect(queryByText("₹450.00")).toBeNull();
+  });
 });

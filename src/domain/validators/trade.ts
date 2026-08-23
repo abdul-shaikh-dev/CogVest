@@ -6,7 +6,11 @@ import {
   isFutureCalendarDate,
 } from "@/src/domain/dates";
 import type { OpeningPosition, Trade, TradeType } from "@/src/types";
-import { isOpeningPositionEffective } from "@/src/domain/openingPositions";
+import {
+  isOpeningPositionEffective,
+  isTransactionAfterOpeningCutover,
+} from "@/src/domain/openingPositions";
+import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
 import {
   decimal,
   normalizeQuantity,
@@ -72,16 +76,20 @@ export function getAvailableQuantity(
       .filter((position) => isOpeningPositionEffective(position, now))
       .map((position) => position.quantity),
   );
+  const effectiveOpenings = openingPositions.filter((position) =>
+    isOpeningPositionEffective(position, now),
+  );
 
   const availableQuantity = trades
-    .filter((trade) => isEffectiveCalendarDate(trade.date, now))
-    .reduce((quantity, trade) => {
-      if (trade.type === "sell") {
-        return quantity.minus(trade.quantity);
-      }
-
-      return quantity.plus(trade.quantity);
-    }, openingQuantity);
+    .filter(
+      (trade) =>
+        isEffectiveCalendarDate(trade.date, now) &&
+        isTransactionAfterOpeningCutover(trade.date, effectiveOpenings),
+    )
+    .reduce(
+      (quantity, trade) => quantity.plus(getTradeQuantityDelta(trade)),
+      openingQuantity,
+    );
 
   return normalizeQuantity(availableQuantity);
 }

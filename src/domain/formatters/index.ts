@@ -1,5 +1,6 @@
 export {
   formatCompactINR,
+  formatCurrency,
   formatDate,
   formatINR,
   formatPercentage,

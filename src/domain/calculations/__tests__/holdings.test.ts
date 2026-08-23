@@ -16,6 +16,7 @@ import {
 } from "@/src/domain/calculations";
 import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
 import type { MonthlySnapshot } from "@/src/types";
+import { isManualTrade } from "@/src/domain/transactionSemantics";
 
 const reliance: Asset = {
   assetClass: "stock",
@@ -220,7 +221,9 @@ describe("holding calculations", () => {
     );
     const expectedBuyCost = buys.reduce(
       (total, buy) =>
-        total + buy.pricePerUnit * buy.quantity + (buy.fees ?? 0),
+        isManualTrade(buy)
+          ? total + buy.pricePerUnit * buy.quantity + (buy.fees ?? 0)
+          : total,
       0,
     );
     const expectedAverageCost = expectedBuyCost / 0.1;
@@ -265,6 +268,57 @@ describe("holding calculations", () => {
     expect(holding.totalInvested).toBe(2250);
     expect(holding.currentValue).toBe(2250);
     expect(holding.unrealisedPnL).toBe(0);
+  });
+
+  it("uses an aggregate opening cutoff without double-counting older trades", () => {
+    const holding = calculateHolding({
+      asset: reliance,
+      currentPrice: 150,
+      openingPositions: [
+        openingPosition({
+          averageCostPrice: 100,
+          measuredAsOf: "2025-03-31",
+          quantity: 10,
+        }),
+      ],
+      trades: [
+        trade({ date: "2025-03-01", pricePerUnit: 80, quantity: 10 }),
+        trade({ date: "2025-04-01", pricePerUnit: 200, quantity: 2 }),
+      ],
+    });
+
+    expect(holding.totalUnits).toBe(12);
+    expect(holding.totalInvested).toBe(1400);
+    expect(holding.averageCostPrice).toBeCloseTo(116.66666667, 7);
+  });
+
+  it("uses costed transfer-ins for basis and transfer-outs for quantity only", () => {
+    const holding = calculateHolding({
+      asset: reliance,
+      currentPrice: 200,
+      trades: [
+        trade({ pricePerUnit: 100, quantity: 10, totalValue: 1000 }),
+        {
+          acquisitionCostPerUnit: 160,
+          assetId: reliance.id,
+          date: "2026-04-21T00:00:00.000Z",
+          id: "transfer-in-1",
+          quantity: 5,
+          type: "transferIn",
+        },
+        {
+          assetId: reliance.id,
+          date: "2026-04-22T00:00:00.000Z",
+          id: "transfer-out-1",
+          quantity: 3,
+          type: "transferOut",
+        },
+      ],
+    });
+
+    expect(holding.totalUnits).toBe(12);
+    expect(holding.averageCostPrice).toBe(120);
+    expect(holding.totalInvested).toBe(1440);
   });
 
   it("returns an empty holding for fully sold positions", () => {
@@ -634,6 +688,13 @@ describe("portfolio calculations", () => {
             quantity: 10,
             totalValue: 10000,
           }),
+          {
+            assetId: reliance.id,
+            date: "2026-05-04T00:00:00.000Z",
+            id: "trade-transfer-in",
+            quantity: 4,
+            type: "transferIn",
+          },
         ],
       }),
     ).toEqual({

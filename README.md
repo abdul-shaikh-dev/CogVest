@@ -212,6 +212,7 @@ Domain rules:
 - Agent instructions: `AGENTS.md`
 - Full product spec: `docs/cogvest-master-spec.md`
 - Holdings CSV onboarding: `docs/onboarding/holdings-csv-import.md`
+- Transaction history CSV onboarding: `docs/onboarding/transaction-csv-import.md`
 - Version roadmap: `docs/roadmap/cogvest-version-roadmap.md`
 - V1 PC verification matrix: `docs/testing/v1-core-flow-test-matrix.md`
 - Excel parity gate: `docs/testing/excel-parity-checklist.md`

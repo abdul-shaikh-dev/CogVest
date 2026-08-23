@@ -41,6 +41,8 @@ export type Asset = {
   exchange?: AssetExchange;
   id: string;
   instrumentType?: InstrumentType;
+  /** Normalized 12-character International Securities Identification Number. */
+  isin?: string;
   isTaxEligible?: boolean;
   logoUrl?: string;
   name: string;

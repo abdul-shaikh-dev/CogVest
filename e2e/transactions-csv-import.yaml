@@ -1,0 +1,113 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace with visual QA data"
+    timeout: 10000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible:
+      id: "visual-qa-seed-screen"
+    timeout: 10000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: "transaction-import-screen"
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-mode-full-history"
+- tapOn:
+    id: "select-transaction-csv"
+- tapOn: "Show roots"
+- extendedWaitUntil:
+    visible: "Downloads"
+    timeout: 5000
+- tapOn:
+    text: "Downloads"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "transactions-import-v1.csv"
+    timeout: 10000
+- tapOn: "transactions-import-v1.csv"
+- extendedWaitUntil:
+    visible:
+      id: "transaction-import-shared-cutover"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-shared-cutover"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-shared-cutover"
+- assertVisible: "OK"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-dry-run"
+    direction: DOWN
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-holding-summary-visual-qa-asset-hdfc"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- assertVisible:
+    id: "transaction-import-holding-summary-visual-qa-asset-hdfc"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-replacement-visual-qa-asset-hdfc"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- assertVisible:
+    id: "transaction-import-replacement-visual-qa-asset-hdfc"
+- takeScreenshot:
+    path: transactions-csv-import-preview
+- scrollUntilVisible:
+    element:
+      id: "confirm-transaction-import"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- scrollUntilVisible:
+    element:
+      id: "confirm-transaction-import"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "confirm-transaction-import"
+- extendedWaitUntil:
+    visible:
+      id: "holdings-screen"
+    timeout: 10000
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-evidence-screen"
+    timeout: 10000
+- assertVisible: "Trade count: 3"
+- assertVisible: "Imported transaction count: 3"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Opening position count: 3"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-hdfcbank-ns-values"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "Values: invested ₹36,250.00 | current ₹41,956.25 | quantity 25"
