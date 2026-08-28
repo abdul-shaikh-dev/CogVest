@@ -33,6 +33,7 @@ export type CasSchemeBlock = {
   closingUnits: string;
   events: CasStatementEvent[];
   folioReference: {
+    fingerprint?: string;
     label: string;
     scope: "statement";
   };
@@ -132,7 +133,10 @@ export function detectCamsKfinCasLayout(
     : { error: "unknownLayout" as const };
 }
 
-export function parseCamsKfinCas(text: string): CasParseResult {
+export function parseCamsKfinCas(
+  text: string,
+  options: { folioFingerprint?: (rawFolio: string) => string | undefined } = {},
+): CasParseResult {
   const source = {
     format: camsKfinCasSourceFormat,
     version: camsKfinCasSourceVersion,
@@ -164,6 +168,7 @@ export function parseCamsKfinCas(text: string): CasParseResult {
   const schemes: CasSchemeBlock[] = [];
   const unsupportedEvents: CasUnsupportedEvent[] = [];
   const consumedClosingRows = new Set<number>();
+  const folioFingerprintOwners = new Map<string, string>();
   let headerStart = 0;
   // Raw folios exist only during this parse and become statement-local labels.
   const folioReferences = new Map<string, string>();
@@ -214,6 +219,18 @@ export function parseCamsKfinCas(text: string): CasParseResult {
     if (!folioLabel) {
       folioLabel = `Folio ${folioReferences.size + 1}`;
       folioReferences.set(header.rawFolio, folioLabel);
+    }
+    const rawFingerprint = options.folioFingerprint?.(header.rawFolio)?.trim();
+    const fingerprintOwner = rawFingerprint
+      ? folioFingerprintOwners.get(rawFingerprint)
+      : undefined;
+    const folioFingerprint = rawFingerprint &&
+      isOpaqueFolioFingerprint(rawFingerprint, header.rawFolio) &&
+      (!fingerprintOwner || fingerprintOwner === header.rawFolio)
+      ? rawFingerprint
+      : undefined;
+    if (folioFingerprint) {
+      folioFingerprintOwners.set(folioFingerprint, header.rawFolio);
     }
     const events: CasStatementEvent[] = [];
     const schemeRegion = lines.slice(index + 1, closingIndex);
@@ -301,7 +318,11 @@ export function parseCamsKfinCas(text: string): CasParseResult {
     const scheme: CasSchemeBlock = {
       closingUnits,
       events,
-      folioReference: { label: folioLabel, scope: "statement" },
+      folioReference: {
+        ...(folioFingerprint ? { fingerprint: folioFingerprint } : {}),
+        label: folioLabel,
+        scope: "statement",
+      },
       isin: header.isin,
       name: header.name,
       openingUnits,
@@ -550,6 +571,15 @@ function parseCasDecimal(value: string) {
   } catch {
     return undefined;
   }
+}
+
+function isOpaqueFolioFingerprint(fingerprint: string, rawFolio: string) {
+  const rawIdentity = rawFolio.replace(/[^A-Za-z0-9]/gu, "").toLowerCase();
+  const fingerprintIdentity = fingerprint
+    .replace(/[^A-Za-z0-9]/gu, "")
+    .toLowerCase();
+  return /^folio_[a-z0-9_-]{24,128}$/u.test(fingerprint) &&
+    !fingerprintIdentity.includes(rawIdentity);
 }
 
 function isMalformedNumericLikeToken(token: string) {
