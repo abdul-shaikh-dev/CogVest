@@ -198,6 +198,83 @@ describe("transaction import planner", () => {
     );
   });
 
+  it.each(["supplemental", "fullHistory"] as const)(
+    "blocks %s CAS history while unsupported statement events remain",
+    (mode) => {
+      const row = resolution(
+        csvRow({
+          date: "2025-04-01",
+          externalId: "cas-event-1",
+          price: "100",
+          quantity: "1",
+          type: "buy",
+        }),
+      );
+      row.row.source = {
+        format: "cams-kfin-cas",
+        version: "combined-detailed-v1",
+      };
+
+      const result = plan({
+        mode,
+        openingPositions: mode === "fullHistory" ? [] : undefined,
+        resolutions: [row],
+        sharedCutover: mode === "supplemental" ? "2025-03-01" : undefined,
+        unsupportedCount: 1,
+      });
+
+      expect(result.command).toBeUndefined();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: "unsupportedSourceEvents" }),
+      );
+    },
+  );
+
+  it("blocks unsupported CAS events when CAS rows are duplicates", () => {
+    const casRow = resolution(
+      csvRow({
+        date: "2025-04-01",
+        externalId: "cas-event-1",
+        price: "100",
+        quantity: "1",
+        type: "buy",
+      }),
+    );
+    casRow.row.source = {
+      format: "cams-kfin-cas",
+      version: "combined-detailed-v1",
+    };
+    const initial = plan({
+      mode: "supplemental",
+      resolutions: [casRow],
+      sharedCutover: "2025-03-01",
+    });
+    const existingCas = initial.command!.transactions[0];
+    const otherRow = resolution(
+      csvRow({
+        date: "2025-05-01",
+        externalId: "other-event-1",
+        price: "100",
+        quantity: "1",
+        type: "buy",
+      }),
+    );
+
+    const result = plan({
+      mode: "supplemental",
+      resolutions: [casRow, otherRow],
+      sharedCutover: "2025-03-01",
+      trades: [existingCas],
+      unsupportedCount: 1,
+    });
+
+    expect(result.duplicates).toBe(1);
+    expect(result.command).toBeUndefined();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "unsupportedSourceEvents" }),
+    );
+  });
+
   it("requires an explicit cutover and rejects supplemental pre-cutover rows", () => {
     const row = resolution(csvRow({ date: "2025-02-01", price: "100", quantity: "1", type: "buy" }));
     const missing = plan({ mode: "supplemental", resolutions: [row] });

@@ -608,6 +608,16 @@ export function buildTransactionImportPlan({
     (transaction) =>
       transaction.importProvenance?.sourceFormat === "zerodha-tradebook",
   );
+  const includesCamsKfinCas = resolutions.some(
+    (resolution) => resolution.row.source?.format === "cams-kfin-cas",
+  );
+  if (includesCamsKfinCas && unsupportedCount > 0) {
+    errors.push({
+      code: "unsupportedSourceEvents",
+      message:
+        "Resolve unsupported CAMS or KFintech statement events before importing this history.",
+    });
+  }
   if (mode === "fullHistory" && includesZerodha && !sourceCoverageConfirmed) {
     errors.push({
       code: "missingSourceCoverage",
