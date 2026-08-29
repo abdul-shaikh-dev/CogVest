@@ -7,6 +7,7 @@ import { parseZerodhaTradebook } from "./zerodhaTradebook";
 export const transactionImportSourceIds = [
   "cogvestCsvV1",
   "zerodhaTradebookEqV1",
+  "camsKfinCasPdfV1",
 ] as const;
 
 export type TransactionImportSourceId =
@@ -32,6 +33,12 @@ export const transactionImportSources: TransactionImportSourceDefinition[] = [
     label: "Zerodha Tradebook",
     multipleFiles: true,
   },
+  {
+    description: "Detailed mutual-fund statement from CAMS + KFintech.",
+    id: "camsKfinCasPdfV1",
+    label: "CAMS + KFintech CAS",
+    multipleFiles: false,
+  },
 ];
 
 export function parseTransactionImportFile(input: {
@@ -40,6 +47,18 @@ export function parseTransactionImportFile(input: {
   sourceId: TransactionImportSourceId;
   text: string;
 }): TransactionCsvParseResult {
+  if (input.sourceId === "camsKfinCasPdfV1") {
+    return {
+      errors: [
+        {
+          code: "invalidHeader",
+          message: "CAS PDF statements must be read through the private on-device statement flow.",
+        },
+      ],
+      rows: [],
+      unsupportedEvents: [],
+    };
+  }
   const parsed =
     input.sourceId === "zerodhaTradebookEqV1"
       ? parseZerodhaTradebook(input.text, {

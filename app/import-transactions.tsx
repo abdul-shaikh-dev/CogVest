@@ -20,6 +20,18 @@ async function pickCsvFile() {
   }
 }
 
+async function pickCasStatement() {
+  try {
+    const picked = await File.pickFileAsync(undefined, "application/pdf");
+    const selected = Array.isArray(picked) ? picked[0] : picked;
+    if (!selected) return undefined;
+    return { size: selected.size, uri: selected.uri };
+  } catch (error) {
+    if (/cancelled|canceled/iu.test(error instanceof Error ? error.message : "")) return undefined;
+    throw error;
+  }
+}
+
 async function saveCsvTemplate() {
   try {
     const directory = await Directory.pickDirectoryAsync();
@@ -33,5 +45,5 @@ async function saveCsvTemplate() {
 }
 
 export default function ImportTransactionsRoute() {
-  return <TransactionImportScreen onCancel={() => router.back()} onImported={() => router.replace({ pathname: "/(tabs)/holdings", params: { statusMessage: "Transaction history imported." } })} pickCsvFile={pickCsvFile} saveCsvTemplate={saveCsvTemplate} />;
+  return <TransactionImportScreen onCancel={() => router.back()} onImported={() => router.replace({ pathname: "/(tabs)/holdings", params: { statusMessage: "Transaction history imported." } })} pickCasStatement={pickCasStatement} pickCsvFile={pickCsvFile} saveCsvTemplate={saveCsvTemplate} />;
 }

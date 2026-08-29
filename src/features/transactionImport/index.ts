@@ -1,6 +1,6 @@
 export { TransactionImportScreen } from "./TransactionImportScreen";
 export { transactionCsvMaxBytes, useTransactionImport } from "./useTransactionImport";
-export type { PickedTransactionCsv } from "./useTransactionImport";
+export type { PickedCasStatement, PickedTransactionCsv } from "./useTransactionImport";
 export {
   buildTransactionImportPlan,
   transactionImportSourceFormat,

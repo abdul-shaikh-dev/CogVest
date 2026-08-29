@@ -113,4 +113,24 @@ describe("Import transactions route", () => {
     });
     expect(text).not.toHaveBeenCalled();
   });
+
+  it("selects a CAS PDF without returning its identity-bearing filename", async () => {
+    mockPickFileAsync.mockResolvedValue({
+      name: "private-statement.pdf",
+      size: 4096,
+      uri: "content://private-statement.pdf",
+    });
+    render(<ImportTransactionsRoute />);
+
+    await expect(
+      (capturedProps?.pickCasStatement as () => Promise<unknown>)(),
+    ).resolves.toEqual({
+      size: 4096,
+      uri: "content://private-statement.pdf",
+    });
+    expect(mockPickFileAsync).toHaveBeenCalledWith(
+      undefined,
+      "application/pdf",
+    );
+  });
 });

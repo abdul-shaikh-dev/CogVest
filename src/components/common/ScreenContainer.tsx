@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import type { ReactElement } from "react";
 import {
   ScrollView,
@@ -14,6 +14,7 @@ type ScreenContainerProps = {
   children: ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
   scroll?: boolean;
+  scrollRef?: Ref<ScrollView>;
   testID?: string;
 };
 
@@ -21,6 +22,7 @@ export function ScreenContainer({
   children,
   refreshControl,
   scroll = false,
+  scrollRef,
   testID,
 }: ScreenContainerProps) {
   if (scroll) {
@@ -29,6 +31,7 @@ export function ScreenContainer({
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="always"
+          ref={scrollRef}
           refreshControl={refreshControl}
           style={styles.scroll}
         >

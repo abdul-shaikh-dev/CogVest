@@ -87,6 +87,10 @@ export type CasUnsupportedEvent = {
 };
 
 export type CasParseResult = {
+  coverage?: {
+    from: string;
+    to: string;
+  };
   errors: CasParseError[];
   schemes: CasSchemeBlock[];
   source: {
@@ -111,6 +115,10 @@ const numericPrefixWithInvalidSuffixPattern = new RegExp(
 const openingPattern = /Opening\s+Unit\s+Balance\s*:?\s*(\S+)/iu;
 const closingPattern = /Closing\s+Unit\s+Balance\s*:?\s*(\S+)/iu;
 const folioPattern = /Folio\s+No\s*:\s*(\d+(?:\s*\/\s*\d+)?)/iu;
+const statementPeriodPattern = new RegExp(
+  `Statement\\s+Period\\s*:\\s*(${dateToken})\\s+(?:To|-)\\s+(${dateToken})`,
+  "iu",
+);
 const isinPattern = /\b(INF[A-Z0-9]{9})\b/u;
 const registrarLabelPattern = /Registrar\s*:/iu;
 const registrarTokenPattern = /\b(CAMS|KFINTECH|KFIN|KARVY)\b/iu;
@@ -164,6 +172,12 @@ export function parseCamsKfinCas(
     .replace(/\r\n?/gu, "\n")
     .split("\n")
     .map((line) => line.replace(/\s+/gu, " ").trim());
+  const periodMatch = statementPeriodPattern.exec(text);
+  const periodFrom = periodMatch ? parseCasDate(periodMatch[1]) : undefined;
+  const periodTo = periodMatch ? parseCasDate(periodMatch[2]) : undefined;
+  const coverage = periodFrom && periodTo
+    ? { from: periodFrom, to: periodTo }
+    : undefined;
   const errors: CasParseError[] = [];
   const schemes: CasSchemeBlock[] = [];
   const unsupportedEvents: CasUnsupportedEvent[] = [];
@@ -353,12 +367,34 @@ export function parseCamsKfinCas(
   }
 
   return {
+    ...(coverage ? { coverage } : {}),
     errors,
     schemes,
     source,
     status: errors.length === 0 && unsupportedEvents.length === 0 ? "ready" : "blocked",
     unsupportedEvents,
   };
+}
+
+export async function parseCamsKfinCasWithFolioFingerprint(
+  text: string,
+  fingerprint: (rawFolio: string) => Promise<string | undefined>,
+): Promise<CasParseResult> {
+  const rawFolios = new Set<string>();
+  const globalFolioPattern = new RegExp(folioPattern.source, "giu");
+  for (const match of text.matchAll(globalFolioPattern)) {
+    const rawFolio = match[1]?.replace(/\s+/gu, "");
+    if (rawFolio) rawFolios.add(rawFolio);
+  }
+
+  const fingerprints = new Map<string, string | undefined>();
+  for (const rawFolio of rawFolios) {
+    fingerprints.set(rawFolio, await fingerprint(rawFolio));
+  }
+
+  return parseCamsKfinCas(text, {
+    folioFingerprint: (rawFolio) => fingerprints.get(rawFolio),
+  });
 }
 
 function parseSchemeHeader(lines: string[]) {

@@ -26,6 +26,125 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("keeps CAS identity private while retrying a password and importing reviewed rows", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({
+      assetClass: "debt",
+      currency: "INR",
+      id: "asset-sample-fund",
+      isin: "INF000000001",
+      instrumentType: "mutualFund",
+      name: "Sample Equity Fund",
+      symbol: "SAMPLE",
+      ticker: "SAMPLE",
+    });
+    const readCasStatement = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("This statement requires its PDF password."))
+      .mockResolvedValueOnce({
+        normalization: {
+          errors: [],
+          parserErrors: [],
+          preservedCharges: [
+            {
+              amount: "0.05",
+              date: "2024-01-02",
+              folioLabel: "Folio 1",
+              rowNumber: 12,
+              type: "stampDuty",
+            },
+          ],
+          rows: [
+            {
+              account: `folio_${"a".repeat(64)}`,
+              currency: "INR",
+              description: "SIP purchase",
+              externalId: "cas:2024-01-02:purchaseSip:8:125:18",
+              fingerprint: "cas-row-fingerprint",
+              identity: { kind: "isin", value: "INF000000001" },
+              isin: "INF000000001",
+              quantity: 8,
+              rowNumber: 11,
+              source: {
+                format: "cams-kfin-cas",
+                version: "combined-detailed-v1",
+              },
+              tradeDate: "2024-01-02",
+              transactionType: "buy",
+              unitPrice: 125,
+            },
+          ],
+          schemes: [
+            {
+              closingUnits: "18",
+              events: [],
+              folioLabel: "Folio 1",
+              importableTransactions: 1,
+              isin: "INF000000001",
+              name: "Sample Equity Fund",
+              openingUnits: "10",
+              registrar: "CAMS",
+            },
+          ],
+          unsupportedEvents: [],
+        },
+        pageCount: 8,
+      });
+    const onImported = jest.fn();
+    const { getByTestId, getByText, queryByText } = render(
+      <TransactionImportScreen
+        onCancel={jest.fn()}
+        onImported={onImported}
+        pickCasStatement={async () => ({
+          size: 4096,
+          uri: "content://private-statement.pdf",
+        })}
+        pickCsvFile={jest.fn()}
+        readCasStatement={readCasStatement}
+        searchAssetLookupResults={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    fireEvent.press(getByTestId("select-cas-statement"));
+    await waitFor(() =>
+      expect(getByText("This statement requires its PDF password.")).toBeTruthy(),
+    );
+    expect(queryByText(/private-statement/iu)).toBeNull();
+
+    fireEvent.changeText(getByTestId("cas-statement-password"), "transient-password");
+    fireEvent.press(getByTestId("read-cas-statement"));
+    await waitFor(() => expect(getByTestId("cas-statement-review")).toBeTruthy());
+    expect(getByText("Statement selected")).toBeTruthy();
+    expect(getByText("Folio 1 • CAMS • INF000000001")).toBeTruthy();
+    expect(getByTestId("cas-preserved-charges")).toHaveTextContent(
+      /1 stamp-duty entry is preserved/u,
+    );
+    expect(readCasStatement).toHaveBeenNthCalledWith(1, {
+      password: undefined,
+      source: { size: 4096, uri: "content://private-statement.pdf" },
+    });
+    expect(readCasStatement).toHaveBeenNthCalledWith(2, {
+      password: "transient-password",
+      source: { size: 4096, uri: "content://private-statement.pdf" },
+    });
+    expect(getByTestId("cas-statement-password")).toHaveProp("value", "");
+
+    fireEvent.press(getByTestId("confirm-transaction-import"));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    expect(store.getState().trades).toHaveLength(1);
+    await waitFor(() =>
+      expect(getByTestId("transaction-import-summary-duplicates")).toHaveTextContent("1"),
+    );
+    expect(
+      getByTestId("confirm-transaction-import").props.accessibilityState
+        ?.disabled,
+    ).toBe(true);
+    expect(JSON.stringify(store.getState())).not.toContain("transient-password");
+    expect(JSON.stringify(store.getState())).not.toContain("private-statement.pdf");
+  });
+
   it("adds, reorders, and removes annual Zerodha files before one dry run", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({

@@ -15,6 +15,11 @@ import {
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { searchAssetLookupResults as searchAssetLookupResultsService } from "@/src/services/assetLookup";
 import {
+  readCasStatementForImport,
+  type CasPdfSourceFile,
+  type CasStatementImportReview,
+} from "@/src/services/import-export";
+import {
   getPortfolioStore,
   type PortfolioStoreState,
   type TransactionImportCommandResult,
@@ -42,10 +47,17 @@ export type SelectedTransactionImportFile = PickedTransactionCsv & {
   id: string;
 };
 
-type UseTransactionImportOptions = {
+export type PickedCasStatement = CasPdfSourceFile;
+
+export type UseTransactionImportOptions = {
   now?: () => Date;
   onImported: (result: TransactionImportCommandResult) => void;
+  pickCasStatement?: () => Promise<PickedCasStatement | undefined>;
   pickCsvFile: () => Promise<PickedTransactionCsv | undefined>;
+  readCasStatement?: (input: {
+    password?: string;
+    source: PickedCasStatement;
+  }) => Promise<CasStatementImportReview>;
   searchAssetLookupResults?: (input: {
     query: string;
   }) => Promise<AssetLookupSearchResult>;
@@ -179,7 +191,9 @@ async function mapWithConcurrency<T, R>(
 export function useTransactionImport({
   now = () => new Date(),
   onImported,
+  pickCasStatement,
   pickCsvFile,
+  readCasStatement = readCasStatementForImport,
   searchAssetLookupResults = searchAssetLookupResultsService,
   store = getPortfolioStore(),
 }: UseTransactionImportOptions) {
@@ -191,6 +205,10 @@ export function useTransactionImport({
   const batchIdRef = useRef(createId("transactions-csv"));
   const analysisIdRef = useRef(0);
   const [files, setFiles] = useState<SelectedTransactionImportFile[]>([]);
+  const [casPassword, setCasPassword] = useState("");
+  const [casReview, setCasReview] = useState<CasStatementImportReview>();
+  const [casReviewErrors, setCasReviewErrors] = useState<string[]>([]);
+  const [casSource, setCasSource] = useState<PickedCasStatement>();
   const [sourceId, setSourceIdState] =
     useState<TransactionImportSourceId>("cogvestCsvV1");
   const [externalActivityConfirmed, setExternalActivityConfirmed] =
@@ -215,8 +233,61 @@ export function useTransactionImport({
     setResolutions([]);
     setUnsupportedCount(0);
     setUnsupportedEvents([]);
+    setCasReview(undefined);
+    setCasReviewErrors([]);
     setSharedCutover("");
     setCutoverByOpeningPositionId({});
+  }
+
+  async function resolveRows(
+    rows: TransactionCsvResolution["row"][],
+    analysisId: number,
+  ) {
+    const byKey = new Map<string, TransactionCsvResolution[]>();
+    for (const row of rows) {
+      const seed: TransactionCsvResolution = { row, status: "unresolved" };
+      const key = identityKey(seed);
+      byKey.set(key, [...(byKey.get(key) ?? []), seed]);
+    }
+
+    const resolvedGroups = await mapWithConcurrency(
+      [...byKey.values()],
+      4,
+      async (seeds) => {
+        const first = seeds[0];
+        const existing = findExistingAsset(first.row, snapshot.assets);
+        if (existing) {
+          return seeds.map((seed) => ({
+            ...seed,
+            asset: existing,
+            status: "ready" as const,
+          }));
+        }
+        try {
+          const lookup = await searchAssetLookupResults({
+            query: lookupQuery(first.row),
+          });
+          const candidates = lookup.results.map(assetFromLookupResult);
+          const status =
+            candidates.length > 0
+              ? ("selectionRequired" as const)
+              : ("unresolved" as const);
+          return seeds.map((seed) => ({
+            ...seed,
+            candidates,
+            status,
+          }));
+        } catch {
+          return seeds.map((seed) => ({
+            ...seed,
+            status: "unresolved" as const,
+          }));
+        }
+      },
+    );
+    if (analysisId === analysisIdRef.current) {
+      setResolutions(resolvedGroups.flat());
+    }
   }
 
   async function analyzeFiles(
@@ -282,56 +353,52 @@ export function useTransactionImport({
         return;
       }
 
-      const byKey = new Map<string, TransactionCsvResolution[]>();
-      for (const row of parsedFiles.flatMap((parsed) => parsed.rows)) {
-        const seed: TransactionCsvResolution = { row, status: "unresolved" };
-        const key = identityKey(seed);
-        byKey.set(key, [...(byKey.get(key) ?? []), seed]);
-      }
-
-      const resolvedGroups = await mapWithConcurrency(
-        [...byKey.values()],
-        4,
-        async (seeds) => {
-          const first = seeds[0];
-          const existing = findExistingAsset(first.row, snapshot.assets);
-          if (existing) {
-            return seeds.map((seed) => ({
-              ...seed,
-              asset: existing,
-              status: "ready" as const,
-            }));
-          }
-          try {
-            const lookup = await searchAssetLookupResults({
-              query: lookupQuery(first.row),
-            });
-            const candidates = lookup.results.map(assetFromLookupResult);
-            const status =
-              candidates.length > 0
-                ? ("selectionRequired" as const)
-                : ("unresolved" as const);
-            return seeds.map((seed) => ({
-              ...seed,
-              candidates,
-              status,
-            }));
-          } catch {
-            return seeds.map((seed) => ({
-              ...seed,
-              status: "unresolved" as const,
-            }));
-          }
-        },
+      await resolveRows(
+        parsedFiles.flatMap((parsed) => parsed.rows),
+        analysisId,
       );
-      if (analysisId === analysisIdRef.current) {
-        setResolutions(resolvedGroups.flat());
-      }
     } catch {
       if (analysisId !== analysisIdRef.current) return;
       clearAnalysis();
       setScreenError(
         "These files could not be read. Check the selected source and try again.",
+      );
+    } finally {
+      if (analysisId === analysisIdRef.current) setIsResolving(false);
+    }
+  }
+
+  async function analyzeCasStatement(
+    source: PickedCasStatement,
+    nextPassword = casPassword,
+  ) {
+    const analysisId = ++analysisIdRef.current;
+    setScreenError(undefined);
+    clearAnalysis();
+    batchIdRef.current = createId("transactions-cas");
+    setIsResolving(true);
+    try {
+      const review = await readCasStatement({
+        password: nextPassword || undefined,
+        source,
+      });
+      if (analysisId !== analysisIdRef.current) return;
+      setCasReview(review);
+      setCasPassword("");
+      const normalization = review.normalization;
+      setCasReviewErrors([
+        ...normalization.parserErrors.map((error) => error.message),
+        ...normalization.errors.map((error) => error.message),
+      ]);
+      setUnsupportedCount(normalization.unsupportedEvents.length);
+      setUnsupportedEvents(normalization.unsupportedEvents);
+      await resolveRows(normalization.rows, analysisId);
+    } catch (error) {
+      if (analysisId !== analysisIdRef.current) return;
+      setScreenError(
+        error instanceof Error
+          ? error.message
+          : "This statement could not be read safely.",
       );
     } finally {
       if (analysisId === analysisIdRef.current) setIsResolving(false);
@@ -347,6 +414,17 @@ export function useTransactionImport({
   async function selectFile() {
     setScreenError(undefined);
     try {
+      if (sourceId === "camsKfinCasPdfV1") {
+        if (!pickCasStatement) {
+          setScreenError("Statement selection is unavailable in this app build.");
+          return;
+        }
+        const statement = await pickCasStatement();
+        if (!statement) return;
+        setCasSource(statement);
+        await analyzeCasStatement(statement);
+        return;
+      }
       const file = await pickCsvFile();
       if (!file) return;
       if (
@@ -364,7 +442,9 @@ export function useTransactionImport({
       );
     } catch {
       setScreenError(
-        "This CSV could not be read. Choose another file and try again.",
+        sourceId === "camsKfinCasPdfV1"
+          ? "This statement could not be selected. Choose another PDF and try again."
+          : "This CSV could not be read. Choose another file and try again.",
       );
     }
   }
@@ -388,6 +468,8 @@ export function useTransactionImport({
     setSourceIdState(nextSourceId);
     setExternalActivityConfirmed(false);
     setFiles([]);
+    setCasPassword("");
+    setCasSource(undefined);
     clearAnalysis();
     setScreenError(undefined);
     setIsResolving(false);
@@ -459,8 +541,17 @@ export function useTransactionImport({
     }
   }
 
+  async function retryCasStatement() {
+    if (!casSource) return;
+    await analyzeCasStatement(casSource);
+  }
+
   return {
     confirmImport,
+    casPassword,
+    casReview,
+    casReviewErrors,
+    casSource,
     cutoverHoldings,
     cutoverByOpeningPositionId,
     externalActivityConfirmed,
@@ -476,10 +567,12 @@ export function useTransactionImport({
     parseErrors,
     plan,
     removeFile,
+    retryCasStatement,
     screenError,
     selectCandidate,
     selectFile,
     setCutover,
+    setCasPassword,
     setExternalActivityConfirmed,
     setMode,
     setSharedCutover,
