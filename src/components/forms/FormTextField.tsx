@@ -13,6 +13,7 @@ type FormTextFieldProps = {
   onSubmitEditing?: () => void;
   placeholder?: string;
   returnKeyType?: ReturnKeyTypeOptions;
+  secureTextEntry?: boolean;
   testID?: string;
   value: string;
 };
@@ -26,6 +27,7 @@ export function FormTextField({
   onSubmitEditing,
   placeholder,
   returnKeyType,
+  secureTextEntry = false,
   testID,
   value,
 }: FormTextFieldProps) {
@@ -43,6 +45,7 @@ export function FormTextField({
         placeholder={placeholder}
         placeholderTextColor={colors.text.secondary}
         returnKeyType={returnKeyType}
+        secureTextEntry={secureTextEntry}
         style={[styles.input, multiline && styles.multiline, error && styles.invalid]}
         testID={testID}
         value={value}

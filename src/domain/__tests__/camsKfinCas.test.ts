@@ -3,10 +3,30 @@ import {
   camsKfinCasSourceVersion,
   detectCamsKfinCasLayout,
   parseCamsKfinCas,
+  parseCamsKfinCasWithFolioFingerprint,
 } from "../camsKfinCas";
 import { sanitizedCombinedDetailedCasFixture as fixture } from "./fixtures/camsKfinCas.fixture";
 
 describe("CAMS + KFintech detailed CAS parser", () => {
+  it("applies async opaque folio fingerprints without exposing raw folios", async () => {
+    const seen: string[] = [];
+    const result = await parseCamsKfinCasWithFolioFingerprint(
+      fixture,
+      async (rawFolio) => {
+        seen.push(rawFolio);
+        return `folio_${(rawFolio.startsWith("100") ? "a" : "b").repeat(64)}`;
+      },
+    );
+
+    expect(seen).toEqual(["10000000/01", "20000000/02"]);
+    expect(result.schemes[0].folioReference.fingerprint).toBe(
+      `folio_${"a".repeat(64)}`,
+    );
+    expect(result.schemes[1].folioReference.fingerprint).toBe(
+      `folio_${"b".repeat(64)}`,
+    );
+    expect(JSON.stringify(result)).not.toMatch(/10000000|20000000/u);
+  });
   it("detects only the versioned detailed statement layout", () => {
     expect(detectCamsKfinCasLayout(fixture)).toEqual({
       version: camsKfinCasSourceVersion,
@@ -25,6 +45,10 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.source).toEqual({
       format: camsKfinCasSourceFormat,
       version: camsKfinCasSourceVersion,
+    });
+    expect(result.coverage).toEqual({
+      from: "2024-01-01",
+      to: "2024-12-31",
     });
     expect(result.errors).toEqual([]);
     expect(result.status).toBe("blocked");
