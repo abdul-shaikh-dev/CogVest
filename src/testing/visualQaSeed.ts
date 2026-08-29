@@ -78,6 +78,17 @@ export const visualQaAssets: Asset[] = [
     symbol: "BTC",
     ticker: "bitcoin",
   },
+  {
+    assetClass: "debt",
+    currency: "INR",
+    id: "visual-qa-asset-sample-fund",
+    instrumentType: "mutualFund",
+    isin: "INF000000001",
+    name: "Sample Equity Fund",
+    sectorType: "diversified",
+    symbol: "SAMPLEFUND",
+    ticker: "SAMPLEFUND",
+  },
 ];
 
 export const visualQaOpeningPositions: OpeningPosition[] = [

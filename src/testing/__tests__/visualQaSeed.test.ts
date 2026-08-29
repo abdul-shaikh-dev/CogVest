@@ -44,7 +44,19 @@ describe("seedVisualQaPortfolio", () => {
       "etf",
       "debt",
       "crypto",
+      "debt",
     ]);
+    expect(
+      state.assets.find((asset) => asset.isin === "INF000000001"),
+    ).toMatchObject({
+      instrumentType: "mutualFund",
+      name: "Sample Equity Fund",
+    });
+    expect(
+      state.openingPositions.some(
+        (position) => position.assetId === "visual-qa-asset-sample-fund",
+      ),
+    ).toBe(false);
     expect(state.cashEntries).toHaveLength(4);
     expect(state.openingPositions).toHaveLength(4);
     expect(state.openingPositions.some((position) => position.conviction)).toBe(
@@ -119,7 +131,7 @@ describe("seedVisualQaPortfolio", () => {
     const state = store.getState();
 
     expect(state.cashEntries.map((entry) => entry.id)).not.toContain("old-cash");
-    expect(state.assets).toHaveLength(4);
+    expect(state.assets).toHaveLength(5);
     expect(state.cashEntries).toHaveLength(4);
     expect(state.monthlySnapshots).toHaveLength(7);
     expect(state.historicalQuoteCache).toEqual({});
