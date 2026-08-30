@@ -23,6 +23,25 @@ describe("useSettings", () => {
     expect(secondStore.getState().preferences.maskWealthValues).toBe(true);
   });
 
+  it("updates and persists display mode independently from value masking", () => {
+    const storage = createMemoryJsonStorage();
+    const firstStore = createPortfolioStore({ storage });
+    const { result } = renderHook(() => useSettings({ store: firstStore }));
+
+    expect(result.current.displayMode).toBe("standard");
+
+    act(() => {
+      result.current.setDisplayMode("minimal");
+    });
+
+    expect(result.current.displayMode).toBe("minimal");
+    expect(result.current.maskWealthValues).toBe(false);
+    expect(createPortfolioStore({ storage }).getState().preferences).toMatchObject({
+      displayMode: "minimal",
+      maskWealthValues: false,
+    });
+  });
+
   it("derives empty quote status without pretending live quotes exist", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { result } = renderHook(() => useSettings({ store }));

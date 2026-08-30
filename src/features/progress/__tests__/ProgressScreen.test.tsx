@@ -564,6 +564,24 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("asset-trend-Cash")).toBeNull();
   });
 
+  it("keeps charts and snapshot controls while hiding optional insights in Minimal mode", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().updatePreferences({ displayMode: "minimal" });
+
+    const { getByTestId, getByText, queryByText } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    expect(getByText("Portfolio Growth")).toBeTruthy();
+    expect(getByText("Asset Momentum")).toBeTruthy();
+    expect(getByTestId("snapshot-history-card")).toBeTruthy();
+    expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
+    expect(queryByText("Crypto +12.50%")).toBeNull();
+    expect(queryByText(/share/u)).toBeNull();
+  });
+
   it("keeps the selected chart month stable until the pointer changes", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);

@@ -3,15 +3,17 @@ import type { StoreApi } from "zustand/vanilla";
 
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { Quote } from "@/src/types";
+import type { DisplayMode, Quote } from "@/src/types";
 
 type UseSettingsInput = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
 export type UseSettingsResult = {
+  displayMode: DisplayMode;
   maskWealthValues: boolean;
   quoteStatus: SettingsQuoteStatus;
+  setDisplayMode: (displayMode: DisplayMode) => void;
   toggleMaskWealthValues: () => void;
 };
 
@@ -105,9 +107,15 @@ export function useSettings({
     });
   }
 
+  function setDisplayMode(displayMode: DisplayMode) {
+    store.getState().updatePreferences({ displayMode });
+  }
+
   return {
+    displayMode: snapshot.preferences.displayMode,
     maskWealthValues: snapshot.preferences.maskWealthValues,
     quoteStatus: deriveQuoteStatus(snapshot.quoteCache),
+    setDisplayMode,
     toggleMaskWealthValues,
   };
 }

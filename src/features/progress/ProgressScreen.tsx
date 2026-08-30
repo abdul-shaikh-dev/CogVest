@@ -312,12 +312,14 @@ function getSelectedChange(
 
 function SelectedMonthPanel({
   maskWealthValues,
+  minimal,
   monthLabel,
   selectedIndex,
   series,
   testIDPrefix,
 }: {
   maskWealthValues: boolean;
+  minimal: boolean;
   monthLabel: string;
   selectedIndex: number;
   series: MonthlyProgressChartSeries[];
@@ -367,9 +369,16 @@ function SelectedMonthPanel({
           <View style={styles.portfolioSelectionContent}>
             <View style={styles.gapOutcome}>
               <AppText
-                style={difference >= 0 ? styles.gainText : styles.lossText}
+                color={minimal ? "secondary" : undefined}
+                style={
+                  minimal
+                    ? undefined
+                    : difference >= 0
+                      ? styles.gainText
+                      : styles.lossText
+                }
                 variant="title"
-                weight="bold"
+                weight={minimal ? "medium" : "bold"}
               >
                 {differencePercentage === null
                   ? "Unavailable"
@@ -445,12 +454,15 @@ function SelectedMonthPanel({
                   {formatCompactINR(item.values[selectedIndex] ?? 0)}
                 </AppText>
                 <AppText
+                  color={minimal ? "secondary" : undefined}
                   style={
-                    change === null
-                      ? styles.neutralText
-                      : change >= 0
-                        ? styles.gainText
-                        : styles.lossText
+                    minimal
+                      ? undefined
+                      : change === null
+                        ? styles.neutralText
+                        : change >= 0
+                          ? styles.gainText
+                          : styles.lossText
                   }
                   variant="caption"
                 >
@@ -470,12 +482,14 @@ function SelectedMonthPanel({
 function TrendChart({
   isReducedMotionEnabled,
   maskWealthValues,
+  minimal,
   monthLabels,
   series,
   testIDPrefix,
 }: {
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
+  minimal: boolean;
   monthLabels: string[];
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
@@ -512,6 +526,7 @@ function TrendChart({
     <View style={styles.chartBlock}>
       <SelectedMonthPanel
         maskWealthValues={maskWealthValues}
+        minimal={minimal}
         monthLabel={monthLabels[safeSelectedIndex] ?? ""}
         selectedIndex={safeSelectedIndex}
         series={series}
@@ -969,6 +984,7 @@ function ProgressTrendCards({
   portfolioChartCustomRange,
   portfolioChartData,
   portfolioChartRange,
+  minimal,
 }: {
   assetChartCustomRange: MonthlyChartCustomRange;
   assetChartData: MonthlyProgressChartData;
@@ -982,6 +998,7 @@ function ProgressTrendCards({
   portfolioChartCustomRange: MonthlyChartCustomRange;
   portfolioChartData: MonthlyProgressChartData;
   portfolioChartRange: MonthlyChartRange;
+  minimal: boolean;
 }) {
   if (
     portfolioChartData.availableMonths.length < 2 &&
@@ -1023,6 +1040,7 @@ function ProgressTrendCards({
           <TrendChart
             isReducedMotionEnabled={isReducedMotionEnabled}
             maskWealthValues={maskWealthValues}
+            minimal={minimal}
             monthLabels={portfolioChartData.monthLabels}
             series={portfolioChartData.portfolioSeries}
             testIDPrefix="portfolio-trend"
@@ -1038,7 +1056,7 @@ function ProgressTrendCards({
       <PremiumCard>
         <ChartCardHeader
           actionLabel={
-            assetChartData.largestAssetMove
+            !minimal && assetChartData.largestAssetMove
               ? `${assetChartData.largestAssetMove.label} ${formatPercentage(
                   assetChartData.largestAssetMove.latestDeltaPct,
                 )}`
@@ -1070,11 +1088,14 @@ function ProgressTrendCards({
             <TrendChart
               isReducedMotionEnabled={isReducedMotionEnabled}
               maskWealthValues={maskWealthValues}
+              minimal={minimal}
               monthLabels={assetChartData.monthLabels}
               series={assetChartData.assetSeries}
               testIDPrefix="asset-trend"
             />
-            <AssetInsightRows insights={assetChartData.assetInsights} />
+            {minimal ? null : (
+              <AssetInsightRows insights={assetChartData.assetInsights} />
+            )}
           </>
         ) : (
           <View style={styles.chartPlaceholder}>
@@ -1090,9 +1111,11 @@ function ProgressTrendCards({
 
 function SnapshotHistoryCard({
   maskWealthValues,
+  minimal,
   summaries,
 }: {
   maskWealthValues: boolean;
+  minimal: boolean;
   summaries: MonthlyProgressSummary[];
 }) {
   const [selectedMonth, setSelectedMonth] = useState(
@@ -1237,7 +1260,7 @@ function SnapshotHistoryCard({
           color="secondary"
           variant="caption"
           style={
-            !maskWealthValues && portfolioChange !== null
+            !minimal && !maskWealthValues && portfolioChange !== null
               ? portfolioChange >= 0
                 ? styles.gainText
                 : styles.lossText
@@ -1275,7 +1298,7 @@ function SnapshotHistoryCard({
                     color="secondary"
                     variant="caption"
                     style={
-                      !maskWealthValues && change !== null
+                      !minimal && !maskWealthValues && change !== null
                         ? change >= 0
                           ? styles.gainText
                           : styles.lossText
@@ -1378,6 +1401,7 @@ export function ProgressScreen({
 }: ProgressScreenProps) {
   const progress = useProgress({ now, store });
   const isReducedMotionEnabled = useReducedMotionPreference();
+  const isMinimalMode = progress.preferences.displayMode === "minimal";
   const hasRunAutomationRef = useRef(false);
 
   useEffect(() => {
@@ -1463,10 +1487,12 @@ export function ProgressScreen({
               portfolioChartCustomRange={progress.portfolioChartCustomRange}
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
+              minimal={isMinimalMode}
             />
 
             <SnapshotHistoryCard
               maskWealthValues={progress.preferences.maskWealthValues}
+              minimal={isMinimalMode}
               summaries={progress.monthlySummaries}
             />
           </>
@@ -1507,21 +1533,23 @@ export function ProgressScreen({
               status={progress.snapshotAutomationStatus}
             />
 
-            <PremiumCard>
-              <SectionHeader title="What changed this month?" />
-              <AppText color="secondary">
-                Monthly investment: {formatINR(progress.monthlyInvestment)}
-              </AppText>
-              <AppText color="secondary">
-                Typed income:{" "}
-                {progress.monthlyIncome === null
-                  ? "Not enough data"
-                  : formatINR(progress.monthlyIncome)}
-              </AppText>
-              <AppText color="secondary">
-                Expense rate needs explicit expense tracking and is not shown in V1.
-              </AppText>
-            </PremiumCard>
+            {isMinimalMode ? null : (
+              <PremiumCard>
+                <SectionHeader title="What changed this month?" />
+                <AppText color="secondary">
+                  Monthly investment: {formatINR(progress.monthlyInvestment)}
+                </AppText>
+                <AppText color="secondary">
+                  Typed income:{" "}
+                  {progress.monthlyIncome === null
+                    ? "Not enough data"
+                    : formatINR(progress.monthlyIncome)}
+                </AppText>
+                <AppText color="secondary">
+                  Expense rate needs explicit expense tracking and is not shown in V1.
+                </AppText>
+              </PremiumCard>
+            )}
 
             <ProgressTrendCards
               assetChartCustomRange={progress.assetChartCustomRange}
@@ -1538,6 +1566,7 @@ export function ProgressScreen({
               portfolioChartCustomRange={progress.portfolioChartCustomRange}
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
+              minimal={isMinimalMode}
             />
 
             <PremiumCard>

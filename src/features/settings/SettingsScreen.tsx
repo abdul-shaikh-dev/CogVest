@@ -25,12 +25,22 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const [isPrivacyDetailsExpanded, setIsPrivacyDetailsExpanded] =
     useState(false);
-  const { maskWealthValues, quoteStatus, toggleMaskWealthValues } = useSettings({
-    store,
-  });
+  const {
+    displayMode,
+    maskWealthValues,
+    quoteStatus,
+    setDisplayMode,
+    toggleMaskWealthValues,
+  } = useSettings({ store });
 
   async function handleToggleMasking() {
     toggleMaskWealthValues();
+    await Haptics.selectionAsync();
+  }
+
+  async function handleDisplayModeChange(nextMode: "minimal" | "standard") {
+    if (displayMode === nextMode) return;
+    setDisplayMode(nextMode);
     await Haptics.selectionAsync();
   }
 
@@ -98,6 +108,62 @@ export function SettingsScreen({
             />
           </View>
         </Pressable>
+
+        <PremiumCard testID="display-mode-settings">
+          <SectionHeader title="Display" />
+          <AppText color="secondary" variant="caption">
+            Minimal keeps essential portfolio information visible while reducing
+            performance emphasis and optional commentary.
+          </AppText>
+          <View accessibilityRole="radiogroup" style={styles.modeOptions}>
+            {([
+              {
+                description: "Full portfolio context and review prompts.",
+                label: "Standard",
+                value: "standard" as const,
+              },
+              {
+                description: "Essential values with a calmer visual hierarchy.",
+                label: "Minimal",
+                value: "minimal" as const,
+              },
+            ]).map((option) => {
+              const selected = displayMode === option.value;
+
+              return (
+                <Pressable
+                  accessibilityLabel={`${option.label} display mode`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  key={option.value}
+                  onPress={() => {
+                    void handleDisplayModeChange(option.value);
+                  }}
+                  style={({ pressed }) => [
+                    styles.modeOption,
+                    selected && styles.modeOptionSelected,
+                    pressed && styles.pressed,
+                  ]}
+                  testID={`display-mode-${option.value}`}
+                >
+                  <View style={styles.toggleCopy}>
+                    <AppText weight="bold">{option.label}</AppText>
+                    <AppText color="secondary" variant="caption">
+                      {option.description}
+                    </AppText>
+                  </View>
+                  <AppText
+                    color={selected ? "primary" : "secondary"}
+                    variant="caption"
+                    weight="bold"
+                  >
+                    {selected ? "Selected" : "Choose"}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </PremiumCard>
 
         <PremiumCard testID="privacy-storage-card">
           <SectionHeader title="Privacy & storage" />
@@ -266,6 +332,22 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  modeOption: {
+    alignItems: "center",
+    borderRadius: radii.button,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  modeOptionSelected: {
+    backgroundColor: colors.surface.elevated,
+  },
+  modeOptions: {
+    gap: spacing.xs,
   },
   pressed: {
     opacity: interaction.pressedOpacity,

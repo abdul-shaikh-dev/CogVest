@@ -42,7 +42,7 @@ import {
   summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { Holding } from "@/src/types";
+import type { DisplayMode, Holding } from "@/src/types";
 import {
   getCalendarDatePart,
   formatLocalCalendarDate,
@@ -80,6 +80,7 @@ export type DashboardState = {
   convictionReadiness: ConvictionReadiness;
   currencyIssues: PortfolioCurrencyIssue[];
   dayChange: PortfolioDayChange;
+  displayMode: DisplayMode;
   holdings: Holding[];
   instrumentAllocation: MetadataAllocationItem[];
   isRefreshing: boolean;
@@ -323,6 +324,7 @@ export function useDashboard({
     ),
     currencyIssues,
     dayChange: calculatePortfolioDayChange(holdings),
+    displayMode: snapshot.preferences.displayMode,
     holdings,
     instrumentAllocation: calculateInstrumentAllocation(holdings),
     isRefreshing,

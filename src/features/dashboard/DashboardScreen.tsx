@@ -173,6 +173,7 @@ export function DashboardScreen({
   const { fontScale } = useWindowDimensions();
   const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now, refreshQuotes, store });
+  const isMinimalMode = dashboard.displayMode === "minimal";
   const displayAllocation = toDisplayAllocation(
     dashboard.holdings,
     dashboard.cashBalance,
@@ -273,25 +274,32 @@ export function DashboardScreen({
               </AppText>
             ) : null}
             {hasCompleteValuation ? (
-            <View
-              style={[
-                styles.metricPill,
-                dashboard.dayChange.absolute < 0 && styles.negativePill,
-              ]}
-            >
-              <AppText
-                style={
-                  dashboard.dayChange.absolute >= 0
-                    ? styles.positiveText
-                    : styles.negativeText
-                }
-                variant="caption"
-                weight="bold"
+              <View
+                style={[
+                  styles.metricPill,
+                  isMinimalMode
+                    ? styles.minimalMetricPill
+                    : dashboard.dayChange.absolute < 0
+                      ? styles.negativePill
+                      : null,
+                ]}
               >
-                {dayChangeAmount} ({formatPercentage(dashboard.dayChange.percentage)})
-                {" today"}
-              </AppText>
-            </View>
+                <AppText
+                  color={isMinimalMode ? "secondary" : undefined}
+                  style={
+                    isMinimalMode
+                      ? undefined
+                      : dashboard.dayChange.absolute >= 0
+                        ? styles.positiveText
+                        : styles.negativeText
+                  }
+                  variant="caption"
+                  weight={isMinimalMode ? "medium" : "bold"}
+                >
+                  {dayChangeAmount} (
+                  {formatPercentage(dashboard.dayChange.percentage)}) today
+                </AppText>
+              </View>
             ) : null}
           </View>
           <View
@@ -334,9 +342,15 @@ export function DashboardScreen({
               ) : (
                 <MaskedValue
                   masked={dashboard.maskWealthValues}
-                  style={totalPnL >= 0 ? styles.positiveText : styles.negativeText}
+                  style={
+                    isMinimalMode
+                      ? styles.minimalReturnText
+                      : totalPnL >= 0
+                        ? styles.positiveText
+                        : styles.negativeText
+                  }
                   value={formatSignedCompactINR(totalPnL)}
-                  weight="bold"
+                  weight={isMinimalMode ? "medium" : "bold"}
                 />
               )}
             </View>
@@ -355,8 +369,15 @@ export function DashboardScreen({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  style={totalPnLPct >= 0 ? styles.positiveText : styles.negativeText}
-                  weight="bold"
+                  color={isMinimalMode ? "secondary" : undefined}
+                  style={
+                    isMinimalMode
+                      ? undefined
+                      : totalPnLPct >= 0
+                        ? styles.positiveText
+                        : styles.negativeText
+                  }
+                  weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatPercentage(totalPnLPct)}
                 </AppText>
@@ -636,45 +657,51 @@ export function DashboardScreen({
           </View>
         </PremiumCard>
 
-        <PremiumCard>
-          <SectionHeader title="This Month" />
-          <MetricGroup
-            metrics={[
-              {
-                label: "Invested",
-                masked: dashboard.maskWealthValues,
-                value: formatCompactINR(dashboard.monthlyMetrics.investment),
-              },
-              {
-                label: "Savings",
-                value:
-                  dashboard.monthlyMetrics.savingsRate === null
-                    ? "Not enough data"
-                    : formatPercentage(dashboard.monthlyMetrics.savingsRate),
-              },
-              {
-                label: "Cash change",
-                masked: dashboard.maskWealthValues,
-                value: formatSignedCompactINR(dashboard.monthlyMetrics.cashChange),
-              },
-            ]}
-          />
-        </PremiumCard>
+        {!isMinimalMode ? (
+          <PremiumCard>
+            <SectionHeader title="This Month" />
+            <MetricGroup
+              metrics={[
+                {
+                  label: "Invested",
+                  masked: dashboard.maskWealthValues,
+                  value: formatCompactINR(dashboard.monthlyMetrics.investment),
+                },
+                {
+                  label: "Savings",
+                  value:
+                    dashboard.monthlyMetrics.savingsRate === null
+                      ? "Not enough data"
+                      : formatPercentage(dashboard.monthlyMetrics.savingsRate),
+                },
+                {
+                  label: "Cash change",
+                  masked: dashboard.maskWealthValues,
+                  value: formatSignedCompactINR(
+                    dashboard.monthlyMetrics.cashChange,
+                  ),
+                },
+              ]}
+            />
+          </PremiumCard>
+        ) : null}
 
-        <PremiumCard>
-          <SectionHeader
-            title={
-              dashboard.convictionReadiness.isReady
-                ? "Conviction data ready"
-                : "Conviction data needs more trades"
-            }
-          />
-          <AppText color="secondary">
-            {dashboard.convictionReadiness.ratedTradeCount} of{" "}
-            {dashboard.convictionReadiness.requiredTradeCount} trades rated. Keep
-            conviction optional, but useful.
-          </AppText>
-        </PremiumCard>
+        {!isMinimalMode ? (
+          <PremiumCard>
+            <SectionHeader
+              title={
+                dashboard.convictionReadiness.isReady
+                  ? "Conviction data ready"
+                  : "Conviction data needs more trades"
+              }
+            />
+            <AppText color="secondary">
+              {dashboard.convictionReadiness.ratedTradeCount} of{" "}
+              {dashboard.convictionReadiness.requiredTradeCount} trades rated.
+              Keep conviction optional, but useful.
+            </AppText>
+          </PremiumCard>
+        ) : null}
       </View>
     </ScreenContainer>
   );
@@ -864,6 +891,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
+  },
+  minimalMetricPill: {
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+  },
+  minimalReturnText: {
+    color: colors.text.secondary,
   },
   negativePill: {
     backgroundColor: "rgba(255,69,58,0.12)",

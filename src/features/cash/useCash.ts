@@ -13,6 +13,7 @@ import type {
   CashEntry,
   CashEntryPurpose,
   CashEntryType,
+  DisplayMode,
 } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -36,6 +37,7 @@ export type ManualCashEntryMode = "addition" | "withdrawal";
 export type UseCashResult = {
   addEntry: (entry: AddCashEntryInput) => CashEntry;
   balance: number;
+  displayMode: DisplayMode;
   entries: CashEntry[];
   manualEntryModes: ManualCashEntryMode[];
   maskWealthValues: boolean;
@@ -80,6 +82,7 @@ export function useCash({
   return {
     addEntry,
     balance: calculateCashBalance(snapshot.cashEntries, now),
+    displayMode: snapshot.preferences.displayMode,
     entries: sortCashEntries(
       snapshot.cashEntries.filter((entry) =>
         isEffectiveCalendarDate(entry.date, now),

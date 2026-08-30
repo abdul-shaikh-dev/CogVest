@@ -24,6 +24,7 @@ const defaultFlows = [
   "e2e/funded-buy-cash.yaml",
   "e2e/snapshot-review.yaml",
   "e2e/value-masking.yaml",
+  "e2e/minimal-mode.yaml",
   "e2e/persistence.yaml",
 ];
 

@@ -19,7 +19,7 @@ export type {
   OpeningPosition,
   OpeningPositionManualValuation,
 } from "./openingPosition";
-export type { ChartRange, Preferences } from "./preferences";
+export type { ChartRange, DisplayMode, Preferences } from "./preferences";
 export type {
   PpfAccount,
   PpfAccountStatus,

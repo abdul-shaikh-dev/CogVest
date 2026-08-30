@@ -2524,6 +2524,25 @@ describe("portfolio store", () => {
     expect(store.getState().quoteCache[asset.id]).toEqual(quote);
   });
 
+  it("defaults legacy persisted preferences to Standard display mode", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setItem(portfolioStorageKey, {
+      preferences: {
+        defaultChartRange: "1M",
+        hasCompletedOnboarding: false,
+        maskWealthValues: true,
+      },
+      schemaVersion: 9,
+    });
+
+    const store = createPortfolioStore({ storage });
+
+    expect(store.getState().preferences).toMatchObject({
+      displayMode: "standard",
+      maskWealthValues: true,
+    });
+  });
+
   it("defaults historical quote cache to empty when no storage key exists", () => {
     const storage = createMemoryJsonStorage();
     storage.setItem(portfolioStorageKey, {
