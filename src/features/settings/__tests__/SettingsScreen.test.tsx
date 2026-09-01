@@ -58,7 +58,8 @@ describe("SettingsScreen", () => {
     expect(getByText("Analytics")).toBeTruthy();
     expect(getByText("Value masking")).toBeTruthy();
     expect(getByText("Preview ₹••,•••")).toBeTruthy();
-    expect(queryByText(/Minimal Mode/i)).toBeNull();
+    expect(getByText("Display")).toBeTruthy();
+    expect(getByText("Minimal")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
 
     fireEvent.press(getByLabelText("Toggle value masking"));
@@ -106,7 +107,7 @@ describe("SettingsScreen", () => {
     expect(queryByText(/Export/i)).toBeNull();
     fireEvent.press(getByTestId("privacy-details-toggle"));
     expect(getByText("Android backup")).toBeTruthy();
-    expect(queryByText(/Minimal Mode/i)).toBeNull();
+    expect(getByText("Minimal")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
     expect(getByText("Clear local data")).toBeTruthy();
     expect(
@@ -114,5 +115,25 @@ describe("SettingsScreen", () => {
     ).toBeTruthy();
     expect(getByText("Unavailable")).toBeTruthy();
     expect(queryByTestId("clear-local-data-button")).toBeNull();
+  });
+
+  it("selects and persists Minimal display mode", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const { getByTestId } = render(<SettingsScreen store={store} />);
+
+    expect(getByTestId("display-mode-standard").props.accessibilityState).toEqual({
+      checked: true,
+    });
+
+    fireEvent.press(getByTestId("display-mode-minimal"));
+
+    expect(store.getState().preferences.displayMode).toBe("minimal");
+    expect(getByTestId("display-mode-minimal").props.accessibilityState).toEqual({
+      checked: true,
+    });
+    expect(createPortfolioStore({ storage }).getState().preferences.displayMode).toBe(
+      "minimal",
+    );
   });
 });

@@ -1,11 +1,12 @@
 import * as Haptics from "expo-haptics";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { BackHandler } from "react-native";
+import { BackHandler, StyleSheet } from "react-native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
+import { colors, typography } from "@/src/theme";
 
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
@@ -274,6 +275,7 @@ describe("AddOpeningPositionForm", () => {
 
   it("creates a manual asset and persists a reviewed opening position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode: "minimal" });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <AddOpeningPositionForm store={store} />,
     );
@@ -315,6 +317,18 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("₹36,250.00")).toBeTruthy();
     expect(getByText("₹41,956.25")).toBeTruthy();
     expect(getByText("+₹5,706.25")).toBeTruthy();
+    expect(
+      StyleSheet.flatten(getByTestId("derived-preview-pnl").props.style),
+    ).toMatchObject({
+      color: colors.text.secondary,
+      fontWeight: typography.weights.medium,
+    });
+    expect(
+      StyleSheet.flatten(getByTestId("derived-preview-pnl-percent").props.style),
+    ).toMatchObject({
+      color: colors.text.secondary,
+      fontWeight: typography.weights.medium,
+    });
     expect(getByText("Cash impact")).toBeTruthy();
     expect(
       getByText(

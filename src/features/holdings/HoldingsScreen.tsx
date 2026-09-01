@@ -105,6 +105,7 @@ export function HoldingsScreen({
 }: HoldingsScreenProps) {
   const [isAddMenuVisible, setIsAddMenuVisible] = useState(false);
   const {
+    displayMode,
     failed,
     holdings,
     isRefreshing,
@@ -123,6 +124,7 @@ export function HoldingsScreen({
     refreshQuotes,
     store,
   });
+  const isMinimalMode = displayMode === "minimal";
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
   const [expandedAssetId, setExpandedAssetId] = useState<string>();
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -411,25 +413,31 @@ export function HoldingsScreen({
           />
         ) : (
           <>
-            <View style={styles.insightGrid}>
-              <InsightCard
-                eyebrow="Dominant position"
-                title={summary.dominant?.holding.asset.name ?? "Not enough data"}
-                detail={
-                  summary.dominant
-                    ? `${formatPercentage(summary.dominant.allocationPct).replace("+", "")} allocation`
-                    : "Add holdings to compare exposure"
-                }
-              />
-              {distinctBestReturn ? (
+            {!isMinimalMode ? (
+              <View style={styles.insightGrid}>
                 <InsightCard
-                  eyebrow="Best return"
-                  title={distinctBestReturn.holding.asset.name}
-                  detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
-                  positive={(distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0}
+                  eyebrow="Dominant position"
+                  title={
+                    summary.dominant?.holding.asset.name ?? "Not enough data"
+                  }
+                  detail={
+                    summary.dominant
+                      ? `${formatPercentage(summary.dominant.allocationPct).replace("+", "")} allocation`
+                      : "Add holdings to compare exposure"
+                  }
                 />
-              ) : null}
-            </View>
+                {distinctBestReturn ? (
+                  <InsightCard
+                    eyebrow="Best return"
+                    title={distinctBestReturn.holding.asset.name}
+                    detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
+                    positive={
+                      (distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0
+                    }
+                  />
+                ) : null}
+              </View>
+            ) : null}
 
             <ExposurePanel segments={exposureSegments} />
 
@@ -452,6 +460,7 @@ export function HoldingsScreen({
                     item={item}
                     key={item.holding.asset.id}
                     masked={maskWealthValues}
+                    minimal={isMinimalMode}
                     openingPositions={openingPositions.filter(
                       (position) => position.assetId === item.holding.asset.id,
                     )}
@@ -737,6 +746,7 @@ function HoldingRow({
   expanded,
   item,
   masked,
+  minimal,
   openingPositions,
   onPress,
   onReviewOpeningPosition,
@@ -747,6 +757,7 @@ function HoldingRow({
   expanded: boolean;
   item: HoldingReviewItem;
   masked: boolean;
+  minimal: boolean;
   openingPositions: OpeningPosition[];
   onPress: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
@@ -802,9 +813,16 @@ function HoldingRow({
           {!isPending && holding.unrealisedPnLPct !== null ? (
           <AppText
             align="right"
-            style={positive ? styles.positiveText : styles.negativeText}
+            color={minimal ? "secondary" : undefined}
+            style={
+              minimal
+                ? undefined
+                : positive
+                  ? styles.positiveText
+                  : styles.negativeText
+            }
             variant="caption"
-            weight="bold"
+            weight={minimal ? "medium" : "bold"}
           >
             {formatPercentage(holding.unrealisedPnLPct)}
           </AppText>
@@ -857,7 +875,8 @@ function HoldingRow({
             <Detail
               label="P&L"
               masked={masked}
-              tone={positive ? "positive" : "negative"}
+              subdued={minimal}
+              tone={minimal ? undefined : positive ? "positive" : "negative"}
               value={
                 holding.unrealisedPnL === null
                   ? "Unavailable"
@@ -969,12 +988,14 @@ function HoldingRow({
 function Detail({
   label,
   masked,
+  subdued,
   testID,
   tone,
   value,
 }: {
   label: string;
   masked?: boolean;
+  subdued?: boolean;
   testID?: string;
   tone?: "negative" | "positive";
   value: string;
@@ -985,6 +1006,7 @@ function Detail({
         {label}
       </AppText>
       <MaskedValue
+        color={subdued ? "secondary" : undefined}
         masked={masked}
         style={
           tone === "positive"
@@ -995,7 +1017,7 @@ function Detail({
         }
         value={value}
         variant="caption"
-        weight="bold"
+        weight={subdued ? "medium" : "bold"}
       />
     </View>
   );

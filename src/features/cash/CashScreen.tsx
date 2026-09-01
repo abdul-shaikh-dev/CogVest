@@ -85,6 +85,7 @@ export function CashScreen({
   const {
     addEntry,
     balance,
+    displayMode,
     entries,
     manualEntryModes,
     maskWealthValues,
@@ -207,14 +208,17 @@ export function CashScreen({
           </PremiumCard>
         ) : null}
 
-        <View style={styles.monthlyInsight}>
-          <AppText weight="bold">This month</AppText>
-          <AppText color="secondary" style={styles.monthlyInsightText}>
-            {monthlyMovementSummary === "No investment cash movement this month"
-              ? "No movement yet"
-              : monthlyMovementSummary}
-          </AppText>
-        </View>
+        {displayMode === "standard" ? (
+          <View style={styles.monthlyInsight}>
+            <AppText weight="bold">This month</AppText>
+            <AppText color="secondary" style={styles.monthlyInsightText}>
+              {monthlyMovementSummary ===
+              "No investment cash movement this month"
+                ? "No movement yet"
+                : monthlyMovementSummary}
+            </AppText>
+          </View>
+        ) : null}
 
         <View style={styles.entryActions}>
           {manualEntryModes.map((entryMode) => (

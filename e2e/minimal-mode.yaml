@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-minimal"
+- assertVisible:
+    id: "display-mode-minimal"
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Portfolio value"
+- assertVisible: "Holdings P&L"
+- assertNotVisible: "This Month"
+- assertNotVisible: ".*Conviction data.*"
+- openLink: "cogvest:///holdings"
+- assertVisible: "Asset mix"
+- assertVisible: "Invested ₹11L"
+- assertNotVisible: "Dominant position"
+- assertNotVisible: "Best return"
+- openLink: "cogvest:///cash"
+- assertVisible: "Recent cash ledger"
+- assertVisible: "Deposit"
+- assertVisible: "Withdraw"
+- assertNotVisible: "This month"
+- openLink: "cogvest:///progress"
+- assertVisible: "Portfolio Growth"
+- assertVisible: "Month-end snapshot"
+- assertNotVisible: "What changed this month?"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-standard"
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      text: "This Month"
+    direction: DOWN
+- assertVisible: "This Month"
+- assertVisible: ".*Conviction data.*"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-minimal"
+- openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      text: "Derived Preview"
+    direction: DOWN
+- assertVisible: "Derived Preview"
+- assertVisible:
+    id: "save-holding-button"

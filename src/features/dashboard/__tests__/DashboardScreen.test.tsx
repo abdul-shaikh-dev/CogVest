@@ -442,6 +442,33 @@ describe("DashboardScreen", () => {
     expect(queryByText(/Minimal Mode/i)).toBeNull();
   });
 
+  it("keeps essential portfolio evidence while removing optional commentary in Minimal mode", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade({ ...buyTrade, conviction: 4 });
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      dayChangePct: 10,
+      price: 150,
+      source: "yahoo",
+    });
+    store.getState().updatePreferences({ displayMode: "minimal" });
+
+    const { getByText, queryByText } = render(
+      <DashboardScreen store={store} />,
+    );
+
+    expect(getByText("Portfolio value")).toBeTruthy();
+    expect(getByText("Holdings P&L")).toBeTruthy();
+    expect(getByText("Allocation")).toBeTruthy();
+    expect(getByText("Month-end snapshot")).toBeTruthy();
+    expect(queryByText("This Month")).toBeNull();
+    expect(queryByText(/Conviction data/u)).toBeNull();
+    expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+  });
+
   it("shows a negative cash liability and reconciles it to net portfolio value", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

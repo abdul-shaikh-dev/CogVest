@@ -177,6 +177,22 @@ describe("HoldingsScreen", () => {
     expect(queryByText(/LTCG/i)).toBeNull();
   });
 
+  it("keeps scannable holdings and exposure while hiding review prompts in Minimal mode", () => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ displayMode: "minimal" });
+
+    const { getAllByText, getByText, queryByText } = render(
+      <HoldingsScreen store={store} />,
+    );
+
+    expect(getByText("Asset mix")).toBeTruthy();
+    expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
+    expect(getByText("Invested ₹200")).toBeTruthy();
+    expect(getByText("+25.00%")).toBeTruthy();
+    expect(queryByText("Dominant position")).toBeNull();
+    expect(queryByText("Best return")).toBeNull();
+  });
+
   it("expands one holding at a time to show useful position details", () => {
     const store = seedMixedHoldings();
     const { getByTestId, getByText, queryByTestId, queryByText } = render(

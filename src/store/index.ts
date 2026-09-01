@@ -417,6 +417,7 @@ export type StorageRecoveryState = {
 export function createDefaultPreferences(): Preferences {
   return {
     defaultChartRange: "1M",
+    displayMode: "standard",
     hasCompletedOnboarding: false,
     maskWealthValues: false,
   };

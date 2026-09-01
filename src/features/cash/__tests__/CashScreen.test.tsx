@@ -215,6 +215,29 @@ describe("CashScreen", () => {
     expect(queryByText("Invested / income")).toBeNull();
   });
 
+  it("keeps cash metrics and actions while hiding monthly commentary in Minimal mode", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({
+      amount: 50000,
+      date: "2026-05-01",
+      id: "cash-income-minimal",
+      label: "Salary",
+      purpose: "income",
+      type: "addition",
+    });
+    store.getState().updatePreferences({ displayMode: "minimal" });
+
+    const { getByText, queryByText } = render(
+      <CashScreen now={new Date("2026-05-16T00:00:00.000Z")} store={store} />,
+    );
+
+    expect(getByText("Deployable cash")).toBeTruthy();
+    expect(getByText("Deposit")).toBeTruthy();
+    expect(getByText("Withdraw")).toBeTruthy();
+    expect(getByText("Recent cash ledger")).toBeTruthy();
+    expect(queryByText("This month")).toBeNull();
+  });
+
   it("shows asset exit proceeds as linked cash movement", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({

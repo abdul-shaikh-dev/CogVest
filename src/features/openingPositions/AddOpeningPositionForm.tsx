@@ -216,6 +216,7 @@ export function AddOpeningPositionForm({
     updateTicker,
     viewSavedHolding,
   } = holding;
+  const isMinimalMode = snapshot.preferences.displayMode === "minimal";
   const [isManualEntryExpanded, setIsManualEntryExpanded] = useState(false);
   const [isExitConfirmationVisible, setIsExitConfirmationVisible] =
     useState(false);
@@ -1037,12 +1038,16 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  style={[
-                    previewHolding.unrealisedPnL >= 0
-                      ? styles.positiveText
-                      : styles.negativeText,
-                  ]}
-                  weight="bold"
+                  color={isMinimalMode ? "secondary" : undefined}
+                  style={
+                    isMinimalMode
+                      ? undefined
+                      : previewHolding.unrealisedPnL >= 0
+                        ? styles.positiveText
+                        : styles.negativeText
+                  }
+                  testID="derived-preview-pnl"
+                  weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatSignedINR(previewHolding.unrealisedPnL)}
                 </AppText>
@@ -1056,12 +1061,16 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  style={[
-                    previewHolding.unrealisedPnLPct >= 0
-                      ? styles.positiveText
-                      : styles.negativeText,
-                  ]}
-                  weight="bold"
+                  color={isMinimalMode ? "secondary" : undefined}
+                  style={
+                    isMinimalMode
+                      ? undefined
+                      : previewHolding.unrealisedPnLPct >= 0
+                        ? styles.positiveText
+                        : styles.negativeText
+                  }
+                  testID="derived-preview-pnl-percent"
+                  weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatPercentage(previewHolding.unrealisedPnLPct)}
                 </AppText>

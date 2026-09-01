@@ -374,6 +374,7 @@ const preferencesSchema = z
     defaultChartRange: z
       .enum(["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"])
       .optional(),
+    displayMode: z.enum(["minimal", "standard"]).optional(),
     hasCompletedOnboarding: z.boolean().optional(),
     maskWealthValues: z.boolean().optional(),
   })
