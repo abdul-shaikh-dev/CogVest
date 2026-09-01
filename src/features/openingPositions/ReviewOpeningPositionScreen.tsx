@@ -32,7 +32,7 @@ type ReviewOpeningPositionScreenProps = {
 
 type CorrectionErrors = Partial<
   Record<
-    "averageCostPrice" | "conviction" | "currentPrice" | "date" | "quantity" | "save",
+    "averageCostPrice" | "conviction" | "currentPrice" | "date" | "intendedHoldDays" | "quantity" | "save",
     string
   >
 >;
@@ -94,6 +94,9 @@ export function ReviewOpeningPositionScreen({
   const [conviction, setConviction] = useState(
     () => initialPosition?.conviction?.toString() ?? "",
   );
+  const [intendedHoldDays, setIntendedHoldDays] = useState(
+    () => initialPosition?.intendedHoldDays?.toString() ?? "",
+  );
   const [errors, setErrors] = useState<CorrectionErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -125,6 +128,7 @@ export function ReviewOpeningPositionScreen({
       date,
       dateUnknown,
       instrumentType: positionAsset.instrumentType ?? "other",
+      intendedHoldDays,
       notes,
       quoteSourceId: positionAsset.quoteSourceId,
       quantity,
@@ -165,6 +169,7 @@ export function ReviewOpeningPositionScreen({
         ...position,
         averageCostPrice: value.averageCostPrice,
         conviction: value.conviction,
+        intendedHoldDays: value.intendedHoldDays,
         currentPrice: currentPriceChanged ? undefined : position.currentPrice,
         date: value.date,
         manualValuation: currentPriceChanged
@@ -318,6 +323,15 @@ export function ReviewOpeningPositionScreen({
               I don't know
             </AppText>
           </Pressable>
+          <FormTextField
+            error={errors.intendedHoldDays}
+            keyboardType="number-pad"
+            label="Planned holding period (days)"
+            onChangeText={setIntendedHoldDays}
+            placeholder="Optional"
+            testID="opening-correction-intended-hold-days-input"
+            value={intendedHoldDays}
+          />
           <FormTextField
             label="Notes"
             multiline

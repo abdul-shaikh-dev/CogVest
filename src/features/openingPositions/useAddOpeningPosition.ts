@@ -169,6 +169,9 @@ export function useAddOpeningPosition({
   const [conviction, setConviction] = useState(
     initialReviewPosition?.conviction?.toString() ?? "",
   );
+  const [intendedHoldDays, setIntendedHoldDays] = useState(
+    initialReviewPosition?.intendedHoldDays?.toString() ?? "",
+  );
   const [notes, setNotes] = useState(initialReviewPosition?.notes ?? "");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [reviewAsset, setReviewAsset] = useState<Asset | undefined>(
@@ -254,6 +257,7 @@ export function useAddOpeningPosition({
     setDate("");
     setDateUnknown(false);
     setConviction("");
+    setIntendedHoldDays("");
     setNotes("");
   }
 
@@ -310,6 +314,7 @@ export function useAddOpeningPosition({
       date,
       dateUnknown,
       instrumentType,
+      intendedHoldDays,
       notes,
       quoteSourceId,
       quantity: quantity || "1",
@@ -342,6 +347,7 @@ export function useAddOpeningPosition({
       date,
       dateUnknown,
       instrumentType: instrumentType || "stock",
+      intendedHoldDays,
       notes,
       quoteSourceId,
       quantity,
@@ -366,6 +372,9 @@ export function useAddOpeningPosition({
       }
       if (result.errors.conviction) {
         phaseErrors.conviction = result.errors.conviction;
+      }
+      if (result.errors.intendedHoldDays) {
+        phaseErrors.intendedHoldDays = result.errors.intendedHoldDays;
       }
     }
 
@@ -729,6 +738,7 @@ export function useAddOpeningPosition({
       date,
       dateUnknown,
       instrumentType,
+      intendedHoldDays,
       notes,
       quoteSourceId,
       quantity,
@@ -769,6 +779,7 @@ export function useAddOpeningPosition({
       assetId: asset.id,
       averageCostPrice: result.value.averageCostPrice,
       conviction: result.value.conviction,
+      intendedHoldDays: result.value.intendedHoldDays,
       date: result.value.date,
       id: commandId,
       ...(result.value.currentPrice === undefined || usesProviderQuote
@@ -926,6 +937,7 @@ export function useAddOpeningPosition({
     handleConfirm,
     handleReview,
     instrumentType,
+    intendedHoldDays,
     instrumentTypeConfidence,
     isSaving,
     isLookupSearching,
@@ -959,6 +971,7 @@ export function useAddOpeningPosition({
     setDate,
     setDateUnknown,
     setInstrumentType,
+    setIntendedHoldDays,
     setLookupQuery,
     setNotes,
     setQuantity,

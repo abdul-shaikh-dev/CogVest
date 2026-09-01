@@ -798,6 +798,7 @@ function isValidOpeningPosition(
   assetCurrency?: Currency,
 ) {
   const conviction = openingPosition.conviction;
+  const intendedHoldDays = openingPosition.intendedHoldDays;
 
   return (
     openingPosition.assetId.trim().length > 0 &&
@@ -808,7 +809,9 @@ function isValidOpeningPosition(
     hasValidManualValuation(openingPosition, now, assetCurrency) &&
     hasValidOpeningPositionDateState(openingPosition, now) &&
     (conviction === undefined ||
-      (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5))
+      (Number.isInteger(conviction) && conviction >= 1 && conviction <= 5)) &&
+    (intendedHoldDays === undefined ||
+      (Number.isInteger(intendedHoldDays) && intendedHoldDays > 0))
   );
 }
 

@@ -77,6 +77,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setAverageCostPrice("100");
       result.current.setCurrentPrice("120");
       result.current.setDateUnknown(true);
+      result.current.setIntendedHoldDays("730");
     });
 
     act(() => {
@@ -92,6 +93,7 @@ describe("useAddOpeningPosition", () => {
         source: "manual",
       },
       quantity: 2,
+      intendedHoldDays: 730,
       date: null,
     });
     expect(result.current.reviewOpeningPosition?.recordedAt).toBeUndefined();
@@ -106,6 +108,7 @@ describe("useAddOpeningPosition", () => {
       date: null,
       recordedAt: expect.any(String),
       recordedOn: expect.any(String),
+      intendedHoldDays: 730,
     });
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().quoteCache).toEqual({});

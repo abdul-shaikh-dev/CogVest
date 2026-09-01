@@ -53,6 +53,7 @@ export function useAddTrade({
   const [fees, setFees] = useState("");
   const [date, setDate] = useState(formatLocalCalendarDate(now));
   const [conviction, setConviction] = useState("");
+  const [intendedHoldDays, setIntendedHoldDays] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [reviewTrade, setReviewTrade] = useState<BuyTrade | SellTrade | undefined>();
@@ -73,6 +74,7 @@ export function useAddTrade({
 
   function updateType(nextType: TradeType) {
     setType(nextType);
+    if (nextType === "sell") setIntendedHoldDays("");
     resetReview();
   }
 
@@ -157,6 +159,7 @@ export function useAddTrade({
         assetId: formAssetId,
         conviction,
         date,
+        intendedHoldDays,
         pricePerUnit,
         quantity,
         type,
@@ -193,6 +196,7 @@ export function useAddTrade({
         date: result.value.date,
         fees: feeValue || undefined,
         id: createId("trade"),
+        intendedHoldDays: result.value.intendedHoldDays,
         notes: notes.trim() || undefined,
         pricePerUnit: result.value.pricePerUnit,
         quantity: result.value.quantity,
@@ -251,6 +255,7 @@ export function useAddTrade({
     handleConfirm,
     handleReview,
     instrumentType,
+    intendedHoldDays,
     pricePerUnit,
     quantity,
     quoteSourceId,
@@ -264,6 +269,7 @@ export function useAddTrade({
     setDate,
     setFees,
     setInstrumentType,
+    setIntendedHoldDays,
     setNotes,
     setPricePerUnit,
     setQuantity,

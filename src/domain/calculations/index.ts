@@ -1,4 +1,17 @@
 export {
+  analyseConviction,
+  analysePatienceFromSells,
+  analyseTradeFrequency,
+  generateInsights,
+} from "./behaviorInsights";
+export type {
+  AnalysisAvailability,
+  BehaviorInsight,
+  ConvictionAnalysis,
+  PatienceAnalysis,
+  TradeFrequencyAnalysis,
+} from "./behaviorInsights";
+export {
   buildGeneratedMonthEndSnapshot,
   deriveMonthlySnapshotSalary,
   getMonthlySnapshotPriceConfidence,

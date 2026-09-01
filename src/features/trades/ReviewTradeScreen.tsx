@@ -177,7 +177,10 @@ export function ReviewTradeScreen({
     if (parsedConviction !== undefined && (!Number.isInteger(parsedConviction) || parsedConviction < 1 || parsedConviction > 5)) {
       nextErrors.conviction = "Conviction must be between 1 and 5.";
     }
-    const parsedHoldDays = holdDays.trim() === "" ? undefined : Number(holdDays);
+    const parsedHoldDays =
+      stableTrade.type === "buy" && holdDays.trim() !== ""
+        ? Number(holdDays)
+        : undefined;
     if (parsedHoldDays !== undefined && (!Number.isInteger(parsedHoldDays) || parsedHoldDays <= 0)) {
       nextErrors.holdDays = "Holding period must be a whole number of days.";
     }
@@ -200,7 +203,10 @@ export function ReviewTradeScreen({
         conviction: valid.parsedConviction as ConvictionScore | undefined,
         date,
         fees: valid.parsedFees,
-        intendedHoldDays: valid.parsedHoldDays,
+        intendedHoldDays:
+          stableTrade.type === "buy"
+            ? valid.parsedHoldDays
+            : stableTrade.intendedHoldDays,
         notes: notes.trim() || undefined,
         pricePerUnit: parsedPrice!,
         quantity: parsedQuantity!,
@@ -287,7 +293,9 @@ export function ReviewTradeScreen({
             })}
           </View>
           {errors.conviction ? <AppText style={styles.errorText} variant="caption">{errors.conviction}</AppText> : null}
-          <FormTextField error={errors.holdDays} keyboardType="number-pad" label="Intended holding period (days)" onChangeText={setHoldDays} value={holdDays} />
+          {stableTrade.type === "buy" ? (
+            <FormTextField error={errors.holdDays} keyboardType="number-pad" label="Planned holding period (days)" onChangeText={setHoldDays} value={holdDays} />
+          ) : null}
           <FormTextField label="Why this investment?" multiline onChangeText={setRationale} value={rationale} />
         </PremiumCard>
         {errors.save ? <AppText accessibilityLiveRegion="polite" selectable style={styles.errorText} variant="caption">{errors.save}</AppText> : null}

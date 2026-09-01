@@ -10,6 +10,7 @@ describe("validateOpeningPositionForm", () => {
       currentPrice: "1678.25",
       date: "2026-04-15",
       instrumentType: "stock",
+      intendedHoldDays: "730",
       notes: " Core holding ",
       quoteSourceId: " reliance-custom ",
       quantity: "25",
@@ -28,6 +29,7 @@ describe("validateOpeningPositionForm", () => {
         currentPrice: 1678.25,
         date: "2026-04-15",
         instrumentType: "stock",
+        intendedHoldDays: 730,
         notes: "Core holding",
         quoteSourceId: "reliance-custom",
         quantity: 25,
@@ -67,6 +69,32 @@ describe("validateOpeningPositionForm", () => {
       isValid: false,
     });
   });
+
+  it.each(["0", "1.5", "later"])(
+    "rejects invalid optional planned holding period %s",
+    (intendedHoldDays) => {
+      const result = validateOpeningPositionForm({
+        assetClass: "stock",
+        assetName: "Reliance Industries",
+        averageCostPrice: "100",
+        currentPrice: "120",
+        date: "2026-04-15",
+        instrumentType: "stock",
+        intendedHoldDays,
+        quantity: "2",
+        sectorType: "energy",
+        symbol: "RELIANCE",
+        ticker: "RELIANCE.NS",
+      });
+
+      expect(result).toMatchObject({
+        errors: {
+          intendedHoldDays: "Planned holding period must be whole days.",
+        },
+        isValid: false,
+      });
+    },
+  );
 
   it("treats a blank optional sector as Unknown", () => {
     const result = validateOpeningPositionForm({

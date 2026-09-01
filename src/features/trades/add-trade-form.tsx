@@ -263,6 +263,17 @@ export function AddTradeForm({
             </AppText>
           ) : null}
         </View>
+        {trade.type === "buy" ? (
+          <FormTextField
+            error={trade.errors.intendedHoldDays}
+            keyboardType="number-pad"
+            label="Planned holding period (days)"
+            onChangeText={trade.setIntendedHoldDays}
+            placeholder="Optional"
+            testID="trade-intended-hold-days-input"
+            value={trade.intendedHoldDays}
+          />
+        ) : null}
         <FormTextField
           label="Note"
           multiline
