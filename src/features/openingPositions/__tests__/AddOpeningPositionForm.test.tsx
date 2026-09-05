@@ -61,7 +61,7 @@ describe("AddOpeningPositionForm", () => {
       <AddOpeningPositionForm onCancel={onCancel} store={store} />,
     );
 
-    fireEvent.press(getByLabelText("Back to Holdings"));
+    fireEvent.press(getByLabelText("Back"));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().assets).toEqual([]);
@@ -84,6 +84,87 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("add-holding-phase-position")).toBeNull();
     expect(queryByTestId("derived-preview")).toBeNull();
     expect(queryByTestId("quantity-input")).toBeNull();
+  });
+
+  it.each(["hardware", "toolbar", "footer"])(
+    "retains a single-holding draft through every phase using %s Back",
+    (entryPoint) => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      const onCancel = jest.fn();
+      let hardwareBack: (() => boolean | null | undefined) | undefined;
+      const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
+        hardwareBack = handler;
+        return { remove: jest.fn() };
+      });
+      const ui = render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
+      openManualAssetEntry(ui.getByTestId);
+      fireEvent.changeText(ui.getByLabelText("Asset name"), "Draft asset");
+      fireEvent.changeText(ui.getByLabelText("Symbol"), "DRAFT");
+      fireEvent.changeText(ui.getByLabelText("Ticker"), "DRAFT.NS");
+      fireEvent.press(ui.getByTestId("continue-class-button"));
+      fireEvent.press(ui.getByTestId("continue-position-button"));
+      fireEvent.changeText(ui.getByLabelText("Quantity"), "2");
+      fireEvent.changeText(ui.getByLabelText("Average cost"), "100");
+      fireEvent.press(ui.getByLabelText("First purchase date unknown"));
+      fireEvent.press(ui.getByTestId("review-holding-button"));
+      expect(ui.getByTestId("add-holding-phase-review")).toBeTruthy();
+      const back = () => {
+        if (entryPoint === "hardware") act(() => { expect(hardwareBack?.()).toBe(true); });
+        else fireEvent.press(ui.getByTestId(entryPoint === "toolbar" ? "add-holding-exit" : "back-button"));
+      };
+      back();
+      expect(ui.getByTestId("add-holding-phase-position")).toBeTruthy();
+      fireEvent.changeText(ui.getByLabelText("Quantity"), "17");
+      fireEvent.changeText(ui.getByLabelText("Average cost"), "1200");
+      fireEvent.changeText(ui.getByTestId("notes-input"), "Keep this draft");
+      back();
+      expect(ui.getByTestId("add-holding-phase-class")).toBeTruthy();
+      back();
+      expect(ui.getByTestId("add-holding-phase-asset")).toBeTruthy();
+      fireEvent.press(ui.getByTestId("continue-class-button"));
+      fireEvent.press(ui.getByTestId("continue-position-button"));
+      expect(ui.getByLabelText("Quantity")).toHaveProp("value", "17");
+      expect(ui.getByLabelText("Average cost")).toHaveProp("value", "1200");
+      expect(ui.getByTestId("notes-input")).toHaveProp("value", "Keep this draft");
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(store.getState().openingPositions).toHaveLength(0);
+      ui.unmount();
+      spy.mockRestore();
+    },
+  );
+
+  it("keeps unfinished input when exit is cancelled or dismissed and only discards explicitly", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCancel = jest.fn();
+    const ui = render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
+    openManualAssetEntry(ui.getByTestId);
+    fireEvent.changeText(ui.getByLabelText("Asset name"), "My draft");
+    fireEvent.press(ui.getByTestId("add-holding-exit"));
+    expect(ui.getByText("Discard unfinished holding?")).toBeTruthy();
+    fireEvent.press(ui.getByTestId("holding-keep-editing"));
+    expect(ui.getByLabelText("Asset name")).toHaveProp("value", "My draft");
+    fireEvent.press(ui.getByTestId("add-holding-exit"));
+    fireEvent(ui.getByTestId("holding-exit-confirmation"), "requestClose");
+    expect(ui.getByLabelText("Asset name")).toHaveProp("value", "My draft");
+    expect(onCancel).not.toHaveBeenCalled();
+    fireEvent.press(ui.getByTestId("add-holding-exit"));
+    fireEvent.press(ui.getByTestId("holding-discard-exit"));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().openingPositions).toHaveLength(0);
+  });
+
+  it("unregisters the single-holding back handler when the route loses focus", () => {
+    const remove = jest.fn();
+    const spy = jest.spyOn(BackHandler, "addEventListener").mockReturnValue({ remove });
+    const props = { onCancel: jest.fn(), store: createPortfolioStore({ storage: createMemoryJsonStorage() }) };
+    const ui = render(<AddOpeningPositionForm {...props} />);
+    expect(spy).toHaveBeenCalled();
+    spy.mockClear();
+    ui.rerender(<AddOpeningPositionForm {...props} hardwareBackEnabled={false} />);
+    expect(remove).toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+    ui.unmount();
+    spy.mockRestore();
   });
 
   it("validates the Asset phase before continuing", () => {
@@ -756,6 +837,12 @@ describe("AddOpeningPositionForm", () => {
 
   it("ignores repeated save presses while the holding command is completing", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCancel = jest.fn();
+    let hardwareBack: (() => boolean | null | undefined) | undefined;
+    const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
+      hardwareBack = handler;
+      return { remove: jest.fn() };
+    });
     let finishHaptics: (() => void) | undefined;
 
     jest.mocked(Haptics.notificationAsync).mockReturnValueOnce(
@@ -766,6 +853,7 @@ describe("AddOpeningPositionForm", () => {
     const { getByTestId, getByText } = render(
       <AddOpeningPositionForm
         initialVisualQaState="review"
+        onCancel={onCancel}
         store={store}
       />,
     );
@@ -776,6 +864,10 @@ describe("AddOpeningPositionForm", () => {
     expect(store.getState().assets).toHaveLength(1);
     expect(store.getState().openingPositions).toHaveLength(1);
     expect(getByText("Saving...")).toBeTruthy();
+    act(() => { expect(hardwareBack?.()).toBe(true); });
+    fireEvent.press(getByTestId("add-holding-exit"));
+    expect(getByTestId("add-holding-phase-review")).toBeTruthy();
+    expect(onCancel).not.toHaveBeenCalled();
 
     finishHaptics?.();
 
@@ -783,6 +875,9 @@ describe("AddOpeningPositionForm", () => {
       expect(getByText("Opening position saved.")).toBeTruthy();
     });
     expect(store.getState().openingPositions).toHaveLength(1);
+    act(() => { expect(hardwareBack?.()).toBe(true); });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 
   it("persists a manual valuation without depending on optional quote caching", async () => {

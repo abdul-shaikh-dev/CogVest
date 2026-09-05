@@ -277,40 +277,52 @@ export function AddOpeningPositionForm({
         ? "Saved manual price"
         : `Saved live quote • ${quoteSourceLabel(selectedSavedQuote)}`
       : "Manual price";
-  const hasUnfinishedQuickSetupDraft = Boolean(
+  const hasUnfinishedDraft = !savedAssetId && Boolean(
     hasSelectedAssetSummary ||
       isManualEntryExpanded ||
       lookupQuery.trim() ||
       quantity.trim() ||
       averageCostPrice.trim() ||
-      currentPrice.trim(),
+      currentPrice.trim() || assetName.trim() || symbol.trim() || ticker.trim() ||
+      notes.trim() || intendedHoldDays.trim() || conviction || date || dateUnknown,
   );
 
+  function requestExit() {
+    if (isSaving) return;
+    if (hasUnfinishedDraft) {
+      setIsExitConfirmationVisible(true);
+    } else {
+      onCancel?.();
+    }
+  }
+
+  function goBack() {
+    if (isSaving) return;
+    if (!savedAssetId && currentPhase !== "asset") {
+      const index = displayPhases.findIndex((phase) => phase.key === currentPhase);
+      moveToPhase(displayPhases[index - 1].key);
+    } else {
+      requestExit();
+    }
+  }
+
   useEffect(() => {
-    if (!hardwareBackEnabled || !quickSetup || !onCancel) {
+    if (!hardwareBackEnabled || !onCancel) {
       return undefined;
     }
 
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        if (hasUnfinishedQuickSetupDraft) {
-          setIsExitConfirmationVisible(true);
-        } else {
-          onCancel();
-        }
+        if (quickSetup) requestExit();
+        else goBack();
 
         return true;
       },
     );
 
     return () => subscription.remove();
-  }, [
-    hardwareBackEnabled,
-    hasUnfinishedQuickSetupDraft,
-    onCancel,
-    quickSetup,
-  ]);
+  }, [hardwareBackEnabled, onCancel, quickSetup, requestExit, goBack]);
 
   function renderStepper() {
     const currentIndex = getPhaseIndex(currentPhase);
@@ -369,17 +381,10 @@ export function AddOpeningPositionForm({
           onCancel ? (
             <IconButton
               accessibilityLabel={
-                quickSetup ? "Exit portfolio setup" : "Back to Holdings"
+                quickSetup ? "Exit portfolio setup" : "Back"
               }
               icon="arrow-back"
-              onPress={() => {
-                if (quickSetup && hasUnfinishedQuickSetupDraft) {
-                  setIsExitConfirmationVisible(true);
-                  return;
-                }
-
-                onCancel();
-              }}
+              onPress={quickSetup ? requestExit : goBack}
               testID="add-holding-exit"
             />
           ) : null
@@ -1160,7 +1165,7 @@ export function AddOpeningPositionForm({
               title="Continue to position"
             />
             <AppButton
-              onPress={() => moveToPhase("asset")}
+              onPress={goBack}
               testID="back-button"
               title="Back"
               variant="secondary"
@@ -1175,7 +1180,7 @@ export function AddOpeningPositionForm({
               title="Review and save"
             />
             <AppButton
-              onPress={() => moveToPhase(quickSetup ? "asset" : "class")}
+              onPress={goBack}
               testID="back-button"
               title="Back"
               variant="secondary"
@@ -1230,7 +1235,7 @@ export function AddOpeningPositionForm({
             )}
             <AppButton
               disabled={isSaving}
-              onPress={() => moveToPhase("position")}
+              onPress={goBack}
               testID="back-button"
               title="Back"
               variant="secondary"
@@ -1240,6 +1245,7 @@ export function AddOpeningPositionForm({
       </View>
 
       <Modal
+        testID="holding-exit-confirmation"
         animationType="fade"
         onRequestClose={() => setIsExitConfirmationVisible(false)}
         transparent
@@ -1247,19 +1253,21 @@ export function AddOpeningPositionForm({
       >
         <View style={styles.exitBackdrop}>
           <Pressable
-            accessibilityLabel="Keep editing portfolio setup"
+            accessibilityLabel={quickSetup ? "Keep editing portfolio setup" : "Keep editing holding"}
             accessibilityRole="button"
             onPress={() => setIsExitConfirmationVisible(false)}
             style={StyleSheet.absoluteFill}
           />
           <View accessibilityViewIsModal style={styles.exitSheet}>
-            <SectionHeader title="Leave portfolio setup?" />
+            <SectionHeader title={quickSetup ? "Leave portfolio setup?" : "Discard unfinished holding?"} />
             <AppText color="secondary">
-              Confirmed holdings are already saved. Unfinished details on this screen will be discarded.
+              {quickSetup
+                ? "Confirmed holdings are already saved. Unfinished details on this screen will be discarded."
+                : "This holding has not been saved. Leaving will discard your unfinished details."}
             </AppText>
             <AppButton
               onPress={() => setIsExitConfirmationVisible(false)}
-              testID="quick-setup-keep-editing"
+              testID={quickSetup ? "quick-setup-keep-editing" : "holding-keep-editing"}
               title="Keep editing"
             />
             <AppButton
@@ -1267,8 +1275,8 @@ export function AddOpeningPositionForm({
                 setIsExitConfirmationVisible(false);
                 onCancel?.();
               }}
-              testID="quick-setup-confirm-exit"
-              title="Leave setup"
+              testID={quickSetup ? "quick-setup-confirm-exit" : "holding-discard-exit"}
+              title={quickSetup ? "Leave setup" : "Discard and leave"}
               variant="secondary"
             />
           </View>

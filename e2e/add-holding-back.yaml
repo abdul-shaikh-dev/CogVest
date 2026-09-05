@@ -1,0 +1,97 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- tapOn:
+    id: asset-lookup-input
+- inputText: hdfc
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: asset-lookup-result-visual-qa-lookup-hdfc
+    timeout: 5000
+- tapOn:
+    id: asset-lookup-result-visual-qa-lookup-hdfc
+- tapOn:
+    id: continue-class-button
+- tapOn:
+    id: continue-position-button
+- tapOn:
+    id: quantity-input
+- inputText: "2"
+- tapOn:
+    id: average-cost-input
+- inputText: "1500"
+- hideKeyboard
+- tapOn:
+    id: review-holding-button
+- assertVisible:
+    id: add-holding-phase-review
+- back
+- assertVisible:
+    id: add-holding-phase-position
+- assertVisible:
+    id: quantity-input
+    text: "2"
+- assertVisible:
+    id: average-cost-input
+    text: "1500"
+- tapOn:
+    id: add-holding-exit
+- assertVisible:
+    id: add-holding-phase-class
+- tapOn:
+    id: back-button
+- assertVisible:
+    id: add-holding-phase-asset
+- back
+- assertVisible: Discard unfinished holding?
+- back
+- assertVisible:
+    id: add-holding-phase-asset
+- back
+- tapOn:
+    id: holding-keep-editing
+- tapOn:
+    id: continue-class-button
+- tapOn:
+    id: continue-position-button
+- assertVisible:
+    id: quantity-input
+    text: "2"
+- assertVisible:
+    id: average-cost-input
+    text: "1500"
+- tapOn:
+    id: review-holding-button
+- scrollUntilVisible:
+    element:
+      id: save-holding-button
+    direction: DOWN
+- tapOn:
+    id: save-holding-button
+- assertVisible:
+    id: holding-save-complete
+- back
+- assertVisible:
+    id: dashboard-screen
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Opening position count: 1"
+- assertVisible: "Values: invested ₹3,000.00 | current ₹3,356.50 | quantity 2"
+
+# Explicit discard must not create a second financial record.
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- tapOn:
+    id: asset-lookup-input
+- inputText: unfinished
+- hideKeyboard
+- tapOn:
+    id: add-holding-exit
+- tapOn:
+    id: holding-discard-exit
+- assertVisible: "Opening position count: 1"

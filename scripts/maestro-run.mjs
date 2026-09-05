@@ -7,6 +7,7 @@ const defaultFlows = [
   "e2e/navigation.yaml",
   "e2e/add-trade.yaml",
   "e2e/add-holding-lookup.yaml",
+  "e2e/add-holding-back.yaml",
   "e2e/add-holding-manual-semantics.yaml",
   "e2e/add-holding-pending-valuation.yaml",
   "e2e/add-holding-unknown-date.yaml",
