@@ -1,0 +1,102 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-3M
+    direction: DOWN
+    speed: 20
+- tapOn:
+    id: portfolio-monthly-chart-range-3M
+- scrollUntilVisible:
+    element:
+      id: asset-monthly-chart-range-3M
+    direction: DOWN
+- tapOn:
+    id: asset-monthly-chart-range-3M
+- scrollUntilVisible:
+    element:
+      id: asset-trend-previous-month
+    direction: UP
+- tapOn:
+    id: asset-trend-previous-month
+- assertVisible:
+    id: asset-trend-selected-panel
+    text: "Apr 2026.*"
+- takeScreenshot: .expo/chart-month-asset-before-scroll
+- scrollUntilVisible:
+    element:
+      id: asset-trend-plot-region
+    direction: DOWN
+- swipe:
+    from:
+      id: asset-trend-plot-region
+    direction: UP
+    duration: 650
+- scrollUntilVisible:
+    element:
+      id: asset-trend-selected-panel
+    direction: UP
+- assertVisible:
+    id: asset-trend-selected-panel
+    text: "Apr 2026.*"
+- scrollUntilVisible:
+    element:
+      id: asset-latest-summary
+    direction: DOWN
+- assertVisible: "Latest in range: May 2026 vs Apr 2026"
+- takeScreenshot: .expo/chart-month-asset-dated-summary
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-previous-month
+    direction: UP
+- assertVisible:
+    id: portfolio-trend-selected-panel
+    text: "May 2026.*"
+- tapOn:
+    id: portfolio-trend-previous-month
+- assertVisible:
+    id: portfolio-trend-selected-panel
+    text: "Apr 2026.*"
+- takeScreenshot: .expo/chart-month-portfolio-before-scroll
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-plot-region
+    direction: DOWN
+- swipe:
+    from:
+      id: portfolio-trend-plot-region
+    direction: UP
+    duration: 650
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: UP
+- assertVisible:
+    id: portfolio-trend-selected-panel
+    text: "Apr 2026.*"
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-6M
+    direction: UP
+- tapOn:
+    id: portfolio-monthly-chart-range-6M
+- assertVisible:
+    id: portfolio-trend-selected-panel
+    text: "May 2026.*"
