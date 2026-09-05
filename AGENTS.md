@@ -62,8 +62,9 @@ plan, or review artifact merely to satisfy ceremony.
 - Normal feature: clear issue acceptance criteria, relevant tests, owned-diff
   review, and relevant verification.
 - Critical change (financial model, currency, persistence, migration, privacy,
-  security, release architecture): approved behavior contract, failure-path
-  tests, adversarial owned-diff review, and full relevant verification.
+  security, release architecture): approved behavior contract (an already-
+  approved issue or explicit user request is sufficient), failure-path tests,
+  adversarial owned-diff review, and full relevant verification.
 
 Use specialized design review tools for significant UI work, but do not require
 multiple design skills to repeat the same critique. One evidence-based review and
@@ -84,7 +85,9 @@ one correction pass are normally enough.
 ## Git And Delivery
 
 - Never edit or commit on `main` or the default branch.
-- Sync `origin/main` and create a focused feature branch before edits.
+- When starting a new task, sync `origin/main` and create a focused feature
+  branch before edits. When resuming an existing task, preserve its task branch
+  and do not switch, rebase, or sync unnecessarily.
 - Do not revert unrelated user changes.
 - Use `Closes #<issue>` in a PR body when merge should auto-close the issue.
 - For CogVest implementation or documentation requests, branch, commit, push,
