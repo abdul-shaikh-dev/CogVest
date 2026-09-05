@@ -237,6 +237,10 @@ Accepted chart direction:
 - cash is excluded from the asset-trend graph and tracked separately in Cash
 - charts must use stored monthly snapshots or a clear empty/no-snapshot state
 - chart y-axis labels and chart-native value labels must obey value masking
+- Y-axis labels and horizontal guides share the chart-native zero/half/maximum
+  scale (two sections). Do not add a separately positioned label column.
+- plot spacing and guide lengths fit the measured container; reserve a
+  font-scaled axis gutter so narrow screens and enlarged text retain readable ticks
 - each chart card owns independent `3M`, `6M`, `1Y`, `All`, and `Custom`
   timeframe controls
 - custom ranges use inclusive start and end months chosen from available stored

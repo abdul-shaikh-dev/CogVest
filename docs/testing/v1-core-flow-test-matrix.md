@@ -40,6 +40,7 @@ approved.
 
 | V1 feature | Primary verification | Emulator / E2E coverage | Evidence |
 | --- | --- | --- | --- |
+| Chart axis alignment (#271) | `ProgressScreen.test.tsx` checks shared native sections/ticks, small/large/zero scales, masking and measured spacing/guide widths | Fresh local APK chart captures at ~427dp/100% and 360dp/130%; existing chart month-navigation regression | `docs/testing/chart-axis-alignment-evidence.md` records screenshots, checks and responsive-layout follow-ups |
 | Cold launch | `src/__tests__/rootRoute.test.ts` | `e2e/smoke-launch.yaml` launches `com.abdulshaikh.cogvest` and asserts `dashboard-screen` | UI tree or Maestro output shows Dashboard, not Unmatched Route |
 | Dashboard empty state | `src/features/dashboard/__tests__/DashboardScreen.test.tsx` | `e2e/smoke-launch.yaml` asserts `dashboard-screen` and tab labels | Dashboard shows portfolio value and Add Holding path |
 | Chart month navigation (#269) | `ProgressScreen.test.tsx` checks explicit navigation, independent range resets, dated summaries, masking, disabled boundaries and non-interactive plot props | `e2e/progress-chart-month-navigation.yaml` seeds stored months and verifies plot swipes, independent selection, preset reset and date context | See `docs/testing/chart-month-interaction-evidence.md` for current local APK, native results and screenshot evidence. TalkBack announcements require a separate device check |

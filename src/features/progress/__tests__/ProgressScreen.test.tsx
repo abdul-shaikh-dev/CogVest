@@ -139,6 +139,28 @@ function seedCurrentMonthMetrics(
   });
 }
 
+function chartSnapshot(
+  month: string,
+  {
+    cryptoValue,
+    debtValue,
+    equityValue,
+    investedValue,
+    portfolioValue,
+  }: Pick<MonthlySnapshot, "cryptoValue" | "debtValue" | "equityValue" | "investedValue" | "portfolioValue">,
+): MonthlySnapshot {
+  return {
+    ...aprilSnapshot,
+    cryptoValue,
+    debtValue,
+    equityValue,
+    id: `snapshot-${month}`,
+    investedValue,
+    month,
+    portfolioValue,
+  };
+}
+
 describe("ProgressScreen", () => {
   beforeEach(() => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(false);
@@ -708,7 +730,7 @@ describe("ProgressScreen", () => {
     });
   });
 
-  it("masks chart axis and chart-native y labels when wealth masking is enabled", () => {
+  it("masks chart-native y labels when wealth masking is enabled", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -721,11 +743,10 @@ describe("ProgressScreen", () => {
       queryByText,
       getAllByTestId,
     } = render(<ProgressScreen store={store} />);
-    const [portfolioChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
 
-    expect(getByTestId("portfolio-trend-y-axis-0")).toHaveTextContent("₹••••");
     expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
     expect(queryByText("₹20L")).toBeNull();
     expect(queryByText("₹13,85,000.00")).toBeNull();
@@ -736,6 +757,178 @@ describe("ProgressScreen", () => {
       "Portfolio hidden. Change hidden",
     );
     expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
+    expect(assetChart.props.formatYLabel("2000000")).toBe("₹••••");
+  });
+
+  it.each([
+    {
+      expectedMax: 5,
+      expectedStep: 2.5,
+      label: "small values",
+      snapshots: [
+        chartSnapshot("2026-01", {
+          cryptoValue: 0,
+          debtValue: 1,
+          equityValue: 4,
+          investedValue: 2,
+          portfolioValue: 4,
+        }),
+        chartSnapshot("2026-02", {
+          cryptoValue: 0.5,
+          debtValue: 1.5,
+          equityValue: 5,
+          investedValue: 2.5,
+          portfolioValue: 5,
+        }),
+      ],
+    },
+    {
+      expectedMax: 10000000,
+      expectedStep: 5000000,
+      label: "large values",
+      snapshots: [
+        chartSnapshot("2026-01", {
+          cryptoValue: 500000,
+          debtValue: 1000000,
+          equityValue: 8000000,
+          investedValue: 7500000,
+          portfolioValue: 8000000,
+        }),
+        chartSnapshot("2026-02", {
+          cryptoValue: 500000,
+          debtValue: 1000000,
+          equityValue: 9000000,
+          investedValue: 8500000,
+          portfolioValue: 9000000,
+        }),
+      ],
+    },
+    {
+      expectedMax: 2,
+      expectedStep: 1,
+      label: "all-zero history",
+      snapshots: [
+        chartSnapshot("2026-01", {
+          cryptoValue: 0,
+          debtValue: 0,
+          equityValue: 0,
+          investedValue: 0,
+          portfolioValue: 0,
+        }),
+        chartSnapshot("2026-02", {
+          cryptoValue: 0,
+          debtValue: 0,
+          equityValue: 0,
+          investedValue: 0,
+          portfolioValue: 0,
+        }),
+      ],
+    },
+  ])("uses matching native ticks for both charts with $label", ({
+    expectedMax,
+    expectedStep,
+    snapshots,
+  }) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    snapshots.forEach((snapshot) => store.getState().addMonthlySnapshot(snapshot));
+
+    const { getAllByTestId } = render(<ProgressScreen store={store} />);
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
+
+    for (const chart of [portfolioChart, assetChart]) {
+      expect(chart.props.maxValue).toBe(expectedMax);
+      expect(chart.props.stepValue).toBe(expectedStep);
+      expect(chart.props.stepValue).toBe(
+        chart.props.maxValue / chart.props.noOfSections,
+      );
+      expect(chart.props.noOfSections).toBe(2);
+      expect(chart.props.hideOrigin).toBe(false);
+      expect(chart.props.showFractionalValues).toBe(true);
+      expect(chart.props.roundToDigits).toBe(2);
+      expect(chart.props.formatYLabel("2000000")).toBe("₹20L");
+    }
+  });
+
+  it("derives plot width and spacing from measured surface width safely", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(
+      chartSnapshot("2026-01", {
+        cryptoValue: 1,
+        debtValue: 2,
+        equityValue: 4,
+        investedValue: 5,
+        portfolioValue: 6,
+      }),
+    );
+    store.getState().addMonthlySnapshot(
+      chartSnapshot("2026-02", {
+        cryptoValue: 1,
+        debtValue: 2,
+        equityValue: 5,
+        investedValue: 6,
+        portfolioValue: 7,
+      }),
+    );
+    store.getState().addMonthlySnapshot(
+      chartSnapshot("2026-03", {
+        cryptoValue: 1,
+        debtValue: 2,
+        equityValue: 6,
+        investedValue: 7,
+        portfolioValue: 8,
+      }),
+    );
+
+    const { getAllByTestId, getByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+    const layoutSurface = (testID: string, width: number) => {
+      fireEvent(getByTestId(testID, { includeHiddenElements: true }), "layout", {
+        nativeEvent: { layout: { width } },
+      });
+    };
+    const chartPointCount = (chart: { props: Record<string, any> }) =>
+      chart.props.data?.length ?? chart.props.dataSet[0].data.length;
+    const assertSpacingRelationship = (chart: { props: Record<string, any> }) => {
+      expect(chart.props.width).toBeGreaterThanOrEqual(1);
+      expect(chart.props.spacing).toBeGreaterThanOrEqual(0);
+      expect(chart.props.rulesLength).toBe(chart.props.width);
+      expect(chart.props.xAxisLength).toBe(chart.props.width);
+      expect(chart.props.spacing).toBe(
+        Math.max(
+          0,
+          (chart.props.width - chart.props.initialSpacing - chart.props.endSpacing) /
+            (chartPointCount(chart) - 1),
+        ),
+      );
+    };
+
+    layoutSurface("portfolio-trend-chart", 400);
+    layoutSurface("asset-trend-chart", 400);
+    let [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
+
+    expect(portfolioChart.props.width).toBe(assetChart.props.width);
+    expect(portfolioChart.props.width).toBeGreaterThan(228);
+    expect(portfolioChart.props.spacing).toBe(assetChart.props.spacing);
+    assertSpacingRelationship(portfolioChart);
+    assertSpacingRelationship(assetChart);
+
+    layoutSurface("portfolio-trend-chart", 40);
+    layoutSurface("asset-trend-chart", 40);
+    [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
+
+    expect(portfolioChart.props.width).toBe(1);
+    expect(assetChart.props.width).toBe(1);
+    expect(portfolioChart.props.spacing).toBe(0);
+    expect(assetChart.props.spacing).toBe(0);
+    assertSpacingRelationship(portfolioChart);
+    assertSpacingRelationship(assetChart);
   });
 
   it("disables chart animation when reduced motion is enabled", () => {
