@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CogVest | Progress design review</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<aside class="workbench">
+  <p class="kicker">COGVEST / DESIGN REVIEW 275</p><h1>A month, understood.</h1>
+  <p>A clearer monthly answer. Two useful trends. The full ledger only when you need it.</p>
+  <label>Preview state<select id="scenario"><option value="populated">Complete history</option><option value="estimated">Estimated month-end prices</option><option value="empty">No snapshots yet</option></select></label>
+  <label class="check"><input type="checkbox" id="large-text">130% text</label>
+  <div class="notes"><strong>Proposed, not implemented</strong><p>Charts keep their own ranges and inspected months. No duplicate latest-asset badge. Month details replace the always-expanded history section.</p><p>Synthetic data only. All interactions stay in this preview. Bottom tabs provide context, not other app screens.</p><p id="height-note"></p></div>
+</aside>
+<main class="phone" aria-label="Monthly Progress preview">
+  <div class="status" aria-hidden="true"><span>9:41</span><span>100%</span></div>
+  <div class="screen" id="screen">
+    <header><div><p class="eyebrow">YOUR PORTFOLIO, OVER TIME</p><h2>Monthly Progress</h2></div><button class="icon" id="mask" aria-label="Hide financial values" aria-pressed="false"><span class="ion" aria-hidden="true">&#62186;</span></button></header>
+    <section id="month-summary" aria-label="Monthly summary"></section>
+    <div id="charts"></div>
+    <section class="disclosure" id="history-entry"><div><h3>Every month, in detail</h3><p>Asset changes, allocation and cash.</p></div><button id="open-history">Month details</button></section>
+    <p class="endnote">Stored month-end values. Not a live market chart.</p>
+  </div>
+  <nav class="tabs" aria-label="App navigation context"><span><i class="ion" aria-hidden="true">&#62339;</i>Dashboard</span><span><i class="ion" aria-hidden="true">&#62648;</i>Holdings</span><span aria-current="page"><i class="ion" aria-hidden="true">&#62876;</i>Progress</span><span><i class="ion" aria-hidden="true">&#63014;</i>Cash</span><span><i class="ion" aria-hidden="true">&#62828;</i>Settings</span></nav>
+</main>
+<dialog id="details"><div class="dialog-head"><h2>Month details</h2><button class="icon" id="close-details" aria-label="Close month details"><span class="ion" aria-hidden="true">&#62030;</span></button></div><label>Stored month<select id="detail-month"></select></label><div id="detail-body"></div></dialog>
+<dialog id="custom"><div class="dialog-head"><h2>Choose a range</h2><button class="icon" id="close-custom" aria-label="Cancel custom range"><span class="ion" aria-hidden="true">&#62030;</span></button></div><p>Only stored months are available. Each trend needs two or more snapshots.</p><label>From<select id="range-from"></select></label><label>Through<select id="range-to"></select></label><button class="primary" id="apply-range">Apply range</button></dialog>
+<dialog id="status-details"><div class="dialog-head"><h2>Snapshot status</h2><button id="close-status">Close</button></div><div id="status-body"></div></dialog>
+<script src="app.js"></script></body></html>
