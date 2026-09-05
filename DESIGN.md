@@ -72,7 +72,8 @@ Use these colors as the canonical CogVest palette.
 | Secondary Text | `#98989D` | Body copy, labels, supporting metrics |
 | Muted Text | `#636366` | Captions, timestamps, empty-state helper text |
 | Primary Green | `#34C759` | Main CTA, active tab, selected state, positive brand emphasis |
-| Deep Green | `#248A3D` | Pressed states and selected backgrounds |
+| Deep Green | `#248A3D` | Reserved darker accent, not a text-bearing selected control |
+| Inverse Text | `#000000` | Labels on bright filled primary/destructive actions |
 | Separator | `rgba(255,255,255,0.10)` | Hairline separators only when needed |
 | Positive | `#34C759` | Gains, positive returns, successful states |
 | Warning | `#F59E0B` | Incomplete data, stale quotes, non-blocking risk |
@@ -92,6 +93,15 @@ Rules:
 - Prefer borderless true-dark surfaces. Use only subtle hairline separators when structure needs extra clarity.
 - Financial values must remain readable on all surfaces.
 - All financial values must be maskable and INR-first.
+- Filled primary and destructive actions use black inverse labels, not white.
+  Selected filters, chart ranges, history months and conviction chips use the
+  same primary/inverse pair. Do not put secondary gray on a filled green control.
+- Enabled pressed controls retain 98% opacity. Android ripples are behind the
+  text: black at 6% for primary/destructive actions, 18% for neutral surfaces.
+  Do not overlay a foreground ripple on labels or fade active controls to 75%.
+- Secondary text is `#98989D` on dark root/card/elevated surfaces. Test resting
+  and composited pressed states at 4.5:1 minimum; disabled styling is not proof
+  of active-state compliance. Gains/losses retain their separate semantic colors.
 
 ## 3. Typography Rules
 

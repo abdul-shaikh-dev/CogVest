@@ -19,9 +19,9 @@ export const colors = {
   },
   text: {
     primary: "#FFFFFF",
-    secondary: "#8E8E93",
+    secondary: "#98989D",
     muted: "#48484A",
-    inverse: "#FFFFFF",
+    inverse: "#000000",
   },
 } as const;
 
@@ -61,9 +61,9 @@ export const typography = {
 
 export const interaction = {
   minimumTouchTarget: 48,
-  primaryRippleColor: "rgba(0,0,0,0.18)",
-  pressedOpacity: 0.75,
-  rippleColor: "rgba(255,255,255,0.12)",
+  primaryRippleColor: "rgba(0,0,0,0.06)",
+  pressedOpacity: 0.98,
+  rippleColor: "rgba(0,0,0,0.18)",
   stateLayerOpacity: 0.12,
   disabledOpacity: 0.48,
 } as const;

@@ -40,6 +40,7 @@ approved.
 
 | V1 feature | Primary verification | Emulator / E2E coverage | Evidence |
 | --- | --- | --- | --- |
+| Shared control contrast (#273) | Theme luminance/compositing tests, primary/destructive/ripple primitive tests, selected Holdings/Progress styling tests | Fresh APK captures of selected/held chart chip, Cash action and Holdings filter; chart month-navigation regression | `docs/testing/control-contrast-evidence.md` records measured foreground/background pairs and native coverage limits |
 | Chart axis alignment (#271) | `ProgressScreen.test.tsx` checks shared native sections/ticks, small/large/zero scales, masking and measured spacing/guide widths | Fresh local APK chart captures at ~427dp/100% and 360dp/130%; existing chart month-navigation regression | `docs/testing/chart-axis-alignment-evidence.md` records screenshots, checks and responsive-layout follow-ups |
 | Cold launch | `src/__tests__/rootRoute.test.ts` | `e2e/smoke-launch.yaml` launches `com.abdulshaikh.cogvest` and asserts `dashboard-screen` | UI tree or Maestro output shows Dashboard, not Unmatched Route |
 | Dashboard empty state | `src/features/dashboard/__tests__/DashboardScreen.test.tsx` | `e2e/smoke-launch.yaml` asserts `dashboard-screen` and tab labels | Dashboard shows portfolio value and Add Holding path |

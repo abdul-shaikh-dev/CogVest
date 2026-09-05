@@ -8,7 +8,7 @@ export function androidRipple(
   return {
     borderless: false,
     color,
-    foreground: true,
+    foreground: false,
   };
 }
 

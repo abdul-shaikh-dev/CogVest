@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, within } from "@testing-library/react-native";
 
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
@@ -972,6 +972,10 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("asset-monthly-chart-range-3M"));
 
     expect(queryByText("Mar 2026")).toBeNull();
+    for (const id of ["portfolio-monthly-chart-range-3M", "asset-monthly-chart-range-3M"]) {
+      expect(getByTestId(id)).toHaveStyle({ backgroundColor: colors.primary });
+      expect(within(getByTestId(id)).getByText("3M")).toHaveStyle({ color: colors.text.inverse });
+    }
   });
 
   it("applies an independent custom range from persisted snapshot months", () => {

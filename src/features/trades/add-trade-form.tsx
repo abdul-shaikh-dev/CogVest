@@ -75,8 +75,8 @@ export function AddTradeForm({
                   pressed && styles.pressed,
                 ]}
               >
-                <AppText weight="bold">{asset.symbol}</AppText>
-                <AppText color="secondary" variant="caption">
+                <AppText color={trade.selectedAssetId === asset.id ? "inverse" : "primary"} weight="bold">{asset.symbol}</AppText>
+                <AppText color={trade.selectedAssetId === asset.id ? "inverse" : "secondary"} variant="caption">
                   {asset.name}
                 </AppText>
               </Pressable>
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   assetChipActive: {
-    backgroundColor: colors.deepGreen,
+    backgroundColor: colors.primary,
   },
   assetGrid: {
     flexDirection: "row",
