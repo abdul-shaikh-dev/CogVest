@@ -54,7 +54,7 @@ export function AppButton({
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityRole={accessibilityRole}
       android_ripple={androidRipple(
-        variant === "primary"
+        variant === "primary" || variant === "destructive"
           ? interaction.primaryRippleColor
           : interaction.rippleColor,
       )}

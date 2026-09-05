@@ -28,6 +28,26 @@ describe("common UI primitives", () => {
     });
   });
 
+  it.each([
+    { expectedBackground: colors.primary, variant: "primary" as const },
+    { expectedBackground: colors.loss, variant: "destructive" as const },
+  ])("pairs $variant labels with inverse text", ({ expectedBackground, variant }) => {
+    const { getByTestId, getByText } = render(
+      <AppButton
+        testID={`${variant}-button`}
+        title={`${variant} action`}
+        variant={variant}
+      />,
+    );
+
+    expect(getByTestId(`${variant}-button`)).toHaveStyle({
+      backgroundColor: expectedBackground,
+    });
+    expect(getByText(`${variant} action`)).toHaveStyle({
+      color: colors.text.inverse,
+    });
+  });
+
   it("uses the standard press opacity during interaction", () => {
     expect(
       getButtonInteractionStyle({ disabled: false, pressed: true }),
@@ -63,28 +83,35 @@ describe("common UI primitives", () => {
     ).toEqual({ opacity: interaction.disabledOpacity });
   });
 
-  it("renders destructive actions with the semantic loss color", () => {
-    const { getByTestId, getByText } = render(
+  it.each([
+    { expectedRipple: interaction.primaryRippleColor, variant: "primary" as const },
+    { expectedRipple: interaction.primaryRippleColor, variant: "destructive" as const },
+    { expectedRipple: interaction.rippleColor, variant: "secondary" as const },
+  ])("routes $variant through its accessible Android ripple", ({ expectedRipple, variant }) => {
+    const { UNSAFE_root } = render(
       <AppButton
-        testID="delete-button"
-        title="Delete entry"
-        variant="destructive"
+        testID={`${variant}-ripple-button`}
+        title={`${variant} action`}
+        variant={variant}
       />,
     );
 
-    expect(getByTestId("delete-button")).toHaveStyle({
-      backgroundColor: colors.loss,
-    });
-    expect(getByText("Delete entry")).toHaveStyle({
-      color: colors.text.inverse,
+    const rippleNodes = UNSAFE_root.findAll(
+      (node: { props: { android_ripple?: unknown } }) => node.props.android_ripple !== undefined,
+    );
+    expect(rippleNodes).toHaveLength(1);
+    expect(rippleNodes[0].props.android_ripple).toEqual({
+      borderless: false,
+      color: expectedRipple,
+      foreground: false,
     });
   });
 
-  it("exposes Android ripple and 48dp touch target helpers", () => {
+  it("exposes the generic Android ripple and 48dp touch target helpers", () => {
     expect(androidRipple()).toEqual({
       borderless: false,
       color: interaction.rippleColor,
-      foreground: true,
+      foreground: false,
     });
     expect(minimumTouchTargetStyle).toEqual({
       minHeight: interaction.minimumTouchTarget,

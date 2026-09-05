@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   filterChipActive: {
-    backgroundColor: colors.deepGreen,
+    backgroundColor: colors.primary,
   },
   filters: {
     flexDirection: "row",

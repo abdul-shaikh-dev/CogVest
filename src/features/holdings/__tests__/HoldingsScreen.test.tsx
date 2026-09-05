@@ -12,6 +12,7 @@ import { HoldingsScreen } from "@/src/features/holdings";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { colors } from "@/src/theme";
 import type { Asset, PpfAccount, Trade } from "@/src/types";
 
 const asset: Asset = {
@@ -419,6 +420,12 @@ describe("HoldingsScreen", () => {
     expect(getList().getByText("Bitcoin")).toBeTruthy();
 
     fireEvent.press(getByTestId("holdings-filter-losers"));
+    expect(getByTestId("holdings-filter-losers")).toHaveStyle({
+      backgroundColor: colors.primary,
+    });
+    expect(within(getByTestId("holdings-filter-losers")).getByText(/Losers/)).toHaveStyle({
+      color: colors.text.inverse,
+    });
     expect(getList().queryByText("Reliance Industries")).toBeNull();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
