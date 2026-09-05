@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/src/testing/visualQaSeed";
 
 export default function AddHoldingScreen() {
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{
     token?: string;
     visualQaState?: string;
@@ -20,10 +22,11 @@ export default function AddHoldingScreen() {
 
   return (
     <AddOpeningPositionForm
+      hardwareBackEnabled={isFocused}
       initialVisualQaState={
         visualQaState === "review" ? "review" : undefined
       }
-      onCancel={() => router.back()}
+      onCancel={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/holdings")}
       onAddPpfAccount={(legacy) =>
         router.replace({
           pathname: "/ppf-account",

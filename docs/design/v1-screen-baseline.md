@@ -162,6 +162,14 @@ Required flow:
 8. Show derived preview.
 9. Review and save.
 
+Single-holding Back navigation follows Review -> Position -> Confirm details ->
+Asset, consistently for the toolbar, footer, and Android system Back. Preserve
+input between phases. Leaving Asset with unfinished input requires explicit
+discard confirmation; Keep editing or dismissing the confirmation retains input.
+Pristine entry and completed saves exit without an unsaved-draft prompt. Ignore
+Back while saving and unregister the hardware handler when the route is inactive.
+Rapid portfolio setup retains its separate guarded-exit behavior.
+
 The UI must not auto-pick the first search result. Manual ticker/current-price
 entry is a fallback, not the primary perceived path.
 Autofilled ticker, instrument type, sector, currency, and price source must be
