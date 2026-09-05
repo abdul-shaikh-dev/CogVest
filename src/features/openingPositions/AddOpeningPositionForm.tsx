@@ -170,6 +170,7 @@ export function AddOpeningPositionForm({
     instrumentTypeConfidence,
     isLookupSearching,
     isSaving,
+    intendedHoldDays,
     lookupQuery,
     lookupResults,
     lookupStatus,
@@ -200,6 +201,7 @@ export function AddOpeningPositionForm({
     setDate,
     setDateUnknown,
     setInstrumentType,
+    setIntendedHoldDays,
     setLookupQuery,
     setNotes,
     setQuantity,
@@ -885,6 +887,20 @@ export function AddOpeningPositionForm({
             </AppText>
           ) : null}
         </View> : null}
+        {!quickSetup ? (
+          <FormTextField
+            error={errors.intendedHoldDays}
+            keyboardType="number-pad"
+            label="Planned holding period (days)"
+            onChangeText={(value) => {
+              setIntendedHoldDays(value);
+              resetReview();
+            }}
+            placeholder="Optional"
+            testID="intended-hold-days-input"
+            value={intendedHoldDays}
+          />
+        ) : null}
         {!quickSetup ? <FormTextField
           label="Note"
           multiline
@@ -997,6 +1013,16 @@ export function AddOpeningPositionForm({
                 : "Not set"
             }
           /> : null}
+          {!quickSetup ? (
+            <ReviewDetailRow
+              label="Planned holding period"
+              value={
+                reviewOpeningPosition.intendedHoldDays
+                  ? `${reviewOpeningPosition.intendedHoldDays} days`
+                  : "Not set"
+              }
+            />
+          ) : null}
         </PremiumCard>
 
         <PremiumCard elevated testID="derived-preview-card">

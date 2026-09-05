@@ -329,6 +329,36 @@ describe("persisted portfolio schema", () => {
     ).toMatchObject({ success: true });
   });
 
+  it("preserves valid planned holding periods and rejects invalid values", () => {
+    const basePosition = {
+      assetId: "asset-reliance",
+      averageCostPrice: 100,
+      date: "2026-07-10",
+      id: "opening-planned",
+      quantity: 2,
+    };
+    const valid = parsePersistedPortfolio(
+      serialize({
+        openingPositions: [{ ...basePosition, intendedHoldDays: 365 }],
+        schemaVersion: 9,
+      }),
+    );
+
+    expect(valid).toMatchObject({ success: true });
+    if (valid.success) {
+      expect(valid.data.openingPositions?.[0]?.intendedHoldDays).toBe(365);
+    }
+
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          openingPositions: [{ ...basePosition, intendedHoldDays: 0 }],
+          schemaVersion: 9,
+        }),
+      ),
+    ).toEqual({ reason: "invalid-shape", success: false });
+  });
+
   it("rejects contradictory or incomplete manual valuation provenance", () => {
     const basePosition = {
       assetId: "asset-reliance",

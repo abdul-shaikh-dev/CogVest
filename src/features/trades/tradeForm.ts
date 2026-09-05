@@ -16,6 +16,7 @@ export type TradeFormValues = {
   assetId: string;
   conviction?: string;
   date: string;
+  intendedHoldDays?: string;
   pricePerUnit: string;
   quantity: string;
   type: TradeType;
@@ -25,6 +26,7 @@ export type ValidTradeFormValue = {
   assetId: string;
   conviction?: number;
   date: string;
+  intendedHoldDays?: number;
   pricePerUnit: number;
   quantity: number;
   type: TradeType;
@@ -103,6 +105,29 @@ function optionalConvictionField() {
   });
 }
 
+function optionalPositiveWholeNumberField() {
+  return z.unknown().transform((value, context) => {
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim().length === 0)
+    ) {
+      return undefined;
+    }
+
+    const parsedValue = parsePositiveNumber(value);
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Planned holding period must be whole days.",
+      });
+      return z.NEVER;
+    }
+
+    return parsedValue;
+  });
+}
+
 export function createTradeFormSchema(now = new Date()) {
   return z.object({
     assetId: z.string().trim().min(1, "Asset is required."),
@@ -113,6 +138,7 @@ export function createTradeFormSchema(now = new Date()) {
       .min(1, "Date is required.")
       .refine(isValidDateString, "Date must be valid.")
       .refine((value) => !isFutureDate(value, now), "Date cannot be in the future."),
+    intendedHoldDays: optionalPositiveWholeNumberField(),
     pricePerUnit: positiveNumberField(
       "Price must be a valid number.",
       "Price must be greater than zero.",
@@ -155,7 +181,11 @@ export function validateTradeForm(
     };
   }
 
-  const value = result.data;
+  const value = {
+    ...result.data,
+    intendedHoldDays:
+      result.data.type === "buy" ? result.data.intendedHoldDays : undefined,
+  };
 
   if (value.type === "sell") {
     const assetTrades = existingTrades.filter(

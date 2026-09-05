@@ -886,7 +886,9 @@ export function getConvictionReadiness(
   openingPositions: OpeningPosition[] = [],
 ): ConvictionReadiness {
   const ratedConvictions = [
-    ...trades.map((trade) => trade.conviction),
+    ...trades
+      .filter((trade) => trade.type === "buy" || trade.type === "sell")
+      .map((trade) => trade.conviction),
     ...openingPositions.map((position) => position.conviction),
   ].filter((conviction): conviction is NonNullable<typeof conviction> =>
     conviction !== undefined,

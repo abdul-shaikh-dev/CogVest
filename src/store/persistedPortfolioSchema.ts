@@ -108,6 +108,7 @@ const openingPositionSchema = z
     currentPrice: finiteNumberSchema.optional(),
     date: nonEmptyStringSchema.nullable(),
     id: nonEmptyStringSchema,
+    intendedHoldDays: finiteNumberSchema.optional(),
     manualValuation: z
       .object({
         asOf: z.string().datetime({ offset: true }).nullable(),
@@ -124,6 +125,18 @@ const openingPositionSchema = z
     recordedOn: calendarDateSchema.optional(),
   })
   .superRefine((position, context) => {
+    if (
+      position.intendedHoldDays !== undefined &&
+      (!Number.isInteger(position.intendedHoldDays) ||
+        position.intendedHoldDays <= 0)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Planned holding periods must be positive whole days.",
+        path: ["intendedHoldDays"],
+      });
+    }
+
     if (
       position.date === null &&
       (position.recordedAt === undefined || position.recordedOn === undefined)

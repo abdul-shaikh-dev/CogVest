@@ -45,6 +45,56 @@ describe("trade form validation", () => {
     });
   });
 
+  it("accepts an optional planned holding period for buys", () => {
+    const result = validateTradeForm(
+      {
+        assetId: "asset-1",
+        conviction: "",
+        date: "2026-04-15",
+        intendedHoldDays: "365",
+        pricePerUnit: "100",
+        quantity: "2",
+        type: "buy",
+      },
+      [],
+    );
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { intendedHoldDays: 365 },
+    });
+  });
+
+  it("ignores legacy planned holding input on sells", () => {
+    const result = validateTradeForm(
+      {
+        assetId: "asset-1",
+        conviction: "",
+        date: "2026-04-15",
+        intendedHoldDays: "365",
+        pricePerUnit: "100",
+        quantity: "1",
+        type: "sell",
+      },
+      [
+        {
+          assetId: "asset-1",
+          date: "2026-04-01",
+          id: "buy-1",
+          pricePerUnit: 90,
+          quantity: 1,
+          totalValue: 90,
+          type: "buy",
+        },
+      ],
+    );
+
+    expect(result).toMatchObject({
+      isValid: true,
+      value: { intendedHoldDays: undefined },
+    });
+  });
+
   it("normalizes quantity and unit price to the V1 precision contract", () => {
     expect(
       validateTradeForm(

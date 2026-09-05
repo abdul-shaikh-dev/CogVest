@@ -23,6 +23,7 @@ export type OpeningPositionFormValues = {
   date: string;
   dateUnknown?: boolean;
   instrumentType: string;
+  intendedHoldDays?: string;
   notes?: string;
   quoteSourceId?: string;
   quantity: string;
@@ -39,6 +40,7 @@ export type ValidOpeningPositionForm = {
   currentPrice?: number;
   date: string | null;
   instrumentType: InstrumentType;
+  intendedHoldDays?: number;
   notes?: string;
   quoteSourceId: string;
   quantity: number;
@@ -84,6 +86,10 @@ export function validateOpeningPositionForm(
   const conviction =
     values.conviction && values.conviction.trim().length > 0
       ? Number(values.conviction)
+      : undefined;
+  const intendedHoldDays =
+    values.intendedHoldDays && values.intendedHoldDays.trim().length > 0
+      ? Number(values.intendedHoldDays)
       : undefined;
   const dateUnknown = values.dateUnknown || values.date.trim().length === 0;
 
@@ -132,6 +138,13 @@ export function validateOpeningPositionForm(
     errors.conviction = "Conviction must be between 1 and 5.";
   }
 
+  if (
+    intendedHoldDays !== undefined &&
+    (!Number.isInteger(intendedHoldDays) || intendedHoldDays <= 0)
+  ) {
+    errors.intendedHoldDays = "Planned holding period must be whole days.";
+  }
+
   if (Object.keys(errors).length > 0) {
     return {
       errors,
@@ -149,6 +162,7 @@ export function validateOpeningPositionForm(
       currentPrice: currentPrice ?? undefined,
       date: dateUnknown ? null : values.date,
       instrumentType: values.instrumentType as InstrumentType,
+      intendedHoldDays,
       notes: values.notes?.trim() || undefined,
       quoteSourceId:
         values.quoteSourceId?.trim() ||

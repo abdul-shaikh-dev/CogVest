@@ -17,6 +17,7 @@ export type OpeningPosition = {
   currentPrice?: number;
   date: string | null;
   id: string;
+  intendedHoldDays?: number;
   manualValuation?: OpeningPositionManualValuation;
   /** The date the aggregate position was measured for transaction cutover. */
   measuredAsOf?: string;

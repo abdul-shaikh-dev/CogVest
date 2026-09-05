@@ -72,6 +72,10 @@ describe("ReviewOpeningPositionScreen", () => {
       "30",
     );
     fireEvent.press(getByTestId("opening-correction-conviction-5"));
+    fireEvent.changeText(
+      getByTestId("opening-correction-intended-hold-days-input"),
+      "1095",
+    );
     const saveButton = getByTestId("save-opening-correction-button");
     fireEvent.press(saveButton);
     fireEvent.press(saveButton);
@@ -83,6 +87,7 @@ describe("ReviewOpeningPositionScreen", () => {
     expect(store.getState().openingPositions).toEqual([
       expect.objectContaining({
         conviction: 5,
+        intendedHoldDays: 1095,
         manualValuation: openingPosition.manualValuation,
         quantity: 30,
       }),

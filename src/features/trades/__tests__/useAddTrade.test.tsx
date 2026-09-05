@@ -24,6 +24,7 @@ describe("useAddTrade", () => {
       result.current.setTicker("RELIANCE.NS");
       result.current.setQuantity("2");
       result.current.setPricePerUnit("100");
+      result.current.setIntendedHoldDays("365");
     });
 
     act(() => {
@@ -32,6 +33,7 @@ describe("useAddTrade", () => {
 
     expect(result.current.reviewTrade).toMatchObject({
       pricePerUnit: 100,
+      intendedHoldDays: 365,
       quantity: 2,
       totalValue: 200,
       type: "buy",
@@ -43,6 +45,7 @@ describe("useAddTrade", () => {
 
     expect(store.getState().assets).toHaveLength(1);
     expect(store.getState().trades).toHaveLength(1);
+    expect(store.getState().trades[0]?.intendedHoldDays).toBe(365);
     expect(store.getState().cashEntries).toEqual([
       expect.objectContaining({ amount: 1000 }),
       expect.objectContaining({
