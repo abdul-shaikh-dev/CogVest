@@ -73,7 +73,7 @@ function drawAll(){
     });
     ctx.fillStyle='#98989d';ctx.textAlign='center';[...new Set([0,Math.floor((data.length-1)/2),data.length-1])].forEach(i=>ctx.fillText(label(data[i].month).split(' ')[0],x(i),h-11*scale));
   });
-  $('height-note').textContent=`Proposed default reading surface: ${($('screen').scrollHeight/$('screen').clientHeight).toFixed(1)} viewports. Full month details remain off the main scroll.`;
+  $('height-note').textContent=`Proposed default reading surface: ${($('screen').scrollHeight/$('screen').clientHeight).toFixed(1)} viewports. Full monthly history remains off the main scroll.`;
 }
 function detailMarkup(index){
   const s=historySnapshots[index],p=historySnapshots[index-1];
@@ -82,7 +82,7 @@ function detailMarkup(index){
 let editingChart;
 function renderHistory(){
   const year=$('history-year').value;
-  const entries=historySnapshots.map((snapshot,index)=>({snapshot,index})).filter(({snapshot})=>snapshot.month.startsWith(year));
+  const entries=historySnapshots.map((snapshot,index)=>({snapshot,index})).filter(({snapshot})=>snapshot.month.startsWith(year)).reverse();
   $('history-count').textContent=`${entries.length} stored months. Tap a month for its breakdown.`;
   $('detail-body').innerHTML=entries.map(({snapshot:s,index})=>{
     const p=historySnapshots[index-1];

@@ -28,14 +28,18 @@ unknown process occupying the port.
 2. One compact automatic/estimated snapshot status, with details on demand.
 3. Portfolio Growth and Asset Momentum, each retaining its own stored-month
    range, inspected month, previous/next buttons and selected figures.
-4. One Month details entry opening a year-based history overview rather than
-   permanently expanding one comparison below both charts. Compact chronological
+4. One Monthly History entry opening a year-based history overview rather than
+   permanently expanding one comparison below both charts. Compact newest-first
    rows show month, month-end portfolio value and change from the prior calendar
    month. Tap a row for its inline breakdown; only one month expands at a time.
 
 The 2026-09-06 refinement replaces the month-picker-first panel. The year selector
 is derived from stored history, newest year first; partial years show only stored
-months, with no future/zero-filled rows. January compares with December of the
+months in descending order (December to January for a complete year). The section
+and panel are titled Monthly History; the entry button is View history. Display
+order does not change comparisons: December still compares with November. The
+two charts retain oldest-to-newest progression. Partial years contain no future
+or zero-filled rows. January compares with December of the
 previous year when available. A missing immediately preceding month has no
 month-over-month comparison, not a fabricated zero or comparison over a gap.
 Percentages describe portfolio value change, including deposits and withdrawals,
@@ -43,14 +47,14 @@ not investment return. Existing flow-adjusted market change stays in expanded
 details and requires a valid recorded performance basis in production.
 
 Remove the duplicate latest-asset highlight and standalone asset-class breakdown
-from the main scroll. Keep their underlying information in Month details.
+from the main scroll. Keep their underlying information in Monthly History.
 Charts remain noninteractive plots so normal vertical scrolling cannot change
 the inspected month. Custom ranges expose only valid ordered stored months.
 Range chips wrap as whole controls; no mid-word Custom label.
 
 ## Retained Information
 
-Month details supports every stored month, current/previous asset-class values,
+Monthly History supports every stored month, current/previous asset-class values,
 class percentages and allocation, total portfolio change, invested capital,
 monthly investment, net contribution, market change, salary and expenses, and
 investment/expense rates. The preview's Investment rate corresponds to the
@@ -75,7 +79,7 @@ than receiving these illustrative values. No production calculations change.
 
 The HTML canvas demonstrates composition only. Production keeps
 `react-native-gifted-charts`, native axis labels and existing range semantics.
-Month details should use the app's accessible modal/route patterns with Android
+Monthly History should use the app's accessible modal/route patterns with Android
 Back, focus restoration and safe-area handling. Existing snapshot correction
 remains separate; this proposal does not create a mandatory monthly save step.
 Estimated, incomplete and failed automation states must keep actionable recovery
@@ -105,7 +109,7 @@ CSS, JavaScript and the local font. `npm run test:verify` passed: typecheck,
 
 Browser visual QA is pending: this session exposed no available browser through
 the computer-use tools. Before design approval, inspect at 360px and 412px with
-normal/130% text, both charts, month details, keyboard/dialog dismissal and each
+normal/130% text, both charts, Monthly History, keyboard/dialog dismissal and each
 preview state. The workbench reports the proposed scroll height but no measured
 before/after improvement is claimed yet. No APK was built or tested for this
 HTML-only proposal.

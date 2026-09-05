@@ -39,12 +39,18 @@ assert.equal(doc.activeElement.textContent, 'Mar 2026');
 assert.equal(doc.querySelector('[data-chart="portfolio"][data-move="-1"]').disabled, true);
 
 get('open-history').click();
+assert.equal(get('open-history').textContent, 'View history');
+assert.equal(get('history-title').textContent, 'Monthly History');
 assert.deepEqual([...get('history-year').options].map(o=>o.value), ['2026','2025']);
+assert.deepEqual([...doc.querySelectorAll('.history-month')].map(row=>row.dataset.month), ['2026-05','2026-04','2026-03','2026-02','2026-01']);
 assert.equal(doc.querySelectorAll('.history-month').length, 5);
 assert.equal(doc.querySelectorAll('.history-month[open]').length, 0);
 assert.match(doc.querySelector('[data-month="2026-01"] summary').getAttribute('aria-label'), /Dec 2025/);
 change('history-year', '2025');
 assert.equal(doc.querySelectorAll('.history-month').length, 12);
+assert.equal(doc.querySelector('.history-month').dataset.month, '2025-12');
+assert.match(doc.querySelector('[data-month="2025-12"] summary').getAttribute('aria-label'), /Nov 2025/);
+assert.equal([...doc.querySelectorAll('.history-month')].at(-1).dataset.month, '2025-01');
 assert.match(get('detail-body').textContent, /First stored month/);
 const january=doc.querySelector('[data-month="2025-01"]');
 const february=doc.querySelector('[data-month="2025-02"]');
