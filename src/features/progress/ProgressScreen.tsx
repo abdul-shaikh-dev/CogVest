@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -127,7 +127,7 @@ function formatUnsignedPercentage(value: number) {
 
 const chartHeight = 154;
 const chartWidth = 228;
-const chartYAxisWidth = 0;
+const chartSections = 2;
 const chartInitialSpacing = 18;
 const chartEndSpacing = 36;
 const maskedChartValueLabel = "₹••••";
@@ -166,14 +166,6 @@ function formatChartYLabel(value: number | string, masked: boolean) {
   return formatCompactINR(Number(value));
 }
 
-function getYAxisLabels(series: MonthlyProgressChartSeries[], masked: boolean) {
-  const maxValue = getChartMaxValue(series);
-
-  return [maxValue, maxValue / 2, 0].map((value) =>
-    formatChartYLabel(value, masked),
-  );
-}
-
 function formatChartAxisLabel(monthLabel: string) {
   return monthLabel.split(" ")[0] ?? monthLabel;
 }
@@ -204,14 +196,14 @@ function toGiftedChartData(
   }));
 }
 
-function getChartSpacing(pointCount: number) {
+function getChartSpacing(pointCount: number, width: number) {
   if (pointCount <= 1) {
-    return chartWidth / 2;
+    return width / 2;
   }
 
   return Math.max(
-    30,
-    (chartWidth - chartInitialSpacing - chartEndSpacing) / (pointCount - 1),
+    0,
+    (width - chartInitialSpacing - chartEndSpacing) / (pointCount - 1),
   );
 }
 
@@ -499,9 +491,30 @@ function TrendChart({
   testIDPrefix: string;
 }) {
   const maxValue = getChartMaxValue(series);
+  const { fontScale } = useWindowDimensions();
+  const [surfaceWidth, setSurfaceWidth] = useState(0);
+  const yAxisWidth = Math.ceil(52 * Math.max(1, fontScale));
+  const plotWidth = surfaceWidth > 0
+    ? Math.max(1, surfaceWidth - yAxisWidth - spacing.xs - spacing.sm - 2 * StyleSheet.hairlineWidth)
+    : chartWidth;
+  const axisProps = {
+    maxValue,
+    noOfSections: chartSections,
+    stepValue: maxValue / chartSections,
+    height: chartHeight,
+    hideOrigin: false,
+    showFractionalValues: true,
+    roundToDigits: 2,
+    yAxisLabelWidth: yAxisWidth,
+    yAxisTextNumberOfLines: 1,
+    formatYLabel: (label: string) => formatChartYLabel(label, maskWealthValues),
+    width: plotWidth,
+    rulesLength: plotWidth,
+    xAxisLength: plotWidth,
+  };
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const pointCount = series[0]?.values.length ?? 0;
-  const spacingValue = getChartSpacing(pointCount);
+  const spacingValue = getChartSpacing(pointCount, plotWidth);
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
@@ -542,28 +555,17 @@ function TrendChart({
         testIDPrefix={testIDPrefix}
       />
       <View style={styles.chartWithAxis} testID={`${testIDPrefix}-plot-region`}>
-        <View style={styles.yAxisLabels}>
-          {getYAxisLabels(series, maskWealthValues).map((label, index) => (
-            <AppText
-              key={`${label}-${index}`}
-              color="secondary"
-              numberOfLines={1}
-              testID={`${testIDPrefix}-y-axis-${index}`}
-              variant="caption"
-            >
-              {label}
-            </AppText>
-          ))}
-        </View>
         <View
           accessible={false}
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
+          onLayout={(event) => setSurfaceWidth(event.nativeEvent.layout.width)}
           style={styles.chartSurface}
           testID={`${testIDPrefix}-chart`}
         >
           {isPortfolioChart ? (
             <LineChart
+            {...axisProps}
             adjustToWidth
             areaChart
             color1={getDisplayedSeriesColor(
@@ -585,14 +587,9 @@ function TrendChart({
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
             endSpacing={chartEndSpacing}
-            formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
-            height={chartHeight}
-            hideOrigin
             initialSpacing={chartInitialSpacing}
             intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated={!isReducedMotionEnabled}
-            maxValue={maxValue}
-            noOfSections={3}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
             spacing={spacingValue}
@@ -601,17 +598,16 @@ function TrendChart({
             thickness1={3}
             thickness2={3}
             strokeDashArray2={[6, 4]}
-            width={chartWidth}
             xAxisColor={colors.border.subtle}
             xAxisLabelTextStyle={styles.axisText}
             xAxisThickness={1}
             yAxisColor="transparent"
-            yAxisLabelWidth={chartYAxisWidth}
             yAxisTextStyle={styles.axisText}
             yAxisThickness={0}
             />
           ) : (
             <LineChart
+            {...axisProps}
             adjustToWidth
             curved
             dataSet={series.map((item, index) => ({
@@ -623,22 +619,15 @@ function TrendChart({
             }))}
             disableScroll
             endSpacing={chartEndSpacing}
-            formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
-            height={chartHeight}
-            hideOrigin
             initialSpacing={chartInitialSpacing}
             isAnimated={!isReducedMotionEnabled}
-            maxValue={maxValue}
-            noOfSections={3}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
             spacing={spacingValue}
-            width={chartWidth}
             xAxisColor={colors.border.subtle}
             xAxisLabelTextStyle={styles.axisText}
             xAxisThickness={1}
             yAxisColor="transparent"
-            yAxisLabelWidth={chartYAxisWidth}
             yAxisTextStyle={styles.axisText}
             yAxisThickness={0}
             />
@@ -1919,13 +1908,6 @@ const styles = StyleSheet.create({
   chartWithAxis: {
     alignItems: "stretch",
     flexDirection: "row",
-    gap: spacing.sm,
-  },
-  yAxisLabels: {
-    justifyContent: "space-between",
-    paddingBottom: spacing.md,
-    paddingTop: spacing.sm,
-    width: 52,
   },
   assetInsightGrid: {
     borderTopColor: colors.border.subtle,
