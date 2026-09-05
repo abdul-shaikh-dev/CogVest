@@ -90,18 +90,41 @@ function renderHistory(){
     previousMonth.setUTCMonth(previousMonth.getUTCMonth()-1);
     const consecutive=p?.month===previousMonth.toISOString().slice(0,7);
     const change=state.masked?'Hidden':consecutive?pct(s.portfolio,p.portfolio):'No prior';
-    return `<details class="history-month" name="month-history" data-month="${s.month}"><summary aria-label="${label(s.month)}. Portfolio ${money(s.portfolio)}. ${change}${consecutive?' versus '+label(p.month):' month comparison'}"><span>${label(s.month).split(' ')[0]}</span><span>${money(s.portfolio)}</span><span class="${state.masked||!consecutive?'':tone(s.portfolio-p.portfolio)}">${change}</span></summary><div class="history-breakdown">${detailMarkup(index)}</div></details>`;
+    return `<button class="history-month" data-month="${s.month}" data-index="${index}" aria-label="View ${label(s.month)} details. Portfolio ${money(s.portfolio)}. ${change}${consecutive?' versus '+label(p.month):' month comparison'}"><span>${label(s.month).split(' ')[0]}</span><span>${money(s.portfolio)}</span><span class="${state.masked||!consecutive?'':tone(s.portfolio-p.portfolio)}">${change}</span><span class="history-chevron" aria-hidden="true">&#8250;</span></button>`;
   }).join('');
-  // Also enforce one expansion in browsers without native named-details grouping.
-  document.querySelectorAll('.history-month').forEach(row=>row.addEventListener('toggle',()=>{
-    if(row.isConnected&&row.open)row.ownerDocument.querySelectorAll('.history-month').forEach(other=>{if(other!==row)other.open=false});
-  }));
+  document.querySelectorAll('.history-month').forEach(row=>row.onclick=()=>openMonthPage(row));
 }
+let historyScroll=0, historyOrigin=null;
+function openMonthPage(row){
+  historyScroll=$('details').scrollTop;
+  historyOrigin=row;
+  const index=Number(row.dataset.index);
+  $('history-title').textContent=label(historySnapshots[index].month);
+  $('month-page').innerHTML='<p class="history-explanation">Month-end portfolio value</p>'+detailMarkup(index);
+  $('history-overview').hidden=true;
+  $('month-page').hidden=false;
+  $('history-back').hidden=false;
+  $('details').scrollTop=0;
+  $('history-back').focus({preventScroll:true});
+}
+function showHistoryOverview(){
+  $('month-page').hidden=true;
+  $('month-page').innerHTML='';
+  $('history-overview').hidden=false;
+  $('history-back').hidden=true;
+  $('history-title').textContent='Monthly History';
+  historyOrigin?.focus({preventScroll:true});
+  $('details').scrollTop=historyScroll;
+}
+$('history-back').onclick=showHistoryOverview;
+$('details').addEventListener('cancel',event=>{
+  if(!$('month-page').hidden){event.preventDefault();showHistoryOverview()}
+});
 function openRange(key){editingChart=key;const c=state.charts[key];$('range-from').innerHTML=options(0,5,c.start);updateEnd(c.end);$('custom').showModal()}
 function updateEnd(end=6){const start=Number($('range-from').value);$('range-to').innerHTML=options(start+1,6,Math.max(start+1,end))}
 $('range-from').onchange=()=>updateEnd(Number($('range-to').value));
 $('apply-range').onclick=()=>{const c=state.charts[editingChart];c.start=Number($('range-from').value);c.end=Number($('range-to').value);c.range='Custom';c.selected=c.end;$('custom').close();renderCharts();focusChart(editingChart,'[data-range="Custom"]')};
-$('open-history').onclick=()=>{const years=[...new Set(historySnapshots.map(s=>s.month.slice(0,4)))].reverse();$('history-year').innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');renderHistory();$('details').showModal()};$('history-year').onchange=renderHistory;
+$('open-history').onclick=()=>{historyOrigin=null;historyScroll=0;showHistoryOverview();const years=[...new Set(historySnapshots.map(s=>s.month.slice(0,4)))].reverse();$('history-year').innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');renderHistory();$('details').showModal();$('details').scrollTop=0};$('history-year').onchange=renderHistory;
 for(const [button,dialog] of [['close-details','details'],['close-custom','custom'],['close-status','status-details']])$(button).onclick=()=>$(dialog).close();
 $('mask').onclick=()=>{state.masked=!state.masked;$('mask').setAttribute('aria-pressed',String(state.masked));$('mask').setAttribute('aria-label',state.masked?'Show financial values':'Hide financial values');renderSummary();renderCharts()};
 $('scenario').onchange=e=>{state.scenario=e.target.value;renderSummary();renderCharts()};

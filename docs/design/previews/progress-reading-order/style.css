@@ -4,21 +4,16 @@ body{margin:0;background:radial-gradient(ellipse at 20% 0%,#142018 0,transparent
 [hidden]{display:none!important}
 .history-explanation,.history-count{font-size:calc(12px * var(--scale))}
 .history-count{margin:12px 0}
-.history-columns,.history-month>summary{display:grid;grid-template-columns:minmax(42px,.65fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.history-columns,.history-month{display:grid;grid-template-columns:minmax(40px,.65fr) minmax(0,1fr) minmax(0,1fr) 10px;gap:8px;align-items:center}
 .history-columns{color:var(--secondary);font-size:calc(11px * var(--scale));padding:8px 0}
-.history-columns span:not(:first-child),.history-month>summary span:not(:first-child){text-align:right}
-.history-month{border-top:1px solid #ffffff18}
-.history-month>summary{min-height:54px;padding:12px 0;cursor:pointer;list-style:none;font-size:calc(14px * var(--scale));font-variant-numeric:tabular-nums}
-.history-month>summary::-webkit-details-marker{display:none}
-.history-month>summary:focus-visible{outline:2px solid var(--cash);outline-offset:2px;border-radius:6px}
-.history-month>summary span:first-child::before{content:'+';display:inline-block;width:15px;color:var(--secondary)}
-.history-month[open]>summary span:first-child::before{content:'−'}
-.history-month[open]>summary{font-weight:600}
-.history-breakdown{padding:0 0 20px}
-.history-breakdown .detail-total{display:none}
-.history-breakdown .detail-row{flex-wrap:wrap}
-.history-breakdown .detail-row>div{min-width:0}
-.history-breakdown .detail-row small{font-size:calc(12px * var(--scale))}
+.history-columns span:not(:first-child),.history-month span:not(:first-child){text-align:right}
+.history-month{width:100%;min-height:56px;padding:12px 0;border-radius:0;border-top:1px solid #ffffff18;background:transparent;font-size:calc(14px * var(--scale));font-weight:400;text-align:left;font-variant-numeric:tabular-nums}
+.history-chevron{color:var(--secondary);font-size:20px}
+#details .dialog-head{position:sticky;top:-20px;margin-top:-20px;padding:20px 0 12px;background:var(--surface);z-index:1}
+#details .dialog-head h2{flex:1;min-width:0;font-size:calc(20px * var(--scale))}
+#month-page .detail-row{flex-wrap:wrap}
+#month-page .detail-row>div{min-width:0}
+#month-page .detail-row small{font-size:calc(12px * var(--scale))}
 .detail-row small.positive{color:var(--green)}
 .detail-row small.negative{color:var(--red)}
 @media(prefers-reduced-motion:no-preference){dialog[open]{animation:arrive .16s ease-out}@keyframes arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}

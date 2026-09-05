@@ -31,7 +31,16 @@ unknown process occupying the port.
 4. One Monthly History entry opening a year-based history overview rather than
    permanently expanding one comparison below both charts. Compact newest-first
    rows show month, month-end portfolio value and change from the prior calendar
-   month. Tap a row for its inline breakdown; only one month expands at a time.
+   month. Tap a chevron row to open a dedicated month-detail view within the
+   same panel. No inline expansion and no second stacked modal.
+
+The latest navigation refinement replaces inline accordion expansion: month
+details always open at the top with the selected month as the title and a Back
+button. Back restores the same year, list scroll position and originating row
+focus. Escape goes back from details before dismissing the overview; production
+must give Android Back the same behavior. Close dismisses the entire panel.
+The header stays reachable while scrolling long month details. No changes to
+chart chronology, range controls or comparison calculations.
 
 The 2026-09-06 refinement replaces the month-picker-first panel. The year selector
 is derived from stored history, newest year first; partial years show only stored
