@@ -9,7 +9,6 @@ import {
   EmptyState,
   HeroMetric,
   MetricGroup,
-  MaskedValue,
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
@@ -184,7 +183,7 @@ export function CashScreen({
             },
             {
               label: "Income",
-              masked: maskWealthValues,
+              masked: maskWealthValues && monthlyMetrics.incomeStatus === "available",
               value:
                 monthlyMetrics.incomeStatus === "available"
                   ? formatCompactINR(monthlyMetrics.income)
@@ -196,17 +195,6 @@ export function CashScreen({
             },
           ]}
         />
-
-        {maskWealthValues ? (
-          <PremiumCard>
-            <SectionHeader title="Masked preview" />
-            <MaskedValue masked value={formatINR(balance)} />
-            <AppText color="secondary" variant="caption">
-              Value masking hides cash values using the same preview pattern as
-              portfolio totals.
-            </AppText>
-          </PremiumCard>
-        ) : null}
 
         {displayMode === "standard" ? (
           <View style={styles.monthlyInsight}>

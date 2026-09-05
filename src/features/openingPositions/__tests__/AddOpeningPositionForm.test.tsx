@@ -591,6 +591,10 @@ describe("AddOpeningPositionForm", () => {
       averageCostPrice: 100,
       date: null,
       id: "opening-hdfc",
+      conviction: 4,
+      intendedHoldDays: 730,
+      measuredAsOf: "2026-04-22",
+      notes: "Long-term opening position",
       quantity: 2,
     });
     const { getByLabelText, getByTestId, getByText } = render(
@@ -609,6 +613,10 @@ describe("AddOpeningPositionForm", () => {
       expect(store.getState().openingPositions).toHaveLength(1);
       expect(store.getState().openingPositions[0]).toMatchObject({
         id: "opening-hdfc",
+        conviction: 4,
+        intendedHoldDays: 730,
+        measuredAsOf: "2026-04-22",
+        notes: "Long-term opening position",
         quantity: 3,
       });
     });

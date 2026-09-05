@@ -155,6 +155,28 @@ describe("ProgressScreen", () => {
     ).toBeTruthy();
   });
 
+  it("keeps pending valuation readable while masking no-snapshot portfolio values", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 100,
+      date: "2026-07-15",
+      id: "opening-pending",
+      quantity: 2,
+    });
+
+    const { getByText } = render(
+      <ProgressScreen
+        now={new Date("2026-07-20T00:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Valuation pending")).toBeTruthy();
+  });
+
   it("shows the typed-income investment rate before snapshots exist", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedCurrentMonthMetrics(store);

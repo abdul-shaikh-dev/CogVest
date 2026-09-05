@@ -9,6 +9,7 @@ const defaultFlows = [
   "e2e/add-holding-lookup.yaml",
   "e2e/add-holding-manual-semantics.yaml",
   "e2e/add-holding-pending-valuation.yaml",
+  "e2e/add-holding-unknown-date.yaml",
   "e2e/add-holding-edited-quote.yaml",
   "e2e/add-holding-asset-switch.yaml",
   "e2e/quick-portfolio-setup.yaml",
@@ -23,9 +24,13 @@ const defaultFlows = [
   "e2e/cash.yaml",
   "e2e/funded-buy-cash.yaml",
   "e2e/snapshot-review.yaml",
+  "e2e/progress-chart-range.yaml",
+  "e2e/progress-snapshot-history.yaml",
   "e2e/value-masking.yaml",
   "e2e/minimal-mode.yaml",
   "e2e/persistence.yaml",
+  "e2e/privacy-settings.yaml",
+  "e2e/workflow-exit-navigation.yaml",
 ];
 
 function candidateNames(command) {

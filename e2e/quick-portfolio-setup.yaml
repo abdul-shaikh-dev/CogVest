@@ -251,11 +251,11 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "e2e-asset-hdfcbank-ns-position-0"
     direction: DOWN
-- assertVisible: "Position 1: quantity 2 | average ₹1,500.00 | date 2026-05-29 | note none | conviction none"
+- assertVisible: "Position 1: quantity 2 | average ₹1,500.00 | date 2026-05-29 | measured unset | note none | conviction none"
 - assertVisible: "Quote: yahoo | ₹1,678.25"
 - scrollUntilVisible:
     element:
       id: "e2e-asset-setupdebt-position-0"
     direction: DOWN
-- assertVisible: "Position 1: quantity 3 | average ₹200.00 | date unknown | note none | conviction none"
+- assertVisible: "Position 1: quantity 3 | average ₹200.00 | date unknown | measured unset | note none | conviction none"
 - assertVisible: "Values: invested ₹600.00 | current pending | quantity 3"

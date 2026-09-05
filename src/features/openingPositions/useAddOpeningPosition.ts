@@ -564,6 +564,9 @@ export function useAddOpeningPosition({
       );
       setDate(existing.date?.slice(0, 10) ?? "");
       setDateUnknown(existing.date === null);
+      setConviction(existing.conviction?.toString() ?? "");
+      setIntendedHoldDays(existing.intendedHoldDays?.toString() ?? "");
+      setNotes(existing.notes ?? "");
       setQuickSetupDuplicate({
         kind: "update",
         message: "This aggregate opening position will be updated, not duplicated.",
@@ -782,6 +785,13 @@ export function useAddOpeningPosition({
       intendedHoldDays: result.value.intendedHoldDays,
       date: result.value.date,
       id: commandId,
+      ...(quickSetupDuplicate.kind === "update"
+        ? {
+            measuredAsOf: snapshot.openingPositions.find(
+              (position) => position.id === commandId,
+            )?.measuredAsOf,
+          }
+        : {}),
       ...(result.value.currentPrice === undefined || usesProviderQuote
         ? {}
         : {

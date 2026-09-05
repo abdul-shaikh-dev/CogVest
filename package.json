@@ -32,9 +32,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "@hookform/resolvers": "^5.2.2",
     "@react-native-community/datetimepicker": "8.4.4",
-    "@shopify/react-native-skia": "2.2.12",
     "decimal.js-light": "^2.5.1",
     "expo": "~54.0.37",
     "expo-constants": "~18.0.14",
@@ -49,7 +47,6 @@
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-hook-form": "^7.73.1",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-gifted-charts": "^1.4.77",

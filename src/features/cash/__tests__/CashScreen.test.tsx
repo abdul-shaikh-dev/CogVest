@@ -352,7 +352,8 @@ describe("CashScreen", () => {
     );
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
-    expect(getByText("Masked preview")).toBeTruthy();
+    expect(queryByText("Masked preview")).toBeNull();
+    expect(getAllByText("Not enough data")).toHaveLength(2);
     expect(getByText("Broker cash")).toBeTruthy();
     expect(queryByText("₹1,000.00")).toBeNull();
   });

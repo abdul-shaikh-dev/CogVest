@@ -252,7 +252,7 @@ export function DashboardScreen({
           </AppText>
           <MaskedValue
             adjustsFontSizeToFit
-            masked={dashboard.maskWealthValues}
+            masked={dashboard.maskWealthValues && dashboard.totalValue !== null}
             minimumFontScale={0.74}
             numberOfLines={1}
             style={styles.heroValue}
@@ -296,8 +296,9 @@ export function DashboardScreen({
                   variant="caption"
                   weight={isMinimalMode ? "medium" : "bold"}
                 >
-                  {dayChangeAmount} (
-                  {formatPercentage(dashboard.dayChange.percentage)}) today
+                  {dashboard.maskWealthValues
+                    ? `${formatPercentage(dashboard.dayChange.percentage)} at saved quotes`
+                    : `${dayChangeAmount} (${formatPercentage(dashboard.dayChange.percentage)}) at saved quotes`}
                 </AppText>
               </View>
             ) : null}
@@ -538,22 +539,21 @@ export function DashboardScreen({
                       {getDisplayAllocationLabel(item.assetClass)}
                     </AppText>
                   </View>
-                  <MaskedValue
-                    align="right"
-                    adjustsFontSizeToFit
-                    masked={dashboard.maskWealthValues}
-                    minimumFontScale={0.75}
-                    numberOfLines={1}
-                    style={styles.allocationLegendValue}
-                    value={
-                      item.percentage === null
-                        ? formatCompactINR(item.value)
-                        : `${formatUnsignedPercentage(item.percentage)} · ${formatCompactINR(
-                            item.value,
-                          )}`
-                    }
-                    variant="caption"
-                  />
+                  <View style={styles.allocationLegendValue}>
+                    {item.percentage !== null ? (
+                      <AppText color="secondary" variant="caption">
+                        {formatUnsignedPercentage(item.percentage)} ·
+                      </AppText>
+                    ) : null}
+                    <MaskedValue
+                      adjustsFontSizeToFit
+                      masked={dashboard.maskWealthValues}
+                      minimumFontScale={0.75}
+                      numberOfLines={1}
+                      value={formatCompactINR(item.value)}
+                      variant="caption"
+                    />
+                  </View>
                 </View>
               ))}
             </View>
@@ -807,7 +807,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   allocationLegendValue: {
+    alignItems: "center",
+    flexDirection: "row",
     flexShrink: 1,
+    gap: spacing.xs,
   },
   allocationSegment: {
     minWidth: 2,

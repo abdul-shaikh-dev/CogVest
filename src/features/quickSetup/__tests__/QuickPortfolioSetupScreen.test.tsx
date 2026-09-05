@@ -126,7 +126,7 @@ describe("QuickPortfolioSetupScreen", () => {
     expect(sessionStore.getState().session?.items).toEqual([]);
   });
 
-  it("masks values and percentages in the final review", () => {
+  it.each([true, false])("masks only wealth values in review (priced: %s)", (hasPrice) => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),
     });
@@ -153,17 +153,17 @@ describe("QuickPortfolioSetupScreen", () => {
       averageCostPrice: 100,
       date: null,
       id: "opening-masked",
-      manualValuation: {
+      manualValuation: hasPrice ? {
         asOf: "2026-08-15T10:00:00.000Z",
         currency: "INR",
         price: 125,
         provenance: "user",
         source: "manual",
-      },
+      } : undefined,
       quantity: 2,
     });
     sessionStore.getState().showReview();
-    const { getAllByText } = render(
+    const { getAllByText, getByText } = render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={jest.fn()}
@@ -173,6 +173,8 @@ describe("QuickPortfolioSetupScreen", () => {
       />,
     );
 
-    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(4);
+    expect(getAllByText(MASKED_INR_VALUE).length).toBe(hasPrice ? 3 : 1);
+    if (hasPrice) expect(getByText("+25.00%")).toBeTruthy();
+    else expect(getAllByText("Pending")).toHaveLength(3);
   });
 });

@@ -95,6 +95,7 @@ describe("DashboardScreen", () => {
 
     fireEvent.press(getByTestId("dashboard-mask-toggle"));
     expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText("Valuation pending")).toBeTruthy();
 
     fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
 
@@ -418,7 +419,7 @@ describe("DashboardScreen", () => {
 
     expect(getByText("₹330")).toBeTruthy();
     expect(getByText("Portfolio value")).toBeTruthy();
-    expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+    expect(getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
     expect(getByText("Allocation")).toBeTruthy();
     expect(getByText("Equity")).toBeTruthy();
     expect(getByText("Open Holdings")).toBeTruthy();
@@ -466,7 +467,28 @@ describe("DashboardScreen", () => {
     expect(getByText("Month-end snapshot")).toBeTruthy();
     expect(queryByText("This Month")).toBeNull();
     expect(queryByText(/Conviction data/u)).toBeNull();
-    expect(getByText("+₹27.27 (+10.00%) today")).toBeTruthy();
+    expect(getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
+  });
+
+  it.each(["standard", "minimal"] as const)("hides the daily monetary change in masked %s mode", (displayMode) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      dayChangePct: 10,
+      price: 150,
+      source: "yahoo",
+    });
+    store.getState().updatePreferences({ displayMode, maskWealthValues: true });
+
+    const { getByText, queryByText } = render(<DashboardScreen store={store} />);
+
+    expect(getByText("+10.00% at saved quotes")).toBeTruthy();
+    expect(queryByText(/today/u)).toBeNull();
+    expect(queryByText(/27\.27/u)).toBeNull();
   });
 
   it("shows a negative cash liability and reconciles it to net portfolio value", () => {
@@ -536,7 +558,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = render(
       <DashboardScreen
         now={new Date("2026-04-22T10:05:00.000Z")}
         store={store}
@@ -549,8 +571,11 @@ describe("DashboardScreen", () => {
         "Percentages show signed exposure against net portfolio value.",
       ),
     ).toBeTruthy();
-    expect(getByText("150.00% · ₹300")).toBeTruthy();
-    expect(getByText("-50.00% · -₹100")).toBeTruthy();
+    const allocationCard = within(getByTestId("dashboard-allocation-card"));
+    expect(allocationCard.getByText("150.00% ·")).toBeTruthy();
+    expect(allocationCard.getByText("₹300")).toBeTruthy();
+    expect(allocationCard.getByText("-50.00% ·")).toBeTruthy();
+    expect(allocationCard.getByText("-₹100")).toBeTruthy();
     expect(queryByTestId("dashboard-allocation-visual")).toBeNull();
   });
 
@@ -601,11 +626,13 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByText, getByTestId } = render(<DashboardScreen store={store} />);
+    const { getByTestId } = render(<DashboardScreen store={store} />);
 
+    const allocationCard = within(getByTestId("dashboard-allocation-card"));
     expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
-    expect(getAllByText("Equity")).toHaveLength(1);
-    expect(getAllByText("100.00% · ₹420")).toHaveLength(1);
+    expect(allocationCard.getAllByText("Equity")).toHaveLength(1);
+    expect(allocationCard.getAllByText("100.00% ·")).toHaveLength(1);
+    expect(allocationCard.getAllByText("₹420")).toHaveLength(1);
   });
 
   it("keeps portfolio answer, allocation, quotes, and next review in the accepted order", () => {
@@ -660,6 +687,28 @@ describe("DashboardScreen", () => {
     expect(queryByText("₹300.00")).toBeNull();
     expect(queryByText("+₹100.00")).toBeNull();
     expect(getAllByText("+50.00%").length).toBeGreaterThan(0);
+  });
+
+  it("keeps allocation percentages visible while masking allocation values", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-04-22T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      price: 150,
+      source: "yahoo",
+    });
+
+    const { getAllByText, getByText, queryByText } = render(
+      <DashboardScreen store={store} />,
+    );
+
+    expect(getByText("100.00% ·")).toBeTruthy();
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(queryByText("₹300")).toBeNull();
   });
 });
 

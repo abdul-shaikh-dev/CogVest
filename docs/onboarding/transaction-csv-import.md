@@ -2,7 +2,8 @@
 
 CogVest V1 can import a constrained, broker-neutral transaction history from
 [`docs/templates/cogvest-transactions-v1.csv`](../templates/cogvest-transactions-v1.csv).
-It can also read the current Zerodha Equity Tradebook CSV format. These are
+It can also read the supported Zerodha Equity Tradebook CSV and detailed
+CAMS/KFintech mutual-fund CAS PDF formats. These are
 onboarding aids for existing portfolios, not arbitrary spreadsheet, tax-lot,
 or cash-reconstruction tools.
 
@@ -36,6 +37,8 @@ and corporate-action reconstruction are not supported.
 
 ## Prepare The File
 
+For the generic CogVest CSV:
+
 1. Download or save the versioned template without changing its header.
 2. Keep one transaction event per row and save the file as UTF-8 CSV.
 3. Use ISO dates only: `YYYY-MM-DD`.
@@ -59,7 +62,8 @@ silently discard them.
 ## Import And Review
 
 1. Open the transaction-history import action from the Holdings/onboarding flow.
-2. Choose **CogVest CSV** or **Zerodha Tradebook** before selecting files.
+2. Choose **CogVest CSV**, **Zerodha Tradebook**, or **CAMS + KFintech CAS**
+   before selecting files. CAS uses the separate PDF review flow below.
 3. Choose **Supplemental** to keep existing opening balances and add only
    transactions after their measured-as-of date.
 4. Choose **Full history** only when the file contains the complete history for
@@ -86,6 +90,19 @@ not provide trustworthy intraday ordering. Correct the date or import the ordere
 events together rather than letting CogVest guess.
 
 ## Safety And Repeatability
+
+### Detailed Mutual-Fund CAS
+
+Choose **CAMS + KFintech CAS**, select a detailed PDF containing transaction
+history, and enter its password if required. Extraction runs on the device;
+the password is not saved. Review normalized transactions, identity matches,
+unsupported events, and reconciliation before committing. A summary-only PDF,
+unrecognized layout, or incomplete history must not be treated as a verified
+transaction history. This adapter is not arbitrary PDF import or Kuvera login
+integration. The source-specific review remains separate from the generic CSV
+template; no real account statement belongs in repository test fixtures.
+
+### Common Import Rules
 
 - Current quote values are ignored by the CSV import. Quotes are refreshed or
   entered manually through the normal quote workflow after import.

@@ -101,6 +101,55 @@ describe("behaviour insight calculations", () => {
   });
 
   describe("analysePatienceFromSells", () => {
+    it("does not classify floating-point dust as a second planned lot", () => {
+      const analysis = analysePatienceFromSells([
+        buy("first", "2025-01-01", { quantity: 0.3, intendedHoldDays: 1 }),
+        buy("second", "2025-01-02", { quantity: 1, intendedHoldDays: 365 }),
+        sell("partial", "2025-02-01", 0.1),
+        sell("remainder", "2025-02-02", 0.2),
+      ]);
+      expect(analysis.metPlanCount).toBe(2);
+      expect(analysis.mixedOutcomeCount).toBe(0);
+      expect(analysis.plannedMatchedQuantity).toBe(0.3);
+      expect(analysis.uncoveredSaleQuantity).toBe(0);
+    });
+
+    it("does not consume an opening position before its effective history date", () => {
+      const analysis = analysePatienceFromSells(
+        [
+          buy("early-buy", "2025-01-01", { intendedHoldDays: 10 }),
+          sell("early-sale", "2025-02-01"),
+          sell("later-sale", "2025-04-01"),
+        ],
+        [opening({ date: "2025-03-01", measuredAsOf: undefined, intendedHoldDays: 365 })],
+      );
+      expect(analysis.observedSaleCount).toBe(2);
+      expect(analysis.metPlanCount).toBe(1);
+      expect(analysis.closedEarlierCount).toBe(1);
+      expect(analysis.uncoveredSaleQuantity).toBe(0);
+    });
+
+    it.each([0, -1, 1.5])("does not infer a plan from legacy invalid days %s", (intendedHoldDays) => {
+      const analysis = analysePatienceFromSells([
+        buy("legacy", "2025-01-01", { intendedHoldDays }),
+        sell("sale", "2025-02-01"),
+      ]);
+      expect(analysis.observedSaleCount).toBe(0);
+      expect(analysis.uncoveredSaleQuantity).toBe(1);
+    });
+
+    it("uses acquisition FIFO among openings already effective at the sale", () => {
+      const analysis = analysePatienceFromSells(
+        [sell("sale", "2025-04-01")],
+        [
+          opening({ id: "newer", date: "2025-02-01", measuredAsOf: "2025-02-28", intendedHoldDays: 365 }),
+          opening({ id: "older", date: "2025-01-01", measuredAsOf: "2025-03-31", intendedHoldDays: 10 }),
+        ],
+      );
+      expect(analysis.metPlanCount).toBe(1);
+      expect(analysis.closedEarlierCount).toBe(0);
+    });
+
     it("uses FIFO lots and becomes available at three planned sale events", () => {
       const trades: Trade[] = [
         buy("buy-1", "2025-02-01", {

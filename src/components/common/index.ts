@@ -17,7 +17,6 @@ export {
   SectionHeader,
 } from "./Premium";
 export type { AdaptiveLayoutMode } from "./Premium";
-export { PlaceholderScreen } from "./PlaceholderScreen";
 export {
   androidRipple,
   getPressedStateStyle,

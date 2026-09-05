@@ -1502,7 +1502,9 @@ export function ProgressScreen({
               metrics={[
                 {
                   label: "Portfolio",
-                  masked: progress.preferences.maskWealthValues,
+                  masked:
+                    progress.preferences.maskWealthValues &&
+                    progress.portfolioValue !== null,
                   value:
                     progress.portfolioValue === null
                       ? "Valuation pending"

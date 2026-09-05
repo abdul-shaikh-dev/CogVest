@@ -91,6 +91,29 @@ function seedMixedHoldings() {
 }
 
 describe("HoldingsScreen", () => {
+  it("keeps pending status readable while masking wealth", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const { getByText, getAllByText, getByTestId } = render(<HoldingsScreen store={store} />);
+    expect(getByText("Valuation pending")).toBeTruthy();
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    expect(within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText("Unavailable")).toHaveLength(2);
+  });
+
+  it("keeps per-unit prices and percentages visible in masked expanded holdings", () => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const { getByTestId } = render(<HoldingsScreen store={store} />);
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    const details = within(getByTestId(`holding-expanded-${asset.id}`));
+    expect(details.getByText("₹100")).toBeTruthy();
+    expect(details.getByText("₹125")).toBeTruthy();
+    expect(details.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+  });
+
   it("shows pending valuation actions without presenting zero as current value", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewOpeningPosition = jest.fn();

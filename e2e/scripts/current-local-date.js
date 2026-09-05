@@ -8,7 +8,7 @@ const monthNames = [
   "Jun",
   "Jul",
   "Aug",
-  "Sep",
+  "Sept?", // en-IN ICU versions abbreviate September as Sep or Sept.
   "Oct",
   "Nov",
   "Dec",

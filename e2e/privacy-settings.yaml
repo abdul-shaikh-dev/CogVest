@@ -1,12 +1,30 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
-- assertVisible:
-    id: "dashboard-screen"
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
 - openLink: "cogvest:///settings"
 - assertVisible:
     id: "settings-screen"
+- scrollUntilVisible:
+    element:
+      id: "privacy-details-toggle"
+    direction: DOWN
+- tapOn:
+    id: "privacy-details-toggle"
+- scrollUntilVisible:
+    element: ".*Separate app encryption is not included in V1.*"
+    direction: DOWN
+- assertVisible: ".*Separate app encryption is not included in V1.*"
+- scrollUntilVisible:
+    element: "Android backup"
+    direction: DOWN
 - assertVisible: "Android backup"
 - assertVisible: "Excluded"
+- scrollUntilVisible:
+    element: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
+    direction: DOWN
 - assertVisible: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
-- assertVisible: ".*CogVest does not add separate app encryption in V1.*"

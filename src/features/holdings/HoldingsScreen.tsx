@@ -802,7 +802,7 @@ function HoldingRow({
         <View style={styles.valueColumn}>
           <MaskedValue
             align="right"
-            masked={masked}
+            masked={masked && !isPending && holding.currentValue !== null}
             value={
               isPending || holding.currentValue === null
                 ? "Valuation pending"
@@ -860,12 +860,10 @@ function HoldingRow({
             />
             <Detail
               label="Avg cost"
-              masked={masked}
               value={formatCompactINR(holding.averageCostPrice)}
             />
             <Detail
               label="Current price"
-              masked={masked}
               value={
                 holding.currentPrice === null
                   ? "Unavailable"
@@ -874,7 +872,7 @@ function HoldingRow({
             />
             <Detail
               label="P&L"
-              masked={masked}
+              masked={masked && holding.unrealisedPnL !== null}
               subdued={minimal}
               tone={minimal ? undefined : positive ? "positive" : "negative"}
               value={

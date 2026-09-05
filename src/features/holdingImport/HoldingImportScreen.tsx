@@ -168,12 +168,12 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
                     <AppText color="secondary" variant="caption">
                       Row {resolution.row.rowNumber} • {resolution.row.quantity} {resolution.row.quantity === 1 ? "unit" : "units"}
                     </AppText>
-                    <MaskedValue
+                    <AppText
                       color="secondary"
-                      masked={masked}
-                      value={`${formatINR(resolution.row.averageCost)} average`}
                       variant="caption"
-                    />
+                    >
+                      {formatINR(resolution.row.averageCost)} average
+                    </AppText>
                   </View>
                   <AppText color={resolution.status === "ready" ? "primary" : "secondary"} variant="caption" weight="bold">
                     {resolution.status === "ready" ? "Ready" : "Review"}
@@ -186,19 +186,19 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
                   </AppText>
                 ) : null}
                 {resolution.row.currentPrice !== undefined ? (
-                  <MaskedValue
+                  <AppText
                     color="secondary"
-                    masked={masked}
-                    value={`Current price ${formatINR(resolution.row.currentPrice)} • Manual • as of ${resolution.row.valuationAsOf}`}
                     variant="caption"
-                  />
+                  >
+                    Current price {formatINR(resolution.row.currentPrice)} • Manual • as of {resolution.row.valuationAsOf}
+                  </AppText>
                 ) : resolution.quote ? (
-                  <MaskedValue
+                  <AppText
                     color="secondary"
-                    masked={masked}
-                    value={`Current price ${formatINR(resolution.quote.price)} • ${resolution.quote.source}`}
                     variant="caption"
-                  />
+                  >
+                    Current price {formatINR(resolution.quote.price)} • {resolution.quote.source}
+                  </AppText>
                 ) : resolution.status === "ready" ? (
                   <AppText color="secondary" variant="caption">
                     Valuation pending after import
@@ -275,7 +275,9 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
             <Summary label="Invested" masked={masked} value={formatINR(controller.plan.summary.resultingInvested)} />
             <Summary
               label="Current"
-              masked={masked}
+              masked={
+                masked && controller.plan.summary.resultingCurrentValue !== null
+              }
               value={controller.plan.summary.resultingCurrentValue === null
                 ? "Pending"
                 : formatINR(controller.plan.summary.resultingCurrentValue)}

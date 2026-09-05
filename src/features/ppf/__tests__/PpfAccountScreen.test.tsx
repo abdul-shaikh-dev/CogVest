@@ -100,6 +100,25 @@ describe("PpfAccountScreen", () => {
     expect(queryByText("Through 15 Aug 2026")).toBeNull();
   });
 
+  it("keeps unavailable estimated interest readable while masking wealth", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-08-15" });
+
+    const { getByText } = render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(getByText("Not available yet")).toBeTruthy();
+  });
+
   it("renders same-day ledger entries in the deterministic replay order", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);

@@ -11,9 +11,11 @@ analytics, or push notification dependency in V1.
 
 ## Current Phase
 
-Current execution focus is V1 adversarial stabilization: financial correctness,
-data integrity, quote provenance, persistence recovery, and Android release
-safety. See `AGENTS.md` and `docs/cogvest-master-spec.md` for current scope.
+Current execution focus is the V2 roadmap in issue #137 while preserving the
+verified V1 baseline. Minimal Mode is available; the behavior and basic LTCG
+calculations are implemented, but their user-facing insight surfaces remain
+roadmap work. Financial correctness, recoverability, and release safety still
+take priority. See `AGENTS.md` and `docs/cogvest-master-spec.md` for scope.
 
 ## Required Tools
 
@@ -70,7 +72,7 @@ npm run start:clear     # start Metro with a clean cache
 npm run android         # local native Android build/install
 npm run android:doctor  # PC Android tooling readiness check
 npm run android:smoke   # emulator/package smoke check
-npm run test:v1:pc      # V1 PC verification gate
+npm run test:v1:pc      # checks + emulator/package readiness, not APK freshness
 npm run maestro:check   # optional Maestro readiness check
 npm run maestro:test    # optional full Maestro E2E suite
 ```
@@ -177,9 +179,12 @@ See `docs/testing/maestro-e2e.md` for install and troubleshooting details.
 
 ## V1 Verification Gate
 
-Run `npm run test:v1:pc` and the relevant Maestro flows before claiming
-installed-app behavior is verified. Build and install a fresh local APK when
-release behavior is affected. Full release criteria live in
+`npm run test:v1:pc` checks the code and Android environment; package presence
+does not prove that the installed APK contains current changes. Before claiming
+installed-app verification, build `npm run android:apk:emulator`, install its
+`android/app/build/outputs/apk/debug/app-debug.apk` with `adb install -r`, and run
+the relevant Maestro flows. Use the documented release build for release-specific
+checks. Full release criteria live in
 `docs/release/v1-release-checklist.md`.
 
 ## Repository Map
