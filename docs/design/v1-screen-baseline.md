@@ -245,8 +245,14 @@ Accepted chart direction:
   shows portfolio value, invested value, and the percentage and amount ahead or
   behind invested capital. Asset Momentum shows Equity, Debt, and Crypto values
   with percentage movement from the previous visible month.
-- `react-native-gifted-charts` owns plot interaction; CogVest-owned components
-  own the selected figures, legend, masking, and accessibility text
+- plots are non-interactive: vertical swipes scroll the page without changing
+  the inspected month. Each chart has accessible Previous/Next stored-month
+  controls with disabled boundaries and a politely announced selected summary
+- chart selection is independent; changing its range resets to the latest
+  visible stored month. Series-colored enlarged points mark that selection
+- latest-in-range asset insights retain explicit month and comparison dates,
+  distinct from the inspected month; hide them when values are masked
+- CogVest owns month selection, figures, legend, masking, and accessibility text
 - use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
   Native for these charts
 - x-axis labels should be sparse and chart-native: show the first month, a

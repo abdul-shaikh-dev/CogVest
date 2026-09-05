@@ -26,6 +26,7 @@ const defaultFlows = [
   "e2e/funded-buy-cash.yaml",
   "e2e/snapshot-review.yaml",
   "e2e/progress-chart-range.yaml",
+  "e2e/progress-chart-month-navigation.yaml",
   "e2e/progress-snapshot-history.yaml",
   "e2e/value-masking.yaml",
   "e2e/minimal-mode.yaml",

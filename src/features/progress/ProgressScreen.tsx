@@ -190,10 +190,12 @@ function toGiftedChartData(
   series: MonthlyProgressChartSeries,
   monthLabels: string[],
   showAxisLabels = true,
+  selectedIndex?: number,
 ) {
   const total = series.values.length;
 
   return series.values.map((value, index) => ({
+    dataPointRadius: index === selectedIndex ? 6 : 3,
     label:
       showAxisLabels && shouldShowAxisLabel(index, total)
         ? formatChartAxisLabel(monthLabels[index] ?? "")
@@ -352,6 +354,7 @@ function SelectedMonthPanel({
               )}. ${formatSignedCompactINR(difference)} ${direction}.`
         }
         accessible
+        accessibilityLiveRegion="polite"
         style={styles.selectedPanel}
         testID={`${testIDPrefix}-selected-panel`}
       >
@@ -427,6 +430,7 @@ function SelectedMonthPanel({
               .join(". ")}.`
       }
       accessible
+      accessibilityLiveRegion="polite"
       style={styles.selectedPanel}
       testID={`${testIDPrefix}-selected-panel`}
     >
@@ -498,7 +502,6 @@ function TrendChart({
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const pointCount = series[0]?.values.length ?? 0;
   const spacingValue = getChartSpacing(pointCount);
-  const monthRangeKey = monthLabels.join("|");
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
@@ -508,22 +511,28 @@ function TrendChart({
     Math.max(pointCount - 1, 0),
   );
 
-  useEffect(() => {
-    setSelectedIndex(Math.max(pointCount - 1, 0));
-  }, [monthRangeKey, pointCount]);
-
-  const selectPointerIndex = ({
-    pointerIndex,
-  }: {
-    pointerIndex: number;
-  }) => {
-    if (pointerIndex >= 0 && pointerIndex < pointCount) {
-      setSelectedIndex(pointerIndex);
-    }
-  };
+  const chartName = isPortfolioChart ? "Portfolio Growth" : "Asset Momentum";
 
   return (
     <View style={styles.chartBlock}>
+      <View style={styles.selectedPanelHeader}>
+        {([-1, 1] as const).map((direction) => {
+          const previous = direction === -1;
+          const disabled = previous ? safeSelectedIndex === 0 : safeSelectedIndex >= pointCount - 1;
+          return (
+            <AppButton
+              key={direction}
+              accessibilityLabel={`${chartName}: ${previous ? "previous" : "next"} stored month`}
+              accessibilityState={{ disabled }}
+              disabled={disabled}
+              onPress={() => setSelectedIndex(Math.max(0, Math.min(pointCount - 1, safeSelectedIndex + direction)))}
+              testID={`${testIDPrefix}-${previous ? "previous" : "next"}-month`}
+              title={previous ? "Previous" : "Next"}
+              variant="secondary"
+            />
+          );
+        })}
+      </View>
       <SelectedMonthPanel
         maskWealthValues={maskWealthValues}
         minimal={minimal}
@@ -532,7 +541,7 @@ function TrendChart({
         series={series}
         testIDPrefix={testIDPrefix}
       />
-      <View style={styles.chartWithAxis}>
+      <View style={styles.chartWithAxis} testID={`${testIDPrefix}-plot-region`}>
         <View style={styles.yAxisLabels}>
           {getYAxisLabels(series, maskWealthValues).map((label, index) => (
             <AppText
@@ -546,7 +555,13 @@ function TrendChart({
             </AppText>
           ))}
         </View>
-        <View style={styles.chartSurface} testID={`${testIDPrefix}-chart`}>
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+          style={styles.chartSurface}
+          testID={`${testIDPrefix}-chart`}
+        >
           {isPortfolioChart ? (
             <LineChart
             adjustToWidth
@@ -560,8 +575,8 @@ function TrendChart({
               focusedSeries,
             )}
             curved
-            data={toGiftedChartData(series[0], monthLabels)}
-            data2={toGiftedChartData(series[1], monthLabels, false)}
+            data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex)}
+            data2={toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
             dataPointsRadius1={3}
@@ -571,7 +586,6 @@ function TrendChart({
             endOpacity={0}
             endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
-            getPointerProps={selectPointerIndex}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
@@ -579,14 +593,6 @@ function TrendChart({
             isAnimated={!isReducedMotionEnabled}
             maxValue={maxValue}
             noOfSections={3}
-            pointerConfig={{
-              activatePointersOnLongPress: true,
-              initialPointerIndex: Math.max(pointCount - 1, 0),
-              persistPointer: true,
-              pointerColor: colors.profit,
-              pointerStripColor: colors.border.subtle,
-              resetPointerIndexOnRelease: false,
-            }}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
             spacing={spacingValue}
@@ -610,7 +616,7 @@ function TrendChart({
             curved
             dataSet={series.map((item, index) => ({
               color: getDisplayedSeriesColor(item.label, focusedSeries),
-              data: toGiftedChartData(item, monthLabels, index === 0),
+              data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex),
               dataPointsColor: getSeriesColor(item.label),
               dataPointsRadius: 3,
               thickness: 3,
@@ -618,21 +624,12 @@ function TrendChart({
             disableScroll
             endSpacing={chartEndSpacing}
             formatYLabel={(label) => formatChartYLabel(label, maskWealthValues)}
-            getPointerProps={selectPointerIndex}
             height={chartHeight}
             hideOrigin
             initialSpacing={chartInitialSpacing}
             isAnimated={!isReducedMotionEnabled}
             maxValue={maxValue}
             noOfSections={3}
-            pointerConfig={{
-              activatePointersOnLongPress: true,
-              initialPointerIndex: Math.max(pointCount - 1, 0),
-              persistPointer: true,
-              pointerColor: colors.text.secondary,
-              pointerStripColor: colors.border.subtle,
-              resetPointerIndexOnRelease: false,
-            }}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
             spacing={spacingValue}
@@ -674,8 +671,9 @@ function ChartRangeSelector({
 
         return (
           <Pressable
-            accessibilityLabel={`Show ${range} monthly progress charts`}
+            accessibilityLabel={`${testIDPrefix.startsWith("portfolio") ? "Portfolio Growth" : "Asset Momentum"}: show ${range}`}
             accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
             android_ripple={androidRipple(
               isSelected
                 ? interaction.primaryRippleColor
@@ -1038,6 +1036,7 @@ function ProgressTrendCards({
         ) : null}
         {portfolioChartData.hasEnoughHistory ? (
           <TrendChart
+            key={`${portfolioChartRange}:${portfolioChartCustomRange.startMonth}:${portfolioChartCustomRange.endMonth}:${portfolioChartData.monthLabels.join("|")}`}
             isReducedMotionEnabled={isReducedMotionEnabled}
             maskWealthValues={maskWealthValues}
             minimal={minimal}
@@ -1056,8 +1055,8 @@ function ProgressTrendCards({
       <PremiumCard>
         <ChartCardHeader
           actionLabel={
-            !minimal && assetChartData.largestAssetMove
-              ? `${assetChartData.largestAssetMove.label} ${formatPercentage(
+            !minimal && !maskWealthValues && assetChartData.largestAssetMove
+              ? `${assetChartData.monthLabels.at(-1)}: ${assetChartData.largestAssetMove.label} ${formatPercentage(
                   assetChartData.largestAssetMove.latestDeltaPct,
                 )}`
               : undefined
@@ -1086,6 +1085,7 @@ function ProgressTrendCards({
         {assetChartData.hasEnoughHistory ? (
           <>
             <TrendChart
+              key={`${assetChartRange}:${assetChartCustomRange.startMonth}:${assetChartCustomRange.endMonth}:${assetChartData.monthLabels.join("|")}`}
               isReducedMotionEnabled={isReducedMotionEnabled}
               maskWealthValues={maskWealthValues}
               minimal={minimal}
@@ -1093,8 +1093,13 @@ function ProgressTrendCards({
               series={assetChartData.assetSeries}
               testIDPrefix="asset-trend"
             />
-            {minimal ? null : (
+            {minimal || maskWealthValues ? null : (
+              <View testID="asset-latest-summary">
+              <AppText color="secondary" variant="caption">
+                {`Latest in range: ${assetChartData.monthLabels.at(-1)} vs ${assetChartData.monthLabels.at(-2)}`}
+              </AppText>
               <AssetInsightRows insights={assetChartData.assetInsights} />
+              </View>
             )}
           </>
         ) : (

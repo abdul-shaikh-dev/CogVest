@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
@@ -565,12 +565,25 @@ describe("ProgressScreen", () => {
     expect(getByText("Absolute value trend - cash excluded")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
-    expect(getByText("Crypto +12.50%")).toBeTruthy();
+    expect(getByText("May 2026: Crypto +12.50%")).toBeTruthy();
     expect(getByTestId("portfolio-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("asset-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
-    const [portfolioChart] = getAllByTestId("gifted-line-chart");
+    expect(getByTestId("asset-latest-summary")).toHaveTextContent(
+      /Latest in range: May 2026 vs Apr 2026/u,
+    );
+    expect(
+      getByTestId("portfolio-trend-chart", { includeHiddenElements: true })
+        .props.pointerEvents,
+    ).toBe("none");
+    expect(
+      getByTestId("asset-trend-chart", { includeHiddenElements: true }).props
+        .pointerEvents,
+    ).toBe("none");
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
 
     expect(portfolioChart.props.color1).toBe(
       colors.primary,
@@ -579,7 +592,10 @@ describe("ProgressScreen", () => {
       colors.text.primary,
     );
     expect(portfolioChart.props.strokeDashArray2).toEqual([6, 4]);
-    expect(portfolioChart.props.getPointerProps).toEqual(expect.any(Function));
+    expect(portfolioChart.props.getPointerProps).toBeUndefined();
+    expect(portfolioChart.props.pointerConfig).toBeUndefined();
+    expect(assetChart.props.getPointerProps).toBeUndefined();
+    expect(assetChart.props.pointerConfig).toBeUndefined();
     expect(getByTestId("asset-trend-Equity")).toBeTruthy();
     expect(getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
@@ -592,7 +608,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
@@ -600,45 +616,96 @@ describe("ProgressScreen", () => {
     expect(getByText("Asset Momentum")).toBeTruthy();
     expect(getByTestId("snapshot-history-card")).toBeTruthy();
     expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
-    expect(queryByText("Crypto +12.50%")).toBeNull();
+    expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
+    expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(queryByText(/share/u)).toBeNull();
   });
 
-  it("keeps the selected chart month stable until the pointer changes", () => {
+  it("navigates chart months independently and resets selection when ranges change", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(marchSnapshot);
 
-    const { getAllByTestId, getByTestId, rerender } = render(
+    const { getByTestId, getByText } = render(
       <ProgressScreen store={store} />,
     );
-    const portfolioChart = getAllByTestId("gifted-line-chart")[0];
-    const selectedPanel = () =>
-      getByTestId("portfolio-trend-selected-panel");
 
-    expect(selectedPanel().props.accessibilityLabel).toContain("May 2026");
+    const selectedPanel = (testID: string) => getByTestId(testID);
+    const button = (testID: string) => getByTestId(testID);
 
-    act(() => {
-      portfolioChart.props.getPointerProps({
-        pointerIndex: 0,
-        pointerX: 0,
-        pointerY: 0,
-      });
+    expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+    expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+    expect(
+      button("portfolio-trend-previous-month").props.accessibilityState,
+    ).toEqual({ disabled: false });
+    expect(button("portfolio-trend-next-month").props.accessibilityState).toEqual({
+      disabled: true,
     });
-    expect(selectedPanel().props.accessibilityLabel).toContain("Mar 2026");
-
-    rerender(<ProgressScreen store={store} />);
-    expect(selectedPanel().props.accessibilityLabel).toContain("Mar 2026");
-
-    act(() => {
-      getAllByTestId("gifted-line-chart")[0].props.getPointerProps({
-        pointerIndex: 2,
-        pointerX: 0,
-        pointerY: 0,
-      });
+    expect(
+      button("asset-trend-previous-month").props.accessibilityState,
+    ).toEqual({ disabled: false });
+    expect(button("asset-trend-next-month").props.accessibilityState).toEqual({
+      disabled: true,
     });
-    expect(selectedPanel().props.accessibilityLabel).toContain("May 2026");
+
+    fireEvent.press(button("portfolio-trend-previous-month"));
+
+    expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
+      "Apr 2026",
+    );
+    expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+    expect(getByText("May 2026: Crypto +12.50%")).toBeTruthy();
+    expect(getByTestId("asset-latest-summary")).toHaveTextContent(
+      /Latest in range: May 2026 vs Apr 2026/u,
+    );
+
+    fireEvent.press(button("asset-trend-previous-month"));
+
+    expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
+      "Apr 2026",
+    );
+    expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
+      "Apr 2026",
+    );
+
+    fireEvent.press(button("portfolio-trend-previous-month"));
+    expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
+      "Mar 2026",
+    );
+    expect(
+      button("portfolio-trend-previous-month").props.accessibilityState,
+    ).toEqual({ disabled: true });
+    expect(button("portfolio-trend-next-month").props.accessibilityState).toEqual({
+      disabled: false,
+    });
+
+    fireEvent.press(button("portfolio-monthly-chart-range-3M"));
+
+    expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+    expect(button("portfolio-monthly-chart-range-3M").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    expect(button("asset-monthly-chart-range-All").props.accessibilityState).toEqual({
+      selected: true,
+    });
+
+    fireEvent.press(button("asset-monthly-chart-range-3M"));
+
+    expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
+      "May 2026",
+    );
+    expect(button("asset-monthly-chart-range-3M").props.accessibilityState).toEqual({
+      selected: true,
+    });
   });
 
   it("masks chart axis and chart-native y labels when wealth masking is enabled", () => {
@@ -648,20 +715,23 @@ describe("ProgressScreen", () => {
     store.getState().updatePreferences({ maskWealthValues: true });
 
     const {
-      getAllByTestId,
       getByTestId,
       getAllByText,
+      queryByTestId,
       queryByText,
-    } = render(
-      <ProgressScreen store={store} />,
-    );
-    const [portfolioChart] = getAllByTestId("gifted-line-chart");
+      getAllByTestId,
+    } = render(<ProgressScreen store={store} />);
+    const [portfolioChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
 
     expect(getByTestId("portfolio-trend-y-axis-0")).toHaveTextContent("₹••••");
     expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
     expect(queryByText("₹20L")).toBeNull();
     expect(queryByText("₹13,85,000.00")).toBeNull();
     expect(getAllByText("Performance values hidden").length).toBeGreaterThan(0);
+    expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
+    expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
       "Portfolio hidden. Change hidden",
     );
@@ -676,7 +746,9 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
     const { getAllByTestId } = render(<ProgressScreen store={store} />);
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart");
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
 
     expect(portfolioChart.props.isAnimated).toBe(false);
     expect(assetChart.props.isAnimated).toBe(false);
@@ -734,8 +806,9 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
     fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
-    const [portfolioChart, assetChart] =
-      getAllByTestId("gifted-line-chart");
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
 
     expect(portfolioChart.props.data).toHaveLength(2);
     expect(assetChart.props.dataSet[0].data).toHaveLength(3);
