@@ -28,8 +28,19 @@ unknown process occupying the port.
 2. One compact automatic/estimated snapshot status, with details on demand.
 3. Portfolio Growth and Asset Momentum, each retaining its own stored-month
    range, inspected month, previous/next buttons and selected figures.
-4. One Month details entry opening the historical comparison rather than
-   permanently expanding it below both charts.
+4. One Month details entry opening a year-based history overview rather than
+   permanently expanding one comparison below both charts. Compact chronological
+   rows show month, month-end portfolio value and change from the prior calendar
+   month. Tap a row for its inline breakdown; only one month expands at a time.
+
+The 2026-09-06 refinement replaces the month-picker-first panel. The year selector
+is derived from stored history, newest year first; partial years show only stored
+months, with no future/zero-filled rows. January compares with December of the
+previous year when available. A missing immediately preceding month has no
+month-over-month comparison, not a fabricated zero or comparison over a gap.
+Percentages describe portfolio value change, including deposits and withdrawals,
+not investment return. Existing flow-adjusted market change stays in expanded
+details and requires a valid recorded performance basis in production.
 
 Remove the duplicate latest-asset highlight and standalone asset-class breakdown
 from the main scroll. Keep their underlying information in Month details.
@@ -53,7 +64,9 @@ with either chart. Tabs are contextual artwork, not simulated app navigation.
 
 ## Implementation Boundary
 
-All seven months are deterministic synthetic fixtures, not user data. This is a
+The seven chart months and ten additional history-only months are deterministic
+synthetic fixtures, not user data. The 2025 history demonstrates all twelve months
+without changing the charts' existing dataset or layout. This is a
 layout prototype, not a financial calculation implementation. Real integration
 must use existing domain selectors, including recorded external-flow provenance
 for market movement; never substitute monthly investment for net external flow.

@@ -39,10 +39,24 @@ assert.equal(doc.activeElement.textContent, 'Mar 2026');
 assert.equal(doc.querySelector('[data-chart="portfolio"][data-move="-1"]').disabled, true);
 
 get('open-history').click();
-assert.equal(get('detail-month').options.length, 7);
-change('detail-month', '0');
+assert.deepEqual([...get('history-year').options].map(o=>o.value), ['2026','2025']);
+assert.equal(doc.querySelectorAll('.history-month').length, 5);
+assert.equal(doc.querySelectorAll('.history-month[open]').length, 0);
+assert.match(doc.querySelector('[data-month="2026-01"] summary').getAttribute('aria-label'), /Dec 2025/);
+change('history-year', '2025');
+assert.equal(doc.querySelectorAll('.history-month').length, 12);
 assert.match(get('detail-body').textContent, /First stored month/);
-change('detail-month', '6');
+const january=doc.querySelector('[data-month="2025-01"]');
+const february=doc.querySelector('[data-month="2025-02"]');
+january.open=true;
+january.dispatchEvent(new window.Event('toggle'));
+february.open=true;
+february.dispatchEvent(new window.Event('toggle'));
+assert.equal(january.open, false);
+assert.equal(february.open, true);
+assert.match(doc.querySelector('[data-month="2025-03"] summary').textContent, /−|-\d/);
+change('history-year', '2026');
+assert.equal(doc.querySelectorAll('.history-month[open]').length, 0);
 for (const label of ['Equity', 'Debt', 'Crypto', 'Cash', 'Invested capital', 'Monthly investment', 'Salary', 'Expenses', 'Investment rate', 'Expense rate']) {
   assert.ok(get('detail-body').textContent.includes(label), label);
 }
@@ -54,6 +68,7 @@ assert.ok(!get('charts').textContent.includes('19.87'));
 get('open-history').click();
 assert.ok(!get('detail-body').textContent.includes('19.87'));
 assert.ok(!get('detail-body').textContent.includes('%'));
+assert.ok(!get('detail-body').innerHTML.includes('19.87'));
 get('close-details').click();
 get('mask').click();
 change('scenario', 'estimated');

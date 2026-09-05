@@ -10,6 +10,20 @@ const snapshots = [
 ].map(([month,equity,debt,crypto,cash,invested,contribution,netExternalFlow])=>({month,equity,debt,crypto,cash,invested,contribution,netExternalFlow,portfolio:equity+debt+crypto+cash}));
 const $ = id=>document.getElementById(id);
 const months = snapshots.map(s=>s.month);
+// Additional history-only fixtures demonstrate a complete year without altering either chart.
+const earlierHistory = [
+  ['2025-01',670000,190000,70000,100000,940000,30000,40000],
+  ['2025-02',700000,195000,75000,110000,980000,40000,50000],
+  ['2025-03',680000,200000,60000,105000,1020000,40000,35000],
+  ['2025-04',710000,205000,65000,115000,1050000,30000,40000],
+  ['2025-05',735000,210000,68000,120000,1090000,40000,45000],
+  ['2025-06',760000,215000,72000,125000,1120000,30000,35000],
+  ['2025-07',740000,220000,65000,120000,1130000,10000,5000],
+  ['2025-08',780000,225000,74000,130000,1150000,20000,30000],
+  ['2025-09',810000,230000,78000,140000,1160000,10000,20000],
+  ['2025-10',835000,235000,82000,145000,1160000,0,5000],
+].map(([month,equity,debt,crypto,cash,invested,contribution,netExternalFlow])=>({month,equity,debt,crypto,cash,invested,contribution,netExternalFlow,portfolio:equity+debt+crypto+cash}));
+const historySnapshots=[...earlierHistory,...snapshots];
 const label = m=>new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-IN',{month:'short',year:'numeric',timeZone:'UTC'});
 const state={masked:false,scenario:'populated',summary:6,charts:{portfolio:{range:'6M',start:1,end:6,selected:6},assets:{range:'6M',start:1,end:6,selected:6}}};
 const money = v=>state.masked?'₹••••':`₹${Math.abs(v)>=10000000?(v/10000000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'Cr':Math.abs(v)>=100000?(v/100000).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'L':Math.abs(v)>=1000?(v/1000).toFixed(1).replace(/\.0$/,'')+'K':v.toLocaleString('en-IN')}`;
@@ -61,16 +75,33 @@ function drawAll(){
   });
   $('height-note').textContent=`Proposed default reading surface: ${($('screen').scrollHeight/$('screen').clientHeight).toFixed(1)} viewports. Full month details remain off the main scroll.`;
 }
-function showDetail(){
-  const index=Number($('detail-month').value),s=snapshots[index],p=snapshots[index-1];
-  $('detail-body').innerHTML=`<div class="detail-total">${money(s.portfolio)}</div><p>${p?`${signed(s.portfolio-p.portfolio)} / ${pct(s.portfolio,p.portfolio)} vs ${label(p.month)}`:'First stored month. No comparison yet.'}</p><h3>What changed</h3>${['equity','debt','crypto','cash'].map(id=>`<div class="detail-row"><div>${id[0].toUpperCase()+id.slice(1)}<small>${state.masked?'Allocation hidden':(s[id]/s.portfolio*100).toFixed(1)+'% allocation'}</small></div><div>${money(s[id])}<small class="${tone(p?s[id]-p[id]:0)}">${p?`${pct(s[id],p[id])} · previous ${money(p[id])}`:'No prior month'}</small></div></div>`).join('')}<h3>Capital & cash flow</h3>${[['Invested capital',s.invested],['Monthly investment',s.contribution],['Net contribution',s.netExternalFlow],['Market change',p?s.portfolio-p.portfolio-s.netExternalFlow:null],['Salary',140000],['Expenses',70000]].map(([title,value])=>`<div class="detail-row"><span>${title}</span><strong>${value===null?'Unavailable':money(value)}</strong></div>`).join('')}<div class="detail-row"><span>Investment rate</span><strong>${state.masked?'Hidden':(s.contribution/140000*100).toFixed(1)+'%'}</strong></div><div class="detail-row"><span>Expense rate</span><strong>${state.masked?'Hidden':'50%'}</strong></div><p style="margin-top:18px">${state.scenario==='estimated'?'Estimated prices are included. Review only if you have better records.':'Stored monthly snapshot. No action required.'}</p>`;
+function detailMarkup(index){
+  const s=historySnapshots[index],p=historySnapshots[index-1];
+  return `<div class="detail-total">${money(s.portfolio)}</div><p>${p?`${signed(s.portfolio-p.portfolio)} / ${pct(s.portfolio,p.portfolio)} vs ${label(p.month)}`:'First stored month. No comparison yet.'}</p><h3>What changed</h3>${['equity','debt','crypto','cash'].map(id=>`<div class="detail-row"><div>${id[0].toUpperCase()+id.slice(1)}<small>${state.masked?'Allocation hidden':(s[id]/s.portfolio*100).toFixed(1)+'% allocation'}</small></div><div>${money(s[id])}<small class="${tone(p?s[id]-p[id]:0)}">${p?`${pct(s[id],p[id])} · previous ${money(p[id])}`:'No prior month'}</small></div></div>`).join('')}<h3>Capital & cash flow</h3>${[['Invested capital',s.invested],['Monthly investment',s.contribution],['Net contribution',s.netExternalFlow],['Market change',p?s.portfolio-p.portfolio-s.netExternalFlow:null],['Salary',140000],['Expenses',70000]].map(([title,value])=>`<div class="detail-row"><span>${title}</span><strong>${value===null?'Unavailable':money(value)}</strong></div>`).join('')}<div class="detail-row"><span>Investment rate</span><strong>${state.masked?'Hidden':(s.contribution/140000*100).toFixed(1)+'%'}</strong></div><div class="detail-row"><span>Expense rate</span><strong>${state.masked?'Hidden':'50%'}</strong></div><p style="margin-top:18px">${state.scenario==='estimated'?'Estimated prices are included. Review only if you have better records.':'Stored monthly snapshot. No action required.'}</p>`;
 }
 let editingChart;
+function renderHistory(){
+  const year=$('history-year').value;
+  const entries=historySnapshots.map((snapshot,index)=>({snapshot,index})).filter(({snapshot})=>snapshot.month.startsWith(year));
+  $('history-count').textContent=`${entries.length} stored months. Tap a month for its breakdown.`;
+  $('detail-body').innerHTML=entries.map(({snapshot:s,index})=>{
+    const p=historySnapshots[index-1];
+    const previousMonth=new Date(`${s.month}-01T00:00:00Z`);
+    previousMonth.setUTCMonth(previousMonth.getUTCMonth()-1);
+    const consecutive=p?.month===previousMonth.toISOString().slice(0,7);
+    const change=state.masked?'Hidden':consecutive?pct(s.portfolio,p.portfolio):'No prior';
+    return `<details class="history-month" name="month-history" data-month="${s.month}"><summary aria-label="${label(s.month)}. Portfolio ${money(s.portfolio)}. ${change}${consecutive?' versus '+label(p.month):' month comparison'}"><span>${label(s.month).split(' ')[0]}</span><span>${money(s.portfolio)}</span><span class="${state.masked||!consecutive?'':tone(s.portfolio-p.portfolio)}">${change}</span></summary><div class="history-breakdown">${detailMarkup(index)}</div></details>`;
+  }).join('');
+  // Also enforce one expansion in browsers without native named-details grouping.
+  document.querySelectorAll('.history-month').forEach(row=>row.addEventListener('toggle',()=>{
+    if(row.isConnected&&row.open)row.ownerDocument.querySelectorAll('.history-month').forEach(other=>{if(other!==row)other.open=false});
+  }));
+}
 function openRange(key){editingChart=key;const c=state.charts[key];$('range-from').innerHTML=options(0,5,c.start);updateEnd(c.end);$('custom').showModal()}
 function updateEnd(end=6){const start=Number($('range-from').value);$('range-to').innerHTML=options(start+1,6,Math.max(start+1,end))}
 $('range-from').onchange=()=>updateEnd(Number($('range-to').value));
 $('apply-range').onclick=()=>{const c=state.charts[editingChart];c.start=Number($('range-from').value);c.end=Number($('range-to').value);c.range='Custom';c.selected=c.end;$('custom').close();renderCharts();focusChart(editingChart,'[data-range="Custom"]')};
-$('open-history').onclick=()=>{$('detail-month').innerHTML=options(0,6,state.summary);showDetail();$('details').showModal()};$('detail-month').onchange=showDetail;
+$('open-history').onclick=()=>{const years=[...new Set(historySnapshots.map(s=>s.month.slice(0,4)))].reverse();$('history-year').innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');renderHistory();$('details').showModal()};$('history-year').onchange=renderHistory;
 for(const [button,dialog] of [['close-details','details'],['close-custom','custom'],['close-status','status-details']])$(button).onclick=()=>$(dialog).close();
 $('mask').onclick=()=>{state.masked=!state.masked;$('mask').setAttribute('aria-pressed',String(state.masked));$('mask').setAttribute('aria-label',state.masked?'Show financial values':'Hide financial values');renderSummary();renderCharts()};
 $('scenario').onchange=e=>{state.scenario=e.target.value;renderSummary();renderCharts()};
