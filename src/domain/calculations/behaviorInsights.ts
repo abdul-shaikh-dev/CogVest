@@ -1,4 +1,5 @@
 import { getCalendarDatePart } from "@/src/domain/dates";
+import { decimal, normalizeQuantity } from "@/src/domain/precision";
 import {
   getOpeningPositionHistoryDate,
   isTransactionAfterOpeningCutover,
@@ -164,8 +165,8 @@ function consumeLots(lots: PatienceLot[], quantity: number) {
     const lot = lots[0];
     const consumedQuantity = Math.min(lot.quantity, remaining);
     consumed.push({ ...lot, consumedQuantity });
-    lot.quantity -= consumedQuantity;
-    remaining -= consumedQuantity;
+    lot.quantity = normalizeQuantity(decimal(lot.quantity).minus(consumedQuantity));
+    remaining = normalizeQuantity(decimal(remaining).minus(consumedQuantity));
 
     if (lot.quantity <= 0) lots.shift();
   }
@@ -186,35 +187,51 @@ export function analysePatienceFromSells(
   let metPlanCount = 0;
   let mixedOutcomeCount = 0;
   let observedSaleCount = 0;
-  let plannedMatchedQuantity = 0;
-  let uncoveredSaleQuantity = 0;
+  let plannedMatchedQuantity = decimal(0);
+  let uncoveredSaleQuantity = decimal(0);
 
   assetIds.forEach((assetId) => {
     const positions = openingPositions.filter(
       (position) => position.assetId === assetId,
     );
-    const lots: PatienceLot[] = positions
-      .slice()
-      .sort((left, right) =>
-        (getCalendarDatePart(left.date ?? "") ?? "").localeCompare(
-          getCalendarDatePart(right.date ?? "") ?? "",
-        ),
-      )
-      .map((position) => ({
-        acquiredOn: getCalendarDatePart(position.date ?? ""),
-        intendedHoldDays: position.intendedHoldDays,
-        quantity: position.quantity,
-      }));
+    const lots: PatienceLot[] = [];
     const relevantTrades = trades
       .filter(
         (trade) =>
           trade.assetId === assetId &&
           isTransactionAfterOpeningCutover(trade.date, positions),
       )
-      .slice()
       .sort(compareTransactionsChronologically);
 
-    relevantTrades.forEach((trade) => {
+    // Introduce openings when history says they exist, not before every trade.
+    const events = [
+      ...positions.map((position) => ({
+        date: getOpeningPositionHistoryDate(position),
+        position,
+        type: "opening" as const,
+      })),
+      ...relevantTrades.map((trade) => ({
+        date: getCalendarDatePart(trade.date),
+        trade,
+        type: "trade" as const,
+      })),
+    ]
+      .filter((event) => event.date !== null)
+      .sort((left, right) => left.date!.localeCompare(right.date!));
+
+    events.forEach((event) => {
+      if (event.type === "opening") {
+        lots.push({
+          acquiredOn: getCalendarDatePart(event.position.date ?? ""),
+          intendedHoldDays: event.position.intendedHoldDays,
+          quantity: event.position.quantity,
+        });
+        lots.sort((left, right) =>
+          (left.acquiredOn ?? "").localeCompare(right.acquiredOn ?? ""),
+        );
+        return;
+      }
+      const trade = event.trade;
       const tradeDate = getCalendarDatePart(trade.date);
 
       if (trade.type === "buy" || trade.type === "transferIn") {
@@ -230,41 +247,41 @@ export function analysePatienceFromSells(
       const { consumed, unmatchedQuantity } = consumeLots(lots, trade.quantity);
       if (trade.type === "transferOut") return;
 
-      let observedThisSale = false;
-      let metQuantity = 0;
-      let earlierQuantity = 0;
+      let metPlan = false;
+      let closedEarlier = false;
 
       consumed.forEach((lot) => {
         if (
           tradeDate === null ||
           lot.acquiredOn === null ||
-          lot.intendedHoldDays === undefined
+          lot.intendedHoldDays === undefined ||
+          !Number.isInteger(lot.intendedHoldDays) ||
+          lot.intendedHoldDays <= 0
         ) {
-          uncoveredSaleQuantity += lot.consumedQuantity;
+          uncoveredSaleQuantity = uncoveredSaleQuantity.plus(lot.consumedQuantity);
           return;
         }
 
         const heldDays = elapsedCalendarDays(lot.acquiredOn, tradeDate);
         if (heldDays === null) {
-          uncoveredSaleQuantity += lot.consumedQuantity;
+          uncoveredSaleQuantity = uncoveredSaleQuantity.plus(lot.consumedQuantity);
           return;
         }
 
-        observedThisSale = true;
-        plannedMatchedQuantity += lot.consumedQuantity;
+        plannedMatchedQuantity = plannedMatchedQuantity.plus(lot.consumedQuantity);
         if (heldDays >= lot.intendedHoldDays) {
-          metQuantity += lot.consumedQuantity;
+          metPlan = true;
         } else {
-          earlierQuantity += lot.consumedQuantity;
+          closedEarlier = true;
         }
       });
 
-      uncoveredSaleQuantity += unmatchedQuantity;
-      if (!observedThisSale) return;
+      uncoveredSaleQuantity = uncoveredSaleQuantity.plus(unmatchedQuantity);
+      if (!metPlan && !closedEarlier) return;
 
       observedSaleCount += 1;
-      if (metQuantity > 0 && earlierQuantity > 0) mixedOutcomeCount += 1;
-      else if (metQuantity > 0) metPlanCount += 1;
+      if (metPlan && closedEarlier) mixedOutcomeCount += 1;
+      else if (metPlan) metPlanCount += 1;
       else closedEarlierCount += 1;
     });
   });
@@ -278,9 +295,9 @@ export function analysePatienceFromSells(
     metPlanCount,
     mixedOutcomeCount,
     observedSaleCount,
-    plannedMatchedQuantity,
+    plannedMatchedQuantity: normalizeQuantity(plannedMatchedQuantity),
     requiredSaleCount,
-    uncoveredSaleQuantity,
+    uncoveredSaleQuantity: normalizeQuantity(uncoveredSaleQuantity),
   };
 }
 

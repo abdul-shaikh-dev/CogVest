@@ -18,6 +18,16 @@ testing matrix for verification work, and roadmap/release documents only when
 those boundaries are affected. Historical previews and completed plans are
 supporting evidence, not sources of truth.
 
+### Active Version
+
+Issue #137 tracks V2 execution on top of the verified V1 baseline below.
+Minimal Mode is implemented. The descriptive behavior engine (#18) and basic
+LTCG calculations are domain capabilities, not yet user-facing insight/tax
+screens; those surfaces remain separately tracked roadmap work. Optional
+planned holding periods accompany acquisitions. V1 exclusions below define the
+V1 boundary, not a prohibition on approved V2 work. See
+`docs/roadmap/v2-behaviour-spec.md` for that version's behavior contract.
+
 ## V1 Product Goal
 
 V1 should let the user continue daily investment tracking without opening the
@@ -51,6 +61,8 @@ V1 includes:
   resolution, and one atomic commit
 - constrained, versioned, broker-neutral transaction CSV onboarding with
   preview, explicit identity resolution, reconciliation, and one atomic commit
+- approved source adapters for Zerodha Equity Tradebook CSV and supported
+  CAMS/KFintech detailed mutual-fund CAS PDFs, with explicit review/reconciliation
 - derived Holdings, Dashboard, Cash Ledger, and Monthly Progress views
 - cash ledger entries for typed additions and withdrawals; investment funding
   and sale proceeds must use explicit linked accounting rather than a confusing
@@ -68,7 +80,7 @@ V1 does not include:
 - Minimal Mode
 - LTCG/tax UI
 - advanced historical market charts
-- arbitrary Excel or broker-specific statement import, full-record export, or
+- arbitrary Excel or unsupported broker-specific statement import, full-record export, or
   restore
 - backend, auth, cloud sync, analytics, or push notifications
 - Play Store auto-submit
@@ -237,10 +249,12 @@ Transaction history uses the separate versioned transaction CSV contract below.
 
 ### V1 Transaction History CSV Import
 
-Transaction history import is intentionally constrained and broker-neutral. It
-accepts the published `cogvest-transactions-v1.csv` format, not arbitrary Excel
-files, broker-specific statement adapters, PDFs, tax-lot files, or inferred
-corporate actions.
+The generic CSV contract accepts the published `cogvest-transactions-v1.csv`
+format. Approved source-specific adapters additionally support the documented
+Zerodha Equity Tradebook CSV and CAMS/KFintech detailed mutual-fund CAS PDF
+layouts. These do not authorize arbitrary Excel files, other broker statements,
+arbitrary PDFs, tax-lot files, or inferred corporate actions. See
+`docs/onboarding/transaction-csv-import.md` for source limits and reconciliation.
 
 Each row must provide:
 

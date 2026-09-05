@@ -1,6 +1,9 @@
 # V1 Screen Baseline
 
 This is the accepted V1 screen contract for CogVest UI implementation work.
+It remains the baseline, not a description of every shipped V2 capability:
+approved V2 issues and `docs/roadmap/v2-behaviour-spec.md` supersede its V1-only
+exclusions where applicable (including the implemented Minimal Mode).
 Use it with `DESIGN.md` and these supporting sources:
 
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`

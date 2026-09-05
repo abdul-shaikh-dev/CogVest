@@ -65,14 +65,18 @@ npm test
 npm run doctor
 ```
 
-For the full V1 PC verification gate, run:
+For code verification and Android environment/package readiness, run:
 
 ```powershell
 npm run test:v1:pc
 ```
 
-This extends `test:verify` with `android:doctor` and strict installed-app
-smoke status. It is intentionally not part of default GitHub PR CI.
+This extends `test:verify` with `android:doctor` and strict package-presence
+checks. It does not build, install, launch, or verify APK freshness. Before
+testing current installed-app behavior, build with `npm run android:apk:emulator`,
+install `android/app/build/outputs/apk/debug/app-debug.apk` using `adb install -r`,
+then run the relevant Maestro flows. Record the tested commit and APK path.
+These checks are intentionally not part of default GitHub PR CI.
 
 ## Android Harness Checks
 

@@ -192,7 +192,11 @@ export function PpfAccountScreen({
               </AppText>
             </View>
             <MaskedValue
-              masked={masked}
+              masked={
+                masked &&
+                summary.estimatedInterest.status === "available" &&
+                hasCompletedEstimatePeriod
+              }
               value={
                 summary.estimatedInterest.status === "available"
                   ? hasCompletedEstimatePeriod

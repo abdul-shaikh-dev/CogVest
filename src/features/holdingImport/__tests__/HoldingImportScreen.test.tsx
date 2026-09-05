@@ -305,10 +305,10 @@ describe("HoldingImportScreen", () => {
     expect(store.getState().openingPositions).toHaveLength(1);
   });
 
-  it("masks imported prices and portfolio totals when value masking is active", async () => {
+  it("masks imported totals while keeping per-unit prices visible", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getAllByText, getByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -322,7 +322,11 @@ describe("HoldingImportScreen", () => {
 
     fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
-    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(3);
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(2);
+    expect(getByText("₹1,450.00 average")).toBeTruthy();
+    expect(
+      getByText("Current price ₹1,678.25 • Manual • as of 2026-08-01"),
+    ).toBeTruthy();
     expect(queryByText("₹36,250.00")).toBeNull();
     expect(queryByText("₹41,956.25")).toBeNull();
   });

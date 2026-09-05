@@ -42,6 +42,5 @@ export type {
   QuoteFreshness,
   QuoteFreshnessSummary,
 } from "./freshness";
-export { useQuoteRefresh } from "./useQuoteRefresh";
 export { createManualQuote } from "./utils";
 export { buildYahooChartUrl, fetchYahooQuote } from "./yahooFinance";

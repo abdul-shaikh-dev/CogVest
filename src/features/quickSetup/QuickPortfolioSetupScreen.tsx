@@ -131,20 +131,19 @@ export function QuickPortfolioSetupScreen({
               },
               {
                 label: "Current",
-                masked: dashboard.maskWealthValues,
+                masked: dashboard.maskWealthValues && totalCurrent !== null,
                 value: totalCurrent === null ? "Pending" : formatINR(totalCurrent),
               },
               {
                 color: (totalPnl ?? 0) >= 0 ? "primary" : "secondary",
                 label: "P&L",
-                masked: dashboard.maskWealthValues,
+                masked: dashboard.maskWealthValues && totalPnl !== null,
                 value:
                   totalPnl === null ? "Pending" : formatSignedINR(totalPnl),
               },
               {
                 color: (totalPnlPct ?? 0) >= 0 ? "primary" : "secondary",
                 label: "P&L %",
-                masked: dashboard.maskWealthValues,
                 value:
                   totalPnlPct === null ? "Pending" : formatPercentage(totalPnlPct),
               },
