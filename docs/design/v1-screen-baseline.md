@@ -199,6 +199,21 @@ final review as one long expanded form. After selection, collapse search into a
 selected-asset summary and continue through metadata review, position details,
 derived preview, and `Review and save`.
 
+The #282 entry/review hierarchy keeps quantity, cost and optional valuation
+primary. Date entry stays available; notes, conviction and planned holding days
+are collapsed under `Add notes or a holding plan`. Disclosures retain input,
+and invalid optional values must reveal their errors rather than silently block.
+Review leads with the asset, honest price-source status, invested/current/P&L
+values, quantity/cost/price and explicit no-cash-movement meaning. Save precedes
+`Holding details & edits`, which retains asset/classification editing and
+populated optional details. Do not show duplicate identifiers or empty planning
+rows. Changing phases dismisses the keyboard and starts at the top; keep
+continuation reachable with the Android keyboard docked. Quick Setup retains
+its existing save-next/save-finish semantics and omits planning fields.
+The form owns keyboard avoidance; do not apply a global screen change merely
+for this flow. Date uses the full available width, and phase labels grow/wrap
+at enlarged text instead of overflowing a fixed-height step row.
+
 Required concepts:
 
 - asset name

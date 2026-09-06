@@ -45,8 +45,9 @@ appId: com.abdulshaikh.cogvest
     id: "first-purchase-date-unknown"
 - tapOn:
     id: "review-holding-button"
-- assertVisible: "First purchase date"
-- assertVisible: "Unknown"
+- assertVisible: "Review holding"
+- assertNotVisible: "First purchase date"
+- assertNotVisible: "Unknown"
 - scrollUntilVisible:
     element:
       id: "save-holding-button"

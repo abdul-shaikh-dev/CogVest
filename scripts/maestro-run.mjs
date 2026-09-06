@@ -14,6 +14,7 @@ const defaultFlows = [
   "e2e/add-holding-edited-quote.yaml",
   "e2e/add-holding-asset-switch.yaml",
   "e2e/add-holding-asset-class.yaml",
+  "e2e/add-holding-review-hierarchy.yaml",
   "e2e/quick-portfolio-setup.yaml",
   "e2e/holdings-csv-import.yaml",
   "e2e/transactions-csv-import.yaml",

@@ -83,6 +83,12 @@ appId: com.abdulshaikh.cogvest
     id: "review-holding-button"
 - scrollUntilVisible:
     element:
+      text: "₹1,678.25"
+    direction: DOWN
+- assertVisible: "₹1,678.25"
+- assertNotVisible: "Valuation pending"
+- scrollUntilVisible:
+    element:
       id: "save-holding-button"
     direction: DOWN
     centerElement: true

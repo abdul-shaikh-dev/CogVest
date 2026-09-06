@@ -39,6 +39,9 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "price-input"
 - inputText: "1300"
+- hideKeyboard
+- tapOn:
+    id: "toggle-position-options"
 - scrollUntilVisible:
     element:
       id: "notes-input"
@@ -65,6 +68,15 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Identity: RELIANCE | RELIANCE.NS"
 - assertVisible: "Classification: stock | stock | other"
 - assertVisible: "Market: INR | NSE | RELIANCE.NS"
-- assertVisible: "Quote: manual | ₹1,300.00"
+- assertVisible: "Quote: missing | missing"
 - assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"
-- assertVisible: "Position 1: quantity 2 | average ₹1,200.00 | note Manual fallback evidence | conviction none"
+- scrollUntilVisible:
+    element:
+      text: "Position 1: quantity 2 | average ₹1,200.00 | date unknown | measured unset | note Manual fallback evidence | conviction none"
+    direction: DOWN
+- assertVisible: "Position 1: quantity 2 | average ₹1,200.00 | date unknown | measured unset | note Manual fallback evidence | conviction none"
+- scrollUntilVisible:
+    element:
+      text: "Position 1 manual price: ₹1,300.00"
+    direction: DOWN
+- assertVisible: "Position 1 manual price: ₹1,300.00"

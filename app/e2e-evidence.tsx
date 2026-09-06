@@ -131,12 +131,18 @@ export default function E2eEvidenceScreen() {
             Values: invested {holding ? formatINR(holding.totalInvested) : "missing"} | current {holding?.currentValue === null ? "pending" : holding ? formatINR(holding.currentValue) : "missing"} | quantity {holding?.totalUnits ?? 0}
           </EvidenceText>
           {openingPositions.map((position, index) => (
+            <View key={position.id}>
             <EvidenceText
-              key={position.id}
               testID={`e2e-asset-${key}-position-${index}`}
             >
               Position {index + 1}: quantity {position.quantity} | average {formatINR(position.averageCostPrice)} | date {position.date ?? "unknown"} | measured {position.measuredAsOf ?? "unset"} | note {position.notes ?? "none"} | conviction {position.conviction ?? "none"}
             </EvidenceText>
+            {position.manualValuation ? (
+              <EvidenceText testID={`e2e-asset-${key}-position-${index}-valuation`}>
+                Position {index + 1} manual price: {formatINR(position.manualValuation.price)}
+              </EvidenceText>
+            ) : null}
+            </View>
           ))}
         </PremiumCard>
       ))}

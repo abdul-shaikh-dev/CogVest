@@ -64,6 +64,18 @@ function openManualConfirmDetails(
   fireEvent.press(getByText("Continue to confirm details"));
 }
 
+function togglePositionOptions(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+) {
+  fireEvent.press(getByTestId("toggle-position-options"));
+}
+
+function toggleReviewDetails(
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+) {
+  fireEvent.press(getByTestId("toggle-review-details"));
+}
+
 describe("AddOpeningPositionForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -122,6 +134,7 @@ describe("AddOpeningPositionForm", () => {
       fireEvent.changeText(ui.getByLabelText("Ticker"), "DRAFT.NS");
       fireEvent.press(ui.getByTestId("continue-class-button"));
       fireEvent.press(ui.getByTestId("continue-position-button"));
+      togglePositionOptions(ui.getByTestId);
       fireEvent.changeText(ui.getByLabelText("Quantity"), "2");
       fireEvent.changeText(ui.getByLabelText("Average cost"), "100");
       fireEvent.press(ui.getByLabelText("First purchase date unknown"));
@@ -385,16 +398,162 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.press(getByText("Review and save"));
 
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
+    expect(getByText("Review holding")).toBeTruthy();
     expect(getByTestId("derived-preview")).toBeTruthy();
+    expect(getByTestId("derived-preview-card")).toBeTruthy();
+    expect(getByTestId("review-position")).toBeTruthy();
+    expect(getByTestId("review-edit-position")).toBeTruthy();
+    expect(getByTestId("save-holding-button")).toBeTruthy();
+    expect(getByText("Manual price")).toBeTruthy();
+    expect(getByTestId("toggle-review-details").props.accessibilityState).toEqual({
+      expanded: false,
+    });
+    expect(queryByTestId("review-identity")).toBeNull();
+    expect(queryByTestId("review-classification")).toBeNull();
+
+    toggleReviewDetails(getByTestId);
+    expect(getByTestId("toggle-review-details").props.accessibilityState).toEqual({
+      expanded: true,
+    });
     expect(getByTestId("review-identity")).toBeTruthy();
     expect(getByTestId("review-classification")).toBeTruthy();
-    expect(getByTestId("review-position")).toBeTruthy();
-    expect(getByTestId("review-quote-provenance")).toBeTruthy();
+    expect(getByTestId("review-edit-asset")).toBeTruthy();
 
     fireEvent.press(getByTestId("review-edit-classification"));
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
     fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Quantity")).toHaveProp("value", "25");
+  });
+
+  it("hides optional position fields by default and retains them through collapse and reopen", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    fireEvent.press(getByText("Continue to position"));
+
+    expect(getByTestId("date-input")).toBeTruthy();
+    expect(getByTestId("toggle-position-options").props.accessibilityState).toEqual({
+      expanded: false,
+    });
+    expect(queryByTestId("conviction-4")).toBeNull();
+    expect(queryByTestId("intended-hold-days-input")).toBeNull();
+    expect(queryByTestId("notes-input")).toBeNull();
+
+    togglePositionOptions(getByTestId);
+    fireEvent.press(getByTestId("conviction-4"));
+    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "730");
+    fireEvent.changeText(getByLabelText("Note"), "Long-term plan");
+    expect(getByTestId("date-input")).toBeTruthy();
+
+    togglePositionOptions(getByTestId);
+    expect(queryByTestId("conviction-4")).toBeNull();
+    expect(queryByTestId("intended-hold-days-input")).toBeNull();
+    expect(queryByTestId("notes-input")).toBeNull();
+
+    togglePositionOptions(getByTestId);
+    expect(getByTestId("conviction-4").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    expect(getByLabelText("Planned holding period (days)")).toHaveProp("value", "730");
+    expect(getByLabelText("Note")).toHaveProp("value", "Long-term plan");
+  });
+
+  it("reveals optional fields for invalid optional values and saves corrected optional data", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    togglePositionOptions(getByTestId);
+    fireEvent.press(getByTestId("conviction-4"));
+    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "0");
+    fireEvent.changeText(getByLabelText("Note"), "Corrected after review");
+    togglePositionOptions(getByTestId);
+
+    fireEvent.press(getByText("Review and save"));
+
+    expect(getByTestId("add-holding-phase-position")).toBeTruthy();
+    expect(getByTestId("toggle-position-options").props.accessibilityState).toEqual({
+      expanded: true,
+    });
+    expect(getByTestId("intended-hold-days-input")).toBeTruthy();
+    expect(getByText("Planned holding period must be whole days.")).toBeTruthy();
+
+    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "365");
+    fireEvent.press(getByText("Review and save"));
+    expect(getByTestId("derived-preview")).toBeTruthy();
+    toggleReviewDetails(getByTestId);
+    expect(getByTestId("review-optional-details")).toBeTruthy();
+    expect(getByText("Corrected after review")).toBeTruthy();
+    expect(getByText("4 of 5")).toBeTruthy();
+    expect(getByText("365 days")).toBeTruthy();
+
+    fireEvent.press(getByText("Save Holding"));
+
+    await waitFor(() => {
+      expect(store.getState().openingPositions).toHaveLength(1);
+      expect(getByText("Opening position saved.")).toBeTruthy();
+    });
+    expect(store.getState().openingPositions[0]).toMatchObject({
+      conviction: 4,
+      intendedHoldDays: 365,
+      notes: "Corrected after review",
+      quantity: 25,
+    });
+    expect(queryByTestId("save-holding-button")).toBeNull();
+  });
+
+  it("omits the optional review section when every optional value is empty", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "2");
+    fireEvent.changeText(getByLabelText("Average cost"), "100");
+    fireEvent.changeText(getByLabelText("Current price"), "120");
+    fireEvent.press(getByText("I don't know"));
+    fireEvent.press(getByText("Review and save"));
+
+    toggleReviewDetails(getByTestId);
+    expect(queryByTestId("review-optional-details")).toBeNull();
+  });
+
+  it("shows nonempty date and optional details in the review disclosure", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "2");
+    fireEvent.changeText(getByLabelText("Average cost"), "100");
+    fireEvent.changeText(getByLabelText("Current price"), "120");
+    togglePositionOptions(getByTestId);
+    fireEvent.press(getByTestId("conviction-3"));
+    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "180");
+    fireEvent.changeText(getByLabelText("Note"), "Review note");
+    selectDate(getByTestId, "date-input", "2026-04-15");
+    fireEvent.press(getByText("Review and save"));
+
+    expect(queryByTestId("review-identity")).toBeNull();
+    toggleReviewDetails(getByTestId);
+    expect(getByTestId("review-optional-details")).toBeTruthy();
+    expect(getByText("2026-04-15")).toBeTruthy();
+    expect(getByText("Review note")).toBeTruthy();
+    expect(getByText("3 of 5")).toBeTruthy();
+    expect(getByText("180 days")).toBeTruthy();
   });
 
   it("allows returning to completed phases before saving", () => {
@@ -459,6 +618,7 @@ describe("AddOpeningPositionForm", () => {
     fireEvent.changeText(getByLabelText("Average cost"), "1450");
     fireEvent.changeText(getByLabelText("Current price"), "1678.25");
     selectDate(getByTestId, "date-input", "2026-04-15");
+    togglePositionOptions(getByTestId);
     fireEvent.press(getByTestId("conviction-4"));
     fireEvent.changeText(getByLabelText("Note"), "Excel opening position");
 
@@ -1243,6 +1403,46 @@ describe("AddOpeningPositionForm", () => {
       expect(getByText(expectedLabel)).toBeTruthy();
     },
   );
+
+  it("shows the cached Yahoo quote as Current price for a saved asset review", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const asset = {
+      assetClass: "stock" as const,
+      currency: "INR" as const,
+      exchange: "NSE" as const,
+      id: "saved-yahoo-review",
+      instrumentType: "stock" as const,
+      name: "Saved HDFC Bank",
+      quoteSourceId: "HDFCBANK.NS",
+      sectorType: "financialServices" as const,
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+
+    store.getState().addAsset(asset);
+    store.getState().upsertQuote({
+      assetId: asset.id,
+      asOf: "2026-07-26T10:00:00.000Z",
+      currency: "INR",
+      price: 1678.25,
+      source: "yahoo",
+    });
+
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm store={store} />,
+    );
+
+    fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
+    fireEvent.press(getByText("Continue to confirm details"));
+    fireEvent.press(getByText("Continue to position"));
+    fireEvent.changeText(getByLabelText("Quantity"), "25");
+    fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    fireEvent.press(getByText("Review and save"));
+
+    const reviewPosition = getByTestId("review-position");
+    expect(within(reviewPosition).getByText("₹1,678.25")).toBeTruthy();
+    expect(within(reviewPosition).queryByText("Valuation pending")).toBeNull();
+  });
 
   it("lets the user change a selected lookup asset before continuing", async () => {
     jest.useFakeTimers();
