@@ -26,6 +26,11 @@ appId: com.abdulshaikh.cogvest
     id: "continue-class-button"
 - assertVisible:
     id: "add-holding-phase-class"
+- assertVisible: "Stocks"
+- assertVisible: "ETFs"
+- tapOn: "Stocks"
+- assertVisible: "Stock"
+- takeScreenshot: .expo/asset-class-280-stocks
 - tapOn:
     id: "continue-position-button"
 - assertVisible:

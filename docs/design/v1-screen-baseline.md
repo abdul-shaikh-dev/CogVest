@@ -160,6 +160,11 @@ Rules:
 
 ## Add Holding
 
+Entry selectors distinguish `Stocks` and `ETFs` with the same unique accessible
+names (#280). Keep `Equity` as their grouped portfolio-summary label; do not use
+that shared label for two mutually exclusive entry choices. Existing instrument
+options and internal `stock` / `etf` records are unchanged.
+
 Add Holding is assisted capture, not a trading ticket. It is lookup-first and
 explicit-selection-first.
 
