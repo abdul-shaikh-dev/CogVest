@@ -450,7 +450,10 @@ function resetPortfolioStoreForVisualQa(
   });
 }
 
-export function seedVisualQaPortfolio(store: StoreApi<PortfolioStoreState>) {
+export function seedVisualQaPortfolio(
+  store: StoreApi<PortfolioStoreState>,
+  { longHistory = false }: { longHistory?: boolean } = {},
+) {
   visualQaSessionActive = true;
   resetPortfolioStoreForVisualQa(store);
 
@@ -461,7 +464,30 @@ export function seedVisualQaPortfolio(store: StoreApi<PortfolioStoreState>) {
     state.addOpeningPosition(position),
   );
   visualQaCashEntries.forEach((entry) => state.addCashEntry(entry));
-  visualQaMonthlySnapshots.forEach((snapshot) =>
+  // Prepend deterministic history; preserve the standard seven-month baseline.
+  const olderSnapshots: MonthlySnapshot[] = longHistory
+    ? Array.from({ length: 53 }, (_, index) => {
+        const month = new Date(Date.UTC(2021, 5 + index, 1))
+          .toISOString().slice(0, 7);
+        const equityValue = 300000 + index * 10000 + (index % 4) * 1500;
+        const debtValue = 100000 + index * 2500;
+        const cryptoValue = 30000 + index * 1300 + (index % 3) * 2000;
+        const cashValue = 100000 + index * 2000;
+        return {
+          id: `visual-qa-snapshot-${month}`,
+          month,
+          equityValue,
+          debtValue,
+          cryptoValue,
+          cashValue,
+          portfolioValue: equityValue + debtValue + cryptoValue + cashValue,
+          investedValue: 500000 + index * 13000,
+          monthlyInvestment: 13000,
+          notes: "Synthetic long-history QA fixture, not investment records",
+        };
+      })
+    : [];
+  [...olderSnapshots, ...visualQaMonthlySnapshots].forEach((snapshot) =>
     state.addMonthlySnapshot(snapshot),
   );
   visualQaQuotes.forEach((quote) => state.upsertQuote(quote));

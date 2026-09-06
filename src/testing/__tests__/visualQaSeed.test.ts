@@ -32,6 +32,27 @@ describe("visual QA harness access", () => {
 });
 
 describe("seedVisualQaPortfolio", () => {
+  it("optionally seeds sixty consecutive months without changing the latest baseline", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedVisualQaPortfolio(store, { longHistory: true });
+    const snapshots = store.getState().monthlySnapshots;
+    expect(snapshots).toHaveLength(60);
+    expect(new Set(snapshots.map((item) => item.month)).size).toBe(60);
+    expect(snapshots[0].month).toBe("2021-06");
+    expect(snapshots[52].month).toBe("2025-10");
+    expect(snapshots[53].month).toBe("2025-11");
+    expect(snapshots.at(-1)).toMatchObject({
+      month: "2026-05", portfolioValue: 1987450,
+    });
+    snapshots.forEach((item) => {
+      expect(item.portfolioValue).toBe(
+        item.equityValue + item.debtValue + item.cryptoValue + item.cashValue,
+      );
+    });
+    seedVisualQaPortfolio(store);
+    expect(store.getState().monthlySnapshots).toHaveLength(7);
+  });
+
   it("creates a deterministic V1 parity dataset", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 

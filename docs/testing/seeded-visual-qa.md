@@ -81,6 +81,21 @@ The fixture includes equity, ETF, debt, crypto, cash entries, mixed quote
 provenance, an optional conviction score, and seven monthly snapshots. It is
 test data only and must never be interpreted as a production portfolio.
 
+For opt-in long-history regression, append `&history=long` to the development
+seed link. This prepends 53 synthetic months, producing 60 consecutive snapshots
+from June 2021 through May 2026 without changing the standard seven-month tail.
+The same development/token/confirmation restrictions apply. The default fixture
+and default Maestro suite remain unchanged.
+
+Standalone release verification must prepare data in a development APK first,
+then upgrade with a release signed by the same private QA key. Never enable seed
+routes in release or clear state in a seed-dependent standalone flow. Real
+month-end automation can add later months when the release opens; inspect those
+months rather than assuming May 2026 remains latest.
+
+See [standalone chart verification](standalone-chart-verification.md) for the
+local signing boundary, opt-in flows, observed defects, and performance limits.
+
 ## Troubleshooting
 
 - `Unable to load script`: start Metro and configure `adb reverse`.
