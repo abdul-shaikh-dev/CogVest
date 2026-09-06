@@ -261,18 +261,28 @@ Accepted chart direction:
   Native for these charts
 - x-axis labels should be sparse and chart-native: show the first month, a
   useful midpoint, and the latest month for longer ranges
-- `Monthly Change Breakdown` compares the selected month with the previous month
+- Monthly History details compare the selected month with the previous calendar month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
-- snapshot history uses one fixed-height explorer instead of rendering every
-  stored month as a vertical list
-- the explorer keeps all stored months available in a horizontal selector and
-  shows one selected month at a time
-- the selected snapshot shows portfolio and invested values plus percentage
-  movement for the portfolio and Equity, Debt, Crypto, and Cash against the
-  previous stored month
-- snapshot history replaces a separate asset-class snapshot card so the same
-  values are not repeated and the screen does not grow with every saved month
+- the approved #275/#277 reading order is a dated monthly answer (portfolio,
+  market change, monthly investment), compact snapshot status, independent
+  charts, then `Monthly History` with a `View history` action
+- Monthly History opens in a panel, newest stored year and months first. Rows
+  show portfolio value and change versus the immediately previous calendar
+  month, including cross-year January comparisons; gaps/zero baselines must
+  not produce fabricated percentages. Value change includes contributions and
+  is not labelled investment return
+- tapping a month opens its dedicated detail view at the top of the same panel,
+  not an accordion or stacked modal. Back restores the history year and scroll
+  position; Android Back goes detail -> history -> Progress
+- details retain portfolio/invested values, current/previous class values,
+  allocation, cash, contribution-adjusted performance and available income/rates;
+  masking and Minimal Mode apply throughout
+- remove duplicate latest-asset badges and the secondary asset breakdown from
+  the main chart surface. Charts retain oldest-to-newest plots and independent
+  ranges/selected-month controls
+- automatic status explanations, warnings and optional correction stay reachable
+  on demand; do not turn automatic snapshots into a required monthly form
 
 Do not fake production chart history. If snapshots are missing, show a premium
 empty state and a clear path to record a snapshot.

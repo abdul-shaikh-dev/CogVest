@@ -57,6 +57,10 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "asset-monthly-chart-range-Custom"
+- scrollUntilVisible:
+    element:
+      id: "asset-custom-range-end"
+    direction: DOWN
 - assertVisible:
     id: "asset-custom-range-start"
 - assertVisible:

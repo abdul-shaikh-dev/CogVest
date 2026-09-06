@@ -19,12 +19,43 @@ appId: com.abdulshaikh.cogvest
     timeout: 30000
 - scrollUntilVisible:
     element:
-      id: "snapshot-month-2026-05"
+      id: "open-monthly-history"
     direction: DOWN
+- tapOn:
+    id: "open-monthly-history"
+- assertVisible: "Monthly History"
+- assertVisible:
+    id: "snapshot-month-2026-05"
 - tapOn:
     id: "snapshot-month-2026-05"
 - assertVisible:
     id: "selected-snapshot-summary"
+- assertVisible: "₹19.87L"
+- takeScreenshot: .expo/progress-277-month-detail
 - scrollUntilVisible:
     element: "May parity seed"
     direction: DOWN
+- back
+- assertVisible:
+    id: "snapshot-month-2026-05"
+- assertNotVisible:
+    id: "selected-snapshot-summary"
+- tapOn:
+    id: "snapshot-month-2026-04"
+- assertVisible: "₹19.29L"
+- tapOn:
+    id: "history-back"
+- tapOn:
+    id: "history-year-2025"
+- tapOn:
+    id: "snapshot-month-2025-11"
+- assertVisible: "₹14.4L"
+- back
+- assertVisible:
+    id: "snapshot-month-2025-11"
+- takeScreenshot: .expo/progress-277-history-older-year
+- back
+- assertVisible:
+    id: "progress-screen"
+- assertNotVisible:
+    id: "snapshot-month-2025-11"

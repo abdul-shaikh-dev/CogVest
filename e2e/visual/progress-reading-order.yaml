@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-screen
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-top
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-Portfolio
+    direction: DOWN
+    speed: 20
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-portfolio
+- scrollUntilVisible:
+    element:
+      id: asset-trend-Equity
+    direction: DOWN
+    speed: 20
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-assets
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: DOWN
+- tapOn:
+    id: open-monthly-history
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-history
+- tapOn:
+    id: snapshot-month-2026-05
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-detail
+- back
+- back
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- tapOn:
+    id: progress-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: DOWN
+- tapOn:
+    id: open-monthly-history
+- tapOn:
+    id: snapshot-month-2026-05
+- assertNotVisible: "₹19.87L"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/progress-277-masked-detail
+- back
+- back
