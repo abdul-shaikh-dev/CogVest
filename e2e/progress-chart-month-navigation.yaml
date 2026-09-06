@@ -38,7 +38,7 @@ appId: com.abdulshaikh.cogvest
     id: asset-trend-previous-month
 - assertVisible:
     id: asset-trend-selected-panel
-    text: "Apr 2026.*"
+    text: "Apr 2026.*% versus previous visible month.*"
 - takeScreenshot: .expo/chart-month-asset-before-scroll
 - scrollUntilVisible:
     element:
@@ -55,7 +55,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - assertVisible:
     id: asset-trend-selected-panel
-    text: "Apr 2026.*"
+    text: "Apr 2026.*% versus previous visible month.*"
 - assertNotVisible:
     id: asset-latest-summary
 - scrollUntilVisible:
@@ -64,12 +64,12 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - assertVisible:
     id: portfolio-trend-selected-panel
-    text: "May 2026.*"
+    text: "May 2026.*% versus invested.*"
 - tapOn:
     id: portfolio-trend-previous-month
 - assertVisible:
     id: portfolio-trend-selected-panel
-    text: "Apr 2026.*"
+    text: "Apr 2026.*% versus invested.*"
 - takeScreenshot: .expo/chart-month-portfolio-before-scroll
 - scrollUntilVisible:
     element:
@@ -86,7 +86,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - assertVisible:
     id: portfolio-trend-selected-panel
-    text: "Apr 2026.*"
+    text: "Apr 2026.*% versus invested.*"
 - scrollUntilVisible:
     element:
       id: portfolio-monthly-chart-range-6M
@@ -95,4 +95,4 @@ appId: com.abdulshaikh.cogvest
     id: portfolio-monthly-chart-range-6M
 - assertVisible:
     id: portfolio-trend-selected-panel
-    text: "May 2026.*"
+    text: "May 2026.*% versus invested.*"

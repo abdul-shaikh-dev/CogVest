@@ -296,6 +296,12 @@ Accepted chart direction:
 - plots are non-interactive: vertical swipes scroll the page without changing
   the inspected month. Each chart has accessible Previous/Next stored-month
   controls with disabled boundaries and a politely announced selected summary
+- grouped chart summaries include the visible signed percentages, not only
+  amounts. Explain first-visible-month and zero-baseline unavailable changes;
+  when masked, announce only the month and that values are hidden. Decorative
+  plot descendants must not become separate screen-reader stops. Runtime
+  verification and remaining TalkBack checks are recorded in
+  `docs/testing/chart-talkback-evidence.md` (#292).
 - chart selection is independent; changing its range resets to the latest
   visible stored month. Series-colored enlarged points mark that selection
 - latest-in-range asset insights retain explicit month and comparison dates,
