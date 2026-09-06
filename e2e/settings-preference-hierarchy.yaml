@@ -1,0 +1,82 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: tab-settings
+- assertVisible:
+    id: value-mask-toggle
+    checked: false
+- assertVisible:
+    id: display-mode-standard
+    checked: true
+- assertNotVisible: "Clear local data"
+- assertNotVisible:
+    id: settings-price-details
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux14-settings
+- tapOn:
+    id: value-mask-toggle
+- assertVisible:
+    id: value-mask-toggle
+    checked: true
+- tapOn:
+    id: display-mode-minimal
+- assertVisible:
+    id: display-mode-minimal
+    checked: true
+- openLink: "cogvest:///dashboard"
+- assertNotVisible: "₹15.9L"
+- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertNotVisible: "This Month"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- tapOn:
+    id: tab-settings
+- assertVisible:
+    id: value-mask-toggle
+    checked: true
+- assertVisible:
+    id: display-mode-minimal
+    checked: true
+- tapOn:
+    id: value-mask-toggle
+- tapOn:
+    id: display-mode-standard
+- scrollUntilVisible:
+    element:
+      id: settings-price-details-toggle
+    direction: DOWN
+- tapOn:
+    id: settings-price-details-toggle
+- scrollUntilVisible:
+    element: "Newest price update date"
+    direction: DOWN
+- assertVisible: "Newest price update date"
+- takeScreenshot: .expo/ux14-prices
+- scrollUntilVisible:
+    element: "Manual price updates"
+    direction: DOWN
+- assertVisible: "Manual price updates"
+- assertNotVisible: "Live"
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+- assertVisible: "Base currency"
+- assertVisible: "INR"
+- assertNotVisible: "Clear local data"
+- takeScreenshot: .expo/ux14-about
