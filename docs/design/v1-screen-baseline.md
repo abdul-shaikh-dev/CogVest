@@ -383,12 +383,20 @@ Settings should build trust.
 
 Baseline groups:
 
-- Local-first summary: local storage, account not required, cloud sync off,
-  analytics off
-- Value masking: real toggle/control plus mask preview
-- Quotes: refresh status, quote source, manual fallback status
-- Currency & App: INR base currency and Android preview/version context
-- Data: destructive or future data actions separated from normal settings
+- Working preferences first: value masking with honest amount-only scope and
+  Standard/Minimal display choices. Checked states must be accessible.
+- Compact Privacy & storage disclosure: no account/cloud sync/analytics summary;
+  app-private storage, separate-encryption limitation and disabled Android backup/
+  transfer remain available in details, not implied to be encryption or recovery.
+- Price information disclosure: separate price-update dates, sources and manual
+  update counts. Explain that prices entered with initial holdings may also be in
+  use and are not counted here; Dashboard remains the valuation-coverage surface.
+  A provider-sourced saved price is not proof of current live availability; its
+  date is not a last-refresh timestamp. Use plain language, not cache/API jargon.
+- About: non-interactive INR reporting currency and actual configured app version
+  (or explicit unavailable state), not a hard-coded Preview label.
+- Hide unimplemented Clear local data rather than giving it a section or control.
+  Do not introduce clearing/export/backup or change data storage in a hierarchy fix.
 
 Do not show unsupported settings as if they work. V2/V3 features may be marked
 as locked or future only if they appear at all.

@@ -19,6 +19,7 @@ appId: com.abdulshaikh.cogvest
     element: ".*Separate app encryption is not included in V1.*"
     direction: DOWN
 - assertVisible: ".*Separate app encryption is not included in V1.*"
+- takeScreenshot: .expo/ux14-privacy
 - scrollUntilVisible:
     element: "Android backup"
     direction: DOWN
@@ -28,3 +29,4 @@ appId: com.abdulshaikh.cogvest
     element: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
     direction: DOWN
 - assertVisible: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
+- takeScreenshot: .expo/ux14-backup

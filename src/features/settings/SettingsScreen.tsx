@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import Constants from "expo-constants";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
@@ -25,6 +26,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const [isPrivacyDetailsExpanded, setIsPrivacyDetailsExpanded] =
     useState(false);
+  const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const {
     displayMode,
     maskWealthValues,
@@ -46,12 +48,17 @@ export function SettingsScreen({
 
   const quoteSourceMeta =
     quoteStatus.quoteSourceLabel === "Mixed"
-      ? "Some assets use live quotes; manual fallback stays ready."
+      ? "Saved provider prices and prices you entered."
       : quoteStatus.quoteSourceLabel === "Live"
-        ? "Live quotes are available for cached assets."
+        ? "Saved provider prices; freshness is shown on Dashboard."
         : quoteStatus.quoteSourceLabel === "Manual"
-          ? "Cached prices are manual fallback values."
-          : "Add holdings or refresh quotes to see quote source status.";
+          ? "Prices you entered yourself."
+          : "No separate price updates saved yet.";
+  const priceSourceLabel = quoteStatus.quoteSourceLabel === "Live"
+    ? "Provider"
+    : quoteStatus.quoteSourceLabel === "Waiting"
+      ? "None yet"
+      : quoteStatus.quoteSourceLabel;
 
   return (
     <ScreenContainer scroll testID="settings-screen">
@@ -71,6 +78,7 @@ export function SettingsScreen({
 
         <Pressable
           accessibilityLabel="Toggle value masking"
+          accessibilityHint="Hides portfolio amounts. Quantities, percentages, and per-unit prices stay visible."
           accessibilityRole="switch"
           accessibilityState={{ checked: maskWealthValues }}
           onPress={() => {
@@ -88,16 +96,11 @@ export function SettingsScreen({
               Value masking
             </AppText>
             <AppText color="secondary">
-              Hide INR wealth values in shared or public spaces.
+              Hide portfolio amounts. Preview ₹••,•••
             </AppText>
             <AppText color="secondary" variant="caption">
               Quantities, percentages, and per-unit prices stay visible.
             </AppText>
-            <View style={styles.maskPreview}>
-              <AppText color="secondary" variant="caption" weight="medium">
-                Preview ₹••,•••
-              </AppText>
-            </View>
           </View>
           <View style={[styles.switchTrack, maskWealthValues && styles.switchOn]}>
             <View
@@ -111,10 +114,6 @@ export function SettingsScreen({
 
         <PremiumCard testID="display-mode-settings">
           <SectionHeader title="Display" />
-          <AppText color="secondary" variant="caption">
-            Minimal keeps essential portfolio information visible while reducing
-            performance emphasis and optional commentary.
-          </AppText>
           <View accessibilityRole="radiogroup" style={styles.modeOptions}>
             {([
               {
@@ -166,13 +165,6 @@ export function SettingsScreen({
         </PremiumCard>
 
         <PremiumCard testID="privacy-storage-card">
-          <SectionHeader title="Privacy & storage" />
-          <GroupedListRow
-            icon="phone-portrait-outline"
-            title="Local storage"
-            meta="Records stay in CogVest's app-private Android storage."
-            value="Active"
-          />
           <Pressable
             accessibilityLabel="Privacy and storage details"
             accessibilityRole="button"
@@ -185,7 +177,7 @@ export function SettingsScreen({
             testID="privacy-details-toggle"
           >
             <View style={styles.disclosureCopy}>
-              <AppText weight="medium">Privacy details</AppText>
+              <AppText weight="medium">Privacy & storage</AppText>
               <AppText color="secondary" variant="caption">
                 No account • No cloud sync • No analytics
               </AppText>
@@ -196,6 +188,9 @@ export function SettingsScreen({
           </Pressable>
           {isPrivacyDetailsExpanded ? (
             <View style={styles.privacyDetails} testID="privacy-storage-details">
+              <AppText color="secondary" variant="caption">
+                Records stay in CogVest's app-private Android storage.
+              </AppText>
               <AppText color="secondary" variant="caption">
                 Protected by Android app-private storage and device security.
                 Separate app encryption is not included in V1.
@@ -228,34 +223,59 @@ export function SettingsScreen({
           ) : null}
         </PremiumCard>
 
-        <PremiumCard>
-          <SectionHeader title="Quotes" />
-          <GroupedListRow
-            icon="refresh-outline"
-            title="Latest quote refresh"
-            meta={`${quoteStatus.quoteCount} cached quote${
-              quoteStatus.quoteCount === 1 ? "" : "s"
-            } from holdings and opening positions.`}
-            value={quoteStatus.latestQuoteLabel}
-          />
-          <GroupedListRow
-            icon="pulse-outline"
-            title="Quote source"
-            meta={quoteSourceMeta}
-            value={quoteStatus.quoteSourceLabel}
-          />
-          <GroupedListRow
-            icon="cloud-offline-outline"
-            title="Manual fallback"
-            meta="Manual prices remain available when quote APIs fail."
-            value={`${quoteStatus.manualFallbackCount} manual quote${
-              quoteStatus.manualFallbackCount === 1 ? "" : "s"
-            }`}
-          />
+        <PremiumCard testID="settings-prices-card">
+          <Pressable
+            accessibilityLabel="Price information"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isPriceDetailsExpanded }}
+            onPress={() => setIsPriceDetailsExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [styles.disclosureRow, pressed && styles.pressed]}
+            testID="settings-price-details-toggle"
+          >
+            <View style={styles.disclosureCopy}>
+              <AppText weight="medium">Price information</AppText>
+              <AppText color="secondary" variant="caption">
+                Sources and dates of price updates
+              </AppText>
+            </View>
+            <AppText color="secondary" variant="caption" weight="bold">
+              {isPriceDetailsExpanded ? "Hide" : "Show"}
+            </AppText>
+          </Pressable>
+          {isPriceDetailsExpanded ? (
+            <View style={styles.privacyDetails} testID="settings-price-details">
+              <AppText color="secondary" variant="caption">
+                These are separate price updates. Prices entered with initial holdings may also be in use; check Dashboard for valuation coverage.
+              </AppText>
+              <View style={styles.priceDate}>
+                <AppText weight="bold">Newest price update date</AppText>
+                <AppText color="secondary">{quoteStatus.latestQuoteLabel}</AppText>
+                <AppText color="secondary" variant="caption">
+                  {`${quoteStatus.quoteCount} price update${
+                    quoteStatus.quoteCount === 1 ? "" : "s"
+                  }. Other prices may be older. This is not a refresh time.`}
+                </AppText>
+              </View>
+              <GroupedListRow
+                icon="pulse-outline"
+                title="Price sources"
+                meta={quoteSourceMeta}
+                value={priceSourceLabel}
+              />
+              <GroupedListRow
+                icon="cloud-offline-outline"
+                title="Manual price updates"
+                meta="You can enter a price when automatic pricing is unavailable."
+                value={`${quoteStatus.manualFallbackCount} price update${
+                  quoteStatus.manualFallbackCount === 1 ? "" : "s"
+                }`}
+              />
+            </View>
+          ) : null}
         </PremiumCard>
 
         <PremiumCard>
-          <SectionHeader title="Currency & App" />
+          <SectionHeader title="About" />
           <GroupedListRow
             icon="cash-outline"
             title="Base currency"
@@ -265,18 +285,8 @@ export function SettingsScreen({
           <GroupedListRow
             icon="phone-portrait-outline"
             title="Version"
-            meta="Android preview build for V1 testing."
-            value="Preview"
-          />
-        </PremiumCard>
-
-        <PremiumCard>
-          <SectionHeader title="Data availability" />
-          <GroupedListRow
-            icon="trash-outline"
-            title="Clear local data"
-            meta="Not available in V1. No data is changed from this screen."
-            value="Unavailable"
+            meta="CogVest for Android."
+            value={Constants.expoConfig?.version ?? "Not available"}
           />
         </PremiumCard>
       </View>
@@ -285,6 +295,10 @@ export function SettingsScreen({
 }
 
 const styles = StyleSheet.create({
+  priceDate: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
   card: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.card,
@@ -325,13 +339,6 @@ const styles = StyleSheet.create({
   },
   localPillText: {
     color: colors.primary,
-  },
-  maskPreview: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   },
   modeOption: {
     alignItems: "center",
