@@ -23,7 +23,10 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "This Month"
 - assertNotVisible: ".*Conviction data.*"
 - openLink: "cogvest:///holdings"
-- assertVisible: "Asset mix"
+- assertVisible:
+    id: "holdings-search-input"
+- assertNotVisible:
+    id: "holdings-insights-button"
 - assertVisible: "Invested ₹11L"
 - assertNotVisible: "Dominant position"
 - assertNotVisible: "Best return"

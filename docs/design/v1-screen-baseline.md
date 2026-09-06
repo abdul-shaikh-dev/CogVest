@@ -88,8 +88,16 @@ Dashboard refinement:
 Holdings replaces Excel rows with a durable position-review screen. It should
 not repeat Dashboard's portfolio-value hero.
 
-PPF accounts use a dedicated section rather than pretending to be market-priced
-holdings. Each row leads with nickname/provider and confirmed balance, then
+The approved #278 list-first preview lives in
+`docs/design/previews/holdings-list-first/`. Search and existing filters precede
+market holdings. A quiet Portfolio insights action opens secondary analysis;
+management, transactions, masking and valuation detail live under More. Keep
+Add in the header with single entry, Quick Setup, imports and Add PPF.
+
+PPF accounts use a counted destination alongside Market when both exist;
+PPF-only portfolios open their accounts. Do not put an absent-account promotion
+above the market list. Existing/legacy PPF access must survive the hierarchy
+change. Each account row leads with nickname/provider and confirmed balance, then
 shows balance date, invested basis, and lifecycle context. The account detail
 uses progressive disclosure for financial-year contribution capacity, official
 interest, a separately labelled estimate, maturity/extension state, and ledger
@@ -135,15 +143,20 @@ Rules:
 - keep allocation visible for each holding and consistent with Dashboard totals
 - keep each row/card visually durable; holdings should not look like a quick
   trade feed
-- lead with position-review insights such as largest position, needs review,
-  top mover, weakest holding, and exposure mix
+- put the list first; retain dominant position, distinct best return, top-three
+  concentration and asset mix in on-demand insights rather than a pre-list grid
 - do not lead with total holdings value unless the issue explicitly asks for a
   portfolio-value variant
 - keep row hierarchy compact: asset/current value/P&L first; invested value,
   allocation, and quote state second; quantity, average cost, current price,
   sector, and notes can live in detail/expanded states
-- useful filters include `Needs review`, `High allocation`, `Manual price`,
-  `Gainers`, `Losers`, and asset classes
+- preserve the implemented `All`, `Winners`, `Losers`, and `High allocation`
+  filter semantics and ordering; new filters require a separate contract
+- normal freshness is compact, but pending valuations and failed refreshes must
+  remain honest and actionable. Preserve incomplete-total semantics and explicit
+  manual provenance; do not make missing prices look successful
+- empty portfolios prioritize setup; interrupted setup has a compact Resume
+  action. No-search-results is distinct from no holdings
 
 ## Add Holding
 

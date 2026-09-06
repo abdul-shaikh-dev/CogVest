@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CogVest · Holdings, list first</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="workbench">
+    <aside class="brief">
+      <p class="eyebrow">COGVEST / UX-08 / #278</p>
+      <h1>Your holdings.<br>Before everything else.</h1>
+      <p>A focused hierarchy proposal. Same holding cards, less administration before the list.</p>
+      <fieldset>
+        <legend>Try a portfolio</legend>
+        <label for="scenario">State</label>
+        <select id="scenario">
+          <option value="four">4 market holdings</option>
+          <option value="many">30 market holdings</option>
+          <option value="pending">1 valuation pending</option>
+          <option value="empty">Empty portfolio</option>
+          <option value="ppf">PPF only</option>
+        </select>
+        <label class="check"><input id="with-ppf" type="checkbox"> Include an existing PPF account</label>
+        <label class="check"><input id="resume" type="checkbox"> Interrupted portfolio setup</label>
+        <label class="check"><input id="large-text" type="checkbox"> 130% text</label>
+        <label class="check"><input id="narrow" type="checkbox"> 360px viewport</label>
+        <label class="check"><input id="minimal" type="checkbox"> Minimal Mode</label>
+      </fieldset>
+      <div class="design-note">
+        <h2>What moves out of the way</h2>
+        <p>Insights open on demand. Management lives in More. PPF gets its own counted destination only when you have an account.</p>
+        <p>Missing prices still have an honest, actionable state. No artificial “everything is fine” message.</p>
+      </div>
+      <p class="fine">Interactive synthetic preview. Not live prices or a production app. Native implementation follows approval.</p>
+    </aside>
+    <section class="phone" aria-label="Holdings screen preview">
+      <div class="statusbar" aria-hidden="true"><span>10:42</span><span>▰ 100%</span></div>
+      <div class="screen" id="screen">
+        <header class="header">
+          <div><h2>Holdings</h2><p id="subtitle"></p></div>
+          <button class="icon-button" id="add" aria-label="Add holdings">+</button>
+          <button class="icon-button" id="more" aria-label="More holdings options">···</button>
+        </header>
+        <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a holding" aria-label="Search holdings"></label>
+        <div id="account-tabs" class="account-tabs" aria-label="Holding types"></div>
+        <div id="context"></div>
+        <div class="filters" id="filters" aria-label="Filter holdings"></div>
+        <button class="insights-link" id="insights">Portfolio insights <span aria-hidden="true">↗</span></button>
+        <div id="results" aria-live="polite"></div>
+      </div>
+      <nav class="bottom-nav" aria-label="App navigation illustration">
+        <span>⌂<small>Dashboard</small></span><span class="active">◴<small>Holdings</small></span><span>⌁<small>Progress</small></span><span>▱<small>Cash</small></span><span>⚙<small>Settings</small></span>
+      </nav>
+      <dialog id="sheet" aria-labelledby="sheet-title">
+        <header><h2 id="sheet-title"></h2><button id="close-sheet" class="quiet">Close</button></header>
+        <div id="sheet-content"></div>
+      </dialog>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

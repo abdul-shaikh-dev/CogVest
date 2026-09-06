@@ -1,0 +1,47 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible: "No holdings yet"
+- assertVisible: "Set up your portfolio"
+- takeScreenshot: .expo/holdings-278-empty
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-search-input
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- takeScreenshot: .expo/holdings-278-enlarged
+- tapOn:
+    id: holdings-insights-button
+- assertVisible: "Dominant position"
+- assertVisible:
+    id: holdings-panel-close
+- takeScreenshot: .expo/holdings-278-enlarged-insights
+- back
+- tapOn:
+    id: holdings-more-button
+- tapOn:
+    id: holdings-valuation-details-button
+- assertVisible: "Valuation details"
+- assertVisible:
+    id: holdings-panel-close
+- takeScreenshot: .expo/holdings-278-enlarged-details
+- back
+- tapOn:
+    id: holdings-search-input
+- inputText: "NoSuchHolding"
+- hideKeyboard
+- assertVisible: "No holdings match"
+- assertNotVisible: "No holdings yet"
+- takeScreenshot: .expo/holdings-278-no-results

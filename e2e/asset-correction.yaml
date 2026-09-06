@@ -64,6 +64,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "tab-holdings"
 - tapOn:
+    id: "holdings-more-button"
+- tapOn:
     id: "holdings-manage-assets-button"
 - assertVisible:
     id: "manage-assets-screen"
@@ -89,6 +91,8 @@ appId: com.abdulshaikh.cogvest
 - launchApp
 - tapOn:
     id: "tab-holdings"
+- tapOn:
+    id: "holdings-more-button"
 - tapOn:
     id: "holdings-manage-assets-button"
 - assertVisible: "Corrected Asset"
