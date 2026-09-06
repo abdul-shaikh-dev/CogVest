@@ -1,0 +1,43 @@
+# Opt-in visual evidence; preserve the synthetic long-history release dataset.
+# Run at normal size and 360dp / font_scale 1.3, restoring overrides afterward.
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-plot-region
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/longchart-narrow-portfolio
+- scrollUntilVisible:
+    element:
+      id: asset-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: asset-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: asset-trend-plot-region
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/longchart-narrow-assets
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/longchart-narrow-assets-axis

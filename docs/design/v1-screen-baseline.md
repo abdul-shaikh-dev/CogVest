@@ -311,6 +311,11 @@ Accepted chart direction:
   Native for these charts
 - x-axis labels should be sparse and chart-native: show the first month, a
   useful midpoint, and the latest month for longer ranges
+- Long histories must retain every point inside the measured plot. Native label
+  components must not inherit a single point's tiny spacing as their text width;
+  first/last labels align inward and multi-year ranges include the year. Renderer
+  geometry refreshes after layout changes without resetting month selection.
+  At enlarged font sizes, portfolio-summary groups stack instead of overlapping.
 - Monthly History details compare the selected month with the previous calendar month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
