@@ -304,7 +304,11 @@ function SelectedMonthPanel({
                 portfolioValue,
               )}. Invested ${formatCompactINR(
                 investedValue,
-              )}. ${formatSignedCompactINR(difference)} ${direction}.`
+              )}. ${formatSignedCompactINR(difference)} ${direction}. ${
+                differencePercentage === null
+                  ? "Percentage unavailable: invested value is zero"
+                  : `${formatPercentage(differencePercentage)} versus invested`
+              }.`
         }
         accessible
         accessibilityLiveRegion="polite"
@@ -366,12 +370,17 @@ function SelectedMonthPanel({
         maskWealthValues
           ? `${monthLabel}. Asset values hidden.`
           : `${monthLabel}. ${series
-              .map(
-                (item) =>
-                  `${item.label} ${formatCompactINR(
-                    item.values[selectedIndex] ?? 0,
-                  )}`,
-              )
+              .map((item) => {
+                const change = getSelectedChange(item.values, selectedIndex);
+                const changeLabel = selectedIndex === 0
+                  ? "First visible month; change unavailable"
+                  : change === null
+                    ? "Change unavailable: previous visible value is zero"
+                    : `${formatPercentage(change)} versus previous visible month`;
+                return `${item.label} ${formatCompactINR(
+                  item.values[selectedIndex] ?? 0,
+                )}. ${changeLabel}`;
+              })
               .join(". ")}.`
       }
       accessible
@@ -408,7 +417,9 @@ function SelectedMonthPanel({
                   variant="caption"
                 >
                   {change === null
-                    ? "First visible month"
+                    ? selectedIndex === 0
+                      ? "First visible month"
+                      : "Change unavailable"
                     : `${formatPercentage(change)} vs prior`}
                 </AppText>
               </View>

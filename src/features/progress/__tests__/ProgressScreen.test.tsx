@@ -630,6 +630,58 @@ describe("ProgressScreen", () => {
     ).toBeTruthy();
   });
 
+  it.each(["standard", "minimal"] as const)(
+    "includes visible chart percentages in %s accessible summaries",
+    (displayMode) => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      store.getState().updatePreferences({ displayMode });
+      store.getState().addMonthlySnapshot(aprilSnapshot);
+      store.getState().addMonthlySnapshot(maySnapshot);
+      const { getByTestId } = render(<ProgressScreen store={store} />);
+      expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
+        .toContain("+30.66% versus invested");
+      expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+        .toContain("+12.50% versus previous visible month");
+      expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+        .not.toContain("Cash");
+    },
+  );
+
+  it("announces negative changes and distinguishes zero baselines from the first month", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0 });
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      equityValue: 720000,
+      portfolioValue: 900000,
+    });
+    const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
+    expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
+      .toContain("-15.09% versus invested");
+    expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toContain("-10.00% versus previous visible month");
+    expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toContain("Change unavailable: previous visible value is zero");
+    expect(getByText("Change unavailable")).toBeTruthy();
+    fireEvent.press(getByTestId("asset-trend-previous-month"));
+    expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toContain("First visible month; change unavailable");
+  });
+
+  it("describes a zero invested baseline and keeps masked summaries free of performance data", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot({ ...maySnapshot, investedValue: 0 });
+    const { getByTestId } = render(<ProgressScreen store={store} />);
+    expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
+      .toContain("Percentage unavailable: invested value is zero");
+    fireEvent.press(getByTestId("progress-mask-toggle"));
+    expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
+      .toBe("May 2026. Portfolio values hidden.");
+    expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toBe("May 2026. Asset values hidden.");
+  });
+
   it("renders portfolio growth and asset momentum charts without cash in asset trends", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
