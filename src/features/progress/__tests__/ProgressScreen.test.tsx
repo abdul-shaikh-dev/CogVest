@@ -1007,6 +1007,9 @@ describe("ProgressScreen", () => {
     };
     const chartPointCount = (chart: { props: Record<string, any> }) =>
       chart.props.data?.length ?? chart.props.dataSet[0].data.length;
+    const initialRenderers = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
     const assertSpacingRelationship = (chart: { props: Record<string, any> }) => {
       expect(chart.props.width).toBeGreaterThanOrEqual(1);
       expect(chart.props.spacing).toBeGreaterThanOrEqual(0);
@@ -1028,6 +1031,8 @@ describe("ProgressScreen", () => {
     });
 
     expect(portfolioChart.props.width).toBe(assetChart.props.width);
+    expect(portfolioChart).not.toBe(initialRenderers[0]);
+    expect(assetChart).not.toBe(initialRenderers[1]);
     expect(portfolioChart.props.width).toBeGreaterThan(228);
     expect(portfolioChart.props.spacing).toBe(assetChart.props.spacing);
     assertSpacingRelationship(portfolioChart);
@@ -1045,6 +1050,42 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.spacing).toBe(0);
     assertSpacingRelationship(portfolioChart);
     assertSpacingRelationship(assetChart);
+  });
+
+  it.each([3, 12, 60, 120])("keeps all %i months and readable sparse labels inside the measured plot", (count) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    for (let index = 0; index < count; index++) {
+      const month = new Date(Date.UTC(2016, index, 1)).toISOString().slice(0, 7);
+      store.getState().addMonthlySnapshot(chartSnapshot(month, {
+        cryptoValue: 100000,
+        debtValue: 200000,
+        equityValue: index === count - 1 ? 8700000 : 700000 + index * 1000,
+        investedValue: 900000,
+        portfolioValue: index === count - 1 ? 9000000 : 1000000 + index * 1000,
+      }));
+    }
+    const { getByTestId, getAllByTestId } = render(<ProgressScreen store={store} />);
+    fireEvent.press(getByTestId("portfolio-monthly-chart-range-All"));
+    fireEvent.press(getByTestId("asset-monthly-chart-range-All"));
+    for (const width of [280, 400]) {
+      for (const prefix of ["portfolio", "asset"]) {
+        fireEvent(getByTestId(`${prefix}-trend-chart`, { includeHiddenElements: true }), "layout", {
+          nativeEvent: { layout: { width } },
+        });
+      }
+      for (const chart of getAllByTestId("gifted-line-chart", { includeHiddenElements: true })) {
+        const data = chart.props.data ?? chart.props.dataSet[0].data;
+        expect(data).toHaveLength(count);
+        const lastX = chart.props.initialSpacing + (count - 1) * chart.props.spacing;
+        expect(lastX + 6).toBeLessThan(chart.props.width);
+        expect(data.filter((item: { label: string }) => item.label)).toHaveLength(3);
+        const lastLabel = data[count - 1].labelComponent();
+        expect(lastLabel.props.style.width).toBeGreaterThan(50);
+        expect(lastLabel.props.align).toBe("right");
+        expect(data[0].labelComponent().props.align).toBe("left");
+        if (count > 12) expect(data[count - 1].label).toContain("\n");
+      }
+    }
   });
 
   it("disables chart animation when reduced motion is enabled", () => {

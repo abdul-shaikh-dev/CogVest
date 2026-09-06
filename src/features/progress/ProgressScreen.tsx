@@ -143,17 +143,46 @@ function toGiftedChartData(
   monthLabels: string[],
   showAxisLabels = true,
   selectedIndex?: number,
+  labelLayout?: { spacing: number; width: number; fontScale: number },
 ) {
   const total = series.values.length;
+  const spansYears = new Set(monthLabels.map((label) => label.split(" ")[1])).size > 1;
 
-  return series.values.map((value, index) => ({
-    dataPointRadius: index === selectedIndex ? 6 : 3,
-    label:
-      showAxisLabels && shouldShowAxisLabel(index, total)
-        ? formatChartAxisLabel(monthLabels[index] ?? "")
-        : "",
-    value,
-  }));
+  return series.values.map((value, index) => {
+    const showLabel = showAxisLabels && shouldShowAxisLabel(index, total);
+    const label = showLabel
+      ? spansYears
+        ? (monthLabels[index] ?? "").replace(" ", "\n")
+        : formatChartAxisLabel(monthLabels[index] ?? "")
+      : "";
+    const labelWidth = labelLayout
+      ? Math.min(72 * Math.max(1, labelLayout.fontScale), labelLayout.width / 3)
+      : 72;
+    return {
+      dataPointRadius: index === selectedIndex ? 6 : 3,
+      label,
+      // Gifted Charts otherwise constrains labels to one point's spacing.
+      ...(showLabel && labelLayout
+        ? {
+            labelComponent: () => (
+              <AppText
+                align={index === 0 ? "left" : index === total - 1 ? "right" : "center"}
+                color="secondary"
+                variant="caption"
+                style={{
+                  width: labelWidth,
+                  top: 4 + 44 * Math.max(0, labelLayout.fontScale - 1),
+                  left: labelLayout.spacing / 2 - (index === 0 ? 0 : index === total - 1 ? labelWidth : labelWidth / 2),
+                }}
+              >
+                {label}
+              </AppText>
+            ),
+          }
+        : {}),
+      value,
+    };
+  });
 }
 
 function getChartSpacing(pointCount: number, width: number) {
@@ -318,7 +347,10 @@ function SelectedMonthPanel({
         {maskWealthValues ? (
           <AppText color="secondary">Performance values hidden</AppText>
         ) : (
-          <View style={styles.portfolioSelectionContent}>
+          <View style={[
+            styles.portfolioSelectionContent,
+            fontScale > 1.15 ? { flexDirection: "column", alignItems: "stretch" } : null,
+          ]}>
             <View style={styles.gapOutcome}>
               <AppText
                 color={minimal ? "secondary" : undefined}
@@ -471,6 +503,10 @@ function TrendChart({
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const pointCount = series[0]?.values.length ?? 0;
   const spacingValue = getChartSpacing(pointCount, plotWidth);
+  // The renderer's reveal animation captures its initial width. Refresh that
+  // renderer on geometry changes, leaving this component's month state intact.
+  const rendererKey = `${plotWidth}:${pointCount}`;
+  const labelLayout = { spacing: spacingValue, width: plotWidth, fontScale };
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
@@ -522,6 +558,7 @@ function TrendChart({
         >
           {isPortfolioChart ? (
             <LineChart
+            key={`portfolio:${rendererKey}`}
             {...axisProps}
             adjustToWidth
             areaChart
@@ -534,7 +571,7 @@ function TrendChart({
               focusedSeries,
             )}
             curved
-            data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex)}
+            data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
             data2={toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
@@ -557,6 +594,8 @@ function TrendChart({
             strokeDashArray2={[6, 4]}
             xAxisColor={colors.border.subtle}
             xAxisLabelTextStyle={styles.axisText}
+            xAxisTextNumberOfLines={2}
+            xAxisLabelsHeight={Math.ceil(44 * Math.max(1, fontScale))}
             xAxisThickness={1}
             yAxisColor="transparent"
             yAxisTextStyle={styles.axisText}
@@ -564,12 +603,13 @@ function TrendChart({
             />
           ) : (
             <LineChart
+            key={`assets:${rendererKey}`}
             {...axisProps}
             adjustToWidth
             curved
             dataSet={series.map((item, index) => ({
               color: getDisplayedSeriesColor(item.label, focusedSeries),
-              data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex),
+              data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),
               dataPointsColor: getSeriesColor(item.label),
               dataPointsRadius: 3,
               thickness: 3,
@@ -583,6 +623,8 @@ function TrendChart({
             spacing={spacingValue}
             xAxisColor={colors.border.subtle}
             xAxisLabelTextStyle={styles.axisText}
+            xAxisTextNumberOfLines={2}
+            xAxisLabelsHeight={Math.ceil(44 * Math.max(1, fontScale))}
             xAxisThickness={1}
             yAxisColor="transparent"
             yAxisTextStyle={styles.axisText}
