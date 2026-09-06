@@ -48,6 +48,7 @@ export const typography = {
   sizes: {
     caption: 12,
     body: 15,
+    section: 17,
     title: 19,
     largeTitle: 30,
     hero: 38,

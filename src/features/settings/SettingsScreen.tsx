@@ -64,14 +64,6 @@ export function SettingsScreen({
     <ScreenContainer scroll testID="settings-screen">
       <View style={styles.content}>
         <ScreenHeader
-          action={
-            <View style={styles.localPill}>
-              <View style={styles.localDot} />
-              <AppText style={styles.localPillText} variant="caption" weight="bold">
-                Local only
-              </AppText>
-            </View>
-          }
           title="Settings"
           subtitle="Local-first controls"
         />
@@ -321,24 +313,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: interaction.minimumTouchTarget,
     paddingVertical: spacing.xs,
-  },
-  localDot: {
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-    height: 8,
-    width: 8,
-  },
-  localPill: {
-    alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  localPillText: {
-    color: colors.primary,
   },
   modeOption: {
     alignItems: "center",

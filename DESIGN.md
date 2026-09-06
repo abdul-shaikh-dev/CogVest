@@ -129,6 +129,12 @@ Suggested hierarchy:
 | Label | Field labels and metric labels |
 | Caption | Timestamps, helper text, stale data notes |
 
+Shared heading roles use `ScreenHeader` (30sp, bold) and `SectionHeader`
+(17sp/24sp, semibold). Section headings keep primary-text contrast and wrap;
+they should organize content rather than compete with hero values. Both expose
+heading accessibility semantics. Keep 19sp titles for focused panel/dialog titles,
+not every label or metric. Do not shrink body text to make a dense card fit.
+
 Numeric formatting:
 
 - Use INR formatting by default.
@@ -144,7 +150,10 @@ Components should feel tactile, quiet, and clearly Android-native.
 Cards:
 
 - Use spacious borderless cards with 16-20px radius.
-- Prefer `Surface` for standard cards and `Elevated Surface` for interactive or nested surfaces.
+- Prefer `Surface` for a coherent content group and `Elevated Surface` for inputs
+  or selected controls. Do not wrap each subsection in another card; use spacing
+  or a hairline separator. A selected radio row inside a settings group is a
+  control state, not another informational card.
 - Use consistent large radii that feel closer to continuous/squircle curves than sharp Material boxes.
 - Avoid coloured card shadows.
 - Avoid dense card grids unless the screen is explicitly analytical.
@@ -167,6 +176,9 @@ Inputs:
 Navigation:
 
 - Bottom tabs should be stable and predictable.
+- Keep full tab names visible. Tab labels alone may fit down to 85% within the
+  existing 150% scale cap to avoid ellipsis in the five-tab bar. Body text and
+  headings remain freely scalable; preserve full accessible names and targets.
 - Active tab uses green sparingly.
 - The Add action can be visually prominent, but not playful.
 - Avoid hidden critical navigation.
@@ -246,7 +258,7 @@ Recommended hierarchy:
 
 - Background: root app canvas.
 - Surface: default card.
-- Elevated Surface: inputs, selected panels, nested cards.
+- Elevated Surface: inputs and selected controls, not repetitive nested cards.
 - Separator: subtle internal grouping and scannability.
 - Green accent: selected/action state only.
 

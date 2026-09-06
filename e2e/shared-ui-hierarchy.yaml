@@ -1,0 +1,51 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- assertVisible:
+    id: tab-dashboard
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux15-dashboard
+- tapOn:
+    id: tab-holdings
+- assertVisible:
+    id: holdings-search-input
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux15-holdings
+- tapOn:
+    id: tab-progress
+- assertVisible:
+    id: progress-screen
+- assertVisible: "₹19.87L"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux15-progress
+- tapOn:
+    id: tab-cash
+- assertVisible:
+    id: cash-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux15-cash
+- tapOn:
+    id: tab-settings
+- assertVisible: "Local-first controls"
+- assertNotVisible: "Local only"
+- assertVisible:
+    id: value-mask-toggle
+    checked: false
+- assertVisible:
+    id: display-mode-standard
+    checked: true
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux15-settings

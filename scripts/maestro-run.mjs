@@ -39,6 +39,7 @@ const defaultFlows = [
   "e2e/persistence.yaml",
   "e2e/privacy-settings.yaml",
   "e2e/settings-preference-hierarchy.yaml",
+  "e2e/shared-ui-hierarchy.yaml",
   "e2e/workflow-exit-navigation.yaml",
 ];
 

@@ -7,6 +7,8 @@ import {
   EmptyState,
   IconButton,
   MaskedValue,
+  ScreenHeader,
+  SectionHeader,
   androidRipple,
   getAdaptiveLayoutMode,
   getPressedStateStyle,
@@ -18,6 +20,26 @@ import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
+  it("separates screen and section heading roles without reducing contrast", () => {
+    const { getByRole } = render(
+      <>
+        <ScreenHeader title="Settings" subtitle="Local-first controls" />
+        <SectionHeader title="Display" />
+      </>,
+    );
+    expect(getByRole("header", { name: "Settings" })).toHaveStyle({
+      fontSize: 30,
+      fontWeight: "700",
+    });
+    expect(getByRole("header", { name: "Display" })).toHaveStyle({
+      fontSize: 17,
+      lineHeight: 24,
+      fontWeight: "600",
+      color: colors.text.primary,
+    });
+    expect(getByRole("header", { name: "Display" }).props.numberOfLines).toBeUndefined();
+  });
+
   it("renders AppText with CogVest text colors", () => {
     const { getByText } = render(
       <AppText color="secondary">Local-first portfolio tracker</AppText>,
