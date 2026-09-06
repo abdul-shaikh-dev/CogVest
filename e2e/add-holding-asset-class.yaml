@@ -1,0 +1,88 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: toggle-manual-asset-entry
+- tapOn:
+    id: asset-input
+- inputText: "Sample ETF"
+- hideKeyboard
+- tapOn:
+    id: symbol-input
+- inputText: "SAMPLEETF"
+- tapOn:
+    id: ticker-input
+- inputText: "SAMPLEETF.NS"
+- hideKeyboard
+- tapOn:
+    id: continue-class-button
+- assertVisible: "Stocks"
+- assertVisible: "ETFs"
+- assertVisible: "Debt"
+- assertVisible: "Crypto"
+- tapOn: "ETFs"
+- assertVisible: "ETF"
+- assertVisible:
+    id: sector-not-applicable
+- tapOn: "Stocks"
+- assertVisible: "Stock"
+- assertVisible:
+    id: sector-type-picker
+- tapOn: "ETFs"
+- assertVisible: "ETF"
+- takeScreenshot: .expo/asset-class-280-etfs
+- scrollUntilVisible:
+    element:
+      id: continue-position-button
+    direction: DOWN
+- tapOn:
+    id: continue-position-button
+- tapOn:
+    id: quantity-input
+- inputText: "2"
+- tapOn:
+    id: average-cost-input
+- inputText: "90"
+- tapOn:
+    id: price-input
+- inputText: "100"
+- hideKeyboard
+- tapOn:
+    id: review-holding-button
+- scrollUntilVisible:
+    element:
+      id: save-holding-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: save-holding-button
+- assertVisible:
+    id: holding-save-complete
+- scrollUntilVisible:
+    element:
+      id: view-holding-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: view-holding-button
+- assertVisible: "Sample ETF"
+- assertVisible: "Invested ₹180"
+- assertVisible: "Equity · ETF · Diversified"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- assertVisible: "Sample ETF"
+- assertVisible: "Equity · ETF · Diversified"
+- assertVisible: "Invested ₹180"
+- takeScreenshot: .expo/asset-class-280-saved-etf

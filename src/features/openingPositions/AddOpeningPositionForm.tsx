@@ -661,9 +661,15 @@ export function AddOpeningPositionForm({
         <View style={styles.classRow}>
           {assetClasses.map((currentClass) => {
             const isSelected = assetClass === currentClass;
+            const choiceLabel = currentClass === "stock"
+              ? "Stocks"
+              : currentClass === "etf"
+                ? "ETFs"
+                : assetClassLabel(currentClass);
 
             return (
               <Pressable
+                accessibilityLabel={choiceLabel}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
                 key={currentClass}
@@ -681,7 +687,7 @@ export function AddOpeningPositionForm({
                   variant="caption"
                   weight="bold"
                 >
-                  {assetClassLabel(currentClass)}
+                  {choiceLabel}
                 </AppText>
               </Pressable>
             );

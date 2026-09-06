@@ -1,5 +1,11 @@
 import * as Haptics from "expo-haptics";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { BackHandler, StyleSheet } from "react-native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
@@ -43,6 +49,19 @@ function openManualAssetEntry(
   getByTestId: ReturnType<typeof render>["getByTestId"],
 ) {
   fireEvent.press(getByTestId("toggle-manual-asset-entry"));
+}
+
+function openManualConfirmDetails(
+  getByLabelText: ReturnType<typeof render>["getByLabelText"],
+  getByTestId: ReturnType<typeof render>["getByTestId"],
+  getByText: ReturnType<typeof render>["getByText"],
+) {
+  openManualAssetEntry(getByTestId);
+  fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+  fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+  fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+  fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+  fireEvent.press(getByText("Continue to confirm details"));
 }
 
 describe("AddOpeningPositionForm", () => {
@@ -180,6 +199,56 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("Asset name is required.")).toBeTruthy();
     expect(getByText("Symbol is required.")).toBeTruthy();
     expect(getByText("Ticker is required.")).toBeTruthy();
+  });
+
+  it("shows distinct Confirm details labels and selected state for every asset class", () => {
+    const { getByLabelText, getByTestId, getByText } = render(
+      <AddOpeningPositionForm store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+
+    for (const [assetClass, label] of [
+      ["stock", "Stocks"],
+      ["etf", "ETFs"],
+      ["debt", "Debt"],
+      ["crypto", "Crypto"],
+    ] as const) {
+      const chip = getByTestId(`asset-class-${assetClass}`);
+      expect(within(chip).getByText(label)).toBeTruthy();
+      expect(getByLabelText(label)).toBeTruthy();
+      expect(chip.props.accessibilityLabel).toBe(label);
+      expect(chip.props.accessibilityState).toEqual({
+        selected: assetClass === "stock",
+      });
+    }
+  });
+
+  it("resets incompatible metadata and exposes only valid stock and ETF instruments", () => {
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <AddOpeningPositionForm store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
+    );
+
+    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    selectOption(getByTestId, "sector-type", "energy");
+    expect(within(getByTestId("sector-type-picker")).getByText("Energy")).toBeTruthy();
+
+    fireEvent.press(getByTestId("asset-class-etf"));
+    expect(within(getByTestId("instrument-type-picker")).getByText("ETF")).toBeTruthy();
+    expect(queryByTestId("sector-type-picker")).toBeNull();
+    expect(getByTestId("sector-not-applicable")).toBeTruthy();
+
+    fireEvent.press(getByTestId("instrument-type-picker"));
+    expect(getByTestId("instrument-type-etf")).toBeTruthy();
+    expect(queryByTestId("instrument-type-stock")).toBeNull();
+    fireEvent.press(getByTestId("instrument-type-etf"));
+
+    fireEvent.press(getByTestId("asset-class-stock"));
+    expect(within(getByTestId("instrument-type-picker")).getByText("Stock")).toBeTruthy();
+    expect(within(getByTestId("sector-type-picker")).getByText("Unknown")).toBeTruthy();
+    fireEvent.press(getByTestId("instrument-type-picker"));
+    expect(getByTestId("instrument-type-stock")).toBeTruthy();
+    expect(queryByTestId("instrument-type-etf")).toBeNull();
   });
 
   it("caps and filters the saved asset list", async () => {
@@ -454,6 +523,69 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("view-holding-button")).toBeTruthy();
     expect(getByTestId("add-another-holding-button")).toBeTruthy();
   });
+
+  it.each([
+    {
+      assetClass: "stock" as const,
+      expectedSectorType: "energy" as const,
+      instrumentType: "stock" as const,
+    },
+    {
+      assetClass: "etf" as const,
+      expectedSectorType: "diversified" as const,
+      instrumentType: "etf" as const,
+    },
+  ])(
+    "persists the $assetClass class, instrument, and financial records",
+    async ({ assetClass, expectedSectorType, instrumentType }) => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      const { getByLabelText, getByTestId, getByText } = render(
+        <AddOpeningPositionForm store={store} />,
+      );
+
+      openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+      fireEvent.press(getByTestId(`asset-class-${assetClass}`));
+      selectOption(getByTestId, "instrument-type", instrumentType);
+      if (assetClass === "stock") {
+        selectOption(getByTestId, "sector-type", "energy");
+      }
+      fireEvent.press(getByText("Continue to position"));
+      fireEvent.changeText(getByLabelText("Quantity"), "25");
+      fireEvent.changeText(getByLabelText("Average cost"), "1450");
+      fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+      selectDate(getByTestId, "date-input", "2026-04-15");
+      fireEvent.press(getByText("Review and save"));
+      fireEvent.press(getByText("Save Holding"));
+
+      await waitFor(() => {
+        expect(store.getState().assets).toHaveLength(1);
+        expect(store.getState().openingPositions).toHaveLength(1);
+      });
+
+      const savedAsset = store.getState().assets[0]!;
+      const savedPosition = store.getState().openingPositions[0]!;
+      expect(savedAsset).toMatchObject({
+        assetClass,
+        exchange: "NSE",
+        instrumentType,
+        sectorType: expectedSectorType,
+      });
+      expect(savedPosition).toMatchObject({
+        assetId: savedAsset.id,
+        averageCostPrice: 1450,
+        date: "2026-04-15",
+        manualValuation: {
+          currency: "INR",
+          price: 1678.25,
+          provenance: "user",
+          source: "manual",
+        },
+        quantity: 25,
+      });
+      expect(store.getState().trades).toEqual([]);
+      expect(store.getState().quoteCache).toEqual({});
+    },
+  );
 
   it("persists metadata edits after selecting an existing saved asset", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
