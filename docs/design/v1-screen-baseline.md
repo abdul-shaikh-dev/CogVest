@@ -61,13 +61,24 @@ Dashboard answers the first five-second questions:
 
 Baseline structure:
 
-- local portfolio header with mask and refresh actions
+- local portfolio header naming current valuation, with mask and refresh actions
 - large `Portfolio Value` hero
 - total gain/loss context, invested value, P&L, and return
 - compact visual allocation card with an `Open Holdings` action
-- calm quote freshness card labelled `Quotes updated`
+- compact price freshness beside the hero, not a separate status card; an
+  accessible `Price details` disclosure contains coverage counts and saved-quote
+  movement. Stale/manual/missing prices and failed refreshes remain apparent
+  while collapsed. Holdings P&L, not daily movement, is the primary return.
 - compact next useful review action, such as `Open Progress` for month-end
   snapshot review when applicable
+
+Dashboard uses current records and available prices, including recorded cash and
+PPF balances; it must not label these values as the latest snapshot. Progress
+uses stored month-end values and may legitimately differ. Do not imply every
+price is live or attach a fresh timestamp merely because the screen was opened.
+Missing valuations remain pending and actionable even while masked. Cash-only
+and PPF-only portfolios must not show a fake market movement or a missing-price
+warning merely because no market holdings require quotes.
 
 The dashboard must not become a trading terminal. Avoid ticker feeds, noisy
 daily movers, dense mini-widgets, and fake market history.

@@ -4,6 +4,7 @@ import {
   render,
   waitFor,
   within,
+  type RenderAPI,
 } from "@testing-library/react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
@@ -90,6 +91,13 @@ describe("DashboardScreen", () => {
     );
 
     expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText("Price coverage needs attention")).toBeTruthy();
+    expect(queryByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
+    expect(queryByText("Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.")).toBeNull();
+    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
+    expect(getByTestId("dashboard-price-details")).toBeTruthy();
+    expect(getByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeTruthy();
+    expect(queryByText(/at saved quotes/u)).toBeNull();
     expect(getByText("Allocation unavailable")).toBeTruthy();
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
 
@@ -109,12 +117,16 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = render(
       <DashboardScreen store={store} onAddTrade={onAddTrade} />,
     );
 
     expect(getByTestId("dashboard-screen")).toBeTruthy();
     expect(getByTestId("add-trade-button")).toBeTruthy();
+    expect(getByText("No market prices needed")).toBeTruthy();
+    expect(queryByText("Cash and recorded PPF balances do not need market quotes.")).toBeNull();
+    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
+    expect(getByText("Cash and recorded PPF balances do not need market quotes.")).toBeTruthy();
     expect(getAllByText("₹0").length).toBeGreaterThan(0);
     expect(getByText("No allocation yet")).toBeTruthy();
     expect(
@@ -124,6 +136,88 @@ describe("DashboardScreen", () => {
     fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("toggles price basis and saved-quote movement through an accessible disclosure", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-05-16T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      dayChangePct: 10,
+      price: 150,
+      source: "yahoo",
+    });
+
+    const screen = render(
+      <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+    const toggle = screen.getByTestId("dashboard-price-details-toggle");
+
+    expect(toggle.props.accessibilityLabel).toBe("Price details. Prices up to date");
+    expect(toggle.props.accessibilityState).toEqual({ expanded: false });
+    expect(screen.getByText("Prices up to date")).toBeTruthy();
+    expect(screen.getByText("Details")).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
+    expect(screen.queryByText(/Current holdings, cash/u)).toBeNull();
+    expect(screen.queryByText(/Current 1 · Stale 0 · Manual 0 · Missing 0/u)).toBeNull();
+    expect(screen.queryByText(/at saved quotes/u)).toBeNull();
+
+    fireEvent.press(toggle);
+
+    expect(toggle.props.accessibilityState).toEqual({ expanded: true });
+    const details = within(screen.getByTestId("dashboard-price-details"));
+    expect(screen.getByText("Hide details")).toBeTruthy();
+    expect(
+      details.getByText(
+        "Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.",
+      ),
+    ).toBeTruthy();
+    expect(details.getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
+    expect(details.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
+    expect(
+      details.getByText(
+        "Saved-quote movement is not your portfolio return and may cover different price dates.",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.press(toggle);
+
+    expect(toggle.props.accessibilityState).toEqual({ expanded: false });
+    expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
+    expect(screen.queryByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeNull();
+    expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
+  });
+
+  it("labels a manual quote and keeps its count behind the disclosure", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-05-16T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      dayChangePct: 4,
+      price: 125,
+      source: "manual",
+    });
+
+    const screen = render(
+      <DashboardScreen
+        now={new Date("2026-05-16T10:05:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Using manual prices")).toBeTruthy();
+    expect(screen.queryByText("Current 0 · Stale 0 · Manual 1 · Missing 0")).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("Current 0 · Stale 0 · Manual 1 · Missing 0")).toBeTruthy();
   });
 
   it("offers resumable setup before the single-holding action", () => {
@@ -228,7 +322,7 @@ describe("DashboardScreen", () => {
       updated: [asset.id],
     });
 
-    const { getByLabelText, getByText } = render(
+    const screen = render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -236,18 +330,20 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    fireEvent.press(getByLabelText("Mask values"));
+    fireEvent.press(screen.getByLabelText("Mask values"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Refresh quotes"));
+      fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
       expect(refreshQuotes).toHaveBeenCalledTimes(1);
     });
-    expect(getByText("Prices up to date")).toBeTruthy();
-    expect(getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
+    expect(screen.getByText("Prices up to date")).toBeTruthy();
+    expect(screen.queryByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
   });
 
   it("describes failed refreshes as last-known prices", async () => {
@@ -269,7 +365,7 @@ describe("DashboardScreen", () => {
       updated: [],
     });
 
-    const { getByLabelText, getByText, queryByText } = render(
+    const screen = render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -278,20 +374,22 @@ describe("DashboardScreen", () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Refresh quotes"));
+      fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
       expect(
-        getByText("Refresh partially completed"),
+        screen.getByText("Refresh partially completed"),
       ).toBeTruthy();
     });
+    expect(screen.queryByText(/Current 0 · Stale 1/u)).toBeNull();
+    expandPriceDetails(screen);
     expect(
-      getByText(
+      screen.getByText(
         "Current 0 · Stale 1 · Manual 0 · Missing 0. 1 failed. Existing prices remain available.",
       ),
     ).toBeTruthy();
-    expect(queryByText(/Prices up to date/u)).toBeNull();
+    expect(screen.queryByText(/Prices up to date/u)).toBeNull();
   });
 
   it("does not promise cached prices when the first refresh fails", async () => {
@@ -305,7 +403,7 @@ describe("DashboardScreen", () => {
       updated: [],
     });
 
-    const { getByLabelText, getByText } = render(
+    const screen = render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -314,14 +412,15 @@ describe("DashboardScreen", () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Refresh quotes"));
+      fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
-      expect(getByText("Quote refresh failed")).toBeTruthy();
+      expect(screen.getByText("Quote refresh failed")).toBeTruthy();
     });
+    expandPriceDetails(screen);
     expect(
-      getByText(
+      screen.getByText(
         "Current 0 · Stale 0 · Manual 0 · Missing 1. 1 failed. No usable prices are available.",
       ),
     ).toBeTruthy();
@@ -341,16 +440,18 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText } = render(
+    const screen = render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         store={store}
       />,
     );
 
-    expect(getByText("Price coverage needs attention")).toBeTruthy();
+    expect(screen.getByText("Price coverage needs attention")).toBeTruthy();
+    expect(screen.queryByText("Current 1 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
+    expandPriceDetails(screen);
     expect(
-      getByText("Current 1 · Stale 0 · Manual 0 · Missing 1"),
+      screen.getByText("Current 1 · Stale 0 · Manual 0 · Missing 1"),
     ).toBeTruthy();
   });
 
@@ -413,34 +514,37 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByText, queryByTestId, queryByText } = render(
+    const screen = render(
       <DashboardScreen store={store} />,
     );
 
-    expect(getByText("₹330")).toBeTruthy();
-    expect(getByText("Portfolio value")).toBeTruthy();
-    expect(getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
-    expect(getByText("Allocation")).toBeTruthy();
-    expect(getByText("Equity")).toBeTruthy();
-    expect(getByText("Open Holdings")).toBeTruthy();
-    expect(getByText("Cash")).toBeTruthy();
-    expect(getByText("Using saved prices")).toBeTruthy();
-    expect(getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
-    expect(getByText("Month-end snapshot")).toBeTruthy();
-    expect(getByText("Open Progress")).toBeTruthy();
-    expect(getByText("This Month")).toBeTruthy();
-    expect(getByText("Cash change")).toBeTruthy();
-    expect(getByText("Not enough data")).toBeTruthy();
-    expect(queryByText("Cash balance")).toBeNull();
-    expect(queryByText("Holdings")).toBeNull();
-    expect(queryByText("Quote Status")).toBeNull();
-    expect(queryByText("Portfolio Rollups")).toBeNull();
-    expect(queryByText("View details")).toBeNull();
-    expect(queryByTestId("add-trade-button")).toBeNull();
-    expect(getByText("Conviction data needs more trades")).toBeTruthy();
-    expect(getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
-    expect(queryByText(/LTCG/i)).toBeNull();
-    expect(queryByText(/Minimal Mode/i)).toBeNull();
+    expect(screen.getByText("₹330")).toBeTruthy();
+    expect(screen.getByText("Portfolio value")).toBeTruthy();
+    expect(screen.getByText("Allocation")).toBeTruthy();
+    expect(screen.getByText("Equity")).toBeTruthy();
+    expect(screen.getByText("Open Holdings")).toBeTruthy();
+    expect(screen.getByText("Cash")).toBeTruthy();
+    expect(screen.getByText("Using older saved prices")).toBeTruthy();
+    expect(screen.queryByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeNull();
+    expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
+    expect(screen.getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
+    expect(screen.getByText("Month-end snapshot")).toBeTruthy();
+    expect(screen.getByText("Open Progress")).toBeTruthy();
+    expect(screen.getByText("This Month")).toBeTruthy();
+    expect(screen.getByText("Cash change")).toBeTruthy();
+    expect(screen.getByText("Not enough data")).toBeTruthy();
+    expect(screen.queryByText("Cash balance")).toBeNull();
+    expect(screen.queryByText("Holdings")).toBeNull();
+    expect(screen.queryByText("Quote Status")).toBeNull();
+    expect(screen.queryByText("Portfolio Rollups")).toBeNull();
+    expect(screen.queryByText("View details")).toBeNull();
+    expect(screen.queryByTestId("add-trade-button")).toBeNull();
+    expect(screen.getByText("Conviction data needs more trades")).toBeTruthy();
+    expect(screen.getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
+    expect(screen.queryByText(/LTCG/i)).toBeNull();
+    expect(screen.queryByText(/Minimal Mode/i)).toBeNull();
   });
 
   it("keeps essential portfolio evidence while removing optional commentary in Minimal mode", () => {
@@ -457,17 +561,19 @@ describe("DashboardScreen", () => {
     });
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getByText, queryByText } = render(
+    const screen = render(
       <DashboardScreen store={store} />,
     );
 
-    expect(getByText("Portfolio value")).toBeTruthy();
-    expect(getByText("Holdings P&L")).toBeTruthy();
-    expect(getByText("Allocation")).toBeTruthy();
-    expect(getByText("Month-end snapshot")).toBeTruthy();
-    expect(queryByText("This Month")).toBeNull();
-    expect(queryByText(/Conviction data/u)).toBeNull();
-    expect(getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
+    expect(screen.getByText("Portfolio value")).toBeTruthy();
+    expect(screen.getByText("Holdings P&L")).toBeTruthy();
+    expect(screen.getByText("Allocation")).toBeTruthy();
+    expect(screen.getByText("Month-end snapshot")).toBeTruthy();
+    expect(screen.queryByText("This Month")).toBeNull();
+    expect(screen.queryByText(/Conviction data/u)).toBeNull();
+    expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
   });
 
   it.each(["standard", "minimal"] as const)("hides the daily monetary change in masked %s mode", (displayMode) => {
@@ -484,11 +590,13 @@ describe("DashboardScreen", () => {
     });
     store.getState().updatePreferences({ displayMode, maskWealthValues: true });
 
-    const { getByText, queryByText } = render(<DashboardScreen store={store} />);
+    const screen = render(<DashboardScreen store={store} />);
 
-    expect(getByText("+10.00% at saved quotes")).toBeTruthy();
-    expect(queryByText(/today/u)).toBeNull();
-    expect(queryByText(/27\.27/u)).toBeNull();
+    expect(screen.queryByText("+10.00% at saved quotes")).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("+10.00% at saved quotes")).toBeTruthy();
+    expect(screen.queryByText(/today/u)).toBeNull();
+    expect(screen.queryByText(/27\.27/u)).toBeNull();
   });
 
   it("shows a negative cash liability and reconciles it to net portfolio value", () => {
@@ -591,18 +699,23 @@ describe("DashboardScreen", () => {
       type: "withdrawal",
     });
 
-    const { getAllByText, getByText, queryByText } = render(
+    const screen = render(
       <DashboardScreen
         now={new Date("2026-04-22T10:05:00.000Z")}
         store={store}
       />,
     );
 
-    expect(getByText("Negative cash balance")).toBeTruthy();
-    expect(getByText("Portfolio composition")).toBeTruthy();
-    expect(getByText("Cash")).toBeTruthy();
-    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(4);
-    expect(queryByText("-₹500")).toBeNull();
+    expect(screen.getByText("Negative cash balance")).toBeTruthy();
+    expect(screen.getByText("Portfolio composition")).toBeTruthy();
+    expect(screen.getByText("Cash")).toBeTruthy();
+    expect(screen.getByText("No market prices needed")).toBeTruthy();
+    expect(screen.queryByText(/at saved quotes/u)).toBeNull();
+    expandPriceDetails(screen);
+    expect(screen.getByText("Cash and recorded PPF balances do not need market quotes.")).toBeTruthy();
+    expect(screen.queryByText(/at saved quotes/u)).toBeNull();
+    expect(screen.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText("-₹500")).toBeNull();
   });
 
   it("groups stock and ETF allocation into one Equity row for Dashboard display", () => {
@@ -660,10 +773,13 @@ describe("DashboardScreen", () => {
 
     const heroIndex = indexOfText(testIds, "dashboard-portfolio-hero");
     const metricsIndex = indexOfText(testIds, "dashboard-top-metrics");
+    const quoteIndex = indexOfText(testIds, "dashboard-quote-card");
     const allocationIndex = indexOfText(testIds, "dashboard-allocation-card");
     const supportIndex = indexOfText(testIds, "dashboard-support-card");
 
     expect(metricsIndex).toBeGreaterThan(heroIndex);
+    expect(quoteIndex).toBeGreaterThan(metricsIndex);
+    expect(quoteIndex).toBeLessThan(allocationIndex);
     expect(allocationIndex).toBeGreaterThan(metricsIndex);
     expect(supportIndex).toBeGreaterThan(allocationIndex);
   });
@@ -729,6 +845,18 @@ function collectTestIds(node: unknown): string[] {
     typeof candidate.props?.testID === "string" ? [candidate.props.testID] : [];
 
   return [...ownTestId, ...collectTestIds(candidate.children)];
+}
+
+function expandPriceDetails(screen: RenderAPI) {
+  const toggle = screen.getByTestId("dashboard-price-details-toggle");
+
+  expect(toggle.props.accessibilityState).toEqual({ expanded: false });
+  expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
+
+  fireEvent.press(toggle);
+
+  expect(toggle.props.accessibilityState).toEqual({ expanded: true });
+  expect(screen.getByTestId("dashboard-price-details")).toBeTruthy();
 }
 
 function indexOfText(textNodes: string[], expectedText: string) {

@@ -1,0 +1,48 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Local portfolio.*current valuation"
+- assertVisible: "Holdings P&L"
+- assertVisible: "₹15.9L"
+- assertVisible: "₹12.38L"
+- assertVisible: "+24.44%"
+- assertVisible: "Using older and manual prices"
+- assertNotVisible:
+    id: dashboard-price-details
+- takeScreenshot: .expo/ux13-dashboard
+- tapOn:
+    id: dashboard-price-details-toggle
+- assertVisible:
+    id: dashboard-price-details
+- scrollUntilVisible:
+    element:
+      text: "Current holdings, cash and recorded PPF balances.*"
+    direction: DOWN
+- assertVisible: "Current holdings, cash and recorded PPF balances.*Not a month-end snapshot."
+- takeScreenshot: .expo/ux13-price-details
+- tapOn:
+    id: dashboard-price-details-toggle
+- assertNotVisible:
+    id: dashboard-price-details
+- scrollUntilVisible:
+    element:
+      id: dashboard-open-progress
+    direction: DOWN
+- assertVisible: "Progress shows stored month-end values.*"
+- takeScreenshot: .expo/ux13-progress-context
+- tapOn:
+    id: dashboard-open-progress
+- extendedWaitUntil:
+    visible: "Monthly Progress"
+    timeout: 30000
