@@ -41,7 +41,8 @@ describe("SettingsScreen", () => {
       checked: false,
     });
     expect(getByText("Settings")).toBeTruthy();
-    expect(getByText("Local only")).toBeTruthy();
+    expect(getByText("Local-first controls")).toBeTruthy();
+    expect(queryByText("Local only")).toBeNull();
     expect(getByText("Privacy & storage")).toBeTruthy();
     expect(queryByTestId("privacy-storage-details")).toBeNull();
     expect(queryByText("Android backup")).toBeNull();

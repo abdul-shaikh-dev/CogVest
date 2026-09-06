@@ -116,7 +116,7 @@ export function ScreenHeader({
       <View style={styles.headerIdentity}>
         {leading ? <View style={styles.headerLeading}>{leading}</View> : null}
         <View style={styles.headerCopy}>
-          <AppText variant="largeTitle" weight="bold">
+          <AppText accessibilityRole="header" variant="largeTitle" weight="bold">
             {title}
           </AppText>
           <AppText color="secondary">{subtitle}</AppText>
@@ -254,7 +254,7 @@ export function SectionHeader({
     <View
       style={[styles.sectionHeader, shouldStack && styles.sectionHeaderStacked]}
     >
-      <AppText variant="title" weight="bold">
+      <AppText accessibilityRole="header" variant="section" weight="medium">
         {title}
       </AppText>
       {actionLabel ? (

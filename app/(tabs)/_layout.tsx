@@ -47,7 +47,9 @@ function TabIcon({
 function TabLabel({ color, routeName }: { color: string; routeName: string }) {
   return (
     <AppText
+      adjustsFontSizeToFit
       maxFontSizeMultiplier={1.5}
+      minimumFontScale={0.85}
       numberOfLines={1}
       style={[styles.tabLabel, { color }]}
     >

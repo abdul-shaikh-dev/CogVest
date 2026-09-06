@@ -1,4 +1,5 @@
 import React from "react";
+import { render } from "@testing-library/react-native";
 
 import TabLayout from "../../app/(tabs)/_layout";
 
@@ -61,6 +62,18 @@ function collectScreens(node: unknown): TestElement[] {
 }
 
 describe("TabLayout", () => {
+  it("configures bounded fitting without abbreviating the Dashboard label", () => {
+    const layout = TabLayout();
+    const options = layout.props.screenOptions({ route: { name: "dashboard" } });
+    const { getByText } = render(options.tabBarLabel({ color: "#98989D" }));
+    expect(getByText("Dashboard").props).toMatchObject({
+      adjustsFontSizeToFit: true,
+      maxFontSizeMultiplier: 1.5,
+      minimumFontScale: 0.85,
+      numberOfLines: 1,
+    });
+  });
+
   it("registers Progress as the tab route name with stable automation ID", () => {
     const layout = TabLayout();
     const screens = collectScreens(layout);

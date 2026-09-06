@@ -383,6 +383,7 @@ Settings should build trust.
 
 Baseline groups:
 
+- Retain the local-first subtitle, without a duplicate Local only header badge.
 - Working preferences first: value masking with honest amount-only scope and
   Standard/Minimal display choices. Checked states must be accessible.
 - Compact Privacy & storage disclosure: no account/cloud sync/analytics summary;
