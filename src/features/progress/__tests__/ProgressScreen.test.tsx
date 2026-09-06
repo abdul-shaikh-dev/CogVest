@@ -11,6 +11,15 @@ jest.mock("@/src/hooks", () => ({
   useReducedMotionPreference: jest.fn(() => false),
 }));
 
+jest.mock("react-native-safe-area-context", () => {
+  const { View } = require("react-native");
+
+  return {
+    SafeAreaView: View,
+    useSafeAreaInsets: jest.fn(() => ({ bottom: 0, left: 0, right: 0, top: 0 })),
+  };
+});
+
 const aprilSnapshot: MonthlySnapshot = {
   cashValue: 120000,
   cryptoValue: 40000,
@@ -273,7 +282,7 @@ describe("ProgressScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
 
-    const { findByText, queryByTestId } = render(
+    const { findByText, getByLabelText, queryByTestId } = render(
       <ProgressScreen
         now={new Date("2026-08-02T10:00:00.000Z")}
         store={store}
@@ -281,6 +290,7 @@ describe("ProgressScreen", () => {
     );
 
     expect(await findByText("Month-end snapshot")).toBeTruthy();
+    expect(getByLabelText("Snapshot status and review")).toBeTruthy();
     expect(queryByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
@@ -305,14 +315,21 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText, queryByText } = render(<ProgressScreen store={store} />);
+    const { findByText, getByLabelText, getByText, queryByText } = render(
+      <ProgressScreen store={store} />,
+    );
 
+    expect(queryByText(/Estimated prices remain/u)).toBeNull();
+    fireEvent.press(getByLabelText("Snapshot status and review"));
     expect(
       await findByText(
         "Estimated prices remain for May 2026. Review if you have better month-end values.",
       ),
     ).toBeTruthy();
+    expect(getByText("Close snapshot status")).toBeTruthy();
     expect(queryByText(/provisional|historical|fallback/i)).toBeNull();
+    fireEvent.press(getByText("Close snapshot status"));
+    expect(queryByText(/Estimated prices remain/u)).toBeNull();
   });
 
   it("identifies confirmed historical month-end prices", async () => {
@@ -335,8 +352,9 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText } = render(<ProgressScreen store={store} />);
+    const { findByText, getByLabelText } = render(<ProgressScreen store={store} />);
 
+    fireEvent.press(getByLabelText("Snapshot status and review"));
     expect(await findByText("Month-end prices confirmed.")).toBeTruthy();
   });
 
@@ -377,8 +395,12 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText, queryByText } = render(<ProgressScreen store={store} />);
+    const { findByText, getByLabelText, queryByText } = render(
+      <ProgressScreen store={store} />,
+    );
 
+    expect(queryByText(/Estimated prices remain/u)).toBeNull();
+    fireEvent.press(getByLabelText("Snapshot status and review"));
     expect(
       await findByText(
         "Estimated prices remain for April 2026. Review if you have better month-end values.",
@@ -394,6 +416,7 @@ describe("ProgressScreen", () => {
       <ProgressScreen onReviewSnapshot={onReviewSnapshot} store={store} />,
     );
 
+    fireEvent.press(getByLabelText("Snapshot status and review"));
     fireEvent.press(getByLabelText("Review month-end snapshot"));
 
     expect(onReviewSnapshot).toHaveBeenCalledTimes(1);
@@ -493,26 +516,33 @@ describe("ProgressScreen", () => {
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
-  it("renders contribution-adjusted performance and compact snapshot history", () => {
+  it("renders the monthly answer and monthly history disclosure", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
+    const monthlyAnswer = getByTestId("progress-monthly-answer");
+    expect(within(monthlyAnswer).getByText("₹13.85L")).toBeTruthy();
+    expect(within(monthlyAnswer).getByText("+₹65K")).toBeTruthy();
+    expect(within(monthlyAnswer).getByText("₹60K")).toBeTruthy();
+    expect(within(monthlyAnswer).queryByText("Net contribution")).toBeNull();
+    expect(getByText("Monthly History")).toBeTruthy();
+    expect(queryByText("Snapshot history")).toBeNull();
+    expect(queryByTestId("selected-snapshot-summary")).toBeNull();
+
+    fireEvent.press(getByTestId("open-monthly-history"));
+    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+
     expect(getAllByText("₹13.85L").length).toBeGreaterThanOrEqual(2);
-    expect(getByText("+₹65K")).toBeTruthy();
-    expect(getByText("+₹60K")).toBeTruthy();
-    expect(getByText("₹60K")).toBeTruthy();
-    expect(getByText("Snapshot history")).toBeTruthy();
-    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
-      "May 2026",
-    );
+    expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getAllByText("Equity").length).toBeGreaterThan(0);
     expect(getAllByText("₹8.8L").length).toBeGreaterThan(0);
-    expect(getByText("Up 10.00%")).toBeTruthy();
+    expect(getAllByText(/\+10\.00%/u).length).toBeGreaterThan(0);
+    expect(getByText("Net contribution")).toBeTruthy();
     expect(getByText("May close")).toBeTruthy();
   });
 
@@ -524,34 +554,68 @@ describe("ProgressScreen", () => {
       performanceBasis: undefined,
     });
 
-    const { getAllByText, getByText } = render(
+    const { getAllByText, getByTestId, getByText } = render(
       <ProgressScreen store={store} />,
     );
 
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
-    expect(getByText("Snapshot history")).toBeTruthy();
+    expect(getByText("Monthly History")).toBeTruthy();
+    fireEvent.press(getByTestId("open-monthly-history"));
+    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
   });
 
-  it("shows one selected snapshot while keeping older months available", () => {
+  it("keeps snapshot detail unmounted until opened and returns to the history overview", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByTestId, queryByTestId } = render(<ProgressScreen store={store} />);
+
+    expect(queryByTestId("selected-snapshot-summary")).toBeNull();
+
+    fireEvent.press(getByTestId("open-monthly-history"));
+    expect(queryByTestId("selected-snapshot-summary")).toBeNull();
+
+    fireEvent.press(getByTestId("snapshot-month-2026-04"));
+
+    expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
+    expect(getByTestId("history-back")).toBeTruthy();
+    fireEvent.press(getByTestId("history-back"));
+
+    expect(queryByTestId("selected-snapshot-summary")).toBeNull();
+    expect(getByTestId("snapshot-month-2026-04")).toBeTruthy();
+  });
+
+  it("changes only the top monthly answer when its summary month changes", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
     const { getByTestId } = render(<ProgressScreen store={store} />);
+    const monthlyAnswer = getByTestId("progress-monthly-answer");
 
-    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
-      "May 2026",
-    );
+    expect(within(monthlyAnswer).getByText("₹13.85L")).toBeTruthy();
+    expect(
+      getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel,
+    ).toContain("May 2026");
+    expect(
+      getByTestId("asset-trend-selected-panel").props.accessibilityLabel,
+    ).toContain("May 2026");
 
-    fireEvent.press(getByTestId("snapshot-month-2026-04"));
+    fireEvent.press(getByTestId("progress-summary-month"));
+    fireEvent.press(getByTestId("progress-summary-month-2026-04"));
 
-    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
-      "April 2026",
-    );
-    expect(getByTestId("snapshot-month-2026-04").props.accessibilityState).toEqual({
-      selected: true,
-    });
+    expect(within(monthlyAnswer).getByText("₹12.6L")).toBeTruthy();
+    expect(within(monthlyAnswer).getByText("₹50K")).toBeTruthy();
+    expect(
+      getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel,
+    ).toContain("May 2026");
+    expect(
+      getByTestId("asset-trend-selected-panel").props.accessibilityLabel,
+    ).toContain("May 2026");
   });
 
   it("shows an insufficient chart-history state until two snapshots exist", () => {
@@ -587,14 +651,12 @@ describe("ProgressScreen", () => {
     expect(getByText("Absolute value trend - cash excluded")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
-    expect(getByText("May 2026: Crypto +12.50%")).toBeTruthy();
+    expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(getByTestId("portfolio-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("asset-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
-    expect(getByTestId("asset-latest-summary")).toHaveTextContent(
-      /Latest in range: May 2026 vs Apr 2026/u,
-    );
+    expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(
       getByTestId("portfolio-trend-chart", { includeHiddenElements: true })
         .props.pointerEvents,
@@ -636,7 +698,7 @@ describe("ProgressScreen", () => {
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(getByText("Asset Momentum")).toBeTruthy();
-    expect(getByTestId("snapshot-history-card")).toBeTruthy();
+    expect(getByTestId("monthly-history-panel")).toBeTruthy();
     expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
@@ -649,7 +711,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(marchSnapshot);
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, queryByTestId, queryByText } = render(
       <ProgressScreen store={store} />,
     );
 
@@ -683,10 +745,8 @@ describe("ProgressScreen", () => {
     expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
       "May 2026",
     );
-    expect(getByText("May 2026: Crypto +12.50%")).toBeTruthy();
-    expect(getByTestId("asset-latest-summary")).toHaveTextContent(
-      /Latest in range: May 2026 vs Apr 2026/u,
-    );
+    expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
+    expect(queryByTestId("asset-latest-summary")).toBeNull();
 
     fireEvent.press(button("asset-trend-previous-month"));
 
@@ -750,12 +810,16 @@ describe("ProgressScreen", () => {
     expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
     expect(queryByText("₹20L")).toBeNull();
     expect(queryByText("₹13,85,000.00")).toBeNull();
-    expect(getAllByText("Performance values hidden").length).toBeGreaterThan(0);
+    expect(
+      within(getByTestId("progress-monthly-answer")).getAllByText("₹••••").length,
+    ).toBeGreaterThanOrEqual(3);
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
-    expect(getByTestId("selected-snapshot-summary").props.accessibilityLabel).toContain(
-      "Portfolio hidden. Change hidden",
-    );
+    expect(queryByTestId("selected-snapshot-summary")).toBeNull();
+    fireEvent.press(getByTestId("open-monthly-history"));
+    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
+    expect(getAllByText("Hidden").length).toBeGreaterThan(0);
     expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
     expect(assetChart.props.formatYLabel("2000000")).toBe("₹••••");
   });

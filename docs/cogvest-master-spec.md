@@ -333,8 +333,11 @@ silent merge or overwrite. The final review shows aggregate invested value,
 current value, P&L, pending valuations, and a direct path to Dashboard.
 
 Monthly Progress owns statement-style progress: `Portfolio Growth`,
-`Asset Momentum`, `Monthly Change Breakdown`, month selection, and a compact
-snapshot CTA.
+`Asset Momentum`, a dated monthly answer, and compact snapshot status with
+optional correction. `Monthly History` opens a newest-first yearly overview;
+each month opens a dedicated breakdown, with Back restoring the history
+position. Detailed interaction and accessibility rules live in the screen
+baseline (#275/#277).
 
 Cash Ledger owns deployable capital and cash movement.
 

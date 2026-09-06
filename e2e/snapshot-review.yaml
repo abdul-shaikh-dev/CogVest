@@ -8,6 +8,7 @@ appId: com.abdulshaikh.cogvest
     id: "tab-progress"
 - assertVisible:
     id: "progress-screen"
+- tapOn: "Snapshot status and review"
 - tapOn: "Review month-end snapshot"
 - assertVisible:
     id: "review-snapshot-screen"

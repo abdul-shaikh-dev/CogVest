@@ -2,7 +2,10 @@
 
 Issue: [#275](https://github.com/abdul-shaikh-dev/CogVest/issues/275).
 Baseline: merged PR #274, commit `54a312a`.
-Status: **proposal awaiting user design approval**, not the production screen.
+Status: **user-approved design**, including dedicated month details and
+newest-first history. Native implementation is tracked in
+[#277](https://github.com/abdul-shaikh-dev/CogVest/issues/277); this HTML remains a
+synthetic design reference, not a financial implementation.
 
 ## Run
 
@@ -22,7 +25,7 @@ with stdout/stderr redirected to `.expo/`, then verify the URL with
 only that owned process when the preview is no longer needed. Do not kill an
 unknown process occupying the port.
 
-## Proposed Reading Order
+## Approved Reading Order
 
 1. A dated month-end portfolio value, market change and monthly investment.
 2. One compact automatic/estimated snapshot status, with details on demand.
@@ -94,10 +97,11 @@ remains separate; this proposal does not create a mandatory monthly save step.
 Estimated, incomplete and failed automation states must keep actionable recovery
 paths in production; the preview status dialog is explanatory only.
 
-The automatic snapshot status and top summary remain visible even when details
-are collapsed. No data storage, migrations, dependency or app-code edits belong
-to this design-only change. Approval precedes implementation and canonical
-screen-baseline replacement.
+The automatic snapshot status and top summary remain visible when details are
+closed. The approved native implementation in #277 updates the canonical screen
+baseline without changing storage, migrations, providers, or dependencies.
+Native custom ranges retain the existing inline form rather than copying the
+HTML dialog; fields stack to remain usable with enlarged text.
 
 ## Verification
 
@@ -116,12 +120,13 @@ They are not visual browser or Android tests.
 CSS, JavaScript and the local font. `npm run test:verify` passed: typecheck,
 96 Jest suites / 964 tests, and Expo Doctor 17/17 checks.
 
-Browser visual QA is pending: this session exposed no available browser through
-the computer-use tools. Before design approval, inspect at 360px and 412px with
+Browser control was unavailable; the user approved the preview and explicitly
+chose visual verification on the freshly installed Android APK instead. Inspect
+the implementation at normal and 360dp widths with
 normal/130% text, both charts, Monthly History, keyboard/dialog dismissal and each
 preview state. The workbench reports the proposed scroll height but no measured
-before/after improvement is claimed yet. No APK was built or tested for this
-HTML-only proposal.
+before/after improvement is claimed by this HTML. Native evidence belongs in
+`docs/testing/progress-reading-order-evidence.md`.
 
 Ionicons font is copied from the existing Expo vector-icons dependency; license
 is retained in `ICON-LICENSE`. No external font requests are made.
