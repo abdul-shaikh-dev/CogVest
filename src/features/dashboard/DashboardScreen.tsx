@@ -121,8 +121,7 @@ function toDisplayAllocation(
             )
           : null,
       value: normalizeMoney(values[assetClass]),
-    }))
-    .filter((item) => item.value !== 0);
+    }));
 }
 
 function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
@@ -183,7 +182,11 @@ export function DashboardScreen({
   const positiveAllocationTotal = normalizeMoney(
     sumFinancialValues(positiveAllocation.map((item) => item.value)),
   );
-  const hasAllocation = displayAllocation.length > 0;
+  const hasAllocation = displayAllocation.some((item) => item.value !== 0);
+  const largestAllocation = positiveAllocation.reduce<DisplayAllocationItem | undefined>(
+    (largest, item) => !largest || item.value > largest.value ? item : largest,
+    undefined,
+  );
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
   const totalInvested = dashboard.rollupTotals.totalInvested;
   const totalPnL = dashboard.rollupTotals.pnl;
@@ -521,15 +524,21 @@ export function DashboardScreen({
               </AppText>
             ) : (
               <View style={styles.allocationSummary}>
+                {largestAllocation && largestAllocation.percentage !== null ? (
+                  <AppText variant="body" weight="medium">
+                    {getDisplayAllocationLabel(largestAllocation.assetClass)} makes up {largestAllocation.percentage.toFixed(1)}%
+                  </AppText>
+                ) : null}
                 <View
                   style={styles.allocationVisual}
                   testID="dashboard-allocation-visual"
                 >
-                  {positiveAllocation.map((item) => (
+                  {positiveAllocation.map((item, index) => (
                     <View
                       key={item.assetClass}
                       style={[
                         styles.allocationSegment,
+                        index > 0 && styles.allocationSegmentSeparator,
                         {
                           backgroundColor: getAllocationColor(item.assetClass),
                           width: getAllocationWidth(
@@ -545,29 +554,26 @@ export function DashboardScreen({
             )}
             <View style={styles.allocationLegend}>
               {displayAllocation.map((item) => (
-                <View key={item.assetClass} style={styles.allocationLegendRow}>
+                <View key={item.assetClass} testID={`dashboard-allocation-${item.assetClass}`} style={[
+                  styles.allocationLegendRow,
+                  adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked,
+                ]}>
                   <View style={styles.allocationLegendLabel}>
-                    <View
-                      style={[
-                        styles.allocationDot,
-                        { backgroundColor: getAllocationColor(item.assetClass) },
-                      ]}
-                    />
-                    <AppText color="secondary" variant="caption">
+                    <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass} size={20} />
+                    <AppText variant="body">
                       {getDisplayAllocationLabel(item.assetClass)}
                     </AppText>
                   </View>
                   <View style={styles.allocationLegendValue}>
                     {item.percentage !== null ? (
-                      <AppText color="secondary" variant="caption">
-                        {formatUnsignedPercentage(item.percentage)} ·
+                      <AppText style={styles.allocationPercentage} weight="bold" variant="body">
+                        {formatUnsignedPercentage(item.percentage)}
                       </AppText>
                     ) : null}
                     <MaskedValue
-                      adjustsFontSizeToFit
+                      color="secondary"
                       masked={dashboard.maskWealthValues}
-                      minimumFontScale={0.75}
-                      numberOfLines={1}
+                      style={styles.allocationAmount}
                       value={formatCompactINR(item.value)}
                       variant="caption"
                     />
@@ -799,13 +805,8 @@ const styles = StyleSheet.create({
   allocationTitle: {
     flexShrink: 1,
   },
-  allocationDot: {
-    borderRadius: radii.pill,
-    height: 9,
-    width: 9,
-  },
   allocationLegend: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   allocationLegendLabel: {
     alignItems: "center",
@@ -818,15 +819,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "space-between",
+    minHeight: 40,
   },
   allocationLegendValue: {
     alignItems: "center",
     flexDirection: "row",
-    flexShrink: 1,
-    gap: spacing.xs,
+    gap: spacing.md,
+  },
+  allocationPercentage: {
+    minWidth: 72,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"],
+  },
+  allocationAmount: {
+    minWidth: 80,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"],
   },
   allocationSegment: {
-    minWidth: 2,
+    minWidth: 0,
+  },
+  allocationSegmentSeparator: {
+    borderLeftWidth: 1,
+    borderLeftColor: colors.surface.card,
   },
   allocationSummary: {
     gap: spacing.sm,
@@ -835,7 +850,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
     flexDirection: "row",
-    height: 10,
+    height: 14,
     overflow: "hidden",
   },
   brandText: {

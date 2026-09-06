@@ -524,6 +524,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Equity")).toBeTruthy();
     expect(screen.getByText("Open Holdings")).toBeTruthy();
     expect(screen.getByText("Cash")).toBeTruthy();
+    expect(screen.getByText("Equity makes up 90.9%")).toBeTruthy();
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     expect(screen.queryByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
@@ -680,9 +681,10 @@ describe("DashboardScreen", () => {
       ),
     ).toBeTruthy();
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
-    expect(allocationCard.getByText("150.00% ·")).toBeTruthy();
+    expect(allocationCard.getByText("150.00%")).toBeTruthy();
     expect(allocationCard.getByText("₹300")).toBeTruthy();
-    expect(allocationCard.getByText("-50.00% ·")).toBeTruthy();
+    expect(allocationCard.getByText("-50.00%")).toBeTruthy();
+    expect(allocationCard.queryByText(/makes up/)).toBeNull();
     expect(allocationCard.getByText("-₹100")).toBeTruthy();
     expect(queryByTestId("dashboard-allocation-visual")).toBeNull();
   });
@@ -744,7 +746,11 @@ describe("DashboardScreen", () => {
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
     expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
     expect(allocationCard.getAllByText("Equity")).toHaveLength(1);
-    expect(allocationCard.getAllByText("100.00% ·")).toHaveLength(1);
+    expect(allocationCard.getAllByText("100.00%")).toHaveLength(1);
+    expect(allocationCard.getByText("Equity makes up 100.0%")).toBeTruthy();
+    for (const label of ["Debt", "Crypto", "Cash"]) {
+      expect(allocationCard.getByText(label)).toBeTruthy();
+    }
     expect(allocationCard.getAllByText("₹420")).toHaveLength(1);
   });
 
@@ -822,7 +828,7 @@ describe("DashboardScreen", () => {
       <DashboardScreen store={store} />,
     );
 
-    expect(getByText("100.00% ·")).toBeTruthy();
+    expect(getByText("100.00%")).toBeTruthy();
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("₹300")).toBeNull();
   });
