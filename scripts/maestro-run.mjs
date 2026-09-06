@@ -27,6 +27,7 @@ const defaultFlows = [
   "e2e/trade-correction.yaml",
   "e2e/asset-correction.yaml",
   "e2e/cash.yaml",
+  "e2e/cash-entry-focus.yaml",
   "e2e/funded-buy-cash.yaml",
   "e2e/snapshot-review.yaml",
   "e2e/progress-chart-range.yaml",

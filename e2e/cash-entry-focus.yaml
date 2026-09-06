@@ -1,0 +1,116 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 60000
+- tapOn:
+    id: "tab-cash"
+- assertVisible:
+    id: "cash-entry-deposit"
+- takeScreenshot: .expo/ux12-cash-resting
+- tapOn:
+    id: "cash-entry-deposit"
+- assertVisible: "Deposit cash"
+- assertVisible:
+    id: "cash-amount-input"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "1000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "cash-label-input"
+    direction: DOWN
+- tapOn:
+    id: "cash-label-input"
+- inputText: "UX12 contribution"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "close-cash-entry-button"
+    direction: UP
+- tapOn:
+    id: "close-cash-entry-button"
+- assertVisible: "No cash movement yet"
+- tapOn:
+    id: "cash-entry-withdraw"
+- assertVisible: "Discard this draft?"
+- tapOn:
+    id: "cash-keep-draft-button"
+- tapOn:
+    id: "cash-entry-deposit"
+- assertVisible: "1000"
+- scrollUntilVisible:
+    element:
+      id: "cash-label-input"
+    direction: DOWN
+- assertVisible: "UX12 contribution"
+- tapOn:
+    id: "cash-label-input"
+# Keep the docked keyboard open while scrolling to Save.
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
+- takeScreenshot: .expo/ux12-cash-keyboard
+- tapOn:
+    id: "save-cash-entry-button"
+- assertVisible:
+    id: "cash-screen"
+- assertVisible: "₹1,000.00"
+- scrollUntilVisible:
+    element:
+      text: "UX12 contribution"
+    direction: DOWN
+- assertVisible: "+₹1,000.00"
+- scrollUntilVisible:
+    element:
+      id: "cash-entry-withdraw"
+    direction: UP
+- tapOn:
+    id: "cash-entry-withdraw"
+- assertVisible: "Withdraw cash"
+- assertNotVisible: "Deposit purpose"
+- tapOn:
+    id: "cash-amount-input"
+- inputText: "250"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "cash-label-input"
+    direction: DOWN
+- tapOn:
+    id: "cash-label-input"
+- inputText: "UX12 withdrawal"
+- hideKeyboard
+- pressKey: BACK
+- assertVisible:
+    id: "cash-screen"
+- tapOn:
+    id: "cash-entry-withdraw"
+- assertVisible: "250"
+- scrollUntilVisible:
+    element:
+      id: "cash-label-input"
+    direction: DOWN
+- assertVisible: "UX12 withdrawal"
+- takeScreenshot: .expo/ux12-cash-withdraw
+- scrollUntilVisible:
+    element:
+      id: "save-cash-entry-button"
+    direction: DOWN
+- assertVisible: "Save withdrawal"
+- tapOn:
+    id: "save-cash-entry-button"
+- assertVisible: "₹750.00"
+- scrollUntilVisible:
+    element:
+      text: "UX12 withdrawal"
+    direction: DOWN
+- assertVisible: "-₹250.00"
+- takeScreenshot: .expo/ux12-cash-ledger
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Cash entry count: 2"
