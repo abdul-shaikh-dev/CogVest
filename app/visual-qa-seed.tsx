@@ -11,7 +11,7 @@ import {
 import { colors, spacing } from "@/src/theme";
 
 export default function VisualQaSeedRoute() {
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string; history?: string }>();
   const canSeed = canUseVisualQaHarness({
     isDevelopment: __DEV__,
     token: params.token,
@@ -38,7 +38,9 @@ export default function VisualQaSeedRoute() {
         {
           onPress: () => {
             try {
-              seedVisualQaPortfolio(getPortfolioStore());
+              seedVisualQaPortfolio(getPortfolioStore(), {
+                longHistory: params.history === "long",
+              });
               setSeeded(true);
             } catch (error) {
               setSeedError(

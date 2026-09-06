@@ -6,10 +6,11 @@ import VisualQaSeedRoute from "../../app/visual-qa-seed";
 const mockSeedVisualQaPortfolio = jest.fn();
 const mockGetPortfolioStore = jest.fn(() => ({ getState: jest.fn() }));
 let mockToken: string | undefined = "cogvest-local-visual-qa";
+let mockHistory: string | undefined;
 
 jest.mock("expo-router", () => ({
   router: { replace: jest.fn() },
-  useLocalSearchParams: () => ({ token: mockToken }),
+  useLocalSearchParams: () => ({ token: mockToken, history: mockHistory }),
 }));
 
 jest.mock("@/src/store", () => ({
@@ -34,6 +35,7 @@ describe("visual QA seed deep link", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockToken = "cogvest-local-visual-qa";
+    mockHistory = undefined;
   });
 
   it("does not replace local data until the developer confirms", () => {
@@ -64,6 +66,17 @@ describe("visual QA seed deep link", () => {
     expect(getByTestId("visual-qa-seed-blocked")).toBeTruthy();
     expect(alertSpy).not.toHaveBeenCalled();
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
+  });
+
+  it("requires confirmation before preparing the optional long history", () => {
+    mockHistory = "long";
+    render(<VisualQaSeedRoute />);
+    expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
+    act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
+    expect(mockSeedVisualQaPortfolio).toHaveBeenCalledWith(
+      mockGetPortfolioStore.mock.results.at(-1)?.value,
+      { longHistory: true },
+    );
   });
 
   it("lets the developer cancel without mutating data", () => {

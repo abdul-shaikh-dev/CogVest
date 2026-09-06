@@ -1,0 +1,8 @@
+Stopping: com.abdulshaikh.cogvest
+Starting: Intent { cmp=com.abdulshaikh.cogvest/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.abdulshaikh.cogvest/.MainActivity
+TotalTime: 491
+WaitTime: 515
+Complete

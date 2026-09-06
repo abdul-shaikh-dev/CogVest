@@ -1,0 +1,36 @@
+# Opt-in standalone release flow; requires the preserved synthetic QA dataset.
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-Custom
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-Custom
+- tapOn:
+    id: portfolio-custom-range-start
+- scrollUntilVisible:
+    element:
+      id: portfolio-custom-range-start-2026-03
+    direction: DOWN
+- tapOn:
+    id: portfolio-custom-range-start-2026-03
+- tapOn:
+    id: portfolio-custom-range-end
+- assertNotVisible:
+    id: portfolio-custom-range-end-2026-02
+- tapOn:
+    id: portfolio-custom-range-end-2026-05
+- tapOn:
+    id: portfolio-custom-range-apply
+- assertVisible:
+    id: portfolio-trend-selected-panel
+    text: "May 2026.*19.87L.*15.48%.*"
+- takeScreenshot: .expo/standalone-custom-range
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: UP
+- tapOn:
+    id: portfolio-monthly-chart-range-All
