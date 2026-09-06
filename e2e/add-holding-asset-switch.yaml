@@ -31,6 +31,9 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "average-cost-input"
 - inputText: "1500"
+- hideKeyboard
+- tapOn:
+    id: "toggle-position-options"
 - tapOn:
     id: "conviction-4"
 - scrollUntilVisible:
@@ -41,6 +44,10 @@ appId: com.abdulshaikh.cogvest
     id: "notes-input"
 - inputText: "STALE HDFC NOTE"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "back-button"
+    direction: DOWN
 - tapOn:
     id: "back-button"
 - tapOn:
@@ -72,6 +79,10 @@ appId: com.abdulshaikh.cogvest
     id: "average-cost-input"
 - inputText: "250"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
 - tapOn:
     id: "review-holding-button"
 - scrollUntilVisible:
@@ -90,6 +101,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Classification: etf | etf | diversified"
 - assertVisible: "Quote: yahoo | ₹255.32"
 - assertVisible: "Values: invested ₹750.00 | current ₹765.96 | quantity 3"
-- assertVisible: "Position 1: quantity 3 | average ₹250.00 | note none | conviction none"
+- scrollUntilVisible:
+    element:
+      text: "Position 1: quantity 3 | average ₹250.00 | date unknown | measured unset | note none | conviction none"
+    direction: DOWN
+- assertVisible: "Position 1: quantity 3 | average ₹250.00 | date unknown | measured unset | note none | conviction none"
 - assertNotVisible: "HDFC Bank"
 - assertNotVisible: "STALE HDFC NOTE"

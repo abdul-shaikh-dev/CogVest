@@ -1,0 +1,130 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Review Holding"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "symbol-input"
+    direction: DOWN
+- tapOn:
+    id: "symbol-input"
+- inputText: "REVIEW"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "ticker-input"
+    direction: DOWN
+- tapOn:
+    id: "ticker-input"
+- inputText: "REVIEW"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "continue-class-button"
+    direction: DOWN
+- tapOn:
+    id: "continue-class-button"
+- scrollUntilVisible:
+    element:
+      id: "continue-position-button"
+    direction: DOWN
+- tapOn:
+    id: "continue-position-button"
+- assertNotVisible:
+    id: "notes-input"
+- assertNotVisible:
+    id: "conviction-4"
+- takeScreenshot: .expo/ux11-position
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- scrollUntilVisible:
+    element:
+      id: "price-input"
+    direction: DOWN
+- tapOn:
+    id: "price-input"
+- inputText: "125"
+# Keep the docked keyboard open: the action must be scroll-reachable and tappable.
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
+- takeScreenshot: .expo/ux11-keyboard
+- tapOn:
+    id: "review-holding-button"
+- assertVisible: "Review holding"
+- scrollUntilVisible:
+    element:
+      id: "derived-preview-pnl"
+    direction: DOWN
+- assertVisible:
+    id: "derived-preview-pnl"
+- assertNotVisible:
+    id: "review-classification"
+- takeScreenshot: .expo/ux11-review
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- assertVisible:
+    id: "save-holding-button"
+- takeScreenshot: .expo/ux11-review-save
+- scrollUntilVisible:
+    element:
+      id: "toggle-review-details"
+    direction: DOWN
+- tapOn:
+    id: "toggle-review-details"
+- scrollUntilVisible:
+    element:
+      id: "review-edit-classification"
+    direction: DOWN
+- tapOn:
+    id: "review-edit-classification"
+- assertVisible:
+    id: "add-holding-phase-class"
+- scrollUntilVisible:
+    element:
+      id: "continue-position-button"
+    direction: DOWN
+- tapOn:
+    id: "continue-position-button"
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 1"
+- assertVisible: "Opening position count: 1"
+- assertVisible: "Cash entry count: 0"
+- assertVisible: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
+- scrollUntilVisible:
+    element:
+      text: "Position 1: quantity 2 | average ₹100.00 | date unknown | measured unset | note none | conviction none"
+    direction: DOWN
+- assertVisible: "Position 1: quantity 2 | average ₹100.00 | date unknown | measured unset | note none | conviction none"

@@ -48,6 +48,8 @@ appId: com.abdulshaikh.cogvest
 - inputText: "100"
 - hideKeyboard
 - tapOn:
+    id: "toggle-position-options"
+- tapOn:
     id: "conviction-4"
 - tapOn:
     id: "review-holding-button"

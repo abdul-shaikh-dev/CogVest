@@ -46,11 +46,21 @@ appId: com.abdulshaikh.cogvest
 - tapOn: "OK"
 - tapOn:
     id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "toggle-review-details"
+    direction: DOWN
+- tapOn:
+    id: "toggle-review-details"
+- scrollUntilVisible:
+    element:
+      text: "2026-05-29"
+    direction: DOWN
 - assertVisible: "2026-05-29"
 - scrollUntilVisible:
     element:
       id: "quick-setup-save-add-next"
-    direction: DOWN
+    direction: UP
     centerElement: true
 - tapOn:
     id: "quick-setup-save-add-next"

@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BackHandler,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   StyleSheet,
   TouchableOpacity,
   View,
+  type ScrollView,
 } from "react-native";
 
 import {
@@ -220,6 +223,12 @@ export function AddOpeningPositionForm({
   } = holding;
   const isMinimalMode = snapshot.preferences.displayMode === "minimal";
   const [isManualEntryExpanded, setIsManualEntryExpanded] = useState(false);
+  const [arePositionOptionsExpanded, setArePositionOptionsExpanded] = useState(false);
+  const [areReviewDetailsExpanded, setAreReviewDetailsExpanded] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const showPositionOptions = arePositionOptionsExpanded || Boolean(
+    errors.conviction || errors.intendedHoldDays,
+  );
   const [isExitConfirmationVisible, setIsExitConfirmationVisible] =
     useState(false);
   const displayPhases = quickSetup
@@ -296,6 +305,64 @@ export function AddOpeningPositionForm({
     }
   }
 
+  useEffect(() => {
+    Keyboard.dismiss();
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    setAreReviewDetailsExpanded(false);
+  }, [currentPhase]);
+
+  function renderReviewDetails() {
+    if (currentPhase !== "review" || !reviewAsset || !reviewOpeningPosition) return null;
+    return (
+      <>
+        <AppButton
+          accessibilityState={{ expanded: areReviewDetailsExpanded }}
+          onPress={() => setAreReviewDetailsExpanded((expanded) => !expanded)}
+          testID="toggle-review-details"
+          title={areReviewDetailsExpanded ? "Hide holding details" : "Holding details & edits"}
+          variant="ghost"
+        />
+        {areReviewDetailsExpanded ? (
+          <View style={styles.reviewSections}>
+            <PremiumCard testID="review-identity">
+              <ReviewSectionHeader onEdit={() => moveToPhase("asset")} testID="review-edit-asset" title="Asset" />
+              <ReviewDetailRow label="Name" value={reviewAsset.name} />
+              <ReviewDetailRow label="Symbol" value={reviewAsset.symbol} />
+              {reviewAsset.ticker !== reviewAsset.symbol ? (
+                <ReviewDetailRow label="Ticker" value={reviewAsset.ticker} />
+              ) : null}
+              {reviewAsset.exchange ? <ReviewDetailRow label="Exchange" value={reviewAsset.exchange} /> : null}
+              <ReviewDetailRow label="Currency" value={reviewAsset.currency} />
+              {reviewAsset.quoteSourceId && reviewAsset.quoteSourceId !== reviewAsset.ticker && reviewAsset.quoteSourceId !== reviewAsset.symbol ? (
+                <ReviewDetailRow label="Price lookup symbol" value={reviewAsset.quoteSourceId} />
+              ) : null}
+            </PremiumCard>
+            {!quickSetup ? (
+              <PremiumCard testID="review-classification">
+                <ReviewSectionHeader onEdit={() => moveToPhase("class")} testID="review-edit-classification" title="Classification" />
+                <ReviewDetailRow label="Asset class" value={assetClassLabel(reviewAsset.assetClass)} />
+                <ReviewDetailRow label="Instrument" value={instrumentTypeLabel(reviewAsset.instrumentType ?? instrumentType)} />
+                {reviewAsset.assetClass === "stock" ? <ReviewDetailRow label="Sector" value={sectorTypeLabel(reviewAsset.sectorType ?? "other")} /> : null}
+              </PremiumCard>
+            ) : null}
+            {reviewOpeningPosition.date || (!quickSetup && (reviewOpeningPosition.notes || reviewOpeningPosition.conviction || reviewOpeningPosition.intendedHoldDays)) ? (
+              <PremiumCard testID="review-optional-details">
+                <ReviewSectionHeader onEdit={() => {
+                  setArePositionOptionsExpanded(true);
+                  moveToPhase("position");
+                }} testID="review-edit-options" title="Optional details" />
+                {reviewOpeningPosition.date ? <ReviewDetailRow label="First purchase date" value={reviewOpeningPosition.date.slice(0, 10)} /> : null}
+                {!quickSetup && reviewOpeningPosition.notes ? <ReviewDetailRow label="Note" value={reviewOpeningPosition.notes} /> : null}
+                {!quickSetup && reviewOpeningPosition.conviction ? <ReviewDetailRow label="Conviction" value={`${reviewOpeningPosition.conviction} of 5`} /> : null}
+                {!quickSetup && reviewOpeningPosition.intendedHoldDays ? <ReviewDetailRow label="Planned holding period" value={`${reviewOpeningPosition.intendedHoldDays} days`} /> : null}
+              </PremiumCard>
+            ) : null}
+          </View>
+        ) : null}
+      </>
+    );
+  }
+
   function goBack() {
     if (isSaving) return;
     if (!savedAssetId && currentPhase !== "asset") {
@@ -362,6 +429,7 @@ export function AddOpeningPositionForm({
               />
               <AppText
                 color={isActive || isComplete ? "primary" : "secondary"}
+                style={styles.stepLabel}
                 variant="caption"
                 weight="bold"
               >
@@ -375,7 +443,8 @@ export function AddOpeningPositionForm({
   }
 
   return (
-    <ScreenContainer scroll testID="add-holding-screen">
+    <KeyboardAvoidingView behavior="height" style={styles.flex}>
+    <ScreenContainer scroll scrollRef={scrollRef} testID="add-holding-screen">
       <ScreenHeader
         leading={
           onCancel ? (
@@ -791,8 +860,8 @@ export function AddOpeningPositionForm({
             />
           </View>
         </View>
-        <View style={styles.row}>
-          <View style={styles.flex}>
+        <View style={styles.secondaryPositionFields}>
+          <View>
             <FormTextField
               error={errors.currentPrice}
               keyboardType="decimal-pad"
@@ -809,7 +878,7 @@ export function AddOpeningPositionForm({
               If unavailable, save now and refresh or enter a manual price later.
             </AppText>
           </View>
-          <View style={styles.flex}>
+          <View>
             {dateUnknown ? (
               <View style={styles.unknownDateSummary}>
                 <AppText color="secondary" variant="caption">
@@ -856,7 +925,16 @@ export function AddOpeningPositionForm({
             </Pressable>
           </View>
         </View>
-        {!quickSetup ? <View style={styles.convictionGroup}>
+        {!quickSetup ? (
+          <AppButton
+            accessibilityState={{ expanded: showPositionOptions }}
+            onPress={() => setArePositionOptionsExpanded((expanded) => !expanded)}
+            testID="toggle-position-options"
+            title={showPositionOptions ? "Hide optional details" : "Add notes or a holding plan"}
+            variant="ghost"
+          />
+        ) : null}
+        {!quickSetup && showPositionOptions ? <View style={styles.convictionGroup}>
           <AppText color="secondary" variant="caption" weight="medium">
             Conviction optional
           </AppText>
@@ -898,7 +976,7 @@ export function AddOpeningPositionForm({
             </AppText>
           ) : null}
         </View> : null}
-        {!quickSetup ? (
+        {!quickSetup && showPositionOptions ? (
           <FormTextField
             error={errors.intendedHoldDays}
             keyboardType="number-pad"
@@ -912,7 +990,7 @@ export function AddOpeningPositionForm({
             value={intendedHoldDays}
           />
         ) : null}
-        {!quickSetup ? <FormTextField
+        {!quickSetup && showPositionOptions ? <FormTextField
           label="Note"
           multiline
           onChangeText={(value) => {
@@ -934,110 +1012,8 @@ export function AddOpeningPositionForm({
           style={styles.reviewSections}
           testID="add-holding-phase-review"
         >
-        <PremiumCard testID="review-identity">
-          <ReviewSectionHeader
-            onEdit={() => moveToPhase("asset")}
-            testID="review-edit-asset"
-            title="Asset"
-          />
-          <ReviewDetailRow label="Name" value={reviewAsset.name} />
-          <ReviewDetailRow
-            label="Symbol and ticker"
-            value={`${reviewAsset.symbol} • ${reviewAsset.ticker}`}
-          />
-          <ReviewDetailRow
-            label="Exchange and currency"
-            value={`${reviewAsset.exchange ?? "Not set"} • ${reviewAsset.currency}`}
-          />
-          <ReviewDetailRow
-            label="Price lookup symbol"
-            value={reviewAsset.quoteSourceId ?? reviewAsset.ticker}
-          />
-          <ReviewDetailRow
-            label="Price source"
-            testID="review-quote-provenance"
-            value={reviewQuoteSourceLabel}
-          />
-        </PremiumCard>
-
-        {!quickSetup ? <PremiumCard testID="review-classification">
-          <ReviewSectionHeader
-            onEdit={() => moveToPhase("class")}
-            testID="review-edit-classification"
-            title="Classification"
-          />
-          <ReviewDetailRow
-            label="Asset class"
-            value={assetClassLabel(reviewAsset.assetClass)}
-          />
-          <ReviewDetailRow
-            label="Instrument"
-            value={instrumentTypeLabel(
-              reviewAsset.instrumentType ?? instrumentType,
-            )}
-          />
-          {reviewAsset.assetClass === "stock" ? (
-            <ReviewDetailRow
-              label="Sector"
-              value={sectorTypeLabel(reviewAsset.sectorType ?? "other")}
-            />
-          ) : null}
-        </PremiumCard> : null}
-
-        <PremiumCard testID="review-position">
-          <ReviewSectionHeader
-            onEdit={() => moveToPhase("position")}
-            testID="review-edit-position"
-            title="Position"
-          />
-          <ReviewDetailRow
-            label="Quantity"
-            value={reviewOpeningPosition.quantity.toString()}
-          />
-          <ReviewDetailRow
-            label="Average cost"
-            value={formatINR(reviewOpeningPosition.averageCostPrice)}
-          />
-          <ReviewDetailRow
-            label="Current price"
-            value={
-              reviewOpeningPosition.manualValuation
-                ? formatINR(reviewOpeningPosition.manualValuation.price)
-                : selectedLookupQuote
-                  ? formatINR(selectedLookupQuote.price)
-                  : "Valuation pending"
-            }
-          />
-          <ReviewDetailRow
-            label="First purchase date"
-            value={reviewOpeningPosition.date?.slice(0, 10) ?? "Unknown"}
-          />
-          {!quickSetup ? <ReviewDetailRow
-            label="Note"
-            value={reviewOpeningPosition.notes || "None"}
-          /> : null}
-          {!quickSetup ? <ReviewDetailRow
-            label="Conviction"
-            value={
-              reviewOpeningPosition.conviction
-                ? `${reviewOpeningPosition.conviction} of 5`
-                : "Not set"
-            }
-          /> : null}
-          {!quickSetup ? (
-            <ReviewDetailRow
-              label="Planned holding period"
-              value={
-                reviewOpeningPosition.intendedHoldDays
-                  ? `${reviewOpeningPosition.intendedHoldDays} days`
-                  : "Not set"
-              }
-            />
-          ) : null}
-        </PremiumCard>
-
-        <PremiumCard elevated testID="derived-preview-card">
-          <SectionHeader title="Derived Preview" />
+        <PremiumCard testID="derived-preview-card">
+          <SectionHeader title="Review holding" />
           <View testID="derived-preview">
           <View style={styles.summaryCard}>
             <CategoryIcon assetClass={reviewAsset!.assetClass} size={20} />
@@ -1048,6 +1024,9 @@ export function AddOpeningPositionForm({
               </AppText>
             </View>
           </View>
+          <AppText color="secondary" testID="review-quote-provenance" variant="caption">
+            {reviewQuoteSourceLabel}
+          </AppText>
           <View style={styles.previewGrid}>
             <View style={styles.previewCell}>
               <AppText color="secondary" variant="caption">
@@ -1114,6 +1093,22 @@ export function AddOpeningPositionForm({
               )}
             </View>
           </View>
+          <View testID="review-position">
+            <ReviewSectionHeader
+              onEdit={() => moveToPhase("position")}
+              testID="review-edit-position"
+              title="Position"
+            />
+            <ReviewDetailRow label="Quantity" value={reviewOpeningPosition.quantity.toString()} />
+            <ReviewDetailRow label="Average cost" value={formatINR(reviewOpeningPosition.averageCostPrice)} />
+            <ReviewDetailRow label="Current price" value={
+              reviewOpeningPosition.manualValuation
+                ? formatINR(reviewOpeningPosition.manualValuation.price)
+                : candidateProviderQuote && preservesProviderQuote
+                  ? formatINR(candidateProviderQuote.price)
+                  : "Valuation pending"
+            } />
+          </View>
           <View style={styles.cashImpact}>
             <AppText weight="bold">Cash impact</AppText>
             <AppText color="secondary" variant="caption">
@@ -1141,6 +1136,7 @@ export function AddOpeningPositionForm({
             <AppButton
               onPress={() => {
                 setIsManualEntryExpanded(false);
+                setArePositionOptionsExpanded(false);
                 startAnotherHolding();
               }}
               testID="add-another-holding-button"
@@ -1210,6 +1206,7 @@ export function AddOpeningPositionForm({
                     if (result) {
                       onQuickSetupItemSaved?.(result, "addNext");
                       setIsManualEntryExpanded(false);
+                      setArePositionOptionsExpanded(false);
                       startAnotherHolding();
                     }
                   }}
@@ -1250,6 +1247,8 @@ export function AddOpeningPositionForm({
         ) : null}
       </View>
 
+      {renderReviewDetails()}
+
       <Modal
         testID="holding-exit-confirmation"
         animationType="fade"
@@ -1289,12 +1288,14 @@ export function AddOpeningPositionForm({
         </View>
       </Modal>
     </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   actions: {
     gap: spacing.sm,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
   },
   assetChip: {
@@ -1337,10 +1338,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   cashImpact: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
     gap: spacing.xs,
-    padding: spacing.sm,
+    paddingTop: spacing.sm,
   },
   convictionChip: {
     alignItems: "center",
@@ -1348,7 +1347,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     flex: 1,
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: interaction.minimumTouchTarget,
   },
   convictionChipActive: {
     backgroundColor: colors.primary,
@@ -1413,11 +1412,8 @@ const styles = StyleSheet.create({
     opacity: interaction.pressedOpacity,
   },
   previewCell: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     width: "48%",
   },
   previewGrid: {
@@ -1427,6 +1423,9 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    gap: spacing.sm,
+  },
+  secondaryPositionFields: {
     gap: spacing.sm,
   },
   reviewDetailRow: {
@@ -1486,8 +1485,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     justifyContent: "center",
-    minHeight: 34,
+    minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  stepLabel: {
+    flexShrink: 1,
   },
   stepItemActive: {
     backgroundColor: "rgba(52,199,89,0.12)",
@@ -1501,14 +1504,12 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: "row",
     gap: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   summaryCard: {
     alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.button,
     flexDirection: "row",
     gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   summaryCopy: {

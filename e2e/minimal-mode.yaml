@@ -55,8 +55,8 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
 - scrollUntilVisible:
     element:
-      text: "Derived Preview"
+      text: "Review holding"
     direction: DOWN
-- assertVisible: "Derived Preview"
+- assertVisible: "Review holding"
 - assertVisible:
     id: "save-holding-button"
