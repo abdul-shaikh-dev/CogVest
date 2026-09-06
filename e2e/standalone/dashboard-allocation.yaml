@@ -1,0 +1,31 @@
+# Opt-in, non-destructive check using a populated synthetic release dataset.
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-card
+    direction: DOWN
+- assertVisible: "Equity"
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-cash
+    direction: DOWN
+- assertVisible: "Debt"
+- assertVisible: "Crypto"
+- assertVisible: "Cash"
+- takeScreenshot: .expo/dashboard-allocation
+- scrollUntilVisible:
+    element:
+      id: dashboard-open-holdings
+    direction: UP
+- tapOn:
+    id: dashboard-open-holdings
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 10000
