@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -24,7 +25,6 @@ import {
 } from "@/src/components/common";
 import {
   formatCompactINR,
-  formatDate,
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
@@ -170,6 +170,7 @@ export function DashboardScreen({
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
+  const [showPriceDetails, setShowPriceDetails] = useState(false);
   const { fontScale } = useWindowDimensions();
   const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now, refreshQuotes, store });
@@ -204,7 +205,7 @@ export function DashboardScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Dashboard"
-          subtitle="Local portfolio • latest snapshot"
+          subtitle="Local portfolio • current valuation"
           action={
             <>
               <IconButton
@@ -272,35 +273,6 @@ export function DashboardScreen({
                   : "s"}{" "}
                 need a price. Invested value remains available.
               </AppText>
-            ) : null}
-            {hasCompleteValuation ? (
-              <View
-                style={[
-                  styles.metricPill,
-                  isMinimalMode
-                    ? styles.minimalMetricPill
-                    : dashboard.dayChange.absolute < 0
-                      ? styles.negativePill
-                      : null,
-                ]}
-              >
-                <AppText
-                  color={isMinimalMode ? "secondary" : undefined}
-                  style={
-                    isMinimalMode
-                      ? undefined
-                      : dashboard.dayChange.absolute >= 0
-                        ? styles.positiveText
-                        : styles.negativeText
-                  }
-                  variant="caption"
-                  weight={isMinimalMode ? "medium" : "bold"}
-                >
-                  {dashboard.maskWealthValues
-                    ? `${formatPercentage(dashboard.dayChange.percentage)} at saved quotes`
-                    : `${dayChangeAmount} (${formatPercentage(dashboard.dayChange.percentage)}) at saved quotes`}
-                </AppText>
-              </View>
             ) : null}
           </View>
           <View
@@ -384,6 +356,52 @@ export function DashboardScreen({
                 </AppText>
               )}
             </View>
+          </View>
+          <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Price details. ${quoteStatus.title}`}
+              accessibilityState={{ expanded: showPriceDetails }}
+              onPress={() => setShowPriceDetails((visible) => !visible)}
+              style={styles.priceDisclosure}
+              testID="dashboard-price-details-toggle"
+            >
+              <AppText color="secondary" style={quoteStatus.prominent ? styles.warningText : undefined} variant="caption">
+                {quoteStatus.title}
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                {showPriceDetails ? "Hide details" : "Details"}
+              </AppText>
+            </Pressable>
+            {(dashboard.isRefreshing || dashboard.quoteFailed.length > 0 || dashboard.quoteTimedOut.length > 0) && (
+              dashboard.quoteFreshness.stale > 0 || dashboard.quoteFreshness.manual > 0 || dashboard.quoteFreshness.missing > 0
+            ) ? (
+              <AppText color="secondary" variant="caption">
+                {[
+                  dashboard.quoteFreshness.stale > 0 ? "Older prices remain in use" : "",
+                  dashboard.quoteFreshness.manual > 0 ? "Manual prices included" : "",
+                  dashboard.quoteFreshness.missing > 0 ? "Some prices are missing" : "",
+                ].filter(Boolean).join(". ")}
+              </AppText>
+            ) : null}
+            {showPriceDetails ? (
+              <View style={styles.priceDetails} testID="dashboard-price-details">
+                <AppText color="secondary" variant="caption">
+                  Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.
+                </AppText>
+                <AppText color="secondary" variant="caption">{quoteStatus.detail}</AppText>
+                {hasCompleteValuation && dashboard.quoteFreshness.total > 0 ? (
+                  <AppText color="secondary" variant="caption">
+                    {dashboard.maskWealthValues
+                      ? `${formatPercentage(dashboard.dayChange.percentage)} at saved quotes`
+                      : `${dayChangeAmount} (${formatPercentage(dashboard.dayChange.percentage)}) at saved quotes`}
+                  </AppText>
+                ) : null}
+                <AppText color="secondary" variant="caption">
+                  Saved-quote movement is not your portfolio return and may cover different price dates.
+                </AppText>
+              </View>
+            ) : null}
           </View>
         </PremiumCard>
 
@@ -609,26 +627,6 @@ export function DashboardScreen({
 
         <PremiumCard style={styles.supportCard} testID="dashboard-support-card">
           <View
-            accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
-            style={styles.supportRow}
-            testID="dashboard-quote-card"
-          >
-            <CategoryIcon assetClass="neutral" size={18} />
-            <View style={styles.infoCardCopy}>
-              <AppText
-                style={quoteStatus.prominent ? styles.warningText : undefined}
-                variant="caption"
-                weight="bold"
-              >
-                {quoteStatus.title}
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                {quoteStatus.detail}
-              </AppText>
-            </View>
-          </View>
-          <View style={styles.supportDivider} />
-          <View
             style={[
               styles.supportRow,
               adaptiveLayoutMode !== "standard" && styles.supportRowStacked,
@@ -641,7 +639,7 @@ export function DashboardScreen({
                 Month-end snapshot
               </AppText>
               <AppText color="secondary" variant="caption">
-                Generated automatically. Review only if a correction is needed.
+                Progress shows stored month-end values. They can differ from current holdings and prices here.
               </AppText>
             </View>
             <Pressable
@@ -752,9 +750,9 @@ function getQuoteStatus({
 
   if (quoteFreshness.status === "empty") {
     return {
-      detail: "Quote coverage appears after your first holding.",
+      detail: "Cash and recorded PPF balances do not need market quotes.",
       prominent: false,
-      title: "No holdings to price",
+      title: "No market prices needed",
     };
   }
 
@@ -763,7 +761,11 @@ function getQuoteStatus({
     ? "Price coverage needs attention"
     : quoteFreshness.status === "current"
       ? "Prices up to date"
-      : "Using saved prices";
+      : quoteFreshness.stale > 0
+        ? quoteFreshness.manual > 0
+          ? "Using older and manual prices"
+          : "Using older saved prices"
+        : "Using manual prices";
 
   return {
     detail: counts,
@@ -773,6 +775,17 @@ function getQuoteStatus({
 }
 
 const styles = StyleSheet.create({
+  priceDisclosure: {
+    minHeight: 48,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  priceDetails: {
+    gap: spacing.sm,
+  },
   allocationHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -885,25 +898,11 @@ const styles = StyleSheet.create({
   inlineAction: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: spacing.sm,
-  },
-  metricPill: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(52,199,89,0.12)",
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  minimalMetricPill: {
-    backgroundColor: "transparent",
-    paddingHorizontal: 0,
   },
   minimalReturnText: {
     color: colors.text.secondary,
-  },
-  negativePill: {
-    backgroundColor: "rgba(255,69,58,0.12)",
   },
   negativeText: {
     color: colors.loss,
@@ -915,10 +914,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  supportDivider: {
-    backgroundColor: colors.border.subtle,
-    height: StyleSheet.hairlineWidth,
-  },
   supportRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -926,7 +921,7 @@ const styles = StyleSheet.create({
   },
   supportRowStacked: {
     alignItems: "flex-start",
-    flexWrap: "wrap",
+    flexDirection: "column",
   },
   warningText: {
     color: colors.warning,
