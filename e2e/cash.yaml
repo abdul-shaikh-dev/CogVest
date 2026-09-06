@@ -6,6 +6,7 @@ appId: com.abdulshaikh.cogvest
     id: "dashboard-screen"
 - tapOn:
     id: "tab-cash"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "cash-screen"
 - tapOn:
@@ -42,7 +43,10 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "Tap to review or correct"
     direction: DOWN
-- tapOn: "Tap to review or correct"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Review Broker cash"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "review-cash-entry-screen"
 - scrollUntilVisible:

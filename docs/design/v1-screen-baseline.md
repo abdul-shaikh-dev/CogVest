@@ -347,13 +347,24 @@ Baseline structure:
 - subtitle `Manual ledger - local only`
 - cash balance hero
 - invested, available, and savings context
-- entry form for deposit and withdrawal
+- Deposit and Withdraw actions immediately below the balance; each opens a
+  focused full-screen entry panel rather than an inline form below summaries
 - invested cash is derived only from trustworthy linked investment accounting;
   do not expose a generic manual `Investment transfer` action
 - recent ledger rows or a useful empty state
 
 Linked investment funding should reduce available cash exactly once. Empty cash
 state should be acceptable and should not imply missing setup.
+
+The #284 entry panel groups amount, full-width calendar date, label and optional
+notes with the correctly named Save action. Deposit also has Contribution/Income
+purpose; withdrawal never pretends to be an investment purchase. Cancel and
+Android Back return to the ledger without saving and keep the same-type draft
+in memory. Switching entry type requires explicit discard when a draft exists.
+Do not promise durable draft recovery. Save failure retains the form and values;
+successful save closes it and updates the ledger once. Keep actions reachable
+with a docked keyboard and enlarged text. Unavailable income/rate use compact
+markers and one accurate dependency explanation, not repeated missing-data cards.
 
 ## Settings
 

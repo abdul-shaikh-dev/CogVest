@@ -1,4 +1,5 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Keyboard, Modal } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
@@ -49,6 +50,13 @@ describe("CashScreen", () => {
       expect(getByText("Broker cash")).toBeTruthy();
       expect(getByText("Capital added to deployable cash")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
+      expect(store.getState().cashEntries).toEqual([
+        expect.objectContaining({
+          amount: 1000,
+          purpose: "capitalContribution",
+          type: "addition",
+        }),
+      ]);
     });
     expect(() => getByTestId("cash-entry-form")).toThrow();
 
@@ -63,16 +71,30 @@ describe("CashScreen", () => {
       expect(getByText("Emergency withdrawal")).toBeTruthy();
       expect(getByText("Withdrawn from deployable cash")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
+      expect(store.getState().cashEntries).toEqual([
+        expect.objectContaining({
+          amount: 1000,
+          purpose: "capitalContribution",
+          type: "addition",
+        }),
+        expect.objectContaining({
+          amount: 250,
+          purpose: "withdrawal",
+          type: "withdrawal",
+        }),
+      ]);
     });
   });
 
   it("changes the cash entry form copy when switching between deposit and withdraw", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText, queryByText } = render(<CashScreen store={store} />);
+    const { getByTestId, getByText, queryByText } = render(
+      <CashScreen store={store} />,
+    );
 
     expect(getByText("Included in portfolio")).toBeTruthy();
     expect(queryByText("Balance ₹0")).toBeNull();
-    expect(getByText("No movement yet")).toBeTruthy();
+    expect(queryByText("No movement yet")).toBeNull();
     expect(queryByText("Deposit cash")).toBeNull();
     expect(queryByText("Save deposit")).toBeNull();
 
@@ -84,6 +106,7 @@ describe("CashScreen", () => {
     expect(getByText("Save deposit")).toBeTruthy();
     expect(queryByText("Save Cash Entry")).toBeNull();
 
+    fireEvent.press(getByTestId("close-cash-entry-button"));
     fireEvent.press(getByText("Withdraw"));
 
     expect(getByText("Withdraw cash")).toBeTruthy();
@@ -91,6 +114,153 @@ describe("CashScreen", () => {
     expect(getByText("Reduces balance")).toBeTruthy();
     expect(getByText("Save withdrawal")).toBeTruthy();
     expect(queryByText("Deposit cash")).toBeNull();
+  });
+
+  it("resumes a same-type draft with its date, purpose, and fields", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <CashScreen now={new Date(2026, 3, 22, 12)} store={store} />,
+    );
+
+    fireEvent.press(getByTestId("cash-entry-deposit"));
+    fireEvent.press(getByTestId("cash-purpose-income"));
+    fireEvent.changeText(getByLabelText("Amount"), "1250");
+    fireEvent.changeText(getByLabelText("Label"), "April salary");
+    fireEvent.changeText(getByLabelText("Notes"), "Keep for the next buy");
+    selectDate(getByTestId, "2026-04-20");
+    fireEvent.press(getByTestId("close-cash-entry-button"));
+
+    expect(queryByTestId("cash-entry-modal")).toBeNull();
+    expect(store.getState().cashEntries).toEqual([]);
+
+    fireEvent.press(getByTestId("cash-entry-deposit"));
+
+    expect(getByTestId("cash-entry-modal")).toBeTruthy();
+    expect(getByLabelText("Amount")).toHaveProp("value", "1250");
+    expect(getByLabelText("Label")).toHaveProp("value", "April salary");
+    expect(getByLabelText("Notes")).toHaveProp(
+      "value",
+      "Keep for the next buy",
+    );
+    expect(getByText("20 Apr 2026")).toBeTruthy();
+    expect(getByTestId("cash-purpose-income")).toHaveProp(
+      "accessibilityState",
+      { selected: true },
+    );
+  });
+
+  it("requires explicit discard before switching a nonempty draft type", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByLabelText, getByTestId, getByText, queryByText } = render(
+      <CashScreen store={store} />,
+    );
+
+    fireEvent.press(getByTestId("cash-entry-deposit"));
+    fireEvent.changeText(getByLabelText("Amount"), "1000");
+    fireEvent.changeText(getByLabelText("Label"), "Do not reinterpret");
+    fireEvent.press(getByTestId("close-cash-entry-button"));
+    fireEvent.press(getByTestId("cash-entry-withdraw"));
+
+    expect(getByTestId("cash-discard-draft-button")).toBeTruthy();
+    expect(getByTestId("cash-keep-draft-button")).toBeTruthy();
+
+    fireEvent.press(getByTestId("cash-keep-draft-button"));
+    expect(queryByText("Deposit cash")).toBeNull();
+    expect(queryByText("Withdraw cash")).toBeNull();
+    expect(store.getState().cashEntries).toEqual([]);
+
+    fireEvent.press(getByTestId("cash-entry-deposit"));
+    expect(getByText("Deposit cash")).toBeTruthy();
+    expect(getByLabelText("Amount")).toHaveProp("value", "1000");
+    expect(getByLabelText("Label")).toHaveProp("value", "Do not reinterpret");
+    fireEvent.press(getByTestId("close-cash-entry-button"));
+    fireEvent.press(getByTestId("cash-entry-withdraw"));
+    fireEvent.press(getByTestId("cash-discard-draft-button"));
+
+    expect(getByText("Withdraw cash")).toBeTruthy();
+    expect(getByLabelText("Amount")).toHaveProp("value", "");
+    expect(getByLabelText("Label")).toHaveProp("value", "");
+    expect(store.getState().cashEntries).toEqual([]);
+  });
+
+  it("closes from Android back without saving and retains the draft", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<CashScreen store={store} />);
+
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+    fireEvent.changeText(screen.getByLabelText("Label"), "Back draft");
+
+    act(() => {
+      screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+    });
+
+    expect(screen.queryByTestId("cash-entry-modal")).toBeNull();
+    expect(store.getState().cashEntries).toEqual([]);
+
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
+    expect(screen.getByLabelText("Label")).toHaveProp("value", "Back draft");
+  });
+
+  it("dismisses the visible keyboard before closing the modal on Android back", () => {
+    const keyboardVisibility = jest
+      .spyOn(Keyboard, "isVisible")
+      .mockReturnValue(true);
+    const keyboardDismiss = jest
+      .spyOn(Keyboard, "dismiss")
+      .mockImplementation(() => undefined);
+
+    try {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      const screen = render(<CashScreen store={store} />);
+
+      fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+      fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+      fireEvent.changeText(screen.getByLabelText("Label"), "Keyboard draft");
+
+      act(() => {
+        screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+      });
+
+      expect(keyboardVisibility).toHaveBeenCalled();
+      expect(keyboardDismiss).toHaveBeenCalled();
+      expect(screen.getByTestId("cash-entry-modal")).toBeTruthy();
+      expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
+      expect(screen.getByLabelText("Label")).toHaveProp(
+        "value",
+        "Keyboard draft",
+      );
+      expect(store.getState().cashEntries).toEqual([]);
+
+      keyboardVisibility.mockClear();
+      keyboardDismiss.mockClear();
+      keyboardVisibility.mockReturnValue(false);
+      act(() => {
+        screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+      });
+
+      expect(keyboardVisibility).toHaveBeenCalled();
+      expect(keyboardDismiss).toHaveBeenCalled();
+      expect(screen.queryByTestId("cash-entry-modal")).toBeNull();
+      expect(store.getState().cashEntries).toEqual([]);
+    } finally {
+      keyboardVisibility.mockRestore();
+      keyboardDismiss.mockRestore();
+    }
+  });
+
+  it("keeps the entry panel modal to accessibility services", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<CashScreen store={store} />);
+
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+
+    expect(screen.getByTestId("cash-entry-modal")).toBeTruthy();
+    expect(screen.getByTestId("cash-entry-form")).toHaveProp(
+      "accessibilityViewIsModal",
+      true,
+    );
   });
 
   it("records deposit purpose explicitly", async () => {
@@ -139,7 +309,7 @@ describe("CashScreen", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
     const originalSetItem = storage.setItem;
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <CashScreen store={store} />,
     );
 
@@ -163,7 +333,22 @@ describe("CashScreen", () => {
       ).toBeTruthy();
     });
     expect(store.getState().cashEntries).toEqual([]);
+    expect(getByTestId("cash-entry-modal")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1000");
+
+    storage.setItem = originalSetItem;
+    fireEvent.press(getByTestId("save-cash-entry-button"));
+
+    await waitFor(() => {
+      expect(store.getState().cashEntries).toEqual([
+        expect.objectContaining({
+          amount: 1000,
+          label: "Retry deposit",
+          type: "addition",
+        }),
+      ]);
+    });
+    expect(queryByTestId("cash-entry-modal")).toBeNull();
   });
 
   it("shows invested as derived evidence without exposing a manual Invest action", () => {
@@ -235,6 +420,24 @@ describe("CashScreen", () => {
     expect(getByText("Deposit")).toBeTruthy();
     expect(getByText("Withdraw")).toBeTruthy();
     expect(getByText("Recent cash ledger")).toBeTruthy();
+    expect(queryByText("This month")).toBeNull();
+  });
+
+  it("does not show monthly commentary when there is no invested movement", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({
+      amount: 50000,
+      date: "2026-05-01",
+      id: "cash-income-no-investment",
+      label: "Salary",
+      purpose: "income",
+      type: "addition",
+    });
+
+    const { queryByText } = render(
+      <CashScreen now={new Date("2026-05-16T00:00:00.000Z")} store={store} />,
+    );
+
     expect(queryByText("This month")).toBeNull();
   });
 
@@ -310,7 +513,7 @@ describe("CashScreen", () => {
       type: "addition",
     });
 
-    const { getAllByText, getByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = render(
       <CashScreen
         now={new Date("2026-05-16T00:00:00.000Z")}
         store={store}
@@ -318,7 +521,9 @@ describe("CashScreen", () => {
     );
 
     expect(getByText("Investment rate")).toBeTruthy();
-    expect(getAllByText("Not enough data")).toHaveLength(2);
+    expect(getAllByText("--")).toHaveLength(2);
+    expect(getByTestId("cash-income-explanation")).toBeTruthy();
+    expect(queryByText("Not enough data")).toBeNull();
   });
 
   it("shows validation errors for invalid cash entries", () => {
@@ -347,13 +552,15 @@ describe("CashScreen", () => {
       type: "addition",
     });
 
-    const { getAllByText, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = render(
       <CashScreen store={store} />,
     );
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("Masked preview")).toBeNull();
-    expect(getAllByText("Not enough data")).toHaveLength(2);
+    expect(getAllByText("--")).toHaveLength(2);
+    expect(getByTestId("cash-income-explanation")).toBeTruthy();
+    expect(queryByText("Not enough data")).toBeNull();
     expect(getByText("Broker cash")).toBeTruthy();
     expect(queryByText("₹1,000.00")).toBeNull();
   });
