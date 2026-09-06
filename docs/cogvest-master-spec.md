@@ -310,9 +310,11 @@ reconstruct Cash Ledger entries.
 
 Dashboard owns portfolio-level answers.
 
-Holdings owns position review: dominant positions, review-needed holdings,
-top/weak movers, allocation/concentration, quote state, and compact holding
-rows.
+Holdings owns finding and reviewing positions: search, filters and compact
+holding rows first, with allocation/concentration and position insights on
+demand. Quote provenance and incomplete valuations remain explicit; management
+actions are secondary. Real PPF accounts have a separate reachable destination,
+not a setup promotion above market holdings.
 
 Add Holding owns assisted capture: search, explicit result selection, provider
 metadata review, position details, derived preview, and manual fallback.

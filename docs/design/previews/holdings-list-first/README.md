@@ -2,8 +2,10 @@
 
 Issue: [#278](https://github.com/abdul-shaikh-dev/CogVest/issues/278).
 Baseline: `5a2e232`, after merged Progress PR #276.
-Status: **proposal awaiting user approval**. No React Native behavior changes.
-This preview does not supersede the canonical Holdings baseline yet.
+Status: **user-approved hierarchy**. Native implementation and acceptance are
+tracked in #278 and PR #279. This preview supersedes older Holdings composition
+references; existing production domain calculations and record workflows remain
+authoritative. Native evidence is recorded separately.
 
 ## Open
 
@@ -16,7 +18,7 @@ index.html, style.css and app.js; it cannot expose portfolio files.
 For a background Windows session, use `Start-Process -WindowStyle Hidden`, log
 to `.expo/`, retain its PID, and verify HTTP 200 before sharing the URL.
 
-## Design Contract Under Review
+## Approved Design Contract
 
 The main question is "Find and inspect what I own", not "Read another dashboard".
 Keep the existing OLED palette, asset-class icons and compact/expanded rows.
@@ -56,7 +58,7 @@ a synthetic confirmed balance rather than a market-price calculation. Values
 and percentages are masked here; this is not approval to change production
 masking semantics without reconciling the existing privacy contract.
 
-## Verification And Next Step
+## Verification
 
 ```powershell
 node --check docs/design/previews/holdings-list-first/app.js
@@ -66,15 +68,18 @@ node docs/design/previews/holdings-list-first/verify.cjs
 
 DOM tests use the existing jsdom dependency, not a new package. HTTP availability
 and source/DOM checks do not establish rendered layout, scroll count, or Android
-quality. Browser control was unavailable in this session. User visual inspection
-is pending; no screenshot or pixel-parity claim is made for this proposal.
+quality. Agent browser control was unavailable in this session; no browser
+screenshot or pixel-parity claim is made. The user approved the preview before
+native implementation.
 
 2026-09-06 checks: eight focused DOM scenarios passed; `npm run test:verify`
 passed (97 suites / 973 tests, typecheck, Expo Doctor 17/17). Impeccable's source
 detector has no remaining hits after removing an unnecessary notice accent
 border. This is source-level feedback, not a rendered design critique.
 
-After approval, implement only UX-08 plus relevant hierarchy treatment from UX-15,
-then verify the native acceptance in #278 on a newly installed local APK. Measure
-visible-row counts at normal and enlarged text; do not meet those targets by
-shrinking type. Keep #278 open until native verification completes.
+The native implementation covers UX-08 plus its related UX-15 hierarchy
+treatment. Current build identity, native results and screenshots are in
+[`holdings-list-first-evidence.md`](../../../testing/holdings-list-first-evidence.md).
+Native financial values come from stored records, not this illustrative fixture;
+PPF legacy records retain their correction and conversion paths. The native
+masking contract keeps quantities, per-unit prices and percentages readable.

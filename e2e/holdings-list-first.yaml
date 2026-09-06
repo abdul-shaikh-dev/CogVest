@@ -1,0 +1,143 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-search-input
+- assertNotVisible: "Track PPF as an account"
+- assertNotVisible: "Dominant position"
+- assertVisible:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible:
+    id: holding-row-visual-qa-asset-sgb
+- takeScreenshot: .expo/holdings-278-top
+- tapOn:
+    id: holdings-search-input
+- inputText: "HDFC"
+- hideKeyboard
+- assertVisible: "HDFC Bank"
+- assertVisible: "Invested ₹36.25K"
+- assertNotVisible: "Nifty 50 ETF"
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible:
+    id: holding-expanded-visual-qa-asset-hdfc
+- assertVisible: "Quantity"
+- takeScreenshot: .expo/holdings-278-expanded
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- tapOn:
+    id: holdings-insights-button
+- assertVisible: "Dominant position"
+- assertVisible: "Asset mix"
+- takeScreenshot: .expo/holdings-278-insights
+- back
+- assertVisible:
+    id: holdings-search-input
+- assertVisible: "HDFC"
+- tapOn:
+    id: holdings-more-button
+- assertVisible: "Manage assets"
+- tapOn:
+    id: holdings-mask-toggle
+- assertNotVisible: "Invested ₹36.25K"
+- takeScreenshot: .expo/holdings-278-masked
+- tapOn:
+    id: holdings-more-button
+- tapOn:
+    id: holdings-manage-assets-button
+- assertVisible:
+    id: manage-assets-screen
+- back
+- assertVisible:
+    id: holdings-screen
+- tapOn:
+    id: holdings-more-button
+- tapOn:
+    id: holdings-mask-toggle
+- tapOn:
+    id: holdings-add-button
+- assertVisible:
+    id: add-one-holding-option
+- assertVisible:
+    id: add-multiple-holdings-option
+- tapOn:
+    id: import-holdings-csv-option
+- assertVisible:
+    id: holding-import-screen
+- back
+- assertVisible:
+    id: holdings-screen
+- tapOn:
+    id: holdings-add-button
+- tapOn:
+    id: import-transactions-csv-option
+- assertVisible:
+    id: transaction-import-screen
+- back
+- assertVisible:
+    id: holdings-screen
+- tapOn:
+    id: holdings-add-button
+- scrollUntilVisible:
+    element:
+      id: add-ppf-account
+    direction: DOWN
+- assertVisible:
+    id: add-ppf-account
+- takeScreenshot: .expo/holdings-278-add-menu
+- tapOn:
+    id: add-ppf-account
+- assertVisible:
+    id: ppf-account-form-screen
+- tapOn:
+    id: ppf-provider-input
+- inputText: "India Post"
+- hideKeyboard
+- tapOn:
+    id: ppf-balance-input
+- inputText: "100000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- scrollUntilVisible:
+    element:
+      id: save-ppf-account
+    direction: DOWN
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-confirmed-balance-card
+- assertVisible: "₹1,00,000.00"
+- tapOn:
+    id: ppf-account-back
+- assertVisible:
+    id: holdings-screen
+- tapOn:
+    id: holdings-ppf-tab
+- assertVisible: "My PPF"
+- assertNotVisible:
+    id: holdings-search-input
+- takeScreenshot: .expo/holdings-278-ppf
+- tapOn:
+    id: holdings-market-tab
+- assertVisible:
+    id: holdings-search-input
+- assertVisible: "HDFC"

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -20,6 +21,7 @@ import {
   minimumTouchTargetStyle,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
+import { useReducedMotionPreference } from "@/src/hooks";
 import {
   instrumentTypeLabel,
   sectorTypeLabel,
@@ -103,7 +105,9 @@ export function HoldingsScreen({
   statusMessage,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
-  const [isAddMenuVisible, setIsAddMenuVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const [activePanel, setActivePanel] = useState<"add" | "insights" | "more" | "quotes">();
+  const [selectedDestination, setSelectedDestination] = useState<"market" | "ppf">("market");
   const {
     displayMode,
     failed,
@@ -125,27 +129,46 @@ export function HoldingsScreen({
     store,
   });
   const isMinimalMode = displayMode === "minimal";
+  const isReducedMotionEnabled = useReducedMotionPreference();
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
   const [expandedAssetId, setExpandedAssetId] = useState<string>();
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const reviewItems = createHoldingReviewItems(holdings, rollupRows);
+  const marketReviewItems = reviewItems.filter(
+    (item) => item.holding.asset.instrumentType !== "ppf",
+  );
+  const marketHoldings = marketReviewItems.map((item) => item.holding);
+  const legacyPpfHoldings = holdings.filter(
+    (holding) => holding.asset.instrumentType === "ppf",
+  );
+  const ppfRecordCount = ppfSummary.accounts.length + legacyPpfHoldings.length;
+  const hasMarketHoldings = marketHoldings.length > 0;
+  const hasPpfDestination =
+    ppfSummary.accounts.length > 0 || legacyPpfHoldings.length > 0;
+  const activeDestination = hasMarketHoldings
+    ? hasPpfDestination
+      ? selectedDestination
+      : "market"
+    : "ppf";
+  const allocationAvailable =
+    rollupTotals.valuationCoverage.status === "complete";
+  const effectiveFilter =
+    !allocationAvailable && selectedFilter === "high-allocation"
+      ? "all"
+      : selectedFilter;
   const visibleItems = filterHoldingReviewItems(
-    reviewItems,
-    selectedFilter,
+    marketReviewItems,
+    effectiveFilter,
     searchQuery,
   );
-  const summary = getHoldingReviewSummary(reviewItems);
+  const summary = getHoldingReviewSummary(marketReviewItems);
   const distinctBestReturn =
     summary.bestReturn?.holding.asset.id === summary.dominant?.holding.asset.id
       ? undefined
       : summary.bestReturn;
-  const exposureSegments = getExposureSegments(reviewItems);
-  const filterCounts = getFilterCounts(reviewItems);
-  const subtitle = `${holdings.length} market ${holdings.length === 1 ? "position" : "positions"} • ${ppfSummary.accounts.length} PPF ${ppfSummary.accounts.length === 1 ? "account" : "accounts"}`;
-  const legacyPpfHoldings = holdings.filter(
-    (holding) => holding.asset.instrumentType === "ppf",
-  );
+  const exposureSegments = getExposureSegments(marketReviewItems);
+  const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
+  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"} • ${ppfSummary.accounts.length} PPF ${ppfSummary.accounts.length === 1 ? "account" : "accounts"}`;
   const quoteStatus = getQuoteStatus({
     failed: failed.length,
     isRefreshing,
@@ -153,6 +176,31 @@ export function HoldingsScreen({
     timedOut: timedOut.length,
   });
   const pendingValuations = rollupTotals.valuationCoverage.pendingHoldings;
+
+  function renderHoldingRow(item: HoldingReviewItem) {
+    return (
+      <HoldingRow
+        allocationAvailable={allocationAvailable}
+        expanded={expandedAssetId === item.holding.asset.id}
+        item={item}
+        key={item.holding.asset.id}
+        masked={maskWealthValues}
+        minimal={isMinimalMode}
+        openingPositions={openingPositions.filter(
+          (position) => position.assetId === item.holding.asset.id,
+        )}
+        onReviewOpeningPosition={onReviewOpeningPosition}
+        onReviewTrades={onReviewTrades}
+        onSellRedeem={onSellRedeem}
+        trades={trades.filter((trade) => trade.assetId === item.holding.asset.id)}
+        onPress={() =>
+          setExpandedAssetId((current) =>
+            current === item.holding.asset.id ? undefined : item.holding.asset.id,
+          )
+        }
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -174,27 +222,20 @@ export function HoldingsScreen({
           subtitle={subtitle}
           action={
             <>
-              <IconButton
-                accessibilityLabel="Search holdings"
-                icon="search-outline"
-                onPress={() => setIsSearchVisible((value) => !value)}
-                testID="holdings-search-toggle"
-              />
-              {onAddTrade ? (
+              {onAddTrade || onAddPpfAccount ? (
                 <IconButton
                   accessibilityLabel={onQuickSetup ? "Add holdings" : "Add Holding"}
                   icon="add-outline"
-                  onPress={() =>
-                    onQuickSetup ? setIsAddMenuVisible(true) : onAddTrade()
-                  }
+                  onPress={() => setActivePanel("add")}
                   testID="holdings-add-button"
                 />
               ) : null}
-              <IconButton
-                accessibilityLabel={maskWealthValues ? "Show values" : "Mask values"}
-                icon={maskWealthValues ? "eye-off-outline" : "eye-outline"}
-                onPress={toggleMaskWealthValues}
-                testID="holdings-mask-toggle"
+              <AppButton
+                accessibilityLabel="More holdings options"
+                onPress={() => setActivePanel("more")}
+                testID="holdings-more-button"
+                title="More"
+                variant="secondary"
               />
             </>
           }
@@ -213,24 +254,38 @@ export function HoldingsScreen({
           </View>
         ) : null}
 
+        {hasMarketHoldings && activeDestination === "market" ? (
+          <FormTextField
+            label="Search"
+            onChangeText={setSearchQuery}
+            placeholder="Search name, symbol, sector..."
+            testID="holdings-search-input"
+            value={searchQuery}
+          />
+        ) : null}
+
         {quickSetupSavedCount > 0 &&
         onQuickSetup &&
         (holdings.length > 0 || ppfSummary.accounts.length > 0) ? (
-          <PremiumCard elevated testID="holdings-continue-setup">
-            <AppText weight="bold">Continue portfolio setup</AppText>
-            <AppText color="secondary" variant="caption">
-              {quickSetupSavedCount} confirmed {quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.
-            </AppText>
+          <View style={styles.resumeRow} testID="holdings-continue-setup">
+            <View style={styles.flex}>
+              <AppText weight="bold">Resume setup</AppText>
+              <AppText color="secondary" variant="caption">
+                {quickSetupSavedCount} saved locally.
+              </AppText>
+            </View>
             <AppButton
               onPress={onQuickSetup}
               testID="holdings-continue-setup-button"
-              title="Continue setup"
+              title="Resume"
               variant="secondary"
             />
-          </PremiumCard>
+          </View>
         ) : null}
 
-        {holdings.length > 0 ? (
+        {hasMarketHoldings &&
+        activeDestination === "market" &&
+        pendingValuations === 0 ? (
           <View
             accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
             style={[
@@ -248,21 +303,26 @@ export function HoldingsScreen({
               >
                 {quoteStatus.title}
               </AppText>
-              <AppText color="secondary" numberOfLines={2} variant="caption">
-                {quoteStatus.detail}
-              </AppText>
             </View>
+            <AppButton
+              onPress={() => setActivePanel("quotes")}
+              style={styles.quoteDetailsAction}
+              title="Details"
+              variant="ghost"
+            />
           </View>
         ) : null}
 
-        {pendingValuations > 0 ? (
-          <PremiumCard testID="holdings-pending-valuations">
-            <AppText weight="bold">
-              {pendingValuations} valuation{pendingValuations === 1 ? "" : "s"} pending
-            </AppText>
-            <AppText color="secondary" variant="caption">
-              Invested values remain available. Current totals, returns, and allocation stay unavailable until every holding has a price.
-            </AppText>
+        {activeDestination === "market" && pendingValuations > 0 ? (
+          <View style={styles.pendingValuationRow} testID="holdings-pending-valuations">
+            <View style={styles.flex}>
+              <AppText weight="bold">
+                {pendingValuations} valuation{pendingValuations === 1 ? "" : "s"} pending
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                Invested values remain available; totals, returns, and allocation are unavailable.
+              </AppText>
+            </View>
             <AppButton
               title="Refresh prices"
               testID="holdings-refresh-pending-prices"
@@ -270,45 +330,28 @@ export function HoldingsScreen({
                 void refresh();
               }}
             />
-          </PremiumCard>
-        ) : null}
-
-        {onManageAssets || (onReviewAllTrades && trades.length > 0) ? (
-          <View style={styles.recordActions}>
-            {onReviewAllTrades && trades.length > 0 ? (
-              <AppButton
-                onPress={onReviewAllTrades}
-                style={styles.recordAction}
-                testID="holdings-transactions-button"
-                title="Transactions"
-                textColor="primary"
-                variant="ghost"
-              />
-            ) : null}
-            {onManageAssets ? (
-              <AppButton
-                onPress={onManageAssets}
-                style={styles.recordAction}
-                testID="holdings-manage-assets-button"
-                title="Manage assets"
-                textColor="primary"
-                variant="ghost"
-              />
-            ) : null}
           </View>
         ) : null}
 
-        {isSearchVisible ? (
-          <FormTextField
-            label="Search holdings input"
-            onChangeText={setSearchQuery}
-            placeholder="Search name, symbol, sector..."
-            testID="holdings-search-input"
-            value={searchQuery}
-          />
+        {hasMarketHoldings && hasPpfDestination ? (
+          <View accessibilityRole="tablist" style={styles.destinationTabs}>
+            <DestinationTab
+              active={activeDestination === "market"}
+              label={`Market ${marketHoldings.length}`}
+              onPress={() => setSelectedDestination("market")}
+              testID="holdings-market-tab"
+            />
+            <DestinationTab
+              active={activeDestination === "ppf"}
+              label={`PPF ${ppfRecordCount}`}
+              onPress={() => setSelectedDestination("ppf")}
+              testID="holdings-ppf-tab"
+            />
+          </View>
         ) : null}
 
-        <View style={styles.ppfSection} testID="holdings-ppf-section">
+        {activeDestination === "ppf" && hasPpfDestination ? (
+          <View style={styles.ppfSection} testID="holdings-ppf-section">
           <View style={styles.sectionActionHeader}>
             <SectionHeader title="PPF accounts" />
             {onAddPpfAccount ? (
@@ -320,20 +363,7 @@ export function HoldingsScreen({
               />
             ) : null}
           </View>
-          {ppfSummary.accounts.length === 0 ? (
-            <PremiumCard>
-              <View style={styles.ppfEmptyRow}>
-                <CategoryIcon assetClass="debt" size={20} />
-                <View style={styles.flex}>
-                  <AppText weight="bold">Track PPF as an account</AppText>
-                  <AppText color="secondary" variant="caption">
-                    Use confirmed balances and a contribution ledger, not units or market prices.
-                  </AppText>
-                </View>
-              </View>
-            </PremiumCard>
-          ) : (
-            ppfSummary.accounts.map((item) => (
+          {ppfSummary.accounts.map((item) => (
               <Pressable
                 accessibilityLabel={`Open ${item.account.nickname}`}
                 accessibilityRole="button"
@@ -349,7 +379,11 @@ export function HoldingsScreen({
                 <View style={styles.flex}>
                   <AppText weight="bold">{item.account.nickname}</AppText>
                   <AppText color="secondary" variant="caption">
-                    {item.account.provider} • {item.contributionContext.financialYearContributions > 0 ? `${formatCompactINR(item.contributionContext.financialYearContributions)} contributed this FY` : "No contribution recorded this FY"}
+                    {item.account.provider} • {maskWealthValues
+                      ? "Contribution details hidden"
+                      : item.contributionContext.financialYearContributions > 0
+                        ? `${formatCompactINR(item.contributionContext.financialYearContributions)} contributed this FY`
+                        : "No contribution recorded this FY"}
                   </AppText>
                 </View>
                 <View style={styles.ppfValue}>
@@ -361,8 +395,7 @@ export function HoldingsScreen({
                   <AppText color="secondary" variant="caption">Confirmed</AppText>
                 </View>
               </Pressable>
-            ))
-          )}
+            ))}
           {legacyPpfHoldings.map((holding) => (
             <PremiumCard elevated key={holding.asset.id} testID={`legacy-ppf-${holding.asset.id}`}>
               <AppText weight="bold">Move {holding.asset.name} to the PPF ledger</AppText>
@@ -384,9 +417,13 @@ export function HoldingsScreen({
               ) : null}
             </PremiumCard>
           ))}
-        </View>
+          {reviewItems
+            .filter((item) => item.holding.asset.instrumentType === "ppf")
+            .map(renderHoldingRow)}
+          </View>
+        ) : null}
 
-        {holdings.length === 0 ? (
+        {!hasMarketHoldings && !hasPpfDestination ? (
           <EmptyState
             actionLabel={
               onQuickSetup
@@ -405,47 +442,35 @@ export function HoldingsScreen({
                   ? "Add existing holdings in one focused setup, or record a single holding."
                   : "Holdings are created automatically from your portfolio entries."
             }
-            title={ppfSummary.accounts.length > 0 ? "No market holdings yet" : "No holdings yet"}
+            title="No holdings yet"
             onAction={onQuickSetup ?? onAddTrade}
             onSecondaryAction={onQuickSetup ? onAddTrade : undefined}
             secondaryActionLabel={onQuickSetup ? "Add one holding" : undefined}
             secondaryActionTestID="add-trade-button"
           />
-        ) : (
+        ) : activeDestination === "market" ? (
           <>
-            {!isMinimalMode ? (
-              <View style={styles.insightGrid}>
-                <InsightCard
-                  eyebrow="Dominant position"
-                  title={
-                    summary.dominant?.holding.asset.name ?? "Not enough data"
-                  }
-                  detail={
-                    summary.dominant
-                      ? `${formatPercentage(summary.dominant.allocationPct).replace("+", "")} allocation`
-                      : "Add holdings to compare exposure"
-                  }
-                />
-                {distinctBestReturn ? (
-                  <InsightCard
-                    eyebrow="Best return"
-                    title={distinctBestReturn.holding.asset.name}
-                    detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
-                    positive={
-                      (distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0
-                    }
-                  />
-                ) : null}
-              </View>
-            ) : null}
-
-            <ExposurePanel segments={exposureSegments} />
-
             <FilterRow
+              allocationAvailable={allocationAvailable}
               counts={filterCounts}
-              onSelect={setSelectedFilter}
-              selected={selectedFilter}
+              onSelect={(filter) => {
+                if (filter !== "high-allocation" || allocationAvailable) {
+                  setSelectedFilter(filter);
+                }
+              }}
+              selected={effectiveFilter}
             />
+
+            {!isMinimalMode ? (
+              <AppButton
+                onPress={() => setActivePanel("insights")}
+                style={styles.insightsAction}
+                testID="holdings-insights-button"
+                title="Portfolio insights"
+                textColor="secondary"
+                variant="ghost"
+              />
+            ) : null}
 
             {visibleItems.length === 0 ? (
               <EmptyState
@@ -454,93 +479,257 @@ export function HoldingsScreen({
               />
             ) : (
               <View style={styles.holdingsList} testID="holdings-list">
-                {visibleItems.map((item) => (
-                  <HoldingRow
-                    expanded={expandedAssetId === item.holding.asset.id}
-                    item={item}
-                    key={item.holding.asset.id}
-                    masked={maskWealthValues}
-                    minimal={isMinimalMode}
-                    openingPositions={openingPositions.filter(
-                      (position) => position.assetId === item.holding.asset.id,
-                    )}
-                    onReviewOpeningPosition={onReviewOpeningPosition}
-                    onReviewTrades={onReviewTrades}
-                    onSellRedeem={onSellRedeem}
-                    trades={trades.filter(
-                      (trade) => trade.assetId === item.holding.asset.id,
-                    )}
-                    onPress={() =>
-                      setExpandedAssetId((current) =>
-                        current === item.holding.asset.id
-                          ? undefined
-                          : item.holding.asset.id,
-                      )
-                    }
-                  />
-                ))}
+                {visibleItems.map(renderHoldingRow)}
               </View>
             )}
           </>
-        )}
+        ) : null}
 
         <Modal
-          animationType="fade"
-          onRequestClose={() => setIsAddMenuVisible(false)}
+          animationType={isReducedMotionEnabled ? "none" : "fade"}
+          onRequestClose={() => setActivePanel(undefined)}
           transparent
-          visible={isAddMenuVisible}
+          visible={activePanel !== undefined}
         >
-          <View style={styles.addMenuBackdrop}>
+          <View
+            style={[
+              styles.panelBackdrop,
+              {
+                paddingBottom: Math.max(insets.bottom, spacing.md),
+                paddingTop: Math.max(insets.top, spacing.md),
+              },
+            ]}
+          >
             <Pressable
-              accessibilityLabel="Close add holdings menu"
+              accessibilityLabel="Close holdings panel"
               accessibilityRole="button"
-              onPress={() => setIsAddMenuVisible(false)}
+              onPress={() => setActivePanel(undefined)}
               style={StyleSheet.absoluteFill}
             />
-            <View accessibilityViewIsModal style={styles.addMenuSheet}>
-              <SectionHeader title="Add holdings" />
-              <AppText color="secondary" variant="caption">
-                Choose a focused single entry or set up several existing holdings.
-              </AppText>
-              <AppButton
-                onPress={() => {
-                  setIsAddMenuVisible(false);
-                  onAddTrade?.();
-                }}
-                testID="add-one-holding-option"
-                title="Add one holding"
-                variant="secondary"
-              />
-              <AppButton
-                onPress={() => {
-                  setIsAddMenuVisible(false);
-                  onQuickSetup?.();
-                }}
-                testID="add-multiple-holdings-option"
-                title={
-                  quickSetupSavedCount > 0
-                    ? `Continue setup (${quickSetupSavedCount} saved)`
-                    : "Add multiple holdings"
-                }
-              />
-              <AppButton
-                onPress={() => {
-                  setIsAddMenuVisible(false);
-                  onImportHoldings?.();
-                }}
-                testID="import-holdings-csv-option"
-                title="Import holdings CSV"
-                variant="secondary"
-              />
-              <AppButton
-                onPress={() => {
-                  setIsAddMenuVisible(false);
-                  onImportTransactions?.();
-                }}
-                testID="import-transactions-csv-option"
-                title="Import transaction history"
-                variant="secondary"
-              />
+            <View accessibilityViewIsModal style={styles.panelSheet}>
+              <View style={styles.panelHeader}>
+                {activePanel === "quotes" ? (
+                  <AppButton
+                    onPress={() => setActivePanel("more")}
+                    title="Back"
+                    variant="ghost"
+                  />
+                ) : null}
+                <AppText
+                  accessibilityRole="header"
+                  style={styles.panelTitle}
+                  variant="title"
+                  weight="bold"
+                >
+                  {
+                    activePanel === "add"
+                      ? "Add holdings"
+                      : activePanel === "more"
+                        ? "Holdings options"
+                        : activePanel === "quotes"
+                          ? "Valuation details"
+                          : "Portfolio insights"
+                  }
+                </AppText>
+                <AppButton
+                  onPress={() => setActivePanel(undefined)}
+                  testID="holdings-panel-close"
+                  title="Close"
+                  variant="ghost"
+                />
+              </View>
+              <ScrollView contentContainerStyle={styles.panelContent}>
+                {activePanel === "add" ? (
+                  <>
+                    <AppText color="secondary" variant="caption">
+                      Choose a focused single entry, a setup path, or an import.
+                    </AppText>
+                    {onAddTrade ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onAddTrade();
+                        }}
+                        testID="add-one-holding-option"
+                        title="Add one holding"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {onQuickSetup ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onQuickSetup();
+                        }}
+                        testID="add-multiple-holdings-option"
+                        title={
+                          quickSetupSavedCount > 0
+                            ? `Continue setup (${quickSetupSavedCount} saved)`
+                            : "Add multiple holdings"
+                        }
+                      />
+                    ) : null}
+                    {onAddPpfAccount ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onAddPpfAccount();
+                        }}
+                        testID="add-ppf-account"
+                        title="Add PPF account"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {onImportHoldings ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onImportHoldings();
+                        }}
+                        testID="import-holdings-csv-option"
+                        title="Import holdings CSV"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {onImportTransactions ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onImportTransactions();
+                        }}
+                        testID="import-transactions-csv-option"
+                        title="Import transaction history"
+                        variant="secondary"
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+
+                {activePanel === "more" ? (
+                  <>
+                    <AppButton
+                      onPress={() => {
+                        toggleMaskWealthValues();
+                        setActivePanel(undefined);
+                      }}
+                      testID="holdings-mask-toggle"
+                      title={maskWealthValues ? "Show values" : "Mask values"}
+                      variant="secondary"
+                    />
+                    <AppButton
+                      onPress={() => setActivePanel("quotes")}
+                      testID="holdings-valuation-details-button"
+                      title="Valuation details"
+                      variant="secondary"
+                    />
+                    {onReviewAllTrades && trades.length > 0 ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onReviewAllTrades();
+                        }}
+                        testID="holdings-transactions-button"
+                        title="Transactions"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {onManageAssets ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onManageAssets();
+                        }}
+                        testID="holdings-manage-assets-button"
+                        title="Manage assets"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {!ppfSummary.accounts.length && onAddPpfAccount ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onAddPpfAccount();
+                        }}
+                        testID="add-ppf-account"
+                        title="Add PPF account"
+                        variant="secondary"
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+
+                {activePanel === "quotes" ? (
+                  <>
+                    <AppText weight="bold">{quoteStatus.title}</AppText>
+                    <AppText color="secondary" variant="caption">
+                      {quoteStatus.detail}
+                    </AppText>
+                    {(failed.length > 0 || timedOut.length > 0) ? (
+                      <AppText color="secondary" variant="caption">
+                        Some quote updates did not complete. Existing saved prices remain available when present.
+                      </AppText>
+                    ) : null}
+                    {hasMarketHoldings ? (
+                      <AppButton
+                        onPress={() => {
+                          void refresh();
+                        }}
+                        title="Refresh prices"
+                        variant="secondary"
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+
+                {activePanel === "insights" ? (
+                  <>
+                    <AppText color="secondary" variant="caption">
+                      Position allocation excludes cash and PPF accounts. Asset mix compares market holdings only.
+                    </AppText>
+                    <View style={styles.insightGrid}>
+                      <InsightCard
+                        eyebrow="Dominant position"
+                        title={
+                          allocationAvailable && summary.dominant
+                            ? summary.dominant.holding.asset.name
+                            : "Awaiting valuation"
+                        }
+                        detail={
+                          allocationAvailable && summary.dominant
+                            ? `${formatPercentage(summary.dominant.allocationPct).replace("+", "")} allocation`
+                            : "Allocation is unavailable while a price is missing"
+                        }
+                      />
+                      {distinctBestReturn ? (
+                        <InsightCard
+                          eyebrow="Best return"
+                          title={distinctBestReturn.holding.asset.name}
+                          detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
+                          positive={(distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0}
+                        />
+                      ) : null}
+                    </View>
+                    {allocationAvailable && exposureSegments.length ? (
+                      <ExposurePanel segments={exposureSegments} />
+                    ) : (
+                      <PremiumCard>
+                        <AppText weight="bold">Asset mix unavailable</AppText>
+                        <AppText color="secondary" variant="caption">
+                          Allocation remains unavailable until every market holding has a price.
+                        </AppText>
+                      </PremiumCard>
+                    )}
+                    <PremiumCard style={styles.topThreeCard}>
+                      <AppText weight="bold">Top three concentration</AppText>
+                      <AppText color="secondary" variant="caption">
+                        {allocationAvailable
+                          ? `${formatPercentage(summary.topThreeAllocationPct).replace("+", "")} of holding value, excluding cash and PPF accounts.`
+                          : "Unavailable while a market holding needs a price."}
+                      </AppText>
+                    </PremiumCard>
+                  </>
+                ) : null}
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -696,11 +885,46 @@ function ExposurePanel({
   );
 }
 
+function DestinationTab({
+  active,
+  label,
+  onPress,
+  testID,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      android_ripple={androidRipple(
+        active ? interaction.primaryRippleColor : interaction.rippleColor,
+      )}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.destinationTab,
+        active && styles.destinationTabActive,
+        getPressedStateStyle({ pressed }),
+      ]}
+      testID={testID}
+    >
+      <AppText color={active ? "primary" : "secondary"} weight="bold">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 function FilterRow({
+  allocationAvailable,
   counts,
   onSelect,
   selected,
 }: {
+  allocationAvailable: boolean;
   counts: Record<HoldingFilter, number>;
   onSelect: (filter: HoldingFilter) => void;
   selected: HoldingFilter;
@@ -709,10 +933,12 @@ function FilterRow({
     <View style={styles.filters}>
       {filterOrder.map((filter) => {
         const active = selected === filter;
+        const disabled = filter === "high-allocation" && !allocationAvailable;
 
         return (
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled, selected: active }}
             android_ripple={androidRipple(
               active
                 ? interaction.primaryRippleColor
@@ -720,6 +946,7 @@ function FilterRow({
             )}
             key={filter}
             onPress={() => onSelect(filter)}
+            disabled={disabled}
             style={({ pressed }) => [
               styles.filterChip,
               minimumTouchTargetStyle,
@@ -743,6 +970,7 @@ function FilterRow({
 }
 
 function HoldingRow({
+  allocationAvailable,
   expanded,
   item,
   masked,
@@ -754,6 +982,7 @@ function HoldingRow({
   onSellRedeem,
   trades,
 }: {
+  allocationAvailable: boolean;
   expanded: boolean;
   item: HoldingReviewItem;
   masked: boolean;
@@ -843,7 +1072,7 @@ function HoldingRow({
           variant="caption"
         />
         <AppText color="secondary" variant="caption">
-          {isPending ? "Allocation unavailable" : `Alloc. ${item.allocationPct.toFixed(2)}%`}
+          {!allocationAvailable || isPending ? "Allocation unavailable" : `Alloc. ${item.allocationPct.toFixed(2)}%`}
         </AppText>
       </View>
 
@@ -883,7 +1112,7 @@ function HoldingRow({
             />
           </View>
 
-          {!isPending ? (
+          {allocationAvailable && !isPending ? (
           <View style={styles.allocationBlock}>
             <View style={styles.allocationHeading}>
               <AppText color="secondary" variant="caption">
@@ -1021,10 +1250,15 @@ function Detail({
   );
 }
 
-function getFilterCounts(items: HoldingReviewItem[]) {
+function getFilterCounts(
+  items: HoldingReviewItem[],
+  allocationAvailable: boolean,
+) {
   return {
     all: items.length,
-    "high-allocation": items.filter((item) => item.allocationPct >= 10).length,
+    "high-allocation": allocationAvailable
+      ? items.filter((item) => item.allocationPct >= 10).length
+      : 0,
     losers: items.filter(
       (item) =>
         item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0,
@@ -1071,18 +1305,6 @@ function formatSource(source?: string) {
 }
 
 const styles = StyleSheet.create({
-  addMenuBackdrop: {
-    backgroundColor: "rgba(0,0,0,0.72)",
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: spacing.md,
-  },
-  addMenuSheet: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.sheet,
-    gap: spacing.md,
-    padding: spacing.md,
-  },
   allocationBlock: {
     gap: spacing.sm,
   },
@@ -1127,6 +1349,21 @@ const styles = StyleSheet.create({
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
+  },
+  destinationTab: {
+    alignItems: "center",
+    borderBottomColor: "transparent",
+    borderBottomWidth: 2,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+  },
+  destinationTabActive: {
+    borderBottomColor: colors.primary,
+  },
+  destinationTabs: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
   detail: {
     flexBasis: "45%",
@@ -1200,6 +1437,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
+  insightsAction: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 0,
+  },
   insightTitle: {
     fontSize: 17,
     lineHeight: 22,
@@ -1264,6 +1505,43 @@ const styles = StyleSheet.create({
   ppfValue: {
     alignItems: "flex-end",
   },
+  pendingValuationRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  panelBackdrop: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingHorizontal: spacing.md,
+  },
+  panelContent: {
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  panelHeader: {
+    alignItems: "center",
+    borderBottomColor: colors.border.subtle,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: spacing.sm,
+  },
+  panelTitle: {
+    flex: 1,
+    minWidth: 0,
+  },
+  panelSheet: {
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.sheet,
+    gap: spacing.md,
+    maxHeight: "90%",
+    padding: spacing.md,
+  },
   quoteStatus: {
     alignItems: "center",
     flexDirection: "row",
@@ -1280,6 +1558,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: spacing.cardInner,
   },
+  quoteDetailsAction: {
+    paddingHorizontal: spacing.xs,
+  },
   recordAction: {
     flexGrow: 0,
   },
@@ -1288,6 +1569,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  resumeRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.sm,
   },
   sectionHeading: {
     alignItems: "flex-start",
@@ -1313,6 +1602,9 @@ const styles = StyleSheet.create({
   statusCard: {
     backgroundColor: colors.surface.card,
     paddingVertical: spacing.sm,
+  },
+  topThreeCard: {
+    gap: spacing.xs,
   },
   valueColumn: {
     alignItems: "flex-end",
