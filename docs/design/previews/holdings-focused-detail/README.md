@@ -20,6 +20,11 @@ approved #278 list-first baseline, nor a production implementation contract.
 - Explain the allocation denominator: market holdings exclude cash and PPF.
 - Keep manual provenance; missing prices have an explicit incomplete state.
   Do not substitute zero prices, gains or allocation when a valuation is absent.
+  Explain incomplete shares once above the list; omit unavailable shares from
+  rows while retaining invested amounts and the affected holding's pending state.
+- Filters wrap when space is limited. On phones up to 380px wide, the list
+  count and Portfolio insights action occupy separate lines, including at 130%
+  text size. This trades some vertical space for readable, reachable controls.
 - Preserve PPF access without presenting it as a traded instrument.
 - Mask portfolio amounts, not units, percentages or per-unit prices, matching
   the app's existing masking contract. Minimal Mode suppresses optional insights
@@ -54,7 +59,10 @@ node docs/design/previews/holdings-focused-detail/verify.cjs
 ```
 
 JSDOM verifies interactions and content, not real rendering, focus trapping,
-dialog geometry or responsive layout. Browser automation exposed no connected
-browser in the creation session (in-app and Chrome unavailable). HTTP and DOM
-checks must not be described as screenshot-based visual approval. Review the
-live preview before adopting the design. No Android app code changed.
+dialog geometry or responsive layout. The initial browser connection blocker was
+resolved on 8 September 2026. Codex in-app browser screenshots verified the
+standard list, detail panel/back interaction, 360px layout with 130% text, and
+missing-price presentation. After refinement, filters no longer clip, the insights
+link does not wrap awkwardly, and rows do not repeat unavailable-share messages.
+This is HTML preview evidence, not Android verification or final design approval.
+No Android app code changed.

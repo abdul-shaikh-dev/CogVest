@@ -150,6 +150,7 @@ select {
   margin-top: 20px;
 }
 .phone {
+  container-type: inline-size;
   --scale: 1;
   flex-shrink: 0;
   position: relative;
@@ -258,6 +259,7 @@ select {
 }
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   overflow: auto;
   scrollbar-width: none;
@@ -282,6 +284,7 @@ select {
 }
 .list-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
@@ -290,6 +293,8 @@ select {
   margin: 4px 0;
 }
 .list-heading button {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: inherit;
   display: flex;
   align-items: center;
@@ -299,6 +304,18 @@ select {
 }
 .list-heading .icon {
   font-size: 16px;
+}
+@container (max-width: 380px) {
+  .list-heading {
+    gap: 0;
+    margin: 12px 0 8px;
+  }
+  .list-heading > :first-child {
+    flex-basis: 100%;
+  }
+  .list-heading button {
+    padding-left: 0;
+  }
 }
 .list {
   background: var(--surface);

@@ -151,11 +151,14 @@ function weight(row, total, pending) {
     : `${((row.value / total) * 100).toFixed(1)}%`;
 }
 function holding(row, total, pending) {
+  const share = pending
+    ? ""
+    : `<span>Market share ${weight(row, total, pending)}</span>`;
   const gain =
     row.value === null
       ? null
       : ((row.value - row.invested) / row.invested) * 100;
-  return `<button class="holding" data-holding="${row.id}" aria-label="Open ${row.name} details"><div class="row-top"><span class="asset-icon ${row.group}">${icon(row.group)}</span><span class="identity"><strong>${row.name}</strong><small>${row.symbol} · ${row.type}${row.source === "Manual" ? " · Manual" : ""}</small></span><span class="amount"><strong>${row.value === null ? "Pending" : money(row.value)}</strong><small class="${gain === null ? "pending" : gain >= 0 ? "up" : "down"}">${gain === null ? "Price needed" : percent(gain)}</small></span></div><span class="row-bottom"><span>Invested ${money(row.invested)}</span><span>Market share ${weight(row, total, pending)}</span></span></button>`;
+  return `<button class="holding" data-holding="${row.id}" aria-label="Open ${row.name} details"><div class="row-top"><span class="asset-icon ${row.group}">${icon(row.group)}</span><span class="identity"><strong>${row.name}</strong><small>${row.symbol} · ${row.type}${row.source === "Manual" ? " · Manual" : ""}</small></span><span class="amount"><strong>${row.value === null ? "Pending" : money(row.value)}</strong><small class="${gain === null ? "pending" : gain >= 0 ? "up" : "down"}">${gain === null ? "Price needed" : percent(gain)}</small></span></div><span class="row-bottom"><span>Invested ${money(row.invested)}</span>${share}</span></button>`;
 }
 function render() {
   const { all, total, pending } = snapshot(),
