@@ -15,7 +15,7 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 - Patience analysis using intended hold periods.
 - Trade frequency analysis.
 - Behaviour insight cards and insight detail screen.
-- Basic LTCG tracker for Indian stocks/ETFs.
+- Informational holding-duration reference with unavailable states for ambiguous instruments/history (#20).
 - Settings for display mode and Minimal Mode preferences.
 - Onboarding nudges for behaviour metadata.
 
@@ -32,7 +32,7 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 - Dashboard with behaviour insight card.
 - Insight detail.
 - Settings with Minimal Mode preferences.
-- Holdings with basic LTCG states.
+- Holdings secondary analysis links to Holding duration; no tax badges on position rows.
 - Add Holding with intended hold period.
 - Progress or Asset Detail if V1 deferred them.
 
@@ -66,14 +66,14 @@ added. These observations are descriptive, not financial or tax advice.
 - `analysePatienceFromSells`
 - `analyseTradeFrequency`
 - `generateInsights`
-- `calculateBasicLtcgStatus`
+- `getHoldingDuration` (informational; never returns tax eligibility)
 
 ## Acceptance Criteria
 
 - Minimal Mode hides daily noise without removing core actions.
 - Behaviour fields remain optional.
 - Insights never sound scolding.
-- Basic LTCG appears only for Indian stocks/ETFs.
+- Duration comparison is limited to explicitly classified INR stocks listed on NSE/BSE, with one dated acquisition and no disposals/transfers or aggregate opening cutover. ETFs remain unavailable without reliable fund classification; the legacy `isTaxEligible` flag is not evidence.
 - V1 persisted data remains compatible.
 
 ## Test Plan
@@ -88,7 +88,7 @@ added. These observations are descriptive, not financial or tax advice.
 - Confirm Add Holding still works in Minimal Mode.
 - Add intended hold period and later sell to test patience analysis.
 - Add enough rated trades for conviction insight.
-- Verify LTCG hidden for crypto and visible for Indian stock/ETF.
+- Verify no tax labels on crypto/debt/foreign assets, and explicit unavailable results for ETFs, unknown instruments and ambiguous histories.
 
 ## Definition of Done
 

@@ -29,6 +29,7 @@ export default function HoldingsScreen() {
 
   return (
     <HoldingsFeatureScreen
+      onOpenDuration={() => router.push("/holding-duration")}
       onAddTrade={() => {
         router.push("/add-holding");
       }}

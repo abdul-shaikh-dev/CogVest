@@ -1,0 +1,51 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace local developer data?"
+    timeout: 30000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- scrollUntilVisible:
+    element:
+      id: "holdings-insights-button"
+    direction: DOWN
+- tapOn:
+    id: "holdings-insights-button"
+- tapOn:
+    id: "holdings-duration-button"
+- assertVisible:
+    id: "holding-duration-screen"
+- assertVisible: "HDFC Bank"
+- assertVisible: "More than 12 months recorded"
+- assertVisible: "Acquired.*2024.*elapsed days"
+- assertVisible: "Nifty 50 ETF"
+- assertVisible: "Comparison unavailable"
+- tapOn:
+    id: "duration-mask"
+- assertNotVisible: "HDFC Bank"
+- assertNotVisible: "More than 12 months recorded"
+- tapOn:
+    id: "duration-mask"
+- tapOn:
+    id: "duration-back"
+- assertVisible:
+    id: "holdings-screen"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-minimal"
+- openLink: "cogvest:///holding-duration"
+- assertVisible: "Optional analysis is paused"
+- assertNotVisible: "HDFC Bank"
+- tapOn: "Done"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-standard"

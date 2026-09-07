@@ -26,10 +26,7 @@ export type Holding = {
   currentPrice: number | null;
   currentValue: number | null;
   dayChangePct?: number;
-  daysToLtcg?: number;
-  heldDays?: number;
   lastUpdated?: string;
-  ltcgEligible?: boolean;
   totalInvested: number;
   totalUnits: number;
   unrealisedPnL: number | null;

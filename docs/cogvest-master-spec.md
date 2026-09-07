@@ -23,8 +23,9 @@ supporting evidence, not sources of truth.
 Issue #137 tracks V2 execution on top of the verified V1 baseline below.
 Minimal Mode is implemented. The descriptive behavior engine (#18) powers
 Dashboard investment-pattern entries and read-only insight details (#19).
-Basic LTCG calculations remain domain capabilities without a user-facing tax
-screen. Optional
+Holding duration (#20) is an on-demand informational reference for unambiguous
+Indian listed-stock records, not tax eligibility or a tax calculator. ETF
+classification and multi-lot histories remain explicitly unavailable. Optional
 planned holding periods accompany acquisitions. V1 exclusions below define the
 V1 boundary, not a prohibition on approved V2 work. See
 `docs/roadmap/v2-behaviour-spec.md` for that version's behavior contract.
