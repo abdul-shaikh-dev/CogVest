@@ -42,6 +42,7 @@ export type PatienceAnalysis = {
   metPlanCount: number;
   mixedOutcomeCount: number;
   observedSaleCount: number;
+  observedSaleIds: string[];
   plannedMatchedQuantity: number;
   requiredSaleCount: number;
   uncoveredSaleQuantity: number;
@@ -187,6 +188,7 @@ export function analysePatienceFromSells(
   let metPlanCount = 0;
   let mixedOutcomeCount = 0;
   let observedSaleCount = 0;
+  const observedSaleIds: string[] = [];
   let plannedMatchedQuantity = decimal(0);
   let uncoveredSaleQuantity = decimal(0);
 
@@ -280,6 +282,7 @@ export function analysePatienceFromSells(
       if (!metPlan && !closedEarlier) return;
 
       observedSaleCount += 1;
+      observedSaleIds.push(trade.id);
       if (metPlan && closedEarlier) mixedOutcomeCount += 1;
       else if (metPlan) metPlanCount += 1;
       else closedEarlierCount += 1;
@@ -295,6 +298,7 @@ export function analysePatienceFromSells(
     metPlanCount,
     mixedOutcomeCount,
     observedSaleCount,
+    observedSaleIds,
     plannedMatchedQuantity: normalizeQuantity(plannedMatchedQuantity),
     requiredSaleCount,
     uncoveredSaleQuantity: normalizeQuantity(uncoveredSaleQuantity),

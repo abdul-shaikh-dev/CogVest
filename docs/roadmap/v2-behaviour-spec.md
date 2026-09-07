@@ -38,6 +38,23 @@ The user sees patterns in conviction, patience, trading frequency, and tax-relev
 
 ## Data Model Changes
 
+### Insight Detail Contract (#19)
+
+Dashboard's Investment patterns section opens conviction, planned holding-period,
+and trading-frequency details. Each detail shows its observation period,
+contributing counts, optional progressively revealed records, methodology, and
+limitations. Insufficient history explains the threshold without encouraging
+transactions or requiring optional ratings. All evidence is derived from current
+records, including corrections and deletions; route parameters carry only the
+insight kind, never a cached result.
+
+Value masking hides summaries, periods, counts, and supporting records. Minimal
+Mode hides the Dashboard entries and suppresses details reached by a direct link.
+Back and Done close the detail, with Dashboard as the no-history fallback.
+Unknown insight links provide the same safe exit. The engine exposes no dismissal
+state, so persistent per-insight dismissal is not implemented and no schema is
+added. These observations are descriptive, not financial or tax advice.
+
 - Persist optional intended hold values on trades.
 - Persist display mode and Minimal Mode preferences.
 - Persist insight dismissal metadata if implemented.

@@ -542,8 +542,8 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText("Portfolio Rollups")).toBeNull();
     expect(screen.queryByText("View details")).toBeNull();
     expect(screen.queryByTestId("add-trade-button")).toBeNull();
-    expect(screen.getByText("Conviction data needs more trades")).toBeTruthy();
-    expect(screen.getByText("1 of 5 trades rated. Keep conviction optional, but useful.")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-insights")).toBeTruthy();
+    expect(screen.getByText("Conviction pattern")).toBeTruthy();
     expect(screen.queryByText(/LTCG/i)).toBeNull();
     expect(screen.queryByText(/Minimal Mode/i)).toBeNull();
   });
@@ -571,7 +571,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Allocation")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.queryByText("This Month")).toBeNull();
-    expect(screen.queryByText(/Conviction data/u)).toBeNull();
+    expect(screen.queryByTestId("dashboard-insights")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
     expandPriceDetails(screen);
     expect(screen.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();

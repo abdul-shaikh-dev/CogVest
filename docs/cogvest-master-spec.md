@@ -21,9 +21,10 @@ supporting evidence, not sources of truth.
 ### Active Version
 
 Issue #137 tracks V2 execution on top of the verified V1 baseline below.
-Minimal Mode is implemented. The descriptive behavior engine (#18) and basic
-LTCG calculations are domain capabilities, not yet user-facing insight/tax
-screens; those surfaces remain separately tracked roadmap work. Optional
+Minimal Mode is implemented. The descriptive behavior engine (#18) powers
+Dashboard investment-pattern entries and read-only insight details (#19).
+Basic LTCG calculations remain domain capabilities without a user-facing tax
+screen. Optional
 planned holding periods accompany acquisitions. V1 exclusions below define the
 V1 boundary, not a prohibition on approved V2 work. See
 `docs/roadmap/v2-behaviour-spec.md` for that version's behavior contract.

@@ -1,0 +1,68 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace local developer data?"
+    timeout: 30000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: "open-insight-conviction"
+    direction: DOWN
+- tapOn:
+    id: "open-insight-conviction"
+- assertVisible: "Conviction pattern"
+- assertVisible: "Not enough data yet"
+- scrollUntilVisible:
+    element:
+      id: "insight-show-records"
+    direction: DOWN
+- tapOn:
+    id: "insight-show-records"
+- scrollUntilVisible:
+    element:
+      text: "Opening position.*conviction 4/5"
+    direction: DOWN
+- assertVisible: "HDFC Bank"
+- scrollUntilVisible:
+    element:
+      id: "insight-mask-toggle"
+    direction: UP
+- tapOn:
+    id: "insight-mask-toggle"
+- assertNotVisible: "What contributed"
+- assertNotVisible: "HDFC Bank"
+- tapOn:
+    id: "insight-mask-toggle"
+- tapOn:
+    id: "insight-back"
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///insight?kind=frequency"
+- assertVisible: "Trading frequency"
+- assertNotVisible: "Not enough data yet"
+- openLink: "cogvest:///insight?kind=patience"
+- assertVisible: "Planned holding periods"
+- assertVisible: "Not enough data yet"
+- openLink: "cogvest:///insight?kind=missing"
+- assertVisible: "Insight unavailable"
+- tapOn: "Back to Dashboard"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-minimal"
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Insights are paused"
+- assertNotVisible: "What contributed"
+- tapOn: "Done"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-standard"

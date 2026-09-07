@@ -21,7 +21,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Portfolio value"
 - assertVisible: "Holdings P&L"
 - assertNotVisible: "This Month"
-- assertNotVisible: ".*Conviction data.*"
+- assertNotVisible: "Investment patterns"
 - openLink: "cogvest:///holdings"
 - assertVisible:
     id: "holdings-search-input"
@@ -48,7 +48,11 @@ appId: com.abdulshaikh.cogvest
       text: "This Month"
     direction: DOWN
 - assertVisible: "This Month"
-- assertVisible: ".*Conviction data.*"
+- scrollUntilVisible:
+    element:
+      text: "Investment patterns"
+    direction: DOWN
+- assertVisible: "Investment patterns"
 - openLink: "cogvest:///settings"
 - tapOn:
     id: "display-mode-minimal"
