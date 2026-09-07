@@ -138,11 +138,36 @@ export function MonthlyHistoryPanel({
   }, [selectedYear, years]);
 
   useEffect(() => {
-    if (!isVisible || !isDetailVisible) return;
+    if (!isVisible) return;
 
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ animated: false, y: 0 });
-    });
+    let frame: number;
+    if (isDetailVisible) {
+      isRestoringOverviewRef.current = false;
+      frame = requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ animated: false, y: 0 });
+      });
+    } else if (isRestoringOverviewRef.current) {
+      const originMonth = originMonthRef.current;
+      const restoreOffset = overviewScrollOffsetRef.current;
+
+      // Wait for the overview rows to mount before restoring scroll and focus.
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ animated: false, y: restoreOffset });
+          const origin = originMonth ? rowRefs.current[originMonth] : null;
+          const handle = origin ? findNodeHandle(origin) : null;
+
+          if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+          frame = requestAnimationFrame(() => {
+            isRestoringOverviewRef.current = false;
+          });
+        });
+      });
+    } else {
+      return;
+    }
+
+    return () => cancelAnimationFrame(frame);
   }, [isDetailVisible, isVisible]);
 
   if (!summaries.length) return null;
@@ -168,26 +193,8 @@ export function MonthlyHistoryPanel({
   }
 
   function showOverview() {
-    const originMonth = originMonthRef.current;
-    const restoreOffset = overviewScrollOffsetRef.current;
-
     isRestoringOverviewRef.current = true;
     setSelectedMonth(null);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({
-          animated: false,
-          y: restoreOffset,
-        });
-        const origin = originMonth ? rowRefs.current[originMonth] : null;
-        const handle = origin ? findNodeHandle(origin) : null;
-
-        if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
-        requestAnimationFrame(() => {
-          isRestoringOverviewRef.current = false;
-        });
-      });
-    });
   }
 
   function requestClose() {
