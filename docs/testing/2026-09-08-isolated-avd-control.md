@@ -5,15 +5,19 @@ Repository base: `54681ec`, after the #300 lifecycle fix. No app code changed.
 
 ## Decision
 
-A new AVD with fresh data and ample free storage still exhibits heavy native
-Settings frame misses. Disabling Vulkan for a separate cold boot does not
-establish a healthy control either. Do not interpret these runs as an app
-optimization result or claim CogVest is smooth. Keep #299 open.
+A new Android 16.1 AVD with fresh data and ample free storage still exhibits
+heavy native Settings frame misses. Disabling Vulkan for a separate cold boot
+does not establish a healthy control either. The subsequently owner-approved
+Android 15 comparison also fails to establish a healthy native baseline.
+Do not interpret these runs as an app optimization result or claim CogVest is
+smooth. Keep #299 open.
 
-Next useful comparison: a separate Android 15 / API 35 system image, using the
-same native control before testing CogVest. Only Android 16.1 is installed.
-Installing another image or upgrading SDK/emulator components requires owner
-approval; neither was done here. The existing AVD must not be replaced or wiped.
+Next: inspect host/emulator presentation timing and validate visible-window
+frame pacing, rather than repeating blind image changes or optimizing chart
+code on contaminated evidence. These counters are not direct measurements of
+perceived smoothness. No specific driver defect or app bottleneck is proven.
+Any further SDK/emulator upgrade still requires owner approval. The existing
+AVD must not be replaced or wiped.
 
 ## Method
 
@@ -78,6 +82,46 @@ powershell -NoProfile -File scripts/measure-android-frames.ps1 -Mode scroll -Lab
 Use a new label to preserve an earlier capture. Do not compare the warm-up to
 the measured runs as evidence of an improvement.
 
+## Approved Android 15 Comparison
+
+After the owner approved a separate image, downloaded Google's stable API 35
+Google Play x86_64 revision 9 archive into `.expo/android35-googleplay-r09.zip`.
+Verified its 1,762,061,559-byte size and SHA-1
+`2f0054868e6aab3c098acd3decba17a82aed4176` against the
+[official catalogue](https://dl.google.com/android/repository/sys-img/google_apis_playstore/sys-img2-3.xml)
+before extraction into `.expo/android35-image/`. No existing SDK component was
+upgraded and the image was not registered in Android Studio's SDK installation.
+
+Created `.expo/isolated-avd/CogVest_API35_Control.avd` with an absolute image
+path and the same hardware/display settings and emulator binary as above.
+Runtime checks returned Android `15`, SDK `35`, host OpenGL translation, and
+1280x2856 at 60Hz. `/data` reported 31GB total, 715MB used, and 30GB available.
+No account or CogVest installation was added to this device.
+
+The initial warm-up aborted after a transient ADB disconnect; a subsequent
+screenshot pull also required retry. Neither is treated as a successful sample.
+After reconnection, visually verified the fully loaded Settings list and ran a
+successful warm-up followed by three uninterrupted measurements. The Android 15
+Settings layout differs from Android 16.1, so equal gestures are not identical
+rendering work. Visible-window activation and first-boot background activity
+remain uncontrolled, as in the preceding comparison.
+
+| Android 15 auto-GPU control | Frames | Missed frames | P95 |
+| --- | ---: | ---: | ---: |
+| Run 1 | 334 | 318 / 95.21% | 57ms |
+| Run 2 | 330 | 326 / 98.79% | 57ms |
+| Run 3 | 334 | 301 / 90.12% | 61ms |
+
+Successful warm-up, excluded: 321 frames / 86.60% / 61ms. Raw counters remain
+local in `.expo/frame-probes/api35-native-measured/`; the incomplete initial
+warm-up is separately labelled. No build, tests, or screenshots overlapped
+these three measured runs.
+
+An additional post-run SurfaceFlinger dump reported `PresentFences=false` and
+HWC-attributed missed-frame counters. That is a diagnostic lead, not a
+host-display FPS measurement or proof of a hardware/driver failure. Do not
+equate gfxinfo's jank percentage with the percentage of frames visibly dropped.
+
 ## Verification Boundary
 
 The disposable AVD is stopped. Original `Pixel_10_Pro` is running again on
@@ -85,8 +129,9 @@ The disposable AVD is stopped. Original `Pixel_10_Pro` is running again on
 2026 synthetic Progress data verified through the UI hierarchy. Strict Android
 smoke passed. Installed APK SHA-256 remains
 `3861e1905928203518a2da1c7b39dce43d1b8d94ab229d2fae3e4db278e697d9`.
-Its saved AVD configuration and app data were not edited. The disposable files
-remain ignored locally, not registered in the owner's normal AVD directory.
+Its saved AVD configuration and app data were not edited. Both disposable AVDs
+are stopped; their files and the Android 15 image remain ignored locally, not
+registered in the owner's normal AVD directory.
 
 This follow-up stopped at the unhealthy native-control gate. No fresh CogVest
 APK was built or installed and no new app-performance claim is made. No Jest
