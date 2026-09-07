@@ -38,6 +38,7 @@ const defaultFlows = [
   "e2e/minimal-mode.yaml",
   "e2e/insight-details.yaml",
   "e2e/holding-duration.yaml",
+  "e2e/contextual-nudges.yaml",
   "e2e/persistence.yaml",
   "e2e/privacy-settings.yaml",
   "e2e/settings-preference-hierarchy.yaml",

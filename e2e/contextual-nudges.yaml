@@ -1,0 +1,145 @@
+appId: com.abdulshaikh.cogvest
+---
+# Replaces only a developer test portfolio, with the existing confirmation gate.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace local developer data?"
+    timeout: 30000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: "nudge-minimal"
+- takeScreenshot: .expo/issue21-settings
+- tapOn:
+    id: "dismiss-nudge-minimal"
+- assertNotVisible:
+    id: "nudge-minimal"
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible:
+    id: "nudge-insights"
+- takeScreenshot: .expo/issue21-insights
+- tapOn:
+    id: "dismiss-nudge-insights"
+- assertVisible: "Conviction pattern"
+- openLink: "cogvest:///add-holding"
+- assertNotVisible:
+    id: "nudge-metadata"
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: "Guidance Holding"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "symbol-input"
+    direction: DOWN
+- tapOn:
+    id: "symbol-input"
+- inputText: "GUIDANCE"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "ticker-input"
+    direction: DOWN
+- tapOn:
+    id: "ticker-input"
+- inputText: "GUIDANCE"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "continue-class-button"
+    direction: DOWN
+- tapOn:
+    id: "continue-class-button"
+- scrollUntilVisible:
+    element:
+      id: "continue-position-button"
+    direction: DOWN
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "price-input"
+    direction: DOWN
+- tapOn:
+    id: "price-input"
+- inputText: "125"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "toggle-position-options"
+    direction: DOWN
+- tapOn:
+    id: "toggle-position-options"
+- scrollUntilVisible:
+    element:
+      id: "dismiss-nudge-metadata"
+    direction: DOWN
+- assertVisible:
+    id: "nudge-metadata"
+- takeScreenshot: .expo/issue21-metadata
+- tapOn:
+    id: "dismiss-nudge-metadata"
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      text: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
+    direction: DOWN
+- assertVisible: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
+# Cold launch proves dismissal persistence, not just local component state.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- assertNotVisible:
+    id: "nudge-minimal"
+- tapOn:
+    id: "display-mode-minimal"
+- takeScreenshot: .expo/issue21-minimal
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Insights are paused"
+- assertNotVisible:
+    id: "nudge-insights"
+- tapOn: "Done"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: "display-mode-standard"
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Conviction pattern"
+- assertNotVisible:
+    id: "nudge-insights"
+- tapOn:
+    id: "insight-back"

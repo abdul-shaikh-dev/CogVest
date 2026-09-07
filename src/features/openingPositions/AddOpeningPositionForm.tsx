@@ -42,6 +42,7 @@ import type {
   Quote,
 } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
+import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
 import {
   assetClasses,
@@ -935,6 +936,7 @@ export function AddOpeningPositionForm({
           />
         ) : null}
         {!quickSetup && showPositionOptions ? <View style={styles.convictionGroup}>
+          <ContextualNudge kind="metadata" store={store} hasConviction={Boolean(conviction)} hasPlan={Boolean(intendedHoldDays.trim())} />
           <AppText color="secondary" variant="caption" weight="medium">
             Conviction optional
           </AppText>

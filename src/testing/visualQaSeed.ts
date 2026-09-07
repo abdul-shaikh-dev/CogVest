@@ -447,6 +447,7 @@ function resetPortfolioStoreForVisualQa(
   state.updatePreferences({
     hasCompletedOnboarding: true,
     maskWealthValues: false,
+    nudgeVersions: {},
   });
 }
 

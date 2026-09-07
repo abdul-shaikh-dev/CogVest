@@ -26,7 +26,10 @@ Dashboard investment-pattern entries and read-only insight details (#19).
 Holding duration (#20) is an on-demand informational reference for unambiguous
 Indian listed-stock records, not tax eligibility or a tax calculator. ETF
 classification and multi-lot histories remain explicitly unavailable. Optional
-planned holding periods accompany acquisitions. V1 exclusions below define the
+planned holding periods accompany acquisitions. Optional, locally dismissed
+guidance (#21) explains these fields, Minimal Mode, and insight context only in
+their relevant screens; it never blocks tracking and is hidden in Minimal Mode.
+V1 exclusions below define the
 V1 boundary, not a prohibition on approved V2 work. See
 `docs/roadmap/v2-behaviour-spec.md` for that version's behavior contract.
 

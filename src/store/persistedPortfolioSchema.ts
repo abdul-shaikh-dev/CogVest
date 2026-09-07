@@ -390,6 +390,11 @@ const preferencesSchema = z
     displayMode: z.enum(["minimal", "standard"]).optional(),
     hasCompletedOnboarding: z.boolean().optional(),
     maskWealthValues: z.boolean().optional(),
+    nudgeVersions: z.object({
+      metadata: z.number().int().positive().optional().catch(undefined),
+      minimal: z.number().int().positive().optional().catch(undefined),
+      insights: z.number().int().positive().optional().catch(undefined),
+    }).catch({}).optional(),
   })
   .optional();
 
