@@ -36,6 +36,7 @@ const defaultFlows = [
   "e2e/progress-snapshot-history.yaml",
   "e2e/value-masking.yaml",
   "e2e/minimal-mode.yaml",
+  "e2e/insight-details.yaml",
   "e2e/persistence.yaml",
   "e2e/privacy-settings.yaml",
   "e2e/settings-preference-hierarchy.yaml",

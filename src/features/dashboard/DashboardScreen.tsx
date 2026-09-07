@@ -44,6 +44,8 @@ import { colors, radii, spacing } from "@/src/theme";
 import type { Holding } from "@/src/types";
 
 import { useDashboard } from "./useDashboard";
+import { InsightCards } from "@/src/features/insights";
+import type { InsightKind } from "@/src/domain/calculations/behaviorInsightDetails";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -54,6 +56,7 @@ type DashboardScreenProps = {
   onAddTrade?: () => void;
   onOpenHoldings?: () => void;
   onOpenProgress?: () => void;
+  onOpenInsight?: (kind: InsightKind) => void;
   onQuickSetup?: () => void;
   quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
@@ -164,6 +167,7 @@ export function DashboardScreen({
   onAddTrade,
   onOpenHoldings,
   onOpenProgress,
+  onOpenInsight,
   onQuickSetup,
   quickSetupSavedCount = 0,
   refreshQuotes,
@@ -690,22 +694,7 @@ export function DashboardScreen({
           </PremiumCard>
         ) : null}
 
-        {!isMinimalMode ? (
-          <PremiumCard>
-            <SectionHeader
-              title={
-                dashboard.convictionReadiness.isReady
-                  ? "Conviction data ready"
-                  : "Conviction data needs more trades"
-              }
-            />
-            <AppText color="secondary">
-              {dashboard.convictionReadiness.ratedTradeCount} of{" "}
-              {dashboard.convictionReadiness.requiredTradeCount} trades rated.
-              Keep conviction optional, but useful.
-            </AppText>
-          </PremiumCard>
-        ) : null}
+        <InsightCards store={store} now={now} onOpen={onOpenInsight} />
       </View>
     </ScreenContainer>
   );

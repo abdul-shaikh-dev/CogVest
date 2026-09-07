@@ -8,6 +8,7 @@ export default function DashboardScreen() {
 
   return (
     <DashboardFeatureScreen
+      onOpenInsight={(kind) => router.push({ pathname: "/insight", params: { kind } })}
       onAddTrade={() => {
         router.push("/add-holding");
       }}

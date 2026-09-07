@@ -170,6 +170,7 @@ describe("behaviour insight calculations", () => {
         metPlanCount: 2,
         mixedOutcomeCount: 0,
         observedSaleCount: 3,
+        observedSaleIds: ["sell-1", "sell-2", "sell-3"],
         plannedMatchedQuantity: 3,
         requiredSaleCount: 3,
         uncoveredSaleQuantity: 0,
