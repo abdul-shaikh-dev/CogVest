@@ -56,6 +56,7 @@ type RefreshQuotes = (
 ) => Promise<QuoteRefreshResult>;
 
 type HoldingsScreenProps = {
+  onOpenDuration?: () => void;
   now?: Date;
   onAddTrade?: () => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
@@ -88,6 +89,7 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 };
 
 export function HoldingsScreen({
+  onOpenDuration,
   now,
   onAddTrade,
   onAddPpfAccount,
@@ -683,6 +685,17 @@ export function HoldingsScreen({
 
                 {activePanel === "insights" ? (
                   <>
+                    {onOpenDuration ? (
+                      <AppButton
+                        title="Holding duration"
+                        variant="secondary"
+                        testID="holdings-duration-button"
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onOpenDuration();
+                        }}
+                      />
+                    ) : null}
                     <AppText color="secondary" variant="caption">
                       Position allocation excludes cash and PPF accounts. Asset mix compares market holdings only.
                     </AppText>
