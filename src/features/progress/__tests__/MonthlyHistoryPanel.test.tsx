@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
 import { Modal, ScrollView } from "react-native";
 
 import { MonthlyHistoryPanel } from "@/src/features/progress/MonthlyHistoryPanel";
@@ -77,6 +77,69 @@ describe("MonthlyHistoryPanel", () => {
     createSummary("2026-04", { portfolioValue: 0 }),
     createSummary("2026-05", { portfolioValue: -20_000 }),
   ];
+
+  describe("animation frame ownership", () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+      cleanup();
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it.each(["close", "unmount"])("cancels the detail scroll on %s", (action) => {
+      const { getByTestId, unmount } = render(
+        <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
+      );
+      fireEvent.press(getByTestId("open-monthly-history"));
+      fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      expect(jest.getTimerCount()).toBe(1);
+
+      if (action === "close") fireEvent.press(getByTestId("close-monthly-history"));
+      else unmount();
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it.each([
+      ["close", 0], ["close", 1], ["close", 2],
+      ["unmount", 0], ["unmount", 1], ["unmount", 2],
+    ] as const)("cancels overview restoration on %s after %i frames", (action, frames) => {
+      const { getByTestId, unmount } = render(
+        <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
+      );
+      fireEvent.press(getByTestId("open-monthly-history"));
+      fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      act(() => jest.runAllTimers());
+      fireEvent.press(getByTestId("history-back"));
+      for (let index = 0; index < frames; index += 1) {
+        act(() => jest.advanceTimersToNextTimer());
+      }
+      expect(jest.getTimerCount()).toBe(1);
+      if (action === "close") fireEvent.press(getByTestId("close-monthly-history"));
+      else unmount();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("does not restore an old overview offset after reopening a month", () => {
+      const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+      const { getByTestId } = render(
+        <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
+      );
+      fireEvent.press(getByTestId("open-monthly-history"));
+      fireEvent.scroll(getByTestId("monthly-history-scroll"), {
+        nativeEvent: { contentOffset: { x: 0, y: 300 } },
+      });
+      fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      act(() => jest.runAllTimers());
+      fireEvent.press(getByTestId("history-back"));
+      fireEvent.press(getByTestId("snapshot-month-2026-05"));
+      scrollTo.mockClear();
+      act(() => jest.runAllTimers());
+
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(scrollTo).toHaveBeenCalledWith({ animated: false, y: 0 });
+    });
+  });
 
   it("opens newest year first and lists only stored months newest first", () => {
     const { getByTestId, getByText } = render(
