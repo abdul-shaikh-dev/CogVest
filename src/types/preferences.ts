@@ -7,4 +7,5 @@ export type Preferences = {
   displayMode: DisplayMode;
   hasCompletedOnboarding: boolean;
   maskWealthValues: boolean;
+  nudgeVersions?: Partial<Record<"metadata" | "minimal" | "insights", number>>;
 };

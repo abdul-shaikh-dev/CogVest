@@ -16,6 +16,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 
 import { useSettings } from "./useSettings";
+import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
 type SettingsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
@@ -154,6 +155,7 @@ export function SettingsScreen({
               );
             })}
           </View>
+          <ContextualNudge kind="minimal" store={store} />
         </PremiumCard>
 
         <PremiumCard testID="privacy-storage-card">

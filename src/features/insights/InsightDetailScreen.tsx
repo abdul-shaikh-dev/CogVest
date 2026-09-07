@@ -14,6 +14,7 @@ import {
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
 import { useBehaviorInsights } from "./useBehaviorInsights";
+import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
 export function InsightDetailScreen({
   kind,
@@ -91,6 +92,7 @@ export function InsightDetailScreen({
                 </>
               )}
             </PremiumCard>
+            <ContextualNudge kind="insights" store={store} />
             {!masked ? (
               <PremiumCard style={styles.group} testID="insight-evidence">
                 <SectionHeader title="What contributed" />

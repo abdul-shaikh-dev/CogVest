@@ -60,6 +60,39 @@ added. These observations are descriptive, not financial or tax advice.
 - Persist insight dismissal metadata if implemented.
 - Keep all insight outputs derived.
 
+### Contextual Guidance Contract (#21)
+
+Guidance is inline, optional, dismissible, and never a modal, onboarding gate,
+notification, or Dashboard banner. There are three content-version keys:
+
+- `metadata`: inside Add Holding's explicitly expanded optional details, never
+  rapid setup. Explain only missing conviction/holding-plan context; existing
+  saved buy/opening-position metadata and entered draft values suppress the
+  corresponding explanation. Both fields remain optional and do not affect
+  portfolio values.
+- `minimal`: below the existing Settings display choices in Standard Mode.
+  Explain the quieter view without prompting a mode change.
+- `insights`: after the observation on a valid insight detail, not on Dashboard
+  or invalid links. Explain recorded evidence and optional missing context.
+
+All guidance is suppressed in Minimal Mode. `preferences.nudgeVersions` stores
+only the acknowledged content version for each key, with no exposure log or
+analytics. Dismissal persists; a mounted guide also completes when both metadata
+fields already exist in saved records or Minimal Mode is selected. Draft input
+only suppresses the matching explanation; it never persists completion.
+Acknowledged versions never downgrade and only materially changed teaching copy
+may increment a content version. App-data reset resets guidance; ordinary edits,
+navigation, restarts, and switching back to Standard do not reset acknowledgment.
+
+The additive optional preference needs no financial schema migration. Older
+preferences default to no acknowledgments. Malformed guidance versions are
+ignored without rejecting financial records. A failed preference write keeps the
+persistent state unchanged, explains the failure, and offers session-only hiding;
+core actions remain available. No writes are permitted while storage recovery is
+pending. This is guidance dismissal, not dismissal of the underlying insights.
+
+Verification and limitations: `docs/testing/contextual-nudges-evidence.md`.
+
 ## Domain Calculations Required
 
 - `analyseConviction`

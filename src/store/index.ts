@@ -179,6 +179,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   updateMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
+  acknowledgeNudge: (kind: "metadata" | "minimal" | "insights", version: number) => void;
   updateTrade: (trade: Trade) => void;
   upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
   upsertQuote: (quote: Quote) => void;
@@ -3370,6 +3371,19 @@ export function createPortfolioStore({
         },
       }));
       persistPortfolio(storage, get());
+    },
+    acknowledgeNudge: (kind, version) => {
+      if (!Number.isInteger(version) || version < 1) return;
+      const state = get();
+      if (state.storageRecovery) throw new Error("Resolve storage recovery before saving preferences.");
+      if ((state.preferences.nudgeVersions?.[kind] ?? 0) >= version) return;
+      const preferences = {
+        ...state.preferences,
+        nudgeVersions: { ...state.preferences.nudgeVersions, [kind]: version },
+      };
+      // Do not claim dismissal is saved if local storage rejected the write.
+      persistPortfolio(storage, { ...state, preferences });
+      set({ preferences });
     },
     updateTrade: (trade) => {
       if (!isManualTrade(trade)) return;
