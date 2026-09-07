@@ -1,0 +1,77 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in retained synthetic portfolio: visual-qa HDFC, 25 units, invested 36250.
+# No seeding, reset, or financial mutation. Works with a current debug or release APK.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-search-input
+    timeout: 30000
+- tapOn:
+    id: holdings-search-input
+- inputText: "HDFC"
+- hideKeyboard
+- assertVisible: "Invested ₹36.25K"
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible:
+    id: holding-detail-back
+- assertVisible: "Quantity"
+- assertVisible: "25"
+- assertVisible: "₹1,450.00"
+- assertVisible: "First recorded purchase"
+- takeScreenshot: .expo/holdings-focused-detail
+- tapOn:
+    id: holding-detail-mask
+- assertNotVisible: "₹36,250.00"
+- assertVisible: "₹1,450.00"
+- tapOn:
+    id: holding-detail-mask
+- tapOn:
+    id: holding-detail-back
+- assertVisible: "HDFC"
+- assertVisible: "Invested ₹36.25K"
+- takeScreenshot: .expo/holdings-focused-list
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- back
+- assertVisible:
+    id: holdings-search-input
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- scrollUntilVisible:
+    element:
+      id: holding-view-records
+    direction: DOWN
+- tapOn:
+    id: holding-view-records
+- scrollUntilVisible:
+    element:
+      id: review-opening-position-.*
+    direction: DOWN
+- tapOn:
+    id: review-opening-position-.*
+- assertVisible:
+    id: review-opening-position-screen
+- back
+- assertVisible:
+    id: holdings-screen
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- scrollUntilVisible:
+    element:
+      id: holding-sell-redeem-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-sell-redeem-visual-qa-asset-hdfc
+- assertVisible:
+    id: sell-redeem-screen
+- tapOn:
+    id: sell-redeem-back
+- assertVisible:
+    id: holdings-screen

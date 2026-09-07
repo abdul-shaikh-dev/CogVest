@@ -105,11 +105,31 @@ Dashboard refinement:
 Holdings replaces Excel rows with a durable position-review screen. It should
 not repeat Dashboard's portfolio-value hero.
 
-The approved #278 list-first preview lives in
-`docs/design/previews/holdings-list-first/`. Search and existing filters precede
-market holdings. A quiet Portfolio insights action opens secondary analysis;
-management, transactions, masking and valuation detail live under More. Keep
-Add in the header with single entry, Quick Setup, imports and Add PPF.
+The focused-detail direction approved on 8 September 2026 supersedes the #278
+visual hierarchy. Its preview and interaction contract live in
+`docs/design/previews/holdings-focused-detail/` (PR #308). Search and existing
+filters precede a grouped list with hairline row separators. Each row shows
+name, symbol/instrument, honest Manual provenance, current value, signed return,
+invested amount and Allocation. Allocation uses market holdings only, excluding
+cash and PPF; never label it "Market share" or imply whole-portfolio allocation.
+Incomplete allocation is explained once rather than repeated on every row.
+
+A row opens a separate full-height detail panel, not an inline expansion.
+Explicit Back and Android Back return to the same list/search/filter/scroll
+state. The panel leads with current value and return, followed by invested value,
+quantity, exact per-unit prices, allocation, classification, first recorded
+purchase (Unknown when history is incomplete), and source timestamp. Recorded
+purchase history is not a claim about the acquisition date of remaining lots.
+View records discloses existing correction/history actions; Sell / redeem
+remains separate. Close the panel before entering those existing routes.
+
+Portfolio insights is a clearly actionable secondary link. Management,
+transactions and full valuation detail remain under More. Masking is available
+in the header and detail panel as well as More. Keep Add in the header with
+single entry, Quick Setup, imports and Add PPF. Normal saved-price status belongs
+in valuation details; refresh outcomes and incomplete valuations remain visible.
+Filters wrap instead of clipping; enlarged text may stack the list heading and
+insights action. Do not shrink text to preserve a single control row.
 
 PPF accounts use a counted destination alongside Market when both exist;
 PPF-only portfolios open their accounts. Do not put an absent-account promotion
@@ -134,7 +154,7 @@ Holdings should answer:
 - Which holdings moved most?
 - Is the portfolio concentrated?
 
-Each holding card should expose:
+Each holding's list row and focused detail panel together expose:
 
 - asset name and symbol
 - asset class and useful metadata
@@ -157,7 +177,8 @@ Rules:
 - keep the Add Holding entry point in the Holdings header
 - keep Search and value masking available
 - do not use spreadsheet-style columns or editable grids
-- keep allocation visible for each holding and consistent with Dashboard totals
+- keep allocation visible for valued market holdings; its denominator excludes
+  cash and PPF, unlike the Dashboard's total-portfolio allocation
 - keep each row/card visually durable; holdings should not look like a quick
   trade feed
 - put the list first; retain dominant position, distinct best return, top-three

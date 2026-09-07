@@ -2,9 +2,51 @@ import {
   filterHoldingReviewItems,
   getExposureSegments,
   getHoldingReviewSummary,
+  getFirstRecordedPurchase,
   type HoldingReviewItem,
 } from "@/src/features/holdings/holdingsReview";
 import type { Asset, Holding } from "@/src/types";
+
+describe("first recorded purchase", () => {
+  const position = {
+    id: "opening",
+    assetId: "asset",
+    quantity: 1,
+    averageCostPrice: 100,
+    date: "2025-06-01",
+  };
+  const buy = {
+    id: "buy",
+    assetId: "asset",
+    type: "buy" as const,
+    quantity: 1,
+    pricePerUnit: 100,
+    totalValue: 100,
+    date: "2024-04-01",
+  };
+  it("uses the earliest purchase across opening positions and buys", () => {
+    expect(getFirstRecordedPurchase([position], [buy])).toBe("2024-04-01");
+  });
+  it("does not invent a date when an opening acquisition is unknown", () => {
+    expect(
+      getFirstRecordedPurchase([{ ...position, date: null }], [buy]),
+    ).toBeNull();
+  });
+  it("does not substitute a measurement date for a purchase date", () => {
+    expect(
+      getFirstRecordedPurchase(
+        [{ ...position, date: null, measuredAsOf: "2026-01-01" }],
+        [],
+      ),
+    ).toBeNull();
+  });
+  it("returns unknown for missing or invalid recorded dates", () => {
+    expect(getFirstRecordedPurchase([], [])).toBeNull();
+    expect(
+      getFirstRecordedPurchase([], [{ ...buy, date: "invalid" }]),
+    ).toBeNull();
+  });
+});
 
 function createReviewItem({
   allocationPct,
@@ -72,7 +114,11 @@ describe("holdings review helpers", () => {
 
   it("aggregates precise exposure values before display rounding", () => {
     const first = createReviewItem({ allocationPct: 50, id: "first", pnl: 0 });
-    const second = createReviewItem({ allocationPct: 50, id: "second", pnl: 0 });
+    const second = createReviewItem({
+      allocationPct: 50,
+      id: "second",
+      pnl: 0,
+    });
     first.holding.calculationBasis = {
       averageCostPrice: "1",
       currentValue: "0.005",

@@ -1,7 +1,9 @@
 # Holdings: Focused Detail Study
 
-Status: **proposal awaiting user review**. This is not a replacement for the
-approved #278 list-first baseline, nor a production implementation contract.
+Status: **approved for implementation on 8 September 2026**. The user approved
+the refined preview, including Allocation terminology. This direction supersedes
+the #278 list-first visual hierarchy; the production contract is recorded in
+`docs/design/v1-screen-baseline.md`. PR #308 contains the preview and implementation.
 
 ## Direction
 
@@ -64,5 +66,5 @@ resolved on 8 September 2026. Codex in-app browser screenshots verified the
 standard list, detail panel/back interaction, 360px layout with 130% text, and
 missing-price presentation. After refinement, filters no longer clip, the insights
 link does not wrap awkwardly, and rows do not repeat unavailable-share messages.
-This is HTML preview evidence, not Android verification or final design approval.
-No Android app code changed.
+This paragraph records HTML preview verification only. Native implementation
+evidence is recorded in `docs/testing/holdings-focused-detail-verification.md`.

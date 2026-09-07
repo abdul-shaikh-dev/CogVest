@@ -1,6 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Keyboard,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -9,6 +18,7 @@ import {
   AppText,
   CategoryIcon,
   EmptyState,
+  GroupedListRow,
   IconButton,
   MaskedValue,
   PremiumCard,
@@ -20,14 +30,12 @@ import {
   getPressedStateStyle,
   minimumTouchTargetStyle,
 } from "@/src/components/common";
-import { FormTextField } from "@/src/components/forms";
 import { useReducedMotionPreference } from "@/src/hooks";
-import {
-  instrumentTypeLabel,
-  sectorTypeLabel,
-} from "@/src/domain/assets";
+import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
+import { instrumentTypeLabel, sectorTypeLabel } from "@/src/domain/assets";
 import {
   formatCompactINR,
+  formatINR,
   formatDate,
   formatPercentage,
 } from "@/src/domain/formatters";
@@ -45,15 +53,14 @@ import {
   filterHoldingReviewItems,
   getExposureSegments,
   getHoldingReviewSummary,
+  getFirstRecordedPurchase,
   type ExposureSegment,
   type HoldingFilter,
   type HoldingReviewItem,
 } from "./holdingsReview";
 import { useHoldings } from "./useHoldings";
 
-type RefreshQuotes = (
-  input: RefreshQuotesInput,
-) => Promise<QuoteRefreshResult>;
+type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
 
 type HoldingsScreenProps = {
   onOpenDuration?: () => void;
@@ -108,8 +115,12 @@ export function HoldingsScreen({
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
   const insets = useSafeAreaInsets();
-  const [activePanel, setActivePanel] = useState<"add" | "insights" | "more" | "quotes">();
-  const [selectedDestination, setSelectedDestination] = useState<"market" | "ppf">("market");
+  const [activePanel, setActivePanel] = useState<
+    "add" | "insights" | "more" | "quotes"
+  >();
+  const [selectedDestination, setSelectedDestination] = useState<
+    "market" | "ppf"
+  >("market");
   const {
     displayMode,
     failed,
@@ -121,7 +132,6 @@ export function HoldingsScreen({
     quoteFreshness,
     refresh,
     rollupRows,
-    rollupTotals,
     timedOut,
     toggleMaskWealthValues,
     trades,
@@ -133,13 +143,19 @@ export function HoldingsScreen({
   const isMinimalMode = displayMode === "minimal";
   const isReducedMotionEnabled = useReducedMotionPreference();
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
-  const [expandedAssetId, setExpandedAssetId] = useState<string>();
+  const [selectedAssetId, setSelectedAssetId] = useState<string>();
   const [searchQuery, setSearchQuery] = useState("");
   const reviewItems = createHoldingReviewItems(holdings, rollupRows);
-  const marketReviewItems = reviewItems.filter(
-    (item) => item.holding.asset.instrumentType !== "ppf",
+  const marketHoldings = holdings.filter(
+    (holding) => holding.asset.instrumentType !== "ppf",
   );
-  const marketHoldings = marketReviewItems.map((item) => item.holding);
+  const allocationHoldings = marketHoldings.filter(
+    (holding) => holding.asset.assetClass !== "cash",
+  );
+  const marketReviewItems = createHoldingReviewItems(
+    marketHoldings,
+    calculateConsolidatedHoldingRows(allocationHoldings),
+  );
   const legacyPpfHoldings = holdings.filter(
     (holding) => holding.asset.instrumentType === "ppf",
   );
@@ -152,8 +168,9 @@ export function HoldingsScreen({
       ? selectedDestination
       : "market"
     : "ppf";
-  const allocationAvailable =
-    rollupTotals.valuationCoverage.status === "complete";
+  const allocationAvailable = allocationHoldings.every(
+    (holding) => holding.valuation.status !== "pending",
+  );
   const effectiveFilter =
     !allocationAvailable && selectedFilter === "high-allocation"
       ? "all"
@@ -163,43 +180,50 @@ export function HoldingsScreen({
     effectiveFilter,
     searchQuery,
   );
-  const summary = getHoldingReviewSummary(marketReviewItems);
+  const allocationItems = marketReviewItems.filter(
+    (item) => item.holding.asset.assetClass !== "cash",
+  );
+  const summary = getHoldingReviewSummary(allocationItems);
   const distinctBestReturn =
     summary.bestReturn?.holding.asset.id === summary.dominant?.holding.asset.id
       ? undefined
       : summary.bestReturn;
-  const exposureSegments = getExposureSegments(marketReviewItems);
+  const exposureSegments = getExposureSegments(allocationItems);
   const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
-  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"} • ${ppfSummary.accounts.length} PPF ${ppfSummary.accounts.length === 1 ? "account" : "accounts"}`;
+  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"}${ppfRecordCount > 0 ? ` · PPF ${ppfRecordCount}` : ""}`;
   const quoteStatus = getQuoteStatus({
     failed: failed.length,
     isRefreshing,
     quoteFreshness,
     timedOut: timedOut.length,
   });
-  const pendingValuations = rollupTotals.valuationCoverage.pendingHoldings;
+  const pendingValuations = marketHoldings.filter(
+    (holding) => holding.valuation.status === "pending",
+  ).length;
 
+  const selectedItem =
+    marketReviewItems.find(
+      (item) => item.holding.asset.id === selectedAssetId,
+    ) ?? reviewItems.find((item) => item.holding.asset.id === selectedAssetId);
+  function closeDetail() {
+    setSelectedAssetId(undefined);
+  }
   function renderHoldingRow(item: HoldingReviewItem) {
     return (
       <HoldingRow
-        allocationAvailable={allocationAvailable}
-        expanded={expandedAssetId === item.holding.asset.id}
+        allocationAvailable={
+          allocationAvailable &&
+          item.holding.asset.instrumentType !== "ppf" &&
+          item.holding.asset.assetClass !== "cash"
+        }
         item={item}
         key={item.holding.asset.id}
         masked={maskWealthValues}
         minimal={isMinimalMode}
-        openingPositions={openingPositions.filter(
-          (position) => position.assetId === item.holding.asset.id,
-        )}
-        onReviewOpeningPosition={onReviewOpeningPosition}
-        onReviewTrades={onReviewTrades}
-        onSellRedeem={onSellRedeem}
-        trades={trades.filter((trade) => trade.assetId === item.holding.asset.id)}
-        onPress={() =>
-          setExpandedAssetId((current) =>
-            current === item.holding.asset.id ? undefined : item.holding.asset.id,
-          )
-        }
+        onPress={() => {
+          Keyboard.dismiss();
+          setSelectedAssetId(item.holding.asset.id);
+        }}
       />
     );
   }
@@ -224,20 +248,29 @@ export function HoldingsScreen({
           subtitle={subtitle}
           action={
             <>
+              <IconButton
+                accessibilityLabel={
+                  maskWealthValues ? "Show values" : "Hide values"
+                }
+                icon={maskWealthValues ? "eye-off-outline" : "eye-outline"}
+                onPress={toggleMaskWealthValues}
+                testID="holdings-header-mask-toggle"
+              />
               {onAddTrade || onAddPpfAccount ? (
                 <IconButton
-                  accessibilityLabel={onQuickSetup ? "Add holdings" : "Add Holding"}
+                  accessibilityLabel={
+                    onQuickSetup ? "Add holdings" : "Add Holding"
+                  }
                   icon="add-outline"
                   onPress={() => setActivePanel("add")}
                   testID="holdings-add-button"
                 />
               ) : null}
-              <AppButton
+              <IconButton
                 accessibilityLabel="More holdings options"
+                icon="ellipsis-horizontal"
                 onPress={() => setActivePanel("more")}
                 testID="holdings-more-button"
-                title="More"
-                variant="secondary"
               />
             </>
           }
@@ -257,13 +290,23 @@ export function HoldingsScreen({
         ) : null}
 
         {hasMarketHoldings && activeDestination === "market" ? (
-          <FormTextField
-            label="Search"
-            onChangeText={setSearchQuery}
-            placeholder="Search name, symbol, sector..."
-            testID="holdings-search-input"
-            value={searchQuery}
-          />
+          <View style={styles.searchField}>
+            <Ionicons
+              accessible={false}
+              name="search-outline"
+              size={20}
+              color={colors.text.secondary}
+            />
+            <TextInput
+              accessibilityLabel="Search holdings"
+              onChangeText={setSearchQuery}
+              placeholder="Find a holding"
+              placeholderTextColor={colors.text.secondary}
+              style={styles.searchInput}
+              testID="holdings-search-input"
+              value={searchQuery}
+            />
+          </View>
         ) : null}
 
         {quickSetupSavedCount > 0 &&
@@ -287,7 +330,8 @@ export function HoldingsScreen({
 
         {hasMarketHoldings &&
         activeDestination === "market" &&
-        pendingValuations === 0 ? (
+        pendingValuations === 0 &&
+        (isRefreshing || failed.length > 0 || timedOut.length > 0) ? (
           <View
             accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
             style={[
@@ -316,13 +360,18 @@ export function HoldingsScreen({
         ) : null}
 
         {activeDestination === "market" && pendingValuations > 0 ? (
-          <View style={styles.pendingValuationRow} testID="holdings-pending-valuations">
+          <View
+            style={styles.pendingValuationRow}
+            testID="holdings-pending-valuations"
+          >
             <View style={styles.flex}>
               <AppText weight="bold">
-                {pendingValuations} valuation{pendingValuations === 1 ? "" : "s"} pending
+                {pendingValuations} valuation
+                {pendingValuations === 1 ? "" : "s"} pending
               </AppText>
               <AppText color="secondary" variant="caption">
-                Invested values remain available; totals, returns, and allocation are unavailable.
+                Invested values remain available. Current totals and allocation
+                are incomplete.
               </AppText>
             </View>
             <AppButton
@@ -354,18 +403,18 @@ export function HoldingsScreen({
 
         {activeDestination === "ppf" && hasPpfDestination ? (
           <View style={styles.ppfSection} testID="holdings-ppf-section">
-          <View style={styles.sectionActionHeader}>
-            <SectionHeader title="PPF accounts" />
-            {onAddPpfAccount ? (
-              <AppButton
-                onPress={() => onAddPpfAccount()}
-                testID="add-ppf-account"
-                title="Add account"
-                variant="secondary"
-              />
-            ) : null}
-          </View>
-          {ppfSummary.accounts.map((item) => (
+            <View style={styles.sectionActionHeader}>
+              <SectionHeader title="PPF accounts" />
+              {onAddPpfAccount ? (
+                <AppButton
+                  onPress={() => onAddPpfAccount()}
+                  testID="add-ppf-account"
+                  title="Add account"
+                  variant="secondary"
+                />
+              ) : null}
+            </View>
+            {ppfSummary.accounts.map((item) => (
               <Pressable
                 accessibilityLabel={`Open ${item.account.nickname}`}
                 accessibilityRole="button"
@@ -381,7 +430,8 @@ export function HoldingsScreen({
                 <View style={styles.flex}>
                   <AppText weight="bold">{item.account.nickname}</AppText>
                   <AppText color="secondary" variant="caption">
-                    {item.account.provider} • {maskWealthValues
+                    {item.account.provider} •{" "}
+                    {maskWealthValues
                       ? "Contribution details hidden"
                       : item.contributionContext.financialYearContributions > 0
                         ? `${formatCompactINR(item.contributionContext.financialYearContributions)} contributed this FY`
@@ -394,34 +444,44 @@ export function HoldingsScreen({
                     value={formatCompactINR(item.confirmedBalance)}
                     weight="bold"
                   />
-                  <AppText color="secondary" variant="caption">Confirmed</AppText>
+                  <AppText color="secondary" variant="caption">
+                    Confirmed
+                  </AppText>
                 </View>
               </Pressable>
             ))}
-          {legacyPpfHoldings.map((holding) => (
-            <PremiumCard elevated key={holding.asset.id} testID={`legacy-ppf-${holding.asset.id}`}>
-              <AppText weight="bold">Move {holding.asset.name} to the PPF ledger</AppText>
-              <AppText color="secondary" variant="caption">
-                This older holding uses market-style fields. Linking it preserves the original record for audit and replaces it in portfolio totals with the confirmed account balance.
-              </AppText>
-              {onAddPpfAccount ? (
-                <AppButton
-                onPress={() =>
-                  onAddPpfAccount({
-                    assetId: holding.asset.id,
-                    name: holding.asset.name,
-                  })
-                }
-                  testID={`convert-legacy-ppf-${holding.asset.id}`}
-                  title="Set up PPF account"
-                  variant="secondary"
-                />
-              ) : null}
-            </PremiumCard>
-          ))}
-          {reviewItems
-            .filter((item) => item.holding.asset.instrumentType === "ppf")
-            .map(renderHoldingRow)}
+            {legacyPpfHoldings.map((holding) => (
+              <PremiumCard
+                elevated
+                key={holding.asset.id}
+                testID={`legacy-ppf-${holding.asset.id}`}
+              >
+                <AppText weight="bold">
+                  Move {holding.asset.name} to the PPF ledger
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  This older holding uses market-style fields. Linking it
+                  preserves the original record for audit and replaces it in
+                  portfolio totals with the confirmed account balance.
+                </AppText>
+                {onAddPpfAccount ? (
+                  <AppButton
+                    onPress={() =>
+                      onAddPpfAccount({
+                        assetId: holding.asset.id,
+                        name: holding.asset.name,
+                      })
+                    }
+                    testID={`convert-legacy-ppf-${holding.asset.id}`}
+                    title="Set up PPF account"
+                    variant="secondary"
+                  />
+                ) : null}
+              </PremiumCard>
+            ))}
+            {reviewItems
+              .filter((item) => item.holding.asset.instrumentType === "ppf")
+              .map(renderHoldingRow)}
           </View>
         ) : null}
 
@@ -436,7 +496,9 @@ export function HoldingsScreen({
                   ? "Add Holding"
                   : undefined
             }
-            actionTestID={onQuickSetup ? "quick-setup-button" : "add-trade-button"}
+            actionTestID={
+              onQuickSetup ? "quick-setup-button" : "add-trade-button"
+            }
             message={
               quickSetupSavedCount > 0
                 ? `${quickSetupSavedCount} confirmed ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.`
@@ -463,16 +525,28 @@ export function HoldingsScreen({
               selected={effectiveFilter}
             />
 
-            {!isMinimalMode ? (
-              <AppButton
-                onPress={() => setActivePanel("insights")}
-                style={styles.insightsAction}
-                testID="holdings-insights-button"
-                title="Portfolio insights"
-                textColor="secondary"
-                variant="ghost"
-              />
-            ) : null}
+            <View style={styles.listHeading}>
+              <AppText color="secondary" variant="caption">
+                {visibleItems.length} {visibleItems.length === 1 ? "position" : "positions"} · value order
+              </AppText>
+              {!isMinimalMode ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Portfolio insights"
+                  onPress={() => setActivePanel("insights")}
+                  style={styles.insightsAction}
+                  testID="holdings-insights-button"
+                >
+                  <AppText variant="caption">Portfolio insights</AppText>
+                  <Ionicons
+                    accessible={false}
+                    name="chevron-forward"
+                    size={16}
+                    color={colors.text.primary}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
 
             {visibleItems.length === 0 ? (
               <EmptyState
@@ -484,7 +558,92 @@ export function HoldingsScreen({
                 {visibleItems.map(renderHoldingRow)}
               </View>
             )}
+            <AppText color="secondary" variant="caption">
+              Allocation across market holdings; excludes cash and PPF. Returns
+              are since investment, not today.
+            </AppText>
           </>
+        ) : null}
+
+        {selectedItem ? (
+          <Modal
+            animationType={isReducedMotionEnabled ? "none" : "fade"}
+            visible
+            onRequestClose={closeDetail}
+            testID="holding-detail-modal"
+          >
+            <View
+              accessibilityViewIsModal
+              style={[
+                styles.detailScreen,
+                { paddingTop: insets.top, paddingBottom: insets.bottom },
+              ]}
+            >
+              <View style={styles.detailHeader}>
+                <IconButton
+                  accessibilityLabel="Back to holdings"
+                  icon="arrow-back"
+                  onPress={closeDetail}
+                  testID="holding-detail-back"
+                />
+                <AppText style={styles.flex} weight="bold">
+                  Holding details
+                </AppText>
+                <IconButton
+                  accessibilityLabel={
+                    maskWealthValues ? "Show values" : "Hide values"
+                  }
+                  icon={maskWealthValues ? "eye-off-outline" : "eye-outline"}
+                  onPress={toggleMaskWealthValues}
+                  testID="holding-detail-mask"
+                />
+              </View>
+              <ScrollView contentContainerStyle={styles.detailContent}>
+                <HoldingDetails
+                  key={selectedItem.holding.asset.id}
+                  allocationAvailable={
+                    allocationAvailable &&
+                    selectedItem.holding.asset.instrumentType !== "ppf" &&
+                    selectedItem.holding.asset.assetClass !== "cash"
+                  }
+                  item={selectedItem}
+                  masked={maskWealthValues}
+                  minimal={isMinimalMode}
+                  openingPositions={openingPositions.filter(
+                    (position) =>
+                      position.assetId === selectedItem.holding.asset.id,
+                  )}
+                  trades={trades.filter(
+                    (trade) => trade.assetId === selectedItem.holding.asset.id,
+                  )}
+                  onReviewOpeningPosition={
+                    onReviewOpeningPosition
+                      ? (id) => {
+                          closeDetail();
+                          onReviewOpeningPosition(id);
+                        }
+                      : undefined
+                  }
+                  onReviewTrades={
+                    onReviewTrades
+                      ? (id) => {
+                          closeDetail();
+                          onReviewTrades(id);
+                        }
+                      : undefined
+                  }
+                  onSellRedeem={
+                    onSellRedeem
+                      ? (id) => {
+                          closeDetail();
+                          onSellRedeem(id);
+                        }
+                      : undefined
+                  }
+                />
+              </ScrollView>
+            </View>
+          </Modal>
         ) : null}
 
         <Modal
@@ -523,15 +682,13 @@ export function HoldingsScreen({
                   variant="title"
                   weight="bold"
                 >
-                  {
-                    activePanel === "add"
-                      ? "Add holdings"
-                      : activePanel === "more"
-                        ? "Holdings options"
-                        : activePanel === "quotes"
-                          ? "Valuation details"
-                          : "Portfolio insights"
-                  }
+                  {activePanel === "add"
+                    ? "Add holdings"
+                    : activePanel === "more"
+                      ? "Holdings options"
+                      : activePanel === "quotes"
+                        ? "Valuation details"
+                        : "Portfolio insights"}
                 </AppText>
                 <AppButton
                   onPress={() => setActivePanel(undefined)}
@@ -666,9 +823,10 @@ export function HoldingsScreen({
                     <AppText color="secondary" variant="caption">
                       {quoteStatus.detail}
                     </AppText>
-                    {(failed.length > 0 || timedOut.length > 0) ? (
+                    {failed.length > 0 || timedOut.length > 0 ? (
                       <AppText color="secondary" variant="caption">
-                        Some quote updates did not complete. Existing saved prices remain available when present.
+                        Some quote updates did not complete. Existing saved
+                        prices remain available when present.
                       </AppText>
                     ) : null}
                     {hasMarketHoldings ? (
@@ -697,7 +855,8 @@ export function HoldingsScreen({
                       />
                     ) : null}
                     <AppText color="secondary" variant="caption">
-                      Position allocation excludes cash and PPF accounts. Asset mix compares market holdings only.
+                      Position allocation excludes cash and PPF accounts. Asset
+                      mix compares market holdings only.
                     </AppText>
                     <View style={styles.insightGrid}>
                       <InsightCard
@@ -718,7 +877,9 @@ export function HoldingsScreen({
                           eyebrow="Best return"
                           title={distinctBestReturn.holding.asset.name}
                           detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
-                          positive={(distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0}
+                          positive={
+                            (distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0
+                          }
                         />
                       ) : null}
                     </View>
@@ -728,7 +889,8 @@ export function HoldingsScreen({
                       <PremiumCard>
                         <AppText weight="bold">Asset mix unavailable</AppText>
                         <AppText color="secondary" variant="caption">
-                          Allocation remains unavailable until every market holding has a price.
+                          Allocation remains unavailable until every market
+                          holding has a price.
                         </AppText>
                       </PremiumCard>
                     )}
@@ -777,8 +939,7 @@ function getQuoteStatus({
       failed > 0 ? `${failed} failed` : "",
       timedOut > 0 ? `${timedOut} timed out` : "",
     ].filter(Boolean);
-    const usablePriceCount =
-      quoteFreshness.total - quoteFreshness.missing;
+    const usablePriceCount = quoteFreshness.total - quoteFreshness.missing;
 
     return {
       detail: `${counts}. ${outcomes.join(" · ")}. ${
@@ -846,11 +1007,7 @@ function InsightCard({
   );
 }
 
-function ExposurePanel({
-  segments,
-}: {
-  segments: ExposureSegment[];
-}) {
+function ExposurePanel({ segments }: { segments: ExposureSegment[] }) {
   return (
     <PremiumCard style={styles.exposureCard}>
       <View style={styles.sectionHeading}>
@@ -953,9 +1110,7 @@ function FilterRow({
             accessibilityRole="button"
             accessibilityState={{ disabled, selected: active }}
             android_ripple={androidRipple(
-              active
-                ? interaction.primaryRippleColor
-                : interaction.rippleColor,
+              active ? interaction.primaryRippleColor : interaction.rippleColor,
             )}
             key={filter}
             onPress={() => onSelect(filter)}
@@ -982,45 +1137,34 @@ function FilterRow({
   );
 }
 
-function HoldingRow({
-  allocationAvailable,
-  expanded,
-  item,
-  masked,
-  minimal,
-  openingPositions,
-  onPress,
-  onReviewOpeningPosition,
-  onReviewTrades,
-  onSellRedeem,
-  trades,
-}: {
+type HoldingDetailsProps = {
   allocationAvailable: boolean;
-  expanded: boolean;
   item: HoldingReviewItem;
   masked: boolean;
   minimal: boolean;
   openingPositions: OpeningPosition[];
-  onPress: () => void;
-  onReviewOpeningPosition?: (openingPositionId: string) => void;
-  onReviewTrades?: (assetId: string) => void;
-  onSellRedeem?: (assetId: string) => void;
   trades: Trade[];
-}) {
+  onReviewOpeningPosition?: (id: string) => void;
+  onReviewTrades?: (id: string) => void;
+  onSellRedeem?: (id: string) => void;
+};
+function HoldingRow({
+  allocationAvailable,
+  item,
+  masked,
+  minimal,
+  onPress,
+}: Pick<
+  HoldingDetailsProps,
+  "allocationAvailable" | "item" | "masked" | "minimal"
+> & { onPress: () => void }) {
   const { holding } = item;
-  const isPending = holding.valuation.status === "pending";
-  const positive = (holding.unrealisedPnL ?? 0) >= 0;
-
+  const pending = holding.currentValue === null;
   return (
     <Pressable
-      accessibilityHint={expanded ? "Collapses position details" : "Shows position details"}
-      accessibilityLabel={
-        isPending
-          ? `${holding.asset.name}, valuation pending, invested ${formatCompactINR(holding.totalInvested)}`
-          : `${holding.asset.name}, ${formatPercentage(holding.unrealisedPnLPct ?? 0)} return`
-      }
       accessibilityRole="button"
-      accessibilityState={{ expanded }}
+      accessibilityLabel={`Open ${holding.asset.name} details`}
+      accessibilityHint="Opens a separate holding detail panel"
       android_ripple={androidRipple()}
       onPress={onPress}
       style={({ pressed }) => [
@@ -1030,53 +1174,45 @@ function HoldingRow({
       testID={`holding-row-${holding.asset.id}`}
     >
       <View style={styles.compactRow}>
-        <View style={styles.assetIcon}>
-          <CategoryIcon assetClass={holding.asset.assetClass} size={22} />
-        </View>
+        <CategoryIcon assetClass={holding.asset.assetClass} size={22} />
         <View style={styles.assetCopy}>
-          <AppText numberOfLines={1} weight="bold">
-            {holding.asset.name}
-          </AppText>
-          <AppText color="secondary" numberOfLines={1} variant="caption">
-            {formatClassification(item)}
+          <AppText weight="bold">{holding.asset.name}</AppText>
+          <AppText color="secondary" variant="caption">
+            {holding.asset.symbol} ·{" "}
+            {instrumentTypeLabel(
+              holding.asset.instrumentType ??
+                (holding.asset.assetClass === "stock" ? "stock" : "other"),
+            )}
+            {holding.quoteSource === "manual" ? " · Manual" : ""}
           </AppText>
         </View>
         <View style={styles.valueColumn}>
           <MaskedValue
-            align="right"
-            masked={masked && !isPending && holding.currentValue !== null}
+            masked={masked && !pending}
             value={
-              isPending || holding.currentValue === null
+              pending
                 ? "Valuation pending"
-                : formatCompactINR(holding.currentValue)
+                : formatCompactINR(holding.currentValue!)
             }
             weight="bold"
           />
-          {!isPending && holding.unrealisedPnLPct !== null ? (
-          <AppText
-            align="right"
-            color={minimal ? "secondary" : undefined}
-            style={
-              minimal
-                ? undefined
-                : positive
-                  ? styles.positiveText
-                  : styles.negativeText
-            }
-            variant="caption"
-            weight={minimal ? "medium" : "bold"}
-          >
-            {formatPercentage(holding.unrealisedPnLPct)}
-          </AppText>
+          {holding.unrealisedPnLPct !== null ? (
+            <AppText
+              variant="caption"
+              color={minimal ? "secondary" : undefined}
+              style={
+                minimal
+                  ? undefined
+                  : (holding.unrealisedPnL ?? 0) >= 0
+                    ? styles.positiveText
+                    : styles.negativeText
+              }
+            >
+              {formatPercentage(holding.unrealisedPnLPct)}
+            </AppText>
           ) : null}
         </View>
-        <Ionicons
-          color={colors.text.secondary}
-          name={expanded ? "chevron-up" : "chevron-down"}
-          size={18}
-        />
       </View>
-
       <View style={styles.compactMeta}>
         <MaskedValue
           color="secondary"
@@ -1084,144 +1220,219 @@ function HoldingRow({
           value={`Invested ${formatCompactINR(holding.totalInvested)}`}
           variant="caption"
         />
+        {allocationAvailable && !pending ? (
+          <AppText color="secondary" variant="caption">
+            Allocation {item.allocationPct.toFixed(1)}%
+          </AppText>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+function HoldingDetails({
+  allocationAvailable,
+  item,
+  masked,
+  minimal,
+  openingPositions,
+  onReviewOpeningPosition,
+  onReviewTrades,
+  onSellRedeem,
+  trades,
+}: HoldingDetailsProps) {
+  const { holding } = item;
+  const isPending = holding.valuation.status === "pending";
+  const positive = (holding.unrealisedPnL ?? 0) >= 0;
+  const [showRecords, setShowRecords] = useState(false);
+  const firstPurchase = getFirstRecordedPurchase(openingPositions, trades);
+  return (
+    <View
+      style={styles.expandedSection}
+      testID={`holding-expanded-${holding.asset.id}`}
+    >
+      <View style={styles.detailIdentity}>
+        <CategoryIcon assetClass={holding.asset.assetClass} size={28} />
+        <View style={styles.flex}>
+          <AppText variant="title" weight="bold">
+            {holding.asset.name}
+          </AppText>
+          <AppText color="secondary" variant="caption">
+            {holding.asset.symbol} ·{" "}
+            {instrumentTypeLabel(holding.asset.instrumentType ?? "other")} · INR
+          </AppText>
+        </View>
+      </View>
+      <PremiumCard>
         <AppText color="secondary" variant="caption">
-          {!allocationAvailable || isPending ? "Allocation unavailable" : `Alloc. ${item.allocationPct.toFixed(2)}%`}
+          Current value
+        </AppText>
+        <MaskedValue
+          masked={masked && !isPending}
+          value={
+            holding.currentValue === null
+              ? "Valuation pending"
+              : formatINR(holding.currentValue)
+          }
+          variant="hero"
+          weight="bold"
+        />
+        <View style={styles.performanceLine}>
+          <MaskedValue
+            masked={masked && holding.unrealisedPnL !== null}
+            value={
+              holding.unrealisedPnL === null
+                ? "Return unavailable"
+                : formatSignedCompactINR(holding.unrealisedPnL)
+            }
+            style={
+              minimal || isPending
+                ? undefined
+                : positive
+                  ? styles.positiveText
+                  : styles.negativeText
+            }
+          />
+          {holding.unrealisedPnLPct !== null ? (
+            <AppText color="secondary" variant="caption">
+              {formatPercentage(holding.unrealisedPnLPct)} since investment
+            </AppText>
+          ) : null}
+        </View>
+        <AppText color="secondary" variant="caption">
+          Invested
+        </AppText>
+        <MaskedValue
+          masked={masked}
+          value={formatINR(holding.totalInvested)}
+          weight="bold"
+        />
+      </PremiumCard>
+      <AppText variant="section" weight="bold">
+        Your position
+      </AppText>
+      <View style={styles.detailGrid}>
+        <Detail
+          label="Quantity"
+          testID={`holding-quantity-${holding.asset.id}`}
+          value={formatQuantity(holding.totalUnits)}
+        />
+        <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
+        <Detail
+          label="Current price"
+          value={
+            holding.currentPrice === null
+              ? "Unavailable"
+              : formatINR(holding.currentPrice)
+          }
+        />
+        <Detail
+          label="Allocation"
+          value={
+            allocationAvailable && !isPending
+              ? `${item.allocationPct.toFixed(1)}%`
+              : "Unavailable"
+          }
+        />
+        <Detail
+          label="First recorded purchase"
+          value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
+        />
+      </View>
+
+      <AppText color="secondary" variant="caption">
+        {formatClassification(item)}
+      </AppText>
+      <AppText color="secondary" variant="caption">
+        Allocation excludes cash and PPF. Purchase date is based on recorded
+        history.
+      </AppText>
+      <View style={styles.sourceRow}>
+        <View>
+          <AppText color="secondary" variant="caption">
+            Price source
+          </AppText>
+          <AppText variant="caption" weight="bold">
+            {isPending
+              ? "Valuation pending"
+              : formatSource(holding.quoteSource)}
+          </AppText>
+        </View>
+        <AppText color="secondary" variant="caption">
+          {isPending
+            ? "Refresh or enter manually"
+            : holding.lastUpdated
+              ? `Updated ${formatPriceTimestamp(holding.lastUpdated)}`
+              : "Local position price"}
         </AppText>
       </View>
 
-      {expanded ? (
-        <View
-          style={styles.expandedSection}
-          testID={`holding-expanded-${holding.asset.id}`}
-        >
-          <View style={styles.detailGrid}>
-            <Detail
-              label="Quantity"
-              testID={`holding-quantity-${holding.asset.id}`}
-              value={formatQuantity(holding.totalUnits)}
-            />
-            <Detail
-              label="Avg cost"
-              value={formatCompactINR(holding.averageCostPrice)}
-            />
-            <Detail
-              label="Current price"
-              value={
-                holding.currentPrice === null
-                  ? "Unavailable"
-                  : formatCompactINR(holding.currentPrice)
-              }
-            />
-            <Detail
-              label="P&L"
-              masked={masked && holding.unrealisedPnL !== null}
-              subdued={minimal}
-              tone={minimal ? undefined : positive ? "positive" : "negative"}
-              value={
-                holding.unrealisedPnL === null
-                  ? "Unavailable"
-                  : formatSignedCompactINR(holding.unrealisedPnL)
-              }
-            />
-          </View>
+      {isPending && onReviewOpeningPosition && openingPositions[0] ? (
+        <AppButton
+          title="Enter manual price"
+          variant="secondary"
+          testID={`holding-enter-manual-price-${holding.asset.id}`}
+          onPress={() => onReviewOpeningPosition(openingPositions[0].id)}
+        />
+      ) : null}
 
-          {allocationAvailable && !isPending ? (
-          <View style={styles.allocationBlock}>
-            <View style={styles.allocationHeading}>
-              <AppText color="secondary" variant="caption">
-                Current allocation
-              </AppText>
-              <AppText variant="caption" weight="bold">
-                {item.allocationPct.toFixed(2)}%
-              </AppText>
-            </View>
-            <View style={styles.allocationRail}>
-              <View
-                style={[
-                  styles.allocationFill,
-                  { width: `${Math.min(100, Math.max(0, item.allocationPct))}%` },
-                ]}
+      {(onReviewOpeningPosition && openingPositions.length > 0) ||
+      (onReviewTrades && trades.length > 0) ? (
+        <GroupedListRow
+          title={showRecords ? "Hide records" : "View records"}
+          meta="Opening positions and corrections"
+          value={showRecords ? "−" : "›"}
+          testID="holding-view-records"
+          onPress={() => setShowRecords(!showRecords)}
+        />
+      ) : null}
+      {showRecords && onReviewOpeningPosition && openingPositions.length > 0 ? (
+        <View style={styles.openingRecords}>
+          <AppText color="secondary" variant="caption" weight="bold">
+            Opening {openingPositions.length === 1 ? "record" : "records"}
+          </AppText>
+          {openingPositions.map((position) => (
+            <View key={position.id} style={styles.openingRecordRow}>
+              <View style={styles.openingRecordCopy}>
+                <AppText variant="caption" weight="bold">
+                  {position.date === null
+                    ? "First purchase date unknown"
+                    : formatDate(position.date)}
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  {formatQuantity(position.quantity)} units · avg{" "}
+                  {formatCompactINR(position.averageCostPrice)}
+                </AppText>
+              </View>
+              <AppButton
+                title="Review"
+                variant="secondary"
+                testID={`review-opening-position-${position.id}`}
+                onPress={() => onReviewOpeningPosition(position.id)}
               />
             </View>
-          </View>
-          ) : null}
-
-          <View style={styles.sourceRow}>
-            <View>
-              <AppText color="secondary" variant="caption">
-                Price source
-              </AppText>
-              <AppText variant="caption" weight="bold">
-                {isPending ? "Valuation pending" : formatSource(holding.quoteSource)}
-              </AppText>
-            </View>
-            <AppText color="secondary" align="right" variant="caption">
-              {isPending
-                ? "Refresh or enter manually"
-                : holding.lastUpdated
-                ? `Updated ${formatDate(holding.lastUpdated)}`
-                : "Local position price"}
-            </AppText>
-          </View>
-
-          {isPending && onReviewOpeningPosition && openingPositions[0] ? (
-            <AppButton
-              title="Enter manual price"
-              variant="secondary"
-              testID={`holding-enter-manual-price-${holding.asset.id}`}
-              onPress={() => onReviewOpeningPosition(openingPositions[0].id)}
-            />
-          ) : null}
-
-          {onReviewOpeningPosition && openingPositions.length > 0 ? (
-            <View style={styles.openingRecords}>
-              <AppText color="secondary" variant="caption" weight="bold">
-                Opening {openingPositions.length === 1 ? "record" : "records"}
-              </AppText>
-              {openingPositions.map((position) => (
-                <View key={position.id} style={styles.openingRecordRow}>
-                  <View style={styles.openingRecordCopy}>
-                    <AppText variant="caption" weight="bold">
-                      {position.date === null
-                        ? "First purchase date unknown"
-                        : formatDate(position.date)}
-                    </AppText>
-                    <AppText color="secondary" variant="caption">
-                      {formatQuantity(position.quantity)} units · avg{" "}
-                      {formatCompactINR(position.averageCostPrice)}
-                    </AppText>
-                  </View>
-                  <AppButton
-                    title="Review"
-                    variant="secondary"
-                    testID={`review-opening-position-${position.id}`}
-                    onPress={() => onReviewOpeningPosition(position.id)}
-                  />
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          {onReviewTrades && trades.length > 0 ? (
-            <AppButton
-              title={`Review ${trades.length} ${trades.length === 1 ? "transaction" : "transactions"}`}
-              variant="secondary"
-              testID={`review-transactions-${holding.asset.id}`}
-              onPress={() => onReviewTrades(holding.asset.id)}
-            />
-          ) : null}
-
-          {onSellRedeem ? (
-            <AppButton
-              title="Sell / redeem"
-              variant="secondary"
-              testID={`holding-sell-redeem-${holding.asset.id}`}
-              onPress={() => onSellRedeem(holding.asset.id)}
-            />
-          ) : null}
+          ))}
         </View>
       ) : null}
-    </Pressable>
+
+      {showRecords && onReviewTrades && trades.length > 0 ? (
+        <AppButton
+          title={`Review ${trades.length} ${trades.length === 1 ? "transaction" : "transactions"}`}
+          variant="secondary"
+          testID={`review-transactions-${holding.asset.id}`}
+          onPress={() => onReviewTrades(holding.asset.id)}
+        />
+      ) : null}
+
+      {onSellRedeem ? (
+        <GroupedListRow
+          title="Sell / redeem"
+          meta="Record a disposal and its cash proceeds"
+          value="›"
+          testID={`holding-sell-redeem-${holding.asset.id}`}
+          onPress={() => onSellRedeem(holding.asset.id)}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -1285,7 +1496,7 @@ function getFilterCounts(
 
 function getFilterLabel(filter: HoldingFilter) {
   if (filter === "high-allocation") {
-    return "High alloc.";
+    return "High allocation";
   }
 
   return filter.charAt(0).toUpperCase() + filter.slice(1);
@@ -1300,7 +1511,9 @@ function formatClassification(item: HoldingReviewItem) {
 }
 
 function formatQuantity(value: number) {
-  return Number.isInteger(value) ? value.toString() : value.toFixed(4).replace(/0+$/, "");
+  return Number.isInteger(value)
+    ? value.toString()
+    : value.toFixed(4).replace(/0+$/, "");
 }
 
 function formatSignedCompactINR(value: number) {
@@ -1317,44 +1530,74 @@ function formatSource(source?: string) {
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
+function formatPriceTimestamp(value: string) {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(value));
+}
+
 const styles = StyleSheet.create({
-  allocationBlock: {
+  performanceLine: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
     gap: spacing.sm,
   },
-  allocationFill: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.pill,
-    height: "100%",
-  },
-  allocationHeading: {
+  searchField: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    paddingHorizontal: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    color: colors.text.primary,
+    fontSize: 16,
+    paddingVertical: spacing.sm,
+  },
+  listHeading: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
+    columnGap: spacing.md,
   },
-  allocationRail: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    height: 6,
-    overflow: "hidden",
+  detailScreen: { flex: 1, backgroundColor: colors.background },
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.subtle,
   },
+  detailContent: { padding: spacing.md, paddingBottom: spacing.xl },
+  detailIdentity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+
   assetCopy: {
     flex: 1,
     gap: 2,
   },
-  assetIcon: {
-    alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
   compactMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingLeft: 50,
+    paddingLeft: 34,
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   compactRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     gap: spacing.sm,
   },
@@ -1389,10 +1632,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   expandedSection: {
-    borderTopColor: colors.border.subtle,
-    borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.md,
-    paddingTop: spacing.md,
   },
   exposureCard: {
     gap: spacing.sm,
@@ -1433,13 +1673,16 @@ const styles = StyleSheet.create({
   },
   holdingCard: {
     backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.subtle,
     gap: spacing.sm,
     overflow: "hidden",
     padding: spacing.cardInner,
   },
   holdingsList: {
-    gap: spacing.sm,
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.card,
+    overflow: "hidden",
   },
   insightCard: {
     flex: 1,
@@ -1452,7 +1695,10 @@ const styles = StyleSheet.create({
   },
   insightsAction: {
     alignSelf: "flex-start",
-    paddingHorizontal: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: 48,
   },
   insightTitle: {
     fontSize: 17,
@@ -1605,11 +1851,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sourceRow: {
-    alignItems: "flex-end",
+    alignItems: "stretch",
     borderTopColor: colors.border.subtle,
     borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    gap: spacing.xs,
     paddingTop: spacing.md,
   },
   statusCard: {

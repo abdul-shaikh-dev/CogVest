@@ -60,6 +60,12 @@ appId: com.abdulshaikh.cogvest
     id: "holding-row-.*"
 - scrollUntilVisible:
     element:
+      id: "holding-view-records"
+    direction: DOWN
+- tapOn:
+    id: "holding-view-records"
+- scrollUntilVisible:
+    element:
       id: "review-opening-position-.*"
     direction: DOWN
 - tapOn:
@@ -85,6 +91,8 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "holding-quantity-.*"
 - assertVisible: "3"
+- tapOn:
+    id: "holding-detail-back"
 - tapOn:
     id: "tab-dashboard"
 - assertVisible:

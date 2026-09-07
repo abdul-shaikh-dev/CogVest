@@ -38,7 +38,14 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Quantity"
 - takeScreenshot: .expo/holdings-278-expanded
 - tapOn:
+    id: holding-detail-back
+- assertVisible: "HDFC"
+- assertVisible: "Invested ₹36.25K"
+- tapOn:
     id: holding-row-visual-qa-asset-hdfc
+- back
+- assertVisible:
+    id: holdings-search-input
 - tapOn:
     id: holdings-insights-button
 - assertVisible: "Dominant position"
