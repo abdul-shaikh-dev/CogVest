@@ -1,0 +1,28 @@
+"name","cpu_ms"
+"RenderThread",929.800000
+"lshaikh.cogvest",480.400000
+"mqt_v_js",315.600000
+"binder:26955_3",27.600000
+"GPU completion",11.300000
+"binder:26955_1",10.900000
+"HWC release",8.100000
+"Jit thread pool",6.700000
+"binder:26955_2",5.500000
+"Profile Saver",5.400000
+"binder:26955_1",4.800000
+"binder:26955_6",4.000000
+
+"phase","samples","avg_ms","max_ms"
+"DrawFrames",345,32.620000,35.630000
+"dequeueBuffer",345,29.640000,33.670000
+"eglSwapBuffersWithDamageKHR",345,30.790000,34.300000
+
+"name","state","ms"
+"RenderThread","S",10428.700000
+"RenderThread","Running",929.800000
+"RenderThread","R",189.200000
+"RenderThread","R+",76.000000
+"mqt_v_js","S",10793.200000
+"mqt_v_js","Running",315.600000
+"mqt_v_js","R",195.800000
+"mqt_v_js","R+",1.900000
