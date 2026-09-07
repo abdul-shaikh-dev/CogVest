@@ -1,0 +1,10 @@
+{
+  "runs": 3,
+  "mode": "scroll",
+  "scrollX": 480,
+  "package": "com.android.settings",
+  "bottomY": 1650,
+  "topY": 825,
+  "rangeX": [],
+  "rangeY": 0
+}
