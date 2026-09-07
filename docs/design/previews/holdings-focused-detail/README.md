@@ -11,11 +11,11 @@ approved #278 list-first baseline, nor a production implementation contract.
 - Reduce the area before the first row: one search field, existing filters, and
   a clearly actionable Portfolio insights link. No redundant portfolio-value hero.
 - Group rows in one quiet surface. Retain invested value, current value, signed
-  return and market share. Use asset-class icons and avoid repeated classification.
+  return and allocation. Use asset-class icons and avoid repeated classification.
 - Tap a row to open a separate full-height detail panel; never expand the list
   into a record-management screen. Back preserves search, filters and scroll.
 - Detail leads with current value and total return, then units, cost, price,
-  market share, classification, first-purchase date and source timestamp.
+  allocation, classification, first-purchase date and source timestamp.
   Record management and Sell / redeem are secondary, separate destinations.
 - Explain the allocation denominator: market holdings exclude cash and PPF.
 - Keep manual provenance; missing prices have an explicit incomplete state.

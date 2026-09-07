@@ -153,7 +153,7 @@ function weight(row, total, pending) {
 function holding(row, total, pending) {
   const share = pending
     ? ""
-    : `<span>Market share ${weight(row, total, pending)}</span>`;
+    : `<span>Allocation ${weight(row, total, pending)}</span>`;
   const gain =
     row.value === null
       ? null
@@ -180,7 +180,7 @@ function render() {
   $("search").parentElement.hidden = !all.length || !market;
   $("notice").innerHTML =
     pending && market
-      ? '<div class="notice"><strong>One holding needs a price</strong>Invested value is saved. Current totals and market shares are incomplete.<br><button data-action="prices">View valuation details</button></div>'
+      ? '<div class="notice"><strong>One holding needs a price</strong>Invested value is saved. Current totals and allocations are incomplete.<br><button data-action="prices">View valuation details</button></div>'
       : "";
   $("filters").innerHTML =
     all.length && market
@@ -227,7 +227,7 @@ function render() {
         : '<div class="empty"><h3>No matching holdings</h3><p>Try a different search or filter.</p><button class="secondary" data-action="clear">Clear search and filters</button></div>';
   $("scope").textContent =
     all.length && market
-      ? "Market share excludes cash and PPF. Returns are since investment, not today."
+      ? "Allocation across market holdings; excludes cash and PPF. Returns are since investment, not today."
       : "";
   $("mask").innerHTML = icon(state.masked ? "hidden" : "eye");
   $("mask").setAttribute(
@@ -270,7 +270,7 @@ function detail(id) {
     state.masked ? "Show values" : "Hide values",
   );
   $("detail-content").innerHTML =
-    `<div class="detail-identity"><span class="asset-icon ${row.group}">${icon(row.group)}</span><div><h3>${row.name}</h3><p>${row.symbol} · ${row.type} · INR</p></div></div><section class="valuation"><p>Current value</p><strong class="hero">${row.value === null ? "Valuation pending" : money(row.value, false)}</strong><div class="performance ${gain === null ? "pending" : gain >= 0 ? "up" : "down"}">${gain === null ? "Add a price to calculate return" : `${state.masked ? "Hidden" : `${gain >= 0 ? "+" : "−"}${money(Math.abs(gain), false)}`}<span> / </span>${percent((gain / row.invested) * 100)} <span>since investment</span>`}</div><div class="metric-line"><span>Invested</span><strong>${money(row.invested, false)}</strong></div></section><h3 class="section-title">Your position</h3><dl class="facts"><div><dt>Quantity</dt><dd>${row.units}</dd></div><div><dt>Average cost / unit</dt><dd>${unitMoney(row.invested / row.units)}</dd></div><div><dt>Current price / unit</dt><dd>${row.value === null ? "Unavailable" : unitMoney(row.value / row.units)}</dd></div><div><dt>Share of market holdings</dt><dd>${weight(row, total, pending)}</dd></div><div><dt>Sector / type</dt><dd>${row.sector}</dd></div><div><dt>First purchase</dt><dd>${row.date}</dd></div></dl><p class="detail-note">${row.value === null ? "Price missing. Your invested value is preserved." : `${row.source === "Manual" ? "Price entered manually" : `${row.source} price`} · 08 Sep 2026, 10:30 AM.`} ${row.group === "crypto" ? "Crypto prices in this example are quoted directly in INR." : ""}</p><div class="manage">${row.value === null ? action("Enter a price", "Manual fallback remains available") : ""}${action("View records", "Opening position and corrections")}${action("Sell / redeem", "Record a disposal and its cash proceeds")}</div>`;
+    `<div class="detail-identity"><span class="asset-icon ${row.group}">${icon(row.group)}</span><div><h3>${row.name}</h3><p>${row.symbol} · ${row.type} · INR</p></div></div><section class="valuation"><p>Current value</p><strong class="hero">${row.value === null ? "Valuation pending" : money(row.value, false)}</strong><div class="performance ${gain === null ? "pending" : gain >= 0 ? "up" : "down"}">${gain === null ? "Add a price to calculate return" : `${state.masked ? "Hidden" : `${gain >= 0 ? "+" : "−"}${money(Math.abs(gain), false)}`}<span> / </span>${percent((gain / row.invested) * 100)} <span>since investment</span>`}</div><div class="metric-line"><span>Invested</span><strong>${money(row.invested, false)}</strong></div></section><h3 class="section-title">Your position</h3><dl class="facts"><div><dt>Quantity</dt><dd>${row.units}</dd></div><div><dt>Average cost / unit</dt><dd>${unitMoney(row.invested / row.units)}</dd></div><div><dt>Current price / unit</dt><dd>${row.value === null ? "Unavailable" : unitMoney(row.value / row.units)}</dd></div><div><dt>Allocation (excluding cash and PPF)</dt><dd>${weight(row, total, pending)}</dd></div><div><dt>Sector / type</dt><dd>${row.sector}</dd></div><div><dt>First purchase</dt><dd>${row.date}</dd></div></dl><p class="detail-note">${row.value === null ? "Price missing. Your invested value is preserved." : `${row.source === "Manual" ? "Price entered manually" : `${row.source} price`} · 08 Sep 2026, 10:30 AM.`} ${row.group === "crypto" ? "Crypto prices in this example are quoted directly in INR." : ""}</p><div class="manage">${row.value === null ? action("Enter a price", "Manual fallback remains available") : ""}${action("View records", "Opening position and corrections")}${action("Sell / redeem", "Record a disposal and its cash proceeds")}</div>`;
   position($("detail"));
   if (!$("detail").open) {
     $("detail").showModal();
