@@ -34,7 +34,7 @@ Memory policy:
 Contexts: 1 (stopped = 0)
 CPU Caches:
   Glyph Cache: 870.29 KB (1 entry)
-  Glyph Count: 48 
+  Glyph Count: 48
 Total CPU memory usage:
   891177 bytes, 870.29 KB (0.00 bytes is purgeable)
 GPU Caches:
@@ -225,4 +225,3 @@ View hierarchy:
 Total ViewRootImpl   : 1
 Total attached Views : 522
 Total RenderNode     : 917.88 kB (used) / 3086.89 kB (capacity)
-
