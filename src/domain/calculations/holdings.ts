@@ -9,7 +9,7 @@ import type {
   QuoteCache,
   Trade,
 } from "@/src/types";
-import { isV1CompatibleQuote } from "@/src/domain/portfolioCurrency";
+import { isV1CompatibleQuote, isV1SupportedAsset } from "@/src/domain/portfolioCurrency";
 import { getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
 import {
   decimal,
@@ -147,15 +147,18 @@ function sortTradesByDate(trades: Trade[]) {
   return [...trades].sort(compareTransactionsChronologically);
 }
 
-export function calculateHolding({
-  asset,
-  currentPrice,
+/** Shared moving-average replay; derived values are never persisted as tax lots. */
+export function calculatePositionAccounting({
   openingPositions = [],
   trades,
-  valuation,
-}: CalculateHoldingInput): Holding {
+}: Pick<CalculateHoldingInput, "openingPositions" | "trades">) {
   let averageCostPrice = decimal(0);
   let totalUnits = decimal(0);
+  const saleGains: Record<string, number | null> = {};
+  let chronologyKnown = !openingPositions.some(
+    (position) => getOpeningPositionHistoryDate(position) === null,
+  ) && !trades.some((trade) => getCalendarDatePart(trade.date) === null);
+  let basisKnown = chronologyKnown;
   const costBasisEvents = [
     ...openingPositions.map((position) => ({
       date: getOpeningPositionHistoryDate(position) ?? "",
@@ -212,6 +215,7 @@ export function calculateHolding({
       // Uncosted transfer-ins remain visible in quantity while later import
       // reconciliation prevents them from being committed as complete history.
       const knownCost = totalUnits.times(averageCostPrice);
+      basisKnown = false;
       totalUnits = totalUnits.plus(quantityDelta);
       averageCostPrice = totalUnits.greaterThan(0)
         ? knownCost.dividedBy(totalUnits)
@@ -220,12 +224,59 @@ export function calculateHolding({
     }
 
     const remainingUnits = totalUnits.plus(quantityDelta);
+    if (remainingUnits.isNegative()) {
+      basisKnown = false;
+      chronologyKnown = false;
+    }
+    if (event.trade.type === "sell") {
+      // The saved total is net of sale fees; purchase fees are already in basis.
+      saleGains[event.trade.id] = basisKnown
+        ? normalizeMoney(decimal(event.trade.totalValue).minus(
+            averageCostPrice.times(event.trade.quantity),
+          ))
+        : null;
+    }
     totalUnits = remainingUnits.isNegative() ? decimal(0) : remainingUnits;
 
     if (totalUnits.isZero()) {
       averageCostPrice = decimal(0);
+      // A verified full exit ends uncertain basis, but cannot repair bad dates.
+      basisKnown = chronologyKnown;
     }
   }
+
+  return { averageCostPrice, totalUnits, saleGains };
+}
+
+export function calculateRecordedSaleGains({
+  assets, openingPositions, trades, now = new Date(),
+}: { assets: Asset[]; openingPositions: OpeningPosition[]; trades: Trade[]; now?: Date }) {
+  const gains: Record<string, number | null> = {};
+  for (const asset of assets) {
+    if (!isV1SupportedAsset(asset)) continue;
+    Object.assign(gains, calculatePositionAccounting({
+      openingPositions: openingPositions.filter((position) =>
+        position.assetId === asset.id &&
+        (getOpeningPositionHistoryDate(position) === null || isOpeningPositionEffective(position, now))),
+      trades: trades.filter((trade) =>
+        trade.assetId === asset.id &&
+        (getCalendarDatePart(trade.date) === null || isEffectiveCalendarDate(trade.date, now))),
+    }).saleGains);
+  }
+  return gains;
+}
+
+export function calculateHolding({
+  asset,
+  currentPrice,
+  openingPositions = [],
+  trades,
+  valuation,
+}: CalculateHoldingInput): Holding {
+  const { averageCostPrice, totalUnits } = calculatePositionAccounting({
+    openingPositions,
+    trades,
+  });
 
   const totalInvested = totalUnits.times(averageCostPrice);
   const resolvedValuation: HoldingValuation =

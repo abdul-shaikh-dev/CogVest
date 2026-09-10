@@ -42,6 +42,20 @@ function seedStore() {
 }
 
 describe("useSellRedeemHolding", () => {
+  it("blocks a backdated sale before ownership instead of previewing today's inventory", () => {
+    const store = seedStore();
+    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store }));
+    act(() => {
+      result.current.setQuantity("1");
+      result.current.setDate("2026-04-01");
+    });
+    expect(result.current.canSave).toBe(false);
+    expect(result.current.preview).toBeNull();
+    expect(result.current.errors.quantity).toMatch(/Not enough units on this date/);
+    act(() => { result.current.save(); });
+    expect(store.getState().trades).toHaveLength(0);
+    expect(store.getState().cashEntries).toHaveLength(0);
+  });
   it("creates a sell trade and linked cash proceeds by default", () => {
     const store = seedStore();
     const { result } = renderHook(() =>

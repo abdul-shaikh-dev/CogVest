@@ -13,6 +13,7 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { formatCurrency, formatDate } from "@/src/domain/formatters";
+import { calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
@@ -22,6 +23,7 @@ type TradeHistoryScreenProps = {
   onBack: () => void;
   onReviewTrade: (tradeId: string) => void;
   store?: StoreApi<PortfolioStoreState>;
+  now?: Date;
 };
 
 export function TradeHistoryScreen({
@@ -29,12 +31,19 @@ export function TradeHistoryScreen({
   onBack,
   onReviewTrade,
   store = getPortfolioStore(),
+  now = new Date(),
 }: TradeHistoryScreenProps) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const asset = snapshot.assets.find((item) => item.id === assetId);
   const trades = snapshot.trades
     .filter((trade) => !assetId || trade.assetId === assetId)
     .sort((left, right) => right.date.localeCompare(left.date));
+  const gains = calculateRecordedSaleGains({
+    assets: snapshot.assets.filter((item) => !assetId || item.id === assetId),
+    openingPositions: snapshot.openingPositions,
+    trades: snapshot.trades,
+    now,
+  });
 
   if (assetId && !asset) {
     return (
@@ -75,18 +84,25 @@ export function TradeHistoryScreen({
             {trades.map((trade) => (
               (() => {
                 const isManual = isManualTrade(trade);
+                const currency = snapshot.assets.find((item) => item.id === trade.assetId)?.currency;
                 const title = isManual
                   ? trade.type === "buy" ? "Purchase" : "Sale"
                   : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
-                const description = snapshot.preferences.maskWealthValues
+                let description = snapshot.preferences.maskWealthValues
                   ? `${formatDate(trade.date)} · values masked`
                   : isManual
-                    ? `${formatDate(trade.date)} · ${trade.quantity} units at ${formatCurrency(trade.pricePerUnit, asset?.currency ?? "INR")}`
+                    ? `${formatDate(trade.date)} · ${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}`
                     : `${formatDate(trade.date)} · ${trade.quantity} units · ${
                         trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
                           ? `acquisition basis ${trade.acquisitionCostPerUnit} per unit`
                           : "no execution price"
                       }`;
+                if (trade.type === "sell" && !snapshot.preferences.maskWealthValues) {
+                  const gain = gains[trade.id];
+                  description += gain == null || !currency
+                    ? "\nRealized gain unavailable: incomplete or unsupported history"
+                    : `\nRealized gain ${gain >= 0 ? "+" : ""}${formatCurrency(gain, currency)} · after fees`;
+                }
 
                 return (
                   <GroupedListRow
@@ -101,9 +117,9 @@ export function TradeHistoryScreen({
                     meta={description}
                     title={`${title}${asset ? "" : ` · ${snapshot.assets.find((item) => item.id === trade.assetId)?.name ?? "Unknown holding"}`}`}
                     value={
-                      snapshot.preferences.maskWealthValues || !isManual
+                      snapshot.preferences.maskWealthValues || !isManual || !currency
                         ? undefined
-                        : formatCurrency(trade.totalValue, asset?.currency ?? "INR")
+                        : `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}`
                     }
                     testID={`review-trade-${trade.id}`}
                     onPress={() => onReviewTrade(trade.id)}
@@ -115,6 +131,7 @@ export function TradeHistoryScreen({
         )}
         <AppText color="secondary" variant="caption">
           Purchases and sales keep cash records in sync. Imported transfers are read-only.
+          {" "}Realized gains use recorded weighted-average cost, not tax lots.
         </AppText>
       </View>
     </ScreenContainer>

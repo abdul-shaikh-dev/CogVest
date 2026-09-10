@@ -56,6 +56,8 @@ describe("Holding duration screen", () => {
     );
     fireEvent.press(screen.getByTestId("duration-mask"));
     expect(screen.queryByText("Example stock")).toBeNull();
+    expect(screen.queryByText("01 Jan 2025")).toBeNull();
+    expect(screen.queryByText("08 Sep 2026")).toBeNull();
     act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
     expect(screen.getByText("Optional analysis is paused")).toBeTruthy();
     fireEvent.press(screen.getByTestId("duration-back"));

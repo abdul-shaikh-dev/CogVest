@@ -223,6 +223,29 @@ by `docs/roadmap/asset-history-contract.md`. It does not change these V1 quote,
 transaction, aggregation or snapshot rules. No historical USD value is relabelled
 as INR using a current exchange rate.
 
+### Core Tracking Accounting (#317)
+
+- Holdings use moving weighted-average cost, not FIFO tax lots. Purchase fees
+  increase acquisition basis; sale fees reduce net proceeds. Partial disposals
+  retain the same average cost for remaining units; a full exit clears basis.
+- "Invested" in current holdings means the cost basis of remaining units, not
+  lifetime cash contributed. Unrealized gain compares current value with that
+  remaining basis. Transaction history shows realized gain per recorded sale:
+  net proceeds minus the weighted-average basis removed at that sale.
+- Realized gains are tracking figures, not tax gains or broker-matching claims.
+  They remain available in Transactions after a full exit and are masked with
+  other sensitive values. No historical FX or missing acquisition lots are guessed.
+- Measured opening balances provide aggregate basis only after their cutover.
+  Earlier transactions cannot create new linked cash movements against that
+  balance. Unknown basis/history yields an unavailable realized gain, not zero.
+- A linked sale must preserve nonnegative inventory throughout the dated record
+  timeline, not merely leave a positive balance today. Corrections and deletions
+  continue to rebuild from raw records under the same policy.
+- Basic duration keeps its existing supported single-known-acquisition scope;
+  multiple acquisitions, aggregate acquisition dates, or dispositions do not
+  imply a guessed age for the remaining units. Advanced tax reporting (#25) is
+  not planned.
+
 ### V1 Financial Precision Contract
 
 - Persisted financial fields remain finite JavaScript numbers under schema v7.
