@@ -57,3 +57,37 @@ are reported as inconclusive preservation, never as unchanged files.
 
 See [the recorded findings](../../docs/reviews/2026-09-10-encryption-feasibility.md)
 for the integration stop decision and remaining verification.
+
+## Native Guard Investigation
+
+The owner's follow-up authorized a bounded guard experiment, not a production
+module. Rebuild/install as above, then run either candidate:
+
+```powershell
+node scripts/encryption-probe/run.mjs emulator-5554 --guarded
+node scripts/encryption-probe/run.mjs emulator-5554 --format-guarded
+```
+
+`--guarded` adds file presence/size checks, native `isFileValid`, read-only record
+validation, unchanged-file comparisons, then writable open. It rejects healthy
+controls with this library version and is not usable.
+
+`--format-guarded` replaces `isFileValid` with `FormatGuard`: a test-only,
+version-4 metadata parser, zero flags, page-aligned bounded data, metadata payload
+size and CRC32. It performs no crypto implementation or library patch. The 1 MiB
+bound is not a proposed app capacity policy. The fixture collector reads files
+before checking that bound; it is not a bounded-I/O production implementation.
+
+The expanded matrix includes three healthy controls, missing/empty files, page
+padding, and metadata version/flags/IV/size/sequence/last-confirmed fields. For
+any accepted case, a separate write/readback phase runs **after** the preservation
+hashes are captured. Rejected fixtures are never written after fault injection.
+Missing artifacts use `MISSING` instead of a byte hash, allowing detection if an
+open improperly recreates them.
+
+Reports use separate `guarded-results.json` and `format-guarded-results.json`
+files. The strict screening gate exits 1 if a mutated fixture is accepted, even
+if its records survive. This identifies detection gaps; it does not prove every
+accepted metadata mutation causes data loss. The exact recorded matrices and
+remaining native boundaries are documented in
+[the follow-up](../../docs/reviews/2026-09-10-encryption-guard-probe.md).
