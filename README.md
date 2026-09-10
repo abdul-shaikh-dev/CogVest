@@ -40,7 +40,7 @@ app storage; there is no automatic backup or cloud recovery. Details:
 - Git.
 - Android Studio.
 - Android SDK and Platform Tools.
-- Android Emulator, preferably Pixel 8.
+- Android Emulator with a supported Android API image; no specific phone model is required.
 - `adb` on `PATH`.
 - Java 17 or newer. Android Studio JBR Java 21 is the recommended default.
 - Optional: Maestro CLI for local Android E2E tests.

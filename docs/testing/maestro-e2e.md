@@ -100,7 +100,7 @@ checks and Android smoke checks should still work.
 - `maestro not found`: add Maestro `bin` folder to `PATH`, restart PowerShell,
   and rerun `npm run maestro:check`.
 - `java not found`: install Java 17+ and set `JAVA_HOME`.
-- `no Android emulator/device`: start Pixel 8 from Android Studio and confirm
+- `no Android emulator/device`: start your Android emulator from Android Studio and confirm
   `adb devices`.
 - `app package not installed`: install a local APK with
   `adb install -r path/to/app.apk`.

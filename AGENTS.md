@@ -124,6 +124,10 @@ Run checks proportionate to the change:
 If emulator or external-provider verification is unavailable, report the exact
 gap instead of claiming completion.
 
+No specific Android emulator model is required. Record the actual AVD, API,
+display/font configuration and build mode with verification evidence. Keep
+performance budgets unchanged and disclose environment differences when comparing runs.
+
 ## Android Commands
 
 - `npm run start:clear`: Metro development loop; press `a` for Android.

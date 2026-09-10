@@ -79,4 +79,5 @@ no crashes or ANRs, and no persistent input or scrolling freezes. The 100 ms
 timer threshold remains a diagnostic signal, not a hard merge cutoff. Retain
 all excursions in evidence. Pair timing measurements with installed-app
 journeys; functional success alone is not a latency measurement. Current
-validation uses Pixel_10_Pro/API 36 debug/Metro, not Pixel 8 or a physical phone.
+validation uses Pixel_10_Pro/API 36 debug/Metro, not a physical phone. No specific
+emulator model is required; retain the actual configuration with each measurement.

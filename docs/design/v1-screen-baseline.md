@@ -123,6 +123,13 @@ purchase history is not a claim about the acquisition date of remaining lots.
 View records discloses existing correction/history actions; Sell / redeem
 remains separate. Close the panel before entering those existing routes.
 
+V3 issue #22 extends this same panel with Price history / Your holding value,
+not a competing detail route. Its behavior and limits are defined in
+`docs/roadmap/asset-history-contract.md`. Native-currency daily observations are
+distinct from INR portfolio summaries and stored Monthly Progress snapshots.
+History masking hides the plot and values, and Minimal Mode suppresses change
+percentages. Preserve the explicit Back and existing correction actions.
+
 Portfolio insights is a clearly actionable secondary link. Management,
 transactions and full valuation detail remain under More. Masking is available
 in the header and detail panel as well as More. Keep Add in the header with

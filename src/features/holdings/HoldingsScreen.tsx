@@ -59,6 +59,7 @@ import {
   type HoldingReviewItem,
 } from "./holdingsReview";
 import { useHoldings } from "./useHoldings";
+import { AssetHistoryPanel } from "./AssetHistoryPanel";
 
 type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
 
@@ -1338,6 +1339,8 @@ function HoldingDetails({
           value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
         />
       </View>
+
+      <AssetHistoryPanel asset={holding.asset} openingPositions={openingPositions} trades={trades} masked={masked} minimal={minimal} />
 
       <AppText color="secondary" variant="caption">
         {formatClassification(item)}
