@@ -25,7 +25,7 @@ manual PC-only verification steps.
 1. Open Android Studio.
 2. Open Device Manager.
 3. Select Create Virtual Device.
-4. Choose Pixel 7 or Pixel 8.
+4. Choose an Android phone hardware profile suited to your PC; no specific model is required.
 5. Choose an Android 14 or Android 15 x86_64 system image.
 6. Finish setup and start the emulator.
 

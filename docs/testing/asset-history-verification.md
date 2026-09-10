@@ -58,7 +58,8 @@ observations. Invalid-token tests ensure the fixture is not initialized.
   including synthetic cache creation. This measures JS-to-layout readiness, not
   compositor presentation time. Maestro separately exercised the controls.
 - Device used: Pixel_10_Pro, Android 16/API 36, x86_64, emulator-5554, 1280x2856,
-  density 480, font scale 1. Pixel 8 named in the issue is not installed here.
+  density 480, font scale 1. The owner accepted this environment on 2026-09-10;
+  no specific emulator model is required.
 
 ## Review And Limitations
 
@@ -73,8 +74,8 @@ moved secondary explanation below the chart. The Impeccable source detector
 reported no findings; native screenshots, not browser rendering, supplied visual
 evidence. The 4 MiB provider guard is pre-parse, not a streaming-memory guarantee.
 
-Pixel 8-specific acceptance remains pending unless the owner accepts the recorded
-Pixel_10_Pro substitution. Stock splits, unsupported asset types and provider
+The reference-device gate is satisfied by the owner-approved recorded emulator.
+Stock splits, unsupported asset types and provider
 history-access restrictions remain explicit limitations, not fabricated curves.
 
 Final independent owned-diff review found no remaining blocking findings after

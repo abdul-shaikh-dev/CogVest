@@ -3,7 +3,7 @@
 - [ ] Android Studio installed.
 - [ ] Android SDK installed.
 - [ ] Android Emulator installed.
-- [ ] Pixel 7 or Pixel 8 emulator created.
+- [ ] Android emulator created with a supported API image; no specific model required.
 - [ ] Android 14 or Android 15 x86_64 image selected.
 - [ ] Emulator boots.
 - [ ] `adb devices` shows the emulator in `device` state.
