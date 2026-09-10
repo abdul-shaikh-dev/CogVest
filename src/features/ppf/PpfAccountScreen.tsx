@@ -39,6 +39,7 @@ type PpfAccountScreenProps = {
   legacyName?: string;
   now?: Date;
   onBack: () => void;
+  onContinuePortfolioSetup?: () => void;
   onComplete: (accountId: string) => void;
   onEntry: (accountId: string, entryId?: string) => void;
   store?: StoreApi<PortfolioStoreState>;
@@ -66,12 +67,17 @@ export function PpfAccountScreen({
   legacyName,
   now = new Date(),
   onBack,
+  onContinuePortfolioSetup,
   onComplete,
   onEntry,
   store = getPortfolioStore(),
 }: PpfAccountScreenProps) {
   const snapshot = usePortfolioSnapshot(store);
-  const existing = snapshot.ppfAccounts.find((account) => account.id === accountId);
+  const [savedAccountId, setSavedAccountId] = useState<string>();
+  const resolvedAccountId = accountId ?? savedAccountId;
+  const existing = snapshot.ppfAccounts.find(
+    (account) => account.id === resolvedAccountId,
+  );
   const [isEditing, setIsEditing] = useState(!existing);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
@@ -91,12 +97,17 @@ export function PpfAccountScreen({
   if (isEditing) {
     return (
       <PpfAccountForm
+        key={existing?.id ?? "new"}
         account={existing}
         legacyAssetId={legacyAssetId}
         legacyName={legacyName}
         now={now}
         onBack={() => (existing ? setIsEditing(false) : onBack())}
-        onComplete={onComplete}
+        onComplete={(savedId) => {
+          setSavedAccountId(savedId);
+          setIsEditing(false);
+          onComplete(savedId);
+        }}
         store={store}
       />
     );
@@ -207,6 +218,10 @@ export function PpfAccountScreen({
               weight="bold"
             />
           </View>
+          <AppText color="secondary" variant="caption">
+            Your starting balance may include historic interest. CogVest cannot
+            infer a lifetime gain percentage from it.
+          </AppText>
         </PremiumCard>
 
         <PremiumCard>
@@ -314,6 +329,14 @@ export function PpfAccountScreen({
             variant="ghost"
           />
         )}
+        {onContinuePortfolioSetup ? (
+          <AppButton
+            onPress={onContinuePortfolioSetup}
+            testID="continue-portfolio-setup"
+            title="Continue portfolio setup"
+            variant="secondary"
+          />
+        ) : null}
       </View>
     </ScreenContainer>
   );

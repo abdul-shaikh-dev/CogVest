@@ -139,6 +139,10 @@ Filters wrap instead of clipping; enlarged text may stack the list heading and
 insights action. Do not shrink text to preserve a single control row.
 
 PPF accounts use a counted destination alongside Market when both exist;
+both taps and deliberate horizontal swipes switch destinations. Keep the tabs
+below the shared header and above search or quote notices so their position does
+not jump. Vertical scrolling, short/diagonal swipes, multi-touch and open detail
+panels must not accidentally switch destinations.
 PPF-only portfolios open their accounts. Do not put an absent-account promotion
 above the market list. Existing/legacy PPF access must survive the hierarchy
 change. Each account row leads with nickname/provider and confirmed balance, then
@@ -289,6 +293,16 @@ the user clear refresh and manual-price recovery actions later.
 ### Quick Portfolio Setup
 
 Use Quick Portfolio Setup when the user is entering several existing holdings.
+
+Dashboard and Holdings `Set up portfolio` open the same entry chooser as
+Holdings `+`: single entry, multiple-entry setup, PPF, holdings CSV, and
+transaction/statement import. A saved setup session remains resumable.
+
+Saving or editing a PPF account shows its saved details, not the initial asset
+entry form. Accounts created through Quick Setup are recorded once in that
+session and offer an explicit `Continue portfolio setup` action. Back/cancel
+remain available. Show credited and estimated interest honestly; a starting
+balance that includes unknown historical interest cannot establish lifetime P&L.
 It is a focused full-screen flow, not a modal and not a spreadsheet grid.
 
 - Empty Dashboard leads with `Set up your portfolio` and keeps `Add one holding`

@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react-native";
 import type { ReactElement } from "react";
-import { Modal, ScrollView } from "react-native";
+import { Modal, PanResponder, ScrollView, type GestureResponderEvent, type PanResponderGestureState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
@@ -185,7 +185,53 @@ function seedMarketAndPpf() {
   return store;
 }
 
+function destinationResponder(createSpy: jest.SpyInstance) {
+  const responder = [...createSpy.mock.calls]
+    .reverse()
+    .map(([callbacks]) => callbacks)
+    .find((callbacks) => callbacks.onPanResponderRelease !== undefined);
+
+  if (!responder) throw new Error("Holdings destination responder was not created.");
+
+  return responder;
+}
+
+function gesture(
+  dx: number,
+  dy: number,
+  numberActiveTouches = 1,
+): PanResponderGestureState {
+  return { dx, dy, numberActiveTouches } as PanResponderGestureState;
+}
+
+function startGesture(responder: ReturnType<typeof destinationResponder>) {
+  responder.onStartShouldSetPanResponderCapture?.(
+    {} as GestureResponderEvent,
+    gesture(0, 0),
+  );
+}
+
+function testIdOrder(node: unknown, ids: string[] = [], seen = new WeakSet<object>()) {
+  if (!node || typeof node !== "object" || seen.has(node)) return ids;
+
+  seen.add(node);
+  const candidate = node as {
+    children?: unknown[];
+    props?: { testID?: unknown };
+  };
+  if (typeof candidate.props?.testID === "string") {
+    ids.push(candidate.props.testID);
+  }
+  candidate.children?.forEach((child) => testIdOrder(child, ids, seen));
+
+  return ids;
+}
+
 describe("HoldingsScreen", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("renders four and thirty holding fixtures with directly visible search", () => {
     const fourScreen = render(<HoldingsScreen store={seedListHoldings(4)} />);
 
@@ -241,6 +287,150 @@ describe("HoldingsScreen", () => {
 
     fireEvent.press(getByTestId("holdings-market-tab"));
     expect(getByText("Reliance Industries")).toBeTruthy();
+  });
+
+  it("renders Market and PPF tabs before the market search field", () => {
+    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const order = testIdOrder(screen.toJSON());
+
+    expect(order.indexOf("holdings-destination-tabs")).toBeLessThan(
+      order.indexOf("holdings-search-input"),
+    );
+  });
+
+  it("switches destinations only for intentional left and right responder gestures", () => {
+    const createSpy = jest.spyOn(PanResponder, "create");
+    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const responder = destinationResponder(createSpy);
+
+    startGesture(responder);
+    expect(
+      responder.onMoveShouldSetPanResponderCapture?.(
+        {} as GestureResponderEvent,
+        gesture(-80, 4),
+      ),
+    ).toBe(true);
+    act(() =>
+      responder.onPanResponderRelease?.(
+        {} as GestureResponderEvent,
+        gesture(-80, 4),
+      ),
+    );
+    expect(screen.getByText("Primary PPF")).toBeTruthy();
+
+    const updatedResponder = destinationResponder(createSpy);
+    startGesture(updatedResponder);
+    expect(
+      updatedResponder.onMoveShouldSetPanResponderCapture?.(
+        {} as GestureResponderEvent,
+        gesture(80, -4),
+      ),
+    ).toBe(true);
+    act(() =>
+      updatedResponder.onPanResponderRelease?.(
+        {} as GestureResponderEvent,
+        gesture(80, -4),
+      ),
+    );
+    expect(screen.getByText("Reliance Industries")).toBeTruthy();
+  });
+
+  it("does not switch destinations for vertical, small, or diagonal responder gestures", () => {
+    const createSpy = jest.spyOn(PanResponder, "create");
+    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const responder = destinationResponder(createSpy);
+
+    const gestures: Array<[number, number, boolean]> = [
+      [8, 100, false],
+      [45, 2, true],
+      [80, 80, false],
+    ];
+    for (const [dx, dy, captures] of gestures) {
+      startGesture(responder);
+      expect(
+        responder.onMoveShouldSetPanResponderCapture?.(
+          {} as GestureResponderEvent,
+          gesture(dx, dy),
+        ),
+      ).toBe(captures);
+      act(() =>
+        responder.onPanResponderRelease?.(
+          {} as GestureResponderEvent,
+          gesture(dx, dy),
+        ),
+      );
+    }
+
+    expect(screen.getByText("Reliance Industries")).toBeTruthy();
+    expect(screen.queryByText("Primary PPF")).toBeNull();
+  });
+
+  it("keeps pre-capture multi-touch cancelled after one finger lifts", () => {
+    const createSpy = jest.spyOn(PanResponder, "create");
+    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const responder = destinationResponder(createSpy);
+    startGesture(responder);
+    responder.onStartShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-10, 0, 2));
+    expect(responder.onMoveShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-40, 0, 2))).toBe(false);
+    expect(responder.onMoveShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-90, 0, 1))).toBe(false);
+    act(() => responder.onPanResponderRelease?.({} as GestureResponderEvent, gesture(-90, 0, 0)));
+    expect(screen.queryByText("Primary PPF")).toBeNull();
+    createSpy.mockRestore();
+  });
+
+  it("invalidates a captured gesture after multi-touch, vertical movement, or termination", () => {
+    const createSpy = jest.spyOn(PanResponder, "create");
+    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const responder = destinationResponder(createSpy);
+
+    for (const invalidate of [
+      () => responder.onPanResponderMove?.({} as GestureResponderEvent, gesture(-80, 4, 2)),
+      () => responder.onPanResponderMove?.({} as GestureResponderEvent, gesture(-80, 100)),
+      () => responder.onPanResponderTerminate?.({} as GestureResponderEvent, gesture(-80, 4)),
+    ]) {
+      startGesture(responder);
+      expect(
+        responder.onMoveShouldSetPanResponderCapture?.(
+          {} as GestureResponderEvent,
+          gesture(-80, 4),
+        ),
+      ).toBe(true);
+      invalidate();
+      act(() =>
+        responder.onPanResponderRelease?.(
+          {} as GestureResponderEvent,
+          gesture(-80, 4),
+        ),
+      );
+      expect(screen.getByText("Reliance Industries")).toBeTruthy();
+      expect(screen.queryByText("Primary PPF")).toBeNull();
+    }
+  });
+
+  it("does not capture destination gestures while an add modal is open", () => {
+    const createSpy = jest.spyOn(PanResponder, "create");
+    const screen = render(
+      <HoldingsScreen openAddMenu store={seedMarketAndPpf()} />,
+    );
+    const responder = destinationResponder(createSpy);
+
+    startGesture(responder);
+    expect(
+      responder.onMoveShouldSetPanResponderCapture?.(
+        {} as GestureResponderEvent,
+        gesture(-80, 4),
+      ),
+    ).toBe(false);
+    act(() =>
+      responder.onPanResponderRelease?.(
+        {} as GestureResponderEvent,
+        gesture(-80, 4),
+      ),
+    );
+
+    fireEvent.press(screen.getByTestId("holdings-panel-close"));
+    expect(screen.getByText("Reliance Industries")).toBeTruthy();
+    expect(screen.queryByText("Primary PPF")).toBeNull();
   });
 
   it("keeps legacy PPF holdings in the counted destination and migration path", () => {
@@ -742,6 +932,40 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByTestId("holdings-add-button"));
     fireEvent.press(getByTestId("import-transactions-csv-option"));
     expect(onImportTransactions).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the Add menu from a requested route signal and acknowledges it", () => {
+    const onAddMenuOpened = jest.fn();
+    const { getByText } = render(
+      <HoldingsScreen
+        onAddMenuOpened={onAddMenuOpened}
+        openAddMenu
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    expect(getByText("Add holdings")).toBeTruthy();
+    expect(onAddMenuOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the same Add modal with import choices from an empty portfolio setup action", () => {
+    const onQuickSetup = jest.fn();
+    const onImportHoldings = jest.fn();
+    const onImportTransactions = jest.fn();
+    const { getByTestId, getByText } = render(
+      <HoldingsScreen
+        onImportHoldings={onImportHoldings}
+        onImportTransactions={onImportTransactions}
+        onQuickSetup={onQuickSetup}
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    fireEvent.press(getByTestId("quick-setup-button"));
+    expect(getByText("Add holdings")).toBeTruthy();
+    expect(getByTestId("import-holdings-csv-option")).toBeTruthy();
+    expect(getByTestId("import-transactions-csv-option")).toBeTruthy();
+    expect(onQuickSetup).not.toHaveBeenCalled();
   });
 
   it("keeps active setup visible above a populated holdings list", () => {

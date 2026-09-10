@@ -5,7 +5,7 @@ import { HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings
 import { useQuickSetupSession } from "@/src/features/quickSetup";
 
 export default function HoldingsScreen() {
-  const params = useLocalSearchParams<{ statusMessage?: string }>();
+  const params = useLocalSearchParams<{ statusMessage?: string; openAddMenu?: string }>();
   const navigation = useNavigation();
   const [statusMessage, setStatusMessage] = useState<string>();
   const quickSetup = useQuickSetupSession();
@@ -29,6 +29,8 @@ export default function HoldingsScreen() {
 
   return (
     <HoldingsFeatureScreen
+      openAddMenu={params.openAddMenu === "true"}
+      onAddMenuOpened={() => router.setParams({ openAddMenu: undefined })}
       onOpenDuration={() => router.push("/holding-duration")}
       onAddTrade={() => {
         router.push("/add-holding");
