@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CogVest | Holdings study</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="workbench">
+      <aside class="brief">
+        <p class="brand">CogVest / Design study</p>
+        <h1>A clearer view<br />of what you own.</h1>
+        <p>
+          Less machinery above the list. More room for the holding you came to
+          see.
+        </p>
+        <div class="notes">
+          <h2>Browse, then go deeper.</h2>
+          <p>
+            Tap any holding. Its details open separately, keeping your place in
+            the list. Back returns you to exactly where you were.
+          </p>
+          <p>
+            Invested value stays in the list. Sector, units, pricing and record
+            management live in the detail view.
+          </p>
+        </div>
+        <fieldset>
+          <legend>Explore the states</legend>
+          <label for="scenario">Portfolio</label>
+          <select id="scenario">
+            <option value="normal">Six market holdings</option>
+            <option value="pending">One price missing</option>
+            <option value="many">Long list: 30 holdings</option>
+            <option value="empty">Empty portfolio</option>
+            <option value="ppf">PPF only</option>
+          </select>
+          <label class="check"
+            ><input type="checkbox" id="with-ppf" /> Include an existing PPF
+            account</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="minimal" /> Minimal Mode</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="large" /> Larger text (130%)</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="narrow" /> Narrow screen (360px)</label
+          >
+        </fieldset>
+        <p class="fine">
+          Synthetic figures. No live prices or financial actions. Design approved
+          on 8 September 2026; native implementation tracked in PR #308.
+        </p>
+      </aside>
+      <section class="phone" aria-label="Interactive Holdings preview">
+        <div class="status" aria-hidden="true">
+          <span>10:42</span><span>100%</span>
+        </div>
+        <div class="screen" id="screen">
+          <header class="header">
+            <div>
+              <h2>Holdings</h2>
+              <p id="subtitle"></p>
+            </div>
+            <button
+              id="mask"
+              class="icon-button"
+              aria-label="Hide values"
+            ></button
+            ><button
+              id="add"
+              class="icon-button"
+              aria-label="Add holdings"
+            ></button
+            ><button
+              id="more"
+              class="icon-button"
+              aria-label="More holdings options"
+            ></button>
+          </header>
+          <label class="search"
+            ><span id="search-icon" aria-hidden="true"></span
+            ><input
+              id="search"
+              type="search"
+              placeholder="Find a holding"
+              aria-label="Search holdings"
+          /></label>
+          <div id="accounts" class="account-tabs"></div>
+          <div id="notice" role="status"></div>
+          <div id="filters" class="filters" aria-label="Filter holdings"></div>
+          <div class="list-heading">
+            <span id="list-caption"></span
+            ><button id="insights">
+              Portfolio insights
+              <span class="icon" aria-hidden="true">&#62011;</span>
+            </button>
+          </div>
+          <div id="results"></div>
+          <p id="scope" class="scope"></p>
+        </div>
+        <nav class="nav" aria-label="Other tabs are illustrative">
+          <span><i class="icon">&#62339;</i>Dashboard</span
+          ><span class="active" aria-current="page"
+            ><i class="icon">&#62648;</i>Holdings</span
+          ><span><i class="icon">&#62876;</i>Progress</span
+          ><span><i class="icon">&#63014;</i>Cash</span
+          ><span><i class="icon">&#62828;</i>Settings</span>
+        </nav>
+      </section>
+      <dialog id="detail" aria-labelledby="detail-title">
+        <header class="detail-header">
+          <button id="back" class="icon-button" aria-label="Back to holdings">
+            <i class="icon" aria-hidden="true">&#61735;</i>
+          </button>
+          <h2 id="detail-title">Holding details</h2>
+          <button
+            id="detail-mask"
+            class="icon-button"
+            aria-label="Hide values"
+          ></button>
+        </header>
+        <div id="detail-content" class="detail-content"></div>
+      </dialog>
+      <dialog id="sheet" aria-labelledby="sheet-title">
+        <header class="detail-header">
+          <h2 id="sheet-title"></h2>
+          <button id="close-sheet" class="icon-button" aria-label="Close panel">
+            <i class="icon" aria-hidden="true">&#62026;</i>
+          </button>
+        </header>
+        <div id="sheet-content" class="sheet-content"></div>
+      </dialog>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

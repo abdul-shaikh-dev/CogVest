@@ -5,7 +5,23 @@ import {
   normalizePercentage,
   sumFinancialValues,
 } from "@/src/domain/precision";
-import type { AssetClass, Holding } from "@/src/types";
+import type { AssetClass, Holding, OpeningPosition, Trade } from "@/src/types";
+import { getCalendarDatePart } from "@/src/domain/dates";
+
+/** Earliest recorded purchase, not the acquisition date of remaining disposal lots. */
+export function getFirstRecordedPurchase(
+  positions: OpeningPosition[],
+  trades: Trade[],
+): string | null {
+  const dates = [
+    ...positions.map((position) => position.date),
+    ...trades
+      .filter((trade) => trade.type === "buy")
+      .map((trade) => trade.date),
+  ].map((date) => (date === null ? null : getCalendarDatePart(date)));
+  if (!dates.length || dates.some((date) => date === null)) return null;
+  return (dates as string[]).sort()[0];
+}
 
 export type HoldingWithQuoteMetadata = Holding & {
   quoteSource?: string;
@@ -46,8 +62,7 @@ export function createHoldingReviewItems(
     })
     .sort(
       (left, right) =>
-        (right.holding.currentValue ?? -1) -
-        (left.holding.currentValue ?? -1),
+        (right.holding.currentValue ?? -1) - (left.holding.currentValue ?? -1),
     );
 }
 
@@ -61,8 +76,7 @@ export function getHoldingReviewSummary(items: HoldingReviewItem[]) {
   const bestReturn = valuedItems
     .filter(
       (item) =>
-        item.holding.unrealisedPnL !== null &&
-        item.holding.unrealisedPnL > 0,
+        item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL > 0,
     )
     .sort(
       (left, right) =>
@@ -121,7 +135,8 @@ export function getExposureSegments(
     items.map(
       (item) =>
         item.holding.calculationBasis?.currentValue ??
-        item.holding.currentValue ?? 0,
+        item.holding.currentValue ??
+        0,
     ),
   );
   const preciseValues = new Map(
@@ -140,7 +155,8 @@ export function getExposureSegments(
           .get(group.key)!
           .plus(
             item.holding.calculationBasis?.currentValue ??
-              item.holding.currentValue ?? 0,
+              item.holding.currentValue ??
+              0,
           ),
       );
     }
@@ -168,8 +184,7 @@ export function filterHoldingReviewItems(
 ) {
   return items.filter(
     (item) =>
-      matchesFilter(item, filter) &&
-      matchesSearch(item.holding, searchQuery),
+      matchesFilter(item, filter) && matchesSearch(item.holding, searchQuery),
   );
 }
 
@@ -184,13 +199,14 @@ function getExposureKey(assetClass: AssetClass) {
 function matchesFilter(item: HoldingReviewItem, filter: HoldingFilter) {
   if (filter === "winners") {
     return (
-      item.holding.unrealisedPnL !== null &&
-      item.holding.unrealisedPnL >= 0
+      item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL >= 0
     );
   }
 
   if (filter === "losers") {
-    return item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0;
+    return (
+      item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0
+    );
   }
 
   if (filter === "high-allocation") {

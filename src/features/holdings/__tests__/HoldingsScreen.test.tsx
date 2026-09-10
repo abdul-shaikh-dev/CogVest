@@ -12,7 +12,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { HoldingsScreen } from "@/src/features/holdings";
 import { useReducedMotionPreference } from "@/src/hooks/useReducedMotionPreference";
-import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
+import type {
+  QuoteRefreshResult,
+  RefreshQuotesInput,
+} from "@/src/services/quotes";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
@@ -192,7 +195,9 @@ describe("HoldingsScreen", () => {
     expect(fourScreen.getAllByTestId(/^holding-row-/)).toHaveLength(1);
 
     fourScreen.unmount();
-    const thirtyScreen = render(<HoldingsScreen store={seedListHoldings(30)} />);
+    const thirtyScreen = render(
+      <HoldingsScreen store={seedListHoldings(30)} />,
+    );
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
     fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),
@@ -236,7 +241,10 @@ describe("HoldingsScreen", () => {
 
   it("keeps legacy PPF holdings in the counted destination and migration path", () => {
     const { getByTestId, getByText } = render(
-      <HoldingsScreen onAddPpfAccount={jest.fn()} store={seedMixedHoldings()} />,
+      <HoldingsScreen
+        onAddPpfAccount={jest.fn()}
+        store={seedMixedHoldings()}
+      />,
     );
 
     expect(getByTestId("holdings-market-tab")).toHaveTextContent("Market 2");
@@ -244,7 +252,9 @@ describe("HoldingsScreen", () => {
 
     fireEvent.press(getByTestId("holdings-ppf-tab"));
     expect(getByTestId("legacy-ppf-asset-ppf")).toBeTruthy();
-    expect(getByText("Move Public Provident Fund to the PPF ledger")).toBeTruthy();
+    expect(
+      getByText("Move Public Provident Fund to the PPF ledger"),
+    ).toBeTruthy();
     expect(getByTestId("convert-legacy-ppf-asset-ppf")).toBeTruthy();
   });
 
@@ -320,16 +330,77 @@ describe("HoldingsScreen", () => {
     expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
   });
 
+  it("excludes legacy PPF and cash from allocation without hiding their records", () => {
+    const store = seedMixedHoldings();
+    const cash = {
+      ...asset,
+      id: "cash-asset",
+      symbol: "CASH",
+      ticker: "CASH",
+      name: "Cash holding",
+      assetClass: "cash" as const,
+    };
+    store.getState().addAsset(cash);
+    store
+      .getState()
+      .addOpeningPosition({
+        id: "cash-opening",
+        assetId: cash.id,
+        quantity: 1,
+        averageCostPrice: 10000,
+        currentPrice: 10000,
+        date: null,
+      });
+    const screen = render(
+      <HoldingsScreen store={store} onReviewOpeningPosition={jest.fn()} />,
+    );
+    expect(screen.getByTestId("holding-row-cash-asset")).toBeTruthy();
+    expect(
+      within(screen.getByTestId(`holding-row-${asset.id}`)).getByText(
+        "Allocation 23.8%",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("holding-row-cash-asset")).queryByText(
+        /Allocation/,
+      ),
+    ).toBeNull();
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    expect(screen.getByText("23.8%")).toBeTruthy();
+    expect(screen.getByText("First recorded purchase")).toBeTruthy();
+    expect(screen.getByText("20 Apr 2026")).toBeTruthy();
+    expect(screen.getByText(/Updated .*\d{2}:\d{2}/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("holding-detail-back"));
+    fireEvent.press(screen.getByTestId("holdings-ppf-tab"));
+    expect(
+      within(screen.getByTestId(`holding-row-${debtAsset.id}`)).queryByText(
+        /Allocation/,
+      ),
+    ).toBeNull();
+    fireEvent.press(screen.getByTestId(`holding-row-${debtAsset.id}`));
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("holding-view-records"));
+    expect(
+      screen.getByTestId("review-opening-position-opening-ppf"),
+    ).toBeTruthy();
+  });
+
   it("keeps pending status readable while masking wealth", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getByText, getAllByText, getByTestId } = render(<HoldingsScreen store={store} />);
+    const { getByText, getAllByText, getByTestId } = render(
+      <HoldingsScreen store={store} />,
+    );
     expect(getByText("Valuation pending")).toBeTruthy();
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-    expect(within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText("Unavailable")).toHaveLength(2);
+    expect(
+      within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText(
+        "Unavailable",
+      ),
+    ).toHaveLength(2);
   });
 
   it("keeps per-unit prices and percentages visible in masked expanded holdings", () => {
@@ -338,8 +409,8 @@ describe("HoldingsScreen", () => {
     const { getByTestId } = render(<HoldingsScreen store={store} />);
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     const details = within(getByTestId(`holding-expanded-${asset.id}`));
-    expect(details.getByText("₹100")).toBeTruthy();
-    expect(details.getByText("₹125")).toBeTruthy();
+    expect(details.getByText("₹100.00")).toBeTruthy();
+    expect(details.getByText("₹125.00")).toBeTruthy();
     expect(details.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
   });
 
@@ -376,15 +447,25 @@ describe("HoldingsScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition({
-      assetId: asset.id, averageCostPrice: 100, date: null,
-      id: "opening-pending", quantity: 2,
+      assetId: asset.id,
+      averageCostPrice: 100,
+      date: null,
+      id: "opening-pending",
+      quantity: 2,
     });
-    const { getByTestId, getByText, queryByText } = render(<HoldingsScreen store={store} />);
-    expect(getByTestId("holdings-filter-high-allocation").props.accessibilityState.disabled).toBe(true);
+    const { getByTestId, getByText, queryByText } = render(
+      <HoldingsScreen store={store} />,
+    );
+    expect(
+      getByTestId("holdings-filter-high-allocation").props.accessibilityState
+        .disabled,
+    ).toBe(true);
     fireEvent.press(getByTestId("holdings-insights-button"));
     expect(getByText("Awaiting valuation")).toBeTruthy();
     expect(getByText("Asset mix unavailable")).toBeTruthy();
-    expect(getByText("Unavailable while a market holding needs a price.")).toBeTruthy();
+    expect(
+      getByText("Unavailable while a market holding needs a price."),
+    ).toBeTruthy();
     expect(queryByText(/0.00%/)).toBeNull();
   });
 
@@ -392,7 +473,9 @@ describe("HoldingsScreen", () => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(reduced);
     const screen = render(<HoldingsScreen store={seedMixedHoldings()} />);
     fireEvent.press(screen.getByTestId("holdings-more-button"));
-    expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe(reduced ? "none" : "fade");
+    expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe(
+      reduced ? "none" : "fade",
+    );
     jest.mocked(useReducedMotionPreference).mockReturnValue(true);
   });
 
@@ -408,7 +491,9 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("add-trade-button")).toBeTruthy();
     expect(getByText("No holdings yet")).toBeTruthy();
     expect(
-      getByText("Holdings are created automatically from your portfolio entries."),
+      getByText(
+        "Holdings are created automatically from your portfolio entries.",
+      ),
     ).toBeTruthy();
 
     fireEvent.press(getByText("Add Holding"));
@@ -439,13 +524,13 @@ describe("HoldingsScreen", () => {
     expect(getByText("All 1")).toBeTruthy();
     expect(getByText("Winners 1")).toBeTruthy();
     expect(getByText("Losers 0")).toBeTruthy();
-    expect(getByText("High alloc. 1")).toBeTruthy();
+    expect(getByText("High allocation 1")).toBeTruthy();
     expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
-    expect(getByText("Equity · Stock · Unknown")).toBeTruthy();
+    expect(getByText("RELIANCE · Stock")).toBeTruthy();
     expect(getByText("₹250")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
     expect(getByText("Invested ₹200")).toBeTruthy();
-    expect(getByText("Alloc. 100.00%")).toBeTruthy();
+    expect(getByText("Allocation 100.0%")).toBeTruthy();
     expect(queryByText("Live price")).toBeNull();
     expect(queryByText("Manual price")).toBeNull();
     expect(queryByText(/fallback/i)).toBeNull();
@@ -473,42 +558,40 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Best return")).toBeNull();
   });
 
-  it("expands one holding at a time to show useful position details", () => {
-    const store = seedMixedHoldings();
-    const { getByTestId, getByText, queryByTestId, queryByText } = render(
-      <HoldingsScreen store={store} />,
+  it("opens separate details and preserves search and filter on both back actions", () => {
+    const screen = render(<HoldingsScreen store={seedMixedHoldings()} />);
+    fireEvent.changeText(
+      screen.getByTestId("holdings-search-input"),
+      "Reliance",
     );
-
-    expect(queryByTestId(`holding-expanded-${asset.id}`)).toBeNull();
-    expect(queryByText("Quantity")).toBeNull();
+    fireEvent.press(screen.getByTestId("holdings-filter-winners"));
+    const list = screen.getByTestId("holdings-list");
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    expect(screen.getByTestId("holding-detail-modal")).toBeTruthy();
+    expect(within(list).queryByText("Quantity")).toBeNull();
+    expect(screen.getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
+    expect(screen.getByText("Avg cost")).toBeTruthy();
+    expect(screen.getByText("Price source")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("holding-detail-back"));
+    expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
+    expect(screen.getByTestId("holdings-search-input").props.value).toBe(
+      "Reliance",
+    );
     expect(
-      getByTestId(`holding-row-${asset.id}`).props.accessibilityState,
-    ).toEqual({ expanded: false });
-
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-
-    expect(getByTestId(`holding-expanded-${asset.id}`)).toBeTruthy();
-    expect(
-      getByTestId(`holding-row-${asset.id}`).props.accessibilityState,
-    ).toEqual({ expanded: true });
-    expect(getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
-    expect(getByText("Quantity")).toBeTruthy();
-    expect(getByText("Avg cost")).toBeTruthy();
-    expect(getByText("Current price")).toBeTruthy();
-    expect(getByText("Price source")).toBeTruthy();
-    expect(getByText("Yahoo")).toBeTruthy();
-
-    fireEvent.press(getByTestId("holdings-ppf-tab"));
-    fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
-
-    expect(queryByTestId(`holding-expanded-${asset.id}`)).toBeNull();
-    expect(getByTestId(`holding-expanded-${debtAsset.id}`)).toBeTruthy();
-    expect(
-      getByTestId(`holding-row-${debtAsset.id}`).props.accessibilityState,
-    ).toEqual({ expanded: true });
-    fireEvent.press(getByTestId("holdings-market-tab"));
-    expect(getByTestId(`holding-row-${asset.id}`).props.accessibilityState)
-      .toEqual({ expanded: false });
+      screen.getByTestId("holdings-filter-winners").props.accessibilityState
+        .selected,
+    ).toBe(true);
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    act(() => {
+      screen
+        .UNSAFE_getAllByType(Modal)
+        .find((modal) => modal.props.testID === "holding-detail-modal")!
+        .props.onRequestClose();
+    });
+    expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
+    expect(screen.getByTestId("holdings-search-input").props.value).toBe(
+      "Reliance",
+    );
   });
 
   it("exposes a Sell / redeem action from expanded holding details", () => {
@@ -532,6 +615,7 @@ describe("HoldingsScreen", () => {
     );
 
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(getByTestId("holding-view-records"));
     fireEvent.press(getByTestId(`review-transactions-${asset.id}`));
 
     expect(onReviewTrades).toHaveBeenCalledWith(asset.id);
@@ -580,8 +664,10 @@ describe("HoldingsScreen", () => {
     expect(queryByTestId("review-opening-position-opening-ppf")).toBeNull();
     expect(queryByTestId("review-opening-position-opening-bitcoin")).toBeNull();
 
+    fireEvent.press(getByTestId("holding-detail-back"));
     fireEvent.press(getByTestId("holdings-ppf-tab"));
     fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
+    fireEvent.press(getByTestId("holding-view-records"));
     fireEvent.press(getByTestId("review-opening-position-opening-ppf"));
 
     expect(onReviewOpeningPosition).toHaveBeenCalledWith("opening-ppf");
@@ -674,9 +760,7 @@ describe("HoldingsScreen", () => {
   it("filters visible holdings by winners, losers, high allocation, and search", () => {
     const store = seedMixedHoldings();
 
-    const { getByTestId } = render(
-      <HoldingsScreen store={store} />,
-    );
+    const { getByTestId } = render(<HoldingsScreen store={store} />);
     const getList = () => within(getByTestId("holdings-list"));
 
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
@@ -687,7 +771,9 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("holdings-filter-losers")).toHaveStyle({
       backgroundColor: colors.primary,
     });
-    expect(within(getByTestId("holdings-filter-losers")).getByText(/Losers/)).toHaveStyle({
+    expect(
+      within(getByTestId("holdings-filter-losers")).getByText(/Losers/),
+    ).toHaveStyle({
       color: colors.text.inverse,
     });
     expect(getList().queryByText("Reliance Industries")).toBeNull();
@@ -700,7 +786,8 @@ describe("HoldingsScreen", () => {
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 
     fireEvent.press(getByTestId("holdings-filter-high-allocation"));
-    expect(getList().queryByText("Reliance Industries")).toBeNull();
+    expect(getList().getByText("Reliance Industries")).toBeTruthy();
+    expect(getList().getByText("Allocation 23.8%")).toBeTruthy();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 
@@ -796,7 +883,7 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    expect(getByText("Using saved prices")).toBeTruthy();
+    expect(queryByText("Using saved prices")).toBeNull();
     fireEvent.press(getByTestId("holdings-more-button"));
     fireEvent.press(getByTestId("holdings-valuation-details-button"));
     expect(
@@ -828,7 +915,6 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    expect(getByText("Price coverage needs attention")).toBeTruthy();
     fireEvent.press(getByTestId("holdings-more-button"));
     fireEvent.press(getByTestId("holdings-valuation-details-button"));
     expect(
