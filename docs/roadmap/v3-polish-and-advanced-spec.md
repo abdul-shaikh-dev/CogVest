@@ -31,6 +31,11 @@ baseline remains unchanged; this is not an implemented encryption claim.
 Frame-attribution work #299 remains parked. Other owner
 deferrals remain recorded in their issues, not treated as completed work.
 
+Advanced search #23 now has a functional implementation and isolated Android
+journey, but its strict performance gate remains open. See
+[search verification](../reviews/2026-09-10-advanced-asset-search.md) before
+marking the issue complete or treating its reference-device timing as verified.
+
 ## Target User Value
 
 The user can inspect historical performance, discover assets more easily, export local data, and rely on stronger tax/quote/release hardening.

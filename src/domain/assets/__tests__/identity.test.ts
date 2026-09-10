@@ -1,4 +1,5 @@
 import {
+  createCanonicalAssetMatcher,
   findCanonicalAsset,
   hasCanonicalAssetConflict,
   normalizeIsin,
@@ -85,5 +86,34 @@ describe("canonical asset identity", () => {
     };
 
     expect(findCanonicalAsset([hdfc], candidate)).toBeUndefined();
+  });
+
+  it("matches the canonical precedence rules with first-seen assets", () => {
+    const sameProvider = { ...hdfc, id: "provider", quoteSourceId: "PROVIDER.NS" };
+    const sameTicker = { ...hdfc, id: "ticker", quoteSourceId: "TICKER.NS" };
+    const sameIsin = {
+      ...hdfc,
+      id: "isin",
+      isin: "INE040A01034",
+      quoteSourceId: "ISIN.NS",
+      ticker: "ISIN.NS",
+    };
+    const matcher = createCanonicalAssetMatcher([sameTicker, sameProvider, sameIsin]);
+
+    expect(matcher.find({ ...hdfc, id: "ticker" })).toBe(sameTicker);
+    expect(matcher.find({ ...hdfc, id: "candidate", isin: " ine040a01034 " })).toBe(sameIsin);
+    expect(matcher.find({ ...hdfc, id: "candidate", quoteSourceId: " provider.ns " })).toBe(sameProvider);
+    expect(matcher.find({ ...hdfc, id: "candidate", quoteSourceId: "other.ns" })).toBe(sameTicker);
+  });
+
+  it("adds assets incrementally without replacing a first-seen canonical match", () => {
+    const matcher = createCanonicalAssetMatcher([]);
+    const first = { ...hdfc, id: "first", quoteSourceId: "FIRST.NS" };
+    const duplicateTicker = { ...hdfc, id: "second", quoteSourceId: "SECOND.NS" };
+
+    matcher.add(first);
+    matcher.add(duplicateTicker);
+
+    expect(matcher.find({ ...hdfc, id: "candidate", quoteSourceId: "OTHER.NS" })).toBe(first);
   });
 });

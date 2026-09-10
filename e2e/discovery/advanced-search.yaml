@@ -1,0 +1,118 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in, isolated memory fixture. Never clears installed app data.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///asset-search-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "asset-search-qa-screen"
+    timeout: 30000
+- tapOn:
+    id: "asset-search-qa-warmup"
+- tapOn:
+    id: "asset-search-qa-reset-metrics"
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "SAVED0420"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "existing-asset-asset-search-qa-saved-0420"
+    direction: DOWN
+- assertVisible:
+    id: "existing-asset-asset-search-qa-saved-0420"
+- scrollUntilVisible:
+    element:
+      id: "asset-lookup-input"
+    direction: UP
+- tapOn:
+    id: "asset-lookup-input"
+- eraseText
+- inputText: "CAND0042"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "asset-lookup-result-asset-search-qa-provider-0042"
+    direction: DOWN
+- assertVisible:
+    id: "asset-lookup-result-asset-search-qa-provider-0042"
+- assertNotVisible:
+    id: "selected-asset-summary"
+- scrollUntilVisible:
+    element:
+      id: "asset-discovery-load-more"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "asset-discovery-load-more"
+- scrollUntilVisible:
+    element:
+      id: "asset-discovery-filter-picker"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "asset-discovery-filter-picker"
+- tapOn:
+    id: "asset-discovery-filter-crypto"
+- assertVisible: "Crypto"
+- tapOn:
+    id: "asset-search-qa-capture-metrics"
+- takeScreenshot: ".expo/issue23-search-stress"
+- tapOn:
+    id: "asset-search-qa-warmup"
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "SAVED0420"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "existing-asset-asset-search-qa-saved-0420"
+    direction: DOWN
+- tapOn:
+    id: "existing-asset-asset-search-qa-saved-0420"
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- scrollUntilVisible:
+    element:
+      id: "quantity-input"
+    direction: DOWN
+- tapOn:
+    id: "quantity-input"
+- inputText: "2"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+- assertVisible:
+    id: "holding-save-complete"
+- tapOn:
+    id: "asset-search-qa-capture-metrics"
+- assertVisible: "Assets: 500; openings: 1"
+- tapOn:
+    id: "asset-search-qa-warmup"
+- scrollUntilVisible:
+    element:
+      text: "Clear recent searches"
+    direction: DOWN
+- tapOn: "Clear recent searches"
+- assertNotVisible: "Recent searches"

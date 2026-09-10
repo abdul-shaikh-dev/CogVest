@@ -11,7 +11,9 @@ export {
   sectorTypeOptions,
 } from "./metadata";
 export {
+  createCanonicalAssetMatcher,
   findCanonicalAsset,
   hasCanonicalAssetConflict,
   normalizeIsin,
 } from "./identity";
+export type { CanonicalAssetMatcher } from "./identity";

@@ -43,6 +43,60 @@ function deferred<T>() {
 }
 
 describe("useAddOpeningPosition", () => {
+  it("keeps manual pricing available when a quote promise rejects", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const resolveQuote = jest.fn().mockRejectedValue(new Error("offline"));
+    const { result } = renderHook(() => useAddOpeningPosition({ store, resolveQuote }));
+    await act(async () => { await result.current.selectLookupResult(hdfcLookupResult); });
+    expect(result.current.quoteStatus).toBe("Live price unavailable. Enter current price manually.");
+    expect(result.current.currentPrice).toBe("");
+    expect(result.current.selectedLookupResult).toBe(hdfcLookupResult);
+  });
+
+  it("paginates provider results, resets filters, and never auto-selects", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const search = jest.fn().mockResolvedValue({ failures: [], results: Array.from({ length: 100 }, (_, i) => ({
+      ...hdfcLookupResult, id: `provider-${i}`, quoteSourceId: `STOCK${i}.NS`, ticker: `STOCK${i}.NS`, exchange: i % 2 ? "BSE" : "NSE",
+    })) });
+    const { result, unmount } = renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
+    act(() => result.current.setLookupQuery("stock"));
+    await act(async () => { jest.advanceTimersByTime(400); });
+    expect(result.current.lookupResults).toHaveLength(20);
+    expect(result.current.selectedLookupResult).toBeUndefined();
+    act(() => result.current.loadMoreLookupResults());
+    act(() => { jest.advanceTimersByTime(100); });
+    expect(result.current.lookupResults).toHaveLength(40);
+    act(() => result.current.loadMoreLookupResults());
+    act(() => result.current.setDiscoveryFilter("BSE"));
+    act(() => { jest.advanceTimersByTime(100); });
+    expect(result.current.lookupResults).toHaveLength(20);
+    expect(result.current.lookupResults.every((asset) => asset.exchange === "BSE")).toBe(true);
+    expect(search).toHaveBeenCalledTimes(1);
+    unmount();
+    jest.useRealTimers();
+  });
+
+  it("clears previous-query results immediately and aborts obsolete requests", async () => {
+    jest.useFakeTimers();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const pending = deferred<{ failures: string[]; results: AssetLookupResult[] }>();
+    const search = jest.fn().mockResolvedValueOnce({ failures: [], results: [hdfcLookupResult] }).mockReturnValueOnce(pending.promise);
+    const { result, unmount } = renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
+    act(() => result.current.setLookupQuery("hdfc"));
+    await act(async () => { jest.advanceTimersByTime(400); });
+    expect(result.current.lookupResults).toHaveLength(1);
+    act(() => result.current.setLookupQuery("reliance"));
+    expect(result.current.lookupResults).toEqual([]);
+    expect(search.mock.calls[0][0].signal.aborted).toBe(true);
+    await act(async () => { jest.advanceTimersByTime(400); });
+    act(() => result.current.setLookupQuery(""));
+    await act(async () => { pending.resolve({ failures: [], results: [hdfcLookupResult] }); });
+    expect(result.current.lookupResults).toEqual([]);
+    unmount();
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

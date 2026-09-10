@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -43,6 +43,9 @@ import type {
 } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
+import { discoveryFilters } from "./assetDiscovery";
+import { DiscoveryResultRow } from "./DiscoveryResultRow";
+import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 import {
   assetClasses,
@@ -141,6 +144,7 @@ export function AddOpeningPositionForm({
   onQuickSetupItemSaved,
   quickSetup = false,
   quickSetupSavedCount = 0,
+  recentSearchStorage,
   resolveQuote,
   searchAssetLookupResults,
   store,
@@ -150,6 +154,7 @@ export function AddOpeningPositionForm({
     now,
     onComplete,
     quickSetup,
+    recentSearchStorage,
     resolveQuote,
     searchAssetLookupResults,
     store,
@@ -178,6 +183,16 @@ export function AddOpeningPositionForm({
     lookupQuery,
     lookupResults,
     lookupStatus,
+    discoveryFilter,
+    setDiscoveryFilter,
+    recentSearches,
+    recentSearchStatus,
+    clearSearchHistory,
+    hasMoreLookupResults,
+    hasMoreSavedAssets,
+    loadMoreLookupResults,
+    isLoadingMoreResults,
+    loadMoreSavedAssets,
     matchingExistingAssets,
     metadataReviewMessage,
     moveToPhase,
@@ -261,12 +276,12 @@ export function AddOpeningPositionForm({
     label: sectorTypeLabel(value),
     value,
   }));
-  const lookupGroups = [
-    ...new Set(lookupResults.map((result) => result.provider)),
-  ].map((provider) => ({
-    label: provider === "yahoo" ? "Indian market" : "Crypto",
-    results: lookupResults.filter((result) => result.provider === provider),
-  }));
+  const lookupSelectionRef = useRef(selectLookupResult);
+  lookupSelectionRef.current = selectLookupResult;
+  const selectDiscoveryResult = useCallback((result: AssetLookupResult) => {
+    setIsManualEntryExpanded(false);
+    void lookupSelectionRef.current(result);
+  }, []);
   const selectedSavedQuote = selectedAssetId
     ? snapshot.quoteCache[selectedAssetId]
     : undefined;
@@ -494,7 +509,7 @@ export function AddOpeningPositionForm({
               </AppText>
             </TouchableOpacity>
           </View>
-        ) : (
+        ) : !isManualEntryExpanded ? (
           <>
             <FormTextField
               label="Search asset"
@@ -506,6 +521,30 @@ export function AddOpeningPositionForm({
               returnKeyType="search"
               testID="asset-lookup-input"
               value={lookupQuery}
+            />
+            <AppButton
+              accessibilityState={{ expanded: false }}
+              onPress={() => setIsManualEntryExpanded(true)}
+              testID="toggle-manual-asset-entry"
+              title="Can't find your asset? Add manually"
+              variant="ghost"
+            />
+            {lookupQuery.trim().length === 0 && recentSearches.length > 0 ? (
+              <View style={styles.lookupResults}>
+                <SectionHeader title="Recent searches" />
+                {recentSearches.map((query) => (
+                  <AppButton key={query} title={query} variant="ghost" onPress={() => setLookupQuery(query)} />
+                ))}
+                <AppButton title="Clear recent searches" variant="ghost" onPress={clearSearchHistory} />
+              </View>
+            ) : null}
+            {recentSearchStatus ? <AppText color="secondary" variant="caption">{recentSearchStatus}</AppText> : null}
+            <SelectionField
+              label="Filter results"
+              options={discoveryFilters}
+              value={discoveryFilter}
+              onChange={setDiscoveryFilter}
+              testIDPrefix="asset-discovery-filter"
             />
             {matchingExistingAssets.length > 0 ? (
               <View
@@ -532,7 +571,7 @@ export function AddOpeningPositionForm({
                     <View style={styles.lookupResultCopy}>
                       <AppText weight="bold">{asset.name}</AppText>
                       <AppText color="secondary" variant="caption">
-                        {asset.symbol} • {asset.ticker}
+                        {asset.symbol} • {asset.exchange ?? assetClassLabel(asset.assetClass)} • {asset.currency}
                       </AppText>
                     </View>
                     <AppText color="secondary" variant="caption" weight="bold">
@@ -540,6 +579,7 @@ export function AddOpeningPositionForm({
                     </AppText>
                   </TouchableOpacity>
                 ))}
+                {hasMoreSavedAssets ? <AppButton title="Show more saved assets" variant="ghost" onPress={loadMoreSavedAssets} /> : null}
               </View>
             ) : null}
             {lookupStatus ? (
@@ -547,51 +587,22 @@ export function AddOpeningPositionForm({
                 {isLookupSearching ? "Searching..." : lookupStatus}
               </AppText>
             ) : null}
-            {lookupGroups.length > 0 ? (
+            {lookupResults.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
-                <AppText color="secondary" variant="caption" weight="medium">
-                  Select a result
-                </AppText>
-                {lookupGroups.map((group) => (
-                  <View key={group.label} style={styles.lookupGroup}>
-                    <AppText color="secondary" variant="caption" weight="bold">
-                      {group.label}
-                    </AppText>
-                    {group.results.map((result) => (
-                      <TouchableOpacity
-                        accessibilityLabel={`Select ${result.name}`}
-                        accessibilityRole="button"
-                        activeOpacity={0.74}
-                        key={result.id}
-                        onPress={() => {
-                          setIsManualEntryExpanded(false);
-                          void selectLookupResult(result);
-                        }}
-                        style={styles.lookupResult}
-                        testID={`asset-lookup-result-${result.id}`}
-                      >
-                        <CategoryIcon assetClass={result.assetClass} size={18} />
-                        <View style={styles.lookupResultCopy}>
-                          <AppText weight="bold">{result.name}</AppText>
-                          <AppText color="secondary" variant="caption">
-                            {result.symbol} • {result.ticker}
-                          </AppText>
-                        </View>
-                        <AppText
-                          color="secondary"
-                          variant="caption"
-                          weight="bold"
-                        >
-                          Select
-                        </AppText>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ))}
+                {lookupResults.map((result) => <DiscoveryResultRow key={result.id} result={result} onSelect={selectDiscoveryResult} />)}
+                {hasMoreLookupResults ? <AppButton title={isLoadingMoreResults ? "Loading more..." : "Load more"} disabled={isLoadingMoreResults} variant="secondary" onPress={loadMoreLookupResults} testID="asset-discovery-load-more" /> : null}
               </View>
             ) : null}
+            {!isLookupSearching && discoveryFilter !== "all" && lookupResults.length === 0 && matchingExistingAssets.length === 0 ? (
+              <AppText color="secondary" variant="caption">No matches for this filter. Try All assets or enter details manually.</AppText>
+            ) : null}
+            {lookupQuery.trim().length >= 2 && lookupResults.length === 0 && !isLookupSearching ? (
+              <AppText color="secondary" variant="caption">
+                Public search covers Indian stocks, ETFs and crypto. For other instruments, use manual entry.
+              </AppText>
+            ) : null}
           </>
-        )}
+        ) : null}
         {quoteStatus ? (
           <AppText color="secondary" variant="caption">
             {quoteStatus}
@@ -630,7 +641,7 @@ export function AddOpeningPositionForm({
             ) : null}
           </PremiumCard>
         ) : null}
-        {!hasSelectedAssetSummary ? (
+        {!hasSelectedAssetSummary && isManualEntryExpanded ? (
           <AppButton
             accessibilityState={{ expanded: isManualEntryExpanded }}
             onPress={() => setIsManualEntryExpanded((expanded) => !expanded)}

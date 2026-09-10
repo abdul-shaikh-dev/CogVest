@@ -1,7 +1,10 @@
 import {
+  assetLookupPageSize,
   buildCoinGeckoSearchUrl,
   buildYahooSearchUrl,
+  getAssetLookupResultsPage,
   mapCoinGeckoCoinToLookupResult,
+  maxAssetLookupResults,
   mapYahooQuoteToLookupResult,
   mapYahooSectorToSectorType,
   prepareAssetLookupResults,
@@ -20,7 +23,7 @@ function response(payload: unknown, ok = true): Response {
 describe("asset lookup service", () => {
   it("builds provider search URLs", () => {
     expect(buildYahooSearchUrl("hdfc bank")).toBe(
-      "https://query2.finance.yahoo.com/v1/finance/search?q=hdfc+bank&quotesCount=8&newsCount=0",
+      "https://query2.finance.yahoo.com/v1/finance/search?q=hdfc+bank&quotesCount=100&newsCount=0",
     );
     expect(buildCoinGeckoSearchUrl("bitcoin")).toBe(
       "https://api.coingecko.com/api/v3/search?query=bitcoin",
@@ -92,32 +95,47 @@ describe("asset lookup service", () => {
     });
   });
 
-  it("deduplicates, ranks, and caps combined provider results", () => {
-    const makeResult = (
-      id: string,
-      name: string,
-      symbol: string,
-    ): AssetLookupResult => ({
+  function makeResult({
+    exchange = "NSE",
+    id,
+    name,
+    provider = "yahoo",
+    symbol,
+    quoteSourceId = `${symbol}.NS`,
+    ticker = `${symbol}.NS`,
+  }: {
+    exchange?: AssetLookupResult["exchange"];
+    id: string;
+    name: string;
+    provider?: AssetLookupResult["provider"];
+    quoteSourceId?: string;
+    symbol: string;
+    ticker?: string;
+  }): AssetLookupResult {
+    return {
       assetClass: "stock",
       currency: "INR",
-      exchange: "NSE",
+      exchange,
       id,
       instrumentType: "stock",
       instrumentTypeConfidence: "inferred",
       metadataReviewMessage: "Review details.",
       name,
-      provider: "yahoo",
-      quoteSourceId: `${symbol}.NS`,
+      provider,
+      quoteSourceId,
       sectorType: "other",
       sectorTypeConfidence: "reviewRequired",
       sourceLabel: "Yahoo Finance",
       symbol,
-      ticker: `${symbol}.NS`,
-    });
-    const exact = makeResult("exact", "HDFC Bank", "HDFCBANK");
+      ticker,
+    };
+  }
+
+  it("deduplicates canonical identities, ranks exact provider fields, and caps results", () => {
+    const exact = makeResult({ id: "exact", name: "HDFC Bank", symbol: "HDFCBANK" });
     const duplicate = { ...exact, id: "duplicate" };
     const others = Array.from({ length: 9 }, (_, index) =>
-      makeResult(`other-${index}`, `Other ${index}`, `OTHER${index}`),
+      makeResult({ id: `other-${index}`, name: `Other ${index}`, symbol: `OTHER${index}` }),
     );
 
     const results = prepareAssetLookupResults("HDFCBANK", [
@@ -126,11 +144,88 @@ describe("asset lookup service", () => {
       exact,
     ]);
 
-    expect(results).toHaveLength(8);
+    expect(results).toHaveLength(10);
     expect(results[0]?.symbol).toBe("HDFCBANK");
     expect(
       results.filter((result) => result.quoteSourceId === "HDFCBANK.NS"),
     ).toHaveLength(1);
+  });
+
+  it("ranks exact symbol, ticker, and quote-source matches ahead of name matches", () => {
+    const results = prepareAssetLookupResults("HDFC.NS", [
+      makeResult({ id: "name", name: "HDFC.NS Holdings", symbol: "HOLDINGS" }),
+      makeResult({ id: "source", name: "Source match", quoteSourceId: " hdfc.ns ", symbol: "SOURCE" }),
+      makeResult({ id: "ticker", name: "Ticker match", quoteSourceId: "ticker-provider", symbol: "TICKER", ticker: "HDFC.NS" }),
+      makeResult({ id: "symbol", name: "Symbol match", quoteSourceId: "symbol-provider", symbol: "HDFC.NS", ticker: "SYMBOL.NS" }),
+    ]);
+
+    expect(results.slice(0, 3).map((result) => result.id)).toEqual([
+      "source",
+      "symbol",
+      "ticker",
+    ]);
+    expect(results[3]?.id).toBe("name");
+  });
+
+  it("does not conflate exchange-specific securities or crypto sharing a symbol", () => {
+    const results = prepareAssetLookupResults("ABC", [
+      makeResult({ id: "nse", name: "ABC NSE", quoteSourceId: "ABC.NS", symbol: "ABC" }),
+      makeResult({ exchange: "BSE", id: "bse", name: "ABC BSE", quoteSourceId: "ABC.BO", symbol: "ABC", ticker: "ABC.BO" }),
+      makeResult({ exchange: "CRYPTO", id: "coin-a", name: "Alpha Coin", provider: "coingecko", quoteSourceId: "alpha-coin", symbol: "ABC", ticker: "alpha-coin" }),
+      makeResult({ exchange: "CRYPTO", id: "coin-b", name: "Beta Coin", provider: "coingecko", quoteSourceId: "beta-coin", symbol: "ABC", ticker: "beta-coin" }),
+    ]);
+
+    expect(results.map((result) => result.id)).toEqual([
+      "bse",
+      "nse",
+      "coin-a",
+      "coin-b",
+    ]);
+  });
+
+  it("deduplicates same-exchange tickers even when quote-source IDs differ", () => {
+    const first = makeResult({
+      id: "first",
+      name: "First listing",
+      quoteSourceId: "first-provider-id",
+      symbol: "ABC",
+      ticker: "ABC.NS",
+    });
+    const duplicate = makeResult({
+      id: "duplicate",
+      name: "Duplicate listing",
+      quoteSourceId: "different-provider-id",
+      symbol: "ABC",
+      ticker: " abc.ns ",
+    });
+
+    expect(prepareAssetLookupResults("ABC", [first, duplicate])).toEqual([first]);
+  });
+
+  it("returns 20-result pages without allowing a page beyond the 100-result cap", () => {
+    const results = Array.from({ length: 125 }, (_, index) =>
+      makeResult({ id: `asset-${index}`, name: `Asset ${index}`, quoteSourceId: `asset-${index}.NS`, symbol: `ASSET${index}` }),
+    );
+    const prepared = prepareAssetLookupResults("asset", results);
+
+    expect(prepared).toHaveLength(maxAssetLookupResults);
+    expect(getAssetLookupResultsPage(prepared)).toHaveLength(assetLookupPageSize);
+    expect(getAssetLookupResultsPage(prepared, 4)).toHaveLength(assetLookupPageSize);
+    expect(getAssetLookupResultsPage(results, 4)).toHaveLength(assetLookupPageSize);
+    expect(getAssetLookupResultsPage(results, 5)).toEqual([]);
+  });
+
+  it("keeps canonical identity and result caps under 200-provider-candidate stress", () => {
+    const candidates = Array.from({ length: 200 }, (_, index) =>
+      makeResult({ id: `candidate-${index}`, name: `Candidate ${index}`, quoteSourceId: `candidate-${index}.NS`, symbol: `CANDIDATE${index}` }),
+    );
+    const exact = makeResult({ id: "exact", name: "Exact candidate", quoteSourceId: "MATCH.NS", symbol: "MATCH" });
+    const duplicate = { ...exact, id: "duplicate" };
+    const results = prepareAssetLookupResults("match", [...candidates, duplicate, exact]);
+
+    expect(results).toHaveLength(maxAssetLookupResults);
+    expect(results[0]?.id).toBe("duplicate");
+    expect(results.filter((result) => result.quoteSourceId === "MATCH.NS")).toHaveLength(1);
   });
 
   it("maps ETF-like Yahoo search results to ETF metadata", () => {
@@ -216,5 +311,22 @@ describe("asset lookup service", () => {
     expect(result.failures).toEqual([
       "Yahoo lookup request failed with status 500.",
     ]);
+  });
+
+  it("forwards an optional abort signal to both provider requests", async () => {
+    const fetcher = jest.fn().mockResolvedValue(response({}));
+    const controller = new AbortController();
+
+    await searchAssetLookupResults({
+      fetcher,
+      query: "bitcoin",
+      signal: controller.signal,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.any(String),
+      { signal: controller.signal },
+    );
   });
 });

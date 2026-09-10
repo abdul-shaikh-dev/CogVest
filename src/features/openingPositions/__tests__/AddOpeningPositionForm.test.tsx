@@ -13,6 +13,7 @@ import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
 import { colors, typography } from "@/src/theme";
+import { assetSearchQaProviderCandidates } from "@/src/testing/assetSearchFixture";
 
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
@@ -77,6 +78,18 @@ function toggleReviewDetails(
 }
 
 describe("AddOpeningPositionForm", () => {
+  it("keeps cross-provider relevance order instead of moving weaker matches into provider groups", async () => {
+    jest.useFakeTimers();
+    const results = [assetSearchQaProviderCandidates[0], assetSearchQaProviderCandidates[4], assetSearchQaProviderCandidates[1]];
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({ failures: [], results });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<AddOpeningPositionForm store={store} searchAssetLookupResults={searchAssetLookupResults} />);
+    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "synthetic");
+    await act(async () => { jest.advanceTimersByTime(400); });
+    const rows = screen.getAllByRole("button").filter((row) => String(row.props.testID).startsWith("asset-lookup-result-"));
+    expect(rows.map((row) => row.props.testID)).toEqual(results.map((result) => `asset-lookup-result-${result.id}`));
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -1090,7 +1103,7 @@ describe("AddOpeningPositionForm", () => {
         quantity: 2,
       });
     });
-    fireEvent.press(getByTestId(`asset-lookup-result-${result.id}`));
+    fireEvent.press(getByTestId("existing-asset-asset-race-hdfc"));
 
     expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
   });
