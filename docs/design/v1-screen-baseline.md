@@ -151,6 +151,14 @@ uses progressive disclosure for financial-year contribution capacity, official
 interest, a separately labelled estimate, maturity/extension state, and ledger
 history. Add/edit and ledger actions require a review step before saving.
 
+Import transaction CSV is a secondary action in the account's Ledger section.
+Its separate screen offers a saved sample template, file selection, opening
+checkpoint/date, included FY contributions and optional closing-balance check.
+Keep file errors beside the picker. Preview displays old/new balances, coverage,
+typed transactions and explicit replacement/repeated-row confirmations before
+saving. Successful import returns to the existing account details, not a second
+copy of that route. See `docs/testing/ppf-csv-import.md` for the data contract.
+
 Legacy PPF-like records remain stored non-destructively. Before linking, show a
 clear action to set up the dedicated account. After linking, exclude the legacy
 record from visible holdings and totals so the confirmed account replaces it

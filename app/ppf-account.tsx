@@ -67,6 +67,7 @@ export default function PpfAccountRoute() {
           params: { accountId, ...(entryId ? { entryId } : {}) },
         })
       }
+      onImport={(accountId) => router.push({ pathname: "/import-ppf", params: { accountId } })}
     />
   );
 }
