@@ -1,0 +1,24 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic QA portfolio only; export-only, never restore/reset.
+# Requires Android Documents picker at Documents/CogVest-QA.
+# Run separately before/after an external same-key APK upgrade; capture the
+# exact new filename from backup-status, not an arbitrary existing backup.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///backup?mode=export"
+- tapOn:
+    id: choose-backup-location
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000
+- copyTextFrom:
+    id: backup-status
+- evalScript: ${console.log(maestro.copiedText)}
+- stopApp
