@@ -93,6 +93,7 @@ const inFlightSnapshotAutomationRuns = new WeakMap<
   StoreApi<PortfolioStoreState>,
   Promise<MonthEndSnapshotAutomationRunResult>
 >();
+const snapshotAutomationEpochs = new WeakMap<StoreApi<PortfolioStoreState>, number>();
 
 type UseProgressInput = {
   historicalPriceFetcher?: typeof resolveHistoricalPrice;
@@ -591,6 +592,12 @@ export function useProgress({
     targetMonths: string[],
   ): Promise<MonthEndSnapshotAutomationRunResult> {
     const lastCompletedMonth = getPreviousCompletedMonth(now);
+    const restoreEpoch = store.getState().restoreEpoch;
+    const cancelledResult: MonthEndSnapshotAutomationRunResult = {
+      createdCount: 0, incomeRefreshedCount: 0, lastCompletedMonth,
+      provisionalCount: 0, provisionalMonths: [], refreshedCount: 0,
+      snapshot: null, status: "insufficient-data", targetMonths: [], warnings: [],
+    };
     const warnings: string[] = [];
     const createdSnapshots: MonthlySnapshot[] = [];
     const incomeRefreshedSnapshots: MonthlySnapshot[] = [];
@@ -621,6 +628,8 @@ export function useProgress({
           asset,
           targetMonth,
         });
+
+        if (store.getState().restoreEpoch !== restoreEpoch) return cancelledResult;
 
         if (historicalPriceResult.ok) {
           store.getState().upsertHistoricalQuote(historicalPriceResult.quote);
@@ -749,6 +758,11 @@ export function useProgress({
   }
 
   async function ensureMonthEndSnapshot() {
+    const restoreEpoch = store.getState().restoreEpoch;
+    if (snapshotAutomationEpochs.get(store) !== restoreEpoch) {
+      inFlightSnapshotAutomationRuns.delete(store);
+      snapshotAutomationEpochs.set(store, restoreEpoch);
+    }
     const requestedLastCompletedMonth = getPreviousCompletedMonth(now);
 
     while (true) {
@@ -824,6 +838,7 @@ export function useProgress({
       }
 
       const result = await run;
+      if (store.getState().restoreEpoch !== restoreEpoch) return result;
 
       if (result.lastCompletedMonth !== requestedLastCompletedMonth) {
         if (inFlightSnapshotAutomationRuns.get(store) === run) {

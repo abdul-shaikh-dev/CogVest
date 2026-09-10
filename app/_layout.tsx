@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, usePathname } from "expo-router";
+import { Stack, usePathname, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -66,6 +66,15 @@ export async function loadRequiredFonts({
 
 export default function RootLayout() {
   const store = getPortfolioStore();
+  const restoreEpoch = useSyncExternalStore(store.subscribe,
+    () => store.getState().restoreEpoch, () => store.getState().restoreEpoch);
+  const previousRestoreEpoch = useRef(restoreEpoch);
+  useEffect(() => {
+    if (previousRestoreEpoch.current === restoreEpoch) return;
+    previousRestoreEpoch.current = restoreEpoch;
+    if (router.canDismiss()) router.dismissAll();
+    router.replace("/");
+  }, [restoreEpoch]);
   const pathname = usePathname();
   const [fontLoadAttempt, setFontLoadAttempt] = useState(0);
   const [fontState, setFontState] = useState<"loading" | "ready" | "error">(
@@ -135,7 +144,7 @@ export default function RootLayout() {
             )}
           </View>
         ) : (
-          <>
+          <Fragment key={restoreEpoch}>
             <MonthEndSnapshotAutomation
               enabled={
                 pathname !== "/visual-qa-seed" &&
@@ -181,6 +190,7 @@ export default function RootLayout() {
               <Stack.Screen name="asset" options={{ headerShown: false }} />
               <Stack.Screen name="sell-redeem" options={{ headerShown: false }} />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="backup" options={{ headerShown: false }} />
               <Stack.Screen
                 name="review-snapshot"
                 options={{ headerShown: false }}
@@ -194,7 +204,7 @@ export default function RootLayout() {
                 options={{ headerShown: false }}
               />
             </Stack>
-          </>
+          </Fragment>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

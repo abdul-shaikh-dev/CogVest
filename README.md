@@ -11,11 +11,28 @@ analytics, or push notification dependency in V1.
 
 ## Current Phase
 
-Current execution focus is the V2 roadmap in issue #137 while preserving the
-verified V1 baseline. Minimal Mode is available; the behavior and basic LTCG
-calculations are implemented, but their user-facing insight surfaces remain
-roadmap work. Financial correctness, recoverability, and release safety still
-take priority. See `AGENTS.md` and `docs/cogvest-master-spec.md` for scope.
+V2 tracker #137 is complete. Current work follows V3 tracker #138 while preserving
+the verified V1/V2 baseline. Minimal Mode, investment-pattern insights, and
+on-demand holding-duration guidance are available. Financial correctness,
+recoverability, and release safety still take priority. See `AGENTS.md` and
+`docs/cogvest-master-spec.md` for scope.
+
+### Portfolio Backups
+
+In Settings, choose **Back up portfolio** and select a trusted folder. Backups
+contain sensitive financial data and are **not encrypted**. The selected Android
+document provider may sync the file; CogVest does not upload it.
+
+**Restore backup** validates a CogVest JSON backup, shows current/backup record
+counts, then asks for explicit replacement confirmation. It replaces the complete
+portfolio and preferences, never merges them. Saved quote timestamps and sources
+are preserved, not refreshed. Back up the current portfolio first if needed.
+
+Backup format 1 supports portfolio schema 9 and files up to 5 MiB. Unsupported or
+corrupt files are rejected without changing the portfolio. Unresolved storage
+recovery blocks the flow. Keep a separate backup before uninstalling or clearing
+app storage; there is no automatic backup or cloud recovery. Details:
+[backup contract](docs/roadmap/backup-restore-contract.md).
 
 ## Required Tools
 

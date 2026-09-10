@@ -6,6 +6,12 @@ import { SettingsScreen } from "@/src/features/settings";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
+const mockPush = jest.fn();
+
+jest.mock("expo-router", () => ({
+  router: { push: (...args: unknown[]) => mockPush(...args) },
+}));
+
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: { expoConfig: { version: "test-version" } },
@@ -23,6 +29,20 @@ describe("SettingsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedConstants.expoConfig = { version: "test-version" };
+  });
+
+  it("routes to the focused backup and restore flows and explains manual backup privacy", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const { getByTestId, getByText } = render(<SettingsScreen store={store} />);
+
+    expect(getByText("Portfolio backup")).toBeTruthy();
+    fireEvent.press(getByTestId("backup-portfolio-action"));
+    fireEvent.press(getByTestId("restore-backup-action"));
+    expect(mockPush).toHaveBeenNthCalledWith(1, "/backup?mode=export");
+    expect(mockPush).toHaveBeenNthCalledWith(2, "/backup?mode=restore");
+
+    fireEvent.press(getByTestId("privacy-details-toggle"));
+    expect(getByText("Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.")).toBeTruthy();
   });
 
   it("shows collapsed privacy settings and toggles value masking", () => {

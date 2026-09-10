@@ -289,6 +289,7 @@ export function useDashboard({
         cachedQuotes: currentState.quoteCache,
       });
 
+      if (store.getState().restoreEpoch !== currentState.restoreEpoch) return result;
       for (const quote of Object.values(result.quoteCache)) {
         store.getState().upsertQuote(quote);
       }

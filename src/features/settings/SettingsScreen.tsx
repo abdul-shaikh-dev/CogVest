@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import Constants from "expo-constants";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -189,6 +190,9 @@ export function SettingsScreen({
                 Protected by Android app-private storage and device security.
                 Separate app encryption is not included in V1.
               </AppText>
+              <AppText color="secondary" variant="caption">
+                Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.
+              </AppText>
               <GroupedListRow
                 icon="cloud-offline-outline"
                 title="Android backup"
@@ -215,6 +219,24 @@ export function SettingsScreen({
               />
             </View>
           ) : null}
+        </PremiumCard>
+
+        <PremiumCard testID="backup-settings-card">
+          <SectionHeader title="Portfolio backup" />
+          <GroupedListRow
+            icon="save-outline"
+            meta="Save an unencrypted manual copy to a location you choose."
+            onPress={() => router.push("/backup?mode=export")}
+            testID="backup-portfolio-action"
+            title="Back up portfolio"
+          />
+          <GroupedListRow
+            icon="arrow-undo-outline"
+            meta="Review a backup before it replaces this device's portfolio."
+            onPress={() => router.push("/backup?mode=restore")}
+            testID="restore-backup-action"
+            title="Restore backup"
+          />
         </PremiumCard>
 
         <PremiumCard testID="settings-prices-card">

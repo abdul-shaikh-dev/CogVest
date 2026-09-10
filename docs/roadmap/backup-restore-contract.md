@@ -3,7 +3,8 @@
 Issue: [#24](https://github.com/abdul-shaikh-dev/CogVest/issues/24).
 Ordering: [#138](https://github.com/abdul-shaikh-dev/CogVest/issues/138).
 Decision date: 10 September 2026.
-Status: behavior direction approved; implementation and verification pending.
+Status: implemented and verified on a fresh standalone Android APK.
+Evidence: [backup/restore verification](../testing/backup-restore-evidence.md).
 
 ## Product Contract
 
@@ -58,10 +59,20 @@ silently generating a different salt is not a valid full-fidelity backup.
 
 ## File and Validation Boundary
 
-Proposed initial format: a versioned JSON envelope with CogVest format identity,
-backup version, creation timestamp, app version, payload, and SHA-256 checksum.
-Choose deterministic serialization and define exactly which bytes are checked.
+Initial format: JSON envelope `cogvest-portfolio-backup`, format version 1,
+portfolio schema 9, creation timestamp, app version, payload, and SHA-256 checksum.
+The digest covers UTF-8 JSON of every envelope field except `checksum`. Object
+keys are recursively sorted; array order is preserved. Optional undefined live
+fields are absent from JSON. No other format/schema combination is supported;
+older and newer unsupported versions are rejected without modifying storage.
 The checksum detects corruption; it is not authentication or encryption.
+
+The current limits are 5 MiB UTF-8, depth 24, 10,000 records per collection,
+50,000 total portfolio records, and 500,000 inspected values. Android reads are
+bounded natively to 5 MiB plus one sentinel byte, independently of provider size
+metadata. Invalid UTF-8 is rejected. Export uses a unique filename and verifies
+the saved bytes before reporting success. No temporary plaintext backup is
+created in CogVest's cache.
 
 The file is not encrypted. Before saving, explain that it contains sensitive
 financial information and must be stored somewhere the user trusts. The chosen
@@ -87,6 +98,11 @@ destinations are device-local. No CogVest-owned upload or cloud account is added
 - Export validates its own selected snapshot too; do not emit an unrestorable
   file and call the backup successful.
 
+Supported legacy unlinked cash classifications (`purchaseFunding` withdrawals
+and `saleProceeds` additions) are preserved. They are not invented trade links.
+When a `linkedTradeId` is present, the referenced trade, amount, date, direction,
+and purpose must match. New purchase/sale commands continue using linked cash.
+
 ## Atomic Replacement and Recovery
 
 `src/store/index.ts` already journals portfolio/current-quote/historical-quote
@@ -105,6 +121,14 @@ and setup state are additional affected keys.
    Update or recreate the quick-setup store too, not just its persisted key.
 7. If any step fails, retain/restore the original state. If rollback also fails,
    keep the durable journal and block mutations until recovery completes.
+
+Journal deletion is the commit point. If its verification fails after deletion,
+accept success only when all five replacement keys can be verified and the
+journal is absent. An unreadable outcome blocks writes and requests restart;
+never attempt an unjournaled rollback or claim the old data is certainly intact.
+Restore review checks destination readiness and revision, not whether the old
+portfolio itself passes export validation. An intact backup can replace an
+unexportable destination, but not bypass an unresolved recovery incident.
 
 At cold launch, recovery must happen before portfolio hydration, CAS fingerprint
 provider creation, or setup-session loading. Crash injection between every

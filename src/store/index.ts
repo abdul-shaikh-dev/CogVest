@@ -1,4 +1,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { validateBackupPayload, type BackupPayload } from "@/src/domain/portfolioBackup";
+import { backupRestoreJournalKey, casFolioSaltStorageKey, quickSetupStorageKey } from "@/src/services/storage/backupKeys";
+import { BackupRecoveryRequiredError, captureBackupStorage, commitBackupRestore, recoverBackupRestore } from "./backupPersistence";
 
 import {
   findCanonicalAsset,
@@ -121,6 +124,10 @@ export type RawPortfolioSnapshot = {
 };
 
 export type PortfolioStoreState = RawPortfolioSnapshot & {
+  restoreEpoch: number;
+  captureBackup: () => { payload: BackupPayload; revision: string };
+  getBackupRevision: () => string;
+  replaceFromBackup: (payload: BackupPayload, expectedRevision: string) => void;
   addAsset: (asset: Asset) => void;
   addCashEntry: (cashEntry: CashEntry) => void;
   addMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
@@ -1539,14 +1546,29 @@ export function createPortfolioStore({
   now = () => new Date(),
   storage = createMmkvJsonStorage(),
 }: CreatePortfolioStoreOptions = {}): StoreApi<PortfolioStoreState> {
-  const assetGraphRecoveryIncident = recoverPendingAssetGraphTransition(
+  let restoreRecoveryIncident: StorageRecoveryIncident | undefined;
+  try {
+    recoverBackupRestore(storage);
+  } catch {
+    restoreRecoveryIncident = {
+      detectedAt: now().toISOString(),
+      displayName: "Interrupted portfolio restore - restart CogVest after freeing device storage",
+      metadataKey: backupRestoreJournalKey,
+      preserved: false,
+      reason: "migration-failed",
+      recoveryKey: backupRestoreJournalKey,
+      sourceKey: backupRestoreJournalKey,
+    };
+  }
+  const assetGraphRecoveryIncident = restoreRecoveryIncident ? undefined : recoverPendingAssetGraphTransition(
     storage,
     now,
   );
-  const snapshotResult = readPortfolioSnapshot(storage, now, migrate);
-  const quoteCacheResult = readQuoteCache(storage, now);
-  const historicalQuoteCacheResult = readHistoricalQuoteCache(storage, now);
+  const snapshotResult = restoreRecoveryIncident ? { data: createEmptyPortfolioSnapshot() } : readPortfolioSnapshot(storage, now, migrate);
+  const quoteCacheResult = restoreRecoveryIncident ? { data: {} as QuoteCache } : readQuoteCache(storage, now);
+  const historicalQuoteCacheResult = restoreRecoveryIncident ? { data: {} as HistoricalQuoteCache } : readHistoricalQuoteCache(storage, now);
   const incidents = [
+    restoreRecoveryIncident,
     assetGraphRecoveryIncident,
     snapshotResult.incident,
     quoteCacheResult.incident,
@@ -1556,8 +1578,84 @@ export function createPortfolioStore({
   const quoteCache = quoteCacheResult.data;
   const historicalQuoteCache = historicalQuoteCacheResult.data;
 
-  return createStore<PortfolioStoreState>((set, get) => ({
+  function revision(state: PortfolioStoreState) {
+    return JSON.stringify({
+      raw: captureBackupStorage(storage),
+      portfolio: selectRawSnapshot(state),
+      quoteCache: state.quoteCache,
+      historicalQuoteCache: state.historicalQuoteCache,
+      epoch: state.restoreEpoch,
+    });
+  }
+
+  function assertBackupReady(state: PortfolioStoreState) {
+    if (state.storageRecovery || storage.getRawItem(backupRestoreJournalKey) !== null ||
+        storage.getRawItem(assetGraphJournalStorageKey) !== null) {
+      throw new Error("Restart CogVest and resolve local data recovery before using backups.");
+    }
+  }
+
+  const store = createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
+    restoreEpoch: 0,
+    getBackupRevision: () => {
+      const state = get();
+      assertBackupReady(state);
+      return revision(state);
+    },
+    captureBackup: () => {
+      const state = get();
+      assertBackupReady(state);
+      return {
+        payload: validateBackupPayload({
+          portfolio: selectRawSnapshot(state),
+          quoteCache: state.quoteCache,
+          historicalQuoteCache: state.historicalQuoteCache,
+          casFolioSalt: storage.getRawItem(casFolioSaltStorageKey),
+        }),
+        revision: revision(state),
+      };
+    },
+    replaceFromBackup: (payload, expectedRevision) => {
+      const state = get();
+      assertBackupReady(state);
+      if (revision(state) !== expectedRevision) {
+        throw new Error("Your portfolio changed. Select the backup again to review the latest replacement details.");
+      }
+      const candidate = validateBackupPayload(payload);
+      try {
+        commitBackupRestore(storage, {
+          [portfolioStorageKey]: JSON.stringify(candidate.portfolio),
+          [quoteCacheStorageKey]: JSON.stringify(candidate.quoteCache),
+          [historicalQuoteCacheStorageKey]: JSON.stringify(candidate.historicalQuoteCache),
+          [casFolioSaltStorageKey]: candidate.casFolioSalt,
+          [quickSetupStorageKey]: null,
+        });
+      } catch (error) {
+        let needsRecovery = error instanceof BackupRecoveryRequiredError;
+        try { needsRecovery ||= storage.getRawItem(backupRestoreJournalKey) !== null; } catch { needsRecovery = true; }
+        if (needsRecovery) {
+          set({ storageRecovery: { incidents: [{
+            detectedAt: now().toISOString(),
+            displayName: "Interrupted portfolio restore - restart CogVest after freeing device storage",
+            metadataKey: backupRestoreJournalKey,
+            preserved: false,
+            reason: "migration-failed",
+            recoveryKey: backupRestoreJournalKey,
+            sourceKey: backupRestoreJournalKey,
+          }] } });
+        }
+        throw error;
+      }
+      const restoreEpoch = state.restoreEpoch + 1;
+      set({
+        ...candidate.portfolio,
+        quoteCache: candidate.quoteCache,
+        historicalQuoteCache: candidate.historicalQuoteCache,
+        restoreEpoch,
+        ...bindActions(restoreEpoch),
+      });
+    },
     addAsset: (asset) => {
       const state = get();
 
@@ -3459,6 +3557,20 @@ export function createPortfolioStore({
       persistQuoteCache(storage, get().quoteCache);
     },
   }));
+  const actions = Object.entries(store.getState()).filter(([, value]) => typeof value === "function");
+  function bindActions(epoch: number): Partial<PortfolioStoreState> {
+    return Object.fromEntries(actions.map(([key, value]) => [key, (...args: unknown[]) => {
+      if (store.getState().restoreEpoch !== epoch) {
+        throw new Error("The portfolio was restored. Reopen this screen before saving.");
+      }
+      if (key !== "resetAffectedStorage" && store.getState().storageRecovery) {
+        throw new Error("Resolve local data recovery before changing the portfolio.");
+      }
+      return (value as (...input: unknown[]) => unknown)(...args);
+    }])) as Partial<PortfolioStoreState>;
+  }
+  store.setState(bindActions(0));
+  return store;
 }
 
 let runtimePortfolioStore: StoreApi<PortfolioStoreState> | undefined;
