@@ -13,7 +13,10 @@ per-asset historical views, advanced tax, then performance/release closeout.
 
 See [Backup and Restore Contract](backup-restore-contract.md) for the first
 delivery's replacement-only behavior, persisted-data inventory, and verification
-plan. This is a planned feature, not an existing recovery capability.
+plan. The issue implementation adds manual unencrypted backup files and
+replacement-only restore from Settings; it does not add automatic backup or
+cloud recovery. Restore requires a supported intact backup saved separately
+before the original data is lost.
 
 Application-layer encryption #218 and frame-attribution work #299 remain parked;
 this reordering does not resume either issue. Explicit owner deferrals remain

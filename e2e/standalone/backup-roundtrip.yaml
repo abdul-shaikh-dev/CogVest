@@ -1,0 +1,102 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in, synthetic visual-QA portfolio ONLY. See backup-restore-evidence.md.
+# Requires the Android picker to start in Documents/CogVest-QA.
+# Exports first, changes preferences, restores that backup, and cold-reopens.
+# Never resets app data. Do not run against a real portfolio.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: backup-portfolio-action
+    direction: DOWN
+- tapOn:
+    id: backup-portfolio-action
+- assertVisible: "This backup contains sensitive financial information and is not encrypted."
+- tapOn:
+    id: choose-backup-location
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000
+- copyTextFrom: ".*saved. Keep this unencrypted file somewhere you trust."
+- evalScript: ${output.backupName = maestro.copiedText.split(' saved.')[0]}
+- takeScreenshot: .expo/backup-export-success
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: value-mask-toggle
+- tapOn:
+    id: display-mode-minimal
+- scrollUntilVisible:
+    element:
+      id: restore-backup-action
+    direction: DOWN
+- tapOn:
+    id: restore-backup-action
+- tapOn:
+    id: choose-backup-file
+- tapOn: ${output.backupName}
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 15000
+- assertVisible: Assets
+- assertVisible: Opening positions
+- takeScreenshot: .expo/backup-review-top
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- assertVisible: "This replaces the portfolio on this device. It does not merge portfolios."
+- takeScreenshot: .expo/backup-review-bottom
+- tapOn:
+    id: continue-restore-confirmation
+- assertVisible:
+    id: backup-restore-confirmation
+- takeScreenshot: .expo/backup-confirmation
+- tapOn: Back to review
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- tapOn:
+    id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-insights-button
+- tapOn:
+    id: holdings-search-input
+- inputText: HDFC
+- hideKeyboard
+- assertVisible: "Invested ₹36.25K"
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible: "25"
+- assertVisible: "₹1,450.00"
+- assertVisible: "15 Apr 2024"
+- takeScreenshot: .expo/backup-restored-holding
+- openLink: "cogvest:///backup?mode=export"
+- tapOn:
+    id: choose-backup-location
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000

@@ -8,7 +8,8 @@ import {
 } from "@/src/services/storage";
 import { createId } from "@/src/utils";
 
-export const quickSetupStorageKey = "cogvest:v1:quick-portfolio-setup";
+import { quickSetupStorageKey, backupRestoreJournalKey } from "@/src/services/storage/backupKeys";
+export { quickSetupStorageKey };
 export const quickSetupSchemaVersion = 1;
 
 const quickSetupItemSchema = z.object({
@@ -49,6 +50,7 @@ type CreateQuickSetupSessionStoreOptions = {
 };
 
 function readSession(storage: JsonStorage): QuickSetupSession | null {
+  if (storage.getRawItem(backupRestoreJournalKey) !== null) return null;
   const raw = storage.getRawItem(quickSetupStorageKey);
 
   if (!raw) {
@@ -74,6 +76,9 @@ export function createQuickSetupSessionStore({
   storage = createMmkvJsonStorage(),
 }: CreateQuickSetupSessionStoreOptions = {}): StoreApi<QuickSetupSessionState> {
   function persist(session: QuickSetupSession | null) {
+    if (storage.getRawItem(backupRestoreJournalKey) !== null) {
+      throw new Error("Restart CogVest to finish local data recovery first.");
+    }
     if (session) {
       storage.setItem(quickSetupStorageKey, session);
     } else {
@@ -183,6 +188,11 @@ let runtimeQuickSetupSessionStore:
 export function getQuickSetupSessionStore() {
   runtimeQuickSetupSessionStore ??= createQuickSetupSessionStore();
   return runtimeQuickSetupSessionStore;
+}
+
+export function resetQuickSetupSessionAfterRestore() {
+  // Persistence was cleared in the restore transaction, not in this notification.
+  runtimeQuickSetupSessionStore?.setState({ session: null });
 }
 
 export function useQuickSetupSession(

@@ -88,6 +88,7 @@ export function useAddOpeningPosition({
   store = getPortfolioStore(),
 }: AddOpeningPositionControllerInput = {}) {
   const snapshot = usePortfolioSnapshot(store);
+  const restoreEpochRef = useRef(snapshot.restoreEpoch);
   const initialReviewAsset: Asset | undefined =
     initialVisualQaState === "review"
       ? {
@@ -811,6 +812,7 @@ export function useAddOpeningPosition({
   }
 
   async function handleConfirm(): Promise<OpeningPositionCommandResult | undefined> {
+    if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
     if (
       !reviewAsset ||
       !reviewOpeningPosition ||
@@ -876,6 +878,7 @@ export function useAddOpeningPosition({
       } catch {
         // Saving and navigation must not depend on optional device feedback.
       }
+      if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
       setErrors({});
       setSuccessMessage(
         commandResult.quoteCacheStatus === "unavailable"

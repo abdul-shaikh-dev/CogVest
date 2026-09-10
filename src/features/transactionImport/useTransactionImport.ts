@@ -203,6 +203,7 @@ export function useTransactionImport({
     store.getState,
   );
   const batchIdRef = useRef(createId("transactions-csv"));
+  const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const analysisIdRef = useRef(0);
   const [files, setFiles] = useState<SelectedTransactionImportFile[]>([]);
   const [casPassword, setCasPassword] = useState("");
@@ -372,6 +373,7 @@ export function useTransactionImport({
     source: PickedCasStatement,
     nextPassword = casPassword,
   ) {
+    if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
     const analysisId = ++analysisIdRef.current;
     setScreenError(undefined);
     clearAnalysis();
@@ -382,6 +384,7 @@ export function useTransactionImport({
         password: nextPassword || undefined,
         source,
       });
+      if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
       if (analysisId !== analysisIdRef.current) return;
       setCasReview(review);
       setCasPassword("");
@@ -420,12 +423,14 @@ export function useTransactionImport({
           return;
         }
         const statement = await pickCasStatement();
+        if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
         if (!statement) return;
         setCasSource(statement);
         await analyzeCasStatement(statement);
         return;
       }
       const file = await pickCsvFile();
+      if (store.getState().restoreEpoch !== restoreEpochRef.current) return;
       if (!file) return;
       if (
         sourceId === "zerodhaTradebookEqV1" &&
@@ -527,6 +532,10 @@ export function useTransactionImport({
   }
 
   function confirmImport() {
+    if (store.getState().restoreEpoch !== restoreEpochRef.current) {
+      setScreenError("The portfolio was restored. Reopen import to review this file again.");
+      return;
+    }
     if (!plan.command || isSaving) return;
     setIsSaving(true);
     setScreenError(undefined);

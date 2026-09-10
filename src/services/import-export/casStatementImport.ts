@@ -18,7 +18,7 @@ import {
   type CasPdfSourceFile,
 } from "./casPdfExtraction";
 
-const casFolioSaltStorageKey = "cogvest.cas-folio-salt.v1";
+import { casFolioSaltStorageKey, backupRestoreJournalKey } from "@/src/services/storage/backupKeys";
 const casFolioFingerprintNamespace = "cogvest-cas-folio-v1";
 
 type CasFingerprintRuntime = {
@@ -48,6 +48,9 @@ export function createCasFolioFingerprintProvider({
   randomBytes,
   storage,
 }: CasFingerprintRuntime) {
+  if (storage.getRawItem(backupRestoreJournalKey) !== null) {
+    throw new Error("Restart CogVest to finish local data recovery before importing.");
+  }
   let salt = storage.getRawItem(casFolioSaltStorageKey);
   if (!salt) {
     salt = bytesToHex(randomBytes(32));

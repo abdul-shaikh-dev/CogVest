@@ -90,6 +90,7 @@ export function useHoldingImport({
     store.getState,
   );
   const batchIdRef = useRef(createId("holdings-csv"));
+  const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const selectionGenerationRef = useRef(0);
   const [fileName, setFileName] = useState<string>();
   const [parseErrors, setParseErrors] = useState<HoldingsCsvError[]>([]);
@@ -245,6 +246,10 @@ export function useHoldingImport({
   });
 
   async function confirmImport() {
+    if (store.getState().restoreEpoch !== restoreEpochRef.current) {
+      setScreenError("The portfolio was restored. Reopen import to review this file again.");
+      return;
+    }
     if (!plan.command || !plan.summary || isSaving) return;
     setIsSaving(true);
     setScreenError(undefined);
