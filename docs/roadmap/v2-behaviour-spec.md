@@ -1,5 +1,13 @@
 # CogVest V2 Behaviour Spec
 
+Closeout evidence: [standalone V2 validation](../testing/v2-closeout-evidence.md).
+Issues #17-#21 are implemented. On 10 September 2026 the owner explicitly
+deferred encryption #218 outside the V2 gate: it remains parked in the post-V2
+backlog with no target date/version, pending explicit resumption. Android
+app-private storage and backup exclusions remain the policy; no application-layer
+MMKV encryption or completed threat assessment is claimed. #137 closes when the
+standalone evidence is accepted; this is not a Play Store release declaration.
+
 ## Goal
 
 Layer behaviour-aware investing feedback and Minimal Mode onto the stable V1 tracker.
