@@ -16,6 +16,10 @@ Search does not create holdings or overwrite confirmed details.
 - Providers may return fewer matches than requested. We rank/deduplicate the
   returned set, cap it at 100 and display 20 at a time. Load more reveals another
   20 already-returned candidates, not a fabricated provider cursor.
+- Visible rows mount in batches of five inside the result-list component, not
+  through repeated whole-form updates. The next-page button appears after the
+  current page finishes mounting. Query/filter replacement immediately removes
+  stale rows; append keeps existing rows mounted.
 - Stock, ETF, saved debt, crypto, NSE and BSE filters work without refetching.
   Six saved assets initially keep the blank-query screen compact; a query shows
   up to 20, with explicit expansion for additional saved assets.
@@ -43,6 +47,30 @@ This development/token-gated route uses an isolated memory portfolio with 500
 saved assets and 200 provider candidates. It does not reset the installed
 portfolio or call external providers. Release builds cannot enable it.
 Test exact saved/provider matches, filters, pagination, explicit selection and
-manual entry. Capture raw React commit durations, provider-result-to-render
-latency and sampled event-loop lag after warm-up/reset. Debug observations are
-not standalone release performance certification or network response guarantees.
+manual entry. Warm up the form, then Reset metrics to start a fresh window.
+Capture metrics ends that window and exports one `[asset-search-qa] metrics`
+JSON console entry. Reset is required before collecting another window.
+
+The buffer retains up to 2,000 measurements with an explicit dropped count. It
+does not log during measured rendering; export/UI-report work happens after
+capture stops sampling. Sampling pauses when the QA route is not focused.
+
+Timing mode excludes React Profiler overhead. Append `&profile=1` to the QA URL
+for a separate diagnostic run that also records raw React commit duration;
+do not mix profiling and timing-only windows without labeling them.
+
+Action metrics end at the **complete React commit**, not proof of native paint:
+provider callback to complete page, query input to saved results, filter to
+completion of both lists, and page action to completion of that list. Pair them
+with installed-app visual checks; do not label them pixel-visible latency.
+Network time/debounce is
+not included in the provider callback metric. The 50 ms timer records sampled
+lag above 100 ms; timer lag alone does not attribute the delay to exclusive JS
+execution rather than native/debug/host scheduling. Cold/remount render context
+is retained when it occurs inside a window. Never discard failing samples or
+use an incomplete first batch as proof of full-page latency.
+
+Debug observations are not standalone release performance certification or
+network response guarantees. Record the AVD/API, APK identity, Metro/debug mode,
+window coverage and dropped count with each result. A passing functional journey
+does not by itself satisfy the issue's 500 ms / no-stall gate.

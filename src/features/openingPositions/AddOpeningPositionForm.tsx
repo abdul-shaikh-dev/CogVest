@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -36,6 +36,7 @@ import {
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type {
+  Asset,
   AssetClass,
   ConvictionScore,
   InstrumentType,
@@ -44,7 +45,7 @@ import type {
 import type { OpeningPositionCommandResult } from "@/src/store";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 import { discoveryFilters } from "./assetDiscovery";
-import { DiscoveryResultRow } from "./DiscoveryResultRow";
+import { DiscoveryResults } from "./DiscoveryResults";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 import {
@@ -57,6 +58,8 @@ import {
 } from "./useAddOpeningPosition";
 
 type AddOpeningPositionFormProps = AddOpeningPositionControllerInput & {
+  onDiscoveryAction?: (kind: "query" | "filter" | "saved-page" | "provider-page") => void;
+  onDiscoverySettled?: (kind: "saved" | "provider") => void;
   hardwareBackEnabled?: boolean;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onCancel?: () => void;
@@ -141,6 +144,8 @@ export function AddOpeningPositionForm({
   onAddPpfAccount,
   onCancel,
   onComplete,
+  onDiscoveryAction,
+  onDiscoverySettled,
   onQuickSetupItemSaved,
   quickSetup = false,
   quickSetupSavedCount = 0,
@@ -191,7 +196,6 @@ export function AddOpeningPositionForm({
     hasMoreLookupResults,
     hasMoreSavedAssets,
     loadMoreLookupResults,
-    isLoadingMoreResults,
     loadMoreSavedAssets,
     matchingExistingAssets,
     metadataReviewMessage,
@@ -282,6 +286,18 @@ export function AddOpeningPositionForm({
     setIsManualEntryExpanded(false);
     void lookupSelectionRef.current(result);
   }, []);
+  const savedSelectionRef = useRef(selectAsset);
+  savedSelectionRef.current = selectAsset;
+  const selectSavedResult = useCallback((asset: Asset) => {
+    setIsManualEntryExpanded(false);
+    savedSelectionRef.current(asset);
+  }, []);
+  const savedResultsSettled = useCallback(() => onDiscoverySettled?.("saved"), [onDiscoverySettled]);
+  const providerResultsSettled = useCallback(() => onDiscoverySettled?.("provider"), [onDiscoverySettled]);
+  useLayoutEffect(() => {
+    if (matchingExistingAssets.length === 0) savedResultsSettled();
+    if (lookupResults.length === 0) providerResultsSettled();
+  }, [lookupResults, matchingExistingAssets, providerResultsSettled, savedResultsSettled]);
   const selectedSavedQuote = selectedAssetId
     ? snapshot.quoteCache[selectedAssetId]
     : undefined;
@@ -514,6 +530,7 @@ export function AddOpeningPositionForm({
             <FormTextField
               label="Search asset"
               onChangeText={(value) => {
+                onDiscoveryAction?.("query");
                 setLookupQuery(value);
                 setQuoteStatus("");
               }}
@@ -543,7 +560,10 @@ export function AddOpeningPositionForm({
               label="Filter results"
               options={discoveryFilters}
               value={discoveryFilter}
-              onChange={setDiscoveryFilter}
+              onChange={(value) => {
+                onDiscoveryAction?.("filter");
+                setDiscoveryFilter(value);
+              }}
               testIDPrefix="asset-discovery-filter"
             />
             {matchingExistingAssets.length > 0 ? (
@@ -554,32 +574,12 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" variant="caption" weight="medium">
                   Your assets
                 </AppText>
-                {matchingExistingAssets.map((asset) => (
-                  <TouchableOpacity
-                    accessibilityLabel={`Use ${asset.name}`}
-                    accessibilityRole="button"
-                    activeOpacity={0.74}
-                    key={asset.id}
-                    onPress={() => {
-                      setIsManualEntryExpanded(false);
-                      selectAsset(asset);
-                    }}
-                    style={styles.lookupResult}
-                    testID={`existing-asset-${asset.id}`}
-                  >
-                    <CategoryIcon assetClass={asset.assetClass} size={18} />
-                    <View style={styles.lookupResultCopy}>
-                      <AppText weight="bold">{asset.name}</AppText>
-                      <AppText color="secondary" variant="caption">
-                        {asset.symbol} • {asset.exchange ?? assetClassLabel(asset.assetClass)} • {asset.currency}
-                      </AppText>
-                    </View>
-                    <AppText color="secondary" variant="caption" weight="bold">
-                      Use
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-                {hasMoreSavedAssets ? <AppButton title="Show more saved assets" variant="ghost" onPress={loadMoreSavedAssets} /> : null}
+                <DiscoveryResults kind="saved" items={matchingExistingAssets} onSelect={selectSavedResult}
+                  onSettled={savedResultsSettled}
+                  footer={hasMoreSavedAssets ? <AppButton title="Show more saved assets" variant="ghost" onPress={() => {
+                    onDiscoveryAction?.("saved-page");
+                    loadMoreSavedAssets();
+                  }} /> : null} />
               </View>
             ) : null}
             {lookupStatus ? (
@@ -589,8 +589,12 @@ export function AddOpeningPositionForm({
             ) : null}
             {lookupResults.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
-                {lookupResults.map((result) => <DiscoveryResultRow key={result.id} result={result} onSelect={selectDiscoveryResult} />)}
-                {hasMoreLookupResults ? <AppButton title={isLoadingMoreResults ? "Loading more..." : "Load more"} disabled={isLoadingMoreResults} variant="secondary" onPress={loadMoreLookupResults} testID="asset-discovery-load-more" /> : null}
+                <DiscoveryResults kind="provider" items={lookupResults} onSelect={selectDiscoveryResult}
+                  onSettled={providerResultsSettled}
+                  footer={hasMoreLookupResults ? <AppButton title="Load more" variant="secondary" onPress={() => {
+                    onDiscoveryAction?.("provider-page");
+                    loadMoreLookupResults();
+                  }} testID="asset-discovery-load-more" /> : null} />
               </View>
             ) : null}
             {!isLookupSearching && discoveryFilter !== "all" && lookupResults.length === 0 && matchingExistingAssets.length === 0 ? (
@@ -1389,21 +1393,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  lookupResult: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.button,
-    borderWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  lookupResultCopy: {
-    flex: 1,
-    gap: spacing.xs,
   },
   lookupGroup: {
     gap: spacing.xs,

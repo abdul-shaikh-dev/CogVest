@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { Profiler, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -16,25 +17,28 @@ import { colors, spacing } from "@/src/theme";
 
 type Measurement = {
   detail: string;
-  kind: "event-loop-stall" | "render" | "search-to-render";
+  kind: "event-loop-stall" | "render" | "search-to-render" | "query-to-render" | "filter-to-render" | "saved-page-to-render" | "provider-page-to-render";
   milliseconds: number;
+};
+
+type MeasurementSnapshot = {
+  droppedMeasurements: number;
+  measurements: Measurement[];
 };
 
 const renderTargetMs = 500;
 const eventLoopStallThresholdMs = 100;
 const eventLoopSampleMs = 50;
-const maxMeasurements = 12;
+const maxMeasurements = 2000;
 
 function now() {
   return globalThis.performance?.now?.() ?? Date.now();
 }
 
-function formatMeasurement(measurement: Measurement) {
-  return `${measurement.kind}: ${measurement.milliseconds.toFixed(1)}ms (${measurement.detail})`;
-}
-
 export default function AssetSearchQaRoute() {
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string; profile?: string }>();
+  const profileRenders = params.profile === "1";
+  const isFocused = useIsFocused();
   const enabled = canUseVisualQaHarness({
     isDevelopment: __DEV__,
     token: params.token,
@@ -42,21 +46,37 @@ export default function AssetSearchQaRoute() {
   const storeRef = useRef<ReturnType<typeof createPortfolioStore> | null>(null);
   const recentSearchStorageRef = useRef<ReturnType<typeof createMemoryJsonStorage> | null>(null);
   const pendingSearchAtRef = useRef<number | null>(null);
+  const pendingActionRef = useRef<{
+    kind: "query" | "filter" | "saved-page" | "provider-page";
+    startedAt: number;
+    remaining: Set<"saved" | "provider">;
+  } | null>(null);
   const measurementsRef = useRef<Measurement[]>([]);
+  const droppedMeasurementsRef = useRef(0);
+  const measurementWindowActiveRef = useRef(true);
+  const nextRenderContextRef = useRef<string | undefined>("cold route mount");
+  const eventLoopIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const suppressNextProfilerCommitRef = useRef(false);
   const [formKey, setFormKey] = useState(0);
-  const [measurementSnapshot, setMeasurementSnapshot] = useState<Measurement[]>([]);
+  const [measurementWindowEpoch, setMeasurementWindowEpoch] = useState(0);
+  const [measurementSnapshot, setMeasurementSnapshot] =
+    useState<MeasurementSnapshot | null>(null);
 
   const recordMeasurement = useCallback((measurement: Measurement) => {
-    console.info("[asset-search-qa]", formatMeasurement(measurement));
-    measurementsRef.current = [measurement, ...measurementsRef.current].slice(
-      0,
-      maxMeasurements,
-    );
+    if (!measurementWindowActiveRef.current) {
+      return;
+    }
+
+    if (measurementsRef.current.length >= maxMeasurements) {
+      droppedMeasurementsRef.current += 1;
+      return;
+    }
+
+    measurementsRef.current.push(measurement);
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !isFocused || !measurementWindowActiveRef.current) {
       return undefined;
     }
 
@@ -74,9 +94,15 @@ export default function AssetSearchQaRoute() {
         });
       }
     }, eventLoopSampleMs);
+    eventLoopIntervalRef.current = interval;
 
-    return () => clearInterval(interval);
-  }, [enabled, recordMeasurement]);
+    return () => {
+      clearInterval(interval);
+      if (eventLoopIntervalRef.current === interval) {
+        eventLoopIntervalRef.current = null;
+      }
+    };
+  }, [enabled, isFocused, measurementWindowEpoch, recordMeasurement]);
 
   const searchAssetLookupResults = useCallback(async ({ query }: { query: string }) => {
     pendingSearchAtRef.current = now();
@@ -85,6 +111,28 @@ export default function AssetSearchQaRoute() {
       results: createAssetSearchQaLookup(query),
     };
   }, []);
+
+  const handleDiscoveryAction = useCallback((kind: "query" | "filter" | "saved-page" | "provider-page") => {
+    pendingActionRef.current = {
+      kind, startedAt: now(),
+      remaining: new Set(kind === "filter" ? ["saved", "provider"] : [kind === "provider-page" ? "provider" : "saved"]),
+    };
+  }, []);
+
+  const handleDiscoverySettled = useCallback((kind: "saved" | "provider") => {
+    const renderedAt = now();
+    if (kind === "provider" && pendingSearchAtRef.current !== null) {
+      recordMeasurement({ kind: "search-to-render", detail: "fixture callback to complete visible provider page", milliseconds: renderedAt - pendingSearchAtRef.current });
+      pendingSearchAtRef.current = null;
+    }
+    const action = pendingActionRef.current;
+    if (!action) return;
+    action.remaining.delete(kind);
+    if (action.remaining.size === 0) {
+      recordMeasurement({ kind: `${action.kind}-to-render`, detail: "input handler to complete visible result rows", milliseconds: renderedAt - action.startedAt });
+      pendingActionRef.current = null;
+    }
+  }, [recordMeasurement]);
 
   if (!enabled) {
     return (
@@ -114,54 +162,97 @@ export default function AssetSearchQaRoute() {
     phase: "mount" | "nested-update" | "update",
     actualDuration: number,
   ) {
-    if (suppressNextProfilerCommitRef.current) {
+    if (
+      suppressNextProfilerCommitRef.current ||
+      !isFocused ||
+      !measurementWindowActiveRef.current
+    ) {
       suppressNextProfilerCommitRef.current = false;
       return;
     }
 
-    const searchStartedAt = pendingSearchAtRef.current;
-    const renderedAt = now();
+    const renderContext = nextRenderContextRef.current ?? "interactive";
+
+    nextRenderContextRef.current = undefined;
 
     recordMeasurement({
-      detail: `${phase}; raw React actualDuration; target <= ${renderTargetMs}ms`,
+      detail: `${renderContext}; ${phase}; raw React actualDuration; target <= ${renderTargetMs}ms`,
       kind: "render",
       milliseconds: actualDuration,
     });
 
-    if (searchStartedAt !== null && phase !== "mount") {
-      pendingSearchAtRef.current = null;
-      recordMeasurement({
-        detail: "fixture lookup callback to next committed form render",
-        kind: "search-to-render",
-        milliseconds: renderedAt - searchStartedAt,
-      });
-    }
   }
 
   function resetMeasurements() {
-    console.info("[asset-search-qa] measurement window reset");
+    pendingActionRef.current = null;
     pendingSearchAtRef.current = null;
     measurementsRef.current = [];
+    droppedMeasurementsRef.current = 0;
+    measurementWindowActiveRef.current = true;
     suppressNextProfilerCommitRef.current = true;
-    setMeasurementSnapshot([]);
+    setMeasurementSnapshot(null);
+    setMeasurementWindowEpoch((current) => current + 1);
   }
 
   function captureMeasurements() {
+    pendingActionRef.current = null;
+    measurementWindowActiveRef.current = false;
+    pendingSearchAtRef.current = null;
+    if (eventLoopIntervalRef.current) {
+      clearInterval(eventLoopIntervalRef.current);
+      eventLoopIntervalRef.current = null;
+    }
+    const snapshot = {
+      droppedMeasurements: droppedMeasurementsRef.current,
+      measurements: [...measurementsRef.current],
+    };
+
+    console.info(
+      "[asset-search-qa] metrics",
+      JSON.stringify({
+        capturedAt: new Date().toISOString(),
+        coverage: {
+          eventLoopSampleMs,
+          eventLoopStallThresholdMs,
+          renderTargetMs,
+          routeWasFocused: isFocused,
+          profileRenders,
+          window: "ended on capture; reset starts a new window",
+        },
+        ...snapshot,
+      }),
+    );
     suppressNextProfilerCommitRef.current = true;
-    setMeasurementSnapshot([...measurementsRef.current]);
+    setMeasurementSnapshot(snapshot);
   }
 
   function warmUpForm() {
     pendingSearchAtRef.current = null;
+    nextRenderContextRef.current = "warm-up form remount";
     setFormKey((current) => current + 1);
   }
+
+  const form = <AddOpeningPositionForm
+    onDiscoveryAction={handleDiscoveryAction}
+    onDiscoverySettled={handleDiscoverySettled}
+    key={formKey}
+    hardwareBackEnabled={false}
+    recentSearchStorage={recentSearchStorage}
+    resolveQuote={async ({ asset }) => ({ ok: true, quote: {
+      assetId: asset.id, currency: asset.currency, price: 100,
+      source: asset.assetClass === "crypto" ? "coingecko" : "yahoo",
+      asOf: new Date().toISOString(),
+    } })}
+    searchAssetLookupResults={searchAssetLookupResults}
+    store={storeRef.current}
+  />;
 
   return (
     <View style={styles.screen} testID="asset-search-qa-screen">
       <View style={styles.controls}>
         <AppText variant="section" weight="bold">Asset search QA</AppText>
         <AppText color="secondary" variant="caption">
-          Isolated synthetic data: {assetSearchQaFixtureCounts.savedAssets} saved assets and {assetSearchQaFixtureCounts.providerCandidates} provider candidates. Try `SAVED0420` for a saved exact match, or `CAND0042` for a provider exact match.
+          Synthetic: {assetSearchQaFixtureCounts.savedAssets} saved / {assetSearchQaFixtureCounts.providerCandidates} candidates. SAVED0420 or CAND0042.
         </AppText>
         <View style={styles.actions}>
           <AppButton onPress={warmUpForm} testID="asset-search-qa-warmup" title="Warm up form" variant="secondary" />
@@ -172,34 +263,20 @@ export default function AssetSearchQaRoute() {
           <AppText variant="caption" testID="asset-search-qa-record-counts">
             Assets: {storeRef.current.getState().assets.length}; openings: {storeRef.current.getState().openingPositions.length}
           </AppText>
-          <AppText variant="caption" weight="bold">Raw measurements</AppText>
           <AppText color="secondary" variant="caption">
-            {"Render target: <= "}{renderTargetMs}ms. Event-loop stalls are logged only when sampled lag exceeds {eventLoopStallThresholdMs}ms. Measurements are debug observations, not device-performance claims.
+            {"Render <= "}{renderTargetMs}ms; sampled lag limit {eventLoopStallThresholdMs}ms. Capture ends and exports the window. Reset starts a new one. Debug observations only.
           </AppText>
-          {measurementSnapshot.length === 0 ? (
-            <AppText color="secondary" variant="caption">Capture metrics to display the current ref-held measurements.</AppText>
-          ) : measurementSnapshot.slice(0, 3).map((measurement, index) => (
-            <AppText key={`${measurement.kind}-${index}-${measurement.milliseconds}`} variant="caption">
-              {formatMeasurement(measurement)}
+          {!measurementSnapshot ? (
+            <AppText color="secondary" variant="caption">Capture metrics to end the active window and display its export summary.</AppText>
+          ) : (
+            <AppText color="secondary" variant="caption">
+              Captured {measurementSnapshot.measurements.length}; dropped {measurementSnapshot.droppedMeasurements}. Full JSON exported.
             </AppText>
-          ))}
+          )}
         </View>
       </View>
       <View style={styles.form}>
-        <Profiler id="asset-search-qa-form" onRender={handleRender}>
-          <AddOpeningPositionForm
-            key={formKey}
-            hardwareBackEnabled={false}
-            recentSearchStorage={recentSearchStorage}
-            resolveQuote={async ({ asset }) => ({ ok: true, quote: {
-              assetId: asset.id, currency: asset.currency, price: 100,
-              source: asset.assetClass === "crypto" ? "coingecko" : "yahoo",
-              asOf: new Date().toISOString(),
-            } })}
-            searchAssetLookupResults={searchAssetLookupResults}
-            store={storeRef.current}
-          />
-        </Profiler>
+        {profileRenders ? <Profiler id="asset-search-qa-form" onRender={handleRender}>{form}</Profiler> : form}
       </View>
     </View>
   );

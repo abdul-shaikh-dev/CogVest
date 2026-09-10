@@ -312,7 +312,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    expect(getAllByText("Use")).toHaveLength(6);
+    await waitFor(() => expect(getAllByText("Use")).toHaveLength(6));
 
     fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
     await act(async () => {

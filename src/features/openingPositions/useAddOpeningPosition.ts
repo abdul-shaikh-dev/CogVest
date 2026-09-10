@@ -130,8 +130,6 @@ export function useAddOpeningPosition({
   const [lookupQuery, setLookupQuery] = useState("");
   const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>("all");
   const [visibleResultCount, setVisibleResultCount] = useState(20);
-  const [isLoadingMoreResults, setIsLoadingMoreResults] = useState(false);
-  const pageTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [visibleSavedCount, setVisibleSavedCount] = useState(6);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try { return readRecentAssetSearches(recentSearchStorage); } catch { return []; }
@@ -214,36 +212,39 @@ export function useAddOpeningPosition({
   );
   const matchingExistingAssets = useMemo(() => searchSavedAssets(snapshot.assets, lookupQuery), [lookupQuery, snapshot.assets]);
   const savedAssetMatcher = useMemo(() => createCanonicalAssetMatcher(snapshot.assets), [snapshot.assets]);
-  const filteredSavedAssets = matchingExistingAssets.filter((asset) => matchesDiscoveryFilter(asset, discoveryFilter));
-  const filteredLookupResults = lookupResultQuery === lookupQuery.trim()
-    ? lookupResults.slice(0, 100).filter((asset) => !savedAssetMatcher.find(asset) && matchesDiscoveryFilter(asset, discoveryFilter))
-    : [];
+  const filteredSavedAssets = useMemo(
+    () => matchingExistingAssets.filter((asset) => matchesDiscoveryFilter(asset, discoveryFilter)),
+    [discoveryFilter, matchingExistingAssets],
+  );
+  const filteredLookupResults = useMemo(
+    () =>
+      lookupResultQuery === lookupQuery.trim()
+        ? lookupResults
+            .slice(0, 100)
+            .filter(
+              (asset) =>
+                !savedAssetMatcher.find(asset) &&
+                matchesDiscoveryFilter(asset, discoveryFilter),
+            )
+        : [],
+    [discoveryFilter, lookupQuery, lookupResultQuery, lookupResults, savedAssetMatcher],
+  );
+  const visibleLookupResults = useMemo(
+    () => filteredLookupResults.slice(0, visibleResultCount),
+    [filteredLookupResults, visibleResultCount],
+  );
+  const visibleSavedAssets = useMemo(
+    () => filteredSavedAssets.slice(0, visibleSavedCount),
+    [filteredSavedAssets, visibleSavedCount],
+  );
   useEffect(() => {
-    clearTimeout(pageTimerRef.current);
-    pageTimerRef.current = undefined;
-    setIsLoadingMoreResults(false);
     setVisibleResultCount(20);
     setVisibleSavedCount(lookupQuery.trim() ? 20 : 6);
-    return () => clearTimeout(pageTimerRef.current);
   }, [lookupQuery, discoveryFilter]);
   useEffect(() => { setLookupResults([]); }, [lookupQuery]);
 
   function loadMoreLookupResults() {
-    if (pageTimerRef.current !== undefined) return;
-    const target = Math.min(visibleResultCount + 20, filteredLookupResults.length, 100);
-    let next = visibleResultCount;
-    setIsLoadingMoreResults(true);
-    // Mount a page in small batches so Android can process input between them.
-    const appendBatch = () => {
-      next = Math.min(next + 5, target);
-      setVisibleResultCount(next);
-      if (next < target) pageTimerRef.current = setTimeout(appendBatch, 16);
-      else {
-        pageTimerRef.current = undefined;
-        setIsLoadingMoreResults(false);
-      }
-    };
-    pageTimerRef.current = setTimeout(appendBatch, 0);
+    setVisibleResultCount((count) => Math.min(count + 20, filteredLookupResults.length, 100));
   }
 
   function rememberSearch() {
@@ -1018,9 +1019,9 @@ export function useAddOpeningPosition({
     isSaving,
     isLookupSearching,
     lookupQuery,
-    lookupResults: filteredLookupResults.slice(0, visibleResultCount),
+    lookupResults: visibleLookupResults,
     lookupStatus,
-    matchingExistingAssets: filteredSavedAssets.slice(0, visibleSavedCount),
+    matchingExistingAssets: visibleSavedAssets,
     discoveryFilter,
     setDiscoveryFilter,
     recentSearches,
@@ -1029,7 +1030,6 @@ export function useAddOpeningPosition({
     hasMoreLookupResults: visibleResultCount < filteredLookupResults.length,
     hasMoreSavedAssets: visibleSavedCount < filteredSavedAssets.length,
     loadMoreLookupResults,
-    isLoadingMoreResults,
     loadMoreSavedAssets: () => setVisibleSavedCount((count) => count + 20),
     metadataReviewMessage,
     moveToPhase,
