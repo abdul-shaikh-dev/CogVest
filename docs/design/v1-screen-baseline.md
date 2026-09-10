@@ -139,6 +139,10 @@ Filters wrap instead of clipping; enlarged text may stack the list heading and
 insights action. Do not shrink text to preserve a single control row.
 
 PPF accounts use a counted destination alongside Market when both exist;
+both taps and deliberate horizontal swipes switch destinations. Keep the tabs
+below the shared header and above search or quote notices so their position does
+not jump. Vertical scrolling, short/diagonal swipes, multi-touch and open detail
+panels must not accidentally switch destinations.
 PPF-only portfolios open their accounts. Do not put an absent-account promotion
 above the market list. Existing/legacy PPF access must survive the hierarchy
 change. Each account row leads with nickname/provider and confirmed balance, then
@@ -146,6 +150,14 @@ shows balance date, invested basis, and lifecycle context. The account detail
 uses progressive disclosure for financial-year contribution capacity, official
 interest, a separately labelled estimate, maturity/extension state, and ledger
 history. Add/edit and ledger actions require a review step before saving.
+
+Import transaction CSV is a secondary action in the account's Ledger section.
+Its separate screen offers a saved sample template, file selection, opening
+checkpoint/date, included FY contributions and optional closing-balance check.
+Keep file errors beside the picker. Preview displays old/new balances, coverage,
+typed transactions and explicit replacement/repeated-row confirmations before
+saving. Successful import returns to the existing account details, not a second
+copy of that route. See `docs/testing/ppf-csv-import.md` for the data contract.
 
 Legacy PPF-like records remain stored non-destructively. Before linking, show a
 clear action to set up the dedicated account. After linking, exclude the legacy
@@ -289,6 +301,16 @@ the user clear refresh and manual-price recovery actions later.
 ### Quick Portfolio Setup
 
 Use Quick Portfolio Setup when the user is entering several existing holdings.
+
+Dashboard and Holdings `Set up portfolio` open the same entry chooser as
+Holdings `+`: single entry, multiple-entry setup, PPF, holdings CSV, and
+transaction/statement import. A saved setup session remains resumable.
+
+Saving or editing a PPF account shows its saved details, not the initial asset
+entry form. Accounts created through Quick Setup are recorded once in that
+session and offer an explicit `Continue portfolio setup` action. Back/cancel
+remain available. Show credited and estimated interest honestly; a starting
+balance that includes unknown historical interest cannot establish lifetime P&L.
 It is a focused full-screen flow, not a modal and not a spreadsheet grid.
 
 - Empty Dashboard leads with `Set up your portfolio` and keeps `Add one holding`
@@ -320,7 +342,14 @@ Accepted chart direction:
   white and dashed
 - second graph: `Asset Momentum` - asset values vs months
 - cash is excluded from the asset-trend graph and tracked separately in Cash
-- charts must use stored monthly snapshots or a clear empty/no-snapshot state
+- charts normally use stored monthly snapshots. Exception (#324): when missing
+  historical PPF checkpoints block full snapshots, reconstruct a separate
+  market-and-cash series from dated records and existing price evidence. Exclude
+  all PPF consistently across every month, including linked legacy positions;
+  never splice full snapshots into this series or persist it as complete totals.
+  Label the scope beside the charts and selected values, disclose estimated
+  prices, and suppress comparative return percentages for this partial view.
+  Full snapshot review and Monthly History remain complete-snapshot-only.
 - chart y-axis labels and chart-native value labels must obey value masking
 - Y-axis labels and horizontal guides share the chart-native zero/half/maximum
   scale (two sections). Do not add a separately positioned label column.
@@ -380,8 +409,9 @@ Accepted chart direction:
 - automatic status explanations, warnings and optional correction stay reachable
   on demand; do not turn automatic snapshots into a required monthly form
 
-Do not fake production chart history. If snapshots are missing, show a premium
-empty state and a clear path to record a snapshot.
+Do not fake production chart history. If neither full snapshots nor explicitly
+scoped reconstructed history is available, show an honest empty state. Missing
+PPF history gets one actionable explanation, not a repeated warning per month.
 
 Monthly Progress must preserve Excel parity concepts:
 

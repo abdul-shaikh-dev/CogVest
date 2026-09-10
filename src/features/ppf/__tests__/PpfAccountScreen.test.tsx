@@ -44,6 +44,8 @@ describe("PpfAccountScreen", () => {
     fireEvent.press(getByTestId("save-ppf-account"));
     expect(store.getState().ppfAccounts).toHaveLength(1);
     expect(onComplete).toHaveBeenCalledWith(store.getState().ppfAccounts[0].id);
+    expect(getByTestId("ppf-account-screen")).toBeTruthy();
+    expect(getByText("My PPF")).toBeTruthy();
   });
 
   it("separates confirmed balance, official interest, and estimated interest", () => {
@@ -74,6 +76,11 @@ describe("PpfAccountScreen", () => {
     expect(getByTestId("ppf-confirmed-balance-card")).toBeTruthy();
     expect(getByText("Officially credited")).toBeTruthy();
     expect(getByText("Estimated, not credited")).toBeTruthy();
+    expect(
+      getByText(
+        "Your starting balance may include historic interest. CogVest cannot infer a lifetime gain percentage from it.",
+      ),
+    ).toBeTruthy();
     expect(getByText("₹1,07,100.00")).toBeTruthy();
     expect(
       getByText("Ledger applied through 01 Aug 2026 • official records remain authoritative"),
@@ -105,7 +112,7 @@ describe("PpfAccountScreen", () => {
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-08-15" });
 
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -117,6 +124,7 @@ describe("PpfAccountScreen", () => {
     );
 
     expect(getByText("Not available yet")).toBeTruthy();
+    expect(queryByText("₹1,00,000.00")).toBeNull();
   });
 
   it("renders same-day ledger entries in the deterministic replay order", () => {
@@ -184,5 +192,50 @@ describe("PpfAccountScreen", () => {
     expect(
       store.getState().ppfAccounts[0]?.confirmedExtensionStartFinancialYear,
     ).toBeUndefined();
+    expect(getByTestId("ppf-account-screen")).toBeTruthy();
+  });
+
+  it("returns to saved details after editing instead of retaining stale form state", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount(account);
+    const { getByTestId, getByText } = render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("edit-ppf-account"));
+    fireEvent.changeText(getByTestId("ppf-nickname-input"), "Updated PPF");
+    fireEvent.press(getByTestId("review-ppf-account"));
+    fireEvent.press(getByTestId("save-ppf-account"));
+
+    expect(store.getState().ppfAccounts[0]).toMatchObject({ nickname: "Updated PPF" });
+    expect(getByTestId("ppf-account-screen")).toBeTruthy();
+    expect(getByText("Updated PPF")).toBeTruthy();
+  });
+
+  it("offers an explicit return to portfolio setup after saving", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const onContinuePortfolioSetup = jest.fn();
+    store.getState().addPpfAccount(account);
+    const { getByTestId } = render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onContinuePortfolioSetup={onContinuePortfolioSetup}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(getByTestId("continue-portfolio-setup"));
+    expect(onContinuePortfolioSetup).toHaveBeenCalledTimes(1);
   });
 });

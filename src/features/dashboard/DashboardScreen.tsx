@@ -611,7 +611,7 @@ export function DashboardScreen({
                 ? quickSetupSavedCount > 0
                   ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} already saved. Continue when ready.`
                   : onQuickSetup
-                    ? "Add existing holdings one after another. Each confirmed holding is saved locally."
+                    ? "Choose manual entry or import holdings and transaction history. Your records stay local."
                     : "Add your first portfolio entry to build holdings automatically."
                 : "Allocation will appear after every holding has a current valuation."
             }
