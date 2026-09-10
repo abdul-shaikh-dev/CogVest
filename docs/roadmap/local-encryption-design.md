@@ -1,7 +1,25 @@
 # Local Storage Encryption Design (#218)
 
-Date: 10 September 2026. Status: proposed for owner approval, not implemented.
+Date: 10 September 2026. Status: approved through PR #312; native feasibility
+found a preservation blocker. Follow-up guard screening is partial; production
+integration is stopped, not implemented.
 Issue: [#218](https://github.com/abdul-shaikh-dev/CogVest/issues/218).
+
+See [native feasibility evidence](../reviews/2026-09-10-encryption-feasibility.md):
+read-only validation accepted CRC-damaged records that default writable opening
+subsequently discarded. The stop condition below applies; the existing
+Android-isolated storage baseline remains unchanged.
+
+The owner authorized a follow-up [native guard experiment](../reviews/2026-09-10-encryption-guard-probe.md).
+A version-pinned check handles the initial faults but leaves metadata detection,
+bounded native I/O, exception containment, and atomic ownership unresolved. It is
+not a completed guard or approval to bypass the implementation gates below.
+
+The owner selected the [library-supported route](mmkv-supported-encryption-route.md)
+instead of promoting the private parser. No suitable reject/preserve policy was
+established in the checked v2.4.2 source/API. Keep implementation on hold until
+that route and its actual React Native behavior pass the documented resume gate.
+The owner declined posting an upstream issue; none was submitted.
 
 ## Decision and Scope
 
@@ -181,9 +199,9 @@ needs investigation rather than an invented success threshold.
 
 ## Approval Summary
 
-Requested: transparent at-rest protection using one SDK-compatible SecureStore
+Approved through PR #312: transparent at-rest protection using one SDK-compatible SecureStore
 dependency, fresh test setup instead of migration, no app-lock/rotation features,
 and a native safety test before integration. The approved no-migration scope is
-already recorded in #218; the remaining choices here are proposals. Current
+already recorded in #218. Native preservation testing blocked integration. Current
 privacy documentation continues to say application-layer encryption is absent
 until implementation and installed verification actually establish it.

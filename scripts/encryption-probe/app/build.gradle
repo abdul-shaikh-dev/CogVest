@@ -1,0 +1,21 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.cogvest.encryptionprobe'
+    compileSdk 36
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    defaultConfig {
+        applicationId 'com.cogvest.encryptionprobe'
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName '1'
+        ndk { abiFilters 'x86_64', 'arm64-v8a' }
+    }
+}
+
+// Match react-native-mmkv/android/build.gradle, not upstream's latest version.
+dependencies { implementation 'io.github.zhongwuzw:mmkv:2.4.0' }
