@@ -1391,7 +1391,16 @@ function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
   return true;
 }
 
-function wouldOversellAsset(
+type QuantityEvent = {
+  date: string;
+  delta: number;
+  id: string;
+  importBatchId?: string;
+  originalRowNumber?: number;
+  priority: number;
+};
+
+function assetQuantityEvents(
   assetId: string,
   openingPositions: OpeningPosition[],
   trades: Trade[],
@@ -1399,7 +1408,7 @@ function wouldOversellAsset(
   const assetOpenings = openingPositions.filter(
     (item) => item.assetId === assetId,
   );
-  const events = [
+  const events: QuantityEvent[] = [
     ...assetOpenings
       .map((position) => ({
         date: getOpeningPositionHistoryDate(position) ?? "",
@@ -1441,6 +1450,16 @@ function wouldOversellAsset(
     },
   );
 
+  return events;
+}
+
+/** Checks the complete dated inventory timeline, including measured cutovers. */
+export function wouldOversellAsset(
+  assetId: string,
+  openingPositions: OpeningPosition[],
+  trades: Trade[],
+) {
+  const events = assetQuantityEvents(assetId, openingPositions, trades);
   let units = decimal(0);
   for (const event of events) {
     units = units.plus(event.delta);
@@ -1448,6 +1467,20 @@ function wouldOversellAsset(
   }
 
   return false;
+}
+
+function availableUnitsBeforeTrade(
+  assetId: string,
+  openingPositions: OpeningPosition[],
+  trades: Trade[],
+  tradeId: string,
+) {
+  let units = decimal(0);
+  for (const event of assetQuantityEvents(assetId, openingPositions, trades)) {
+    if (event.id === tradeId) return normalizeQuantity(units);
+    units = units.plus(event.delta);
+  }
+  return normalizeQuantity(units);
 }
 
 function linkedCashEntriesForTrade(state: PortfolioStoreState, tradeId: string) {
@@ -1482,6 +1515,7 @@ function validateLinkedTrade(
   input: LinkedTradeCommandInput,
   trade: Trade,
   expectedType: "buy" | "sell",
+  currentDate: Date,
 ): LinkedTradeCommandResult | null {
   if (!isManualTrade(trade) || trade.type !== expectedType) {
     return { isValid: false, reason: "invalidTradeType" };
@@ -1489,6 +1523,7 @@ function validateLinkedTrade(
 
   const fees = trade.fees ?? 0;
   if (
+    !isValidTradeRecord(trade, currentDate) ||
     !Number.isFinite(trade.quantity) ||
     trade.quantity <= 0 ||
     !Number.isFinite(trade.pricePerUnit) ||
@@ -1509,10 +1544,14 @@ function validateLinkedTrade(
     input.asset?.id === trade.assetId;
   const tradeAsset =
     state.assets.find((asset) => asset.id === trade.assetId) ?? input.asset;
+  const assetOpenings = state.openingPositions.filter(
+    (position) => position.assetId === trade.assetId,
+  );
 
   if (
     !hasMatchingAsset ||
     !tradeAsset ||
+    !isTransactionAfterOpeningCutover(trade.date, assetOpenings) ||
     getV1AssetCurrencyIssue(tradeAsset) !== undefined ||
     input.cashLabel.trim().length === 0 ||
     !isWithinQuantum(trade.totalValue, expectedTotal, moneyQuantum)
@@ -2515,6 +2554,7 @@ export function createPortfolioStore({
     },
     recordFundedBuy: (input) => {
       const state = get();
+      const currentDate = now();
       let commandInput = input;
 
       if (input.asset) {
@@ -2549,6 +2589,7 @@ export function createPortfolioStore({
         commandInput,
         commandInput.trade,
         "buy",
+        currentDate,
       );
 
       if (invalidResult) {
@@ -2564,6 +2605,7 @@ export function createPortfolioStore({
         commandInput,
         commandInput.trade,
         "buy",
+        currentDate,
       );
       if (normalizedInvalidResult) {
         return normalizedInvalidResult;
@@ -3324,11 +3366,13 @@ export function createPortfolioStore({
     },
     recordSaleWithProceeds: (input) => {
       const state = get();
+      const currentDate = now();
       const invalidResult = validateLinkedTrade(
         state,
         input,
         input.trade,
         "sell",
+        currentDate,
       );
 
       if (invalidResult) {
@@ -3344,29 +3388,25 @@ export function createPortfolioStore({
         normalizedInput,
         normalizedInput.trade,
         "sell",
+        currentDate,
       );
       if (normalizedInvalidResult) {
         return normalizedInvalidResult;
       }
 
-      const availableUnits = normalizeQuantity(
-        sumFinancialValues([
-          ...state.openingPositions
-            .filter((position) => position.assetId === input.trade.assetId)
-            .map((position) => position.quantity),
-          ...state.trades
-            .filter((trade) => trade.assetId === input.trade.assetId)
-            .map(getTradeQuantityDelta),
-        ]),
-      );
-
-      if (
-        decimal(normalizedInput.trade.quantity)
-          .minus(availableUnits)
-          .greaterThan(0)
-      ) {
+      const trades = [...state.trades, normalizedInput.trade];
+      if (wouldOversellAsset(
+        normalizedInput.trade.assetId,
+        state.openingPositions,
+        trades,
+      )) {
         return {
-          availableUnits,
+          availableUnits: availableUnitsBeforeTrade(
+            normalizedInput.trade.assetId,
+            state.openingPositions,
+            trades,
+            normalizedInput.trade.id,
+          ),
           isValid: false,
           reason: "insufficientUnits",
           requiredUnits: normalizedInput.trade.quantity,
@@ -3375,7 +3415,6 @@ export function createPortfolioStore({
 
       const cashEntry = linkedCashEntry(normalizedInput, "saleProceeds");
       const cashEntries = [...state.cashEntries, cashEntry];
-      const trades = [...state.trades, normalizedInput.trade];
 
       persistPortfolioTransition(storage, state, { cashEntries, trades });
       set({ cashEntries, trades });

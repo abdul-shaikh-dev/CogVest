@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -25,6 +25,20 @@ const trade: Trade = {
 };
 
 describe("TradeHistoryScreen", () => {
+  it("shows realized gain separately from net proceeds even after a full exit", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.getState().addTrade({ ...trade, id: "sale", date: "2026-04-11", type: "sell", pricePerUnit: 150, fees: 5, totalValue: 295 });
+    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    expect(screen.getByText("Net ₹295.00")).toBeTruthy();
+    expect(screen.getByText(/Realized gain \+₹95.00 · after fees/)).toBeTruthy();
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    screen.rerender(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    expect(screen.queryByText(/₹95.00/)).toBeNull();
+    expect(screen.queryByText(/₹295.00/)).toBeNull();
+  });
+
   it("lists the holding transaction with a review action", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewTrade = jest.fn();

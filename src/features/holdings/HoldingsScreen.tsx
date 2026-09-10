@@ -1295,12 +1295,12 @@ function HoldingDetails({
           />
           {holding.unrealisedPnLPct !== null ? (
             <AppText color="secondary" variant="caption">
-              {formatPercentage(holding.unrealisedPnLPct)} since investment
+              {formatPercentage(holding.unrealisedPnLPct)} unrealized
             </AppText>
           ) : null}
         </View>
         <AppText color="secondary" variant="caption">
-          Invested
+          Invested in remaining units
         </AppText>
         <MaskedValue
           masked={masked}

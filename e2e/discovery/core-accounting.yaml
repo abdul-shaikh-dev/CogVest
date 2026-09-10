@@ -1,0 +1,66 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///accounting-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: accounting-qa-screen
+    timeout: 30000
+- assertVisible: "Units 20; basis 1510; cash 0"
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-quantity-input
+- tapOn:
+    id: sell-redeem-quantity-input
+- inputText: "4"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-fees-input
+- tapOn:
+    id: sell-redeem-fees-input
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-save-button
+- tapOn:
+    id: sell-redeem-save-button
+- assertVisible: "Units 16; basis 1208; cash 595"
+- assertVisible: ".*Realized gain.*293.00.*after fees.*"
+- takeScreenshot: .expo/issue317-transactions
+- tapOn:
+    id: accounting-qa-mask
+- assertNotVisible: ".*293.00.*"
+- assertVisible: ".*values masked.*"
+- tapOn:
+    id: accounting-qa-mask
+- tapOn:
+    id: accounting-qa-toggle
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-quantity-input
+- tapOn:
+    id: sell-redeem-quantity-input
+- inputText: "16"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-fees-input
+- tapOn:
+    id: sell-redeem-fees-input
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-save-button
+- tapOn:
+    id: sell-redeem-save-button
+- assertVisible: "Units 0; basis 0; cash 2990"
+- assertVisible: ".*Realized gain.*1,187.00.*after fees.*"
+- takeScreenshot: .expo/issue317-full-exit

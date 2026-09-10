@@ -25,7 +25,8 @@ import {
   isValidDateString,
   validateSellQuantity,
 } from "@/src/domain/validators";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { getPortfolioStore, wouldOversellAsset, type PortfolioStoreState } from "@/src/store";
+import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -131,11 +132,30 @@ export function useSellRedeemHolding({
       now,
     );
 
-    return sellQuantityResult.isValid ? undefined : sellQuantityResult.message;
+    if (!sellQuantityResult.isValid) return sellQuantityResult.message;
+    if (isValidDateString(date)) {
+      if (!isTransactionAfterOpeningCutover(date, assetOpeningPositions)) {
+        return "Sale date must be after the opening balance date.";
+      }
+      const candidate: Trade = {
+        id: tradeIdRef.current,
+        assetId,
+        date,
+        type: "sell",
+        quantity: quantityValue,
+        pricePerUnit: 1,
+        totalValue: quantityValue,
+      };
+      if (wouldOversellAsset(assetId, assetOpeningPositions, [...assetTrades, candidate])) {
+        return "Not enough units on this date or after later recorded sales.";
+      }
+    }
+    return undefined;
   }, [
     assetId,
     holding,
     quantityValue,
+    date,
     snapshot.openingPositions,
     snapshot.trades,
     now,

@@ -113,6 +113,25 @@ describe("informational holding duration", () => {
       ).status,
     ).toBe("unavailable");
   });
+  it("does not derive a holding date from weighted-average accounting after a partial sale", () => {
+    const duration = run(undefined, [
+      { ...buy, quantity: 2, totalValue: 200 },
+      {
+        ...buy,
+        id: "partial-sale",
+        type: "sell",
+        date: "2026-01-01",
+        quantity: 1,
+        totalValue: 120,
+        pricePerUnit: 120,
+      },
+    ]);
+
+    expect(duration).toMatchObject({
+      status: "unavailable",
+      reason: expect.stringContaining("Lot matching"),
+    });
+  });
   it("supports one dated opening but never substitutes its recording date for acquisition", () => {
     const opening: OpeningPosition = {
       id: "o",
@@ -136,6 +155,39 @@ describe("informational holding duration", () => {
       run(undefined, [buy, { ...buy, id: "future", date: "2027-01-01" }]),
     ).toEqual(run());
     expect(run(undefined, []).status).toBe("unavailable");
+  });
+  it("uses the supplied as-of date and leaves unknown historical dates unavailable", () => {
+    const asOf = "2026-09-08";
+    expect(
+      run(asOf, [
+        { ...buy, date: asOf },
+        {
+          ...buy,
+          id: "future-sale",
+          type: "sell",
+          date: "2026-09-09",
+          pricePerUnit: 120,
+          totalValue: 120,
+        },
+      ]),
+    ).toMatchObject({
+      status: "available",
+      acquiredOn: asOf,
+      elapsedDays: 0,
+      observedOn: asOf,
+    });
+    expect(
+      run(asOf, [], [
+        {
+          id: "unknown-opening",
+          assetId: asset.id,
+          quantity: 1,
+          averageCostPrice: 100,
+          date: null,
+          recordedOn: asOf,
+        },
+      ]),
+    ).toMatchObject({ status: "unavailable" });
   });
   it("records the rule source and removes legacy derived semantics", () => {
     expect(INDIA_HOLDING_DURATION_RULE).toMatchObject({
