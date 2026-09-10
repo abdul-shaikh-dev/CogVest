@@ -19,7 +19,7 @@ export default function DashboardScreen() {
         router.navigate("/(tabs)/progress");
       }}
       onQuickSetup={() => {
-        router.push("/quick-portfolio-setup");
+        router.navigate({ pathname: "/(tabs)/holdings", params: { openAddMenu: "true" } });
       }}
       quickSetupSavedCount={quickSetup.session?.items.length ?? 0}
     />

@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   Modal,
+  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -60,10 +61,13 @@ import {
 } from "./holdingsReview";
 import { useHoldings } from "./useHoldings";
 import { AssetHistoryPanel } from "./AssetHistoryPanel";
+import { destinationAfterSwipe, isHorizontalIntent, type HoldingsDestination } from "./destinationSwipe";
 
 type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
 
 type HoldingsScreenProps = {
+  openAddMenu?: boolean;
+  onAddMenuOpened?: () => void;
   onOpenDuration?: () => void;
   now?: Date;
   onAddTrade?: () => void;
@@ -97,6 +101,8 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 };
 
 export function HoldingsScreen({
+  openAddMenu,
+  onAddMenuOpened,
   onOpenDuration,
   now,
   onAddTrade,
@@ -122,6 +128,14 @@ export function HoldingsScreen({
   const [selectedDestination, setSelectedDestination] = useState<
     "market" | "ppf"
   >("market");
+  const scrollRef = useRef<ScrollView>(null);
+  const verticalGesture = useRef(false);
+  useEffect(() => {
+    if (openAddMenu) {
+      setActivePanel("add");
+      onAddMenuOpened?.();
+    }
+  }, [openAddMenu, onAddMenuOpened]);
   const {
     displayMode,
     failed,
@@ -169,6 +183,40 @@ export function HoldingsScreen({
       ? selectedDestination
       : "market"
     : "ppf";
+  function selectDestination(destination: HoldingsDestination) {
+    if (destination === activeDestination) return;
+    Keyboard.dismiss();
+    setSelectedDestination(destination);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }
+  const destinationGesture = PanResponder.create({
+    onStartShouldSetPanResponderCapture: (_, gesture) => {
+      verticalGesture.current = gesture.numberActiveTouches !== 1;
+      return false;
+    },
+    onMoveShouldSetPanResponderCapture: (_, gesture) => {
+      if (gesture.numberActiveTouches > 1 ||
+          (Math.abs(gesture.dy) > 12 && Math.abs(gesture.dy) >= Math.abs(gesture.dx))) {
+        verticalGesture.current = true;
+      }
+      return hasMarketHoldings && hasPpfDestination && !activePanel &&
+        !selectedAssetId && !verticalGesture.current && gesture.numberActiveTouches === 1 &&
+        isHorizontalIntent(gesture.dx, gesture.dy);
+    },
+    onPanResponderMove: (_, gesture) => {
+      if (gesture.numberActiveTouches > 1 ||
+          Math.abs(gesture.dy) >= Math.abs(gesture.dx)) {
+        verticalGesture.current = true;
+      }
+    },
+    onPanResponderTerminate: () => { verticalGesture.current = true; },
+    onPanResponderRelease: (_, gesture) => {
+      const destination = destinationAfterSwipe(gesture.dx, gesture.dy);
+      if (destination && !verticalGesture.current && hasMarketHoldings && hasPpfDestination &&
+          !activePanel && !selectedAssetId) selectDestination(destination);
+    },
+    onPanResponderTerminationRequest: () => true,
+  });
   const allocationAvailable = allocationHoldings.every(
     (holding) => holding.valuation.status !== "pending",
   );
@@ -230,7 +278,9 @@ export function HoldingsScreen({
   }
 
   return (
+    <View style={{ flex: 1 }} testID="holdings-swipe-surface" {...destinationGesture.panHandlers}>
     <ScreenContainer
+      scrollRef={scrollRef}
       refreshControl={
         holdings.length > 0 ? (
           <RefreshControl
@@ -276,6 +326,23 @@ export function HoldingsScreen({
             </>
           }
         />
+
+        {hasMarketHoldings && hasPpfDestination ? (
+          <View accessibilityRole="tablist" testID="holdings-destination-tabs" style={styles.destinationTabs}>
+            <DestinationTab
+              active={activeDestination === "market"}
+              label={`Market ${marketHoldings.length}`}
+              onPress={() => selectDestination("market")}
+              testID="holdings-market-tab"
+            />
+            <DestinationTab
+              active={activeDestination === "ppf"}
+              label={`PPF ${ppfRecordCount}`}
+              onPress={() => selectDestination("ppf")}
+              testID="holdings-ppf-tab"
+            />
+          </View>
+        ) : null}
 
         {statusMessage ? (
           <View
@@ -385,23 +452,6 @@ export function HoldingsScreen({
           </View>
         ) : null}
 
-        {hasMarketHoldings && hasPpfDestination ? (
-          <View accessibilityRole="tablist" style={styles.destinationTabs}>
-            <DestinationTab
-              active={activeDestination === "market"}
-              label={`Market ${marketHoldings.length}`}
-              onPress={() => setSelectedDestination("market")}
-              testID="holdings-market-tab"
-            />
-            <DestinationTab
-              active={activeDestination === "ppf"}
-              label={`PPF ${ppfRecordCount}`}
-              onPress={() => setSelectedDestination("ppf")}
-              testID="holdings-ppf-tab"
-            />
-          </View>
-        ) : null}
-
         {activeDestination === "ppf" && hasPpfDestination ? (
           <View style={styles.ppfSection} testID="holdings-ppf-section">
             <View style={styles.sectionActionHeader}>
@@ -504,11 +554,11 @@ export function HoldingsScreen({
               quickSetupSavedCount > 0
                 ? `${quickSetupSavedCount} confirmed ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.`
                 : onQuickSetup
-                  ? "Add existing holdings in one focused setup, or record a single holding."
+                  ? "Choose manual entry or import holdings and transaction history."
                   : "Holdings are created automatically from your portfolio entries."
             }
             title="No holdings yet"
-            onAction={onQuickSetup ?? onAddTrade}
+            onAction={onQuickSetup ? () => setActivePanel("add") : onAddTrade}
             onSecondaryAction={onQuickSetup ? onAddTrade : undefined}
             secondaryActionLabel={onQuickSetup ? "Add one holding" : undefined}
             secondaryActionTestID="add-trade-button"
@@ -911,6 +961,7 @@ export function HoldingsScreen({
         </Modal>
       </View>
     </ScreenContainer>
+    </View>
   );
 }
 

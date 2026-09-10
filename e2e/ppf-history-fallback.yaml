@@ -1,0 +1,118 @@
+appId: com.abdulshaikh.cogvest
+---
+# Destructive synthetic-data test; run only on a disposable emulator.
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: dashboard-screen
+- openLink: "cogvest:///ppf-account"
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "QA PPF history"
+- hideKeyboard
+- tapOn:
+    id: ppf-provider-input
+- inputText: "HDFC"
+- hideKeyboard
+- tapOn:
+    id: ppf-opening-fy-input
+- eraseText
+- inputText: "2020"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "720000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-fy-contribution-input
+    direction: DOWN
+- tapOn:
+    id: ppf-fy-contribution-input
+- inputText: "150000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-confirmed-balance-card
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: toggle-manual-asset-entry
+- tapOn:
+    id: asset-input
+- inputText: "Reliance QA"
+- hideKeyboard
+- tapOn:
+    id: symbol-input
+- inputText: "RELIANCE"
+- hideKeyboard
+- tapOn:
+    id: ticker-input
+- inputText: "RELIANCE.NS"
+- hideKeyboard
+- tapOn:
+    id: continue-class-button
+- tapOn:
+    id: continue-position-button
+- tapOn:
+    id: quantity-input
+- inputText: "10"
+- hideKeyboard
+- tapOn:
+    id: average-cost-input
+- inputText: "2500"
+- hideKeyboard
+- tapOn:
+    id: price-input
+- inputText: "2600"
+- hideKeyboard
+- tapOn:
+    id: date-input
+- tapOn:
+    id: android:id/date_picker_header_year
+- scrollUntilVisible:
+    element:
+      text: "2024"
+    direction: UP
+- tapOn: "2024"
+- tapOn: "OK"
+- tapOn:
+    id: review-holding-button
+- scrollUntilVisible:
+    element:
+      id: save-holding-button
+    direction: DOWN
+- tapOn:
+    id: save-holding-button
+- assertVisible:
+    id: holding-save-complete
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: ppf-excluded-chart-notice
+    direction: DOWN
+- assertVisible: "Market and cash history"
+- assertVisible: ".*PPF is excluded from every month.*"
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+- assertVisible: "Market \\+ cash"
+- assertNotVisible: ".*ahead of invested.*"
+- takeScreenshot: ppf-history-market-chart
+- scrollUntilVisible:
+    element:
+      id: asset-trend-chart
+    direction: DOWN
+- takeScreenshot: ppf-history-asset-chart

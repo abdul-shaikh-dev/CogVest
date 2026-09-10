@@ -174,6 +174,7 @@ export default function RootLayout() {
               />
               <Stack.Screen name="ppf-account" options={{ headerShown: false }} />
               <Stack.Screen name="ppf-entry" options={{ headerShown: false }} />
+              <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen
                 name="opening-position"

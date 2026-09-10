@@ -14,12 +14,19 @@ export default function PpfAccountRoute() {
 
   return (
     <PpfAccountScreen
+      key={params.accountId ?? "new"}
       accountId={params.accountId}
       legacyAssetId={params.legacyAssetId}
       legacyName={params.legacyName}
-      onBack={() => router.back()}
+      onBack={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace("/(tabs)/holdings");
+      }}
       onComplete={(accountId) => {
-        if (params.returnTo === "quick-portfolio-setup") {
+        if (
+          params.returnTo === "quick-portfolio-setup" &&
+          !params.accountId
+        ) {
           const account = getPortfolioStore()
             .getState()
             .ppfAccounts.find((candidate) => candidate.id === accountId);
@@ -32,18 +39,35 @@ export default function PpfAccountRoute() {
             });
           }
 
-          router.back();
+          router.replace({
+            pathname: "/ppf-account",
+            params: { accountId, returnTo: "quick-portfolio-setup" },
+          });
           return;
         }
 
-        router.replace({ pathname: "/ppf-account", params: { accountId } });
+        router.replace({
+          pathname: "/ppf-account",
+          params: {
+            accountId,
+            ...(params.returnTo ? { returnTo: params.returnTo } : {}),
+          },
+        });
       }}
+      onContinuePortfolioSetup={
+        params.returnTo === "quick-portfolio-setup"
+          ? () => {
+              router.dismissTo("/quick-portfolio-setup");
+            }
+          : undefined
+      }
       onEntry={(accountId, entryId) =>
         router.push({
           pathname: "/ppf-entry",
           params: { accountId, ...(entryId ? { entryId } : {}) },
         })
       }
+      onImport={(accountId) => router.push({ pathname: "/import-ppf", params: { accountId } })}
     />
   );
 }

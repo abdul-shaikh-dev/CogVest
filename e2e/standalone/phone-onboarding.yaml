@@ -1,0 +1,112 @@
+appId: com.abdulshaikh.cogvest
+---
+# Resets synthetic app data. Includes the shared stock + PPF setup regression.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: quick-setup-button
+- assertVisible:
+    id: import-holdings-csv-option
+- assertVisible:
+    id: import-transactions-csv-option
+- assertVisible:
+    id: add-multiple-holdings-option
+- tapOn:
+    id: holdings-panel-close
+- runFlow: ../ppf-history-fallback.yaml
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-search-input
+- swipe:
+    start: "85%, 48%"
+    end: "15%, 48%"
+    duration: 500
+- assertVisible:
+    id: holdings-ppf-section
+- assertNotVisible:
+    id: holdings-search-input
+- takeScreenshot: phone-onboarding-ppf-tab
+- swipe:
+    start: "15%, 48%"
+    end: "85%, 48%"
+    duration: 500
+- assertVisible:
+    id: holdings-search-input
+- takeScreenshot: phone-onboarding-market-tab
+- tapOn:
+    id: holdings-ppf-tab
+- assertVisible:
+    id: holdings-ppf-section
+- tapOn:
+    id: holdings-market-tab
+- tapOn:
+    id: holdings-add-button
+- tapOn:
+    id: add-multiple-holdings-option
+- scrollUntilVisible:
+    element:
+      id: quick-setup-add-ppf
+    direction: DOWN
+- tapOn:
+    id: quick-setup-add-ppf
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "Setup PPF"
+- hideKeyboard
+- tapOn:
+    id: ppf-provider-input
+- inputText: "HDFC"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "50000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-account-screen
+- assertVisible: "Setup PPF"
+- assertVisible: "₹50,000.00"
+- tapOn:
+    id: edit-ppf-account
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "Setup PPF edited"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-account-screen
+- assertVisible: "Setup PPF edited"
+- scrollUntilVisible:
+    element:
+      id: continue-portfolio-setup
+    direction: DOWN
+- takeScreenshot: phone-onboarding-ppf-continue
+- tapOn:
+    id: continue-portfolio-setup
+- assertVisible:
+    id: add-holding-phase-asset
+- assertVisible: "1 holding saved locally"
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- assertVisible: "Setup PPF edited"

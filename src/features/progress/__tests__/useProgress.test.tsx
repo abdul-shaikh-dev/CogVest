@@ -176,6 +176,39 @@ function seedMonthlyInvestmentMetrics(
 }
 
 describe("useProgress", () => {
+  it("shows isolated market history when PPF blocks full snapshots, with one actionable warning", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id, averageCostPrice: 2500, currentPrice: 2600,
+      date: "2024-09-11", id: "repro-stock", quantity: 10,
+    });
+    store.getState().addPpfAccount({
+      id: "repro-ppf", nickname: "Test PPF", provider: "HDFC", status: "active",
+      opening: { kind: "financialYear", financialYearStart: 2020 },
+      balanceAsOf: "2026-09-10", confirmedBalance: 720000,
+      createdAt: "2026-09-10T00:00:00Z",
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({ ok: false });
+    const { result } = renderHook(() => useProgress({
+      store, now: new Date("2026-09-11T12:00:00Z"), historicalPriceFetcher,
+    }));
+    await act(async () => { await result.current.ensureMonthEndSnapshot(); });
+    expect(store.getState().monthlySnapshots).toEqual([]);
+    expect(result.current.monthlySummaries).toEqual([]);
+    expect(result.current.portfolioValue).toBe(746000);
+    expect(result.current.portfolioChartData.availableMonths).toHaveLength(24);
+    expect(result.current.portfolioChartData.availableMonths.at(-1)).toBe("2026-08");
+    expect(result.current.portfolioChartData.portfolioSeries[0].values.every(value => value === 26000)).toBe(true);
+    expect(result.current.ppfExcludedHistory?.estimatedMonths).toHaveLength(24);
+    expect(result.current.snapshotAutomationStatus.warnings).toHaveLength(1);
+    expect(result.current.snapshotAutomationStatus.warnings[0]).toContain("Earlier PPF balances are missing");
+    expect(result.current.snapshotAutomationStatus.message).toContain("earlier PPF balances");
+    act(() => { result.current.setPortfolioChartRange("Custom");
+      result.current.setPortfolioChartCustomRange({ startMonth: "2025-01", endMonth: "2025-06" }); });
+    expect(result.current.portfolioChartData.monthLabels).toHaveLength(6);
+  });
+
   it("shares typed-income investment metrics with Cash without double-counting a funded buy", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-20T00:00:00.000Z");

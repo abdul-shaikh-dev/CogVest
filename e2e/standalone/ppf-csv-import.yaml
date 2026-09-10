@@ -1,0 +1,173 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable emulator only. Provision fixtures/ppf-import.csv in Downloads first.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///ppf-account"
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "CSV PPF"
+- hideKeyboard
+- tapOn:
+    id: ppf-provider-input
+- inputText: "Synthetic bank"
+- hideKeyboard
+- tapOn:
+    id: ppf-opening-fy-input
+- eraseText
+- inputText: "2020"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "10000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- tapOn:
+    id: ppf-import-choose-csv
+- tapOn: "Show roots"
+- tapOn: "Downloads"
+- tapOn: "ppf-import.csv"
+- assertVisible: "Selected:.*"
+- assertVisible:
+    id: ppf-import-screen
+- scrollUntilVisible:
+    element:
+      id: ppf-import-balance-as-of
+    direction: DOWN
+- tapOn:
+    id: ppf-import-balance-as-of
+- tapOn:
+    id: android:id/date_picker_header_year
+- scrollUntilVisible:
+    element:
+      text: "2024"
+    direction: UP
+- tapOn: "2024"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-baseline-contribution
+    direction: DOWN
+- tapOn:
+    id: ppf-import-baseline-contribution
+- eraseText
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-expected-closing
+    direction: DOWN
+- tapOn:
+    id: ppf-import-expected-closing
+- inputText: "14350"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-complete-through-today
+    direction: DOWN
+- tapOn:
+    id: ppf-import-complete-through-today
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- assertVisible:
+    id: ppf-import-preview-screen
+- assertVisible: "Review PPF history"
+- takeScreenshot: .expo/ppf-csv-preview
+- scrollUntilVisible:
+    element:
+      id: ppf-import-confirm-replacement
+    direction: DOWN
+- tapOn:
+    id: ppf-import-confirm-replacement
+- scrollUntilVisible:
+    element:
+      id: ppf-import-save
+    direction: DOWN
+- assertVisible: ".*Interest credited.*"
+- tapOn:
+    id: ppf-import-save
+- assertVisible:
+    id: ppf-account-screen
+- assertVisible: "₹14,350.00"
+- takeScreenshot: .expo/ppf-csv-saved
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn: "CSV PPF"
+- assertVisible: "₹14,350.00"
+- scrollUntilVisible:
+    element:
+      text: "₹350.00"
+    direction: DOWN
+- assertVisible: "₹350.00"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- tapOn:
+    id: ppf-import-choose-csv
+- tapOn: "ppf-import.csv"
+- assertVisible: "Selected:.*"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-complete-through-today
+    direction: DOWN
+- tapOn:
+    id: ppf-import-complete-through-today
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- scrollUntilVisible:
+    element:
+      id: ppf-import-save
+    direction: DOWN
+- assertNotVisible:
+    id: ppf-import-confirm-replacement
+- tapOn:
+    id: ppf-import-save
+- assertVisible: "₹14,350.00"
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-screen
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-chart
+    direction: DOWN
+- assertVisible:
+    id: portfolio-trend-chart
+- takeScreenshot: .expo/ppf-csv-progress
