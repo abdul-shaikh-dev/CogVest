@@ -1,4 +1,17 @@
 export {
+  createDailyPriceCache,
+  dailyPriceCacheStorageKey,
+} from "./dailyPriceCache";
+export type {
+  DailyPriceRequest,
+  DailyPricePoint,
+  DailyPriceEntry,
+  DailyPriceReadResult,
+  DailyPriceWriteResult,
+  DailyPriceRefreshResult,
+  DailyPriceClearResult,
+} from "./dailyPriceCache";
+export {
   buildCoinGeckoSimplePriceUrl,
   fetchCoinGeckoQuote,
 } from "./coinGecko";
