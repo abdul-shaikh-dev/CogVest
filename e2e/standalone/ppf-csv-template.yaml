@@ -1,0 +1,53 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after ppf-csv-import.yaml. Provision Download/CogVestPpfTemplate first.
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn: "CSV PPF"
+- assertVisible: "₹14,350.00"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- tapOn:
+    id: ppf-import-choose-csv
+- back
+- assertVisible:
+    id: ppf-import-screen
+- assertNotVisible: "Selected:.*"
+- assertNotVisible:
+    id: ppf-import-file-error
+- tapOn:
+    id: ppf-import-save-template
+- tapOn: "Show roots"
+- tapOn:
+    id: "android:id/title"
+    childOf:
+      id: ".*:id/roots_list"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Download"
+    direction: DOWN
+- tapOn: "Download"
+- tapOn: "CogVestPpfTemplate"
+- tapOn: "Use this folder"
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- extendedWaitUntil:
+    visible: "cogvest-ppf-v1.csv saved.*"
+    timeout: 10000
+- takeScreenshot: .expo/ppf-csv-template-saved
+- tapOn:
+    id: ppf-import-back
+- assertVisible: "₹14,350.00"

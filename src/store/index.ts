@@ -3,6 +3,7 @@ import { validateBackupPayload, type BackupPayload } from "@/src/domain/portfoli
 import { backupRestoreJournalKey, casFolioSaltStorageKey, quickSetupStorageKey } from "@/src/services/storage/backupKeys";
 import { BackupRecoveryRequiredError, captureBackupStorage, commitBackupRestore, recoverBackupRestore } from "./backupPersistence";
 
+import { planPpfCsvImport, type PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
 import {
   findCanonicalAsset,
   hasCanonicalAssetConflict,
@@ -133,6 +134,12 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
   addOpeningPosition: (openingPosition: OpeningPosition) => void;
   addPpfAccount: (account: PpfAccount) => PpfAccountMutationResult;
+  importPpfCsv: (command: {
+    input: PpfCsvImportInput;
+    expectedState: string;
+    confirmReplacement: boolean;
+    confirmDuplicateRows: boolean;
+  }) => { status: "applied" | "alreadyApplied" } | { status: "rejected"; reason: string };
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
   clearHistoricalQuoteCache: () => void;
@@ -1787,6 +1794,26 @@ export function createPortfolioStore({
 
       persistPortfolioTransition(storage, state, { openingPositions });
       set({ openingPositions });
+    },
+    importPpfCsv: ({ input, expectedState, confirmReplacement, confirmDuplicateRows }) => {
+      const state = get();
+      const currentDate = now();
+      const plan = planPpfCsvImport(input, state.ppfAccounts, state.ppfLedgerEntries, currentDate);
+      if (plan.errors.length || !plan.account) return { status: "rejected", reason: "Correct the import errors before saving." };
+      if (plan.alreadyApplied) return { status: "alreadyApplied" };
+      if (expectedState !== plan.expectedState) return { status: "rejected", reason: "This account changed. Generate a fresh preview before saving." };
+      if (plan.requiresReplacement && confirmReplacement !== true) return { status: "rejected", reason: "Confirm replacement of this account's checkpoint and history." };
+      if (plan.duplicateRows > 0 && confirmDuplicateRows !== true) return { status: "rejected", reason: "Confirm that the repeated rows represent separate transactions." };
+      const previous = state.ppfAccounts.find((account) => account.id === input.accountId)!;
+      const ppfAccounts = state.ppfAccounts.map((account) => account.id === input.accountId ? plan.account! : account);
+      const ppfLedgerEntries = [...state.ppfLedgerEntries.filter((entry) => entry.accountId !== input.accountId), ...plan.entries];
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: [previous.balanceAsOf, plan.account.balanceAsOf].sort()[0].slice(0, 7),
+        now: currentDate, state, ppfAccounts, ppfLedgerEntries,
+      });
+      persistPortfolioTransition(storage, state, { ppfAccounts, ppfLedgerEntries, monthlySnapshots });
+      set({ ppfAccounts, ppfLedgerEntries, monthlySnapshots });
+      return { status: "applied" };
     },
     addPpfAccount: (account) => {
       const state = get();

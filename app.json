@@ -35,6 +35,7 @@
       "./plugins/withPrivateReleaseSigning",
       "./plugins/withPrivateDataBackupPolicy",
       "./plugins/withLeastPrivilegeAndroidPermissions",
+      "./plugins/withBoundedDocumentRead",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

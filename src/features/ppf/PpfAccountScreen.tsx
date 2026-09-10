@@ -40,6 +40,7 @@ type PpfAccountScreenProps = {
   now?: Date;
   onBack: () => void;
   onContinuePortfolioSetup?: () => void;
+  onImport?: (accountId: string) => void;
   onComplete: (accountId: string) => void;
   onEntry: (accountId: string, entryId?: string) => void;
   store?: StoreApi<PortfolioStoreState>;
@@ -68,6 +69,7 @@ export function PpfAccountScreen({
   now = new Date(),
   onBack,
   onContinuePortfolioSetup,
+  onImport,
   onComplete,
   onEntry,
   store = getPortfolioStore(),
@@ -255,6 +257,10 @@ export function PpfAccountScreen({
             variant="secondary"
           />
         </View>
+        {onImport ? (
+          <AppButton title="Import transaction CSV" variant="secondary" testID="ppf-import-csv"
+            onPress={() => onImport(account.id)} />
+        ) : null}
         {entries.length === 0 ? (
           <PremiumCard>
             <AppText weight="bold">No ledger entries yet</AppText>

@@ -164,6 +164,14 @@ All domain calculations must be pure functions under `src/domain/`.
 - Stored entries are ordered deterministically by date, recorded time, and ID.
   Entries on or before the confirmed baseline date are rejected so the baseline
   cannot be counted twice.
+- Standardized PPF CSV import (#323) uses `date,type,amount,note` with a
+  user-confirmed opening checkpoint and complete subsequent history through
+  today. Preview and reconciliation precede an atomic account-history update;
+  conflicting existing history requires explicit replacement confirmation.
+  Interest uses its effective/value date, never an inferred posting date, and
+  remains separate from contributions. Duplicate re-import is a no-op; equal
+  rows need confirmation as distinct transactions. Earlier unknown months are
+  not fabricated. The detailed contract is `docs/testing/ppf-csv-import.md`.
 - Existing synthetic PPF holdings are never deleted during migration. An
   explicit link preserves the original record for audit while excluding it
   from current and later portfolio totals once the dedicated confirmed baseline
