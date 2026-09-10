@@ -218,6 +218,11 @@ All domain calculations must be pure functions under `src/domain/`.
 - General foreign-asset portfolios, FX conversion, and user-selectable reporting
   currency remain outside V1.
 
+V3 per-asset daily history (#22) is a separate native-currency display governed
+by `docs/roadmap/asset-history-contract.md`. It does not change these V1 quote,
+transaction, aggregation or snapshot rules. No historical USD value is relabelled
+as INR using a current exchange rate.
+
 ### V1 Financial Precision Contract
 
 - Persisted financial fields remain finite JavaScript numbers under schema v7.

@@ -25,6 +25,10 @@ jest.mock("@/src/hooks/useReducedMotionPreference", () => ({
   useReducedMotionPreference: jest.fn(() => true),
 }));
 
+jest.mock("../useAssetHistory", () => ({
+  useAssetHistory: () => ({ loading: false, retry: jest.fn() }),
+}));
+
 const testSafeAreaMetrics = {
   frame: { height: 640, width: 360, x: 0, y: 0 },
   insets: { bottom: 0, left: 0, right: 0, top: 0 },
