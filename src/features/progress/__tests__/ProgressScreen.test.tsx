@@ -78,6 +78,51 @@ const stockAsset: Asset = {
   ticker: "HDFCBANK.NS",
 };
 
+it("labels PPF-excluded history and masks its values without presenting it as full snapshots", () => {
+  const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+  store.getState().addAsset(stockAsset);
+  store.getState().addOpeningPosition({
+    assetId: stockAsset.id, averageCostPrice: 2500, currentPrice: 2600,
+    date: "2024-09-11", id: "repro-stock", quantity: 10,
+  });
+  store.getState().addPpfAccount({
+    id: "repro-ppf", nickname: "Test PPF", provider: "HDFC", status: "active",
+    opening: { kind: "financialYear", financialYearStart: 2020 },
+    balanceAsOf: "2026-09-10", confirmedBalance: 720000,
+    createdAt: "2026-09-10T00:00:00Z",
+  });
+  const screen = render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
+  expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
+  expect(screen.getByText("Tracked Growth")).toBeTruthy();
+  expect(screen.getByText(/Some months use estimated prices/)).toBeTruthy();
+  const panel = within(screen.getByTestId("portfolio-trend-selected-panel"));
+  expect(panel.getByText("Market + cash")).toBeTruthy();
+  expect(panel.getByText("₹26K")).toBeTruthy();
+  expect(panel.queryByText("Invested")).toBeNull();
+  expect(panel.queryByText(/ahead of invested/)).toBeNull();
+  expect(store.getState().monthlySnapshots).toEqual([]);
+  fireEvent.press(screen.getByTestId("progress-mask-toggle"));
+  expect(panel.queryByText("₹26K")).toBeNull();
+});
+
+it("explains PPF exclusion even with only one reconstructed month", () => {
+  const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+  store.getState().addAsset(stockAsset);
+  store.getState().addOpeningPosition({
+    assetId: stockAsset.id, averageCostPrice: 2500, currentPrice: 2600,
+    date: "2026-08-11", id: "one-month-stock", quantity: 10,
+  });
+  store.getState().addPpfAccount({
+    id: "ppf", nickname: "Test PPF", provider: "HDFC", status: "active",
+    opening: { kind: "financialYear", financialYearStart: 2020 },
+    balanceAsOf: "2026-09-10", confirmedBalance: 720000,
+    createdAt: "2026-09-10T00:00:00Z",
+  });
+  const screen = render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
+  expect(screen.getByText(/PPF is excluded: earlier balances are unknown/)).toBeTruthy();
+  expect(screen.queryByText("Record at least 2 monthly snapshots to compare portfolio and asset trends.")).toBeNull();
+});
+
 function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
   const openingPosition: OpeningPosition = {
     assetId: stockAsset.id,

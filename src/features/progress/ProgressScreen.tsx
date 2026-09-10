@@ -223,11 +223,13 @@ function TrendLegend({
   onFocusSeries,
   series,
   testIDPrefix,
+  portfolioLabel = "Portfolio",
 }: {
   focusedSeries: string | null;
   onFocusSeries: (label: string | null) => void;
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
+  portfolioLabel?: string;
 }) {
   return (
     <View style={styles.chartLegend}>
@@ -237,7 +239,7 @@ function TrendLegend({
 
         return (
           <Pressable
-            accessibilityLabel={`Emphasize ${item.label} series`}
+            accessibilityLabel={`Emphasize ${item.label === "Portfolio" ? portfolioLabel : item.label} series`}
             accessibilityRole="button"
             accessibilityState={{ selected: isFocused }}
             key={item.label}
@@ -258,7 +260,7 @@ function TrendLegend({
               ]}
             />
             <AppText color="secondary" variant="caption" weight="medium">
-              {item.label}
+              {item.label === "Portfolio" ? portfolioLabel : item.label}
             </AppText>
           </Pressable>
         );
@@ -300,6 +302,8 @@ function SelectedMonthPanel({
   selectedIndex,
   series,
   testIDPrefix,
+  portfolioLabel = "Portfolio",
+  partialHistory = false,
 }: {
   maskWealthValues: boolean;
   minimal: boolean;
@@ -307,9 +311,28 @@ function SelectedMonthPanel({
   selectedIndex: number;
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
+  portfolioLabel?: string;
+  partialHistory?: boolean;
 }) {
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const { fontScale } = useWindowDimensions();
+
+  if (partialHistory) {
+    return (
+      <View style={styles.selectedPanel} testID={`${testIDPrefix}-selected-panel`}>
+        {series.map((item) => (
+          <View key={item.label} style={styles.gapValueRow}>
+            <AppText color="secondary" variant="caption">
+              {item.label === "Portfolio" ? portfolioLabel : item.label}
+            </AppText>
+            <AppText variant="caption" weight="bold">
+              {maskWealthValues ? maskedChartValueLabel : formatCompactINR(item.values[selectedIndex] ?? 0)}
+            </AppText>
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   if (isPortfolioChart) {
     const portfolioValue = getSeriesValue(series, "Portfolio", selectedIndex);
@@ -328,8 +351,8 @@ function SelectedMonthPanel({
       <View
         accessibilityLabel={
           maskWealthValues
-            ? `${monthLabel}. Portfolio values hidden.`
-            : `${monthLabel}. Portfolio ${formatCompactINR(
+            ? `${monthLabel}. ${portfolioLabel} values hidden.`
+            : `${monthLabel}. ${portfolioLabel} ${formatCompactINR(
                 portfolioValue,
               )}. Invested ${formatCompactINR(
                 investedValue,
@@ -375,7 +398,7 @@ function SelectedMonthPanel({
             <View style={styles.gapValues}>
               <View style={styles.gapValueRow}>
                 <AppText color="secondary" variant="caption">
-                  Portfolio
+                  {portfolioLabel}
                 </AppText>
                 <AppText variant="caption" weight="bold">
                   {formatCompactINR(portfolioValue)}
@@ -470,6 +493,8 @@ function TrendChart({
   monthLabels,
   series,
   testIDPrefix,
+  portfolioLabel = "Portfolio",
+  partialHistory = false,
 }: {
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
@@ -477,6 +502,8 @@ function TrendChart({
   monthLabels: string[];
   series: MonthlyProgressChartSeries[];
   testIDPrefix: string;
+  portfolioLabel?: string;
+  partialHistory?: boolean;
 }) {
   const maxValue = getChartMaxValue(series);
   const { fontScale } = useWindowDimensions();
@@ -540,6 +567,8 @@ function TrendChart({
         />
       </View>
       <SelectedMonthPanel
+        partialHistory={partialHistory}
+        portfolioLabel={portfolioLabel}
         maskWealthValues={maskWealthValues}
         minimal={minimal}
         monthLabel={monthLabels[safeSelectedIndex] ?? ""}
@@ -572,7 +601,7 @@ function TrendChart({
             )}
             curved
             data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
-            data2={toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
+            data2={partialHistory ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
             dataPointsRadius1={3}
@@ -582,7 +611,7 @@ function TrendChart({
             endOpacity={0}
             endSpacing={chartEndSpacing}
             initialSpacing={chartInitialSpacing}
-            intersectionAreaConfig={{ fillColor: "rgba(52,199,89,0.14)" }}
+            intersectionAreaConfig={partialHistory ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated={!isReducedMotionEnabled}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
@@ -634,6 +663,7 @@ function TrendChart({
         </View>
       </View>
       <TrendLegend
+        portfolioLabel={portfolioLabel}
         focusedSeries={focusedSeries}
         onFocusSeries={setFocusedSeries}
         series={series}
@@ -747,7 +777,7 @@ function MonthPickerField({
                 {label}
               </AppText>
               <AppText color="secondary" variant="caption">
-                Stored snapshots only
+                Available completed months
               </AppText>
             </View>
             <ScrollView
@@ -902,6 +932,7 @@ function ProgressTrendCards({
   portfolioChartData,
   portfolioChartRange,
   minimal,
+  ppfExcludedHistory,
 }: {
   assetChartCustomRange: MonthlyChartCustomRange;
   assetChartData: MonthlyProgressChartData;
@@ -916,6 +947,7 @@ function ProgressTrendCards({
   portfolioChartData: MonthlyProgressChartData;
   portfolioChartRange: MonthlyChartRange;
   minimal: boolean;
+  ppfExcludedHistory: { estimatedMonths: string[]; missingMonths: string[] } | null;
 }) {
   if (
     portfolioChartData.availableMonths.length < 2 &&
@@ -926,7 +958,9 @@ function ProgressTrendCards({
         <SectionHeader title="Trend history is still building" />
         <View style={styles.chartPlaceholder}>
           <AppText color="secondary" align="center">
-            Record at least 2 monthly snapshots to compare portfolio and asset trends.
+            {ppfExcludedHistory
+              ? "PPF is excluded: earlier balances are unknown. At least 2 consecutive valued months of market and cash records are needed for this chart. Missing prices must be resolved before a trend can be shown."
+              : "Record at least 2 monthly snapshots to compare portfolio and asset trends."}
           </AppText>
         </View>
       </PremiumCard>
@@ -935,10 +969,29 @@ function ProgressTrendCards({
 
   return (
     <>
+      {ppfExcludedHistory ? (
+        <PremiumCard testID="ppf-excluded-chart-notice">
+          <SectionHeader title="Market and cash history" />
+          <AppText color="secondary">
+            PPF is excluded from every month in these charts because its earlier balances are unknown.
+            These are reconstructed values, not complete portfolio snapshots.
+          </AppText>
+          {ppfExcludedHistory.estimatedMonths.length > 0 ? (
+            <AppText color="secondary" variant="caption">
+              Some months use estimated prices, not confirmed historical closes.
+            </AppText>
+          ) : null}
+          {ppfExcludedHistory.missingMonths.length > 0 ? (
+            <AppText color="secondary" variant="caption">
+              Some months could not be valued. Only the latest uninterrupted history is shown; missing months are not joined across.
+            </AppText>
+          ) : null}
+        </PremiumCard>
+      ) : null}
       <PremiumCard>
         <ChartCardHeader
-          subtitle="Portfolio value compared with invested capital"
-          title="Portfolio Growth"
+          subtitle={ppfExcludedHistory ? "Market holdings and cash · PPF excluded" : "Portfolio value compared with invested capital"}
+          title={ppfExcludedHistory ? "Tracked Growth" : "Portfolio Growth"}
         />
         <ChartRangeSelector
           onChange={onPortfolioRangeChange}
@@ -955,25 +1008,27 @@ function ProgressTrendCards({
         ) : null}
         {portfolioChartData.hasEnoughHistory ? (
           <TrendChart
+            partialHistory={ppfExcludedHistory !== null}
+            portfolioLabel={ppfExcludedHistory ? "Market + cash" : "Portfolio"}
             key={`${portfolioChartRange}:${portfolioChartCustomRange.startMonth}:${portfolioChartCustomRange.endMonth}:${portfolioChartData.monthLabels.join("|")}`}
             isReducedMotionEnabled={isReducedMotionEnabled}
             maskWealthValues={maskWealthValues}
             minimal={minimal}
             monthLabels={portfolioChartData.monthLabels}
-            series={portfolioChartData.portfolioSeries}
+            series={ppfExcludedHistory ? portfolioChartData.portfolioSeries.filter(item => item.label !== "Invested") : portfolioChartData.portfolioSeries}
             testIDPrefix="portfolio-trend"
           />
         ) : (
           <View style={styles.chartPlaceholder}>
             <AppText color="secondary" align="center">
-              Select at least 2 stored snapshot months to show this trend.
+              Select at least 2 available months to show this trend.
             </AppText>
           </View>
         )}
       </PremiumCard>
       <PremiumCard>
         <ChartCardHeader
-          subtitle="Absolute value trend - cash excluded"
+          subtitle={ppfExcludedHistory ? "Market asset values · cash and PPF excluded" : "Absolute value trend - cash excluded"}
           title="Asset Momentum"
         />
         <ChartRangeSelector
@@ -992,6 +1047,7 @@ function ProgressTrendCards({
         {assetChartData.hasEnoughHistory ? (
           <>
             <TrendChart
+              partialHistory={ppfExcludedHistory !== null}
               key={`${assetChartRange}:${assetChartCustomRange.startMonth}:${assetChartCustomRange.endMonth}:${assetChartData.monthLabels.join("|")}`}
               isReducedMotionEnabled={isReducedMotionEnabled}
               maskWealthValues={maskWealthValues}
@@ -1004,7 +1060,7 @@ function ProgressTrendCards({
         ) : (
           <View style={styles.chartPlaceholder}>
             <AppText color="secondary" align="center">
-              Select at least 2 stored snapshot months to show this trend.
+              Select at least 2 available months to show this trend.
             </AppText>
           </View>
         )}
@@ -1168,6 +1224,7 @@ export function ProgressScreen({
             />
 
             <ProgressTrendCards
+              ppfExcludedHistory={progress.ppfExcludedHistory}
               assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
@@ -1250,6 +1307,7 @@ export function ProgressScreen({
             )}
 
             <ProgressTrendCards
+              ppfExcludedHistory={progress.ppfExcludedHistory}
               assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
