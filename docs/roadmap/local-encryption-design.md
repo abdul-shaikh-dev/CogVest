@@ -15,6 +15,12 @@ A version-pinned check handles the initial faults but leaves metadata detection,
 bounded native I/O, exception containment, and atomic ownership unresolved. It is
 not a completed guard or approval to bypass the implementation gates below.
 
+The owner selected the [library-supported route](mmkv-supported-encryption-route.md)
+instead of promoting the private parser. No suitable reject/preserve policy was
+established in the checked v2.4.2 source/API. Keep implementation on hold until
+that route and its actual React Native behavior pass the documented resume gate.
+The owner declined posting an upstream issue; none was submitted.
+
 ## Decision and Scope
 
 Recommend a bounded native feasibility test of encrypted MMKV with a

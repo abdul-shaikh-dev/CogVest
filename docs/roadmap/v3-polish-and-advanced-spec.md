@@ -24,7 +24,9 @@ legacy plaintext migration is excluded. The approved
 [local encryption design](local-encryption-design.md) reached its native safety
 gate, where file-preservation testing blocked integration. A subsequent isolated
 guard experiment handles the original faults but leaves production native-safety
-boundaries unresolved. The existing storage
+boundaries unresolved. The owner selected a
+[library-supported route](mmkv-supported-encryption-route.md), not a production
+private parser. The existing storage
 baseline remains unchanged; this is not an implemented encryption claim.
 Frame-attribution work #299 remains parked. Other owner
 deferrals remain recorded in their issues, not treated as completed work.
