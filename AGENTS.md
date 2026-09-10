@@ -6,10 +6,10 @@ CogVest is an Android-first, local-first React Native portfolio tracker. V1 must
 replace the user's Excel investment tracker with trustworthy holdings, cash,
 quote, and monthly-progress workflows before V2/V3 behavior features expand.
 
-Current priority: preserve the verified V1 baseline while executing the V2
-roadmap in issue #137. Financial correctness, data integrity, quote provenance,
-recoverability, and Android release safety take priority over visual polish or
-new features.
+Current priority: preserve the verified V1/V2 baseline while executing the V3
+roadmap in issue #138, starting with backup/restore #24. Financial correctness,
+data integrity, quote provenance, recoverability, and Android release safety take
+priority over visual polish or new features.
 
 ## Canonical Sources
 

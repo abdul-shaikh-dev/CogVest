@@ -4,6 +4,21 @@
 
 Add advanced market, tax, backup, and polish features after V1/V2 validate the product direction.
 
+## Current Execution Direction
+
+V2 tracker #137 closed after standalone verification. On 10 September 2026 the
+owner prioritized full-portfolio backup/restore #24 ahead of the other V3 work.
+Issue #138 owns the updated order: backup/restore, search and cache foundations,
+per-asset historical views, advanced tax, then performance/release closeout.
+
+See [Backup and Restore Contract](backup-restore-contract.md) for the first
+delivery's replacement-only behavior, persisted-data inventory, and verification
+plan. This is a planned feature, not an existing recovery capability.
+
+Application-layer encryption #218 and frame-attribution work #299 remain parked;
+this reordering does not resume either issue. Explicit owner deferrals remain
+recorded in their issues rather than being treated as completed work.
+
 ## Target User Value
 
 The user can inspect historical performance, discover assets more easily, export local data, and rely on stronger tax/quote/release hardening.
