@@ -20,7 +20,11 @@ supporting evidence, not sources of truth.
 
 ### Active Version
 
-Issue #137 tracks V2 execution on top of the verified V1 baseline below.
+V2 tracker #137 is complete with standalone verification recorded in
+`docs/testing/v2-closeout-evidence.md`. V3 tracker #138 now owns execution,
+starting with full-portfolio backup/restore #24. Backup/restore is not implemented
+yet; its approved replacement-only direction and delivery plan are recorded in
+`docs/roadmap/backup-restore-contract.md`.
 Minimal Mode is implemented. The descriptive behavior engine (#18) powers
 Dashboard investment-pattern entries and read-only insight details (#19).
 Holding duration (#20) is an on-demand informational reference for unambiguous
