@@ -20,9 +20,11 @@ before the original data is lost.
 
 After #24 merged through PR #311, the owner explicitly resumed encryption
 evaluation #218. All existing installations contain disposable test data, so
-legacy plaintext migration is excluded. See the proposed
-[local encryption design](local-encryption-design.md); this is not an implemented
-encryption claim. Frame-attribution work #299 remains parked. Other owner
+legacy plaintext migration is excluded. The approved
+[local encryption design](local-encryption-design.md) reached its native safety
+gate, where file-preservation testing blocked integration. The existing storage
+baseline remains unchanged; this is not an implemented encryption claim.
+Frame-attribution work #299 remains parked. Other owner
 deferrals remain recorded in their issues, not treated as completed work.
 
 ## Target User Value

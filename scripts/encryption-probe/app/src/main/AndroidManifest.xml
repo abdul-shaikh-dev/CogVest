@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="CogVest encryption probe" android:allowBackup="false" />
+    <instrumentation
+        android:name=".Probe"
+        android:targetPackage="com.cogvest.encryptionprobe"
+        android:label="Isolated synthetic MMKV probe" />
+</manifest>

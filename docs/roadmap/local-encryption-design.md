@@ -1,7 +1,13 @@
 # Local Storage Encryption Design (#218)
 
-Date: 10 September 2026. Status: proposed for owner approval, not implemented.
+Date: 10 September 2026. Status: approved through PR #312; native feasibility
+found a preservation blocker. Integration is stopped, not implemented.
 Issue: [#218](https://github.com/abdul-shaikh-dev/CogVest/issues/218).
+
+See [native feasibility evidence](../reviews/2026-09-10-encryption-feasibility.md):
+read-only validation accepted CRC-damaged records that default writable opening
+subsequently discarded. The stop condition below applies; the existing
+Android-isolated storage baseline remains unchanged.
 
 ## Decision and Scope
 
@@ -181,9 +187,9 @@ needs investigation rather than an invented success threshold.
 
 ## Approval Summary
 
-Requested: transparent at-rest protection using one SDK-compatible SecureStore
+Approved through PR #312: transparent at-rest protection using one SDK-compatible SecureStore
 dependency, fresh test setup instead of migration, no app-lock/rotation features,
 and a native safety test before integration. The approved no-migration scope is
-already recorded in #218; the remaining choices here are proposals. Current
+already recorded in #218. Native preservation testing blocked integration. Current
 privacy documentation continues to say application-layer encryption is absent
 until implementation and installed verification actually establish it.
