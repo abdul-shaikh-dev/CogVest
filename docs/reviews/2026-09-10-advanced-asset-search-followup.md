@@ -1,7 +1,8 @@
 # Advanced Asset Search: Performance Follow-Up
 
-Issue #23; PR #314. Supersedes neither the earlier failed samples nor the issue
-gate. **The strict performance gate remains open.**
+Issue #23; PR #314. The measurements below are unchanged. After reviewing these
+results, the user approved replacing the strict 100 ms cutoff with the
+responsiveness gate recorded below. **Ready for review under the revised gate.**
 
 ## Corrections
 
@@ -61,11 +62,20 @@ without further profiling. Removing Profiler did not eliminate the excursions.
 raw values and original metric labels. Its `to-render` labels mean React commit
 completion as explained above; they do not prove native paint.
 
-## Remaining Gate
+## Approved Gate Revision
 
-- Attribute and resolve the remaining >100 ms responsiveness excursions.
-- Verify user-visible completion rather than only React commits.
-- Repeat on the issue's Pixel 8 reference configuration: only Pixel_10_Pro is
-  installed, and Android command-line AVD management tools are absent.
-- Keep PR #314 draft and issue #23 open. Do not change thresholds or silently
-  substitute another reference device. General frame issue #299 stays parked.
+The user accepted brief 100-170 ms excursions for this search flow and approved
+the following merge criteria: complete search/filter updates within 500 ms,
+no crashes or ANRs, and no persistent input or scrolling freezes. The previous
+100 ms zero-stall cutoff is no longer a merge blocker. This is an explicit
+acceptance decision, not evidence that the delays were fixed or are invisible.
+
+Recorded complete-commit samples meet 500 ms; both installed-app journeys
+completed without observed persistent freezes, crashes or ANRs. PR #314 can
+leave draft under this revised gate; merging it should close #23.
+
+Validation used the available Pixel_10_Pro/API 36, not Pixel 8. Native-paint
+timing and standalone-release/physical-phone smoothness remain unverified;
+do not extrapolate phone performance from these debug-emulator results.
+General frame issue #299 remains parked. Earlier reports and raw evidence
+retain the original failed-gate observations for traceability.

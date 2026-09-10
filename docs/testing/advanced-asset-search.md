@@ -72,5 +72,11 @@ use an incomplete first batch as proof of full-page latency.
 
 Debug observations are not standalone release performance certification or
 network response guarantees. Record the AVD/API, APK identity, Metro/debug mode,
-window coverage and dropped count with each result. A passing functional journey
-does not by itself satisfy the issue's 500 ms / no-stall gate.
+window coverage and dropped count with each result.
+
+The user-approved #23 gate is complete search/filter updates within 500 ms,
+no crashes or ANRs, and no persistent input or scrolling freezes. The 100 ms
+timer threshold remains a diagnostic signal, not a hard merge cutoff. Retain
+all excursions in evidence. Pair timing measurements with installed-app
+journeys; functional success alone is not a latency measurement. Current
+validation uses Pixel_10_Pro/API 36 debug/Metro, not Pixel 8 or a physical phone.
