@@ -228,6 +228,13 @@ V1 does not auto-submit. Build the production AAB and manually upload it to the 
 
 Future versions may add EAS Submit after manual release flow is proven.
 
+Any future Play automation is optional and requires explicit owner authorization.
+Use a manually approved release environment and least-privilege service-account
+credentials supplied through repository/environment secrets. Never put credential
+JSON, tokens or signing passwords in logs, artifacts, or source control. Submission
+must not run on ordinary pull requests; a successful CI check is not permission
+to publish. Existing preview-build triggers do not authorize Play submission.
+
 ## Versioning
 
 - `versionName`: semantic user-facing version shared by `app.json`,
