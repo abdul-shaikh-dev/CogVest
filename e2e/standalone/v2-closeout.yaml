@@ -1,0 +1,147 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in: existing standard visual-QA portfolio, prepared before release install.
+# No seed/reset, new financial records, or development evidence routes.
+# Dismisses optional guidance and restores Standard/unmasked display at the end.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: visual-qa-seed-blocked
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-search-input
+- inputText: "HDFC"
+- hideKeyboard
+- assertVisible: "Invested ₹36.25K"
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible: "25"
+- assertVisible: "₹1,450.00"
+- assertVisible: "15 Apr 2024"
+- takeScreenshot: .expo/v2-release-holding
+- tapOn:
+    id: holding-detail-back
+- tapOn:
+    id: holdings-insights-button
+- tapOn:
+    id: holdings-duration-button
+- assertVisible:
+    id: holding-duration-screen
+- assertVisible: "HDFC Bank"
+- assertVisible: "More than 12 months recorded"
+- assertVisible: "Nifty 50 ETF"
+- assertVisible: "Comparison unavailable"
+- takeScreenshot: .expo/v2-release-duration
+- tapOn:
+    id: duration-mask
+- assertNotVisible: "HDFC Bank"
+- tapOn:
+    id: duration-mask
+- tapOn:
+    id: duration-back
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: open-insight-conviction
+    direction: DOWN
+- tapOn:
+    id: open-insight-conviction
+- assertVisible: "Conviction pattern"
+- assertVisible: "Not enough data yet"
+- runFlow:
+    when:
+      visible:
+        id: dismiss-nudge-insights
+    commands:
+      - tapOn:
+          id: dismiss-nudge-insights
+- scrollUntilVisible:
+    element:
+      id: insight-show-records
+    direction: DOWN
+- tapOn:
+    id: insight-show-records
+- scrollUntilVisible:
+    element:
+      text: "Opening position.*conviction 4/5"
+    direction: DOWN
+- assertVisible: "HDFC Bank"
+- takeScreenshot: .expo/v2-release-conviction
+- scrollUntilVisible:
+    element:
+      id: insight-mask-toggle
+    direction: UP
+- tapOn:
+    id: insight-mask-toggle
+- assertNotVisible: "HDFC Bank"
+- tapOn:
+    id: insight-mask-toggle
+- tapOn:
+    id: insight-back
+- openLink: "cogvest:///insight?kind=frequency"
+- assertVisible: "Trading frequency"
+- assertNotVisible: "Not enough data yet"
+- takeScreenshot: .expo/v2-release-frequency
+- openLink: "cogvest:///insight?kind=patience"
+- assertVisible: "Planned holding periods"
+- assertVisible: "Not enough data yet"
+- openLink: "cogvest:///insight?kind=missing"
+- assertVisible: "Insight unavailable"
+- tapOn: "Back to Dashboard"
+- openLink: "cogvest:///settings"
+- runFlow:
+    when:
+      visible:
+        id: dismiss-nudge-minimal
+    commands:
+      - tapOn:
+          id: dismiss-nudge-minimal
+- tapOn:
+    id: display-mode-minimal
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- assertNotVisible: "Investment patterns"
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-search-input
+- assertNotVisible:
+    id: holdings-insights-button
+- assertVisible: "Invested ₹11L"
+- takeScreenshot: .expo/v2-release-minimal
+- openLink: "cogvest:///cash"
+- assertVisible: "Deposit"
+- assertVisible: "Withdraw"
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-screen
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Insights are paused"
+- tapOn: "Done"
+- openLink: "cogvest:///holding-duration"
+- assertVisible: "Optional analysis is paused"
+- tapOn: "Done"
+- openLink: "cogvest:///settings"
+- assertNotVisible:
+    id: nudge-minimal
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Conviction pattern"
+- assertNotVisible:
+    id: nudge-insights
+- tapOn:
+    id: insight-back
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-search-input
+- inputText: "HDFC"
+- hideKeyboard
+- assertVisible: "Invested ₹36.25K"
