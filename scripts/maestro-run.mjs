@@ -24,6 +24,7 @@ const defaultFlows = [
   "e2e/holdings-list-first.yaml",
   "e2e/holdings-list-first-layout.yaml",
   "e2e/ppf-account.yaml",
+  "e2e/ppf-history-fallback.yaml",
   "e2e/opening-position-correction.yaml",
   "e2e/trade-correction.yaml",
   "e2e/asset-correction.yaml",

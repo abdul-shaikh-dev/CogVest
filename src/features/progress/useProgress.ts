@@ -1,4 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { buildPpfExcludedChartHistory } from "@/src/domain/calculations/ppfExcludedChartHistory";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -229,13 +230,18 @@ function automationMessage({
   provisionalCount,
   refreshedCount,
   status,
+  warnings = [],
 }: {
   createdCount: number;
   incomeRefreshedCount: number;
   provisionalCount: number;
   refreshedCount: number;
   status: GeneratedSnapshotStatus;
+  warnings?: string[];
 }) {
+  if (warnings.some((warning) => warning.startsWith("Earlier PPF balances"))) {
+    return "Full portfolio history needs earlier PPF balances. PPF is excluded from available market and cash trends.";
+  }
   if (refreshedCount > 0) {
     return refreshedCount === 1
       ? "1 estimated snapshot updated with better month-end values."
@@ -270,6 +276,9 @@ function automationMessage({
 }
 
 function automationWarningMessage(targetMonth: string, warning: string) {
+  if (warning.includes("PPF account") && warning.includes("confirmed balance checkpoint")) {
+    return "Earlier PPF balances are missing. Today's PPF balance cannot be used for past months. Add a confirmed earlier balance only if your statement supports it; market and cash charts exclude PPF until its history is available.";
+  }
   if (warning.includes("fallback")) {
     return null;
   }
@@ -411,6 +420,24 @@ export function useProgress({
   store = getPortfolioStore(),
 }: UseProgressInput = {}) {
   const snapshot = usePortfolioSnapshot(store);
+  const currentCalendarMonth = formatLocalCalendarDate(now).slice(0, 7);
+  // Keep chart-only partial history out of persisted full-portfolio snapshots.
+  // Memoize the multi-month reconstruction, not cheap presentation calculations.
+  const ppfExcludedHistory = useMemo(() => buildPpfExcludedChartHistory({
+    assets: snapshot.assets,
+    cashEntries: snapshot.cashEntries,
+    existingSnapshots: snapshot.monthlySnapshots,
+    historicalQuotes: snapshot.historicalQuoteCache,
+    now: new Date(`${currentCalendarMonth}-15T12:00:00Z`),
+    openingPositions: snapshot.openingPositions,
+    ppfAccounts: snapshot.ppfAccounts,
+    ppfLedgerEntries: snapshot.ppfLedgerEntries,
+    quoteCache: snapshot.quoteCache,
+    trades: snapshot.trades,
+  }), [snapshot.assets, snapshot.cashEntries, snapshot.monthlySnapshots,
+    snapshot.historicalQuoteCache, snapshot.openingPositions, snapshot.ppfAccounts,
+    snapshot.ppfLedgerEntries, snapshot.quoteCache, snapshot.trades, currentCalendarMonth]);
+  const chartSnapshots = ppfExcludedHistory?.snapshots ?? snapshot.monthlySnapshots;
   const [formValues, setFormValues] = useState(emptyProgressFormValues);
   const [errors, setErrors] = useState<ProgressFormErrors>({});
   const [snapshotAutomationStatus, setSnapshotAutomationStatus] =
@@ -424,28 +451,28 @@ export function useProgress({
     }));
   const [portfolioChartRange, setPortfolioChartRange] =
     useState<MonthlyChartRange>(() =>
-      getDefaultMonthlyChartRange(snapshot.monthlySnapshots.length),
+      getDefaultMonthlyChartRange(chartSnapshots.length),
     );
   const [assetChartRange, setAssetChartRange] = useState<MonthlyChartRange>(() =>
-    getDefaultMonthlyChartRange(snapshot.monthlySnapshots.length),
+    getDefaultMonthlyChartRange(chartSnapshots.length),
   );
   const [portfolioChartCustomRange, setPortfolioChartCustomRange] =
     useState<MonthlyChartCustomRange>(() =>
-      getDefaultCustomChartRange(snapshot.monthlySnapshots),
+      getDefaultCustomChartRange(chartSnapshots),
     );
   const [assetChartCustomRange, setAssetChartCustomRange] =
     useState<MonthlyChartCustomRange>(() =>
-      getDefaultCustomChartRange(snapshot.monthlySnapshots),
+      getDefaultCustomChartRange(chartSnapshots),
     );
 
   useEffect(() => {
     setPortfolioChartCustomRange((current) =>
-      normalizeCustomChartRange(current, snapshot.monthlySnapshots),
+      normalizeCustomChartRange(current, chartSnapshots),
     );
     setAssetChartCustomRange((current) =>
-      normalizeCustomChartRange(current, snapshot.monthlySnapshots),
+      normalizeCustomChartRange(current, chartSnapshots),
     );
-  }, [snapshot.monthlySnapshots]);
+  }, [chartSnapshots]);
   const asOf = formatLocalCalendarDate(now);
   const ppfSummary = calculatePpfPortfolioSummary({
     accounts: snapshot.ppfAccounts,
@@ -527,12 +554,12 @@ export function useProgress({
   );
   const latestSummary = monthlySummaries[0];
   const portfolioChartData = buildMonthlyProgressChartData(
-    snapshot.monthlySnapshots,
+    chartSnapshots,
     portfolioChartRange,
     portfolioChartCustomRange,
   );
   const assetChartData = buildMonthlyProgressChartData(
-    snapshot.monthlySnapshots,
+    chartSnapshots,
     assetChartRange,
     assetChartCustomRange,
   );
@@ -753,7 +780,7 @@ export function useProgress({
       snapshot,
       status,
       targetMonths,
-      warnings,
+      warnings: [...new Set(warnings)],
     };
   }
 
@@ -879,6 +906,7 @@ export function useProgress({
     monthlyInvestment: monthlyMetrics.invested,
     monthlySummaries,
     portfolioChartData,
+    ppfExcludedHistory,
     portfolioChartCustomRange,
     portfolioChartRange,
     portfolioValue,

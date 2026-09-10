@@ -320,7 +320,14 @@ Accepted chart direction:
   white and dashed
 - second graph: `Asset Momentum` - asset values vs months
 - cash is excluded from the asset-trend graph and tracked separately in Cash
-- charts must use stored monthly snapshots or a clear empty/no-snapshot state
+- charts normally use stored monthly snapshots. Exception (#324): when missing
+  historical PPF checkpoints block full snapshots, reconstruct a separate
+  market-and-cash series from dated records and existing price evidence. Exclude
+  all PPF consistently across every month, including linked legacy positions;
+  never splice full snapshots into this series or persist it as complete totals.
+  Label the scope beside the charts and selected values, disclose estimated
+  prices, and suppress comparative return percentages for this partial view.
+  Full snapshot review and Monthly History remain complete-snapshot-only.
 - chart y-axis labels and chart-native value labels must obey value masking
 - Y-axis labels and horizontal guides share the chart-native zero/half/maximum
   scale (two sections). Do not add a separately positioned label column.
@@ -380,8 +387,9 @@ Accepted chart direction:
 - automatic status explanations, warnings and optional correction stay reachable
   on demand; do not turn automatic snapshots into a required monthly form
 
-Do not fake production chart history. If snapshots are missing, show a premium
-empty state and a clear path to record a snapshot.
+Do not fake production chart history. If neither full snapshots nor explicitly
+scoped reconstructed history is available, show an honest empty state. Missing
+PPF history gets one actionable explanation, not a repeated warning per month.
 
 Monthly Progress must preserve Excel parity concepts:
 
