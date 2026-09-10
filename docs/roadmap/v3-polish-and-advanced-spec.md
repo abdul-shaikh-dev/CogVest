@@ -31,12 +31,17 @@ baseline remains unchanged; this is not an implemented encryption claim.
 Frame-attribution work #299 remains parked. Other owner
 deferrals remain recorded in their issues, not treated as completed work.
 
-Advanced search #23 is ready for review under the user-approved responsiveness
+Advanced search #23 merged through PR #314 under the user-approved responsiveness
 gate: updates within 500 ms, no crashes/ANRs, and no persistent input or scrolling
 freezes. Brief sampled delays up to 167.7 ms remain documented, not fixed. See
 [search verification](../reviews/2026-09-10-advanced-asset-search-followup.md).
 Validation used Pixel_10_Pro/API 36 debug/Metro; physical-phone and native-paint
-performance are not certified. Issue completion follows PR #314 merging.
+performance are not certified.
+
+Issue #26 separates disposable daily chart history from protected current prices
+and month-end evidence. Its [cache/offline contract](quote-cache-offline-policy.md)
+defines bounded storage, provenance, failure handling and the benchmark fixture.
+Per-asset historical charts and provider history adapters remain #22 work.
 
 ## Target User Value
 

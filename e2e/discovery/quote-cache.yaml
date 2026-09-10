@@ -1,0 +1,23 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in synthetic cache benchmark in its own MMKV namespace. No portfolio reset.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///quote-cache-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "quote-cache-qa-screen"
+    timeout: 30000
+- tapOn:
+    id: "quote-cache-qa-run"
+- extendedWaitUntil:
+    visible: "PASS"
+    timeout: 60000
+- assertVisible:
+    id: "quote-cache-qa-point-count"
+    text: "Synthetic point count: 36530"
+- takeScreenshot: ".expo/issue26-cache-benchmark"
