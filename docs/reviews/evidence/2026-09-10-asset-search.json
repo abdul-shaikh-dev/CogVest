@@ -1,0 +1,42 @@
+{
+  "date": "2026-09-10",
+  "environment": {
+    "avd": "Pixel_10_Pro",
+    "android": "16",
+    "api": 36,
+    "architecture": "x86_64",
+    "resolution": "1280x2856",
+    "density": 480,
+    "fontScale": 1,
+    "build": "fresh QA-signed debug APK with Metro and React Profiler"
+  },
+  "fixture": {
+    "savedAssets": 500,
+    "providerCandidates": 200
+  },
+  "searchToRenderMs": [
+    192.1,
+    131.3,
+    136.2,
+    85.8
+  ],
+  "eventLoopLagOver100ms": [
+    122.6,
+    107.6,
+    113.3,
+    116.5,
+    149.8,
+    131,
+    277.5,
+    102.1,
+    152.6,
+    100.7,
+    137.6,
+    105.1,
+    107.1,
+    184.1
+  ],
+  "maxReactCommitMs": 297.5,
+  "scope": "Last measurement reset through isolated selection/save/history-clear journey. Sampled event-loop lag is not exclusive JS execution attribution. Named Pixel 8 reference not tested.",
+  "verdict": "Functional journey passed; <=100ms no-stall gate NOT demonstrated."
+}

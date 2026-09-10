@@ -1,0 +1,109 @@
+{
+  "capturedAt": "2026-09-10T13:58:23.677Z",
+  "coverage": {
+    "eventLoopSampleMs": 50,
+    "eventLoopStallThresholdMs": 100,
+    "renderTargetMs": 500,
+    "routeWasFocused": true,
+    "profileRenders": false,
+    "window": "ended on capture; reset starts a new window"
+  },
+  "droppedMeasurements": 0,
+  "measurements": [
+    {
+      "detail": "interval lag above 100ms",
+      "kind": "event-loop-stall",
+      "milliseconds": 122.7425640001893
+    },
+    {
+      "detail": "interval lag above 100ms",
+      "kind": "event-loop-stall",
+      "milliseconds": 106.88826800137758
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 24.809313997626305
+    },
+    {
+      "kind": "search-to-render",
+      "detail": "fixture callback to complete visible provider page",
+      "milliseconds": 302.1255870014429
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 181.72240399941802
+    },
+    {
+      "detail": "interval lag above 100ms",
+      "kind": "event-loop-stall",
+      "milliseconds": 150.64643999934196
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 162.51324899867177
+    },
+    {
+      "detail": "interval lag above 100ms",
+      "kind": "event-loop-stall",
+      "milliseconds": 167.65819099918008
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 29.86097799986601
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 20.04220799729228
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 15.510844998061657
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 15.7066880017519
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 19.714452002197504
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 14.323178999125957
+    },
+    {
+      "kind": "query-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 18.152127999812365
+    },
+    {
+      "kind": "search-to-render",
+      "detail": "fixture callback to complete visible provider page",
+      "milliseconds": 303.9101679995656
+    },
+    {
+      "kind": "provider-page-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 389.6290600001812
+    },
+    {
+      "detail": "interval lag above 100ms",
+      "kind": "event-loop-stall",
+      "milliseconds": 148.9286749996245
+    },
+    {
+      "kind": "filter-to-render",
+      "detail": "input handler to complete visible result rows",
+      "milliseconds": 386.0311510004103
+    }
+  ]
+}

@@ -206,6 +206,13 @@ options and internal `stock` / `etf` records are unchanged.
 Add Holding is assisted capture, not a trading ticket. It is lookup-first and
 explicit-selection-first.
 
+V3 issue #23 extends this shared discovery flow with exact-match ranking,
+clearable local recent searches, exchange/type filters and 20-result pages
+(100 public-result cap). Saved assets stay first; manual entry remains separate
+and reachable above results. See `docs/testing/advanced-asset-search.md` for the
+behavior and verification contract. Optional provider logos are not required;
+retain the existing asset-class icons.
+
 Required flow:
 
 1. Search for an asset by familiar name or symbol.

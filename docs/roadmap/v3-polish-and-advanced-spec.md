@@ -31,6 +31,13 @@ baseline remains unchanged; this is not an implemented encryption claim.
 Frame-attribution work #299 remains parked. Other owner
 deferrals remain recorded in their issues, not treated as completed work.
 
+Advanced search #23 is ready for review under the user-approved responsiveness
+gate: updates within 500 ms, no crashes/ANRs, and no persistent input or scrolling
+freezes. Brief sampled delays up to 167.7 ms remain documented, not fixed. See
+[search verification](../reviews/2026-09-10-advanced-asset-search-followup.md).
+Validation used Pixel_10_Pro/API 36 debug/Metro; physical-phone and native-paint
+performance are not certified. Issue completion follows PR #314 merging.
+
 ## Target User Value
 
 The user can inspect historical performance, discover assets more easily, export local data, and rely on stronger tax/quote/release hardening.

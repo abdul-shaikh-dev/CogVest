@@ -9,6 +9,7 @@ import {
 import type { StoreApi } from "zustand/vanilla";
 
 import {
+  createCanonicalAssetMatcher,
   findCanonicalAsset,
   getDefaultAssetMetadata,
 } from "@/src/domain/assets";
@@ -42,8 +43,11 @@ import type {
   SectorType,
 } from "@/src/types";
 import { createId } from "@/src/utils";
+import type { JsonStorage } from "@/src/services/storage";
 
 import { validateOpeningPositionForm } from "./openingPositionForm";
+import { matchesDiscoveryFilter, searchSavedAssets, type DiscoveryFilter } from "./assetDiscovery";
+import { readRecentAssetSearches, saveRecentAssetSearch, clearRecentAssetSearches } from "./recentAssetSearches";
 
 export type AddHoldingPhase = "asset" | "class" | "position" | "review";
 export type FieldErrors = Partial<Record<string, string>>;
@@ -53,9 +57,11 @@ export type AddOpeningPositionControllerInput = {
   now?: Date;
   onComplete?: (assetId: string) => void;
   quickSetup?: boolean;
+  recentSearchStorage?: JsonStorage;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
+    signal?: AbortSignal;
   }) => Promise<AssetLookupSearchResult>;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -83,6 +89,7 @@ export function useAddOpeningPosition({
   now = new Date(),
   onComplete,
   quickSetup = false,
+  recentSearchStorage,
   resolveQuote = defaultResolveQuote,
   searchAssetLookupResults = defaultSearchAssetLookupResults,
   store = getPortfolioStore(),
@@ -121,7 +128,15 @@ export function useAddOpeningPosition({
     initialVisualQaState === "review" ? "review" : "asset",
   );
   const [lookupQuery, setLookupQuery] = useState("");
+  const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>("all");
+  const [visibleResultCount, setVisibleResultCount] = useState(20);
+  const [visibleSavedCount, setVisibleSavedCount] = useState(6);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try { return readRecentAssetSearches(recentSearchStorage); } catch { return []; }
+  });
+  const [recentSearchStatus, setRecentSearchStatus] = useState("");
   const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
+  const [lookupResultQuery, setLookupResultQuery] = useState("");
   const [selectedLookupResult, setSelectedLookupResult] =
     useState<AssetLookupResult | undefined>();
   const [selectedLookupQuote, setSelectedLookupQuote] =
@@ -195,21 +210,56 @@ export function useAddOpeningPosition({
     () => snapshot.assets.find((asset) => asset.id === selectedAssetId),
     [selectedAssetId, snapshot.assets],
   );
-  const matchingExistingAssets = useMemo(() => {
-    const normalizedQuery = lookupQuery.trim().toLowerCase();
+  const matchingExistingAssets = useMemo(() => searchSavedAssets(snapshot.assets, lookupQuery), [lookupQuery, snapshot.assets]);
+  const savedAssetMatcher = useMemo(() => createCanonicalAssetMatcher(snapshot.assets), [snapshot.assets]);
+  const filteredSavedAssets = useMemo(
+    () => matchingExistingAssets.filter((asset) => matchesDiscoveryFilter(asset, discoveryFilter)),
+    [discoveryFilter, matchingExistingAssets],
+  );
+  const filteredLookupResults = useMemo(
+    () =>
+      lookupResultQuery === lookupQuery.trim()
+        ? lookupResults
+            .slice(0, 100)
+            .filter(
+              (asset) =>
+                !savedAssetMatcher.find(asset) &&
+                matchesDiscoveryFilter(asset, discoveryFilter),
+            )
+        : [],
+    [discoveryFilter, lookupQuery, lookupResultQuery, lookupResults, savedAssetMatcher],
+  );
+  const visibleLookupResults = useMemo(
+    () => filteredLookupResults.slice(0, visibleResultCount),
+    [filteredLookupResults, visibleResultCount],
+  );
+  const visibleSavedAssets = useMemo(
+    () => filteredSavedAssets.slice(0, visibleSavedCount),
+    [filteredSavedAssets, visibleSavedCount],
+  );
+  useEffect(() => {
+    setVisibleResultCount(20);
+    setVisibleSavedCount(lookupQuery.trim() ? 20 : 6);
+  }, [lookupQuery, discoveryFilter]);
+  useEffect(() => { setLookupResults([]); }, [lookupQuery]);
 
-    return snapshot.assets
-      .filter((asset) => {
-        if (!normalizedQuery) {
-          return true;
-        }
+  function loadMoreLookupResults() {
+    setVisibleResultCount((count) => Math.min(count + 20, filteredLookupResults.length, 100));
+  }
 
-        return [asset.name, asset.symbol, asset.ticker].some((value) =>
-          value.toLowerCase().includes(normalizedQuery),
-        );
-      })
-      .slice(0, 6);
-  }, [lookupQuery, snapshot.assets]);
+  function rememberSearch() {
+    try { setRecentSearches(saveRecentAssetSearch(lookupQuery, recentSearchStorage)); } catch {
+      setRecentSearchStatus("Recent search could not be saved on this device.");
+    }
+  }
+
+  function clearSearchHistory() {
+    try {
+      clearRecentAssetSearches(recentSearchStorage);
+      setRecentSearches([]);
+      setRecentSearchStatus("");
+    } catch { setRecentSearchStatus("Could not clear recent searches. Try again."); }
+  }
 
   const previewHolding =
     reviewAsset && reviewOpeningPosition
@@ -434,25 +484,23 @@ export function useAddOpeningPosition({
     }
 
     let isCancelled = false;
+    const controller = new AbortController();
 
     setIsLookupSearching(true);
     setLookupStatus("Searching public asset directories...");
 
     const timeout = setTimeout(async () => {
       try {
-        const result = await searchAssetLookupResults({ query: trimmedQuery });
+        const result = await searchAssetLookupResults({ query: trimmedQuery, signal: controller.signal });
 
         if (isCancelled) {
           return;
         }
 
-        const providerResults = result.results.filter((lookupResult) => {
-          const candidate = buildLookupAsset(lookupResult);
-
-          return !findCanonicalAsset(snapshot.assets, candidate);
-        });
+        const providerResults = result.results.filter((lookupResult) => !savedAssetMatcher.find(lookupResult));
 
         setLookupResults(providerResults);
+        setLookupResultQuery(trimmedQuery);
         setLookupStatus(
           providerResults.length > 0
             ? "Select a result to autofill asset details."
@@ -467,6 +515,8 @@ export function useAddOpeningPosition({
           matchingExistingAssets.length === 0
         ) {
           setLookupStatus("Lookup unavailable. You can enter details manually.");
+        } else if (result.failures.length > 0) {
+          setLookupStatus("Some sources are unavailable. Showing available matches; manual entry is also available.");
         }
       } catch {
         if (!isCancelled) {
@@ -482,6 +532,7 @@ export function useAddOpeningPosition({
 
     return () => {
       isCancelled = true;
+      controller.abort();
       clearTimeout(timeout);
     };
   }, [
@@ -489,6 +540,7 @@ export function useAddOpeningPosition({
     matchingExistingAssets.length,
     searchAssetLookupResults,
     snapshot.assets,
+    savedAssetMatcher,
   ]);
 
   function changeSelectedAsset() {
@@ -517,6 +569,7 @@ export function useAddOpeningPosition({
   }
 
   function selectAsset(asset: Asset) {
+    rememberSearch();
     const currencyIssue = getV1AssetCurrencyIssue(asset);
 
     if (currencyIssue) {
@@ -598,6 +651,7 @@ export function useAddOpeningPosition({
   }
 
   async function selectLookupResult(result: AssetLookupResult) {
+    rememberSearch();
     const lookupAsset = buildLookupAsset(result);
     const currencyIssue = getV1AssetCurrencyIssue(lookupAsset);
 
@@ -638,7 +692,17 @@ export function useAddOpeningPosition({
     setErrors({});
     resetReview();
 
-    const quoteResult = await resolveQuote({ asset: lookupAsset });
+    let quoteResult: QuoteResult;
+    try {
+      quoteResult = await resolveQuote({ asset: lookupAsset });
+    } catch {
+      if (quoteRequestId === quoteRequestIdRef.current) {
+        setCurrentPrice("");
+        setSelectedLookupQuote(undefined);
+        setQuoteStatus("Live price unavailable. Enter current price manually.");
+      }
+      return;
+    }
 
     if (quoteRequestId !== quoteRequestIdRef.current) {
       return;
@@ -955,9 +1019,18 @@ export function useAddOpeningPosition({
     isSaving,
     isLookupSearching,
     lookupQuery,
-    lookupResults,
+    lookupResults: visibleLookupResults,
     lookupStatus,
-    matchingExistingAssets,
+    matchingExistingAssets: visibleSavedAssets,
+    discoveryFilter,
+    setDiscoveryFilter,
+    recentSearches,
+    recentSearchStatus,
+    clearSearchHistory,
+    hasMoreLookupResults: visibleResultCount < filteredLookupResults.length,
+    hasMoreSavedAssets: visibleSavedCount < filteredSavedAssets.length,
+    loadMoreLookupResults,
+    loadMoreSavedAssets: () => setVisibleSavedCount((count) => count + 20),
     metadataReviewMessage,
     moveToPhase,
     notes,

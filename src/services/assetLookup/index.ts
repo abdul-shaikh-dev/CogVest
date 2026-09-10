@@ -1,4 +1,7 @@
-import { getDefaultAssetMetadata } from "@/src/domain/assets";
+import {
+  createCanonicalAssetMatcher,
+  getDefaultAssetMetadata,
+} from "@/src/domain/assets";
 import type {
   AssetClass,
   AssetExchange,
@@ -37,6 +40,9 @@ export type AssetLookupSearchResult = {
   results: AssetLookupResult[];
 };
 
+export const assetLookupPageSize = 20;
+export const maxAssetLookupResults = 100;
+
 export type YahooSearchQuote = {
   exchange?: string;
   industry?: string;
@@ -66,7 +72,7 @@ type CoinGeckoSearchResponse = {
 export function buildYahooSearchUrl(query: string) {
   const params = new URLSearchParams({
     q: query,
-    quotesCount: "8",
+    quotesCount: String(maxAssetLookupResults),
     newsCount: "0",
   });
 
@@ -238,11 +244,16 @@ export function mapCoinGeckoCoinToLookupResult(
 async function searchYahoo({
   fetcher,
   query,
+  signal,
 }: {
   fetcher: QuoteFetcher;
   query: string;
+  signal?: AbortSignal;
 }) {
-  const response = await fetcher(buildYahooSearchUrl(query));
+  const response = await fetcher(
+    buildYahooSearchUrl(query),
+    signal ? { signal } : undefined,
+  );
 
   if (!response.ok) {
     throw new Error(`Yahoo lookup request failed with status ${response.status}.`);
@@ -257,50 +268,56 @@ async function searchYahoo({
 
 function resultRank(query: string, result: AssetLookupResult) {
   const normalizedQuery = normalizeMetadataLabel(query) ?? "";
+  const normalizedIdentityQuery = query.trim().toUpperCase();
   const normalizedSymbol = normalizeMetadataLabel(result.symbol) ?? "";
   const normalizedTicker = normalizeMetadataLabel(result.ticker) ?? "";
+  const normalizedQuoteSourceId = result.quoteSourceId.trim().toUpperCase();
   const normalizedName = normalizeMetadataLabel(result.name) ?? "";
 
   if (
-    normalizedQuery === normalizedSymbol ||
-    normalizedQuery === normalizedTicker
+    normalizedIdentityQuery === result.symbol.trim().toUpperCase() ||
+    normalizedIdentityQuery === result.ticker.trim().toUpperCase() ||
+    normalizedIdentityQuery === normalizedQuoteSourceId
   ) {
     return 0;
   }
 
   if (
     normalizedSymbol.startsWith(normalizedQuery) ||
-    normalizedTicker.startsWith(normalizedQuery)
+    normalizedTicker.startsWith(normalizedQuery) ||
+    normalizeMetadataLabel(result.quoteSourceId)?.startsWith(normalizedQuery)
   ) {
     return 1;
   }
 
-  if (normalizedName.startsWith(normalizedQuery)) {
-    return 2;
-  }
+  if (normalizedName === normalizedQuery) return 2;
 
-  if (normalizedName.includes(normalizedQuery)) {
+  if (normalizedName.startsWith(normalizedQuery)) {
     return 3;
   }
 
-  return 4;
+  if (normalizedName.includes(normalizedQuery)) {
+    return 4;
+  }
+
+  return 5;
 }
 
 export function prepareAssetLookupResults(
   query: string,
   results: AssetLookupResult[],
 ) {
-  const uniqueResults = new Map<string, AssetLookupResult>();
+  const uniqueResults: AssetLookupResult[] = [];
+  const matcher = createCanonicalAssetMatcher(uniqueResults);
 
   for (const result of results) {
-    const key = `${result.provider}:${result.quoteSourceId.toLowerCase()}`;
-
-    if (!uniqueResults.has(key)) {
-      uniqueResults.set(key, result);
+    if (!matcher.find(result)) {
+      uniqueResults.push(result);
+      matcher.add(result);
     }
   }
 
-  return [...uniqueResults.values()]
+  return uniqueResults
     .sort((left, right) => {
       const rankDifference = resultRank(query, left) - resultRank(query, right);
 
@@ -310,17 +327,32 @@ export function prepareAssetLookupResults(
 
       return left.name.localeCompare(right.name);
     })
-    .slice(0, 8);
+    .slice(0, maxAssetLookupResults);
+}
+
+export function getAssetLookupResultsPage(
+  results: AssetLookupResult[],
+  page: number = 0,
+) {
+  const normalizedPage = Number.isFinite(page) ? Math.max(0, Math.floor(page)) : 0;
+  const start = normalizedPage * assetLookupPageSize;
+
+  return results.slice(start, Math.min(start + assetLookupPageSize, maxAssetLookupResults));
 }
 
 async function searchCoinGecko({
   fetcher,
   query,
+  signal,
 }: {
   fetcher: QuoteFetcher;
   query: string;
+  signal?: AbortSignal;
 }) {
-  const response = await fetcher(buildCoinGeckoSearchUrl(query));
+  const response = await fetcher(
+    buildCoinGeckoSearchUrl(query),
+    signal ? { signal } : undefined,
+  );
 
   if (!response.ok) {
     throw new Error(
@@ -338,9 +370,11 @@ async function searchCoinGecko({
 export async function searchAssetLookupResults({
   fetcher = getDefaultFetcher(),
   query,
+  signal,
 }: {
   fetcher?: QuoteFetcher;
   query: string;
+  signal?: AbortSignal;
 }): Promise<AssetLookupSearchResult> {
   const trimmedQuery = query.trim();
 
@@ -349,8 +383,8 @@ export async function searchAssetLookupResults({
   }
 
   const settledResults = await Promise.allSettled([
-    searchYahoo({ fetcher, query: trimmedQuery }),
-    searchCoinGecko({ fetcher, query: trimmedQuery }),
+    searchYahoo({ fetcher, query: trimmedQuery, signal }),
+    searchCoinGecko({ fetcher, query: trimmedQuery, signal }),
   ]);
 
   const results: AssetLookupResult[] = [];
