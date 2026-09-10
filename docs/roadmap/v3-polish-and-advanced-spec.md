@@ -18,9 +18,12 @@ replacement-only restore from Settings; it does not add automatic backup or
 cloud recovery. Restore requires a supported intact backup saved separately
 before the original data is lost.
 
-Application-layer encryption #218 and frame-attribution work #299 remain parked;
-this reordering does not resume either issue. Explicit owner deferrals remain
-recorded in their issues rather than being treated as completed work.
+After #24 merged through PR #311, the owner explicitly resumed encryption
+evaluation #218. All existing installations contain disposable test data, so
+legacy plaintext migration is excluded. See the proposed
+[local encryption design](local-encryption-design.md); this is not an implemented
+encryption claim. Frame-attribution work #299 remains parked. Other owner
+deferrals remain recorded in their issues, not treated as completed work.
 
 ## Target User Value
 
