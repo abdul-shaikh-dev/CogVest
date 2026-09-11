@@ -74,9 +74,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   }
 
   const affectedWithoutCutover = controller.cutoverHoldings;
-  const unresolved = controller.groups.filter((group) => !group.selectedAsset);
+  const identityConflicts = controller.groups.filter((group) => group.identityConflict);
+  const unresolved = controller.groups.filter((group) => !group.selectedAsset && !group.identityConflict);
   const suggested = unresolved.filter((group) => group.suggestedAsset);
-  const matched = controller.groups.filter((group) => group.selectedAsset);
+  const matched = controller.groups.filter((group) => group.selectedAsset && !group.identityConflict);
   const groupedErrors = [...controller.plan.errors.reduce((groups, error) => {
     if (error.code === "unresolvedAsset" || error.code === "ambiguousAsset") return groups;
     const key = `${error.code}:${error.assetId ?? ""}:${error.message}`;
@@ -191,6 +192,12 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       {controller.groups.length > 0 ? <PremiumCard style={styles.card}>
         <SectionHeader title="Match your holdings" />
         <AppText color="secondary" testID="transaction-import-match-summary">{matched.length} matched • {unresolved.length} to confirm. Each choice applies to every transaction for that holding.</AppText>
+        {identityConflicts.length > 0 ? <>
+          <AppText testID="transaction-import-identity-conflicts" weight="bold">{identityConflicts.length} historical identities need corporate-action review</AppText>
+          <AppText color="secondary">Different ISINs point to the same current listing. Their quantities cannot safely be combined yet. Keep the original rows; do not delete transactions to bypass this check. Corporate-action import support is needed before these histories can be combined.</AppText>
+          {identityConflicts.map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />)}
+        </> : null}
+        <AppText color="secondary" testID="transaction-import-row-accounting">{controller.plan.summary.parsedRows} parsed rows • {controller.plan.summary.additions} proposed additions • {controller.plan.duplicates} duplicates • {controller.plan.conflicts} conflicting transactions • {controller.plan.summary.unplannedRows} need resolution. Nothing is saved until the whole batch is valid.</AppText>
         {controller.sourceId === "zerodhaTradebookEqV1" ? <AppText color="secondary" variant="caption">Add all your annual files before importing. Confirmed matches are kept as you add files.</AppText> : null}
         {unresolved.filter((group) => !group.suggestedAsset).map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />)}
         {(showAllSuggestions ? suggested : suggested.slice(0, 5)).map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />)}
@@ -227,7 +234,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         <AppText color="secondary" variant="caption">If unsure, keep existing opening balances and add only later activity instead. Do not confirm incomplete history.</AppText>
       </PremiumCard> : null}
 
-      {unresolved.length === 0 && !controller.isResolving && (controller.groups.length > 0 || controller.unsupportedEvents.length > 0 || controller.casReview) ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
+      {identityConflicts.length === 0 && unresolved.length === 0 && !controller.isResolving && (controller.groups.length > 0 || controller.unsupportedEvents.length > 0 || controller.casReview) ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
         <SectionHeader title="Review before importing" />
         <View style={styles.summaryGrid}>
           <Summary label="New transactions" testID="transaction-import-summary-additions" value={`${controller.plan.summary.additions}`} />
@@ -267,7 +274,7 @@ function HoldingMatch({ group, onSelect }: {
   const chosen = group.selectedAsset ?? group.suggestedAsset;
   return <View style={styles.holdingPreview} testID={`transaction-import-asset-${group.key}`}>
     <AppText weight="bold">{chosen?.name ?? group.title}</AppText>
-    {chosen ? <AppText color="secondary" variant="caption">{chosen.ticker} • {chosen.exchange} • {group.selectedAsset ? "Matched" : "Suggested match"}</AppText> : null}
+    {chosen ? <AppText color="secondary" variant="caption">{chosen.ticker} • {chosen.exchange} • {group.identityConflict ? "Historical identity unresolved" : group.selectedAsset ? "Matched" : "Suggested match"}</AppText> : null}
     <AppText color="secondary" variant="caption">{group.rowNumbers.length} {group.rowNumbers.length === 1 ? "transaction" : "transactions"}{chosen ? ` • ${group.title}` : ""}</AppText>
     {chosen && group.candidates.length > 0 ? <AppButton onPress={() => setChanging(!changing)} testID={`transaction-import-change-${group.key}`} title={changing ? "Keep this match" : "Change match"} variant="secondary" /> : null}
     {!chosen && group.candidates.length === 0 ? <AppText color="secondary">No matching listing was found. This holding needs a verified asset match before its history can be imported.</AppText> : null}

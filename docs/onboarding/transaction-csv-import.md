@@ -90,6 +90,15 @@ silently discard them.
 9. Confirm only when the review is correct. The batch is atomic; a validation,
    reconciliation, or persistence failure imports nothing.
 
+Different historical ISINs sharing a provider ID, quote listing or saved canonical
+asset are not interchangeable units. Import preflight flags these groups before
+batch acceptance and does not describe them as matched. All parsed rows remain
+accounted for as proposed additions, duplicates, conflicting transactions or rows
+needing resolution; proposed additions are not a partially committed batch.
+Keep original rows unchanged. Corporate-action support (#333-#335) is required
+before affected histories can safely be combined; this guard does not implement
+splits, bonuses or demergers. Same-ISIN continuity remains supported.
+
 Matched holdings and resulting balances are expandable, not repeated expanded
 lists. Only five exact suggestions are initially shown, with access to the full
 list before accepting the batch. A missing match is explained once per holding,

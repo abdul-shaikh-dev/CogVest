@@ -308,7 +308,10 @@ arbitrary PDFs, tax-lot files, or inferred corporate actions. See
 Tradebook review groups transactions by holding and preserves confirmed matches
 while annual files are added/reordered. Exact symbol/exchange/currency matches
 can be explicitly accepted as a batch; ambiguous identities still require a
-choice. Supported NSE BE and BSE B equity executions must not be dropped from
+choice. Different historical ISINs sharing a quote/canonical listing require
+corporate-action review before acceptance; quote identity is not proof of equal
+historical units. Review accounts for all parsed rows, including unresolved rows.
+Supported NSE BE and BSE B equity executions must not be dropped from
 cost/quantity history. Unknown series and missing corporate actions remain
 blocked or explicitly surfaced, never inferred.
 
