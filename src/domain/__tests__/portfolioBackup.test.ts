@@ -10,6 +10,7 @@ import {
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { seedVisualQaPortfolio } from "@/src/testing/visualQaSeed";
+import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
 
 const digest = async (text: string) => {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -53,7 +54,7 @@ function payload(): BackupPayload {
       ppfAccounts: [{ balanceAsOf: "2026-01-01", confirmedBalance: 0, createdAt: "2026-01-01T10:00:00.000Z", id: "ppf-account", legacyAssetId: "asset-ppf", nickname: "Primary", opening: { kind: "financialYear" as const, financialYearStart: 2025 }, provider: "India Post", status: "active" as const }],
       ppfLedgerEntries: [{ accountId: "ppf-account", amount: 500, date: "2026-01-02", id: "ppf-contribution", recordedAt: "2026-01-02T10:00:00.000Z", type: "contribution" as const }],
       preferences: { defaultChartRange: "ALL", displayMode: "standard", hasCompletedOnboarding: true, maskWealthValues: false },
-      schemaVersion: 10,
+      schemaVersion: 11,
       trades: [
         { assetId: "asset-stock", date: "2026-01-02", fees: 2, id: "trade-buy", importProvenance: { fingerprint: "synthetic-fingerprint", importBatchId: "batch-cas", originalRowNumber: 1, sourceFormat: "cams-kfin-cas", sourceVersion: "1" }, pricePerUnit: 100, quantity: 2, totalValue: 202, type: "buy" as const },
         { assetId: "asset-stock", date: "2026-01-03", fees: 2, id: "trade-sell", pricePerUnit: 120, quantity: 1, totalValue: 118, type: "sell" as const },
@@ -70,7 +71,69 @@ async function backup() {
   return createPortfolioBackup(payload(), { appVersion: "1.0.1", createdAt: "2026-09-10T10:00:00.000Z" }, digest);
 }
 
+function bonusPayload(): BackupPayload {
+  const value = payload();
+  const event = bonusShareCatalog[0];
+  if (!event || event.kind !== "bonus" || !event.creditedDate) throw new Error("A reviewed bonus fixture with a credit date is required.");
+  value.portfolio.assets.push({
+    assetClass: "stock", currency: "INR", exchange: "NSE", id: "asset-bonus",
+    name: "Berger Paints", symbol: "BERGEPAINT", ticker: "BERGEPAINT.NS",
+    isin: event.newIsin, stockSplits: [{ ...event, evidence: { ...event.evidence } }],
+  });
+  value.portfolio.trades.push(
+    { assetId: "asset-bonus", id: "before-bonus", date: "2023-09-01", type: "buy", quantity: event.oldShares, pricePerUnit: 100, totalValue: event.oldShares * 100 },
+    { assetId: "asset-bonus", id: "after-bonus", date: event.creditedDate, type: "sell", quantity: event.oldShares + event.newShares, pricePerUnit: 100, totalValue: (event.oldShares + event.newShares) * 100 },
+  );
+  return value;
+}
+
 describe("portable portfolio backup", () => {
+  it("round trips catalog bonus credits in schema11 with additional-share inventory semantics", async () => {
+    const original = bonusPayload();
+    const text = await createPortfolioBackup(original, { appVersion: "1", createdAt: "2026-09-11T10:00:00.000Z" }, digest);
+    expect(JSON.parse(text).payload.portfolio.schemaVersion).toBe(11);
+    expect((await parsePortfolioBackup(text, digest)).payload).toEqual(original);
+  });
+
+  it.each(["ratio", "identity", "evidence", "duplicate", "fractional", "pre-credit sale"])("rejects bonus backup with %s corruption", (scenario) => {
+    const value = bonusPayload();
+    const event = value.portfolio.assets.at(-1)!.stockSplits![0];
+    if (scenario === "ratio") event.newShares += 1;
+    if (scenario === "identity") event.oldIsin = "INE040A01034";
+    if (scenario === "evidence") event.evidence.url = "https://example.com/unverified.pdf";
+    if (scenario === "duplicate") value.portfolio.assets.at(-1)!.stockSplits!.push({ ...event });
+    if (scenario === "pre-credit sale") value.portfolio.trades.at(-1)!.date = event.effectiveDate;
+    if (scenario === "fractional") {
+      const buy = value.portfolio.trades.at(-2)!;
+      if (buy.type !== "buy") throw new Error("Bonus fixture purchase is missing.");
+      buy.quantity = 1;
+      buy.totalValue = 100;
+    }
+    expect(() => validateBackupPayload(value)).toThrow();
+  });
+
+  it.each([9, 10])("upgrades a genuinely signed V%s backup to V11 without changing records", async (schemaVersion) => {
+    const source = JSON.parse(await backup());
+    delete source.checksum;
+    source.payload.portfolio.schemaVersion = schemaVersion;
+    function canonical(value: unknown): string {
+      if (value === null || typeof value !== "object") return JSON.stringify(value);
+      if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+      const record = value as Record<string, unknown>;
+      return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(",")}}`;
+    }
+    const signed = { ...source, checksum: await digest(canonical(source)) };
+    expect((await parsePortfolioBackup(JSON.stringify(signed), digest)).payload).toEqual(payload());
+    expect(validateBackupPayload(source.payload).portfolio.schemaVersion).toBe(11);
+    signed.payload.portfolio.preferences.maskWealthValues = true;
+    await expect(parsePortfolioBackup(JSON.stringify(signed), digest)).rejects.toThrow("checksum");
+  });
+
+  it.each([8, 12])("rejects unsupported portfolio schema %s", (schemaVersion) => {
+    const current = payload();
+    expect(() => validateBackupPayload({ ...current, portfolio: { ...current.portfolio, schemaVersion } })).toThrow("supported snapshot");
+  });
+
   it("captures and round trips the visual QA seed before file selection", async () => {
     const store = createPortfolioStore({
       now: () => new Date("2026-09-10T10:00:00.000Z"),

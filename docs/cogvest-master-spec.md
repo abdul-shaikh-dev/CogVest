@@ -344,6 +344,11 @@ unknown events and combined split/bonus chains remain unsupported. Historical
 prices with unresolved adjustment units stay unavailable. See the scope and
 remaining gates in [the stock-split contract](onboarding/stock-split-contract.md).
 
+Berger Paints' verified 2023 bonus is also represented as a distinct non-purchase
+event with unchanged tracking cost. Its bounded coverage and delayed-credit
+guard are documented in [the bonus-share contract](onboarding/bonus-share-contract.md).
+This is not support for arbitrary zero-priced rows or combined split/bonus chains.
+
 The import has two explicit modes:
 
 - **Supplemental:** keep the existing opening position and add only rows after

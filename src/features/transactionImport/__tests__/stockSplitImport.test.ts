@@ -85,7 +85,7 @@ describe("verified split import", () => {
   it("accepts a schema-9 backup without events and upgrades its version", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
     const backup = store.getState().captureBackup().payload;
-    expect(validateBackupPayload({ ...backup, portfolio: { ...backup.portfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(10);
+    expect(validateBackupPayload({ ...backup, portfolio: { ...backup.portfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(11);
   });
 
   it("revisits old automatic snapshots when attaching a split but preserves manual snapshots", () => {

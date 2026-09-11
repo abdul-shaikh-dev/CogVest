@@ -103,6 +103,13 @@ unproven chains remain blocked, including Easy Trip's combined split/bonus
 history. Same-ISIN continuity remains supported. See the
 [stock-split contract](stock-split-contract.md) for bounded coverage and evidence.
 
+The reviewed bonus catalog additionally supports Berger Paints' 2023 one-for-five
+bonus as a separate non-purchase event. The original execution CSV is unchanged;
+the adjustment appears before final confirmation. This does not accept arbitrary
+zero-priced buys or unknown corporate-action rows. See the
+[bonus-share contract](bonus-share-contract.md) for eligibility, credit dates,
+fractional-entitlement limits and remaining coverage.
+
 Matched holdings and resulting balances are expandable, not repeated expanded
 lists. Only five exact suggestions are initially shown, with access to the full
 list before accepting the batch. A missing match is explained once per holding,

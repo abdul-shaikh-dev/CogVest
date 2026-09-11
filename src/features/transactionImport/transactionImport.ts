@@ -605,8 +605,8 @@ export function buildTransactionImportPlan({
     if (reconciliation.unresolvedTransactionIds.length > 0) {
       errors.push({
         assetId,
-        code: "unresolvedTransfer",
-        message: "A transfer in is missing acquisition cost, so average cost cannot be verified.",
+        code: reconciliation.adjustmentError ? "reconciliationMismatch" : "unresolvedTransfer",
+        message: reconciliation.adjustmentError ?? "A transfer in is missing acquisition cost, so average cost cannot be verified.",
       });
     }
     if (reconciliation.oversoldTransactionIds.length > 0) {

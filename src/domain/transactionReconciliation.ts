@@ -20,6 +20,7 @@ export type TransactionReconciliation = {
   oversoldTransactionIds: string[];
   quantity: number;
   unresolvedTransactionIds: string[];
+  adjustmentError?: string;
 };
 
 export function reconcileTransactions({
@@ -47,14 +48,23 @@ export function reconcileTransactions({
     return { averageCostPrice: openingPosition.averageCostPrice, quantity: openingPosition.quantity,
       isExact: false, oversoldTransactionIds, unresolvedTransactionIds: ["opening-measurement-date"] };
   }
-  const events = positionEvents({ trades: transactions, through,
-    stockSplits: stockSplits.filter((event) => !openingMeasuredAsOf || event.effectiveDate > openingMeasuredAsOf) });
+  let events: ReturnType<typeof positionEvents>;
+  try {
+    events = positionEvents({ trades: transactions, through,
+      stockSplits: stockSplits.filter((event) => !openingMeasuredAsOf || event.effectiveDate > openingMeasuredAsOf) });
+  } catch (error) {
+    if (!(error instanceof StockSplitError)) throw error;
+    return { averageCostPrice: openingPosition?.averageCostPrice ?? 0, quantity: quantity.toNumber(),
+      isExact: false, oversoldTransactionIds, unresolvedTransactionIds: [error.eventId], adjustmentError: error.message };
+  }
+  let adjustmentError: string | undefined;
   for (const event of events) {
     if (event.type === "split") {
       try { quantity = splitQuantity(quantity, event.split); }
       catch (error) {
         if (!(error instanceof StockSplitError)) throw error;
         unresolvedTransactionIds.push(event.split.id);
+        adjustmentError = error.message;
       }
       continue;
     }
@@ -106,6 +116,7 @@ export function reconcileTransactions({
     oversoldTransactionIds,
     quantity: normalizeQuantity(quantity),
     unresolvedTransactionIds,
+    ...(adjustmentError ? { adjustmentError } : {}),
   };
 }
 

@@ -109,7 +109,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 10;
+export const portfolioSchemaVersion = 11;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -1435,7 +1435,7 @@ function assetQuantityEvents(
     (item) => item.assetId === assetId,
   );
   const events: QuantityEvent[] = [
-    ...positionEvents({ openingPositions: assetOpenings, trades: [], stockSplits })
+    ...positionEvents({ openingPositions: assetOpenings, trades: trades.filter((trade) => trade.assetId === assetId), stockSplits })
       .flatMap((event) => event.type === "split"
         ? [{ date: event.date, delta: 0, id: event.split.id, priority: -1, split: event.split }] : []),
     ...assetOpenings
