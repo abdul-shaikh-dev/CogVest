@@ -337,6 +337,11 @@ only after explicit dry-run review. CogVest never guesses an equivalent supporte
 from the quote service or an explicit manual valuation are used for current
 value; transaction CSV data never overwrites current prices.
 
+Planned in #333, not yet implemented: verified stock-split events apply
+automatically with a change summary, without per-event confirmation. Ambiguous
+events remain unresolved. The researched scope, evidence rules and integration
+plan are in [the stock-split contract](onboarding/stock-split-contract.md).
+
 The import has two explicit modes:
 
 - **Supplemental:** keep the existing opening position and add only rows after
