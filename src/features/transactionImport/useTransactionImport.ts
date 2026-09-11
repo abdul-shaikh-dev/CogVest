@@ -32,6 +32,7 @@ import {
   type TransactionCsvResolution,
   type TransactionImportMode,
 } from "./transactionImport";
+import { compatibleTransactionCandidate, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
 
 export { transactionCsvMaxBytes };
 
@@ -69,6 +70,7 @@ type ResolutionGroup = {
   key: string;
   rowNumbers: number[];
   selectedAsset?: Asset;
+  suggestedAsset?: Asset;
   title: string;
 };
 
@@ -103,16 +105,13 @@ function assetFromLookupResult(result: {
 }
 
 function identityKey(resolution: TransactionCsvResolution) {
-  const { identity } = resolution.row;
-  return identity.kind === "isin"
-    ? `isin:${normalized(identity.value)}`
-    : `symbol:${normalized(identity.exchange)}:${normalized(identity.symbol)}`;
+  return transactionAssetKey(resolution.row);
 }
 
 function titleForResolution(resolution: TransactionCsvResolution) {
   const { identity } = resolution.row;
   return identity.kind === "isin"
-    ? `ISIN ${identity.value}`
+    ? `${resolution.row.symbol ? `${resolution.row.symbol} • ` : ""}ISIN ${identity.value}`
     : `${identity.symbol} • ${identity.exchange}`;
 }
 
@@ -164,6 +163,10 @@ function groupResolutions(resolutions: TransactionCsvResolution[]) {
         resolution.asset,
     );
     if (selected?.asset) group.selectedAsset = selected.asset;
+    group.suggestedAsset = exactTradebookSuggestion(
+      resolutions.filter((resolution) => identityKey(resolution) === group.key).map((resolution) => resolution.row),
+      group.candidates,
+    );
   }
   return [...groups.values()];
 }
@@ -205,7 +208,10 @@ export function useTransactionImport({
   const batchIdRef = useRef(createId("transactions-csv"));
   const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const analysisIdRef = useRef(0);
+  const selectedAssetsRef = useRef(new Map<string, Asset>());
+  const lookupCacheRef = useRef(new Map<string, Asset[]>());
   const [files, setFiles] = useState<SelectedTransactionImportFile[]>([]);
+  const [fileSummaries, setFileSummaries] = useState<Record<string, string>>({});
   const [casPassword, setCasPassword] = useState("");
   const [casReview, setCasReview] = useState<CasStatementImportReview>();
   const [casReviewErrors, setCasReviewErrors] = useState<string[]>([]);
@@ -256,6 +262,8 @@ export function useTransactionImport({
       4,
       async (seeds) => {
         const first = seeds[0];
+        const cacheKey = JSON.stringify([identityKey(first), ...new Set(seeds.map((seed) => `${seed.row.exchange}:${seed.row.symbol}:${seed.row.currency}`))].sort());
+        const cachedCandidates = lookupCacheRef.current.get(cacheKey)?.filter((asset) => seeds.every((seed) => compatibleTransactionCandidate(asset, seed.row)));
         const existing = findExistingAsset(first.row, snapshot.assets);
         if (existing) {
           return seeds.map((seed) => ({
@@ -264,11 +272,28 @@ export function useTransactionImport({
             status: "ready" as const,
           }));
         }
+        const selected = selectedAssetsRef.current.get(identityKey(first));
+        if (selected && seeds.every((seed) => compatibleTransactionCandidate(selected, seed.row))) {
+          return seeds.map((seed) => ({ ...seed, asset: selected, candidates: cachedCandidates, status: "ready" as const }));
+        }
+        if (cachedCandidates?.length) return seeds.map((seed) => ({ ...seed, candidates: cachedCandidates, status: "selectionRequired" as const }));
         try {
-          const lookup = await searchAssetLookupResults({
+          let lookup = await searchAssetLookupResults({
             query: lookupQuery(first.row),
           });
-          const candidates = lookup.results.map(assetFromLookupResult);
+          if (first.row.source?.format === "zerodha-tradebook" &&
+              !exactTradebookSuggestion(seeds.map((seed) => seed.row), lookup.results)) {
+            const symbols = [...new Set(seeds.map((seed) => seed.row.symbol).filter((symbol): symbol is string => Boolean(symbol)))];
+            for (const symbol of symbols) {
+              if (analysisId !== analysisIdRef.current) return seeds;
+              const bySymbol = await searchAssetLookupResults({ query: symbol });
+              lookup = { failures: [...lookup.failures, ...bySymbol.failures], results: [...lookup.results, ...bySymbol.results] };
+            }
+          }
+          const candidates = [...new Map(lookup.results.map(assetFromLookupResult)
+            .filter((asset) => seeds.every((seed) => compatibleTransactionCandidate(asset, seed.row)))
+            .map((asset) => [asset.id, asset])).values()];
+          if (candidates.length > 0 && analysisId === analysisIdRef.current) lookupCacheRef.current.set(cacheKey, candidates);
           const status =
             candidates.length > 0
               ? ("selectionRequired" as const)
@@ -298,6 +323,7 @@ export function useTransactionImport({
     const analysisId = ++analysisIdRef.current;
     setScreenError(undefined);
     clearAnalysis();
+    setFileSummaries({});
     batchIdRef.current = createId("transactions-csv");
     if (nextFiles.length === 0) {
       setIsResolving(false);
@@ -328,6 +354,10 @@ export function useTransactionImport({
           sourceId: nextSourceId,
           text: file.text,
         });
+        const dates = parsed.rows.map((row) => row.tradeDate.slice(0, 10)).sort();
+        if (dates.length > 0) setFileSummaries((current) => ({ ...current,
+          [file.id]: `${dates[0]} to ${dates[dates.length - 1]} • ${parsed.rows.length} transactions`,
+        }));
         return {
           errors: parsed.errors.map((error) => ({
             ...error,
@@ -471,6 +501,8 @@ export function useTransactionImport({
     if (nextSourceId === sourceId) return;
     analysisIdRef.current += 1;
     setSourceIdState(nextSourceId);
+    selectedAssetsRef.current.clear();
+    lookupCacheRef.current.clear();
     setExternalActivityConfirmed(false);
     setFiles([]);
     setCasPassword("");
@@ -481,6 +513,7 @@ export function useTransactionImport({
   }
 
   function selectCandidate(key: string, asset: Asset) {
+    selectedAssetsRef.current.set(key, asset);
     setResolutions((current) =>
       current.map((resolution) =>
         identityKey(resolution) === key
@@ -488,6 +521,21 @@ export function useTransactionImport({
           : resolution,
       ),
     );
+  }
+
+  const groups = groupResolutions(resolutions);
+  function acceptSuggestedMatches() {
+    const accepted = new Map<string, Asset>();
+    for (const group of groups) {
+      if (!group.selectedAsset && group.suggestedAsset) {
+        accepted.set(group.key, group.suggestedAsset);
+        selectedAssetsRef.current.set(group.key, group.suggestedAsset);
+      }
+    }
+    setResolutions((current) => current.map((resolution) => {
+      const asset = accepted.get(identityKey(resolution));
+      return asset ? { ...resolution, asset, status: "ready" } : resolution;
+    }));
   }
 
   const currentDate = now();
@@ -536,7 +584,7 @@ export function useTransactionImport({
       setScreenError("The portfolio was restored. Reopen import to review this file again.");
       return;
     }
-    if (!plan.command || isSaving) return;
+    if (!plan.command || isSaving || isResolving || parseErrors.length > 0 || casReviewErrors.length > 0) return;
     setIsSaving(true);
     setScreenError(undefined);
     try {
@@ -557,6 +605,7 @@ export function useTransactionImport({
 
   return {
     confirmImport,
+    acceptSuggestedMatches,
     casPassword,
     casReview,
     casReviewErrors,
@@ -565,7 +614,8 @@ export function useTransactionImport({
     cutoverByOpeningPositionId,
     externalActivityConfirmed,
     files,
-    groups: groupResolutions(resolutions),
+    fileSummaries,
+    groups,
     isResolving,
     isSaving,
     maxFiles: transactionImportMaxFiles,

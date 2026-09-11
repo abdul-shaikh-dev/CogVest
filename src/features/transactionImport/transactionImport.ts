@@ -587,7 +587,7 @@ export function buildTransactionImportPlan({
       errors.push({
         assetId,
         code: "wouldOversell",
-        message: "The transaction sequence disposes of more units than are available.",
+        message: `Some sales of ${asset.name} have no earlier purchase balance in this batch. Add earlier annual files or the missing acquisition records; do not invent a purchase to make the balance fit.`,
       });
     }
     if (baseline && baseline.measuredAsOf !== cutover) {
