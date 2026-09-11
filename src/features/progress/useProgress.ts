@@ -32,7 +32,7 @@ import {
   getOpeningPositionHistoryDate,
   isTransactionAfterOpeningCutover,
 } from "@/src/domain/openingPositions";
-import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
+import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   calculatePpfPortfolioSummary,
@@ -363,7 +363,7 @@ function isOnOrBefore(isoDate: string, maxDate: Date) {
   return new Date(isoDate).getTime() <= maxDate.getTime();
 }
 
-function needsHistoricalPrice({
+export function needsHistoricalPrice({
   assetId,
   state,
   targetMonth,
@@ -389,29 +389,22 @@ function needsHistoricalPrice({
       position.assetId === assetId &&
       isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd),
   );
-  const openingQuantity = state.openingPositions.reduce(
-    (quantity, position) =>
-      position.assetId === assetId &&
-      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd)
-        ? quantity.plus(position.quantity)
-        : quantity,
-    decimal(0),
+  const trades = state.trades.filter((trade) =>
+    trade.assetId === assetId &&
+    isOnOrBefore(trade.date, monthEnd) &&
+    isTransactionAfterOpeningCutover(trade.date, effectiveOpenings),
   );
-  const tradedQuantity = state.trades.reduce((quantity, trade) => {
-    if (
-      trade.assetId !== assetId ||
-      !isOnOrBefore(trade.date, monthEnd) ||
-      !isTransactionAfterOpeningCutover(trade.date, effectiveOpenings)
-    ) {
-      return quantity;
-    }
-
-    return quantity.plus(getTradeQuantityDelta(trade));
-  }, decimal(0));
-
-  return openingQuantity
-    .plus(tradedQuantity)
-    .greaterThanOrEqualTo(quantityQuantum);
+  try {
+    return positionQuantity({
+      openingPositions: effectiveOpenings,
+      trades,
+      stockSplits: state.assets.find((asset) => asset.id === assetId)?.stockSplits,
+      through: monthEnd.toISOString().slice(0, 10),
+    }).greaterThanOrEqualTo(quantityQuantum);
+  } catch (error) {
+    if (!(error instanceof StockSplitError)) throw error;
+    return false;
+  }
 }
 
 export function useProgress({

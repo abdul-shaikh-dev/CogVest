@@ -8,7 +8,10 @@ import type {
   OpeningPosition,
   QuoteCache,
   Trade,
+  StockSplitEvent,
 } from "@/src/types";
+import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { isV1CompatibleQuote, isV1SupportedAsset } from "@/src/domain/portfolioCurrency";
 import { getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
 import {
@@ -44,6 +47,7 @@ type CalculateHoldingInput = {
   openingPositions?: OpeningPosition[];
   trades: Trade[];
   valuation?: HoldingValuation;
+  through?: string;
 };
 
 type CalculateHoldingsInput = {
@@ -151,7 +155,9 @@ function sortTradesByDate(trades: Trade[]) {
 export function calculatePositionAccounting({
   openingPositions = [],
   trades,
-}: Pick<CalculateHoldingInput, "openingPositions" | "trades">) {
+  stockSplits = [],
+  through,
+}: Pick<CalculateHoldingInput, "openingPositions" | "trades" | "through"> & { stockSplits?: StockSplitEvent[] }) {
   let averageCostPrice = decimal(0);
   let totalUnits = decimal(0);
   const saleGains: Record<string, number | null> = {};
@@ -159,32 +165,19 @@ export function calculatePositionAccounting({
     (position) => getOpeningPositionHistoryDate(position) === null,
   ) && !trades.some((trade) => getCalendarDatePart(trade.date) === null);
   let basisKnown = chronologyKnown;
-  const costBasisEvents = [
-    ...openingPositions.map((position) => ({
-      date: getOpeningPositionHistoryDate(position) ?? "",
-      pricePerUnit: position.averageCostPrice,
-      quantity: position.quantity,
-      type: "opening" as const,
-    })),
-    ...sortTradesByDate(
-      trades.filter((trade) =>
-        isTransactionAfterOpeningCutover(trade.date, openingPositions),
-      ),
-    ).map((trade) => ({
-      date: trade.date,
-      trade,
-      type: "trade" as const,
-    })),
-  ].sort(
-    (left, right) =>
-      new Date(left.date).getTime() - new Date(right.date).getTime(),
-  );
+  const costBasisEvents = positionEvents({ openingPositions, trades, stockSplits, through });
 
   for (const event of costBasisEvents) {
+    if (event.type === "split") {
+      const cost = totalUnits.times(averageCostPrice);
+      totalUnits = splitQuantity(totalUnits, event.split);
+      averageCostPrice = totalUnits.isZero() ? decimal(0) : cost.dividedBy(totalUnits);
+      continue;
+    }
     if (event.type === "opening") {
       const existingCost = totalUnits.times(averageCostPrice);
-      const buyCost = decimal(event.pricePerUnit).times(event.quantity);
-      const nextUnits = totalUnits.plus(event.quantity);
+      const buyCost = decimal(event.position.averageCostPrice).times(event.position.quantity);
+      const nextUnits = totalUnits.plus(event.position.quantity);
 
       averageCostPrice = nextUnits.greaterThan(0)
         ? existingCost.plus(buyCost).dividedBy(nextUnits)
@@ -255,6 +248,8 @@ export function calculateRecordedSaleGains({
   for (const asset of assets) {
     if (!isV1SupportedAsset(asset)) continue;
     Object.assign(gains, calculatePositionAccounting({
+      stockSplits: asset.stockSplits,
+      through: formatLocalCalendarDate(now),
       openingPositions: openingPositions.filter((position) =>
         position.assetId === asset.id &&
         (getOpeningPositionHistoryDate(position) === null || isOpeningPositionEffective(position, now))),
@@ -272,10 +267,13 @@ export function calculateHolding({
   openingPositions = [],
   trades,
   valuation,
+  through,
 }: CalculateHoldingInput): Holding {
   const { averageCostPrice, totalUnits } = calculatePositionAccounting({
     openingPositions,
     trades,
+    stockSplits: asset.stockSplits,
+    through,
   });
 
   const totalInvested = totalUnits.times(averageCostPrice);
@@ -411,6 +409,7 @@ export function calculateHoldings({
               }
             : { status: "pending" };
       const holding = calculateHolding({
+        through: formatLocalCalendarDate(now),
         asset,
         currentPrice,
         openingPositions: assetOpeningPositions,

@@ -1,4 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
+import { assertCatalogSplits, assertSplitSourceIdentities, splitCanonicalIsin, withVerifiedStockSplits } from "@/src/domain/stockSplitCatalog";
 import { validateBackupPayload, type BackupPayload } from "@/src/domain/portfolioBackup";
 import { backupRestoreJournalKey, casFolioSaltStorageKey, quickSetupStorageKey } from "@/src/services/storage/backupKeys";
 import { BackupRecoveryRequiredError, captureBackupStorage, commitBackupRestore, recoverBackupRestore } from "./backupPersistence";
@@ -107,7 +109,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 9;
+export const portfolioSchemaVersion = 10;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -560,6 +562,7 @@ function migratePortfolioSnapshot(
   const stored = parsedSnapshot as StoredPortfolioSnapshot &
     PersistedPortfolioSnapshot;
   const assets = (stored.assets ?? []).map(normalizeAssetMetadata);
+  validateSplitInventory({ assets, openingPositions: stored.openingPositions ?? [], trades: stored.trades ?? [] });
 
   return {
     assets,
@@ -702,6 +705,7 @@ function persistPortfolio(
   storage: JsonStorage,
   state: PortfolioStoreState,
 ) {
+  validateSplitInventory(state);
   storage.setItem(portfolioStorageKey, selectRawSnapshot(state) as JsonValue);
 }
 
@@ -710,6 +714,7 @@ function persistPortfolioTransition(
   state: PortfolioStoreState,
   transition: Partial<RawPortfolioSnapshot>,
 ) {
+  validateSplitInventory({ ...state, ...transition });
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
     ...transition,
@@ -1076,6 +1081,7 @@ const validAssetClasses: Asset["assetClass"][] = [
 const validExchanges = ["BSE", "CRYPTO", "NSE"];
 
 function hasValidAssetIdentity(asset: Asset) {
+  try { assertCatalogSplits(asset); } catch { return false; }
 
   return (
     asset.id.trim().length > 0 &&
@@ -1224,6 +1230,7 @@ function persistAssetGraphTransition({
   quoteCache: QuoteCache;
   storage: JsonStorage;
 }) {
+  validateSplitInventory(portfolio);
   const previous = {
     historical: storage.getRawItem(historicalQuoteCacheStorageKey),
     portfolio: storage.getRawItem(portfolioStorageKey),
@@ -1399,6 +1406,7 @@ function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
 }
 
 type QuantityEvent = {
+  split?: import("@/src/types").StockSplitEvent;
   date: string;
   delta: number;
   id: string;
@@ -1407,15 +1415,29 @@ type QuantityEvent = {
   priority: number;
 };
 
+function validateSplitInventory(portfolio: Pick<RawPortfolioSnapshot, "assets" | "openingPositions" | "trades">) {
+  for (const asset of portfolio.assets) {
+    assertCatalogSplits(asset);
+    assertSplitSourceIdentities(asset, portfolio.trades);
+    if (asset.stockSplits?.length && wouldOversellAsset(asset.id, portfolio.openingPositions, portfolio.trades, asset.stockSplits)) {
+      throw new Error("Stock-split inventory does not reconcile.");
+    }
+  }
+}
+
 function assetQuantityEvents(
   assetId: string,
   openingPositions: OpeningPosition[],
   trades: Trade[],
+  stockSplits: import("@/src/types").StockSplitEvent[] = [],
 ) {
   const assetOpenings = openingPositions.filter(
     (item) => item.assetId === assetId,
   );
   const events: QuantityEvent[] = [
+    ...positionEvents({ openingPositions: assetOpenings, trades: [], stockSplits })
+      .flatMap((event) => event.type === "split"
+        ? [{ date: event.date, delta: 0, id: event.split.id, priority: -1, split: event.split }] : []),
     ...assetOpenings
       .map((position) => ({
         date: getOpeningPositionHistoryDate(position) ?? "",
@@ -1465,11 +1487,12 @@ export function wouldOversellAsset(
   assetId: string,
   openingPositions: OpeningPosition[],
   trades: Trade[],
+  stockSplits: import("@/src/types").StockSplitEvent[] = [],
 ) {
-  const events = assetQuantityEvents(assetId, openingPositions, trades);
+  const events = assetQuantityEvents(assetId, openingPositions, trades, stockSplits);
   let units = decimal(0);
   for (const event of events) {
-    units = units.plus(event.delta);
+    units = event.split ? splitQuantity(units, event.split) : units.plus(event.delta);
     if (isAtOrBeyondNegativeQuantum(units, quantityQuantum)) return true;
   }
 
@@ -1481,11 +1504,12 @@ function availableUnitsBeforeTrade(
   openingPositions: OpeningPosition[],
   trades: Trade[],
   tradeId: string,
+  stockSplits: import("@/src/types").StockSplitEvent[] = [],
 ) {
   let units = decimal(0);
-  for (const event of assetQuantityEvents(assetId, openingPositions, trades)) {
+  for (const event of assetQuantityEvents(assetId, openingPositions, trades, stockSplits)) {
     if (event.id === tradeId) return normalizeQuantity(units);
-    units = units.plus(event.delta);
+    units = event.split ? splitQuantity(units, event.split) : units.plus(event.delta);
   }
   return normalizeQuantity(units);
 }
@@ -2053,7 +2077,7 @@ export function createPortfolioStore({
         return { reason: "invalidAsset", status: "rejected" };
       }
 
-      const asset = normalizeAssetMetadata(input);
+      const asset = normalizeAssetMetadata({ ...input, ...(existingAsset.stockSplits ? { stockSplits: existingAsset.stockSplits } : {}) });
       if (!hasValidAssetIdentity(asset)) {
         return { reason: "invalidAsset", status: "rejected" };
       }
@@ -2156,7 +2180,7 @@ export function createPortfolioStore({
       const trades = state.trades.map((item) =>
         item.id === trade.id ? trade : item,
       );
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades)) {
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits)) {
         return { reason: "oversold", status: "rejected" };
       }
 
@@ -2496,7 +2520,7 @@ export function createPortfolioStore({
       }
 
       const trades = state.trades.filter((item) => item.id !== tradeId);
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades)) {
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits)) {
         return { reason: "oversold", status: "rejected" };
       }
 
@@ -3203,13 +3227,13 @@ export function createPortfolioStore({
 
       let assets = [...state.assets];
       for (const rawAsset of input.assets) {
-        const candidate = normalizeAssetMetadata(rawAsset);
+        const candidate = withVerifiedStockSplits(normalizeAssetMetadata(rawAsset));
         const existingById = assets.find((asset) => asset.id === candidate.id);
         if (existingById) {
           if (
             candidate.isin &&
             existingById.isin &&
-            candidate.isin !== existingById.isin
+            splitCanonicalIsin(candidate.isin) !== splitCanonicalIsin(existingById.isin)
           ) {
             throw new Error("Transaction import asset identity conflicts with existing data.");
           }
@@ -3217,6 +3241,11 @@ export function createPortfolioStore({
             assets = assets.map((asset) =>
               asset.id === candidate.id ? { ...asset, isin: candidate.isin } : asset,
             );
+          }
+          if (candidate.stockSplits?.length) {
+            assertCatalogSplits(existingById);
+            assets = assets.map((asset) => asset.id === candidate.id
+              ? { ...asset, isin: candidate.isin, stockSplits: candidate.stockSplits } : asset);
           }
           continue;
         }
@@ -3320,6 +3349,8 @@ export function createPortfolioStore({
           throw new Error("Full-history replacement requires a confirmed cutover.");
         }
         const reconciliation = reconcileTransactions({
+          stockSplits: assets.find((asset) => asset.id === openingPosition.assetId)?.stockSplits,
+          through: openingPosition.measuredAsOf,
           transactions: nextTrades.filter(
             (trade) =>
               trade.assetId === openingPosition.assetId &&
@@ -3337,13 +3368,18 @@ export function createPortfolioStore({
 
       if (
         [...affectedAssetIds].some((assetId) =>
-          wouldOversellAsset(assetId, openingPositions, nextTrades),
+          wouldOversellAsset(assetId, openingPositions, nextTrades, assets.find((asset) => asset.id === assetId)?.stockSplits),
         )
       ) {
         throw new Error("Transaction import would oversell a holding.");
       }
 
       const affectedMonths = [
+        ...assets.flatMap((asset) => {
+          const previous = state.assets.find((item) => item.id === asset.id);
+          const newlyAttached = asset.stockSplits?.filter((event) => !previous?.stockSplits?.some((prior) => prior.id === event.id)) ?? [];
+          return newlyAttached.length ? [assetRecordMonth(state, asset.id), ...newlyAttached.map((event) => event.effectiveDate.slice(0, 7))] : [];
+        }),
         ...normalizedTransactions.map(tradeMonth),
         ...state.openingPositions
           .filter((position) => replacementIds.has(position.id))
@@ -3426,6 +3462,7 @@ export function createPortfolioStore({
         normalizedInput.trade.assetId,
         state.openingPositions,
         trades,
+        state.assets.find((asset) => asset.id === normalizedInput.trade.assetId)?.stockSplits,
       )) {
         return {
           availableUnits: availableUnitsBeforeTrade(
@@ -3433,6 +3470,7 @@ export function createPortfolioStore({
             state.openingPositions,
             trades,
             normalizedInput.trade.id,
+            state.assets.find((asset) => asset.id === normalizedInput.trade.assetId)?.stockSplits,
           ),
           isValid: false,
           reason: "insufficientUnits",

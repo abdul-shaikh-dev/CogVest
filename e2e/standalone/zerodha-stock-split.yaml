@@ -1,0 +1,88 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic balances using the verified public IRCTC split.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "zerodha-stock-split.csv"
+    direction: DOWN
+- tapOn: "zerodha-stock-split.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-accept-matches
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-split-summary
+    direction: DOWN
+- assertVisible: "Stock splits included"
+- takeScreenshot: .expo/issue333-split-summary
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: UP
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:IRCTC.NS
+    direction: DOWN
+- assertVisible:
+    text: "2 transactions.*45 units.*20.00"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- assertVisible:
+    id: holdings-screen
+- takeScreenshot: .expo/issue333-holdings-restart
+- tapOn:
+    id: holding-row-yahoo:IRCTC.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:IRCTC.NS
+    direction: DOWN
+- assertVisible:
+    id: holding-quantity-yahoo:IRCTC.NS
+- assertVisible: "45"
+- assertVisible: "₹900.00"
+- takeScreenshot: .expo/issue333-position-restart

@@ -249,6 +249,12 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
         <AppText color="secondary" variant="caption">Cash Ledger is unchanged. Fees and taxes stay with imported transaction metadata; V1 does not calculate tax lots.</AppText>
         {controller.plan.holdings.length > 0 ? <AppButton onPress={() => setShowHoldings(!showHoldings)} testID="transaction-import-show-balances" title={showHoldings ? "Hide resulting balances" : `Review ${controller.plan.holdings.length} resulting balances`} variant="secondary" /> : null}
+        {controller.plan.holdings.some((holding) => holding.asset.stockSplits?.length) ? <View testID="transaction-import-split-summary" style={styles.holdingPreview}>
+          <AppText weight="bold">Stock splits included</AppText>
+          {controller.plan.holdings.flatMap((holding) => (holding.asset.stockSplits ?? []).map((event) =>
+            <AppText key={`${holding.asset.id}-${event.id}`} color="secondary" variant="caption">{holding.asset.name}: {event.newShares} for {event.oldShares} on {event.effectiveDate}. Earlier eligible units are adjusted; invested cost is unchanged.</AppText>))}
+          <AppText color="secondary" variant="caption">These verified events are saved with the import, not as new purchases.</AppText>
+        </View> : null}
         {showHoldings ? controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
           <AppText weight="bold">{holding.asset.name}</AppText>
           <AppText color="secondary" testID={`transaction-import-holding-summary-${holding.asset.id}`} variant="caption">{holding.importedTransactions} transactions • {holding.reconciliation.quantity} units • average cost {formatCurrency(holding.reconciliation.averageCostPrice, holding.asset.currency)}</AppText>

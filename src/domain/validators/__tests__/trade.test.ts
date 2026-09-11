@@ -1,5 +1,5 @@
-import { validateSellQuantity, validateTradeInput } from "@/src/domain/validators";
-import type { OpeningPosition, Trade } from "@/src/types";
+import { getAvailableQuantity, validateSellQuantity, validateTradeInput } from "@/src/domain/validators";
+import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
 
 const existingBuy: Trade = {
   assetId: "asset-1",
@@ -21,6 +21,30 @@ const existingOpeningPosition: OpeningPosition = {
 };
 
 describe("trade validators", () => {
+  const split: StockSplitEvent = {
+    id: "split", kind: "split", effectiveDate: "2026-05-01",
+    oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+    evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
+  };
+
+  it("uses the split timeline without multiplying ex-date buys or future trades", () => {
+    const trades: Trade[] = [existingBuy,
+      { ...existingBuy, id: "ex-date", date: "2026-05-01", quantity: 3 },
+      { ...existingBuy, id: "future", date: "2026-06-01", quantity: 100 },
+    ];
+    expect(getAvailableQuantity(trades, [], new Date("2026-04-30T12:00:00Z"), [split])).toBe(5);
+    expect(validateSellQuantity(trades, 13, [], new Date("2026-05-02T12:00:00Z"), [split]))
+      .toEqual({ availableQuantity: 13, isValid: true });
+  });
+
+  it("preserves measured cutovers and rejects unresolved fractional splits", () => {
+    const now = new Date("2026-05-02T12:00:00Z");
+    expect(getAvailableQuantity([existingBuy], [{ ...existingOpeningPosition, measuredAsOf: "2026-04-30" }], now, [split])).toBe(20);
+    expect(validateSellQuantity([existingBuy], 1, [], now, [{ ...split, newShares: 1, oldShares: 2 }]))
+      .toMatchObject({ isValid: false, availableQuantity: Number.NaN, message: expect.stringContaining("unavailable") });
+    expect(validateSellQuantity([], 1, [existingOpeningPosition], now, [split]).isValid).toBe(false);
+  });
+
   it("allows sell quantity within available units", () => {
     expect(validateSellQuantity([existingBuy], 3)).toEqual({
       availableQuantity: 5,

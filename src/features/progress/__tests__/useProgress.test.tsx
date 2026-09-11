@@ -13,7 +13,25 @@ import type {
 
 import { useCash } from "../../cash/useCash";
 import { useMonthEndSnapshotAutomation } from "../useMonthEndSnapshotAutomation";
-import { useProgress } from "../useProgress";
+import { needsHistoricalPrice, useProgress } from "../useProgress";
+
+it("requests month-end prices for split residual units but not unresolved quantities", () => {
+  const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+  const stockSplits: NonNullable<Asset["stockSplits"]> = [{
+    id: "split", kind: "split", effectiveDate: "2026-02-01",
+    oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+    evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-01-01", verifiedDate: "2026-01-02" },
+  }];
+  store.setState({ assets: [{ ...stockAsset, stockSplits }], trades: [
+    { assetId: stockAsset.id, id: "buy", date: "2026-01-01", type: "buy", quantity: 2, pricePerUnit: 100, totalValue: 200 },
+    { assetId: stockAsset.id, id: "sell", date: "2026-02-02", type: "sell", quantity: 2, pricePerUnit: 100, totalValue: 200 },
+    { assetId: stockAsset.id, id: "future-sell", date: "2026-03-02", type: "sell", quantity: 2, pricePerUnit: 100, totalValue: 200 },
+  ] });
+  expect(needsHistoricalPrice({ assetId: stockAsset.id, state: store.getState(), targetMonth: "2026-02" })).toBe(true);
+  expect(needsHistoricalPrice({ assetId: stockAsset.id, state: store.getState(), targetMonth: "2026-03" })).toBe(false);
+  store.setState({ assets: [{ ...stockAsset, stockSplits: [{ ...stockSplits[0], newShares: 1, oldShares: 3 }] }] });
+  expect(needsHistoricalPrice({ assetId: stockAsset.id, state: store.getState(), targetMonth: "2026-02" })).toBe(false);
+});
 
 const stockAsset: Asset = {
   assetClass: "stock",

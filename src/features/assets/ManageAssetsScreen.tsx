@@ -17,7 +17,7 @@ import {
   normalizeQuantity,
   quantityQuantum,
 } from "@/src/domain/precision";
-import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
+import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
@@ -32,21 +32,23 @@ function remainingUnits(state: PortfolioStoreState, assetId: string) {
   const assetOpenings = state.openingPositions.filter(
     (position) => position.assetId === assetId,
   );
-  const openingUnits = assetOpenings
-    .reduce((sum, position) => sum.plus(position.quantity), decimal(0));
-  const remaining = state.trades
+  const trades = state.trades
     .filter(
       (trade) =>
         trade.assetId === assetId &&
         isTransactionAfterOpeningCutover(trade.date, assetOpenings),
-    )
-    .reduce(
-      (units, trade) =>
-        units.plus(getTradeQuantityDelta(trade)),
-      openingUnits,
     );
 
-  return normalizeQuantity(remaining);
+  try {
+    return normalizeQuantity(positionQuantity({
+      openingPositions: assetOpenings,
+      trades,
+      stockSplits: state.assets.find((asset) => asset.id === assetId)?.stockSplits,
+    }));
+  } catch (error) {
+    if (!(error instanceof StockSplitError)) throw error;
+    return null;
+  }
 }
 
 export function ManageAssetsScreen({
@@ -74,9 +76,8 @@ export function ManageAssetsScreen({
         ) : (
           <PremiumCard style={styles.list}>
             {snapshot.assets.map((asset, index) => {
-              const isActive = decimal(
-                remainingUnits(snapshot, asset.id),
-              ).greaterThanOrEqualTo(quantityQuantum);
+              const units = remainingUnits(snapshot, asset.id);
+              const isActive = units !== null && decimal(units).greaterThanOrEqualTo(quantityQuantum);
               return (
                 <Pressable
                   accessibilityHint="Opens asset details and deletion impact"
@@ -101,7 +102,7 @@ export function ManageAssetsScreen({
                   </View>
                   <View style={[styles.status, isActive ? styles.active : styles.closed]}>
                     <AppText color={isActive ? "primary" : "secondary"} variant="caption" weight="bold">
-                      {isActive ? "Active" : "Closed"}
+                      {units === null ? "Unavailable" : isActive ? "Active" : "Closed"}
                     </AppText>
                   </View>
                   <AppText color="secondary">›</AppText>

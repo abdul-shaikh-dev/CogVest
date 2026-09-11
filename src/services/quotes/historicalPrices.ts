@@ -23,6 +23,7 @@ type YahooHistoricalChartResponse = {
         }>;
       };
       timestamp?: number[];
+      events?: { splits?: Record<string, { date?: number }> };
     }>;
   };
 };
@@ -74,6 +75,7 @@ export function getMonthEndDateUtc(targetMonth: string) {
 export function buildYahooHistoricalChartUrl(
   ticker: string,
   targetMonth: string,
+  adjustmentThrough?: string,
 ) {
   const monthEnd = getMonthEndDateUtc(targetMonth);
   const period2 = Math.floor(monthEnd.getTime() / 1000) + 1;
@@ -81,7 +83,8 @@ export function buildYahooHistoricalChartUrl(
   const params = new URLSearchParams({
     interval: "1d",
     period1: String(period1),
-    period2: String(period2),
+    period2: String(adjustmentThrough ? Math.max(period2, Math.floor(new Date(adjustmentThrough).getTime() / 1000) + 1) : period2),
+    events: "splits",
   });
 
   return `${yahooChartBaseUrl}/${encodeURIComponent(ticker)}?${params.toString()}`;
@@ -120,7 +123,7 @@ export async function fetchYahooHistoricalPrice({
 
     const providerId = asset.quoteSourceId ?? asset.ticker;
     const response = await fetcher(
-      buildYahooHistoricalChartUrl(providerId, targetMonth),
+      buildYahooHistoricalChartUrl(providerId, targetMonth, now()),
     );
 
     if (!response.ok) {
@@ -176,6 +179,13 @@ export async function fetchYahooHistoricalPrice({
         error: "Yahoo historical price response did not include a usable close.",
         ok: false,
       };
+    }
+
+    const splits = result?.events?.splits;
+    if (splits !== undefined && (splits === null || typeof splits !== "object" || Array.isArray(splits) ||
+      Object.values(splits).some((event) => !event || typeof event.date !== "number" ||
+        !Number.isFinite(event.date) || event.date > latestClose.timestamp))) {
+      return { ok: false, error: "Historical price units need corporate-action reconciliation; an adjusted close was not accepted." };
     }
 
     return {

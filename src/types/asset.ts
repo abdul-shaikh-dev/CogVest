@@ -1,3 +1,5 @@
+import type { StockSplitEvent } from "./stockSplit";
+
 export type AssetClass = "crypto" | "debt" | "stock" | "etf" | "cash";
 
 export type Currency = "INR" | "USD";
@@ -48,6 +50,7 @@ export type Asset = {
   name: string;
   quoteSourceId?: string;
   sectorType?: SectorType;
+  stockSplits?: StockSplitEvent[];
   symbol: string;
   ticker: string;
 };

@@ -375,6 +375,10 @@ function selectAssetPrice({
   quoteCache: QuoteCache;
   targetMonth: string;
 }): PriceSelection {
+  // Current-unit fallback and legacy cached closes cannot value pre-split units.
+  if (asset.stockSplits?.some((event) => event.effectiveDate.slice(0, 7) > targetMonth)) {
+    return { basis: "unavailable" };
+  }
   const historicalQuote =
     historicalQuotes[historicalQuoteCacheKey(asset.id, targetMonth)];
 

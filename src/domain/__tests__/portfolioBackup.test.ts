@@ -53,7 +53,7 @@ function payload(): BackupPayload {
       ppfAccounts: [{ balanceAsOf: "2026-01-01", confirmedBalance: 0, createdAt: "2026-01-01T10:00:00.000Z", id: "ppf-account", legacyAssetId: "asset-ppf", nickname: "Primary", opening: { kind: "financialYear" as const, financialYearStart: 2025 }, provider: "India Post", status: "active" as const }],
       ppfLedgerEntries: [{ accountId: "ppf-account", amount: 500, date: "2026-01-02", id: "ppf-contribution", recordedAt: "2026-01-02T10:00:00.000Z", type: "contribution" as const }],
       preferences: { defaultChartRange: "ALL", displayMode: "standard", hasCompletedOnboarding: true, maskWealthValues: false },
-      schemaVersion: 9,
+      schemaVersion: 10,
       trades: [
         { assetId: "asset-stock", date: "2026-01-02", fees: 2, id: "trade-buy", importProvenance: { fingerprint: "synthetic-fingerprint", importBatchId: "batch-cas", originalRowNumber: 1, sourceFormat: "cams-kfin-cas", sourceVersion: "1" }, pricePerUnit: 100, quantity: 2, totalValue: 202, type: "buy" as const },
         { assetId: "asset-stock", date: "2026-01-03", fees: 2, id: "trade-sell", pricePerUnit: 120, quantity: 1, totalValue: 118, type: "sell" as const },

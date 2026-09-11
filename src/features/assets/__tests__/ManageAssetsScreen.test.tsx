@@ -28,6 +28,27 @@ const closedAsset: Asset = {
 };
 
 describe("ManageAssetsScreen", () => {
+  it("keeps post-split residual units active and labels unresolved quantities unavailable", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const stockSplits: NonNullable<Asset["stockSplits"]> = [{
+      id: "split", kind: "split", effectiveDate: "2026-02-01",
+      oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+      evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-01-01", verifiedDate: "2026-01-02" },
+    }];
+    store.setState({
+      assets: [{ ...activeAsset, stockSplits }, { ...closedAsset, stockSplits }],
+      openingPositions: [{ assetId: closedAsset.id, id: "unmeasured", date: "2026-01-01", quantity: 1, averageCostPrice: 100 }],
+      trades: [
+        { assetId: activeAsset.id, id: "buy", date: "2026-01-01", type: "buy", quantity: 2, pricePerUnit: 100, totalValue: 200 },
+        { assetId: activeAsset.id, id: "sell", date: "2026-03-01", type: "sell", quantity: 2, pricePerUnit: 100, totalValue: 200 },
+      ],
+    });
+    const { getByText, queryByText } = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+    expect(getByText("Active")).toBeTruthy();
+    expect(getByText("Unavailable")).toBeTruthy();
+    expect(queryByText("Closed")).toBeNull();
+  });
+
   it("lists active and fully sold assets and opens review by stable ID", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(activeAsset);

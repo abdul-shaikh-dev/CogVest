@@ -46,7 +46,7 @@ function payload(): BackupPayload {
         hasCompletedOnboarding: true,
         maskWealthValues: false,
       },
-      schemaVersion: 9,
+      schemaVersion: 10,
       trades: [],
     },
     quoteCache: {

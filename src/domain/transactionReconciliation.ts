@@ -11,7 +11,8 @@ import {
   getTradeQuantityDelta,
   hasUnresolvedTransferCostBasis,
 } from "@/src/domain/transactionSemantics";
-import type { OpeningPosition, Trade } from "@/src/types";
+import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
+import { positionEvents, splitQuantity, StockSplitError } from "./stockSplits";
 
 export type TransactionReconciliation = {
   averageCostPrice: number;
@@ -24,19 +25,41 @@ export type TransactionReconciliation = {
 export function reconcileTransactions({
   openingPosition,
   transactions,
+  stockSplits = [],
+  through,
+  openingMeasuredAsOf,
 }: {
   openingPosition?: Pick<
     OpeningPosition,
     "averageCostPrice" | "quantity"
   >;
   transactions: Trade[];
+  stockSplits?: StockSplitEvent[];
+  through?: string;
+  openingMeasuredAsOf?: string;
 }): TransactionReconciliation {
   let quantity = decimal(openingPosition?.quantity ?? 0);
   let totalCost = quantity.times(openingPosition?.averageCostPrice ?? 0);
   const oversoldTransactionIds: string[] = [];
   const unresolvedTransactionIds: string[] = [];
 
-  for (const transaction of [...transactions].sort(compareTransactionsChronologically)) {
+  if (openingPosition && stockSplits.length && !openingMeasuredAsOf) {
+    return { averageCostPrice: openingPosition.averageCostPrice, quantity: openingPosition.quantity,
+      isExact: false, oversoldTransactionIds, unresolvedTransactionIds: ["opening-measurement-date"] };
+  }
+  const events = positionEvents({ trades: transactions, through,
+    stockSplits: stockSplits.filter((event) => !openingMeasuredAsOf || event.effectiveDate > openingMeasuredAsOf) });
+  for (const event of events) {
+    if (event.type === "split") {
+      try { quantity = splitQuantity(quantity, event.split); }
+      catch (error) {
+        if (!(error instanceof StockSplitError)) throw error;
+        unresolvedTransactionIds.push(event.split.id);
+      }
+      continue;
+    }
+    if (event.type !== "trade") continue;
+    const transaction = event.trade;
     if (hasUnresolvedTransferCostBasis(transaction)) {
       unresolvedTransactionIds.push(transaction.id);
       quantity = quantity.plus(transaction.quantity);
