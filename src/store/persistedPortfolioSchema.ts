@@ -44,8 +44,9 @@ const stockSplitEvidenceUrlSchema = z.string().url().refine((value) => {
 export const stockSplitEventSchema = z
   .object({
     id: nonEmptyStringSchema,
-    kind: z.literal("split"),
+    kind: z.enum(["split", "bonus"]),
     effectiveDate: calendarDateSchema,
+    creditedDate: calendarDateSchema.optional(),
     oldIsin: stockSplitIsinSchema,
     newIsin: stockSplitIsinSchema,
     newShares: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -59,9 +60,19 @@ export const stockSplitEventSchema = z
       .strict(),
   })
   .strict()
-  .refine((event) => event.newShares !== event.oldShares, {
+  .refine((event) => event.kind !== "split" || event.newShares !== event.oldShares, {
     message: "Stock split ratios must not equal one.",
     path: ["newShares"],
+  })
+  .refine((event) => event.kind !== "bonus" || event.oldIsin === event.newIsin, {
+    message: "Bonus credits must preserve the asset ISIN.",
+    path: ["newIsin"],
+  })
+  .refine((event) => event.kind === "bonus"
+    ? event.creditedDate !== undefined && event.creditedDate >= event.effectiveDate
+    : event.creditedDate === undefined, {
+    message: "Bonus credits require a credit date on or after the ex-date; splits must not have one.",
+    path: ["creditedDate"],
   });
 
 const stockSplitsSchema = z
@@ -465,6 +476,7 @@ const schemaVersionSchema = z.union([
   z.literal(8),
   z.literal(9),
   z.literal(10),
+  z.literal(11),
 ]);
 
 const persistedPortfolioSchema = z
@@ -669,7 +681,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

@@ -281,17 +281,17 @@ function parsePayload(raw: unknown): BackupPayload {
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
   requireExactKeys(portfolioRaw, ["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
-  if (![9, 10].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
+  if (![9, 10, 11].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
-  if (!parsed.success || ![9, 10].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
+  if (!parsed.success || ![9, 10, 11].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);
   const quoteCache = parsePersistedQuoteCache(JSON.stringify(raw.quoteCache));
   const historicalQuoteCache = parsePersistedHistoricalQuoteCache(JSON.stringify(raw.historicalQuoteCache));
   if (!quoteCache.success || !historicalQuoteCache.success) fail("quote cache records are invalid");
   assertNoDiscardedFields(raw.quoteCache, quoteCache.data);
   assertNoDiscardedFields(raw.historicalQuoteCache, historicalQuoteCache.data);
-  const portfolio = { ...parsed.data, schemaVersion: 10 } as RawPortfolioSnapshot;
+  const portfolio = { ...parsed.data, schemaVersion: 11 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;
@@ -339,7 +339,8 @@ export async function parsePortfolioBackup(text: string, digest: BackupDigest): 
   if (typeof raw.createdAt !== "string" || typeof raw.appVersion !== "string" || raw.appVersion.trim().length === 0 || typeof raw.checksum !== "string") fail("envelope metadata is invalid");
   requireIsoTimestamp(raw.createdAt, "backup creation time");
   const payload = validateBackupPayload(raw.payload);
-  const body: BackupEnvelopeWithoutChecksum = { appVersion: raw.appVersion, createdAt: raw.createdAt, format: portfolioBackupFormat, formatVersion: portfolioBackupFormatVersion, payload };
+  // Verify the original signed bytes, not the schema-upgraded payload.
+  const body: BackupEnvelopeWithoutChecksum = { appVersion: raw.appVersion, createdAt: raw.createdAt, format: portfolioBackupFormat, formatVersion: portfolioBackupFormatVersion, payload: raw.payload as BackupPayload };
   if (raw.checksum !== await checksum(body, digest)) fail("checksum does not match");
   return freeze({ appVersion: raw.appVersion, createdAt: raw.createdAt, payload: JSON.parse(JSON.stringify(payload)) as BackupPayload });
 }

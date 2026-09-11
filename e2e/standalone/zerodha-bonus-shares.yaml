@@ -1,0 +1,83 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic purchase; bonus comes from verified public evidence, not a fake buy.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "zerodha-bonus-shares.csv"
+    direction: DOWN
+- tapOn: "zerodha-bonus-shares.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-accept-matches
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-split-summary
+    direction: DOWN
+- assertVisible: "Share adjustments included"
+- takeScreenshot: .expo/issue334-bonus-summary
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: UP
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:BERGEPAINT.NS
+    direction: DOWN
+- assertVisible:
+    text: "1 transactions.*120 units.*83.33"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- tapOn:
+    id: holding-row-yahoo:BERGEPAINT.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:BERGEPAINT.NS
+    direction: DOWN
+- assertVisible: "120"
+- assertVisible: "₹10,000.00"
+- takeScreenshot: .expo/issue334-bonus-restart

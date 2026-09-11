@@ -23,9 +23,9 @@ const split = {
   },
 };
 
-function parse(stockSplits: unknown) {
+function parse(stockSplits: unknown, schemaVersion = 11) {
   return parsePersistedPortfolio(
-    JSON.stringify({ schemaVersion: 9, assets: [{ ...asset, stockSplits }] }),
+    JSON.stringify({ schemaVersion, assets: [{ ...asset, stockSplits }] }),
   );
 }
 
@@ -35,11 +35,11 @@ describe("stock split persistence", () => {
   it("preserves every split and evidence field", () => {
     expect(parse([split])).toEqual({
       success: true,
-      data: { schemaVersion: 9, assets: [{ ...asset, stockSplits: [split] }] },
+      data: { schemaVersion: 11, assets: [{ ...asset, stockSplits: [split] }] },
     });
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])(
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])(
     "keeps legacy V%s assets valid without adding stockSplits",
     (schemaVersion) => {
       expect(parsePersistedPortfolio(JSON.stringify({ schemaVersion, assets: [asset] })))
@@ -50,6 +50,51 @@ describe("stock split persistence", () => {
   it("accepts an empty array and reverse splits", () => {
     expect(parse([]).success).toBe(true);
     expect(parse([{ ...split, newShares: 1, oldShares: 10 }]).success).toBe(true);
+  });
+
+  const bonus = { ...split, id: "bonus-1", kind: "bonus", effectiveDate: "2026-09-02", creditedDate: "2026-09-10", oldIsin: split.newIsin, newShares: 1 };
+
+  it("allows credit on the ex-date and preserves a later credit date", () => {
+    expect(parse([{ ...bonus, creditedDate: bonus.effectiveDate }]).success).toBe(true);
+    expect(parse([bonus])).toMatchObject({ success: true, data: { assets: [{ stockSplits: [bonus] }] } });
+  });
+
+  it.each([undefined, null, "", "2026-09-01", "2026-02-29", "2026-09-10T00:00:00Z", " 2026-09-10"])(
+    "rejects absent, earlier, or malformed bonus credit date %j", (creditedDate) => {
+      expect(parse([{ ...bonus, creditedDate }])).toEqual(invalidShape);
+    },
+  );
+
+  it.each(["2026-09-01", "2026-09-10", null])("forbids split credit date %j", (creditedDate) => {
+    expect(parse([{ ...split, creditedDate }])).toEqual(invalidShape);
+  });
+
+  it.each([[1, 1], [1, 2], [2, 1], [2, 2]])("round trips additional bonus ratio %s:%s unchanged", (newShares, oldShares) => {
+    const events = [split, { ...bonus, newShares, oldShares }];
+    expect(parse(events)).toEqual({ success: true, data: { schemaVersion: 11, assets: [{ ...asset, stockSplits: events }] } });
+  });
+
+  it.each([
+    { newIsin: split.oldIsin }, { newShares: 0 }, { oldShares: 0 },
+    { newShares: -1 }, { oldShares: -1 }, { newShares: 1.5 },
+    { oldShares: Number.MAX_SAFE_INTEGER + 1 }, { newShares: Number.MAX_SAFE_INTEGER + 1 },
+    { kind: "dividend" }, { effectiveDate: "2026-02-29" }, { oldIsin: "invalid" },
+    { evidence: { ...split.evidence, url: "http://example.com/bonus.pdf" } },
+    { evidence: { ...split.evidence, verifiedDate: "2026-04-31" } }, { extra: true },
+  ])("rejects malformed bonus %j", (overrides) => {
+    expect(parse([{ ...bonus, ...overrides }])).toEqual(invalidShape);
+  });
+
+  it("shares uniqueness and collection bounds across split and bonus kinds", () => {
+    expect(parse([split, { ...bonus, id: split.id }])).toEqual(invalidShape);
+    expect(parse([split, { ...bonus, effectiveDate: split.effectiveDate }])).toEqual(invalidShape);
+    const events = Array.from({ length: 100 }, (_, index) => ({ ...bonus, id: `bonus-${index}`, effectiveDate: `${1900 + index}-01-01` }));
+    expect(parse(events).success).toBe(true);
+    expect(parse([...events, bonus])).toEqual(invalidShape);
+  });
+
+  it.each([9, 10])("preserves legacy V%s split records", (version) => {
+    expect(parse([split], version)).toMatchObject({ success: true, data: { schemaVersion: version, assets: [{ stockSplits: [split] }] } });
   });
 
   it.each([
