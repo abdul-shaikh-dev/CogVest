@@ -13,7 +13,7 @@ export class StockSplitError extends Error {
 
 export function orderedStockSplits(events: readonly StockSplitEvent[]) {
   const ids = new Set<string>();
-  const dates = new Set<string>();
+  const dates = new Map<string, StockSplitEvent[]>();
   for (const event of events) {
     if (!event.id || !["split", "bonus"].includes(event.kind) ||
         getCalendarDatePart(event.effectiveDate) !== event.effectiveDate ||
@@ -21,16 +21,26 @@ export function orderedStockSplits(events: readonly StockSplitEvent[]) {
         !Number.isSafeInteger(event.oldShares) || event.oldShares <= 0 ||
         (event.kind === "split" && event.newShares === event.oldShares) ||
         (event.kind === "bonus" && event.oldIsin !== event.newIsin) ||
-        (event.kind === "bonus" && (!event.creditedDate || getCalendarDatePart(event.creditedDate) !== event.creditedDate || event.creditedDate < event.effectiveDate)) ||
-        (event.kind === "split" && event.creditedDate !== undefined) ||
+        (event.kind === "bonus" && (
+          Boolean(event.creditedDate) === Boolean(event.availableFrom) ||
+          getCalendarDatePart(event.creditedDate ?? event.availableFrom ?? "") !== (event.creditedDate ?? event.availableFrom) ||
+          (event.creditedDate ?? event.availableFrom ?? "") < event.effectiveDate)) ||
+        (event.kind === "split" && (event.creditedDate !== undefined || event.availableFrom !== undefined)) ||
+        (event.sequence !== undefined && (!Number.isSafeInteger(event.sequence) || event.sequence < 0)) ||
         !/^[A-Z0-9]{12}$/.test(event.oldIsin) || !/^[A-Z0-9]{12}$/.test(event.newIsin) ||
-        ids.has(event.id) || dates.has(event.effectiveDate)) {
+        ids.has(event.id)) {
       throw new StockSplitError(event.id, "Share-adjustment terms or ordering are unresolved.");
     }
     ids.add(event.id);
-    dates.add(event.effectiveDate);
+    dates.set(event.effectiveDate, [...(dates.get(event.effectiveDate) ?? []), event]);
   }
-  return [...events].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
+  for (const group of dates.values()) {
+    if (group.length > 1 && (group.some((event) => event.sequence === undefined) ||
+        new Set(group.map((event) => event.sequence)).size !== group.length)) {
+      throw new StockSplitError(group[0].id, "Same-day share adjustments need verified ordering.");
+    }
+  }
+  return [...events].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || (a.sequence ?? 0) - (b.sequence ?? 0));
 }
 
 export function splitQuantity(quantity: FinancialDecimalInstance, event: StockSplitEvent) {
@@ -57,11 +67,19 @@ export function positionEvents({
   through?: string;
 }): PositionEvent[] {
   const splits = orderedStockSplits(stockSplits).filter((event) => event.effectiveDate <= through);
+  // Earlier Easy Trip ownership can include a separate February 2022 bonus.
+  // Its exchange cutover is not yet verified; never silently omit that entitlement.
+  if (stockSplits.some((event) => event.id === "EASEMYTRIP-2022-11-21-split-v1") &&
+      (trades.some((trade) => (getCalendarDatePart(trade.date) ?? "") <= "2022-03-02" &&
+        isTransactionAfterOpeningCutover(trade.date, openingPositions)) ||
+       openingPositions.some((position) => (getOpeningPositionHistoryDate(position) ?? "") <= "2022-03-02"))) {
+    throw new StockSplitError("EASEMYTRIP-2022-earlier-bonus", "Easy Trip history on or before 2 March 2022 needs its earlier bonus verified before import.");
+  }
   for (const event of splits) {
     if (event.kind === "bonus" && trades.some((trade) => {
       const date = getCalendarDatePart(trade.date) ?? "";
       return (trade.type === "sell" || trade.type === "transferOut") &&
-        date >= event.effectiveDate && date < event.creditedDate! &&
+        date >= event.effectiveDate && date < (event.availableFrom ?? event.creditedDate)! &&
         isTransactionAfterOpeningCutover(trade.date, openingPositions);
     })) {
       throw new StockSplitError(event.id, "A disposal before bonus shares were credited needs reconciliation.");
@@ -85,7 +103,8 @@ export function positionEvents({
   return events.sort((a, b) => {
     const day = (getCalendarDatePart(a.date) ?? a.date).localeCompare(getCalendarDatePart(b.date) ?? b.date);
     if (day) return day;
-    if (a.type === "split" || b.type === "split") return a.type === b.type ? 0 : a.type === "split" ? -1 : 1;
+    if (a.type === "split" && b.type === "split") return (a.split.sequence ?? 0) - (b.split.sequence ?? 0);
+    if (a.type === "split" || b.type === "split") return a.type === "split" ? -1 : 1;
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 }

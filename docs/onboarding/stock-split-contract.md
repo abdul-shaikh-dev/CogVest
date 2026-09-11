@@ -1,6 +1,7 @@
 # Stock splits: implementation contract (#333)
 
-Status: bounded implementation in PR #340, 2026-09-11; #333 remains partial.
+Status: initial bounded implementation in PR #340, 2026-09-11; #333 closed.
+Current expanded coverage is documented in the [bonus-share contract](bonus-share-contract.md).
 Parent: #338. Historical identity guard: #332. Bonus credits: #334.
 Demergers: #335. Private broker reconciliation: #337.
 

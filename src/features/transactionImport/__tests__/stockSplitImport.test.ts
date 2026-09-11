@@ -34,7 +34,7 @@ describe("verified split import", () => {
     const restarted = createPortfolioStore({ storage, now });
     expect(restarted.getState().assets[0].stockSplits).toHaveLength(1);
     const restored = validateBackupPayload(restarted.getState().captureBackup().payload);
-    expect(restored.portfolio.assets[0].stockSplits).toEqual(stockSplitCatalog);
+    expect(restored.portfolio.assets[0].stockSplits).toEqual(stockSplitCatalog.filter((event) => event.newIsin === "INE335Y01020"));
     const replacement = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
     replacement.getState().replaceFromBackup(restored, replacement.getState().getBackupRevision());
     const state = replacement.getState();
@@ -85,7 +85,7 @@ describe("verified split import", () => {
   it("accepts a schema-9 backup without events and upgrades its version", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
     const backup = store.getState().captureBackup().payload;
-    expect(validateBackupPayload({ ...backup, portfolio: { ...backup.portfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(11);
+    expect(validateBackupPayload({ ...backup, portfolio: { ...backup.portfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(12);
   });
 
   it("revisits old automatic snapshots when attaching a split but preserves manual snapshots", () => {

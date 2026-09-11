@@ -4,6 +4,8 @@ import { TransactionImportScreen } from "@/src/features/transactionImport";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { parseTransactionCsv } from "@/src/domain/transactionCsv";
+import { buildTransactionImportPlan } from "../transactionImport";
 
 const header = "cogvest_version,transaction_type,trade_date,isin,exchange,symbol,currency,quantity,unit_price,acquisition_cost,settlement_date,external_id,account,fees,taxes,description,notes";
 const zerodhaHeader = "symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time";
@@ -26,6 +28,25 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("offers an explicit share-adjustment action for already saved transactions", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const asset = { ...lookup, isin: "INE040A01034" };
+    store.getState().addAsset(asset);
+    const text = `${header}\n1,buy,2025-01-02,INE040A01034,NSE,HDFCBANK,INR,10,100,,,old-buy,,,,,`;
+    const parsed = parseTransactionCsv(text);
+    const initial = buildTransactionImportPlan({ batchId: "legacy", mode: "supplemental", state: store.getState(), resolutions: parsed.rows.map((row) => ({ row, asset, status: "ready" as const })) });
+    store.getState().addTrade(initial.command!.transactions[0]);
+    const onImported = jest.fn();
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={async () => ({ name: "saved.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByText("Apply share adjustments")).toBeTruthy());
+    expect(screen.getByText(/Your transactions are already saved/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    expect(store.getState().trades).toHaveLength(1);
+    expect(store.getState().assets[0].stockSplits).toHaveLength(1);
+  });
+
   it("surfaces historical collisions before accepting matches or offering import", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const text = `${zerodhaHeader}\nHDFCBANK,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000002,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;

@@ -99,12 +99,14 @@ Keep original rows unchanged. The verified stock-split catalog currently permits
 IRCTC's 2021 old/new ISIN transition and applies its five-for-one subdivision on
 2021-10-28, before that day's executions. The preview explains the adjustment;
 the final batch confirmation persists it with the source transactions. Other
-unproven chains remain blocked, including Easy Trip's combined split/bonus
-history. Same-ISIN continuity remains supported. See the
+unproven chains remain blocked. Easy Trip's verified November 2022 split/bonus
+chain and November 2024 bonus are supported, with bounded historical coverage
+described below. Same-ISIN continuity remains supported. See the
 [stock-split contract](stock-split-contract.md) for bounded coverage and evidence.
 
-The reviewed bonus catalog additionally supports Berger Paints' 2023 one-for-five
-bonus as a separate non-purchase event. The original execution CSV is unchanged;
+The reviewed bonus catalog additionally supports Berger Paints' 2023 one-for-five,
+HDFC Bank's 2025 one-for-one and Reliance's 2024 one-for-one bonuses, plus Easy
+Trip's ordered chain, as separate non-purchase events. The original CSV is unchanged;
 the adjustment appears before final confirmation. This does not accept arbitrary
 zero-priced buys or unknown corporate-action rows. See the
 [bonus-share contract](bonus-share-contract.md) for eligibility, credit dates,

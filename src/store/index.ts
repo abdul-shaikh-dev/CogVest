@@ -109,7 +109,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 11;
+export const portfolioSchemaVersion = 12;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -1467,6 +1467,7 @@ function assetQuantityEvents(
     (left, right) => {
       const dateOrder = left.date.localeCompare(right.date);
       if (dateOrder !== 0) return dateOrder;
+      if (left.split && right.split) return (left.split.sequence ?? 0) - (right.split.sequence ?? 0);
       if (
         left.importBatchId &&
         left.importBatchId === right.importBatchId &&
@@ -3116,11 +3117,69 @@ export function createPortfolioStore({
     recordTransactionImport: (input) => {
       const state = get();
       const currentDate = now();
-      if (!input.commandId.trim() || input.transactions.length === 0) {
+      if (!input.commandId.trim()) {
         throw new Error("Transaction import command is empty.");
       }
       if (input.mode !== "fullHistory" && input.mode !== "supplemental") {
         throw new Error("Transaction import mode is invalid.");
+      }
+      // Event-only commands preserve executions, balances, and unrelated metadata.
+      if (input.transactions.length === 0) {
+        if (!input.assets.length || input.cutovers.length || input.replaceOpeningPositionIds.length) {
+          throw new Error("Event-only imports require existing holdings and cannot change opening balances.");
+        }
+        const seen = new Set<string>();
+        const updates = new Map<string, Asset>();
+        const affectedMonths: string[] = [];
+        for (const proposed of input.assets) {
+          const existing = state.assets.find((asset) => asset.id === proposed.id);
+          if (!existing || seen.has(proposed.id) || !proposed.stockSplits?.length ||
+              !existing.isin || splitCanonicalIsin(existing.isin) !== proposed.isin ||
+              existing.currency !== proposed.currency || existing.assetClass !== proposed.assetClass) {
+            throw new Error("Event-only import holding identity is stale or invalid.");
+          }
+          seen.add(proposed.id);
+          assertCatalogSplits(proposed);
+          assertCatalogSplits(existing);
+          const verified = withVerifiedStockSplits(existing);
+          if (verified.stockSplits?.length !== proposed.stockSplits.length ||
+              verified.stockSplits.some((event) => !proposed.stockSplits!.some((item) => item.id === event.id))) {
+            throw new Error("Event-only import differs from the verified event chain.");
+          }
+          const updated = { ...existing, isin: verified.isin, stockSplits: verified.stockSplits };
+          const openings = state.openingPositions.filter((position) => position.assetId === existing.id);
+          if (openings.length > 1) throw new Error("Event-only import has multiple opening balances.");
+          const baseline = openings[0];
+          const reconciliation = reconcileTransactions({
+            openingPosition: baseline,
+            openingMeasuredAsOf: baseline?.measuredAsOf,
+            stockSplits: updated.stockSplits,
+            through: formatLocalCalendarDate(currentDate),
+            transactions: state.trades.filter((trade) => trade.assetId === existing.id &&
+              isTransactionAfterOpeningCutover(trade.date, openings)),
+          });
+          if (!reconciliation.isExact) throw new Error(reconciliation.adjustmentError ?? "Event-only import inventory no longer reconciles.");
+          const addedEvents = verified.stockSplits!.filter((event) => !existing.stockSplits?.some((prior) => prior.id === event.id));
+          if (addedEvents.length) {
+            updates.set(existing.id, updated);
+            const firstRecord = assetRecordMonth(state, existing.id);
+            if (firstRecord) affectedMonths.push(firstRecord);
+            affectedMonths.push(...addedEvents.map((event) => event.effectiveDate.slice(0, 7)));
+          }
+        }
+        const assets = state.assets.map((asset) => updates.get(asset.id) ?? asset);
+        validateSplitInventory({ ...state, assets });
+        if (!updates.size) return { added: 0, removedOpeningPositions: 0, status: "alreadyApplied" as const, updatedCutovers: 0 };
+        const monthlySnapshots = rebuildPortfolioSnapshots({
+          assets, earliestAffectedMonth: affectedMonths.sort()[0], now: currentDate, state,
+        }).monthlySnapshots;
+        persistAssetGraphTransition({
+          historicalQuoteCache: state.historicalQuoteCache,
+          portfolio: { ...selectRawSnapshot(state), assets, monthlySnapshots },
+          quoteCache: state.quoteCache, storage,
+        });
+        set({ assets, monthlySnapshots });
+        return { added: 0, removedOpeningPositions: 0, status: "applied" as const, updatedCutovers: 0 };
       }
       const includesZerodha = input.transactions.some(
         (transaction) =>
@@ -3229,6 +3288,30 @@ export function createPortfolioStore({
       for (const rawAsset of input.assets) {
         const candidate = withVerifiedStockSplits(normalizeAssetMetadata(rawAsset));
         const existingById = assets.find((asset) => asset.id === candidate.id);
+        if (candidate.stockSplits?.length && !normalizedTransactions.some((trade) => trade.assetId === candidate.id)) {
+          if (!existingById?.isin || !rawAsset.stockSplits?.length ||
+              splitCanonicalIsin(existingById.isin) !== candidate.isin ||
+              existingById.currency !== candidate.currency || existingById.assetClass !== candidate.assetClass) {
+            throw new Error("Event-only import holding identity is stale or invalid.");
+          }
+          assertCatalogSplits(existingById);
+          const openings = state.openingPositions.filter((position) => position.assetId === candidate.id);
+          if (openings.length > 1 || openings.some((position) =>
+            input.cutovers.some((cutover) => cutover.openingPositionId === position.id) ||
+            input.replaceOpeningPositionIds.includes(position.id))) {
+            throw new Error("Event-only imports cannot change opening balances.");
+          }
+          const baseline = openings[0];
+          const reconciliation = reconcileTransactions({
+            openingPosition: baseline,
+            openingMeasuredAsOf: baseline?.measuredAsOf,
+            stockSplits: candidate.stockSplits,
+            through: formatLocalCalendarDate(currentDate),
+            transactions: state.trades.filter((trade) => trade.assetId === candidate.id &&
+              isTransactionAfterOpeningCutover(trade.date, openings)),
+          });
+          if (!reconciliation.isExact) throw new Error(reconciliation.adjustmentError ?? "Event-only import inventory no longer reconciles.");
+        }
         if (existingById) {
           if (
             candidate.isin &&

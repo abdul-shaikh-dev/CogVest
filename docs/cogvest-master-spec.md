@@ -339,15 +339,18 @@ value; transaction CSV data never overwrites current prices.
 
 Verified stock-split events from a bounded reviewed catalog apply during import
 with a change summary and final batch confirmation, not per-event confirmation.
-Initial coverage is IRCTC's 2021 subdivision only. Arbitrary CSV action rows,
-unknown events and combined split/bonus chains remain unsupported. Historical
+Coverage includes IRCTC's 2021 subdivision and Easy Trip's ordered November 2022
+subdivision/bonus chain. Arbitrary CSV action rows and unknown events remain unsupported. Historical
 prices with unresolved adjustment units stay unavailable. See the scope and
 remaining gates in [the stock-split contract](onboarding/stock-split-contract.md).
 
-Berger Paints' verified 2023 bonus is also represented as a distinct non-purchase
-event with unchanged tracking cost. Its bounded coverage and delayed-credit
+Berger Paints' 2023, HDFC Bank's 2025, Reliance's 2024 and Easy Trip's November
+2022/2024 verified bonuses are distinct non-purchase events with unchanged
+tracking cost. Bounded coverage and delayed-availability
 guard are documented in [the bonus-share contract](onboarding/bonus-share-contract.md).
-This is not support for arbitrary zero-priced rows or combined split/bonus chains.
+This is not support for arbitrary zero-priced rows or unverified event chains.
+Easy Trip histories through 2 March 2022 remain gated pending earlier-event
+verification. Demerger identities and cost allocation remain separate scope.
 
 The import has two explicit modes:
 
