@@ -25,6 +25,7 @@ import type {
   UseTransactionImportOptions,
 } from "./useTransactionImport";
 import { useTransactionImport } from "./useTransactionImport";
+import type { Asset } from "@/src/types";
 
 type TransactionImportScreenProps = {
   now?: () => Date;
@@ -44,6 +45,9 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const [statementReviewY, setStatementReviewY] = useState<number>();
   const [templateStatus, setTemplateStatus] = useState<string>();
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [showMatched, setShowMatched] = useState(false);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  const [showHoldings, setShowHoldings] = useState(false);
 
   useEffect(() => {
     if (!controller.casReview || controller.isResolving || !statementReviewY) return;
@@ -70,12 +74,22 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   }
 
   const affectedWithoutCutover = controller.cutoverHoldings;
+  const unresolved = controller.groups.filter((group) => !group.selectedAsset);
+  const suggested = unresolved.filter((group) => group.suggestedAsset);
+  const matched = controller.groups.filter((group) => group.selectedAsset);
+  const groupedErrors = [...controller.plan.errors.reduce((groups, error) => {
+    if (error.code === "unresolvedAsset" || error.code === "ambiguousAsset") return groups;
+    const key = `${error.code}:${error.assetId ?? ""}:${error.message}`;
+    const prior = groups.get(key);
+    groups.set(key, { error, count: (prior?.count ?? 0) + 1 });
+    return groups;
+  }, new Map<string, { error: (typeof controller.plan.errors)[number]; count: number }>()).values()];
 
   return (
     <ScreenContainer scroll scrollRef={scrollRef} testID="transaction-import-screen">
       <ScreenHeader
         leading={<IconButton accessibilityLabel="Go back" icon="chevron-back" onPress={props.onCancel} testID="transaction-import-back" />}
-        subtitle="Versioned history • local only"
+        subtitle="Import your files • local only"
         title="Import transaction history"
       />
 
@@ -102,14 +116,14 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
             description="Keep your opening balances; add only later activity."
             onPress={() => controller.setMode("supplemental")}
             testID="transaction-import-mode-supplemental"
-            title="Supplemental"
+            title="Add later activity"
           />
           <ModeButton
             active={controller.mode === "fullHistory"}
             description="Replace an opening balance only after exact reconciliation."
             onPress={() => controller.setMode("fullHistory")}
             testID="transaction-import-mode-full-history"
-            title="Full history"
+            title="Rebuild from history"
           />
         </View>
         <AppText color="secondary" variant="caption">{controller.sourceId === "camsKfinCasPdfV1" ? `PDFs can contain up to ${casPdfMaxPages} pages and ${casPdfMaxBytes / (1024 * 1024)} MB.` : `Each file can contain up to ${controller.maxRows} rows and 1 MB.`} Unsupported events stay visible and are never guessed.</AppText>
@@ -130,8 +144,8 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         {controller.files.length > 0 ? <View style={styles.fileList}>
           {controller.files.map((file, index) => <View key={file.id} style={styles.fileRow} testID={`transaction-import-file-${index}`}>
             <View style={styles.fileDetails}>
-              <AppText numberOfLines={1} weight="bold">{index + 1}. {file.name}</AppText>
-              <AppText color="secondary" variant="caption">{Math.max(1, Math.ceil(file.size / 1024))} KB</AppText>
+              <AppText numberOfLines={1} weight="bold">{index + 1}. {/\.csv$/iu.test(file.name) ? file.name : "Tradebook CSV"}</AppText>
+              <AppText color="secondary" variant="caption">{controller.fileSummaries[file.id] ?? `${Math.max(1, Math.ceil(file.size / 1024))} KB`}</AppText>
             </View>
             {index > 0 ? <IconButton accessibilityLabel={`Move ${file.name} earlier`} icon="chevron-up" onPress={() => controller.moveFile(file.id, -1)} testID={`transaction-import-file-${index}-up`} /> : null}
             {index < controller.files.length - 1 ? <IconButton accessibilityLabel={`Move ${file.name} later`} icon="chevron-down" onPress={() => controller.moveFile(file.id, 1)} testID={`transaction-import-file-${index}-down`} /> : null}
@@ -174,19 +188,20 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         </PremiumCard>
       </View> : null}
 
-      {controller.groups.length > 0 ? <View style={styles.section}>
-        <SectionHeader title="Resolve holdings" />
-        {controller.groups.map((group) => <PremiumCard key={group.key} testID={`transaction-import-asset-${group.key}`}>
-          <AppText weight="bold">{group.title}</AppText>
-          <AppText color="secondary" variant="caption">{group.rowNumbers.length} transaction {group.rowNumbers.length === 1 ? "row" : "rows"}</AppText>
-          {group.selectedAsset ? <AppText color="secondary" variant="caption">Matched: {group.selectedAsset.name} • {group.selectedAsset.ticker}</AppText> : null}
-          {!group.selectedAsset && group.candidates.length === 0 ? <AppText color="secondary" variant="caption">No matching asset was found. Add this holding first, then return to import its history.</AppText> : null}
-          {group.candidates.length > 0 ? <View style={styles.actions}>
-            <AppText color="secondary" variant="caption">Select the matching asset. CogVest will not choose a provider result for you.</AppText>
-            {group.candidates.slice(0, 6).map((candidate) => <AppButton key={candidate.id} onPress={() => controller.selectCandidate(group.key, candidate)} testID={`transaction-import-asset-${group.key}-candidate-${candidate.id}`} title={`${candidate.name} • ${candidate.ticker}`} variant="secondary" />)}
-          </View> : null}
-        </PremiumCard>)}
-      </View> : null}
+      {controller.groups.length > 0 ? <PremiumCard style={styles.card}>
+        <SectionHeader title="Match your holdings" />
+        <AppText color="secondary" testID="transaction-import-match-summary">{matched.length} matched • {unresolved.length} to confirm. Each choice applies to every transaction for that holding.</AppText>
+        {controller.sourceId === "zerodhaTradebookEqV1" ? <AppText color="secondary" variant="caption">Add all your annual files before importing. Confirmed matches are kept as you add files.</AppText> : null}
+        {unresolved.filter((group) => !group.suggestedAsset).map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />)}
+        {(showAllSuggestions ? suggested : suggested.slice(0, 5)).map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />)}
+        {suggested.length > 5 ? <AppButton onPress={() => setShowAllSuggestions(!showAllSuggestions)} testID="transaction-import-show-suggestions" title={showAllSuggestions ? "Show fewer suggestions" : `View all ${suggested.length} suggested matches`} variant="secondary" /> : null}
+        {suggested.length > 0 ? <>
+          <AppText color="secondary" variant="caption">All {suggested.length} suggestions match the file's symbol, exchange and currency. You can inspect each match before accepting them together; no transactions are saved yet.</AppText>
+          <AppButton disabled={controller.isResolving} onPress={controller.acceptSuggestedMatches} testID="transaction-import-accept-matches" title={`Accept ${suggested.length} matching ${suggested.length === 1 ? "holding" : "holdings"}`} />
+        </> : null}
+        {matched.length > 0 ? <AppButton onPress={() => setShowMatched(!showMatched)} testID="transaction-import-show-matched" title={showMatched ? "Hide matched holdings" : `View ${matched.length} matched holdings`} variant="secondary" /> : null}
+        {showMatched ? matched.map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />) : null}
+      </PremiumCard> : null}
 
       {affectedWithoutCutover.length > 0 ? <PremiumCard style={styles.card} testID="transaction-import-cutover">
         <SectionHeader title="Holdings measured as of" />
@@ -209,10 +224,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         >
           <AppText color={controller.externalActivityConfirmed ? "primary" : "secondary"} weight="bold">I confirm these date ranges had no external trades or corporate actions.</AppText>
         </Pressable>
-        <AppText color="secondary" variant="caption">If that is uncertain, use Supplemental so existing opening balances stay intact.</AppText>
+        <AppText color="secondary" variant="caption">If unsure, keep existing opening balances and add only later activity instead. Do not confirm incomplete history.</AppText>
       </PremiumCard> : null}
 
-      {controller.groups.length > 0 || controller.unsupportedEvents.length > 0 || controller.casReview ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
+      {unresolved.length === 0 && !controller.isResolving && (controller.groups.length > 0 || controller.unsupportedEvents.length > 0 || controller.casReview) ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
         <SectionHeader title="Review before importing" />
         <View style={styles.summaryGrid}>
           <Summary label="New transactions" testID="transaction-import-summary-additions" value={`${controller.plan.summary.additions}`} />
@@ -226,17 +241,40 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
         <AppText color="secondary" variant="caption">Cash Ledger is unchanged. Fees and taxes stay with imported transaction metadata; V1 does not calculate tax lots.</AppText>
-        {controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
+        {controller.plan.holdings.length > 0 ? <AppButton onPress={() => setShowHoldings(!showHoldings)} testID="transaction-import-show-balances" title={showHoldings ? "Hide resulting balances" : `Review ${controller.plan.holdings.length} resulting balances`} variant="secondary" /> : null}
+        {showHoldings ? controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
           <AppText weight="bold">{holding.asset.name}</AppText>
           <AppText color="secondary" testID={`transaction-import-holding-summary-${holding.asset.id}`} variant="caption">{holding.importedTransactions} transactions • {holding.reconciliation.quantity} units • average cost {formatCurrency(holding.reconciliation.averageCostPrice, holding.asset.currency)}</AppText>
           {holding.cutover ? <AppText color="secondary" variant="caption">Holdings measured as of {holding.cutover}</AppText> : null}
           {controller.mode === "fullHistory" && holding.baseline ? <AppText color={holding.replacementExact ? "primary" : "secondary"} testID={`transaction-import-replacement-${holding.asset.id}`} variant="caption">{holding.replacementExact ? "Opening balance will be replaced after confirmation." : "Opening balance is kept until history reconciles exactly."}</AppText> : null}
-        </View>)}
-        {controller.plan.errors.map((error, index) => <ErrorCard key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
-        <AppButton disabled={!controller.plan.command || controller.isSaving} onPress={controller.confirmImport} testID="confirm-transaction-import" title={controller.isSaving ? "Importing..." : "Confirm transaction import"} />
+        </View>) : null}
+        {groupedErrors.map(({ error, count }, index) => {
+          const asset = controller.plan.holdings.find((holding) => holding.asset.id === error.assetId)?.asset ?? controller.snapshot.assets.find((item) => item.id === error.assetId);
+          return <ErrorCard key={`${error.code}-${index}`} message={`${asset ? `${asset.name}: ` : ""}${error.message}${count > 1 ? ` (${count} transactions)` : ""}`} />;
+        })}
+        {unresolved.length > 0 ? <AppText color="secondary">Confirm the {unresolved.length} remaining holding matches above before importing.</AppText> : null}
+        <AppButton disabled={!controller.plan.command || controller.isSaving || controller.isResolving || controller.parseErrors.length > 0 || controller.casReviewErrors.length > 0} onPress={controller.confirmImport} testID="confirm-transaction-import" title={controller.isSaving ? "Importing..." : "Confirm transaction import"} />
       </PremiumCard> : null}
     </ScreenContainer>
   );
+}
+
+function HoldingMatch({ group, onSelect }: {
+  group: ReturnType<typeof useTransactionImport>["groups"][number];
+  onSelect: (key: string, asset: Asset) => void;
+}) {
+  const [changing, setChanging] = useState(false);
+  const chosen = group.selectedAsset ?? group.suggestedAsset;
+  return <View style={styles.holdingPreview} testID={`transaction-import-asset-${group.key}`}>
+    <AppText weight="bold">{chosen?.name ?? group.title}</AppText>
+    {chosen ? <AppText color="secondary" variant="caption">{chosen.ticker} • {chosen.exchange} • {group.selectedAsset ? "Matched" : "Suggested match"}</AppText> : null}
+    <AppText color="secondary" variant="caption">{group.rowNumbers.length} {group.rowNumbers.length === 1 ? "transaction" : "transactions"}{chosen ? ` • ${group.title}` : ""}</AppText>
+    {chosen && group.candidates.length > 0 ? <AppButton onPress={() => setChanging(!changing)} testID={`transaction-import-change-${group.key}`} title={changing ? "Keep this match" : "Change match"} variant="secondary" /> : null}
+    {!chosen && group.candidates.length === 0 ? <AppText color="secondary">No matching listing was found. This holding needs a verified asset match before its history can be imported.</AppText> : null}
+    {!chosen || changing ? <View style={styles.actions}>
+      {group.candidates.map((candidate) => <AppButton key={candidate.id} onPress={() => { onSelect(group.key, candidate); setChanging(false); }} testID={`transaction-import-asset-${group.key}-candidate-${candidate.id}`} title={`${candidate.name} • ${candidate.ticker}`} variant="secondary" />)}
+    </View> : null}
+  </View>;
 }
 
 function ModeButton({ active, description, onPress, testID, title }: { active: boolean; description: string; onPress: () => void; testID: string; title: string }) {
@@ -279,9 +317,9 @@ const styles = StyleSheet.create({
   fileList: { gap: spacing.sm },
   fileRow: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.xs, minHeight: 64, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   holdingPreview: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingTop: spacing.sm },
-  modeButton: { backgroundColor: colors.surface.elevated, borderRadius: radii.card, flex: 1, gap: spacing.xs, minHeight: 96, padding: spacing.md },
+  modeButton: { backgroundColor: colors.surface.elevated, borderRadius: radii.card, flexBasis: "100%", flexGrow: 1, gap: spacing.xs, minHeight: 64, padding: spacing.md },
   modeButtonActive: { borderColor: colors.primary, borderWidth: 1 },
-  modeRow: { flexDirection: "row", gap: spacing.sm },
+  modeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   pressed: { opacity: 0.78 },
   section: { gap: spacing.cardGap },
   summary: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },

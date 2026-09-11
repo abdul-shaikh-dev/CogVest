@@ -118,8 +118,12 @@ function getUnsupportedReason(
   }
 
   const series = getField(fields, "series").toUpperCase();
-  if (series !== "EQ") {
+  const supportedSeries = exchange === "NSE" ? ["EQ", "BE"] : ["EQ", "B"];
+  if (!supportedSeries.includes(series)) {
     return { column: "series", reason: `series ${series || "(blank)"}` };
+  }
+  if (/-RE\d*$/u.test(getField(fields, "symbol").toUpperCase())) {
+    return { column: "symbol", reason: "rights entitlement (not an ordinary holding)" };
   }
 
   const auction = getField(fields, "auction").toLowerCase();
@@ -239,6 +243,7 @@ export function parseZerodhaTradebook(
     const tradeDate = getField(fields, "trade_date");
     const exchange = getField(fields, "exchange").toUpperCase();
     const segment = getField(fields, "segment").toUpperCase();
+    const series = getField(fields, "series").toUpperCase();
     const tradeType = getField(fields, "trade_type").toLowerCase() as "buy" | "sell";
     const tradeId = getField(fields, "trade_id");
     const orderId = getField(fields, "order_id");
@@ -329,6 +334,7 @@ export function parseZerodhaTradebook(
 
     const candidateWithoutFingerprint = {
       currency: "INR" as Currency,
+      ...(series === "EQ" ? {} : { description: `Zerodha ${exchange} series ${series}` }),
       exchange,
       externalId: tradeId,
       identity: { kind: "isin" as const, value: isin },

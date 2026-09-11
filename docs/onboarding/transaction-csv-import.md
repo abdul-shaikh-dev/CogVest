@@ -17,11 +17,19 @@ or cash-reconstruction tools.
    files as one ordered batch.
 5. Remove or reorder files before confirming. Repeated trades from overlapping
    exports are detected by Zerodha's execution-level `trade_id`.
+6. Review holding matches, not individual transactions. Exact symbol/exchange/
+   currency suggestions can be accepted together; ambiguous matches still need
+   an explicit selection. Accepted matches stay selected as annual files change.
 
 V1 supports delivery-equity `buy` and `sell` rows from the proven current
 Tradebook layout. Each execution remains separate even when partial fills share
 an `order_id`. NSE/BSE equity identity, ISIN, symbol, execution timestamp, trade
 and order IDs, and local source-file provenance are retained.
+Supported classifications are NSE `EQ`/`BE` and BSE `EQ`/`B`. The non-EQ
+classification is retained in transaction description metadata, not rewritten
+into an EQ row. Unknown classifications, auctions and rights-entitlement symbols
+remain unsupported. See [NSE's series definitions](https://www.nseindia.com/static/market-data/legend-of-series)
+and [Zerodha's exchange-group explanation](https://support.zerodha.com/category/trading-and-markets/trading-faqs/trading-categories-and-groups/articles/what-do-the-different-groups-on-nse-and-bse-mean).
 
 Zerodha stores IPO/OFS allotments, buybacks, transfers, and corporate actions
 in a separate **Equity (external trades)** report. Supplemental imports keep the
@@ -64,20 +72,31 @@ silently discard them.
 1. Open the transaction-history import action from the Holdings/onboarding flow.
 2. Choose **CogVest CSV**, **Zerodha Tradebook**, or **CAMS + KFintech CAS**
    before selecting files. CAS uses the separate PDF review flow below.
-3. Choose **Supplemental** to keep existing opening balances and add only
+3. Choose **Add later activity** (supplemental mode) to keep existing opening balances and add only
    transactions after their measured-as-of date.
-4. Choose **Full history** only when the file contains the complete history for
+4. Choose **Rebuild from history** (full-history mode) only when the file contains the complete history for
    an affected holding and you want to reconcile it against the opening balance.
 5. Save the CogVest template from the app if needed, then choose the completed CSV
    through Android's document picker.
-6. Select the intended asset whenever lookup returns multiple results. Provider
-   results are never selected silently.
+6. Confirm exact Tradebook suggestions together or select an ambiguous match.
+   The selection applies to every transaction for that ISIN. ISIN lookup falls
+   back to each distinct source symbol, so an old ticker does not suppress a
+   newer one. Generic CSV and CAS matching still require explicit selection.
+   Provider results are never saved silently.
 7. Confirm **Holdings measured as of** for each existing opening position. One
    shared date can be used, with a per-holding correction when required.
 8. Read the dry-run totals, duplicate/conflict messages, unsupported rows, and
    per-holding reconciliation before confirming the import.
 9. Confirm only when the review is correct. The batch is atomic; a validation,
    reconciliation, or persistence failure imports nothing.
+
+Matched holdings and resulting balances are expandable, not repeated expanded
+lists. Only five exact suggestions are initially shown, with access to the full
+list before accepting the batch. A missing match is explained once per holding,
+not once per transaction. File date coverage helps distinguish annual files even
+when Android returns an opaque document name. Genuine missing purchases, unknown
+corporate actions and incompatible opening balances still block import; this
+flow does not invent history to make totals reconcile.
 
 Supplemental imports reject rows on or before the cutover so the opening
 baseline is not counted twice. Full-history imports replace an opening position

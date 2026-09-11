@@ -1,0 +1,22 @@
+appId: com.abdulshaikh.cogvest
+---
+- extendedWaitUntil:
+    visible: "Show roots"
+    timeout: 30000
+- repeat:
+    while:
+      notVisible: "Files in Downloads"
+    times: 3
+    commands:
+      - tapOn: "Show roots"
+      - waitForAnimationToEnd
+      - tapOn:
+          text: "Downloads"
+          retryTapIfNoChange: true
+      - waitForAnimationToEnd
+- assertVisible: "Files in Downloads"
+- runFlow:
+    when:
+      visible: "List view"
+    commands:
+      - tapOn: "List view"

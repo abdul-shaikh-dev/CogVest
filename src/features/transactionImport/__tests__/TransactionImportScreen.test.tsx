@@ -26,6 +26,64 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("searches each historical symbol for the same ISIN instead of caching only the first", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const text = `${zerodhaHeader}\nOLDNAME,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000001,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;
+    const search = jest.fn(async ({ query }: { query: string }) => ({ failures: [], results: query === "HDFCBANK" ? [lookup] : [] }));
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={search} store={store} />);
+    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
+    expect(search).toHaveBeenCalledWith({ query: "OLDNAME" });
+    expect(search).toHaveBeenCalledWith({ query: "HDFCBANK" });
+    expect(screen.queryByTestId("transaction-import-accept-matches")).toBeNull();
+  });
+
+  it("does not reuse incompatible currency candidates when replacing a CSV", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const first = `${header}\n1,buy,2025-04-01,INE000000001,,,INR,2,100,,,one,,,,,`;
+    const second = first.replace(",INR,", ",USD,");
+    const picker = jest.fn().mockResolvedValueOnce({ name: "first.csv", size: first.length, text: first }).mockResolvedValueOnce({ name: "second.csv", size: second.length, text: second });
+    const search = jest.fn().mockResolvedValueOnce({ failures: [], results: [lookup] }).mockResolvedValueOnce({ failures: [], results: [] });
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeNull();
+    expect(store.getState().trades).toHaveLength(0);
+  });
+
+  it("accepts exact Tradebook matches once and keeps them when annual files change", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onImported = jest.fn();
+    const first = `${zerodhaHeader}\nHDFCBANK,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,trade-1,order-1,2024-01-02T10:00:00`;
+    const second = `${zerodhaHeader}\nHDFCBANK,INE000000001,2025-01-02,NSE,EQ,EQ,buy,false,2,110,trade-2,order-2,2025-01-02T10:00:00`;
+    const search = jest.fn(async ({ query }: { query: string }) => ({ failures: [], results: query === "HDFCBANK" ? [lookup] : [] }));
+    const picker = jest.fn().mockResolvedValueOnce({ name: "first.csv", size: first.length, text: first })
+      .mockResolvedValueOnce({ name: "second.csv", size: second.length, text: second });
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
+    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-accept-matches")).toBeTruthy());
+    expect(store.getState().trades).toHaveLength(0);
+    fireEvent.press(screen.getByTestId("transaction-import-accept-matches"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary")).toHaveTextContent(/1 matched • 0 to confirm/u));
+    expect(screen.queryByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeNull();
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-summary-additions")).toHaveTextContent("2"));
+    expect(screen.getByTestId("transaction-import-match-summary")).toHaveTextContent(/1 matched • 0 to confirm/u);
+    expect(search).toHaveBeenCalledTimes(2);
+    fireEvent.press(screen.getByTestId("transaction-import-file-1-up"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-summary-additions")).toHaveTextContent("2"));
+    expect(search).toHaveBeenCalledTimes(2);
+    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    expect(store.getState().trades).toHaveLength(2);
+    expect(store.getState().assets).toHaveLength(1);
+    expect(store.getState().cashEntries).toHaveLength(0);
+  });
+
   it("keeps CAS identity private while retrying a password and importing reviewed rows", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
@@ -260,7 +318,7 @@ describe("TransactionImportScreen", () => {
         getByTestId("transaction-import-asset-symbol:NSE:HDFCBANK-candidate-yahoo:HDFCBANK.NS"),
       ).toBeTruthy(),
     );
-    expect(queryByTestId("confirm-transaction-import")).toBeTruthy();
+    expect(queryByTestId("confirm-transaction-import")).toBeNull();
     expect(store.getState().trades).toEqual([]);
 
     fireEvent.press(

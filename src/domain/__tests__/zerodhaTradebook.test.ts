@@ -147,7 +147,9 @@ describe("Zerodha Equity Tradebook parser", () => {
 
   it.each([
     ["segment", { segment: "FO" }],
-    ["series", { series: "BE" }],
+    ["series", { series: "SM" }],
+    ["exchange-series mismatch", { series: "B", exchange: "NSE" }],
+    ["rights entitlement", { series: "BE", symbol: "SYNTHETIC-RE" }],
     ["exchange", { exchange: "MCX" }],
     ["auction", { auction: "true" }],
     ["trade type", { trade_type: "transfer" }],
@@ -179,5 +181,13 @@ describe("Zerodha Equity Tradebook parser", () => {
     expect(parseZerodhaTradebook("é".repeat(500_001)).errors).toEqual([
       expect.objectContaining({ code: "fileLimit" }),
     ]);
+  });
+
+  it.each([["NSE", "BE"], ["BSE", "B"]])("accepts %s %s equity executions and retains their classification", (exchange, series) => {
+    const result = parseZerodhaTradebook(`${header}\n${row({ exchange, series })}`);
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].description).toBe(`Zerodha ${exchange} series ${series}`);
+    expect(result.rows[0].transactionType).toBe("buy");
   });
 });

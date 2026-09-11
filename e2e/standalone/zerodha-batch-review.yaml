@@ -1,0 +1,130 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic emulator. Requires Yahoo lookup, not private broker data.
+# Push fixtures/zerodha-tradebook-2024.csv and zerodha-series-2025.csv to Downloads.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- tapOn: "zerodha-tradebook-2024.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-accept-matches
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: zerodha-batch-suggestion
+- tapOn:
+    id: transaction-import-accept-matches
+- assertVisible:
+    text: "1 matched.*0 to confirm.*"
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: UP
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element:
+      text: "zerodha-series-2025.csv"
+    direction: DOWN
+- tapOn: "zerodha-series-2025.csv"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-match-summary
+    direction: DOWN
+- assertVisible:
+    text: "1 matched.*0 to confirm.*"
+- assertNotVisible:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-summary-additions
+    direction: DOWN
+- assertVisible:
+    id: transaction-import-summary-additions
+    text: "3"
+- assertVisible:
+    id: transaction-import-summary-duplicates
+    text: "1"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: DOWN
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:HDFCBANK.NS
+    direction: DOWN
+- assertVisible:
+    text: "3 transactions.*20 units.*1,450.00"
+- takeScreenshot: zerodha-batch-preview
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element:
+      text: "zerodha-series-2025.csv"
+    direction: DOWN
+- tapOn: "zerodha-series-2025.csv"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-summary-duplicates
+    direction: DOWN
+- assertVisible:
+    id: transaction-import-summary-duplicates
+    text: "3"
+- assertVisible:
+    id: transaction-import-summary-additions
+    text: "0"
+- takeScreenshot: zerodha-batch-duplicates

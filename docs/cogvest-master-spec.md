@@ -305,6 +305,13 @@ layouts. These do not authorize arbitrary Excel files, other broker statements,
 arbitrary PDFs, tax-lot files, or inferred corporate actions. See
 `docs/onboarding/transaction-csv-import.md` for source limits and reconciliation.
 
+Tradebook review groups transactions by holding and preserves confirmed matches
+while annual files are added/reordered. Exact symbol/exchange/currency matches
+can be explicitly accepted as a batch; ambiguous identities still require a
+choice. Supported NSE BE and BSE B equity executions must not be dropped from
+cost/quantity history. Unknown series and missing corporate actions remain
+blocked or explicitly surfaced, never inferred.
+
 Each row must provide:
 
 - `cogvest_version` equal to `1`
