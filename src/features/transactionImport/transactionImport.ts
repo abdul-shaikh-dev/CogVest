@@ -17,6 +17,7 @@ import type {
   TransactionImportCommandInput,
 } from "@/src/store";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
+import { conflictingHistoricalRows } from "./transactionImportMatching";
 
 export const transactionImportSourceFormat = "cogvest-transactions";
 export const transactionImportSourceVersion = "1";
@@ -39,6 +40,7 @@ export type TransactionImportPlanError = {
     | "currencyMismatch"
     | "duplicateAssetIdentity"
     | "futureDate"
+    | "historicalIdentityConflict"
     | "invalidCutover"
     | "missingCutover"
     | "missingSourceCoverage"
@@ -71,6 +73,8 @@ export type TransactionImportPlan = {
   holdings: TransactionImportHoldingPreview[];
   summary: {
     additions: number;
+    parsedRows: number;
+    unplannedRows: number;
     affectedHoldings: number;
     unsupported: number;
   };
@@ -299,7 +303,17 @@ export function buildTransactionImportPlan({
     Array<{ row: TransactionCsvCandidate; transaction: Trade }>
   >();
 
-  for (const resolution of resolutions) {
+  const historicalConflicts = conflictingHistoricalRows(resolutions, state.assets);
+  for (const [index, resolution] of resolutions.entries()) {
+    if (historicalConflicts.has(index)) {
+      errors.push({
+        assetId: resolution.asset?.id,
+        code: "historicalIdentityConflict",
+        message: "Different historical ISINs point to the same listing. Verify the corporate action before combining their quantities; keep the original source rows unchanged.",
+        rowNumber: resolution.row.rowNumber,
+      });
+      continue;
+    }
     const asset = assetForResolution(resolution, state);
     if (!asset) {
       errors.push({
@@ -635,6 +649,8 @@ export function buildTransactionImportPlan({
 
   const summary = {
     additions: additions.length,
+    parsedRows: resolutions.length,
+    unplannedRows: resolutions.length - additions.length - duplicates - conflicts,
     affectedHoldings: holdings.length,
     unsupported: unsupportedCount,
   };

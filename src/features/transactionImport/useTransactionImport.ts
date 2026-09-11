@@ -32,7 +32,7 @@ import {
   type TransactionCsvResolution,
   type TransactionImportMode,
 } from "./transactionImport";
-import { compatibleTransactionCandidate, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import { compatibleTransactionCandidate, conflictingHistoricalRows, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
 
 export { transactionCsvMaxBytes };
 
@@ -66,6 +66,7 @@ export type UseTransactionImportOptions = {
 };
 
 type ResolutionGroup = {
+  identityConflict?: boolean;
   candidates: Asset[];
   key: string;
   rowNumbers: number[];
@@ -139,7 +140,7 @@ function lookupQuery(row: TransactionCsvResolution["row"]) {
     : row.symbol ?? row.identity.symbol;
 }
 
-function groupResolutions(resolutions: TransactionCsvResolution[]) {
+function groupResolutions(resolutions: TransactionCsvResolution[], existingAssets: Asset[]) {
   const groups = new Map<string, ResolutionGroup>();
   for (const resolution of resolutions) {
     const key = identityKey(resolution);
@@ -168,7 +169,18 @@ function groupResolutions(resolutions: TransactionCsvResolution[]) {
       group.candidates,
     );
   }
-  return [...groups.values()];
+  const result = [...groups.values()];
+  const candidates = resolutions.map((resolution) => ({
+    row: resolution.row,
+    asset: resolution.asset ?? groups.get(identityKey(resolution))?.suggestedAsset,
+  }));
+  const conflicts = conflictingHistoricalRows(candidates, existingAssets);
+  for (const index of conflicts) {
+    const group = groups.get(identityKey(resolutions[index]))!;
+    group.identityConflict = true;
+    group.suggestedAsset = undefined;
+  }
+  return result;
 }
 
 async function mapWithConcurrency<T, R>(
@@ -523,11 +535,11 @@ export function useTransactionImport({
     );
   }
 
-  const groups = groupResolutions(resolutions);
+  const groups = groupResolutions(resolutions, snapshot.assets);
   function acceptSuggestedMatches() {
     const accepted = new Map<string, Asset>();
     for (const group of groups) {
-      if (!group.selectedAsset && group.suggestedAsset) {
+      if (!group.identityConflict && !group.selectedAsset && group.suggestedAsset) {
         accepted.set(group.key, group.suggestedAsset);
         selectedAssetsRef.current.set(group.key, group.suggestedAsset);
       }

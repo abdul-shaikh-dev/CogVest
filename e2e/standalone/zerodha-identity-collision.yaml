@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic identities only. Requires a disposable emulator and Yahoo lookup.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "zerodha-identity-collision.csv"
+    direction: DOWN
+- tapOn: "zerodha-identity-collision.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-identity-conflicts
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "2 historical identities need corporate-action review"
+- assertNotVisible:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS
+    direction: DOWN
+- tapOn:
+    id: transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS
+- scrollUntilVisible:
+    element:
+      id: transaction-import-asset-isin:INE000000002-candidate-yahoo:HDFCBANK.BO
+    direction: DOWN
+- tapOn:
+    id: transaction-import-asset-isin:INE000000002-candidate-yahoo:HDFCBANK.BO
+- scrollUntilVisible:
+    element:
+      id: transaction-import-row-accounting
+    direction: DOWN
+- assertVisible: "2 parsed rows.*2 need resolution.*"
+- assertNotVisible:
+    id: confirm-transaction-import
+- takeScreenshot: .expo/issue332-collision
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- assertVisible:
+    id: holdings-screen
+- assertVisible: "No holdings yet"
+- assertNotVisible: "HDFC Bank Limited"

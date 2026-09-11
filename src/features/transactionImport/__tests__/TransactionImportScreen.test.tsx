@@ -26,6 +26,19 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("surfaces historical collisions before accepting matches or offering import", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const text = `${zerodhaHeader}\nHDFCBANK,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000002,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
+    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-identity-conflicts")).toBeTruthy());
+    expect(screen.queryByTestId("transaction-import-accept-matches")).toBeNull();
+    expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
+    expect(screen.getByTestId("transaction-import-row-accounting").props.children.join("")).toContain("2 parsed rows");
+    expect(store.getState().trades).toHaveLength(0);
+  });
+
   it("searches each historical symbol for the same ISIN instead of caching only the first", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const text = `${zerodhaHeader}\nOLDNAME,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000001,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;

@@ -697,7 +697,8 @@ describe("transaction import planner", () => {
 
     expect(result.command).toBeUndefined();
     expect(result.errors).toEqual([
-      expect.objectContaining({ code: "duplicateAssetIdentity", rowNumber: 2 }),
+      expect.objectContaining({ code: "historicalIdentityConflict", rowNumber: 2 }),
+      expect.objectContaining({ code: "historicalIdentityConflict", rowNumber: 2 }),
     ]);
   });
 
