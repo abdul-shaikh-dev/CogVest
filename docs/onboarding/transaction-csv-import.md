@@ -95,9 +95,13 @@ asset are not interchangeable units. Import preflight flags these groups before
 batch acceptance and does not describe them as matched. All parsed rows remain
 accounted for as proposed additions, duplicates, conflicting transactions or rows
 needing resolution; proposed additions are not a partially committed batch.
-Keep original rows unchanged. Corporate-action support (#333-#335) is required
-before affected histories can safely be combined; this guard does not implement
-splits, bonuses or demergers. Same-ISIN continuity remains supported.
+Keep original rows unchanged. The verified stock-split catalog currently permits
+IRCTC's 2021 old/new ISIN transition and applies its five-for-one subdivision on
+2021-10-28, before that day's executions. The preview explains the adjustment;
+the final batch confirmation persists it with the source transactions. Other
+unproven chains remain blocked, including Easy Trip's combined split/bonus
+history. Same-ISIN continuity remains supported. See the
+[stock-split contract](stock-split-contract.md) for bounded coverage and evidence.
 
 Matched holdings and resulting balances are expandable, not repeated expanded
 lists. Only five exact suggestions are initially shown, with access to the full

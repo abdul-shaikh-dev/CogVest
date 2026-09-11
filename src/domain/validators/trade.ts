@@ -2,19 +2,19 @@ import { z } from "zod";
 
 import {
   getCalendarDatePart,
+  formatLocalCalendarDate,
   isEffectiveCalendarDate,
   isFutureCalendarDate,
 } from "@/src/domain/dates";
-import type { OpeningPosition, Trade, TradeType } from "@/src/types";
+import type { OpeningPosition, StockSplitEvent, Trade, TradeType } from "@/src/types";
 import {
   isOpeningPositionEffective,
   isTransactionAfterOpeningCutover,
 } from "@/src/domain/openingPositions";
-import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
+import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import {
   decimal,
   normalizeQuantity,
-  sumFinancialValues,
 } from "@/src/domain/precision";
 
 type ValidationResult =
@@ -70,28 +70,30 @@ export function getAvailableQuantity(
   trades: Trade[],
   openingPositions: OpeningPosition[] = [],
   now = new Date(),
+  stockSplits?: readonly StockSplitEvent[],
 ) {
-  const openingQuantity = sumFinancialValues(
-    openingPositions
-      .filter((position) => isOpeningPositionEffective(position, now))
-      .map((position) => position.quantity),
-  );
   const effectiveOpenings = openingPositions.filter((position) =>
     isOpeningPositionEffective(position, now),
   );
 
-  const availableQuantity = trades
+  const effectiveTrades = trades
     .filter(
       (trade) =>
         isEffectiveCalendarDate(trade.date, now) &&
         isTransactionAfterOpeningCutover(trade.date, effectiveOpenings),
-    )
-    .reduce(
-      (quantity, trade) => quantity.plus(getTradeQuantityDelta(trade)),
-      openingQuantity,
     );
 
-  return normalizeQuantity(availableQuantity);
+  try {
+    return normalizeQuantity(positionQuantity({
+      openingPositions: effectiveOpenings,
+      trades: effectiveTrades,
+      stockSplits,
+      through: formatLocalCalendarDate(now),
+    }));
+  } catch (error) {
+    if (!(error instanceof StockSplitError)) throw error;
+    return Number.NaN;
+  }
 }
 
 export function validateSellQuantity(
@@ -99,12 +101,22 @@ export function validateSellQuantity(
   sellQuantity: number,
   openingPositions: OpeningPosition[] = [],
   now = new Date(),
+  stockSplits?: readonly StockSplitEvent[],
 ): SellQuantityResult {
   const availableQuantity = getAvailableQuantity(
     trades,
     openingPositions,
     now,
+    stockSplits,
   );
+
+  if (!Number.isFinite(availableQuantity)) {
+    return {
+      availableQuantity,
+      isValid: false,
+      message: "Available units are unavailable until the stock split is resolved.",
+    };
+  }
 
   if (
     decimal(sellQuantity)

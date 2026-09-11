@@ -1,5 +1,5 @@
 import { validateTradeForm } from "@/src/features/trades/tradeForm";
-import type { Trade } from "@/src/types";
+import type { StockSplitEvent, Trade } from "@/src/types";
 
 const existingBuy: Trade = {
   assetId: "asset-1",
@@ -18,6 +18,20 @@ const otherAssetBuy: Trade = {
 };
 
 describe("trade form validation", () => {
+  it("passes split terms to selected-asset validation and fails closed on unresolved terms", () => {
+    const split: StockSplitEvent = {
+      id: "split", kind: "split", effectiveDate: "2026-05-01",
+      oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+      evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
+    };
+    const values = { assetId: "asset-1", date: "2026-05-02", quantity: "10", pricePerUnit: "100", type: "sell" as const };
+    const now = new Date("2026-05-02T12:00:00Z");
+    expect(validateTradeForm(values, [existingBuy, otherAssetBuy], [], now, [split]).isValid).toBe(true);
+    expect(validateTradeForm({ ...values, quantity: "11" }, [existingBuy, otherAssetBuy], [], now, [split]).isValid).toBe(false);
+    expect(validateTradeForm(values, [existingBuy], [], now, [{ ...split, oldShares: 3 }]))
+      .toMatchObject({ isValid: false, errors: { quantity: expect.stringContaining("unavailable") } });
+  });
+
   it("accepts valid buy values without conviction", () => {
     expect(
       validateTradeForm(

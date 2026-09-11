@@ -27,6 +27,7 @@ import {
 } from "@/src/domain/validators";
 import { getPortfolioStore, wouldOversellAsset, type PortfolioStoreState } from "@/src/store";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
+import { StockSplitError } from "@/src/domain/stockSplits";
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -100,23 +101,35 @@ export function useSellRedeemHolding({
   const savedResultRef = useRef<SaveResult | null>(null);
   const tradeIdRef = useRef(createId("trade"));
 
-  const holdings = useMemo(
-    () =>
-      calculateHoldings({
-        assets: snapshot.assets,
-        openingPositions: snapshot.openingPositions,
-        quoteCache: snapshot.quoteCache,
-        trades: snapshot.trades,
-        now,
-      }),
-    [snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades],
+  const holdingsResult = useMemo(
+    () => {
+      try {
+        return {
+          holdings: calculateHoldings({
+            assets: snapshot.assets.filter((asset) => asset.id === assetId),
+            openingPositions: snapshot.openingPositions,
+            quoteCache: snapshot.quoteCache,
+            trades: snapshot.trades,
+            now,
+          }),
+          splitUnavailable: false,
+        };
+      } catch (error) {
+        if (!(error instanceof StockSplitError)) throw error;
+        return { holdings: [], splitUnavailable: true };
+      }
+    },
+    [assetId, snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades, now],
   );
-  const holding = holdings.find((candidate) => candidate.asset.id === assetId) ?? null;
+  const holding = holdingsResult.holdings.find((candidate) => candidate.asset.id === assetId) ?? null;
   const availableUnits = holding?.totalUnits ?? 0;
   const quantityValue = parseNumber(quantity);
   const sellPriceValue = parseNumber(sellPrice);
   const feeValue = parseOptionalNumber(fees);
   const quantityValidationMessage = useMemo(() => {
+    if (holdingsResult.splitUnavailable) {
+      return "Available units are unavailable until the stock split is resolved.";
+    }
     if (!holding || !Number.isFinite(quantityValue) || quantityValue <= 0) {
       return undefined;
     }
@@ -130,6 +143,7 @@ export function useSellRedeemHolding({
       quantityValue,
       assetOpeningPositions,
       now,
+      holding.asset.stockSplits,
     );
 
     if (!sellQuantityResult.isValid) return sellQuantityResult.message;
@@ -146,14 +160,20 @@ export function useSellRedeemHolding({
         pricePerUnit: 1,
         totalValue: quantityValue,
       };
-      if (wouldOversellAsset(assetId, assetOpeningPositions, [...assetTrades, candidate])) {
-        return "Not enough units on this date or after later recorded sales.";
+      try {
+        if (wouldOversellAsset(assetId, assetOpeningPositions, [...assetTrades, candidate], holding.asset.stockSplits)) {
+          return "Not enough units on this date or after later recorded sales.";
+        }
+      } catch (error) {
+        if (!(error instanceof StockSplitError)) throw error;
+        return "Available units are unavailable until the stock split is resolved.";
       }
     }
     return undefined;
   }, [
     assetId,
     holding,
+    holdingsResult.splitUnavailable,
     quantityValue,
     date,
     snapshot.openingPositions,
@@ -189,7 +209,7 @@ export function useSellRedeemHolding({
     const nextErrors: FieldErrors = {};
 
     if (!holding) {
-      nextErrors.quantity = "Holding was not found.";
+      nextErrors.quantity = quantityValidationMessage ?? "Holding was not found.";
       return nextErrors;
     }
 

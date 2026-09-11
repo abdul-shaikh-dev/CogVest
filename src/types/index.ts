@@ -8,6 +8,7 @@ export type {
 } from "./asset";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding, HoldingValuation } from "./holding";
+export type { StockSplitEvent } from "./stockSplit";
 export type {
   MonthlyPerformanceBasis,
   MonthlySnapshot,

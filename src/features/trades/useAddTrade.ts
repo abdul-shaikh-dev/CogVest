@@ -167,6 +167,7 @@ export function useAddTrade({
       snapshot.trades,
       snapshot.openingPositions,
       now,
+      selectedAsset?.stockSplits,
     );
 
     if (!result.isValid || Object.keys(manualErrors).length > 0) {

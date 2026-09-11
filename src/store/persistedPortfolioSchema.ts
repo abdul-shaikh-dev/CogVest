@@ -29,6 +29,60 @@ const convictionScoreSchema = z.union([
   z.literal(5),
 ]);
 
+const stockSplitIsinSchema = z.string().regex(/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/);
+const stockSplitEvidenceUrlSchema = z.string().url().refine((value) => {
+  if (!value.startsWith("https://") || /[\s\\]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    // Syntax validation is not issuer/exchange verification; catalog matching owns trust.
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+});
+
+export const stockSplitEventSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    kind: z.literal("split"),
+    effectiveDate: calendarDateSchema,
+    oldIsin: stockSplitIsinSchema,
+    newIsin: stockSplitIsinSchema,
+    newShares: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    oldShares: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    evidence: z
+      .object({
+        url: stockSplitEvidenceUrlSchema,
+        publishedDate: calendarDateSchema,
+        verifiedDate: calendarDateSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .refine((event) => event.newShares !== event.oldShares, {
+    message: "Stock split ratios must not equal one.",
+    path: ["newShares"],
+  });
+
+const stockSplitsSchema = z
+  .array(stockSplitEventSchema)
+  .max(100)
+  .superRefine((events, context) => {
+    for (const field of ["id", "effectiveDate"] as const) {
+      const seen = new Set<string>();
+      events.forEach((event, index) => {
+        if (seen.has(event[field])) {
+          context.addIssue({
+            code: "custom",
+            message: `Stock split ${field} values must be unique per asset.`,
+            path: [index, field],
+          });
+        }
+        seen.add(event[field]);
+      });
+    }
+  });
+
 const assetSchema = z.object({
   assetClass: z.enum(["crypto", "debt", "stock", "etf", "cash"]),
   currency: z.enum(["INR", "USD"]),
@@ -74,6 +128,7 @@ const assetSchema = z.object({
       "utilities",
     ])
     .optional(),
+  stockSplits: stockSplitsSchema.optional(),
   symbol: nonEmptyStringSchema,
   ticker: nonEmptyStringSchema,
 });
@@ -207,6 +262,7 @@ const importedTransactionProvenanceSchema = z.object({
   sourceOrderId: nonEmptyStringSchema.optional(),
   sourceSegment: nonEmptyStringSchema.optional(),
   sourceSymbol: nonEmptyStringSchema.optional(),
+  sourceIsin: normalizedIsinSchema.optional(),
   sourceVersion: nonEmptyStringSchema,
   taxes: finiteNumberSchema.nonnegative().optional(),
 });
@@ -408,6 +464,7 @@ const schemaVersionSchema = z.union([
   z.literal(7),
   z.literal(8),
   z.literal(9),
+  z.literal(10),
 ]);
 
 const persistedPortfolioSchema = z
@@ -612,7 +669,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

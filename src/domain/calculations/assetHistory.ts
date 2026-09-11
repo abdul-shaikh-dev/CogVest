@@ -5,6 +5,7 @@ import {
 } from "@/src/domain/openingPositions";
 import { decimal, normalizeMoney } from "@/src/domain/precision";
 import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
+import { positionEvents, splitQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
@@ -86,6 +87,31 @@ export function buildAssetHistory({
       })),
       warning: "A transaction has no reliable history date.",
     };
+  }
+
+  if (asset.stockSplits?.length) {
+    if (asset.stockSplits.some((event) => event.effectiveDate > (entry.points[0]?.date ?? ""))) {
+      return { holdingStart: null, points: [], warning: "Price units across this stock split need reconciliation." };
+    }
+    try {
+      const events = positionEvents({ openingPositions: openings, trades: assetTrades, stockSplits: asset.stockSplits });
+      const holdingStart = events.find((event) => event.type !== "split")?.date ?? null;
+      let quantity = decimal(0);
+      let index = 0;
+      const points = entry.points.map((point) => {
+        while (index < events.length && (getCalendarDatePart(events[index].date) ?? "") <= point.date) {
+          const event = events[index++];
+          quantity = event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
+            event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
+          if (quantity.isNegative()) throw new StockSplitError("inventory", "Transaction history would produce a negative quantity.");
+        }
+        return { date: point.date, price: point.close, holdingValue: holdingStart === null || point.date < holdingStart ? null : normalizeMoney(quantity.times(point.close)) };
+      });
+      return { holdingStart, points, warning: null };
+    } catch (error) {
+      if (!(error instanceof StockSplitError)) throw error;
+      return { holdingStart: null, points: [], warning: error.message };
+    }
   }
 
   const datedEvents = [

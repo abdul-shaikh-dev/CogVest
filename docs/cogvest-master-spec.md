@@ -337,10 +337,12 @@ only after explicit dry-run review. CogVest never guesses an equivalent supporte
 from the quote service or an explicit manual valuation are used for current
 value; transaction CSV data never overwrites current prices.
 
-Planned in #333, not yet implemented: verified stock-split events apply
-automatically with a change summary, without per-event confirmation. Ambiguous
-events remain unresolved. The researched scope, evidence rules and integration
-plan are in [the stock-split contract](onboarding/stock-split-contract.md).
+Verified stock-split events from a bounded reviewed catalog apply during import
+with a change summary and final batch confirmation, not per-event confirmation.
+Initial coverage is IRCTC's 2021 subdivision only. Arbitrary CSV action rows,
+unknown events and combined split/bonus chains remain unsupported. Historical
+prices with unresolved adjustment units stay unavailable. See the scope and
+remaining gates in [the stock-split contract](onboarding/stock-split-contract.md).
 
 The import has two explicit modes:
 

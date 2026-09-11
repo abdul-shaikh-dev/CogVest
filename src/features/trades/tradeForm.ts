@@ -10,7 +10,7 @@ import {
   normalizeQuantity,
   normalizeUnitPrice,
 } from "@/src/domain/precision";
-import type { OpeningPosition, Trade, TradeType } from "@/src/types";
+import type { OpeningPosition, StockSplitEvent, Trade, TradeType } from "@/src/types";
 
 export type TradeFormValues = {
   assetId: string;
@@ -165,6 +165,7 @@ export function validateTradeForm(
   existingTrades: Trade[],
   nowOrOpeningPositions: Date | OpeningPosition[] = new Date(),
   maybeNow = new Date(),
+  stockSplits?: readonly StockSplitEvent[],
 ): TradeFormValidationResult {
   const openingPositions = Array.isArray(nowOrOpeningPositions)
     ? nowOrOpeningPositions
@@ -198,6 +199,8 @@ export function validateTradeForm(
       assetTrades,
       value.quantity,
       assetOpeningPositions,
+      now,
+      stockSplits,
     );
 
     if (!sellQuantityResult.isValid) {

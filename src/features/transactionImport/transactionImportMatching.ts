@@ -1,6 +1,7 @@
 import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin } from "@/src/domain/assets";
 import type { TransactionCsvCandidate } from "@/src/domain/transactionCsv";
 import type { Asset } from "@/src/types";
+import { splitCanonicalIsin, stockSplitCatalog } from "@/src/domain/stockSplitCatalog";
 
 const normalized = (value?: string) => value?.trim().toUpperCase() ?? "";
 
@@ -29,7 +30,7 @@ export function conflictingHistoricalRows(
     if (!isin) return;
     for (const key of keys) {
       const values = identities.get(key) ?? new Set<string>();
-      values.add(isin);
+      values.add(splitCanonicalIsin(isin)!);
       identities.set(key, values);
     }
   };
@@ -58,7 +59,7 @@ export function matchesTradebookListing(asset: Asset, row: TransactionCsvCandida
     normalized(asset.exchange) === normalized(row.exchange) &&
     normalized(asset.symbol) === normalized(row.symbol) &&
     Boolean(row.symbol) &&
-    (!asset.isin || normalizeIsin(asset.isin) === normalizeIsin(row.isin));
+    (!asset.isin || splitCanonicalIsin(asset.isin) === splitCanonicalIsin(row.isin));
 }
 
 /** A bulk suggestion is evidence-based, not the first fuzzy search result. */
@@ -70,7 +71,15 @@ export function exactTradebookSuggestion(rows: TransactionCsvCandidate[], candid
 export function compatibleTransactionCandidate(asset: Asset, row: TransactionCsvCandidate) {
   if (asset.currency !== row.currency) return false;
   if (row.identity.kind === "isin" && asset.isin &&
-      normalizeIsin(asset.isin) !== normalizeIsin(row.identity.value)) return false;
+      splitCanonicalIsin(asset.isin) !== splitCanonicalIsin(row.identity.value)) return false;
   return row.source?.format !== "zerodha-tradebook" ||
     asset.assetClass === "stock" || asset.assetClass === "etf";
+}
+
+export function hasValidSplitSourceDate(row: TransactionCsvCandidate) {
+  if (row.identity.kind !== "isin") return true;
+  const isin = normalizeIsin(row.identity.value);
+  return stockSplitCatalog.every((event) =>
+    isin === event.oldIsin ? row.tradeDate < event.effectiveDate :
+      isin === event.newIsin ? row.tradeDate >= event.effectiveDate : true);
 }

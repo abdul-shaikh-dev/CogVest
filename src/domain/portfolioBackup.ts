@@ -1,4 +1,6 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
+import { assertCatalogSplits, assertSplitSourceIdentities } from "@/src/domain/stockSplitCatalog";
 import { camsKfinCasSourceFormat } from "@/src/domain/camsKfinCas";
 import { getCalendarDatePart, parseCalendarDate } from "@/src/domain/dates";
 import { getOpeningPositionHistoryDate, isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
@@ -153,7 +155,19 @@ function validateCashLinks(cashEntries: CashEntry[], trades: Trade[]) {
 
 function validateInventory(portfolio: RawPortfolioSnapshot) {
   for (const asset of portfolio.assets) {
+    assertCatalogSplits(asset);
+    assertSplitSourceIdentities(asset, portfolio.trades);
     const openings = portfolio.openingPositions.filter((position) => position.assetId === asset.id);
+    if (asset.stockSplits?.length) {
+      let quantity = decimal(0);
+      for (const event of positionEvents({ openingPositions: openings,
+        trades: portfolio.trades.filter((trade) => trade.assetId === asset.id), stockSplits: asset.stockSplits })) {
+        quantity = event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
+          event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
+        if (quantity.isNegative()) fail(`inventory oversells asset '${asset.id}'`);
+      }
+      continue;
+    }
     const events: Array<{ date: string; delta: number; id: string; importBatchId?: string; originalRowNumber?: number; priority: number }> = [];
     for (const position of openings) {
       const date = getOpeningPositionHistoryDate(position);
@@ -267,17 +281,17 @@ function parsePayload(raw: unknown): BackupPayload {
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
   requireExactKeys(portfolioRaw, ["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
-  if (portfolioRaw.schemaVersion !== 9 || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete schema-9 snapshot");
+  if (![9, 10].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
-  if (!parsed.success || parsed.data.schemaVersion !== 9) fail("portfolio records are invalid");
+  if (!parsed.success || ![9, 10].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);
   const quoteCache = parsePersistedQuoteCache(JSON.stringify(raw.quoteCache));
   const historicalQuoteCache = parsePersistedHistoricalQuoteCache(JSON.stringify(raw.historicalQuoteCache));
   if (!quoteCache.success || !historicalQuoteCache.success) fail("quote cache records are invalid");
   assertNoDiscardedFields(raw.quoteCache, quoteCache.data);
   assertNoDiscardedFields(raw.historicalQuoteCache, historicalQuoteCache.data);
-  const portfolio = parsed.data as RawPortfolioSnapshot;
+  const portfolio = { ...parsed.data, schemaVersion: 10 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;

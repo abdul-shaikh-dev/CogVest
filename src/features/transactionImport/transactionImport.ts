@@ -17,7 +17,9 @@ import type {
   TransactionImportCommandInput,
 } from "@/src/store";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
-import { conflictingHistoricalRows } from "./transactionImportMatching";
+import { conflictingHistoricalRows, hasValidSplitSourceDate } from "./transactionImportMatching";
+import { splitCanonicalIsin, withVerifiedStockSplits } from "@/src/domain/stockSplitCatalog";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 
 export const transactionImportSourceFormat = "cogvest-transactions";
 export const transactionImportSourceVersion = "1";
@@ -171,7 +173,7 @@ function selectedAssetMatchesRow(asset: Asset, row: TransactionCsvCandidate) {
   if (row.identity.kind === "isin") {
     const rowIsin = normalizeIsin(row.identity.value);
     const assetIsin = normalizeIsin(asset.isin);
-    return assetIsin === undefined || assetIsin === rowIsin;
+    return assetIsin === undefined || splitCanonicalIsin(assetIsin) === splitCanonicalIsin(rowIsin);
   }
 
   return (
@@ -191,11 +193,11 @@ function assetForResolution(
     resolution.row.identity.kind === "isin" && !resolution.asset.isin
       ? { ...resolution.asset, isin: resolution.row.identity.value }
       : resolution.asset;
-  const normalized = normalizeAssetMetadata(withCsvIdentity);
+  const normalized = withVerifiedStockSplits(normalizeAssetMetadata(withCsvIdentity));
   const canonical = findCanonicalAsset(state.assets, normalized);
-  return canonical && normalized.isin && !canonical.isin
+  return withVerifiedStockSplits(canonical && normalized.isin && !canonical.isin
     ? { ...canonical, isin: normalized.isin }
-    : (canonical ?? normalized);
+    : (canonical ?? normalized));
 }
 
 function transactionFromRow(
@@ -204,6 +206,7 @@ function transactionFromRow(
   batchId: string,
 ): Trade {
   const importProvenance = {
+    ...(row.identity.kind === "isin" ? { sourceIsin: normalizeIsin(row.identity.value) } : {}),
     ...(row.account ? { account: row.account } : {}),
     ...(row.externalId ? { externalId: row.externalId } : {}),
     ...(row.fees === undefined ? {} : { fees: row.fees }),
@@ -329,7 +332,7 @@ export function buildTransactionImportPlan({
       });
       continue;
     }
-    if (!selectedAssetMatchesRow(asset, resolution.row)) {
+    if (!selectedAssetMatchesRow(asset, resolution.row) || !hasValidSplitSourceDate(resolution.row)) {
       errors.push({
         assetId: asset.id,
         code: "conflictingIdentity",
@@ -363,8 +366,8 @@ export function buildTransactionImportPlan({
       (priorAsset.currency !== asset.currency ||
         (resolution.row.identity.kind === "isin" &&
           normalizeIsin(priorAsset.isin) !== undefined &&
-          normalizeIsin(priorAsset.isin) !==
-            normalizeIsin(resolution.row.identity.value)))
+          splitCanonicalIsin(priorAsset.isin) !==
+            splitCanonicalIsin(resolution.row.identity.value)))
     ) {
       errors.push({
         assetId: asset.id,
@@ -553,6 +556,9 @@ export function buildTransactionImportPlan({
         continue;
       }
       reconciliation = reconcileTransactions({
+        stockSplits: asset.stockSplits,
+        through: formatLocalCalendarDate(now),
+        openingMeasuredAsOf: cutover,
         openingPosition: baseline,
         transactions: [
           ...existing.filter(
@@ -566,6 +572,8 @@ export function buildTransactionImportPlan({
         (trade) => transactionCalendarDate(trade) <= cutover!,
       );
       const baselineReconciliation = reconcileTransactions({
+        stockSplits: asset.stockSplits,
+        through: cutover,
         transactions: throughCutover,
       });
       replacementExact = matchesOpeningPosition(
@@ -573,6 +581,8 @@ export function buildTransactionImportPlan({
         baseline,
       );
       reconciliation = reconcileTransactions({
+        stockSplits: asset.stockSplits,
+        through: formatLocalCalendarDate(now),
         transactions: [...existing, ...incoming],
       });
       if (!replacementExact) {
@@ -586,6 +596,8 @@ export function buildTransactionImportPlan({
       }
     } else {
       reconciliation = reconcileTransactions({
+        stockSplits: asset.stockSplits,
+        through: formatLocalCalendarDate(now),
         transactions: [...existing, ...incoming],
       });
     }

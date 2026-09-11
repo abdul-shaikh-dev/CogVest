@@ -21,6 +21,7 @@ export type ImportedTransactionProvenance = {
   sourceOrderId?: string;
   sourceSegment?: string;
   sourceSymbol?: string;
+  sourceIsin?: string;
   sourceVersion: string;
   taxes?: number;
 };

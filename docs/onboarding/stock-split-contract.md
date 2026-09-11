@@ -1,6 +1,6 @@
 # Stock splits: implementation contract (#333)
 
-Status: researched implementation contract, 2026-09-11. Not implemented.
+Status: bounded implementation in PR #340, 2026-09-11; #333 remains partial.
 Parent: #338. Historical identity guard: #332. Bonus credits: #334.
 Demergers: #335. Private broker reconciliation: #337.
 
@@ -23,7 +23,7 @@ substitute for the ex-date. A proposed announcement is not proof that the event
 took effect. Keep source URL, publication date, verification date and a stable
 event identity with the normalized event.
 
-The first implementation should use a reviewed, versioned catalog of verified
+The first implementation uses a reviewed, versioned catalog of verified
 events bundled with the app. This is bounded coverage, not an automatic feed of
 every listed company's actions. No new paid provider, backend, credentials or
 runtime scraping service is authorized by this contract. Provider action data
@@ -94,8 +94,10 @@ including events after the requested chart end date. Dividend-adjusted values
 must not be used as historical cash-market closes.
 
 Until that price contract is proven, affected history stays unavailable rather
-than rendering fabricated performance. The month-end provider currently lacks
-the daily-history split guard; closing that gap is part of #333, not optional.
+than rendering fabricated performance. The month-end provider now requests
+split evidence through the retrieval date and rejects cross-split prices,
+including events after the requested month. Known pre-event cached prices are
+also excluded from snapshot valuation.
 Invalidate incompatible cached historical prices. Recompute affected automatic
 snapshots when sound evidence exists, or mark them for reconciliation. Preserve
 manually confirmed snapshots and disclose discrepancies without overwriting them.
@@ -149,6 +151,46 @@ Known owners from the current source inspection:
   synthetic standalone-APK E2E and a private discrepancy report. The broker
   screenshots are a point-in-time baseline, not a fixed live-price test oracle.
 
-Do not close #333 or #332 on the strength of this document. They require the
-integrated implementation and evidence above; bonus and demerger differences
-must remain separately attributed to #334 and #335.
+## Delivered slice and remaining gates
+
+PR #340 adds shared effective-date quantity/cost replay, strict persisted event
+validation (schema 10), import planning/commit, disposal validation, quantity
+consumers, backup/restore, restart safety and automatic-snapshot invalidation.
+Legacy schema-9 backups remain readable; older binaries must not read schema 10.
+Manual snapshots are preserved. Attaching an event revisits older generated
+history, not only the incoming transaction month. No event is a cash flow.
+
+The only production catalog entry is IRCTC's five-for-one split on 2021-10-28:
+INE335Y01012 to INE335Y01020. Evidence is NSE/CML/49897, dated 2021-10-11,
+[mirrored by Steel City](https://www.steelcitynettrade.com/Circulars/Face%20Value%20Split%20%E2%80%93%20IRCTC.pdf).
+This is a mirror of an exchange circular, not an NSE-hosted URL. The ex-date
+and subdivision are independently corroborated by the
+[MSE corporate-action record](https://www.msei.in/corporates/corporate-securities-information/corporate-update/default?symbol=IRCTC&type=4&vmode=vm).
+Issuer filings establish the
+[old ISIN](https://www.irctc.com/assets/images/CG%2030.09.2021.pdf) and
+[new ISIN](https://www.irctc.com/assets/images/Annual%20Return%202023-24_7.29.24.pdf).
+
+Verification: `npm run test:v1:pc` passes: 146 suites / 1,441 tests passed,
+one suite / two tests skipped; typecheck passes and Expo Doctor passes 17/17.
+Independent financial-integrity review found no remaining findings after
+correction of event-shape, source-identity and older-snapshot invalidation gaps.
+
+Fresh standalone release APK installed and verified with
+`e2e/standalone/zerodha-stock-split.yaml`: synthetic purchase of 10 at INR 100,
+five-for-one split, sale of 5 at INR 60; preview and restarted saved holding
+show 45 units, INR 20 average cost and INR 900 invested. Screenshots were
+inspected locally. This does not establish live-quote availability. Emulator:
+Pixel_10_Pro, API 36, x86_64, 1280x2856, density 480, font scale 1.0; no Metro.
+APK SHA-256: `7CFF637633D6D007603980619AC6F62BFA2CB09E083F097AA647AAC32BCCE1FE`.
+Local evidence: `.expo/issue333-final-pc.log`,
+`.expo/issue333-final-build.log`, `.expo/issue333-final-maestro.log`,
+`.expo/issue333-position-restart.png`. These local artifacts are not committed.
+
+Remaining: authorized private broker reconciliation (#337), additional verified
+catalog coverage, and reconstructed cross-split historical prices. Current
+history guards intentionally show unavailable data rather than wrong valuations.
+Long historical lookups now cover the adjustment horizon and may fetch more
+data; no throughput improvement is claimed. Native sale/restore journeys still
+need dedicated evidence; their accounting and persistence paths have unit tests.
+Easy Trip's combined split/bonus chain (#332/#334) and demergers (#335) are not
+fixed by this slice. Do not close #333 or #332 on this bounded implementation.

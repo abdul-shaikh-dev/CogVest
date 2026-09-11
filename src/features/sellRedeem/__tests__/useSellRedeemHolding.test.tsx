@@ -42,6 +42,39 @@ function seedStore() {
 }
 
 describe("useSellRedeemHolding", () => {
+  it("previews a sale above pre-split units but rejects it before the split date", () => {
+    const store = seedStore();
+    store.setState({
+      openingPositions: store.getState().openingPositions.map((position) => ({ ...position, measuredAsOf: "2026-04-15" })),
+      assets: [{ ...hdfc, stockSplits: [{
+        id: "split", kind: "split", effectiveDate: "2026-05-01",
+        oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+        evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
+      }] }],
+    });
+    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
+    act(() => result.current.setQuantity("30"));
+    expect(result.current.availableUnits).toBe(50);
+    expect(result.current.canSave).toBe(true);
+    expect(result.current.preview?.remainingUnits).toBe(20);
+    act(() => result.current.setDate("2026-04-20"));
+    expect(result.current.canSave).toBe(false);
+    expect(result.current.preview).toBeNull();
+  });
+
+  it("blocks unresolved split holdings without crashing or allowing save", () => {
+    const store = seedStore();
+    store.setState({ assets: [{ ...hdfc, stockSplits: [{
+      id: "split", kind: "split", effectiveDate: "2026-05-01",
+      oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
+      evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
+    }] }] });
+    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
+    expect(result.current.canSave).toBe(false);
+    expect(result.current.preview).toBeNull();
+    expect(result.current.errors.quantity).toMatch(/unavailable/);
+  });
+
   it("blocks a backdated sale before ownership instead of previewing today's inventory", () => {
     const store = seedStore();
     const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store }));
