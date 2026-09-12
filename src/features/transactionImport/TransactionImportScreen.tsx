@@ -44,6 +44,11 @@ type TransactionImportScreenProps = {
 
 export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const controller = useTransactionImport(props);
+  const importDemergers = controller.plan.demergers?.filter((event) =>
+    event.kind === "entitlement" && controller.plan.holdings.some((holding) =>
+      holding.asset.id === event.sourceAssetId || holding.asset.id === event.assetId,
+    ),
+  ) ?? [];
   const scrollRef = useRef<ScrollView>(null);
   const sourceCardYRef = useRef<number | undefined>(undefined);
   const passwordFieldYRef = useRef<number | undefined>(undefined);
@@ -220,7 +225,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">Nothing has been imported. Do not remove statement rows to get past this check.</AppText>
         </View> : null}
         <AppText color="secondary">Review the schemes and printed balances before importing. Folio numbers stay private and appear only as statement-local labels.</AppText>
-        {(controller.casReview.normalization.administrativeNotices ?? 0) > 0 ? <AppText color="secondary" variant="caption" testID="cas-administrative-notices">{controller.casReview.normalization.administrativeNotices} administrative address-update notices identified. These are not investment transactions and do not change balances.</AppText> : null}
+        {(controller.casReview.normalization.administrativeNotices ?? 0) > 0 ? <AppText color="secondary" variant="caption" testID="cas-administrative-notices">{controller.casReview.normalization.administrativeNotices} administrative notices identified (address updates or nominee registration). These are not investment transactions and do not change balances.</AppText> : null}
         {controller.casReview.normalization.coverage ? <AppText color="secondary" testID="cas-statement-coverage" variant="caption">Statement coverage: {controller.casReview.normalization.coverage.from} to {controller.casReview.normalization.coverage.to}</AppText> : null}
         {(controller.casReview.normalization.preservedNotices?.length ?? 0) > 0 ? <View style={styles.card} testID="cas-preserved-notices">
           <AppText weight="bold">Cancellation notice retained in this review</AppText>
@@ -309,9 +314,9 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">These verified events are saved with the import, not as new purchases.</AppText>
           {controller.plan.command?.transactions.length === 0 ? <AppText color="secondary" variant="caption">Your transactions are already saved. Apply the verified share adjustments without importing them again.</AppText> : null}
         </View> : null}
-        {controller.plan.demergers?.some((event) => event.kind === "entitlement") ? <View style={styles.holdingPreview} testID="transaction-import-demerger-summary">
+        {importDemergers.length > 0 ? <View style={styles.holdingPreview} testID="transaction-import-demerger-summary">
           <AppText weight="bold">Demergers included</AppText>
-          {controller.plan.demergers.filter((event) => event.kind === "entitlement").map((event) => {
+          {importDemergers.map((event) => {
             if (event.kind !== "entitlement") return null;
             const terms = demergerCatalog.find((item) => item.id === event.eventId)!;
               const parent = controller.plan.holdings.find((holding) => holding.asset.id === event.sourceAssetId)?.asset;

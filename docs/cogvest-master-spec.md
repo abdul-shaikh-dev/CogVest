@@ -306,7 +306,11 @@ arbitrary PDFs, tax-lot files, or inferred corporate actions. See
 `docs/onboarding/transaction-csv-import.md` for source limits and reconciliation.
 
 CAS review retains an exact value-free cancellation notice without inventing a
-trade or requiring the user's recollection. Numeric/unknown financial events and
+trade or requiring the user's recollection. Exact dated, value-free address-update
+and nominee-registration notices are counted as administrative notices, not
+investment transactions. Import summaries show demergers only for holdings
+affected by the current import, not unrelated saved equity holdings.
+Numeric/unknown financial events and
 balance mismatches still block import. Nonzero statement-opening units must not
 disappear: full-history rebuilds require a statement from before the first
 investment; later-activity imports require a matching saved opening balance and
