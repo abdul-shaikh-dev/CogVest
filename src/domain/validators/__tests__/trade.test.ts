@@ -1,4 +1,5 @@
 import { getAvailableQuantity, validateSellQuantity, validateTradeInput } from "@/src/domain/validators";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
 
 const existingBuy: Trade = {
@@ -35,6 +36,24 @@ describe("trade validators", () => {
     expect(getAvailableQuantity(trades, [], new Date("2026-04-30T12:00:00Z"), [split])).toBe(5);
     expect(validateSellQuantity(trades, 13, [], new Date("2026-05-02T12:00:00Z"), [split]))
       .toEqual({ availableQuantity: 13, isValid: true });
+  });
+
+  it("includes derived successor entitlements when validating a sale", () => {
+    const entitlement: DemergerAdjustment = {
+      assetId: "asset-1",
+      cost: "100",
+      date: "2026-05-01",
+      eventId: "demerger-1",
+      firstAcquisitionDate: "2026-04-20",
+      kind: "entitlement",
+      quantity: 10,
+      sourceAssetId: "parent-asset",
+      sourceRecordIds: ["parent-buy"],
+    };
+
+    expect(getAvailableQuantity([], [], new Date("2026-05-02T12:00:00Z"), [], [entitlement])).toBe(10);
+    expect(validateSellQuantity([], 10, [], new Date("2026-05-02T12:00:00Z"), [], [entitlement]))
+      .toEqual({ availableQuantity: 10, isValid: true });
   });
 
   it("preserves measured cutovers and rejects unresolved fractional splits", () => {

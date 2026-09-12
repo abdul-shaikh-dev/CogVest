@@ -20,6 +20,8 @@ import type { Asset, OpeningPosition, Trade } from "@/src/types";
 import { conflictingHistoricalRows, hasValidSplitSourceDate } from "./transactionImportMatching";
 import { splitCanonicalIsin, withVerifiedStockSplits } from "@/src/domain/stockSplitCatalog";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { projectDemergers, proposeDemergers } from "@/src/domain/demergers";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 
 export const transactionImportSourceFormat = "cogvest-transactions";
 export const transactionImportSourceVersion = "1";
@@ -68,6 +70,7 @@ export type TransactionImportHoldingPreview = {
 };
 
 export type TransactionImportPlan = {
+  demergers?: DemergerAdjustment[];
   command?: TransactionImportCommandInput;
   conflicts: number;
   duplicates: number;
@@ -487,13 +490,37 @@ export function buildTransactionImportPlan({
   const cutovers: TransactionImportCommandInput["cutovers"] = [];
   const replaceOpeningPositionIds: string[] = [];
   const eventOnlyAssets: Asset[] = [];
+  let demergerAdjustments: DemergerAdjustment[] = [];
+  const demergerAffected = new Set<string>();
+  const demergerChanged = new Set<string>();
+  try {
+    const mergedAssets = [...state.assets.filter((asset) => !assetsById.has(asset.id)), ...assetsById.values()];
+    const previewAssets = proposeDemergers({ ...state, assets: mergedAssets, trades: [...state.trades, ...additions] }, new Set(rowsByAssetId.keys()), formatLocalCalendarDate(now));
+    for (const parent of previewAssets.filter((asset) => asset.demerger)) {
+      const childId = parent.demerger!.childAssetId;
+      if (!rowsByAssetId.has(parent.id) && !rowsByAssetId.has(childId)) continue;
+      const savedLink = state.assets.find((asset) => asset.id === parent.id)?.demerger;
+      if (savedLink?.eventId !== parent.demerger!.eventId || savedLink.childAssetId !== childId) {
+        demergerChanged.add(parent.id); demergerChanged.add(childId);
+      }
+      for (const id of [parent.id, childId]) {
+        demergerAffected.add(id);
+        assetsById.set(id, previewAssets.find((asset) => asset.id === id)!);
+        if (!rowsByAssetId.has(id)) rowsByAssetId.set(id, []);
+      }
+    }
+    demergerAdjustments = projectDemergers({ assets: previewAssets, trades: [...state.trades, ...additions],
+      openingPositions: mode === "fullHistory" ? state.openingPositions.filter((position) => !rowsByAssetId.has(position.assetId)) : state.openingPositions }, formatLocalCalendarDate(now));
+  } catch (error) {
+    errors.push({ code: "reconciliationMismatch", message: error instanceof Error ? error.message : "The demerger cannot be reconciled." });
+  }
 
   for (const [assetId, items] of rowsByAssetId) {
     const asset = assetsById.get(assetId)!;
     const savedAsset = state.assets.find((candidate) => candidate.id === assetId);
     const eventOnly = items.length === 0 && savedAsset !== undefined &&
       asset.stockSplits?.some((event) => !savedAsset.stockSplits?.some((prior) => prior.id === event.id));
-    if (items.length === 0 && !eventOnly) continue;
+    if (items.length === 0 && !eventOnly && !demergerAffected.has(assetId)) continue;
     if (eventOnly) {
       if (!savedAsset?.isin || splitCanonicalIsin(savedAsset.isin) !== asset.isin) {
         errors.push({ assetId, code: "conflictingIdentity", message: "Verify the saved holding identity before attaching share adjustments." });
@@ -501,6 +528,7 @@ export function buildTransactionImportPlan({
       }
       eventOnlyAssets.push(asset);
     }
+    if (demergerChanged.has(assetId) && !eventOnlyAssets.some((item) => item.id === assetId)) eventOnlyAssets.push(asset);
     const baselines = state.openingPositions.filter(
       (position) => position.assetId === assetId,
     );
@@ -567,6 +595,7 @@ export function buildTransactionImportPlan({
         continue;
       }
       reconciliation = reconcileTransactions({
+        demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === assetId),
         stockSplits: asset.stockSplits,
         through: formatLocalCalendarDate(now),
         openingMeasuredAsOf: cutover,
@@ -583,6 +612,7 @@ export function buildTransactionImportPlan({
         (trade) => transactionCalendarDate(trade) <= cutover!,
       );
       const baselineReconciliation = reconcileTransactions({
+        demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === assetId),
         stockSplits: asset.stockSplits,
         through: cutover,
         transactions: throughCutover,
@@ -592,6 +622,7 @@ export function buildTransactionImportPlan({
         baseline,
       );
       reconciliation = reconcileTransactions({
+        demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === assetId),
         stockSplits: asset.stockSplits,
         through: formatLocalCalendarDate(now),
         transactions: [...existing, ...incoming],
@@ -607,6 +638,7 @@ export function buildTransactionImportPlan({
       }
     } else {
       reconciliation = reconcileTransactions({
+        demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === assetId),
         stockSplits: asset.stockSplits,
         through: formatLocalCalendarDate(now),
         transactions: [...existing, ...incoming],
@@ -681,10 +713,11 @@ export function buildTransactionImportPlan({
     errors.push({ code: "unsupportedSourceEvents", message: "Resolve unsupported source events before attaching share adjustments." });
   }
   if (errors.length > 0 || (additions.length === 0 && eventOnlyAssets.length === 0)) {
-    return { conflicts, duplicates, errors, holdings, summary };
+    return { conflicts, duplicates, errors, holdings, summary, demergers: demergerAdjustments };
   }
 
   return {
+    demergers: demergerAdjustments,
     command: {
       assets: additions.length === 0 ? eventOnlyAssets : [...assetsById.values()],
       commandId: batchId,

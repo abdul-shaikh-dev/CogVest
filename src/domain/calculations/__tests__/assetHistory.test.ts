@@ -60,4 +60,22 @@ describe("asset history", () => {
     const result = buildAssetHistory({ asset, entry: entry(), openingPositions: [{ ...opening, date: "2020-01-01", measuredAsOf: "2026-01-02" }], trades: [trade("buy", "2025-12-01", 10), trade("buy", "2026-01-02", 10), trade("sell", "2026-01-03", 2)] });
     expect(result.points.map((point) => point.holdingValue)).toEqual([null, 1100, 960]);
   });
+
+  it("blocks child quotes before listing and does not guess parent units across a demerger", () => {
+    const parent: Asset = { ...asset, id: "ril", isin: "INE002A01018", demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" } };
+    const child: Asset = { ...asset, id: "jio", isin: "INE758E01017", symbol: "JIOFIN", ticker: "JIOFIN.NS" };
+    const parentBuy: Trade = { ...trade("buy", "2023-01-01", 10), id: "ril-buy", assetId: parent.id };
+    const prices = entry([
+      { date: "2023-07-19", close: 100 },
+      { date: "2023-07-20", close: 101 },
+      { date: "2023-08-20", close: 102 },
+      { date: "2023-08-21", close: 103 },
+    ]);
+
+    const childHistory = buildAssetHistory({ asset: child, assets: [parent, child], entry: prices, openingPositions: [], trades: [parentBuy] });
+    expect(childHistory.points.map((point) => point.holdingValue)).toEqual([null, null, null, 1030]);
+    const parentHistory = buildAssetHistory({ asset: parent, assets: [parent, child], entry: prices, openingPositions: [], trades: [parentBuy] });
+    expect(parentHistory.warning).toContain("across this demerger");
+    expect(parentHistory.points.every((point) => point.holdingValue === null)).toBe(true);
+  });
 });

@@ -11,6 +11,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { seedVisualQaPortfolio } from "@/src/testing/visualQaSeed";
 import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
+import { demergerCatalog } from "@/src/domain/demergers";
 
 const digest = async (text: string) => {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -54,7 +55,7 @@ function payload(): BackupPayload {
       ppfAccounts: [{ balanceAsOf: "2026-01-01", confirmedBalance: 0, createdAt: "2026-01-01T10:00:00.000Z", id: "ppf-account", legacyAssetId: "asset-ppf", nickname: "Primary", opening: { kind: "financialYear" as const, financialYearStart: 2025 }, provider: "India Post", status: "active" as const }],
       ppfLedgerEntries: [{ accountId: "ppf-account", amount: 500, date: "2026-01-02", id: "ppf-contribution", recordedAt: "2026-01-02T10:00:00.000Z", type: "contribution" as const }],
       preferences: { defaultChartRange: "ALL", displayMode: "standard", hasCompletedOnboarding: true, maskWealthValues: false },
-      schemaVersion: 12,
+      schemaVersion: 13,
       trades: [
         { assetId: "asset-stock", date: "2026-01-02", fees: 2, id: "trade-buy", importProvenance: { fingerprint: "synthetic-fingerprint", importBatchId: "batch-cas", originalRowNumber: 1, sourceFormat: "cams-kfin-cas", sourceVersion: "1" }, pricePerUnit: 100, quantity: 2, totalValue: 202, type: "buy" as const },
         { assetId: "asset-stock", date: "2026-01-03", fees: 2, id: "trade-sell", pricePerUnit: 120, quantity: 1, totalValue: 118, type: "sell" as const },
@@ -87,11 +88,39 @@ function bonusPayload(): BackupPayload {
   return value;
 }
 
+function demergerPayload(): BackupPayload {
+  const value = payload();
+  const event = demergerCatalog[0];
+  const parent = {
+    assetClass: "stock" as const, currency: "INR" as const, exchange: "NSE" as const,
+    id: "asset-parent", instrumentType: "stock" as const, isin: event.parentIsin,
+    name: "Parent Asset", symbol: "PARENT", ticker: "PARENT.NS",
+    demerger: { childAssetId: "asset-child", eventId: event.id },
+  };
+  const child = {
+    assetClass: "stock" as const, currency: "INR" as const, exchange: "NSE" as const,
+    id: "asset-child", instrumentType: "stock" as const, isin: event.childIsin,
+    name: event.childName, symbol: event.childSymbol, ticker: `${event.childSymbol}.NS`,
+  };
+  value.portfolio.assets = [parent, child];
+  value.portfolio.openingPositions = [{
+    assetId: parent.id, averageCostPrice: 100, date: "2023-01-01", id: "opening-parent",
+    measuredAsOf: "2023-01-01", quantity: 10,
+  }];
+  value.portfolio.trades = [];
+  value.portfolio.cashEntries = [];
+  value.portfolio.ppfAccounts = [];
+  value.portfolio.ppfLedgerEntries = [];
+  value.quoteCache = {};
+  value.historicalQuoteCache = {};
+  return value;
+}
+
 describe("portable portfolio backup", () => {
-  it("round trips catalog bonus credits in schema12 with additional-share inventory semantics", async () => {
+  it("round trips catalog bonus credits in schema13 with additional-share inventory semantics", async () => {
     const original = bonusPayload();
     const text = await createPortfolioBackup(original, { appVersion: "1", createdAt: "2026-09-11T10:00:00.000Z" }, digest);
-    expect(JSON.parse(text).payload.portfolio.schemaVersion).toBe(12);
+    expect(JSON.parse(text).payload.portfolio.schemaVersion).toBe(13);
     expect((await parsePortfolioBackup(text, digest)).payload).toEqual(original);
   });
 
@@ -112,7 +141,7 @@ describe("portable portfolio backup", () => {
     expect(() => validateBackupPayload(value)).toThrow();
   });
 
-  it.each([9, 10, 11])("upgrades a genuinely signed V%s backup to V12 without changing records", async (schemaVersion) => {
+  it.each([9, 10, 11, 12])("upgrades a genuinely signed V%s backup to V13 without changing records", async (schemaVersion) => {
     const source = JSON.parse(await backup());
     delete source.checksum;
     source.payload.portfolio.schemaVersion = schemaVersion;
@@ -124,14 +153,58 @@ describe("portable portfolio backup", () => {
     }
     const signed = { ...source, checksum: await digest(canonical(source)) };
     expect((await parsePortfolioBackup(JSON.stringify(signed), digest)).payload).toEqual(payload());
-    expect(validateBackupPayload(source.payload).portfolio.schemaVersion).toBe(12);
+    expect(validateBackupPayload(source.payload).portfolio.schemaVersion).toBe(13);
     signed.payload.portfolio.preferences.maskWealthValues = true;
     await expect(parsePortfolioBackup(JSON.stringify(signed), digest)).rejects.toThrow("checksum");
   });
 
-  it.each([8, 13])("rejects unsupported portfolio schema %s", (schemaVersion) => {
+  it.each([8, 14])("rejects unsupported portfolio schema %s", (schemaVersion) => {
     const current = payload();
     expect(() => validateBackupPayload({ ...current, portfolio: { ...current.portfolio, schemaVersion } })).toThrow("supported snapshot");
+  });
+
+  it("rejects an uncosted successor transfer", () => {
+    const value = demergerPayload();
+    value.portfolio.trades.push({
+      assetId: "asset-child", date: "2023-08-21", id: "uncosted-successor",
+      quantity: 1, type: "transferIn",
+    });
+    expect(() => validateBackupPayload(value)).toThrow("acquisition cost is unresolved");
+  });
+
+  it.each([
+    { childAssetId: "missing-child", eventId: demergerCatalog[0].id },
+    { childAssetId: "asset-child", eventId: "missing-event" },
+  ])("rejects a missing or corrupt demerger link", (demerger) => {
+    const value = demergerPayload();
+    value.portfolio.assets[0] = { ...value.portfolio.assets[0], demerger };
+    expect(() => validateBackupPayload(value)).toThrow();
+  });
+
+  it("rejects multiple opening balances for a demerged asset", () => {
+    const value = demergerPayload();
+    value.portfolio.openingPositions.push({
+      assetId: "asset-child", averageCostPrice: 1, date: "2023-08-21",
+      id: "opening-child-1", measuredAsOf: "2023-08-21", quantity: 1,
+    });
+    value.portfolio.openingPositions.push({
+      assetId: "asset-child", averageCostPrice: 1, date: "2023-08-22",
+      id: "opening-child-2", measuredAsOf: "2023-08-22", quantity: 1,
+    });
+    expect(() => validateBackupPayload(value)).toThrow();
+  });
+
+  it("does not hide unresolved successor history behind a measured opening cutover", () => {
+    const value = demergerPayload();
+    value.portfolio.openingPositions.push({
+      assetId: "asset-child", averageCostPrice: 1, date: "2024-01-01",
+      id: "opening-child", measuredAsOf: "2024-01-01", quantity: 1,
+    });
+    value.portfolio.trades.push({
+      assetId: "asset-child", date: "2023-09-01", id: "pre-cutover-transfer",
+      quantity: 1, type: "transferIn",
+    });
+    expect(() => validateBackupPayload(value)).toThrow("does not reconcile");
   });
 
   it("captures and round trips the visual QA seed before file selection", async () => {

@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])(
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,10 +51,32 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 13 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 14 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });
+  });
+
+  it("round trips a strict demerger link", () => {
+    const demerger = { childAssetId: "child-asset", eventId: "event-1" };
+    expect(parsePersistedPortfolio(serialize({
+      assets: [{ ...validAsset, demerger }],
+      schemaVersion: 13,
+    }))).toEqual({
+      success: true,
+      data: { assets: [{ ...validAsset, demerger }], schemaVersion: 13 },
+    });
+  });
+
+  it.each([
+    { childAssetId: "", eventId: "event-1" },
+    { childAssetId: "child-asset", eventId: " " },
+    { childAssetId: "child-asset", eventId: "event-1", extra: true },
+  ])("rejects an invalid demerger link", (demerger) => {
+    expect(parsePersistedPortfolio(serialize({
+      assets: [{ ...validAsset, demerger }],
+      schemaVersion: 13,
+    }))).toEqual({ reason: "invalid-shape", success: false });
   });
 
   it("accepts V9 transfer records and normalizes optional ISIN identity", () => {

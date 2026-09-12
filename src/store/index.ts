@@ -1,5 +1,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
+import { projectDemergers, demergerCatalog } from "@/src/domain/demergers";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { assertCatalogSplits, assertSplitSourceIdentities, splitCanonicalIsin, withVerifiedStockSplits } from "@/src/domain/stockSplitCatalog";
 import { validateBackupPayload, type BackupPayload } from "@/src/domain/portfolioBackup";
 import { backupRestoreJournalKey, casFolioSaltStorageKey, quickSetupStorageKey } from "@/src/services/storage/backupKeys";
@@ -109,7 +111,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 12;
+export const portfolioSchemaVersion = 13;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -329,7 +331,7 @@ export type AssetDeletionResult =
       impact: AssetDeletionImpact;
       status: "applied";
     })
-  | { reason: "insufficientCash" | "notFound"; status: "rejected" };
+  | { reason: "insufficientCash" | "notFound" | "linkedDemerger"; status: "rejected" };
 
 export type ManualCashDeletionResult =
   | { entry: CashEntry; status: "applied" }
@@ -1416,10 +1418,18 @@ type QuantityEvent = {
 };
 
 function validateSplitInventory(portfolio: Pick<RawPortfolioSnapshot, "assets" | "openingPositions" | "trades">) {
+  const adjustments = projectDemergers(portfolio);
   for (const asset of portfolio.assets) {
     assertCatalogSplits(asset);
     assertSplitSourceIdentities(asset, portfolio.trades);
-    if (asset.stockSplits?.length && wouldOversellAsset(asset.id, portfolio.openingPositions, portfolio.trades, asset.stockSplits)) {
+    const demergerAdjustments = adjustments.filter((event) => event.assetId === asset.id);
+    if (demergerAdjustments.length) {
+      const openings = portfolio.openingPositions.filter((item) => item.assetId === asset.id);
+      if (openings.length > 1 || !reconcileTransactions({ openingPosition: openings[0], openingMeasuredAsOf: openings[0]?.measuredAsOf,
+        transactions: portfolio.trades.filter((trade) => trade.assetId === asset.id && isTransactionAfterOpeningCutover(trade.date, openings)),
+        stockSplits: asset.stockSplits, demergerAdjustments }).isExact) throw new Error("Demerged quantity or acquisition cost is unresolved.");
+    }
+    if ((asset.stockSplits?.length || adjustments.some((event) => event.assetId === asset.id)) && wouldOversellAsset(asset.id, portfolio.openingPositions, portfolio.trades, asset.stockSplits, adjustments.filter((event) => event.assetId === asset.id))) {
       throw new Error("Stock-split inventory does not reconcile.");
     }
   }
@@ -1430,13 +1440,16 @@ function assetQuantityEvents(
   openingPositions: OpeningPosition[],
   trades: Trade[],
   stockSplits: import("@/src/types").StockSplitEvent[] = [],
+  demergerAdjustments: DemergerAdjustment[] = [],
 ) {
   const assetOpenings = openingPositions.filter(
     (item) => item.assetId === assetId,
   );
   const events: QuantityEvent[] = [
-    ...positionEvents({ openingPositions: assetOpenings, trades: trades.filter((trade) => trade.assetId === assetId), stockSplits })
-      .flatMap((event) => event.type === "split"
+    ...positionEvents({ openingPositions: assetOpenings, trades: trades.filter((trade) => trade.assetId === assetId), stockSplits, demergerAdjustments })
+      .flatMap((event): QuantityEvent[] => event.type === "demerger"
+        ? [{ date: event.date, delta: event.adjustment.kind === "entitlement" ? event.adjustment.quantity : 0, id: event.adjustment.eventId, priority: -2 }]
+        : event.type === "split"
         ? [{ date: event.date, delta: 0, id: event.split.id, priority: -1, split: event.split }] : []),
     ...assetOpenings
       .map((position) => ({
@@ -1489,8 +1502,9 @@ export function wouldOversellAsset(
   openingPositions: OpeningPosition[],
   trades: Trade[],
   stockSplits: import("@/src/types").StockSplitEvent[] = [],
+  demergerAdjustments: DemergerAdjustment[] = [],
 ) {
-  const events = assetQuantityEvents(assetId, openingPositions, trades, stockSplits);
+  const events = assetQuantityEvents(assetId, openingPositions, trades, stockSplits, demergerAdjustments);
   let units = decimal(0);
   for (const event of events) {
     units = event.split ? splitQuantity(units, event.split) : units.plus(event.delta);
@@ -1506,9 +1520,10 @@ function availableUnitsBeforeTrade(
   trades: Trade[],
   tradeId: string,
   stockSplits: import("@/src/types").StockSplitEvent[] = [],
+  demergerAdjustments: DemergerAdjustment[] = [],
 ) {
   let units = decimal(0);
-  for (const event of assetQuantityEvents(assetId, openingPositions, trades, stockSplits)) {
+  for (const event of assetQuantityEvents(assetId, openingPositions, trades, stockSplits, demergerAdjustments)) {
     if (event.id === tradeId) return normalizeQuantity(units);
     units = event.split ? splitQuantity(units, event.split) : units.plus(event.delta);
   }
@@ -2078,7 +2093,9 @@ export function createPortfolioStore({
         return { reason: "invalidAsset", status: "rejected" };
       }
 
-      const asset = normalizeAssetMetadata({ ...input, ...(existingAsset.stockSplits ? { stockSplits: existingAsset.stockSplits } : {}) });
+      const asset = normalizeAssetMetadata({ ...input, ...(existingAsset.stockSplits ? { stockSplits: existingAsset.stockSplits } : {}), ...(existingAsset.demerger ? { demerger: existingAsset.demerger } : {}) });
+      if ((existingAsset.demerger || state.assets.some((item) => item.demerger?.childAssetId === existingAsset.id)) &&
+          (asset.isin !== existingAsset.isin || asset.currency !== existingAsset.currency || asset.assetClass !== existingAsset.assetClass)) return { reason: "invalidAsset", status: "rejected" };
       if (!hasValidAssetIdentity(asset)) {
         return { reason: "invalidAsset", status: "rejected" };
       }
@@ -2181,7 +2198,7 @@ export function createPortfolioStore({
       const trades = state.trades.map((item) =>
         item.id === trade.id ? trade : item,
       );
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits)) {
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits, projectDemergers({ ...state, trades }).filter((event) => event.assetId === trade.assetId))) {
         return { reason: "oversold", status: "rejected" };
       }
 
@@ -2365,6 +2382,7 @@ export function createPortfolioStore({
       const state = get();
       const asset = state.assets.find((item) => item.id === assetId);
       if (!asset) return { reason: "notFound", status: "rejected" };
+      if (asset.demerger || state.assets.some((item) => item.demerger?.childAssetId === assetId)) return { reason: "linkedDemerger", status: "rejected" };
 
       const removedTrades = state.trades.filter(
         (trade) => trade.assetId === assetId,
@@ -2521,7 +2539,7 @@ export function createPortfolioStore({
       }
 
       const trades = state.trades.filter((item) => item.id !== tradeId);
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits)) {
+      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits, projectDemergers({ ...state, trades }).filter((event) => event.assetId === trade.assetId))) {
         return { reason: "oversold", status: "rejected" };
       }
 
@@ -3123,6 +3141,42 @@ export function createPortfolioStore({
       if (input.mode !== "fullHistory" && input.mode !== "supplemental") {
         throw new Error("Transaction import mode is invalid.");
       }
+      if (!input.transactions.length && input.assets.some((asset) => asset.demerger)) {
+        if (input.cutovers.length || input.replaceOpeningPositionIds.length) throw new Error("A demerger-only correction cannot replace opening balances.");
+        let assets = [...state.assets];
+        const seen = new Set<string>();
+        for (const proposed of input.assets) {
+          if (seen.has(proposed.id)) throw new Error("Duplicate demerger holding proposal.");
+          seen.add(proposed.id);
+          const existing = assets.find((asset) => asset.id === proposed.id);
+          if (existing) {
+            if (!existing.isin || existing.isin !== proposed.isin || existing.currency !== proposed.currency || existing.assetClass !== proposed.assetClass ||
+                (existing.demerger && JSON.stringify(existing.demerger) !== JSON.stringify(proposed.demerger))) throw new Error("The demerger holding identity changed after preview.");
+            assertCatalogSplits(proposed);
+            const updated = { ...existing, ...(proposed.stockSplits ? { stockSplits: proposed.stockSplits } : {}), ...(proposed.demerger ? { demerger: proposed.demerger } : {}) };
+            assets = assets.map((asset) => asset.id === existing.id ? updated : asset);
+          } else {
+            const parent = input.assets.find((asset) => asset.demerger?.childAssetId === proposed.id);
+            const event = demergerCatalog.find((item) => item.id === parent?.demerger?.eventId);
+            if (!event || proposed.isin !== event.childIsin || proposed.quoteSourceId !== `${event.childSymbol}.NS` || hasDuplicateAssetIdentity(assets, proposed)) throw new Error("The new demerger successor is not a verified listing.");
+            assets.push(proposed);
+          }
+        }
+        validateSplitInventory({ ...state, assets });
+        const adjustments = projectDemergers({ ...state, assets });
+        for (const assetId of new Set(adjustments.map((event) => event.assetId))) {
+          const openings = state.openingPositions.filter((item) => item.assetId === assetId);
+          if (openings.length > 1 || !reconcileTransactions({ openingPosition: openings[0], openingMeasuredAsOf: openings[0]?.measuredAsOf,
+            transactions: state.trades.filter((trade) => trade.assetId === assetId && isTransactionAfterOpeningCutover(trade.date, openings)),
+            stockSplits: assets.find((asset) => asset.id === assetId)?.stockSplits,
+            demergerAdjustments: adjustments.filter((event) => event.assetId === assetId) }).isExact) throw new Error("Demerged holdings no longer reconcile.");
+        }
+        if (JSON.stringify(assets) === JSON.stringify(state.assets)) return { added: 0, removedOpeningPositions: 0, updatedCutovers: 0, status: "alreadyApplied" as const };
+        const monthlySnapshots = rebuildPortfolioSnapshots({ assets, earliestAffectedMonth: adjustments.map((event) => event.date.slice(0, 7)).sort()[0], now: currentDate, state }).monthlySnapshots;
+        persistAssetGraphTransition({ historicalQuoteCache: state.historicalQuoteCache, portfolio: { ...selectRawSnapshot(state), assets, monthlySnapshots }, quoteCache: state.quoteCache, storage });
+        set({ assets, monthlySnapshots });
+        return { added: 0, removedOpeningPositions: 0, updatedCutovers: 0, status: "applied" as const };
+      }
       // Event-only commands preserve executions, balances, and unrelated metadata.
       if (input.transactions.length === 0) {
         if (!input.assets.length || input.cutovers.length || input.replaceOpeningPositionIds.length) {
@@ -3288,6 +3342,8 @@ export function createPortfolioStore({
       for (const rawAsset of input.assets) {
         const candidate = withVerifiedStockSplits(normalizeAssetMetadata(rawAsset));
         const existingById = assets.find((asset) => asset.id === candidate.id);
+        if (candidate.demerger && existingById && (!existingById.isin || existingById.isin !== candidate.isin ||
+            (existingById.demerger && JSON.stringify(existingById.demerger) !== JSON.stringify(candidate.demerger)))) throw new Error("The demerger identity changed after preview.");
         if (candidate.stockSplits?.length && !normalizedTransactions.some((trade) => trade.assetId === candidate.id)) {
           if (!existingById?.isin || !rawAsset.stockSplits?.length ||
               splitCanonicalIsin(existingById.isin) !== candidate.isin ||
@@ -3330,6 +3386,7 @@ export function createPortfolioStore({
             assets = assets.map((asset) => asset.id === candidate.id
               ? { ...asset, isin: candidate.isin, stockSplits: candidate.stockSplits } : asset);
           }
+          if (candidate.demerger) assets = assets.map((asset) => asset.id === candidate.id ? { ...asset, demerger: candidate.demerger } : asset);
           continue;
         }
         if (
@@ -3394,6 +3451,13 @@ export function createPortfolioStore({
       const affectedAssetIds = new Set(
         normalizedTransactions.map((transaction) => transaction.assetId),
       );
+      for (const parent of assets) {
+        const childId = parent.demerger?.childAssetId;
+        if (childId && (affectedAssetIds.has(parent.id) || affectedAssetIds.has(childId))) {
+          affectedAssetIds.add(parent.id);
+          affectedAssetIds.add(childId);
+        }
+      }
       if (
         input.mode === "fullHistory" &&
         openingPositions.some(
@@ -3432,6 +3496,7 @@ export function createPortfolioStore({
           throw new Error("Full-history replacement requires a confirmed cutover.");
         }
         const reconciliation = reconcileTransactions({
+          demergerAdjustments: projectDemergers({ assets, openingPositions: openingPositions.filter((position) => !replacementIds.has(position.id)), trades: nextTrades }, openingPosition.measuredAsOf).filter((event) => event.assetId === openingPosition.assetId),
           stockSplits: assets.find((asset) => asset.id === openingPosition.assetId)?.stockSplits,
           through: openingPosition.measuredAsOf,
           transactions: nextTrades.filter(
@@ -3451,13 +3516,15 @@ export function createPortfolioStore({
 
       if (
         [...affectedAssetIds].some((assetId) =>
-          wouldOversellAsset(assetId, openingPositions, nextTrades, assets.find((asset) => asset.id === assetId)?.stockSplits),
+          wouldOversellAsset(assetId, openingPositions, nextTrades, assets.find((asset) => asset.id === assetId)?.stockSplits, projectDemergers({ assets, openingPositions, trades: nextTrades }).filter((event) => event.assetId === assetId)),
         )
       ) {
         throw new Error("Transaction import would oversell a holding.");
       }
 
       const affectedMonths = [
+        ...assets.filter((asset) => asset.demerger && !state.assets.find((item) => item.id === asset.id)?.demerger)
+          .flatMap((asset) => [assetRecordMonth(state, asset.id), demergerCatalog.find((event) => event.id === asset.demerger!.eventId)?.exDate.slice(0, 7)]),
         ...assets.flatMap((asset) => {
           const previous = state.assets.find((item) => item.id === asset.id);
           const newlyAttached = asset.stockSplits?.filter((event) => !previous?.stockSplits?.some((prior) => prior.id === event.id)) ?? [];
@@ -3546,6 +3613,7 @@ export function createPortfolioStore({
         state.openingPositions,
         trades,
         state.assets.find((asset) => asset.id === normalizedInput.trade.assetId)?.stockSplits,
+        projectDemergers({ ...state, trades }).filter((event) => event.assetId === normalizedInput.trade.assetId),
       )) {
         return {
           availableUnits: availableUnitsBeforeTrade(
@@ -3554,6 +3622,7 @@ export function createPortfolioStore({
             trades,
             normalizedInput.trade.id,
             state.assets.find((asset) => asset.id === normalizedInput.trade.assetId)?.stockSplits,
+            projectDemergers({ ...state, trades }).filter((event) => event.assetId === normalizedInput.trade.assetId),
           ),
           isValid: false,
           reason: "insufficientUnits",

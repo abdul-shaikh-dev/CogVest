@@ -1,4 +1,5 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { projectDemergers } from "@/src/domain/demergers";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { assertCatalogSplits, assertSplitSourceIdentities } from "@/src/domain/stockSplitCatalog";
 import { camsKfinCasSourceFormat } from "@/src/domain/camsKfinCas";
@@ -7,6 +8,7 @@ import { getOpeningPositionHistoryDate, isTransactionAfterOpeningCutover } from 
 import { decimal, isWithinQuantum, moneyQuantum } from "@/src/domain/precision";
 import { comparePpfLedgerEntries, calculatePpfConfirmedBalance, validatePpfAccount, validatePpfLedgerEntryForAccount } from "@/src/domain/ppf";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
+import { reconcileTransactions } from "@/src/domain/transactionReconciliation";
 import { getTradeQuantityDelta, isTradeAcquisition } from "@/src/domain/transactionSemantics";
 import { parsePersistedHistoricalQuoteCache, parsePersistedPortfolio, parsePersistedQuoteCache } from "@/src/store/persistedPortfolioSchema";
 import type { RawPortfolioSnapshot } from "@/src/store";
@@ -154,15 +156,27 @@ function validateCashLinks(cashEntries: CashEntry[], trades: Trade[]) {
 }
 
 function validateInventory(portfolio: RawPortfolioSnapshot) {
+  const demergerAdjustments = projectDemergers(portfolio);
   for (const asset of portfolio.assets) {
     assertCatalogSplits(asset);
     assertSplitSourceIdentities(asset, portfolio.trades);
     const openings = portfolio.openingPositions.filter((position) => position.assetId === asset.id);
-    if (asset.stockSplits?.length) {
+    const assetDemergerAdjustments = demergerAdjustments.filter((event) => event.assetId === asset.id);
+    if (assetDemergerAdjustments.length && (openings.length > 1 || !reconcileTransactions({
+      openingPosition: openings[0],
+      openingMeasuredAsOf: openings[0]?.measuredAsOf,
+      transactions: portfolio.trades.filter((trade) => trade.assetId === asset.id && isTransactionAfterOpeningCutover(trade.date, openings)),
+      stockSplits: asset.stockSplits,
+      demergerAdjustments: assetDemergerAdjustments,
+    }).isExact)) {
+      fail("demerged quantity or acquisition cost is unresolved");
+    }
+    if (asset.stockSplits?.length || demergerAdjustments.some((event) => event.assetId === asset.id)) {
       let quantity = decimal(0);
       for (const event of positionEvents({ openingPositions: openings,
-        trades: portfolio.trades.filter((trade) => trade.assetId === asset.id), stockSplits: asset.stockSplits })) {
-        quantity = event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
+        trades: portfolio.trades.filter((trade) => trade.assetId === asset.id), stockSplits: asset.stockSplits,
+        demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === asset.id) })) {
+        quantity = event.type === "demerger" ? quantity.plus(event.adjustment.kind === "entitlement" ? event.adjustment.quantity : 0) : event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
           event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
         if (quantity.isNegative()) fail(`inventory oversells asset '${asset.id}'`);
       }
@@ -281,17 +295,17 @@ function parsePayload(raw: unknown): BackupPayload {
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
   requireExactKeys(portfolioRaw, ["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
-  if (![9, 10, 11, 12].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
+  if (![9, 10, 11, 12, 13].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
-  if (!parsed.success || ![9, 10, 11, 12].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
+  if (!parsed.success || ![9, 10, 11, 12, 13].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);
   const quoteCache = parsePersistedQuoteCache(JSON.stringify(raw.quoteCache));
   const historicalQuoteCache = parsePersistedHistoricalQuoteCache(JSON.stringify(raw.historicalQuoteCache));
   if (!quoteCache.success || !historicalQuoteCache.success) fail("quote cache records are invalid");
   assertNoDiscardedFields(raw.quoteCache, quoteCache.data);
   assertNoDiscardedFields(raw.historicalQuoteCache, historicalQuoteCache.data);
-  const portfolio = { ...parsed.data, schemaVersion: 12 } as RawPortfolioSnapshot;
+  const portfolio = { ...parsed.data, schemaVersion: 13 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;

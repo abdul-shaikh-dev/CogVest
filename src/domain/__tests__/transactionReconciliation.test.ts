@@ -39,6 +39,7 @@ describe("transaction reconciliation", () => {
       isExact: true,
       oversoldTransactionIds: [],
       quantity: 10,
+      totalCost: "1500",
       unresolvedTransactionIds: [],
     });
   });

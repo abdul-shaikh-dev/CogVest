@@ -18,6 +18,8 @@ import {
   quantityQuantum,
 } from "@/src/domain/precision";
 import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
+import { projectDemergers } from "@/src/domain/demergers";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
@@ -28,7 +30,11 @@ type ManageAssetsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
-function remainingUnits(state: PortfolioStoreState, assetId: string) {
+function remainingUnits(
+  state: PortfolioStoreState,
+  assetId: string,
+  demergerAdjustments: readonly DemergerAdjustment[],
+) {
   const assetOpenings = state.openingPositions.filter(
     (position) => position.assetId === assetId,
   );
@@ -44,6 +50,7 @@ function remainingUnits(state: PortfolioStoreState, assetId: string) {
       openingPositions: assetOpenings,
       trades,
       stockSplits: state.assets.find((asset) => asset.id === assetId)?.stockSplits,
+      demergerAdjustments,
     }));
   } catch (error) {
     if (!(error instanceof StockSplitError)) throw error;
@@ -57,6 +64,11 @@ export function ManageAssetsScreen({
   store = getPortfolioStore(),
 }: ManageAssetsScreenProps) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const demergerAdjustments = projectDemergers({
+    assets: snapshot.assets,
+    openingPositions: snapshot.openingPositions,
+    trades: snapshot.trades,
+  });
 
   return (
     <ScreenContainer scroll testID="manage-assets-screen">
@@ -76,7 +88,11 @@ export function ManageAssetsScreen({
         ) : (
           <PremiumCard style={styles.list}>
             {snapshot.assets.map((asset, index) => {
-              const units = remainingUnits(snapshot, asset.id);
+              const units = remainingUnits(
+                snapshot,
+                asset.id,
+                demergerAdjustments.filter((adjustment) => adjustment.assetId === asset.id),
+              );
               const isActive = units !== null && decimal(units).greaterThanOrEqualTo(quantityQuantum);
               return (
                 <Pressable

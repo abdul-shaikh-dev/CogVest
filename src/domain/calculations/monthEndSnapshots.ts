@@ -49,6 +49,7 @@ import {
   calculatePortfolioTotal,
 } from "./holdings";
 import { buildMonthlyPerformanceBasis } from "./monthlyPerformance";
+import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 
 export type GeneratedSnapshotStatus =
   | "already-exists"
@@ -628,6 +629,10 @@ export function buildGeneratedMonthEndSnapshot({
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
   );
+  const monthDemergerAdjustments = projectDemergers(
+    { assets, openingPositions, trades },
+    monthEndCalendarDate,
+  );
   const openQuantityByAssetId = new Map<string, FinancialDecimalInstance>();
 
   for (const position of openingPositions.filter(
@@ -704,21 +709,31 @@ export function buildGeneratedMonthEndSnapshot({
       (position) => position.assetId === asset.id,
     );
     const hasTrade = monthTrades.some((trade) => trade.assetId === asset.id);
+    const hasDemergerAdjustment = monthDemergerAdjustments.some(
+      (event) => event.assetId === asset.id,
+    );
 
-    return hasOpeningPosition || hasTrade;
+    return hasOpeningPosition || hasTrade || hasDemergerAdjustment;
   });
   const priceSelectionsByAssetId = new Map(
     relevantAssets.map((asset) => [
       asset.id,
-      selectAssetPrice({
-        asset,
-        historicalQuotes,
-        openingPositions: monthOpeningPositions.filter(
-          (position) => position.assetId === asset.id,
-        ),
-        quoteCache,
-        targetMonth,
-      }),
+      (() => {
+        const childEvent = demergerCatalog.find((event) =>
+          assets.some((parent) => parent.demerger?.eventId === event.id && parent.demerger.childAssetId === asset.id),
+        );
+        return childEvent && monthEndCalendarDate < childEvent.availableFrom
+          ? { basis: "unavailable" as const }
+          : selectAssetPrice({
+              asset,
+              historicalQuotes,
+              openingPositions: monthOpeningPositions.filter(
+                (position) => position.assetId === asset.id,
+              ),
+              quoteCache,
+              targetMonth,
+            });
+      })(),
     ]),
   );
   const snapshotQuoteCache = relevantAssets.reduce<QuoteCache>((cache, asset) => {
@@ -739,7 +754,7 @@ export function buildGeneratedMonthEndSnapshot({
     return cache;
   }, {});
   const holdings = calculateHoldings({
-    assets: relevantAssets,
+    assets,
     now: monthEnd,
     openingPositions: monthOpeningPositions,
     quoteCache: snapshotQuoteCache,

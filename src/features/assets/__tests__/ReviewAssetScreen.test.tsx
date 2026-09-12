@@ -28,6 +28,22 @@ function createStore() {
 }
 
 describe("ReviewAssetScreen", () => {
+  it("explains why a linked demerger holding cannot be deleted", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.setState({
+      deleteAsset: jest.fn(() => ({ reason: "linkedDemerger" as const, status: "rejected" as const })),
+    });
+    const { getByTestId, getByText } = render(
+      <ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={jest.fn()} store={store} />,
+    );
+
+    fireEvent.press(getByTestId("delete-asset-button"));
+    fireEvent.press(getByTestId("confirm-delete-asset-button"));
+
+    expect(getByText("This holding is linked to a demerger. Its parent and successor history must be corrected together.")).toBeTruthy();
+  });
+
   it("corrects metadata once after repeated save presses", async () => {
     const store = createStore();
     const originalCorrection = store.getState().correctAsset;

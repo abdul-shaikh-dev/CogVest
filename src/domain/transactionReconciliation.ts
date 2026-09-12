@@ -13,6 +13,7 @@ import {
 } from "@/src/domain/transactionSemantics";
 import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
 import { positionEvents, splitQuantity, StockSplitError } from "./stockSplits";
+import type { DemergerAdjustment } from "./demergerEvents";
 
 export type TransactionReconciliation = {
   averageCostPrice: number;
@@ -21,12 +22,15 @@ export type TransactionReconciliation = {
   quantity: number;
   unresolvedTransactionIds: string[];
   adjustmentError?: string;
+  /** Unrounded remaining tracking cost for cross-holding allocation. */
+  totalCost?: string;
 };
 
 export function reconcileTransactions({
   openingPosition,
   transactions,
   stockSplits = [],
+  demergerAdjustments = [],
   through,
   openingMeasuredAsOf,
 }: {
@@ -36,6 +40,7 @@ export function reconcileTransactions({
   >;
   transactions: Trade[];
   stockSplits?: StockSplitEvent[];
+  demergerAdjustments?: DemergerAdjustment[];
   through?: string;
   openingMeasuredAsOf?: string;
 }): TransactionReconciliation {
@@ -51,6 +56,7 @@ export function reconcileTransactions({
   let events: ReturnType<typeof positionEvents>;
   try {
     events = positionEvents({ trades: transactions, through,
+      demergerAdjustments: demergerAdjustments.filter((event) => !openingMeasuredAsOf || event.date > openingMeasuredAsOf),
       stockSplits: stockSplits.filter((event) => !openingMeasuredAsOf || event.effectiveDate > openingMeasuredAsOf) });
   } catch (error) {
     if (!(error instanceof StockSplitError)) throw error;
@@ -59,6 +65,11 @@ export function reconcileTransactions({
   }
   let adjustmentError: string | undefined;
   for (const event of events) {
+    if (event.type === "demerger") {
+      if (event.adjustment.kind === "retainedCost") totalCost = totalCost.times(event.adjustment.retainedFraction);
+      else { quantity = quantity.plus(event.adjustment.quantity); totalCost = totalCost.plus(event.adjustment.cost); }
+      continue;
+    }
     if (event.type === "split") {
       try { quantity = splitQuantity(quantity, event.split); }
       catch (error) {
@@ -115,6 +126,7 @@ export function reconcileTransactions({
       unresolvedTransactionIds.length === 0,
     oversoldTransactionIds,
     quantity: normalizeQuantity(quantity),
+    totalCost: totalCost.toString(),
     unresolvedTransactionIds,
     ...(adjustmentError ? { adjustmentError } : {}),
   };

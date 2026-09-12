@@ -9,6 +9,7 @@ import {
 } from "@/src/domain/assets";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { normalizeMoney } from "@/src/domain/precision";
+import { projectDemergers } from "@/src/domain/demergers";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type {
@@ -168,6 +169,11 @@ export function useAddTrade({
       snapshot.openingPositions,
       now,
       selectedAsset?.stockSplits,
+      projectDemergers({
+        assets: snapshot.assets,
+        openingPositions: snapshot.openingPositions,
+        trades: snapshot.trades,
+      }, formatLocalCalendarDate(now)).filter((adjustment) => adjustment.assetId === formAssetId),
     );
 
     if (!result.isValid || Object.keys(manualErrors).length > 0) {

@@ -46,6 +46,9 @@ function failureMessage(reason?: string) {
   if (reason === "insufficientCash") {
     return "This asset's sale proceeds fund later cash activity. Correct those records before deleting it.";
   }
+  if (reason === "linkedDemerger") {
+    return "This holding is linked to a demerger. Its parent and successor history must be corrected together.";
+  }
   return "These asset details are not valid for CogVest V1.";
 }
 

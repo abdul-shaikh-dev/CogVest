@@ -60,7 +60,10 @@ silently generating a different salt is not a valid full-fidelity backup.
 ## File and Validation Boundary
 
 Initial format: JSON envelope `cogvest-portfolio-backup`, format version 1,
-portfolio schema 9, creation timestamp, app version, payload, and SHA-256 checksum.
+portfolio schema 13, creation timestamp, app version, payload, and SHA-256 checksum.
+Signed schema 9-12 payloads remain readable: verify the original checksum before
+migrating to the current schema. Schema 13 preserves strict demerger links and
+validates both linked holdings and their reconstructed acquisition cost.
 The digest covers UTF-8 JSON of every envelope field except `checksum`. Object
 keys are recursively sorted; array order is preserved. Optional undefined live
 fields are absent from JSON. No other format/schema combination is supported;

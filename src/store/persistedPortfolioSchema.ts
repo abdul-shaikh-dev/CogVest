@@ -119,6 +119,13 @@ const stockSplitsSchema = z
 const assetSchema = z.object({
   assetClass: z.enum(["crypto", "debt", "stock", "etf", "cash"]),
   currency: z.enum(["INR", "USD"]),
+  demerger: z
+    .object({
+      childAssetId: z.string().trim().min(1),
+      eventId: z.string().trim().min(1),
+    })
+    .strict()
+    .optional(),
   exchange: z.enum(["NSE", "BSE", "CRYPTO"]).optional(),
   id: nonEmptyStringSchema,
   instrumentType: z
@@ -500,6 +507,7 @@ const schemaVersionSchema = z.union([
   z.literal(10),
   z.literal(11),
   z.literal(12),
+  z.literal(13),
 ]);
 
 const persistedPortfolioSchema = z
@@ -704,7 +712,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

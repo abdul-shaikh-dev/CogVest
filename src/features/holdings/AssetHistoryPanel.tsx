@@ -34,6 +34,7 @@ export function assetHistoryRange(months: number, now = new Date()) {
 
 type AssetHistoryPanelProps = {
   asset: Asset;
+  assets?: Asset[];
   openingPositions: OpeningPosition[];
   trades: Trade[];
   masked: boolean;
@@ -44,6 +45,7 @@ type AssetHistoryPanelProps = {
 
 export function AssetHistoryPanel({
   asset,
+  assets,
   openingPositions,
   trades,
   masked,
@@ -59,7 +61,7 @@ export function AssetHistoryPanel({
   const { from, to } = assetHistoryRange(months);
   const history = useAssetHistory(asset, from, to, historyCache);
   const built = history.entry
-    ? buildAssetHistory({ asset, entry: history.entry, openingPositions, trades })
+    ? buildAssetHistory({ asset, assets, entry: history.entry, openingPositions, trades })
     : null;
   const sampled = built ? downsampleAssetHistory(built.points) : [];
   const originalIndices = new Map(built?.points.map((point, index) => [point.date, index]));

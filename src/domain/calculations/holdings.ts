@@ -10,6 +10,8 @@ import type {
   Trade,
   StockSplitEvent,
 } from "@/src/types";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
+import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { isV1CompatibleQuote, isV1SupportedAsset } from "@/src/domain/portfolioCurrency";
@@ -48,6 +50,7 @@ type CalculateHoldingInput = {
   trades: Trade[];
   valuation?: HoldingValuation;
   through?: string;
+  demergerAdjustments?: readonly DemergerAdjustment[];
 };
 
 type CalculateHoldingsInput = {
@@ -156,8 +159,9 @@ export function calculatePositionAccounting({
   openingPositions = [],
   trades,
   stockSplits = [],
+  demergerAdjustments = [],
   through,
-}: Pick<CalculateHoldingInput, "openingPositions" | "trades" | "through"> & { stockSplits?: StockSplitEvent[] }) {
+}: Pick<CalculateHoldingInput, "openingPositions" | "trades" | "through" | "demergerAdjustments"> & { stockSplits?: StockSplitEvent[] }) {
   let averageCostPrice = decimal(0);
   let totalUnits = decimal(0);
   const saleGains: Record<string, number | null> = {};
@@ -165,9 +169,24 @@ export function calculatePositionAccounting({
     (position) => getOpeningPositionHistoryDate(position) === null,
   ) && !trades.some((trade) => getCalendarDatePart(trade.date) === null);
   let basisKnown = chronologyKnown;
-  const costBasisEvents = positionEvents({ openingPositions, trades, stockSplits, through });
+  const costBasisEvents = positionEvents({ openingPositions, trades, stockSplits, demergerAdjustments, through });
 
   for (const event of costBasisEvents) {
+    if (event.type === "demerger") {
+      const currentCost = totalUnits.times(averageCostPrice);
+      if (event.adjustment.kind === "retainedCost") {
+        averageCostPrice = totalUnits.isZero()
+          ? decimal(0)
+          : currentCost.times(event.adjustment.retainedFraction).dividedBy(totalUnits);
+      } else {
+        const nextUnits = totalUnits.plus(event.adjustment.quantity);
+        averageCostPrice = nextUnits.isZero()
+          ? decimal(0)
+          : currentCost.plus(event.adjustment.cost).dividedBy(nextUnits);
+        totalUnits = nextUnits;
+      }
+      continue;
+    }
     if (event.type === "split") {
       const cost = totalUnits.times(averageCostPrice);
       totalUnits = splitQuantity(totalUnits, event.split);
@@ -245,11 +264,14 @@ export function calculateRecordedSaleGains({
   assets, openingPositions, trades, now = new Date(),
 }: { assets: Asset[]; openingPositions: OpeningPosition[]; trades: Trade[]; now?: Date }) {
   const gains: Record<string, number | null> = {};
+  const through = formatLocalCalendarDate(now);
+  const demergerAdjustments = projectDemergers({ assets, openingPositions, trades }, through);
   for (const asset of assets) {
     if (!isV1SupportedAsset(asset)) continue;
     Object.assign(gains, calculatePositionAccounting({
       stockSplits: asset.stockSplits,
-      through: formatLocalCalendarDate(now),
+      through,
+      demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === asset.id),
       openingPositions: openingPositions.filter((position) =>
         position.assetId === asset.id &&
         (getOpeningPositionHistoryDate(position) === null || isOpeningPositionEffective(position, now))),
@@ -268,11 +290,13 @@ export function calculateHolding({
   trades,
   valuation,
   through,
+  demergerAdjustments = [],
 }: CalculateHoldingInput): Holding {
   const { averageCostPrice, totalUnits } = calculatePositionAccounting({
     openingPositions,
     trades,
     stockSplits: asset.stockSplits,
+    demergerAdjustments,
     through,
   });
 
@@ -333,9 +357,24 @@ export function calculateHoldings({
   quoteCache,
   trades,
 }: CalculateHoldingsInput) {
+  const through = formatLocalCalendarDate(now);
+  const demergerAdjustments = projectDemergers({ assets, openingPositions, trades }, through);
   return assets
     .map((asset) => {
-      const quote = quoteCache[asset.id];
+      const rawQuote = quoteCache[asset.id];
+      const childEvent = demergerCatalog.find((event) =>
+        assets.some((parent) => parent.demerger?.eventId === event.id && parent.demerger.childAssetId === asset.id),
+      );
+      const parentEvent = asset.demerger
+        ? demergerCatalog.find((event) => event.id === asset.demerger?.eventId)
+        : undefined;
+      const minimumValuationDate = childEvent?.availableFrom ??
+        (parentEvent && parentEvent.exDate <= through ? parentEvent.exDate : undefined);
+      const quoteDate = rawQuote ? getCalendarDatePart(rawQuote.asOf) : null;
+      const quote = rawQuote && (
+        (childEvent && (!quoteDate || quoteDate < childEvent.availableFrom)) ||
+        (parentEvent && parentEvent.exDate <= through && (!quoteDate || quoteDate < parentEvent.exDate))
+      ) ? undefined : rawQuote;
 
       if (!isV1CompatibleQuote(asset, quote)) {
         return null;
@@ -353,12 +392,16 @@ export function calculateHoldings({
           isTransactionAfterOpeningCutover(trade.date, assetOpeningPositions),
       );
 
-      if (assetTrades.length === 0 && assetOpeningPositions.length === 0) {
+      const assetDemergerAdjustments = demergerAdjustments.filter(
+        (event) => event.assetId === asset.id,
+      );
+      if (assetTrades.length === 0 && assetOpeningPositions.length === 0 && assetDemergerAdjustments.length === 0) {
         return null;
       }
 
       const latestManualValuation = [...assetOpeningPositions]
-        .filter((position) => position.manualValuation !== undefined)
+        .filter((position) => position.manualValuation !== undefined &&
+          (!minimumValuationDate || (position.manualValuation.asOf ?? "") >= minimumValuationDate))
         .sort(
           (left, right) =>
             (
@@ -372,7 +415,8 @@ export function calculateHoldings({
             ),
         )[0]?.manualValuation;
       const latestLegacyPrice = [...assetOpeningPositions]
-        .filter((position) => position.currentPrice !== undefined)
+        .filter((position) => position.currentPrice !== undefined &&
+          (!minimumValuationDate || (getOpeningPositionHistoryDate(position) ?? "") >= minimumValuationDate))
         .sort((left, right) =>
           (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
             getOpeningPositionHistoryDate(left) ?? "",
@@ -409,7 +453,8 @@ export function calculateHoldings({
               }
             : { status: "pending" };
       const holding = calculateHolding({
-        through: formatLocalCalendarDate(now),
+        through,
+        demergerAdjustments: assetDemergerAdjustments,
         asset,
         currentPrice,
         openingPositions: assetOpeningPositions,
