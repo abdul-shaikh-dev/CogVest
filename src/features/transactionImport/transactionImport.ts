@@ -486,10 +486,21 @@ export function buildTransactionImportPlan({
 
   const cutovers: TransactionImportCommandInput["cutovers"] = [];
   const replaceOpeningPositionIds: string[] = [];
+  const eventOnlyAssets: Asset[] = [];
 
   for (const [assetId, items] of rowsByAssetId) {
-    if (items.length === 0) continue;
     const asset = assetsById.get(assetId)!;
+    const savedAsset = state.assets.find((candidate) => candidate.id === assetId);
+    const eventOnly = items.length === 0 && savedAsset !== undefined &&
+      asset.stockSplits?.some((event) => !savedAsset.stockSplits?.some((prior) => prior.id === event.id));
+    if (items.length === 0 && !eventOnly) continue;
+    if (eventOnly) {
+      if (!savedAsset?.isin || splitCanonicalIsin(savedAsset.isin) !== asset.isin) {
+        errors.push({ assetId, code: "conflictingIdentity", message: "Verify the saved holding identity before attaching share adjustments." });
+        continue;
+      }
+      eventOnlyAssets.push(asset);
+    }
     const baselines = state.openingPositions.filter(
       (position) => position.assetId === assetId,
     );
@@ -504,7 +515,7 @@ export function buildTransactionImportPlan({
 
     const baseline = baselines[0];
     const cutover = baseline
-      ? resolveCutover({ cutoverByOpeningPositionId, openingPosition: baseline, sharedCutover })
+      ? eventOnly ? baseline.measuredAsOf : resolveCutover({ cutoverByOpeningPositionId, openingPosition: baseline, sharedCutover })
       : undefined;
     if (baseline && !cutover) {
       errors.push({
@@ -540,7 +551,7 @@ export function buildTransactionImportPlan({
     let reconciliation: TransactionReconciliation;
     let replacementExact = false;
 
-    if (mode === "supplemental" && baseline) {
+    if ((mode === "supplemental" || eventOnly) && baseline) {
       const preCutover = items.filter(
         (item) => transactionCalendarDate(item.transaction) <= cutover!,
       );
@@ -666,13 +677,16 @@ export function buildTransactionImportPlan({
     affectedHoldings: holdings.length,
     unsupported: unsupportedCount,
   };
-  if (errors.length > 0 || additions.length === 0) {
+  if (eventOnlyAssets.length > 0 && unsupportedCount > 0) {
+    errors.push({ code: "unsupportedSourceEvents", message: "Resolve unsupported source events before attaching share adjustments." });
+  }
+  if (errors.length > 0 || (additions.length === 0 && eventOnlyAssets.length === 0)) {
     return { conflicts, duplicates, errors, holdings, summary };
   }
 
   return {
     command: {
-      assets: [...assetsById.values()],
+      assets: additions.length === 0 ? eventOnlyAssets : [...assetsById.values()],
       commandId: batchId,
       cutovers,
       mode,

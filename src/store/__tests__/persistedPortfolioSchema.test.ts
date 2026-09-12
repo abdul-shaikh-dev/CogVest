@@ -18,7 +18,7 @@ function serialize(value: unknown) {
 }
 
 describe("persisted portfolio schema", () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])(
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])(
     "accepts a valid V%s portfolio with legacy optional fields absent",
     (schemaVersion) => {
       const result = parsePersistedPortfolio(
@@ -51,7 +51,7 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 12 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 13 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });

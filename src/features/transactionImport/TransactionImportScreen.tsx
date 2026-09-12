@@ -254,6 +254,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           {controller.plan.holdings.flatMap((holding) => (holding.asset.stockSplits ?? []).map((event) =>
             <AppText key={`${holding.asset.id}-${event.id}`} color="secondary" variant="caption">{holding.asset.name}: {event.newShares} {event.kind === "bonus" ? "bonus share(s)" : "shares"} for {event.oldShares} held on {event.effectiveDate}. Earlier eligible units are adjusted; invested cost is unchanged.</AppText>))}
           <AppText color="secondary" variant="caption">These verified events are saved with the import, not as new purchases.</AppText>
+          {controller.plan.command?.transactions.length === 0 ? <AppText color="secondary" variant="caption">Your transactions are already saved. Apply the verified share adjustments without importing them again.</AppText> : null}
         </View> : null}
         {showHoldings ? controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
           <AppText weight="bold">{holding.asset.name}</AppText>
@@ -266,7 +267,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           return <ErrorCard key={`${error.code}-${index}`} message={`${asset ? `${asset.name}: ` : ""}${error.message}${count > 1 ? ` (${count} transactions)` : ""}`} />;
         })}
         {unresolved.length > 0 ? <AppText color="secondary">Confirm the {unresolved.length} remaining holding matches above before importing.</AppText> : null}
-        <AppButton disabled={!controller.plan.command || controller.isSaving || controller.isResolving || controller.parseErrors.length > 0 || controller.casReviewErrors.length > 0} onPress={controller.confirmImport} testID="confirm-transaction-import" title={controller.isSaving ? "Importing..." : "Confirm transaction import"} />
+        <AppButton disabled={!controller.plan.command || controller.isSaving || controller.isResolving || controller.parseErrors.length > 0 || controller.casReviewErrors.length > 0} onPress={controller.confirmImport} testID="confirm-transaction-import" title={controller.isSaving ? "Importing..." : controller.plan.command?.transactions.length === 0 ? "Apply share adjustments" : "Confirm transaction import"} />
       </PremiumCard> : null}
     </ScreenContainer>
   );

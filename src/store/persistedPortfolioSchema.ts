@@ -47,6 +47,8 @@ export const stockSplitEventSchema = z
     kind: z.enum(["split", "bonus"]),
     effectiveDate: calendarDateSchema,
     creditedDate: calendarDateSchema.optional(),
+    availableFrom: calendarDateSchema.optional(),
+    sequence: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
     oldIsin: stockSplitIsinSchema,
     newIsin: stockSplitIsinSchema,
     newShares: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -69,9 +71,10 @@ export const stockSplitEventSchema = z
     path: ["newIsin"],
   })
   .refine((event) => event.kind === "bonus"
-    ? event.creditedDate !== undefined && event.creditedDate >= event.effectiveDate
-    : event.creditedDate === undefined, {
-    message: "Bonus credits require a credit date on or after the ex-date; splits must not have one.",
+    ? (event.creditedDate !== undefined) !== (event.availableFrom !== undefined)
+      && (event.creditedDate ?? event.availableFrom)! >= event.effectiveDate
+    : event.creditedDate === undefined && event.availableFrom === undefined, {
+    message: "Bonuses require exactly one credit or availability date on or after the ex-date; splits must have neither.",
     path: ["creditedDate"],
   });
 
@@ -79,7 +82,7 @@ const stockSplitsSchema = z
   .array(stockSplitEventSchema)
   .max(100)
   .superRefine((events, context) => {
-    for (const field of ["id", "effectiveDate"] as const) {
+    for (const field of ["id"] as const) {
       const seen = new Set<string>();
       events.forEach((event, index) => {
         if (seen.has(event[field])) {
@@ -91,6 +94,25 @@ const stockSplitsSchema = z
         }
         seen.add(event[field]);
       });
+    }
+    const dates = new Map<string, number[]>();
+    events.forEach((event, index) => {
+      dates.set(event.effectiveDate, [...(dates.get(event.effectiveDate) ?? []), index]);
+    });
+    for (const indices of dates.values()) {
+      if (indices.length < 2) continue;
+      const sequences = new Set<number>();
+      for (const index of indices) {
+        const sequence = events[index].sequence;
+        if (sequence === undefined || sequences.has(sequence)) {
+          context.addIssue({
+            code: "custom",
+            message: "Same-date share adjustments require explicit unique sequences.",
+            path: [index, "sequence"],
+          });
+        }
+        if (sequence !== undefined) sequences.add(sequence);
+      }
     }
   });
 
@@ -477,6 +499,7 @@ const schemaVersionSchema = z.union([
   z.literal(9),
   z.literal(10),
   z.literal(11),
+  z.literal(12),
 ]);
 
 const persistedPortfolioSchema = z
@@ -681,7 +704,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

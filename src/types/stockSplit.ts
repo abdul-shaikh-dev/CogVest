@@ -6,8 +6,12 @@ export type StockSplitEvent = {
   id: string;
   kind: "split" | "bonus";
   effectiveDate: string;
-  /** Required for bonus events; economic entitlement is not immediate tradability. */
+  /** A bonus needs either this credit date or an evidence-backed availability bound. */
   creditedDate?: string;
+  /** Confirmed available by this date; not necessarily the first trading/credit date. */
+  availableFrom?: string;
+  /** Explicit ordering for a verified same-day multi-event chain. */
+  sequence?: number;
   oldIsin: string;
   newIsin: string;
   newShares: number;

@@ -1,0 +1,90 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic executions only; verified catalog events supply the share adjustments.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "zerodha-bonus-chain.csv"
+    direction: DOWN
+- tapOn: "zerodha-bonus-chain.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-accept-matches
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Accept 2 matching holdings"
+- tapOn:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-match-summary
+    direction: UP
+- assertVisible:
+    text: "2 matched.*0 to confirm.*"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-split-summary
+    direction: DOWN
+- assertVisible: "Share adjustments included"
+- takeScreenshot: .expo/bonus-chain-summary
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: UP
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:EASEMYTRIP.NS
+    direction: DOWN
+- assertVisible:
+    text: "2 transactions.*174 units.*9.77"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- tapOn:
+    id: holding-row-yahoo:EASEMYTRIP.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:EASEMYTRIP.NS
+    direction: DOWN
+- assertVisible: "174"
+- assertVisible: "\u20b91,700.00"
+- takeScreenshot: .expo/bonus-chain-restart
