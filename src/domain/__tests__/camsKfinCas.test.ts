@@ -319,6 +319,30 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.status).toBe("blocked");
   });
 
+  it("preserves exact nominee registration notices without changing financial events", () => {
+    const original = parseCamsKfinCas(syntheticNativePageCasFixture);
+    const result = parseCamsKfinCas(syntheticNativePageCasFixture.replace(
+      "***Address Updated from KRA Data***", "***Registration of Nominee***",
+    ));
+    expect(result.status).toBe("ready");
+    expect(result.errors).toEqual([]);
+    expect(result.administrativeNotices).toBe(1);
+    expect(result.schemes).toEqual(original.schemes);
+  });
+
+  it.each([
+    "***Registration of Nominee*** 100.00",
+    "***Registration of Nominee*** 100.00 1.000 100.00 4.000",
+    "***Registration of Nominee Cancelled***",
+    "***Registration of Nominee*** unknown",
+  ])("does not discard ambiguous or financial nominee rows: %s", (notice) => {
+    const result = parseCamsKfinCas(syntheticNativePageCasFixture.replace(
+      "***Address Updated from KRA Data***", notice,
+    ));
+    expect(result.status).toBe("blocked");
+    expect(result.administrativeNotices).toBe(0);
+  });
+
   it("does not broadly ignore near-match administrative rows", () => {
     const result = parseCamsKfinCas(
       syntheticNativePageCasFixture.replace(

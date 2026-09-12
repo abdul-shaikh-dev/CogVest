@@ -145,8 +145,10 @@ template; no real account statement belongs in repository test fixtures.
 
 Layout and reconciliation failures appear in one expandable problem summary,
 with extracted row references. They are not reported as skipped transactions.
-Recognized administrative address updates are counted separately from investment
-activity. An exact, dated `***Cancelled***` line with no financial values is retained
+Exact dated, value-free `***Address Updated from KRA Data***` and
+`***Registration of Nominee***` notices are counted separately from investment
+activity. Extra numeric columns or unfamiliar suffixes are not silently ignored.
+An exact, dated `***Cancelled***` line with no financial values is retained
 as a notice in statement review, not converted into a purchase or reversal. This
 does not claim that it means SIP cancellation. The user does not need to remember
 or confirm its meaning. Only recorded financial transactions are imported, and

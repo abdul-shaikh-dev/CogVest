@@ -718,7 +718,8 @@ function hasTransactionHeaderBlock(lines: string[]) {
 }
 
 function isAdministrativeRow(line: string) {
-  return new RegExp(`^${dateToken}\\s+\\*{3}Address Updated from KRA Data\\*{3}$`, "iu").test(line);
+  const match = new RegExp(`^(${dateToken})\\s+\\*{3}(?:Address Updated from KRA Data|Registration of Nominee)\\*{3}$`, "iu").exec(line);
+  return Boolean(match && parseCasDate(match[1]));
 }
 
 function isNoTransactionsNotice(line: string) {
