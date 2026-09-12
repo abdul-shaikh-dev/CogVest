@@ -47,6 +47,11 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - scrollUntilVisible:
     element:
+      id: cas-preserved-notices
+    direction: DOWN
+- assertVisible: "Cancellation notice retained in this review"
+- scrollUntilVisible:
+    element:
       id: transaction-import-show-balances
     direction: DOWN
     centerElement: true

@@ -27,6 +27,13 @@ export type CasPreservedCharge = {
   type: "stampDuty";
 };
 
+export type CasPreservedNotice = {
+  date: string;
+  folioLabel: string;
+  rowNumber: number;
+  type: "cancelled";
+};
+
 export type CasSchemeReview = {
   closingUnits: string;
   events: Array<Pick<
@@ -54,6 +61,7 @@ export type CamsKfinCasNormalizationResult = {
   errors: CasNormalizationError[];
   parserErrors: CasParseError[];
   preservedCharges: CasPreservedCharge[];
+  preservedNotices?: CasPreservedNotice[];
   rows: TransactionCsvCandidate[];
   schemes: CasSchemeReview[];
   unsupportedEvents: UnsupportedTransactionCsvEvent[];
@@ -149,6 +157,7 @@ export function normalizeCamsKfinCas(
 ): CamsKfinCasNormalizationResult {
   const errors: CasNormalizationError[] = [];
   const preservedCharges: CasPreservedCharge[] = [];
+  const preservedNotices: CasPreservedNotice[] = [];
   const rows: TransactionCsvCandidate[] = [];
   const schemes: CasSchemeReview[] = [];
   const unsupportedEvents = parsed.unsupportedEvents.map((event) => ({
@@ -163,6 +172,7 @@ export function normalizeCamsKfinCas(
       errors,
       parserErrors: parsed.errors,
       preservedCharges,
+      preservedNotices,
       rows,
       schemes,
       unsupportedEvents,
@@ -190,6 +200,15 @@ export function normalizeCamsKfinCas(
             type: "stampDuty",
           });
         }
+        continue;
+      }
+      if (event.disposition === "preservedNotice" && event.type === "cancelled") {
+        preservedNotices.push({
+          date: event.date,
+          folioLabel: scheme.folioReference.label,
+          rowNumber: event.rowNumber,
+          type: "cancelled",
+        });
         continue;
       }
       if (event.disposition !== "importable") continue;
@@ -228,6 +247,7 @@ export function normalizeCamsKfinCas(
     errors,
     parserErrors: parsed.errors,
     preservedCharges,
+    preservedNotices,
     rows: errors.length === 0 ? rows : [],
     schemes,
     unsupportedEvents,

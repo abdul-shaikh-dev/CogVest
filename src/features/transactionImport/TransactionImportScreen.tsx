@@ -214,9 +214,19 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         ]} />
         <PremiumCard style={styles.card} testID="cas-statement-review">
         <SectionHeader title="Statement review" />
+        {controller.plan.errors.some((error) => error.code === "incompleteCasHistory") ? <View style={styles.card} testID="cas-opening-history-error">
+          <AppText weight="bold">Earlier holdings need a starting balance</AppText>
+          <AppText color="secondary">{controller.plan.errors.find((error) => error.code === "incompleteCasHistory")?.message}</AppText>
+          <AppText color="secondary" variant="caption">Nothing has been imported. Do not remove statement rows to get past this check.</AppText>
+        </View> : null}
         <AppText color="secondary">Review the schemes and printed balances before importing. Folio numbers stay private and appear only as statement-local labels.</AppText>
         {(controller.casReview.normalization.administrativeNotices ?? 0) > 0 ? <AppText color="secondary" variant="caption" testID="cas-administrative-notices">{controller.casReview.normalization.administrativeNotices} administrative address-update notices identified. These are not investment transactions and do not change balances.</AppText> : null}
         {controller.casReview.normalization.coverage ? <AppText color="secondary" testID="cas-statement-coverage" variant="caption">Statement coverage: {controller.casReview.normalization.coverage.from} to {controller.casReview.normalization.coverage.to}</AppText> : null}
+        {(controller.casReview.normalization.preservedNotices?.length ?? 0) > 0 ? <View style={styles.card} testID="cas-preserved-notices">
+          <AppText weight="bold">Cancellation notice retained in this review</AppText>
+          <AppText color="secondary" variant="caption">The statement lists a cancellation without financial values. Only the recorded transactions will be imported; no purchase or reversal is created from this notice. All printed unit balances must still reconcile.</AppText>
+          {controller.casReview.normalization.preservedNotices?.map((notice) => <AppText key={`${notice.folioLabel}-${notice.rowNumber}`} color="secondary" variant="caption">{notice.folioLabel} · {notice.date} · Cancelled</AppText>)}
+        </View> : null}
         {controller.casReview.normalization.schemes.map((scheme) => <View key={`${scheme.folioLabel}-${scheme.isin}`} style={styles.holdingPreview}>
           <View style={styles.reviewHeading}>
             <View style={styles.fileDetails}>
@@ -286,7 +296,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         </View>
         {controller.unsupportedEvents.length > 0 ? <View style={styles.unsupported}>
           <AppText color="secondary" variant="caption" weight="bold">{controller.sourceId === "camsKfinCasPdfV1" ? "Unsupported events need attention" : "Skipped unsupported events"}</AppText>
-          {controller.sourceId === "camsKfinCasPdfV1" && controller.unsupportedEvents.some((event) => event.transactionType === "cancelled") ? <AppText color="secondary" variant="caption">A cancellation notice does not include amounts or units. CogVest cannot infer which investment it affects, so this import remains blocked. Check the notice against your fund statement before changing any records.</AppText> : null}
+          {controller.sourceId === "camsKfinCasPdfV1" && controller.unsupportedEvents.some((event) => event.transactionType === "cancelled") ? <AppText color="secondary" variant="caption">This cancellation includes financial values or cannot be read as a standalone notice. Its effect cannot be inferred safely, so this import remains blocked.</AppText> : null}
           {controller.unsupportedEvents.map((event) => <AppText key={`${event.rowNumber}-${event.transactionType}`} color="secondary" variant="caption">Row {event.rowNumber}: {event.transactionType}{event.reason ? ` • ${event.reason}` : ""}</AppText>)}
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}

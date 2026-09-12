@@ -17,6 +17,7 @@ export type CasEventType =
 export type CasEventDisposition =
   | "importable"
   | "preservedCharge"
+  | "preservedNotice"
   | "unsupported";
 
 export type CasStatementEvent = {
@@ -322,7 +323,12 @@ export function parseCamsKfinCas(
         let combinedLine = lines[rowIndex];
         for (let offset = 1; offset <= 3 && rowIndex + offset < closingIndex; offset += 1) {
           const continuation = lines[rowIndex + offset];
-          if (transactionCandidatePattern.test(continuation)) break;
+          if (
+            transactionCandidatePattern.test(continuation) ||
+            pageBoilerplateRows.has(rowIndex + offset) ||
+            isAdministrativeRow(continuation) ||
+            isTransactionHeaderFragment(continuation)
+          ) break;
           combinedLine = `${combinedLine} ${continuation}`;
           const wrappedErrors: CasParseError[] = [];
           const wrappedEvent = parseTransactionLine(
@@ -344,8 +350,12 @@ export function parseCamsKfinCas(
       ) {
         const dateMatch = transactionRowPattern.exec(lines[rowIndex]);
         const date = dateMatch ? parseCasDate(dateMatch[1]) : undefined;
-        const classification = classifyEvent(dateMatch?.[2] ?? "");
-        if (date && classification.type === "cancelled") {
+        const classification = classifyEvent(dateMatch?.[2] ?? "", undefined, false);
+        if (
+          date &&
+          classification.disposition === "preservedNotice" &&
+          classification.type === "cancelled"
+        ) {
           event = {
             date,
             disposition: classification.disposition,
@@ -554,7 +564,7 @@ function parseTransactionLine(
     return undefined;
   }
 
-  const classification = classifyEvent(parts.join(" "), units);
+  const classification = classifyEvent(parts.join(" "), units, true);
   return {
     amount,
     date,
@@ -570,12 +580,15 @@ function parseTransactionLine(
 function classifyEvent(
   description: string,
   units?: string,
+  hasFinancialColumns = false,
 ): Pick<CasStatementEvent, "disposition" | "type"> {
   const normalized = description.toLowerCase();
+  if (/^\*{3}\s*cancelled\s*\*{3}$/u.test(normalized)) {
+    return hasFinancialColumns
+      ? { disposition: "unsupported", type: "cancelled" }
+      : { disposition: "preservedNotice", type: "cancelled" };
+  }
   if (!units) {
-    if (/^\*{3}\s*cancelled\s*\*{3}$/u.test(normalized)) {
-      return { disposition: "unsupported", type: "cancelled" };
-    }
     return /stamp\s+duty/u.test(normalized)
       ? { disposition: "preservedCharge", type: "stampDuty" }
       : { disposition: "unsupported", type: "unknown" };

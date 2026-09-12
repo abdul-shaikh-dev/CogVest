@@ -494,14 +494,104 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.status).toBe("blocked");
   });
 
-  it("blocks a bare cancellation explicitly without guessing its unit effect", () => {
+  it("preserves an exact bare cancellation without treating it as a transaction", () => {
     const result = parseCamsKfinCas(singleSchemeFixture("17-Jul-2024 ***Cancelled***", "10.0000000"));
 
     expect(result.errors).toEqual([]);
-    expect(result.unsupportedEvents).toEqual([
-      expect.objectContaining({ type: "cancelled" }),
+    expect(result.unsupportedEvents).toEqual([]);
+    expect(result.schemes[0]?.events).toEqual([{
+      date: "2024-07-17",
+      disposition: "preservedNotice",
+      rowNumber: 8,
+      type: "cancelled",
+    }]);
+    expect(result.status).toBe("ready");
+  });
+
+  it("preserves a cancellation before a real transaction", () => {
+    const result = parseCamsKfinCas(
+      singleSchemeFixture(
+        [
+          "17-Jul-2024 ***Cancelled***",
+          "18-Jul-2024 Purchase 100.00 1.0000000 100.0000 11.0000000",
+        ].join("\n"),
+        "11.0000000",
+      ),
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.schemes[0]?.events.map(({ disposition, type }) => ({ disposition, type }))).toEqual([
+      { disposition: "preservedNotice", type: "cancelled" },
+      { disposition: "importable", type: "purchase" },
     ]);
+    expect(result.status).toBe("ready");
+  });
+
+  it.each([
+    "17-Jul-2024 ***Cancelled*** 100.00",
+    "17-Jul-2024 ***Cancelled*** 100.00 1.0000000 100.0000 11.0000000",
+    "17-Jul-2024 ***Cancelled***\n100.00 1.0000000 100.0000 11.0000000",
+  ])("blocks cancellation text carrying financial columns: %s", (row) => {
+    const result = parseCamsKfinCas(singleSchemeFixture(row, "11.0000000"));
+
+    expect(result.schemes[0]?.events).not.toContainEqual(
+      expect.objectContaining({ disposition: "preservedNotice" }),
+    );
+    expect(result.unsupportedEvents).toContainEqual(
+      expect.objectContaining({ type: "cancelled" }),
+    );
     expect(result.status).toBe("blocked");
+  });
+
+  it("does not preserve near-match cancellation text", () => {
+    const result = parseCamsKfinCas(
+      singleSchemeFixture("17-Jul-2024 ***Cancelled by registrar***", "10.0000000"),
+    );
+
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "missingColumns",
+    }));
+    expect(result.schemes[0]?.events).toEqual([]);
+    expect(result.status).toBe("blocked");
+  });
+
+  it("still blocks a balance mismatch after a preserved cancellation", () => {
+    const result = parseCamsKfinCas(
+      singleSchemeFixture(
+        [
+          "17-Jul-2024 ***Cancelled***",
+          "18-Jul-2024 Purchase 100.00 1.0000000 100.0000 12.0000000",
+        ].join("\n"),
+        "11.0000000",
+      ),
+    );
+
+    expect(result.schemes[0]?.events).toContainEqual(
+      expect.objectContaining({ disposition: "preservedNotice" }),
+    );
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: "runningBalanceMismatch" }),
+    );
+    expect(result.status).toBe("blocked");
+  });
+
+  it("preserves a cancellation adjacent to a trusted page continuation", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace(
+        "Page 1 of 2",
+        "17-Jul-2024 ***Cancelled***\nPage 1 of 2",
+      ),
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.schemes[1]?.events).toContainEqual(
+      expect.objectContaining({
+        disposition: "preservedNotice",
+        type: "cancelled",
+      }),
+    );
+    expect(result.status).toBe("ready");
   });
 
   it("rejects invalid and unsupported transaction dates", () => {

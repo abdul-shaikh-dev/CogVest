@@ -553,6 +553,9 @@ export function useTransactionImport({
   const currentDate = now();
   const plan = buildTransactionImportPlan({
     batchId: batchIdRef.current,
+    casOpeningEvidence: sourceId === "camsKfinCasPdfV1" && casReview
+      ? { coverageFrom: casReview.normalization.coverage?.from, schemes: casReview.normalization.schemes }
+      : undefined,
     cutoverByOpeningPositionId,
     mode,
     now: currentDate,

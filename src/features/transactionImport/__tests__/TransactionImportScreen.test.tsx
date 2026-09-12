@@ -29,6 +29,33 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("explains missing pre-statement holdings before matching or confirmation", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onImported = jest.fn();
+    const screen = render(<TransactionImportScreen
+      onCancel={jest.fn()}
+      onImported={onImported}
+      pickCsvFile={jest.fn()}
+      pickCasStatement={async () => ({ size: 4096, uri: "content://synthetic.pdf" })}
+      readCasStatement={async () => ({ pageCount: 1, normalization: {
+        coverage: { from: "2024-01-01", to: "2024-12-31" },
+        errors: [], parserErrors: [], preservedCharges: [], rows: [], unsupportedEvents: [],
+        schemes: [{ folioLabel: "Folio 1", isin: "INF000000001", name: "Sample Fund", registrar: "CAMS", openingUnits: "5", closingUnits: "5", events: [], importableTransactions: 0 }],
+      } })}
+      searchAssetLookupResults={jest.fn()}
+      store={store}
+    />);
+    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    fireEvent.press(screen.getByTestId("select-cas-statement"));
+    await waitFor(() => expect(screen.getByTestId("cas-opening-history-error")).toBeTruthy());
+    expect(screen.getByText("Earlier holdings need a starting balance")).toBeTruthy();
+    expect(screen.getByTestId("confirm-transaction-import")).toBeDisabled();
+    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    expect(onImported).not.toHaveBeenCalled();
+    expect(store.getState().trades).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+  });
+
   it("scrolls to the password's content position after the keyboard opens", () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
     const metrics = jest.spyOn(Keyboard, "metrics").mockReturnValue({ screenX: 0, screenY: 500, width: 360, height: 300 });
@@ -187,6 +214,7 @@ describe("TransactionImportScreen", () => {
         normalization: {
           errors: [],
           parserErrors: [],
+          preservedNotices: [{ date: "2024-02-01", folioLabel: "Folio 1", rowNumber: 13, type: "cancelled" }],
           preservedCharges: [
             {
               amount: "0.05",
@@ -201,7 +229,7 @@ describe("TransactionImportScreen", () => {
               account: `folio_${"a".repeat(64)}`,
               currency: "INR",
               description: "SIP purchase",
-              externalId: "cas:2024-01-02:purchaseSip:8:125:18",
+              externalId: "cas:2024-01-02:purchaseSip:8:125:8",
               fingerprint: "cas-row-fingerprint",
               identity: { kind: "isin", value: "INF000000001" },
               isin: "INF000000001",
@@ -218,13 +246,13 @@ describe("TransactionImportScreen", () => {
           ],
           schemes: [
             {
-              closingUnits: "18",
+              closingUnits: "8",
               events: [],
               folioLabel: "Folio 1",
               importableTransactions: 1,
               isin: "INF000000001",
               name: "Sample Equity Fund",
-              openingUnits: "10",
+              openingUnits: "0",
               registrar: "CAMS",
             },
           ],
@@ -260,6 +288,9 @@ describe("TransactionImportScreen", () => {
     await waitFor(() => expect(getByTestId("cas-statement-review")).toBeTruthy());
     expect(getByText("Statement selected")).toBeTruthy();
     expect(getByText("Folio 1 • CAMS • INF000000001")).toBeTruthy();
+    expect(getByText("Cancellation notice retained in this review")).toBeTruthy();
+    expect(getByText("Folio 1 · 2024-02-01 · Cancelled")).toBeTruthy();
+    expect(store.getState().trades).toHaveLength(0);
     expect(getByTestId("cas-preserved-charges")).toHaveTextContent(
       /1 stamp-duty entry is preserved/u,
     );
