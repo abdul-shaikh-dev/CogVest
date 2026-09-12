@@ -259,7 +259,7 @@ export function parseCamsKfinCas(
     const schemeHeaderLines = firstTransactionOffset >= 0
       ? schemeRegion.slice(0, firstTransactionOffset)
       : schemeRegion;
-    const localHeaderCandidate = schemeHeaderLines.some(isTransactionHeaderCandidate);
+    const localHeaderCandidate = schemeHeaderLines.some(isTransactionHeaderFragment);
     const pageStart = findPageStart(lines, index);
     const firstPageOpening = findNextLine(lines, pageStart, openingPattern);
     const sharedPageHeader = firstPageOpening >= 0 && firstPageOpening <= index
@@ -277,6 +277,25 @@ export function parseCamsKfinCas(
     const transactionStart = firstTransactionOffset >= 0
       ? index + 1 + firstTransactionOffset
       : closingIndex;
+    for (let rowIndex = index + 1; rowIndex < transactionStart; rowIndex += 1) {
+      if (!lines[rowIndex] || pageBoilerplateRows.has(rowIndex) || isTransactionHeaderFragment(lines[rowIndex])) {
+        continue;
+      }
+      if (isAdministrativeRow(lines[rowIndex])) {
+        administrativeNotices += 1;
+        continue;
+      }
+      if (transactionStart === closingIndex && openingUnits === closingUnits &&
+          isNoTransactionsNotice(lines[rowIndex])) {
+        continue;
+      }
+      errors.push({
+        code: "malformedTransaction",
+        detail: "orphanedContent",
+        message: "A transaction region contains detached content that cannot be proven.",
+        rowNumber: rowIndex + 1,
+      });
+    }
     for (let rowIndex = transactionStart; rowIndex < closingIndex; rowIndex += 1) {
       if (pageBoilerplateRows.has(rowIndex)) continue;
       if (isAdministrativeRow(lines[rowIndex])) {
@@ -673,11 +692,6 @@ function isTransactionHeaderFragment(line: string) {
     .replace(/[()\s/|-]/gu, "") === "";
 }
 
-function isTransactionHeaderCandidate(line: string) {
-  const matches = line.match(/\b(?:Date|Transaction|Amount|Units|Price|NAV|Balance)\b/giu);
-  return (matches?.length ?? 0) >= 2;
-}
-
 function hasTransactionHeaderBlock(lines: string[]) {
   for (let start = 0; start < lines.length; start += 1) {
     if (!isTransactionHeaderFragment(lines[start])) continue;
@@ -692,6 +706,10 @@ function hasTransactionHeaderBlock(lines: string[]) {
 
 function isAdministrativeRow(line: string) {
   return new RegExp(`^${dateToken}\\s+\\*{3}Address Updated from KRA Data\\*{3}$`, "iu").test(line);
+}
+
+function isNoTransactionsNotice(line: string) {
+  return /^\*{3}\s*No transactions during this statement period\s*\*{3}$/iu.test(line);
 }
 
 function findPageStart(lines: string[], before: number) {

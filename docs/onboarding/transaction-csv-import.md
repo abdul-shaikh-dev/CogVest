@@ -156,6 +156,17 @@ field during initial and repeated keyboard openings. Run it against a fresh
 standalone APK, including a narrow display with enlarged text; it does not prove
 successful PDF parsing or transaction import.
 
+For the native-reader success path, install a fresh **debug** APK with Metro,
+push `e2e/fixtures/cas-native-synthetic.pdf` to Android Downloads, then run
+`npm run maestro:test -- e2e/cas-native-import.yaml`. This disposable-data journey
+uses the existing development-only seed and verifies wrong-password retry,
+two-page parsing, a 12-unit / INR 1,200 holding, unchanged cash records, restart
+persistence, and repeat-import deduplication. It is not release-mode evidence or
+proof that an arbitrary customer statement is supported. The wholly invented PDF
+can be regenerated with Python + reportlab using
+`scripts/fixtures/generate-cas-native-pdf.py`; its public test password is
+`synthetic-cas-test`. Never replace this fixture with a customer statement.
+
 ### Common Import Rules
 
 - Current quote values are ignored by the CSV import. Quotes are refreshed or

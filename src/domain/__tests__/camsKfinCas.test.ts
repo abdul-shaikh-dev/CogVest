@@ -340,12 +340,45 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     const result = parseCamsKfinCas(
       syntheticNativePageCasFixture.replace(
         "Opening Unit Balance: 1.000\n03-Jan-2024",
-        "Opening Unit Balance: 1.000\nDate Transaction Units Balance\n03-Jan-2024",
+        "Opening Unit Balance: 1.000\nDate\nTransaction\nUnits\nBalance\n03-Jan-2024",
       ),
     );
 
     expect(result.errors).toContainEqual(expect.objectContaining({ code: "missingTransactionHeader" }));
     expect(result.status).toBe("blocked");
+  });
+
+  it("blocks undated content before the first date-leading transaction", () => {
+    const result = parseCamsKfinCas(
+      fixture.replace(
+        "Date Transaction Amount Units NAV Unit Balance\n02-Jan-2024",
+        "Date Transaction Amount Units NAV Unit Balance\nPurchase details omitted by extraction\n02-Jan-2024",
+      ),
+    );
+
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "orphanedContent",
+    }));
+    expect(result.status).toBe("blocked");
+  });
+
+  it("accepts an exact no-transactions notice only when printed balances are unchanged", () => {
+    const unchanged = parseCamsKfinCas(
+      singleSchemeFixture("*** No transactions during this statement period ***", "10.0000000"),
+    );
+    const changed = parseCamsKfinCas(
+      singleSchemeFixture("*** No transactions during this statement period ***", "11.0000000"),
+    );
+
+    expect(unchanged.errors).toEqual([]);
+    expect(unchanged.schemes[0]?.events).toEqual([]);
+    expect(unchanged.status).toBe("ready");
+    expect(changed.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "orphanedContent",
+    }));
+    expect(changed.status).toBe("blocked");
   });
 
   it("does not compose a page header across arbitrary prose", () => {

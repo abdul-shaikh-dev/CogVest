@@ -19,6 +19,7 @@ const defaultFlows = [
   "e2e/quick-portfolio-setup.yaml",
   "e2e/holdings-csv-import.yaml",
   "e2e/transactions-csv-import.yaml",
+  "e2e/cas-native-import.yaml",
   "e2e/zerodha-tradebook-import.yaml",
   "e2e/holdings.yaml",
   "e2e/holdings-list-first.yaml",
@@ -101,6 +102,7 @@ const holdingsCsvFlow = "e2e/holdings-csv-import.yaml";
 const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
 const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
 const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
+const casNativeFlow = "e2e/cas-native-import.yaml";
 const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
 const zerodhaTradebookFixtures = [
   "e2e/fixtures/zerodha-tradebook-2024.csv",
@@ -219,6 +221,14 @@ for (const flow of flows) {
     zerodhaTradebookFixtures.forEach((fixture) =>
       pushFixture(adbPath, fixture),
     );
+  }
+  if (flow.replaceAll("\\", "/") === casNativeFlow) {
+    const adbPath = findExecutable("adb");
+    if (!adbPath) {
+      console.log("FAIL adb not found");
+      process.exit(1);
+    }
+    pushFixture(adbPath, "e2e/fixtures/cas-native-synthetic.pdf");
   }
   console.log(`RUN maestro test ${flow}`);
   const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR
