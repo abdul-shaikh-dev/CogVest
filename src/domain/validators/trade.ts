@@ -7,6 +7,7 @@ import {
   isFutureCalendarDate,
 } from "@/src/domain/dates";
 import type { OpeningPosition, StockSplitEvent, Trade, TradeType } from "@/src/types";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import {
   isOpeningPositionEffective,
   isTransactionAfterOpeningCutover,
@@ -71,6 +72,7 @@ export function getAvailableQuantity(
   openingPositions: OpeningPosition[] = [],
   now = new Date(),
   stockSplits?: readonly StockSplitEvent[],
+  demergerAdjustments?: readonly DemergerAdjustment[],
 ) {
   const effectiveOpenings = openingPositions.filter((position) =>
     isOpeningPositionEffective(position, now),
@@ -88,6 +90,7 @@ export function getAvailableQuantity(
       openingPositions: effectiveOpenings,
       trades: effectiveTrades,
       stockSplits,
+      demergerAdjustments,
       through: formatLocalCalendarDate(now),
     }));
   } catch (error) {
@@ -102,12 +105,14 @@ export function validateSellQuantity(
   openingPositions: OpeningPosition[] = [],
   now = new Date(),
   stockSplits?: readonly StockSplitEvent[],
+  demergerAdjustments?: readonly DemergerAdjustment[],
 ): SellQuantityResult {
   const availableQuantity = getAvailableQuantity(
     trades,
     openingPositions,
     now,
     stockSplits,
+    demergerAdjustments,
   );
 
   if (!Number.isFinite(availableQuantity)) {

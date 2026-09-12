@@ -24,7 +24,7 @@ import {
   summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { DisplayMode, Holding, OpeningPosition, Trade } from "@/src/types";
+import type { Asset, DisplayMode, Holding, OpeningPosition, Trade } from "@/src/types";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -41,6 +41,7 @@ type UseHoldingsInput = {
 };
 
 export type UseHoldingsResult = {
+  assets: Asset[];
   displayMode: DisplayMode;
   failed: QuoteRefreshFailure[];
   holdings: HoldingWithQuoteMetadata[];
@@ -174,6 +175,7 @@ export function useHoldings({
   }
 
   return {
+    assets: snapshot.assets,
     displayMode: snapshot.preferences.displayMode,
     failed,
     holdings,

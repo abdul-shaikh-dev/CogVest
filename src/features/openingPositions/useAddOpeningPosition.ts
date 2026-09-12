@@ -14,6 +14,7 @@ import {
   getDefaultAssetMetadata,
 } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
+import { projectDemergers } from "@/src/domain/demergers";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -265,6 +266,11 @@ export function useAddOpeningPosition({
     reviewAsset && reviewOpeningPosition
       ? calculateHolding({
           asset: reviewAsset,
+          demergerAdjustments: projectDemergers({
+            assets: snapshot.assets,
+            openingPositions: snapshot.openingPositions,
+            trades: snapshot.trades,
+          }).filter((adjustment) => adjustment.assetId === reviewAsset.id),
           currentPrice:
             reviewOpeningPosition.manualValuation?.price ??
             selectedLookupQuote?.price ??

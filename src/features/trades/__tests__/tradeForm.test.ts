@@ -1,4 +1,5 @@
 import { validateTradeForm } from "@/src/features/trades/tradeForm";
+import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import type { StockSplitEvent, Trade } from "@/src/types";
 
 const existingBuy: Trade = {
@@ -18,6 +19,29 @@ const otherAssetBuy: Trade = {
 };
 
 describe("trade form validation", () => {
+  it("forwards derived successor units to sell validation", () => {
+    const entitlement: DemergerAdjustment = {
+      assetId: "asset-1",
+      cost: "100",
+      date: "2026-04-01",
+      eventId: "demerger-1",
+      firstAcquisitionDate: "2026-03-01",
+      kind: "entitlement",
+      quantity: 10,
+      sourceAssetId: "parent-asset",
+      sourceRecordIds: ["parent-buy"],
+    };
+
+    expect(validateTradeForm(
+      { assetId: "asset-1", date: "2026-04-20", pricePerUnit: "100", quantity: "10", type: "sell" },
+      [],
+      [],
+      new Date("2026-04-20T12:00:00Z"),
+      undefined,
+      [entitlement],
+    )).toMatchObject({ isValid: true });
+  });
+
   it("passes split terms to selected-asset validation and fails closed on unresolved terms", () => {
     const split: StockSplitEvent = {
       id: "split", kind: "split", effectiveDate: "2026-05-01",

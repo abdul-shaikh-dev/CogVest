@@ -6,6 +6,7 @@ export type {
   InstrumentType,
   SectorType,
 } from "./asset";
+export type { DemergerLink } from "./demerger";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding, HoldingValuation } from "./holding";
 export type { StockSplitEvent } from "./stockSplit";

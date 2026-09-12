@@ -34,6 +34,29 @@ const buyTrade: Trade = {
 };
 
 describe("useHoldings", () => {
+  it.each(["parent", "child"] as const)("keeps the full demerger graph when the %s is fully sold", (soldSide) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const parent: Asset = {
+      ...asset,
+      id: "ril",
+      isin: "INE002A01018",
+      demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" },
+    };
+    const child: Asset = { ...asset, id: "jio", isin: "INE758E01017", symbol: "JIOFIN", ticker: "JIOFIN.NS", quoteSourceId: "JIOFIN.NS" };
+    const parentBuy: Trade = { ...buyTrade, id: "ril-buy", assetId: parent.id, date: "2023-01-02", quantity: 10, totalValue: 1000 };
+    const sale: Trade = soldSide === "parent"
+      ? { ...parentBuy, id: "ril-sale", date: "2024-11-02", quantity: 20, totalValue: 2000, type: "sell" }
+      : { ...parentBuy, id: "jio-sale", assetId: child.id, date: "2023-09-01", type: "sell" };
+    store.setState({ assets: [parent, child], trades: [parentBuy, sale] });
+
+    const { result } = renderHook(() => useHoldings({ store, now: new Date("2024-11-03T12:00:00Z") }));
+
+    expect(result.current.assets.map((item) => item.id)).toEqual(["ril", "jio"]);
+    expect(result.current.holdings.map((holding) => holding.asset.id)).toEqual([
+      soldSide === "parent" ? "jio" : "ril",
+    ]);
+  });
+
   it("derives holdings from raw trades and cached quotes", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(rawAsset);

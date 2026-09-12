@@ -23,7 +23,7 @@ const split = {
   },
 };
 
-function parse(stockSplits: unknown, schemaVersion = 12) {
+function parse(stockSplits: unknown, schemaVersion = 13) {
   return parsePersistedPortfolio(
     JSON.stringify({ schemaVersion, assets: [{ ...asset, stockSplits }] }),
   );
@@ -35,7 +35,7 @@ describe("stock split persistence", () => {
   it("preserves every split and evidence field", () => {
     expect(parse([split])).toEqual({
       success: true,
-      data: { schemaVersion: 12, assets: [{ ...asset, stockSplits: [split] }] },
+      data: { schemaVersion: 13, assets: [{ ...asset, stockSplits: [split] }] },
     });
   });
 
@@ -56,7 +56,7 @@ describe("stock split persistence", () => {
 
   it("preserves explicit same-day ordering without sorting records", () => {
     const events = [{ ...bonus, effectiveDate: split.effectiveDate, sequence: 1 }, { ...split, sequence: 0 }];
-    expect(parse(events)).toMatchObject({ success: true, data: { schemaVersion: 12, assets: [{ stockSplits: events }] } });
+    expect(parse(events)).toMatchObject({ success: true, data: { schemaVersion: 13, assets: [{ stockSplits: events }] } });
     expect(parse([{ ...split, sequence: Number.MAX_SAFE_INTEGER }]).success).toBe(true);
     expect(parse([{ ...split, sequence: 0 }, { ...bonus, sequence: 0 }]).success).toBe(true);
   });
@@ -118,7 +118,7 @@ describe("stock split persistence", () => {
 
   it.each([[1, 1], [1, 2], [2, 1], [2, 2]])("round trips additional bonus ratio %s:%s unchanged", (newShares, oldShares) => {
     const events = [split, { ...bonus, newShares, oldShares }];
-    expect(parse(events)).toEqual({ success: true, data: { schemaVersion: 12, assets: [{ ...asset, stockSplits: events }] } });
+    expect(parse(events)).toEqual({ success: true, data: { schemaVersion: 13, assets: [{ ...asset, stockSplits: events }] } });
   });
 
   it.each([

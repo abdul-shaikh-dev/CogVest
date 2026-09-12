@@ -350,7 +350,18 @@ tracking cost. Bounded coverage and delayed-availability
 guard are documented in [the bonus-share contract](onboarding/bonus-share-contract.md).
 This is not support for arbitrary zero-priced rows or unverified event chains.
 Easy Trip histories through 2 March 2022 remain gated pending earlier-event
-verification. Demerger identities and cost allocation remain separate scope.
+verification.
+
+The bounded demerger catalog supports Reliance/Jio Financial (2023) and Tata
+Motors/TMPV/TMCV (2025). Import derives the child entitlement and allocates the
+parent's existing tracking cost using verified issuer percentages, without new
+purchases or cash entries. Both holdings commit atomically; a measured opening
+must reconcile with the shared history before a link is accepted. Reimports
+cannot duplicate entitlements. Missing child prices, pre-listing values and
+unresolved cross-event historical price units stay unavailable. Schema 13 stores
+only the verified event/child link; cost and quantity remain derived. Arbitrary
+demergers, fractional entitlements and tax-lot accounting remain unsupported.
+See [the demerger contract and verification gates](onboarding/demerger-contract.md).
 
 The import has two explicit modes:
 

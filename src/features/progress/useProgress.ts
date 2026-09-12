@@ -34,6 +34,7 @@ import {
 } from "@/src/domain/openingPositions";
 import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { projectDemergers } from "@/src/domain/demergers";
 import {
   calculatePpfPortfolioSummary,
   getLinkedLegacyPpfAssetIds,
@@ -395,7 +396,13 @@ export function needsHistoricalPrice({
     isTransactionAfterOpeningCutover(trade.date, effectiveOpenings),
   );
   try {
+    const demergerAdjustments = projectDemergers({
+      assets: state.assets,
+      openingPositions: state.openingPositions,
+      trades: state.trades,
+    }, monthEnd.toISOString().slice(0, 10)).filter((adjustment) => adjustment.assetId === assetId);
     return positionQuantity({
+      demergerAdjustments,
       openingPositions: effectiveOpenings,
       trades,
       stockSplits: state.assets.find((asset) => asset.id === assetId)?.stockSplits,

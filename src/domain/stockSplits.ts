@@ -3,6 +3,7 @@ import { getOpeningPositionHistoryDate, isTransactionAfterOpeningCutover } from 
 import { decimal, type FinancialDecimalInstance } from "./precision";
 import { compareTransactionsChronologically } from "./transactionSemantics";
 import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
+import type { DemergerAdjustment } from "./demergerEvents";
 
 export class StockSplitError extends Error {
   constructor(readonly eventId: string, message: string) {
@@ -53,17 +54,19 @@ export function splitQuantity(quantity: FinancialDecimalInstance, event: StockSp
 }
 
 export type PositionEvent =
+  | { date: string; type: "demerger"; adjustment: DemergerAdjustment }
   | { date: string; type: "opening"; position: OpeningPosition }
   | { date: string; type: "trade"; trade: Trade }
   | { date: string; type: "split"; split: StockSplitEvent };
 
 /** Splits change existing ownership before ex-date trading, not that day's buys. */
 export function positionEvents({
-  openingPositions = [], trades, stockSplits = [], through = formatLocalCalendarDate(new Date()),
+  openingPositions = [], trades, stockSplits = [], demergerAdjustments = [], through = formatLocalCalendarDate(new Date()),
 }: {
   openingPositions?: OpeningPosition[];
   trades: Trade[];
   stockSplits?: readonly StockSplitEvent[];
+  demergerAdjustments?: readonly DemergerAdjustment[];
   through?: string;
 }): PositionEvent[] {
   const splits = orderedStockSplits(stockSplits).filter((event) => event.effectiveDate <= through);
@@ -92,6 +95,9 @@ export function positionEvents({
     }
   }
   const events: PositionEvent[] = [
+    ...demergerAdjustments.filter((event) => event.date <= through &&
+      !openingPositions.some((position) => (position.measuredAsOf ?? "") >= event.date))
+      .map((adjustment) => ({ date: adjustment.date, type: "demerger" as const, adjustment })),
     ...openingPositions.map((position) => ({
       date: getOpeningPositionHistoryDate(position) ?? "", position, type: "opening" as const,
     })),
@@ -103,6 +109,7 @@ export function positionEvents({
   return events.sort((a, b) => {
     const day = (getCalendarDatePart(a.date) ?? a.date).localeCompare(getCalendarDatePart(b.date) ?? b.date);
     if (day) return day;
+    if (a.type === "demerger" || b.type === "demerger") return a.type === b.type ? 0 : a.type === "demerger" ? -1 : 1;
     if (a.type === "split" && b.type === "split") return (a.split.sequence ?? 0) - (b.split.sequence ?? 0);
     if (a.type === "split" || b.type === "split") return a.type === "split" ? -1 : 1;
     return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -113,7 +120,9 @@ export function positionEvents({
 export function positionQuantity(input: Parameters<typeof positionEvents>[0]) {
   let quantity = decimal(0);
   for (const event of positionEvents(input)) {
-    if (event.type === "split") quantity = splitQuantity(quantity, event.split);
+    if (event.type === "demerger") {
+      if (event.adjustment.kind === "entitlement") quantity = quantity.plus(event.adjustment.quantity);
+    } else if (event.type === "split") quantity = splitQuantity(quantity, event.split);
     else if (event.type === "opening") quantity = quantity.plus(event.position.quantity);
     else quantity = quantity.plus(
       event.trade.type === "buy" || event.trade.type === "transferIn" ? event.trade.quantity : -event.trade.quantity,

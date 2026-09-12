@@ -147,6 +147,25 @@ function buildInput(overrides: {
   };
 }
 
+describe("demerger month-end snapshots", () => {
+  it("includes a derived child and never fills a missing child quote with zero", () => {
+    const parent: Asset = { ...stockAsset, isin: "INE002A01018", demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" } };
+    const child: Asset = { ...stockAsset, id: "jio", name: "Jio Financial", symbol: "JIOFIN", ticker: "JIOFIN.NS", isin: "INE758E01017" };
+    const input = { assets: [parent, child], openingPositions: [], cashEntries: [], existingSnapshots: [], quoteCache: {},
+      trades: [trade({ date: "2023-01-01", quantity: 100, pricePerUnit: 100, totalValue: 10000 })],
+      targetMonth: "2023-09", now: new Date("2023-10-15T12:00:00Z"),
+      historicalQuotes: {
+        [historicalQuoteCacheKey(parent.id, "2023-09")]: { assetId: parent.id, asOfMonth: "2023-09", basis: "historical-close" as const, currency: "INR" as const, fetchedAt: "2023-10-01T12:00:00Z", price: 120, source: "yahoo" as const },
+      } };
+    expect(buildGeneratedMonthEndSnapshot(input).status).toBe("insufficient-data");
+    const result = buildGeneratedMonthEndSnapshot({ ...input, historicalQuotes: { ...input.historicalQuotes,
+      [historicalQuoteCacheKey(child.id, "2023-09")]: { assetId: child.id, asOfMonth: "2023-09", basis: "historical-close", currency: "INR", fetchedAt: "2023-10-01T12:00:00Z", price: 20, source: "yahoo" },
+    } });
+    expect(result.status).toBe("created");
+    expect(result.snapshot).toMatchObject({ portfolioValue: 14000, investedValue: 10000, monthlyInvestment: 0 });
+  });
+});
+
 describe("getPreviousCompletedMonth", () => {
   it("returns the previous completed month for a mid-month date", () => {
     expect(

@@ -1,4 +1,5 @@
 import type { StockSplitEvent } from "./stockSplit";
+import type { DemergerLink } from "./demerger";
 
 export type AssetClass = "crypto" | "debt" | "stock" | "etf" | "cash";
 
@@ -40,6 +41,7 @@ export type SectorType =
 export type Asset = {
   assetClass: AssetClass;
   currency: Currency;
+  demerger?: DemergerLink;
   exchange?: AssetExchange;
   id: string;
   instrumentType?: InstrumentType;

@@ -1,0 +1,189 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic parent purchases only; verified public catalog events derive both children.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-screen
+    timeout: 15000
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "zerodha-demergers.csv"
+    direction: DOWN
+- tapOn: "zerodha-demergers.csv"
+- extendedWaitUntil:
+    notVisible:
+      id: transaction-import-resolving
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: transaction-import-accept-matches
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "transaction-import-asset-.*-candidate-yahoo:TMPV.BO"
+- assertVisible: "Accept 1 matching holding"
+- tapOn:
+    id: transaction-import-accept-matches
+- scrollUntilVisible:
+    element:
+      id: transaction-import-demerger-summary
+    direction: DOWN
+- assertVisible: "Demergers included"
+- assertVisible:
+    text: ".*10 shares retained at the event, 68.85% of cost.*688.50.*"
+- assertVisible:
+    text: "Tata Motors Limited: 10 new shares, 31.15% of cost.*311.50.*"
+- assertVisible:
+    text: "Ex-date 2025-10-14; new holding listed 2025-11-12.*"
+- scrollUntilVisible:
+    element:
+      text: ".*10 shares retained at the event, 95.32% of cost.*953.20.*"
+    direction: DOWN
+- assertVisible:
+    text: ".*10 shares retained at the event, 95.32% of cost.*953.20.*"
+- scrollUntilVisible:
+    element:
+      text: "Jio Financial Services Limited: 10 new shares, 4.68% of cost.*46.80.*"
+    direction: DOWN
+- assertVisible:
+    text: "Jio Financial Services Limited: 10 new shares, 4.68% of cost.*46.80.*"
+- scrollUntilVisible:
+    element:
+      text: "Ex-date 2023-07-20; new holding listed 2023-08-21.*"
+    direction: DOWN
+- assertVisible:
+    text: "Ex-date 2023-07-20; new holding listed 2023-08-21.*"
+- scrollUntilVisible:
+    element: "Verified issuer allocation. No new investment or cash entry is created. Both holdings are saved together."
+    direction: DOWN
+- assertVisible: "Verified issuer allocation. No new investment or cash entry is created. Both holdings are saved together."
+- takeScreenshot: .expo/demerger-import-summary
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: UP
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:JIOFIN.NS
+    direction: DOWN
+- assertVisible:
+    text: "0 transactions.*10 units.*4.68"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-yahoo:TMCV.NS
+    direction: DOWN
+- assertVisible:
+    text: "0 transactions.*10 units.*31.15"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- tapOn:
+    id: holding-row-yahoo:RELIANCE.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:RELIANCE.NS
+    direction: DOWN
+- assertVisible: "20"
+- assertVisible: "₹953.20"
+- tapOn:
+    id: holding-detail-back
+- tapOn:
+    id: holding-row-yahoo:TMPV.BO
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:TMPV.BO
+    direction: DOWN
+- assertVisible: "10"
+- assertVisible: "₹688.50"
+- tapOn:
+    id: holding-detail-back
+- tapOn:
+    id: holding-row-yahoo:JIOFIN.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:JIOFIN.NS
+    direction: DOWN
+- assertVisible: "10"
+- assertVisible: "₹46.80"
+- tapOn:
+    id: holding-detail-back
+- tapOn:
+    id: holding-row-yahoo:TMCV.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:TMCV.NS
+    direction: DOWN
+- assertVisible: "10"
+- assertVisible: "₹311.50"
+- takeScreenshot: .expo/demerger-derived-children
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- tapOn:
+    id: tab-holdings
+- tapOn:
+    id: holding-row-yahoo:JIOFIN.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:JIOFIN.NS
+    direction: DOWN
+- assertVisible: "10"
+- assertVisible: "₹46.80"
+- tapOn:
+    id: holding-detail-back
+- tapOn:
+    id: holding-row-yahoo:TMCV.NS
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-yahoo:TMCV.NS
+    direction: DOWN
+- assertVisible: "10"
+- assertVisible: "₹311.50"
+- takeScreenshot: .expo/demerger-restart
+- tapOn:
+    id: holding-detail-back
+- scrollUntilVisible:
+    element:
+      id: holdings-refresh-pending-prices
+    direction: UP
+- tapOn:
+    id: holdings-refresh-pending-prices
+- extendedWaitUntil:
+    notVisible:
+      text: "Refreshing quotes.*"
+    timeout: 60000
+- tapOn:
+    id: holding-row-yahoo:TMCV.NS
+- extendedWaitUntil:
+    notVisible: "Valuation pending"
+    timeout: 60000
+- assertVisible: "10"
+- assertVisible: "₹311.50"
+- takeScreenshot: .expo/demerger-child-refreshed

@@ -14,6 +14,8 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatCurrency } from "@/src/domain/formatters";
 import { transactionImportSources } from "@/src/domain/transactionImportSources";
+import { demergerCatalog } from "@/src/domain/demergers";
+import { decimal } from "@/src/domain/precision";
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { casPdfMaxBytes, casPdfMaxPages } from "@/src/services/import-export";
 import type { PortfolioStoreState, TransactionImportCommandResult } from "@/src/store";
@@ -255,6 +257,22 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
             <AppText key={`${holding.asset.id}-${event.id}`} color="secondary" variant="caption">{holding.asset.name}: {event.newShares} {event.kind === "bonus" ? "bonus share(s)" : "shares"} for {event.oldShares} held on {event.effectiveDate}. Earlier eligible units are adjusted; invested cost is unchanged.</AppText>))}
           <AppText color="secondary" variant="caption">These verified events are saved with the import, not as new purchases.</AppText>
           {controller.plan.command?.transactions.length === 0 ? <AppText color="secondary" variant="caption">Your transactions are already saved. Apply the verified share adjustments without importing them again.</AppText> : null}
+        </View> : null}
+        {controller.plan.demergers?.some((event) => event.kind === "entitlement") ? <View style={styles.holdingPreview} testID="transaction-import-demerger-summary">
+          <AppText weight="bold">Demergers included</AppText>
+          {controller.plan.demergers.filter((event) => event.kind === "entitlement").map((event) => {
+            if (event.kind !== "entitlement") return null;
+            const terms = demergerCatalog.find((item) => item.id === event.eventId)!;
+              const parent = controller.plan.holdings.find((holding) => holding.asset.id === event.sourceAssetId)?.asset;
+              const parentFraction = decimal(1).minus(terms.childFraction);
+              const parentCost = decimal(event.cost).dividedBy(terms.childFraction).times(parentFraction);
+              return <View key={event.eventId}>
+                <AppText color="secondary" variant="caption">{parent?.name ?? "Retained holding"}: {event.quantity} shares retained at the event, {parentFraction.times(100).toString()}% of cost ({formatCurrency(parentCost.toNumber(), "INR")}).</AppText>
+                <AppText color="secondary" variant="caption">{terms.childName}: {event.quantity} new shares, {decimal(terms.childFraction).times(100).toString()}% of cost ({formatCurrency(Number(event.cost), "INR")}).</AppText>
+                <AppText color="secondary" variant="caption">Ex-date {event.date}; new holding listed {terms.availableFrom}. Values above are at the event, before later activity.</AppText>
+              </View>;
+          })}
+          <AppText color="secondary" variant="caption">Verified issuer allocation. No new investment or cash entry is created. Both holdings are saved together.</AppText>
         </View> : null}
         {showHoldings ? controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
           <AppText weight="bold">{holding.asset.name}</AppText>

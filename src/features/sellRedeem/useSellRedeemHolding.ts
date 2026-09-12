@@ -14,6 +14,7 @@ import {
   type SellRedeemPreview,
 } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { projectDemergers } from "@/src/domain/demergers";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import {
   normalizeMoney,
@@ -104,9 +105,15 @@ export function useSellRedeemHolding({
   const holdingsResult = useMemo(
     () => {
       try {
+        const demergerAdjustments = projectDemergers({
+          assets: snapshot.assets,
+          openingPositions: snapshot.openingPositions,
+          trades: snapshot.trades,
+        }, formatLocalCalendarDate(now)).filter((adjustment) => adjustment.assetId === assetId);
         return {
+          demergerAdjustments,
           holdings: calculateHoldings({
-            assets: snapshot.assets.filter((asset) => asset.id === assetId),
+            assets: snapshot.assets,
             openingPositions: snapshot.openingPositions,
             quoteCache: snapshot.quoteCache,
             trades: snapshot.trades,
@@ -116,7 +123,7 @@ export function useSellRedeemHolding({
         };
       } catch (error) {
         if (!(error instanceof StockSplitError)) throw error;
-        return { holdings: [], splitUnavailable: true };
+        return { demergerAdjustments: [], holdings: [], splitUnavailable: true };
       }
     },
     [assetId, snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades, now],
@@ -144,6 +151,7 @@ export function useSellRedeemHolding({
       assetOpeningPositions,
       now,
       holding.asset.stockSplits,
+      holdingsResult.demergerAdjustments,
     );
 
     if (!sellQuantityResult.isValid) return sellQuantityResult.message;
@@ -161,7 +169,13 @@ export function useSellRedeemHolding({
         totalValue: quantityValue,
       };
       try {
-        if (wouldOversellAsset(assetId, assetOpeningPositions, [...assetTrades, candidate], holding.asset.stockSplits)) {
+        if (wouldOversellAsset(
+          assetId,
+          assetOpeningPositions,
+          [...assetTrades, candidate],
+          holding.asset.stockSplits,
+          holdingsResult.demergerAdjustments,
+        )) {
           return "Not enough units on this date or after later recorded sales.";
         }
       } catch (error) {
@@ -173,6 +187,7 @@ export function useSellRedeemHolding({
   }, [
     assetId,
     holding,
+    holdingsResult.demergerAdjustments,
     holdingsResult.splitUnavailable,
     quantityValue,
     date,

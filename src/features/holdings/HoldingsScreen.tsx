@@ -47,7 +47,7 @@ import type {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type { OpeningPosition, Trade } from "@/src/types";
+import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
 import {
   createHoldingReviewItems,
@@ -137,6 +137,7 @@ export function HoldingsScreen({
     }
   }, [openAddMenu, onAddMenuOpened]);
   const {
+    assets,
     displayMode,
     failed,
     holdings,
@@ -658,15 +659,11 @@ export function HoldingsScreen({
                     selectedItem.holding.asset.assetClass !== "cash"
                   }
                   item={selectedItem}
+                  assets={assets}
                   masked={maskWealthValues}
                   minimal={isMinimalMode}
-                  openingPositions={openingPositions.filter(
-                    (position) =>
-                      position.assetId === selectedItem.holding.asset.id,
-                  )}
-                  trades={trades.filter(
-                    (trade) => trade.assetId === selectedItem.holding.asset.id,
-                  )}
+                  openingPositions={openingPositions}
+                  trades={trades}
                   onReviewOpeningPosition={
                     onReviewOpeningPosition
                       ? (id) => {
@@ -1191,6 +1188,7 @@ function FilterRow({
 
 type HoldingDetailsProps = {
   allocationAvailable: boolean;
+  assets: Asset[];
   item: HoldingReviewItem;
   masked: boolean;
   minimal: boolean;
@@ -1283,6 +1281,7 @@ function HoldingRow({
 }
 function HoldingDetails({
   allocationAvailable,
+  assets,
   item,
   masked,
   minimal,
@@ -1296,7 +1295,11 @@ function HoldingDetails({
   const isPending = holding.valuation.status === "pending";
   const positive = (holding.unrealisedPnL ?? 0) >= 0;
   const [showRecords, setShowRecords] = useState(false);
-  const firstPurchase = getFirstRecordedPurchase(openingPositions, trades);
+  const assetOpeningPositions = openingPositions.filter(
+    (position) => position.assetId === holding.asset.id,
+  );
+  const assetTrades = trades.filter((trade) => trade.assetId === holding.asset.id);
+  const firstPurchase = getFirstRecordedPurchase(assetOpeningPositions, assetTrades);
   return (
     <View
       style={styles.expandedSection}
@@ -1391,7 +1394,7 @@ function HoldingDetails({
         />
       </View>
 
-      <AssetHistoryPanel asset={holding.asset} openingPositions={openingPositions} trades={trades} masked={masked} minimal={minimal} />
+      <AssetHistoryPanel asset={holding.asset} assets={assets} openingPositions={openingPositions} trades={trades} masked={masked} minimal={minimal} />
 
       <AppText color="secondary" variant="caption">
         {formatClassification(item)}
@@ -1420,17 +1423,17 @@ function HoldingDetails({
         </AppText>
       </View>
 
-      {isPending && onReviewOpeningPosition && openingPositions[0] ? (
+      {isPending && onReviewOpeningPosition && assetOpeningPositions[0] ? (
         <AppButton
           title="Enter manual price"
           variant="secondary"
           testID={`holding-enter-manual-price-${holding.asset.id}`}
-          onPress={() => onReviewOpeningPosition(openingPositions[0].id)}
+          onPress={() => onReviewOpeningPosition(assetOpeningPositions[0].id)}
         />
       ) : null}
 
-      {(onReviewOpeningPosition && openingPositions.length > 0) ||
-      (onReviewTrades && trades.length > 0) ? (
+      {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
+      (onReviewTrades && assetTrades.length > 0) ? (
         <GroupedListRow
           title={showRecords ? "Hide records" : "View records"}
           meta="Opening positions and corrections"
@@ -1439,12 +1442,12 @@ function HoldingDetails({
           onPress={() => setShowRecords(!showRecords)}
         />
       ) : null}
-      {showRecords && onReviewOpeningPosition && openingPositions.length > 0 ? (
+      {showRecords && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
         <View style={styles.openingRecords}>
           <AppText color="secondary" variant="caption" weight="bold">
-            Opening {openingPositions.length === 1 ? "record" : "records"}
+            Opening {assetOpeningPositions.length === 1 ? "record" : "records"}
           </AppText>
-          {openingPositions.map((position) => (
+          {assetOpeningPositions.map((position) => (
             <View key={position.id} style={styles.openingRecordRow}>
               <View style={styles.openingRecordCopy}>
                 <AppText variant="caption" weight="bold">
@@ -1468,9 +1471,9 @@ function HoldingDetails({
         </View>
       ) : null}
 
-      {showRecords && onReviewTrades && trades.length > 0 ? (
+      {showRecords && onReviewTrades && assetTrades.length > 0 ? (
         <AppButton
-          title={`Review ${trades.length} ${trades.length === 1 ? "transaction" : "transactions"}`}
+          title={`Review ${assetTrades.length} ${assetTrades.length === 1 ? "transaction" : "transactions"}`}
           variant="secondary"
           testID={`review-transactions-${holding.asset.id}`}
           onPress={() => onReviewTrades(holding.asset.id)}

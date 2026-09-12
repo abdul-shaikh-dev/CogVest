@@ -6,6 +6,7 @@ import {
 import { decimal, normalizeMoney } from "@/src/domain/precision";
 import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
 import { positionEvents, splitQuantity, StockSplitError } from "@/src/domain/stockSplits";
+import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
@@ -23,6 +24,7 @@ export type AssetHistoryResult = {
 
 type AssetHistoryInput = {
   asset: Asset;
+  assets?: Asset[];
   entry: DailyPriceEntry;
   openingPositions: OpeningPosition[];
   trades: Trade[];
@@ -56,6 +58,7 @@ export function downsampleAssetHistory(
 
 export function buildAssetHistory({
   asset,
+  assets,
   entry,
   openingPositions,
   trades,
@@ -89,23 +92,45 @@ export function buildAssetHistory({
     };
   }
 
-  if (asset.stockSplits?.length) {
-    if (asset.stockSplits.some((event) => event.effectiveDate > (entry.points[0]?.date ?? ""))) {
+  const demergerAdjustments = assets
+    ? projectDemergers({ assets, openingPositions, trades }, entry.to)
+        .filter((event) => event.assetId === asset.id)
+    : [];
+  const demergerAdjustment = demergerAdjustments[0];
+  const parentEvent = asset.demerger
+    ? demergerCatalog.find((event) => event.id === asset.demerger?.eventId)
+    : undefined;
+  if (parentEvent && entry.points.some((point) => point.date < parentEvent.exDate) &&
+      entry.points.some((point) => point.date >= parentEvent.exDate)) {
+    return {
+      holdingStart: null,
+      points: entry.points.map((point) => ({ date: point.date, holdingValue: null, price: point.close })),
+      warning: "Historical units across this demerger are unavailable.",
+    };
+  }
+
+  if (asset.stockSplits?.length || demergerAdjustment) {
+    if (asset.stockSplits?.some((event) => event.effectiveDate > (entry.points[0]?.date ?? ""))) {
       return { holdingStart: null, points: [], warning: "Price units across this stock split need reconciliation." };
     }
     try {
-      const events = positionEvents({ openingPositions: openings, trades: assetTrades, stockSplits: asset.stockSplits });
+      const events = positionEvents({ openingPositions: openings, trades: assetTrades, stockSplits: asset.stockSplits, demergerAdjustments });
       const holdingStart = events.find((event) => event.type !== "split")?.date ?? null;
       let quantity = decimal(0);
       let index = 0;
       const points = entry.points.map((point) => {
         while (index < events.length && (getCalendarDatePart(events[index].date) ?? "") <= point.date) {
           const event = events[index++];
-          quantity = event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
-            event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
+          quantity = event.type === "demerger"
+            ? event.adjustment.kind === "entitlement" ? quantity.plus(event.adjustment.quantity) : quantity
+            : event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
+              event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
           if (quantity.isNegative()) throw new StockSplitError("inventory", "Transaction history would produce a negative quantity.");
         }
-        return { date: point.date, price: point.close, holdingValue: holdingStart === null || point.date < holdingStart ? null : normalizeMoney(quantity.times(point.close)) };
+        const childEvent = demergerAdjustment?.kind === "entitlement"
+          ? demergerCatalog.find((event) => event.id === demergerAdjustment.eventId)
+          : undefined;
+        return { date: point.date, price: point.close, holdingValue: holdingStart === null || point.date < holdingStart || (childEvent && point.date < childEvent.availableFrom) ? null : normalizeMoney(quantity.times(point.close)) };
       });
       return { holdingStart, points, warning: null };
     } catch (error) {
