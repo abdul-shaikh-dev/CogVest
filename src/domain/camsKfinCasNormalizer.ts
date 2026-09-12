@@ -49,6 +49,7 @@ export type CasSchemeReview = {
 };
 
 export type CamsKfinCasNormalizationResult = {
+  administrativeNotices?: number;
   coverage?: CasParseResult["coverage"];
   errors: CasNormalizationError[];
   parserErrors: CasParseError[];
@@ -157,6 +158,7 @@ export function normalizeCamsKfinCas(
 
   if (parsed.errors.length > 0) {
     return {
+      administrativeNotices: parsed.administrativeNotices,
       ...(parsed.coverage ? { coverage: parsed.coverage } : {}),
       errors,
       parserErrors: parsed.errors,
@@ -221,6 +223,7 @@ export function normalizeCamsKfinCas(
   }
 
   return {
+    administrativeNotices: parsed.administrativeNotices,
     ...(parsed.coverage ? { coverage: parsed.coverage } : {}),
     errors,
     parserErrors: parsed.errors,

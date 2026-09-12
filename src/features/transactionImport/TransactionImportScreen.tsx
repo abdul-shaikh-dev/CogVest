@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -27,6 +27,7 @@ import type {
   UseTransactionImportOptions,
 } from "./useTransactionImport";
 import { useTransactionImport } from "./useTransactionImport";
+import { CasImportProblems } from "./CasImportProblems";
 import type { Asset } from "@/src/types";
 
 type TransactionImportScreenProps = {
@@ -44,6 +45,8 @@ type TransactionImportScreenProps = {
 export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const controller = useTransactionImport(props);
   const scrollRef = useRef<ScrollView>(null);
+  const sourceCardYRef = useRef<number | undefined>(undefined);
+  const passwordFieldYRef = useRef<number | undefined>(undefined);
   const [statementReviewY, setStatementReviewY] = useState<number>();
   const [templateStatus, setTemplateStatus] = useState<string>();
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
@@ -61,6 +64,26 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     }, 150);
     return () => clearTimeout(timer);
   }, [controller.casReview, controller.isResolving, statementReviewY]);
+
+  function scrollPasswordIntoView() {
+    if (!Keyboard.metrics() || sourceCardYRef.current === undefined || passwordFieldYRef.current === undefined) return;
+    scrollRef.current?.scrollTo({ animated: false, y: Math.max(0, sourceCardYRef.current + passwordFieldYRef.current - spacing.md) });
+  }
+
+  useEffect(() => {
+    const subscription = Keyboard.addListener("keyboardDidShow", () => {
+      scrollPasswordIntoView();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  function selectSource(sourceId: Parameters<typeof controller.setSourceId>[0]) {
+    if (sourceId === controller.sourceId) return;
+    passwordFieldYRef.current = undefined;
+    Keyboard.dismiss();
+    scrollRef.current?.scrollTo({ animated: false, y: 0 });
+    controller.setSourceId(sourceId);
+  }
 
   async function saveTemplate() {
     if (!props.saveCsvTemplate || isSavingTemplate) return;
@@ -89,6 +112,9 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   }, new Map<string, { error: (typeof controller.plan.errors)[number]; count: number }>()).values()];
 
   return (
+    <KeyboardAvoidingView behavior="height" style={styles.flex} onLayout={() => {
+      requestAnimationFrame(scrollPasswordIntoView);
+    }}>
     <ScreenContainer scroll scrollRef={scrollRef} testID="transaction-import-screen">
       <ScreenHeader
         leading={<IconButton accessibilityLabel="Go back" icon="chevron-back" onPress={props.onCancel} testID="transaction-import-back" />}
@@ -96,6 +122,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         title="Import transaction history"
       />
 
+      <View onLayout={(event) => { sourceCardYRef.current = event.nativeEvent.layout.y; }} testID="transaction-import-source-card">
       <PremiumCard style={styles.card}>
         <SectionHeader title="Choose a source" />
         <AppText color="secondary">Files stay on this device. Select the export format before adding history.</AppText>
@@ -105,7 +132,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
               active={controller.sourceId === source.id}
               description={source.description}
               key={source.id}
-              onPress={() => controller.setSourceId(source.id)}
+              onPress={() => selectSource(source.id)}
               testID={`transaction-import-source-${source.id}`}
               title={source.label}
             />
@@ -135,14 +162,23 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           {templateStatus ? <AppText color="secondary" testID="transaction-csv-template-status" variant="caption">{templateStatus}</AppText> : null}
         </> : controller.sourceId === "zerodhaTradebookEqV1" ? <AppText color="secondary" variant="caption">Console exports at most 365 days per Tradebook. Add up to {controller.maxFiles} annual files; overlapping trades are detected before import.</AppText> : <>
           <AppText color="secondary" variant="caption">Choose a detailed CAS PDF with transaction history. The statement is read on this device, and its password is never saved.</AppText>
-          <FormTextField
-            label="PDF password (if required)"
-            onChangeText={controller.setCasPassword}
-            returnKeyType="done"
-            secureTextEntry
-            testID="cas-statement-password"
-            value={controller.casPassword}
-          />
+          <View
+            collapsable={false}
+            onLayout={(event) => { passwordFieldYRef.current = event.nativeEvent.layout.y; }}
+            testID="cas-statement-password-field"
+          >
+            <FormTextField
+              label="PDF password (if required)"
+              onChangeText={controller.setCasPassword}
+              onFocus={() => {
+                scrollPasswordIntoView();
+              }}
+              returnKeyType="done"
+              secureTextEntry
+              testID="cas-statement-password"
+              value={controller.casPassword}
+            />
+          </View>
         </>}
         {controller.files.length > 0 ? <View style={styles.fileList}>
           {controller.files.map((file, index) => <View key={file.id} style={styles.fileRow} testID={`transaction-import-file-${index}`}>
@@ -165,17 +201,21 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={controller.selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? (controller.casSource ? "Choose another statement" : "Choose CAS PDF") : controller.sourceId === "zerodhaTradebookEqV1" ? (controller.files.length > 0 ? "Add another Tradebook" : "Add Tradebook CSV") : (controller.files.length > 0 ? "Choose another CSV" : "Choose CSV")} />
       </PremiumCard>
 
+      </View>
       {controller.isResolving ? <PremiumCard testID="transaction-import-resolving"><AppText weight="bold">Checking transaction rows and matching holdings...</AppText><AppText color="secondary" variant="caption">Nothing changes until you confirm the dry run.</AppText></PremiumCard> : null}
       {controller.screenError ? <ErrorCard message={controller.screenError} testID="transaction-import-screen-error" /> : null}
       {controller.parseErrors.map((error, index) => <ErrorCard key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
-      {controller.casReviewErrors.map((message, index) => <ErrorCard key={`cas-review-error-${index}`} message={message} />)}
-
       {controller.casReview ? <View onLayout={(event) => {
         setStatementReviewY(event.nativeEvent.layout.y);
-      }}>
+      }} style={styles.card}>
+        <CasImportProblems problems={[
+          ...controller.casReview.normalization.parserErrors,
+          ...controller.casReview.normalization.errors,
+        ]} />
         <PremiumCard style={styles.card} testID="cas-statement-review">
         <SectionHeader title="Statement review" />
         <AppText color="secondary">Review the schemes and printed balances before importing. Folio numbers stay private and appear only as statement-local labels.</AppText>
+        {(controller.casReview.normalization.administrativeNotices ?? 0) > 0 ? <AppText color="secondary" variant="caption" testID="cas-administrative-notices">{controller.casReview.normalization.administrativeNotices} administrative address-update notices identified. These are not investment transactions and do not change balances.</AppText> : null}
         {controller.casReview.normalization.coverage ? <AppText color="secondary" testID="cas-statement-coverage" variant="caption">Statement coverage: {controller.casReview.normalization.coverage.from} to {controller.casReview.normalization.coverage.to}</AppText> : null}
         {controller.casReview.normalization.schemes.map((scheme) => <View key={`${scheme.folioLabel}-${scheme.isin}`} style={styles.holdingPreview}>
           <View style={styles.reviewHeading}>
@@ -245,7 +285,8 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <Summary label="Unsupported" testID="transaction-import-summary-unsupported" value={`${controller.unsupportedCount}`} />
         </View>
         {controller.unsupportedEvents.length > 0 ? <View style={styles.unsupported}>
-          <AppText color="secondary" variant="caption" weight="bold">Skipped unsupported events</AppText>
+          <AppText color="secondary" variant="caption" weight="bold">{controller.sourceId === "camsKfinCasPdfV1" ? "Unsupported events need attention" : "Skipped unsupported events"}</AppText>
+          {controller.sourceId === "camsKfinCasPdfV1" && controller.unsupportedEvents.some((event) => event.transactionType === "cancelled") ? <AppText color="secondary" variant="caption">A cancellation notice does not include amounts or units. CogVest cannot infer which investment it affects, so this import remains blocked. Check the notice against your fund statement before changing any records.</AppText> : null}
           {controller.unsupportedEvents.map((event) => <AppText key={`${event.rowNumber}-${event.transactionType}`} color="secondary" variant="caption">Row {event.rowNumber}: {event.transactionType}{event.reason ? ` • ${event.reason}` : ""}</AppText>)}
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
@@ -288,6 +329,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         <AppButton disabled={!controller.plan.command || controller.isSaving || controller.isResolving || controller.parseErrors.length > 0 || controller.casReviewErrors.length > 0} onPress={controller.confirmImport} testID="confirm-transaction-import" title={controller.isSaving ? "Importing..." : controller.plan.command?.transactions.length === 0 ? "Apply share adjustments" : "Confirm transaction import"} />
       </PremiumCard> : null}
     </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -339,6 +381,7 @@ function ErrorCard({ message, testID }: { message: string; testID?: string }) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   card: { gap: spacing.md },
   coverageControl: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minHeight: 56, padding: spacing.md },

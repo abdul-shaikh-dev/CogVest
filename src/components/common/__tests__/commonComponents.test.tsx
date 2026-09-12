@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 
 import {
   AppButton,
@@ -208,5 +208,25 @@ describe("common UI primitives", () => {
     expect(getByPlaceholderText("1000").props.placeholderTextColor).toBe(
       colors.text.secondary,
     );
+  });
+
+  it("forwards focus lifecycle callbacks to the text input", () => {
+    const onBlur = jest.fn();
+    const onFocus = jest.fn();
+    const { getByLabelText } = render(
+      <FormTextField
+        label="Password"
+        onBlur={onBlur}
+        onChangeText={jest.fn()}
+        onFocus={onFocus}
+        value=""
+      />,
+    );
+
+    fireEvent(getByLabelText("Password"), "focus");
+    fireEvent(getByLabelText("Password"), "blur");
+
+    expect(onFocus).toHaveBeenCalledTimes(1);
+    expect(onBlur).toHaveBeenCalledTimes(1);
   });
 });

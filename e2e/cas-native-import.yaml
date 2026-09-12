@@ -1,0 +1,99 @@
+appId: com.abdulshaikh.cogvest
+---
+# Fresh debug APK + Metro; push e2e/fixtures/cas-native-synthetic.pdf to Downloads.
+# Uses only invented data. The QA seed route is development-only.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: "Replace with visual QA data"
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: wrong-password
+- hideKeyboard
+- tapOn:
+    id: select-cas-statement
+- runFlow: standalone/helpers/open-downloads.yaml
+- tapOn: cas-native-synthetic.pdf
+- scrollUntilVisible:
+    element:
+      id: transaction-import-screen-error
+    direction: DOWN
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: UP
+- tapOn:
+    id: cas-statement-password
+- eraseText: 100
+- inputText: synthetic-cas-test
+- hideKeyboard
+- tapOn:
+    id: read-cas-statement
+- scrollUntilVisible:
+    element:
+      id: cas-administrative-notices
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-holding-summary-visual-qa-asset-sample-fund
+    direction: DOWN
+- assertVisible: "2 transactions.*12 units.*100.00"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
+- runFlow: helpers/cas-import-evidence.yaml
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow: helpers/cas-import-evidence.yaml
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: synthetic-cas-test
+- hideKeyboard
+- tapOn:
+    id: select-cas-statement
+- runFlow: standalone/helpers/open-downloads.yaml
+- tapOn: cas-native-synthetic.pdf
+- scrollUntilVisible:
+    element:
+      id: transaction-import-row-accounting
+    direction: DOWN
+- assertVisible: ".*0 proposed additions.*2 duplicates.*"
+- runFlow: helpers/cas-import-evidence.yaml

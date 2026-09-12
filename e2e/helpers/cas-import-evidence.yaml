@@ -1,0 +1,16 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: e2e-evidence-screen
+    timeout: 15000
+- assertVisible: "Trade count: 2"
+- assertVisible: "Imported transaction count: 2"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Opening position count: 4"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-samplefund-values
+    direction: DOWN
+- assertVisible: "Values: invested .*1,200.00.*quantity 12"
