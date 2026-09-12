@@ -1,9 +1,37 @@
 import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin } from "@/src/domain/assets";
+import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 import type { TransactionCsvCandidate } from "@/src/domain/transactionCsv";
 import type { Asset } from "@/src/types";
 import { splitCanonicalIsin, stockSplitCatalog } from "@/src/domain/stockSplitCatalog";
 
 const normalized = (value?: string) => value?.trim().toUpperCase() ?? "";
+
+export function assetFromCasScheme(
+  scheme: CasSchemeReview,
+): Asset | undefined {
+  const isin = normalizeIsin(scheme.isin);
+  const name = scheme.name.trim();
+  if (!isin || !name) return undefined;
+
+  const normalizedName = name.toUpperCase();
+  const instrumentType = /\bLIQUID\b/u.test(normalizedName)
+    ? "liquidFund"
+    : /\bARBITRAGE\b/u.test(normalizedName)
+      ? "arbitrageFund"
+      : "mutualFund";
+
+  return {
+    assetClass: "debt",
+    currency: "INR",
+    id: `cas:${isin}`,
+    instrumentType,
+    isin,
+    name,
+    sectorType: instrumentType === "liquidFund" ? "liquidity" : "diversified",
+    symbol: isin,
+    ticker: isin,
+  };
+}
 
 /** A quote listing is not evidence that two historical securities have equal units. */
 export function conflictingHistoricalRows(

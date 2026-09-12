@@ -32,7 +32,8 @@ import {
   type TransactionCsvResolution,
   type TransactionImportMode,
 } from "./transactionImport";
-import { compatibleTransactionCandidate, conflictingHistoricalRows, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import { assetFromCasScheme, compatibleTransactionCandidate, conflictingHistoricalRows, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 
 export { transactionCsvMaxBytes };
 
@@ -261,7 +262,11 @@ export function useTransactionImport({
   async function resolveRows(
     rows: TransactionCsvResolution["row"][],
     analysisId: number,
+    casSchemes: CasSchemeReview[] = [],
   ) {
+    const casSchemesByIsin = new Map(
+      casSchemes.map((scheme) => [normalizeIsin(scheme.isin), scheme]),
+    );
     const byKey = new Map<string, TransactionCsvResolution[]>();
     for (const row of rows) {
       const seed: TransactionCsvResolution = { row, status: "unresolved" };
@@ -287,6 +292,17 @@ export function useTransactionImport({
         const selected = selectedAssetsRef.current.get(identityKey(first));
         if (selected && seeds.every((seed) => compatibleTransactionCandidate(selected, seed.row))) {
           return seeds.map((seed) => ({ ...seed, asset: selected, candidates: cachedCandidates, status: "ready" as const }));
+        }
+        const casScheme = first.row.identity.kind === "isin"
+          ? casSchemesByIsin.get(normalizeIsin(first.row.identity.value))
+          : undefined;
+        const casAsset = casScheme ? assetFromCasScheme(casScheme) : undefined;
+        if (casAsset) {
+          return seeds.map((seed) => ({
+            ...seed,
+            asset: casAsset,
+            status: "ready" as const,
+          }));
         }
         if (cachedCandidates?.length) return seeds.map((seed) => ({ ...seed, candidates: cachedCandidates, status: "selectionRequired" as const }));
         try {
@@ -437,7 +453,7 @@ export function useTransactionImport({
       ]);
       setUnsupportedCount(normalization.unsupportedEvents.length);
       setUnsupportedEvents(normalization.unsupportedEvents);
-      await resolveRows(normalization.rows, analysisId);
+      await resolveRows(normalization.rows, analysisId, normalization.schemes);
     } catch (error) {
       if (analysisId !== analysisIdRef.current) return;
       setScreenError(

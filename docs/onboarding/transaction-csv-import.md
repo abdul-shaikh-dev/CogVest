@@ -143,6 +143,13 @@ transaction history. This adapter is not arbitrary PDF import or Kuvera login
 integration. The source-specific review remains separate from the generic CSV
 template; no real account statement belongs in repository test fixtures.
 
+For a valid detailed statement, CogVest uses each normalized ISIN and printed
+scheme name to create one local mutual-fund holding when the portfolio has no
+same-ISIN asset. Transactions from multiple folios with the same ISIN share that
+holding. This does not create or imply a Yahoo listing, exchange, current quote,
+or live-price guarantee. Existing same-ISIN assets remain authoritative. Users
+review and confirm the complete batch; they do not confirm every CAS transaction.
+
 Layout and reconciliation failures appear in one expandable problem summary,
 with extracted row references. They are not reported as skipped transactions.
 Exact dated, value-free `***Address Updated from KRA Data***` and
@@ -185,6 +192,10 @@ proof that an arbitrary customer statement is supported. The wholly invented PDF
 can be regenerated with Python + reportlab using
 `scripts/fixtures/generate-cas-native-pdf.py`; its public test password is
 `synthetic-cas-test`. Never replace this fixture with a customer statement.
+Run `npm run maestro:test -- e2e/cas-native-fresh-portfolio.yaml` to verify the
+separate empty-portfolio contract: the statement creates one local fund per ISIN,
+requires no per-fund lookup confirmation, persists after restart, and deduplicates
+on repeat import without inventing an exchange or quote-provider identity.
 Run Metro without `CI=1` during editing: CI mode disables file watching and can
 serve old JavaScript even after reinstalling a fresh debug APK. The Android
 emulator may connect directly to `10.0.2.2:8081`, bypassing `adb reverse`; verify

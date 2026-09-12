@@ -61,6 +61,19 @@ describe("asset metadata", () => {
     ).toMatchObject({ isin: "INE040A01034" });
   });
 
+  it("does not invent a quote provider identity for local mutual funds", () => {
+    expect(normalizeAssetMetadata({
+      assetClass: "debt",
+      currency: "INR",
+      id: "cas:INF000000001",
+      instrumentType: "mutualFund",
+      isin: "INF000000001",
+      name: "Sample Fund",
+      symbol: "INF000000001",
+      ticker: "INF000000001",
+    })).not.toHaveProperty("quoteSourceId");
+  });
+
   it("uses user-facing labels and class-specific choices", () => {
     expect(instrumentTypeLabel("fixedDeposit")).toBe("Fixed Deposit");
     expect(sectorTypeLabel("other")).toBe("Unknown");

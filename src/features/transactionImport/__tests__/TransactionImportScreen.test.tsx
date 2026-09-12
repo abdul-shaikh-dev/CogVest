@@ -203,7 +203,7 @@ describe("TransactionImportScreen", () => {
       id: "asset-sample-fund",
       isin: "INF000000001",
       instrumentType: "mutualFund",
-      name: "Sample Equity Fund",
+      name: "My saved fund",
       symbol: "SAMPLE",
       ticker: "SAMPLE",
     });
@@ -307,6 +307,12 @@ describe("TransactionImportScreen", () => {
     fireEvent.press(getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().trades).toHaveLength(1);
+    expect(store.getState().assets).toHaveLength(1);
+    expect(store.getState().assets[0]).toMatchObject({
+      id: "asset-sample-fund",
+      name: "My saved fund",
+      symbol: "SAMPLE",
+    });
     await waitFor(() =>
       expect(getByTestId("transaction-import-summary-duplicates")).toHaveTextContent("1"),
     );
@@ -316,6 +322,132 @@ describe("TransactionImportScreen", () => {
     ).toBe(true);
     expect(JSON.stringify(store.getState())).not.toContain("transient-password");
     expect(JSON.stringify(store.getState())).not.toContain("private-statement.pdf");
+  });
+
+  it("creates one local mutual-fund holding from a verified CAS scheme on a fresh portfolio", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const searchAssetLookupResults = jest.fn();
+    const onImported = jest.fn();
+    const screen = render(
+      <TransactionImportScreen
+        onCancel={jest.fn()}
+        onImported={onImported}
+        pickCasStatement={async () => ({
+          size: 4096,
+          uri: "content://synthetic-statement.pdf",
+        })}
+        pickCsvFile={jest.fn()}
+        readCasStatement={async () => ({
+          normalization: {
+            errors: [],
+            parserErrors: [],
+            preservedCharges: [],
+            rows: [
+              {
+                account: `folio_${"a".repeat(64)}`,
+                currency: "INR",
+                description: "Purchase",
+                externalId: "cas:2024-01-02:purchase:10:100:10",
+                fingerprint: "synthetic-cas-row",
+                identity: { kind: "isin", value: "INF000000001" },
+                isin: "INF000000001",
+                quantity: 10,
+                rowNumber: 11,
+                source: {
+                  format: "cams-kfin-cas",
+                  version: "combined-detailed-v1",
+                },
+                tradeDate: "2024-01-02",
+                transactionType: "buy",
+                unitPrice: 100,
+              },
+              {
+                account: `folio_${"b".repeat(64)}`,
+                currency: "INR",
+                description: "Purchase",
+                externalId: "cas:2024-02-02:purchase:5:110:5",
+                fingerprint: "synthetic-cas-row-two",
+                identity: { kind: "isin", value: "INF000000001" },
+                isin: "INF000000001",
+                quantity: 5,
+                rowNumber: 21,
+                source: {
+                  format: "cams-kfin-cas",
+                  version: "combined-detailed-v1",
+                },
+                tradeDate: "2024-02-02",
+                transactionType: "buy",
+                unitPrice: 110,
+              },
+            ],
+            schemes: [
+              {
+                closingUnits: "10",
+                events: [],
+                folioLabel: "Folio 1",
+                importableTransactions: 1,
+                isin: "INF000000001",
+                name: "Sample Equity Fund - Direct Growth",
+                openingUnits: "0",
+                registrar: "CAMS",
+              },
+              {
+                closingUnits: "5",
+                events: [],
+                folioLabel: "Folio 2",
+                importableTransactions: 1,
+                isin: "INF000000001",
+                name: "Sample Equity Fund - Direct Growth",
+                openingUnits: "0",
+                registrar: "KFINTECH",
+              },
+            ],
+            unsupportedEvents: [],
+          },
+          pageCount: 2,
+        })}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(
+      screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"),
+    );
+    fireEvent.press(screen.getByTestId("select-cas-statement"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("transaction-import-match-summary"))
+        .toHaveTextContent(/1 identified from this statement • 0 need attention/u),
+    );
+    expect(searchAssetLookupResults).not.toHaveBeenCalled();
+    expect(screen.queryByText(/No matching listing was found/u)).toBeNull();
+    expect(screen.queryByText(/undefined/u)).toBeNull();
+    fireEvent.press(screen.getByTestId("transaction-import-show-matched"));
+    expect(screen.getByText("INF000000001 • From statement")).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+
+    expect(store.getState().assets).toEqual([
+      expect.objectContaining({
+        assetClass: "debt",
+        currency: "INR",
+        id: "cas:INF000000001",
+        instrumentType: "mutualFund",
+        isin: "INF000000001",
+        name: "Sample Equity Fund - Direct Growth",
+        sectorType: "diversified",
+        symbol: "INF000000001",
+        ticker: "INF000000001",
+      }),
+    ]);
+    expect(store.getState().assets[0]).not.toHaveProperty("exchange");
+    expect(store.getState().assets[0]).not.toHaveProperty("quoteSourceId");
+    expect(store.getState().trades).toHaveLength(2);
+    expect(store.getState().trades.every(
+      (trade) => trade.assetId === "cas:INF000000001",
+    )).toBe(true);
   });
 
   it("adds, reorders, and removes annual Zerodha files before one dry run", async () => {

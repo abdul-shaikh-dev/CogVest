@@ -247,8 +247,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       </View> : null}
 
       {controller.groups.length > 0 ? <PremiumCard style={styles.card}>
-        <SectionHeader title="Match your holdings" />
-        <AppText color="secondary" testID="transaction-import-match-summary">{matched.length} matched • {unresolved.length} to confirm. Each choice applies to every transaction for that holding.</AppText>
+        <SectionHeader title={controller.sourceId === "camsKfinCasPdfV1" ? "Review fund identities" : "Match your holdings"} />
+        <AppText color="secondary" testID="transaction-import-match-summary">{controller.sourceId === "camsKfinCasPdfV1"
+          ? `${matched.length} identified from this statement • ${unresolved.length} need attention. Each ISIN maps to one local holding.`
+          : `${matched.length} matched • ${unresolved.length} to confirm. Each choice applies to every transaction for that holding.`}</AppText>
         {identityConflicts.length > 0 ? <>
           <AppText testID="transaction-import-identity-conflicts" weight="bold">{identityConflicts.length} historical identities need corporate-action review</AppText>
           <AppText color="secondary">Different ISINs point to the same current listing. Their quantities cannot safely be combined yet. Keep the original rows; do not delete transactions to bypass this check. Corporate-action import support is needed before these histories can be combined.</AppText>
@@ -263,7 +265,9 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">All {suggested.length} suggestions match the file's symbol, exchange and currency. You can inspect each match before accepting them together; no transactions are saved yet.</AppText>
           <AppButton disabled={controller.isResolving} onPress={controller.acceptSuggestedMatches} testID="transaction-import-accept-matches" title={`Accept ${suggested.length} matching ${suggested.length === 1 ? "holding" : "holdings"}`} />
         </> : null}
-        {matched.length > 0 ? <AppButton onPress={() => setShowMatched(!showMatched)} testID="transaction-import-show-matched" title={showMatched ? "Hide matched holdings" : `View ${matched.length} matched holdings`} variant="secondary" /> : null}
+        {matched.length > 0 ? <AppButton onPress={() => setShowMatched(!showMatched)} testID="transaction-import-show-matched" title={controller.sourceId === "camsKfinCasPdfV1"
+          ? showMatched ? "Hide identified funds" : `Review ${matched.length} identified ${matched.length === 1 ? "fund" : "funds"}`
+          : showMatched ? "Hide matched holdings" : `View ${matched.length} matched holdings`} variant="secondary" /> : null}
         {showMatched ? matched.map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />) : null}
       </PremiumCard> : null}
 
@@ -356,7 +360,17 @@ function HoldingMatch({ group, onSelect }: {
   const chosen = group.selectedAsset ?? group.suggestedAsset;
   return <View style={styles.holdingPreview} testID={`transaction-import-asset-${group.key}`}>
     <AppText weight="bold">{chosen?.name ?? group.title}</AppText>
-    {chosen ? <AppText color="secondary" variant="caption">{chosen.ticker} • {chosen.exchange} • {group.identityConflict ? "Historical identity unresolved" : group.selectedAsset ? "Matched" : "Suggested match"}</AppText> : null}
+    {chosen ? <AppText color="secondary" variant="caption">{[
+      chosen.ticker,
+      chosen.exchange,
+      group.identityConflict
+        ? "Historical identity unresolved"
+        : chosen.id.startsWith("cas:")
+          ? "From statement"
+          : group.selectedAsset
+            ? "Matched"
+            : "Suggested match",
+    ].filter(Boolean).join(" • ")}</AppText> : null}
     <AppText color="secondary" variant="caption">{group.rowNumbers.length} {group.rowNumbers.length === 1 ? "transaction" : "transactions"}{chosen ? ` • ${group.title}` : ""}</AppText>
     {chosen && group.candidates.length > 0 ? <AppButton onPress={() => setChanging(!changing)} testID={`transaction-import-change-${group.key}`} title={changing ? "Keep this match" : "Change match"} variant="secondary" /> : null}
     {!chosen && group.candidates.length === 0 ? <AppText color="secondary">No matching listing was found. This holding needs a verified asset match before its history can be imported.</AppText> : null}

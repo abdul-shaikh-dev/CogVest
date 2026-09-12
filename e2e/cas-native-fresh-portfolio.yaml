@@ -1,0 +1,92 @@
+appId: com.abdulshaikh.cogvest
+---
+# Fresh debug APK + Metro; uses only the invented native CAS fixture.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: synthetic-cas-test
+- hideKeyboard
+- tapOn:
+    id: select-cas-statement
+- runFlow: standalone/helpers/open-downloads.yaml
+- tapOn: cas-native-synthetic.pdf
+- scrollUntilVisible:
+    element:
+      id: transaction-import-match-summary
+    direction: DOWN
+- assertVisible: ".*1 identified from this statement.*0 need attention.*"
+- assertNotVisible: "No matching listing was found"
+- tapOn:
+    id: transaction-import-show-matched
+- assertVisible: "INF000000001.*From statement"
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: confirm-transaction-import
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: e2e-evidence-screen
+- assertVisible: "Asset count: 1"
+- assertVisible: "Trade count: 2"
+- assertVisible: "Imported transaction count: 2"
+- assertVisible: "Cash entry count: 0"
+- assertVisible: "Opening position count: 0"
+- assertVisible: "Duplicate identity count: 0"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-inf000000001-classification
+    direction: DOWN
+- assertVisible: "Classification: debt.*mutualFund.*diversified"
+- assertVisible: "Market: INR.*unset.*unset"
+- assertVisible: "Values: invested .*1,200.00.*quantity 12"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 1"
+- assertVisible: "Trade count: 2"
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: synthetic-cas-test
+- hideKeyboard
+- tapOn:
+    id: select-cas-statement
+- runFlow: standalone/helpers/open-downloads.yaml
+- tapOn: cas-native-synthetic.pdf
+- scrollUntilVisible:
+    element:
+      id: transaction-import-row-accounting
+    direction: DOWN
+- assertVisible: ".*0 proposed additions.*2 duplicates.*"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 1"
+- assertVisible: "Trade count: 2"

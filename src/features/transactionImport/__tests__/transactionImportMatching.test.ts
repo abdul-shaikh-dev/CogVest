@@ -1,5 +1,5 @@
 import { parseZerodhaTradebook } from "@/src/domain/zerodhaTradebook";
-import { compatibleTransactionCandidate, exactTradebookSuggestion } from "../transactionImportMatching";
+import { assetFromCasScheme, compatibleTransactionCandidate, exactTradebookSuggestion } from "../transactionImportMatching";
 import type { Asset } from "@/src/types";
 
 const rows = parseZerodhaTradebook("symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time\nEXAMPLE,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,order-one,2024-01-02T10:00:00").rows;
@@ -21,5 +21,34 @@ describe("Tradebook match suggestions", () => {
   });
   it("excludes cryptocurrency lookup noise from Tradebooks", () => {
     expect(compatibleTransactionCandidate({ ...asset, assetClass: "crypto" }, rows[0])).toBe(false);
+  });
+});
+
+describe("CAS scheme identities", () => {
+  it.each([
+    ["Sample Equity Fund - Direct Growth", "mutualFund", "diversified"],
+    ["Sample Liquid Fund - Direct Growth", "liquidFund", "liquidity"],
+    ["Sample Arbitrage Fund - Direct Growth", "arbitrageFund", "diversified"],
+  ] as const)("creates a local holding for %s", (name, instrumentType, sectorType) => {
+    expect(assetFromCasScheme({
+      closingUnits: "10",
+      events: [],
+      folioLabel: "Folio 1",
+      importableTransactions: 1,
+      isin: " inf000000001 ",
+      name,
+      openingUnits: "0",
+      registrar: "CAMS",
+    })).toEqual({
+      assetClass: "debt",
+      currency: "INR",
+      id: "cas:INF000000001",
+      instrumentType,
+      isin: "INF000000001",
+      name,
+      sectorType,
+      symbol: "INF000000001",
+      ticker: "INF000000001",
+    });
   });
 });

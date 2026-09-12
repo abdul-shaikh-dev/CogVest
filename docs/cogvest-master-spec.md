@@ -310,6 +310,12 @@ trade or requiring the user's recollection. Exact dated, value-free address-upda
 and nominee-registration notices are counted as administrative notices, not
 investment transactions. Import summaries show demergers only for holdings
 affected by the current import, not unrelated saved equity holdings.
+For a valid detailed CAS, the statement's normalized ISIN and scheme name form
+the verified local mutual-fund identity. A fresh portfolio creates one local
+holding per unique ISIN and groups every folio and transaction under it without
+requiring provider search or per-transaction confirmation. Existing same-ISIN
+assets are reused. CogVest must not invent an exchange or quote-provider listing;
+the final atomic batch confirmation and all reconciliation gates remain required.
 Numeric/unknown financial events and
 balance mismatches still block import. Nonzero statement-opening units must not
 disappear: full-history rebuilds require a statement from before the first
