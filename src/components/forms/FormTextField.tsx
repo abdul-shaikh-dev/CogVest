@@ -10,6 +10,8 @@ type FormTextFieldProps = {
   label: string;
   multiline?: boolean;
   onChangeText: (value: string) => void;
+  onBlur?: () => void;
+  onFocus?: () => void;
   onSubmitEditing?: () => void;
   placeholder?: string;
   returnKeyType?: ReturnKeyTypeOptions;
@@ -24,6 +26,8 @@ export function FormTextField({
   label,
   multiline = false,
   onChangeText,
+  onBlur,
+  onFocus,
   onSubmitEditing,
   placeholder,
   returnKeyType,
@@ -40,7 +44,9 @@ export function FormTextField({
         accessibilityLabel={label}
         keyboardType={keyboardType}
         multiline={multiline}
+        onBlur={onBlur}
         onChangeText={onChangeText}
+        onFocus={onFocus}
         onSubmitEditing={onSubmitEditing}
         placeholder={placeholder}
         placeholderTextColor={colors.text.secondary}

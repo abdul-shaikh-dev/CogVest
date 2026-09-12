@@ -143,6 +143,19 @@ transaction history. This adapter is not arbitrary PDF import or Kuvera login
 integration. The source-specific review remains separate from the generic CSV
 template; no real account statement belongs in repository test fixtures.
 
+Layout and reconciliation failures appear in one expandable problem summary,
+with extracted row references. They are not reported as skipped transactions.
+Recognized administrative address updates are counted separately from investment
+activity. A cancellation without amounts or units remains an explicit unsupported
+event: CogVest must not infer a reversal or silently discard it. Printed opening,
+running and closing unit balances must still reconcile.
+
+The Android password field uses keyboard avoidance and content-position scrolling.
+The synthetic `e2e/standalone/cas-password-focus.yaml` journey checks the label and
+field during initial and repeated keyboard openings. Run it against a fresh
+standalone APK, including a narrow display with enlarged text; it does not prove
+successful PDF parsing or transaction import.
+
 ### Common Import Rules
 
 - Current quote values are ignored by the CSV import. Quotes are refreshed or

@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor, within } from "@testing-library/react-native";
+import { Keyboard, ScrollView } from "react-native";
 
 import { TransactionImportScreen } from "@/src/features/transactionImport";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -28,6 +29,55 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("scrolls to the password's content position after the keyboard opens", () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    const metrics = jest.spyOn(Keyboard, "metrics").mockReturnValue({ screenX: 0, screenY: 500, width: 360, height: 300 });
+    let onKeyboardDidShow: (() => void) | undefined;
+    const keyboardListener = jest.spyOn(Keyboard, "addListener").mockImplementation((event, listener) => {
+      if (event === "keyboardDidShow") onKeyboardDidShow = listener as () => void;
+      return { remove: jest.fn() } as unknown as ReturnType<typeof Keyboard.addListener>;
+    });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(
+      <TransactionImportScreen
+        onCancel={jest.fn()}
+        onImported={jest.fn()}
+        pickCsvFile={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    fireEvent(screen.getByTestId("transaction-import-source-card"), "layout", { nativeEvent: { layout: { y: 120 } } });
+    fireEvent(screen.getByTestId("cas-statement-password-field"), "layout", { nativeEvent: { layout: { y: 240 } } });
+    fireEvent(screen.getByTestId("cas-statement-password"), "focus");
+    scrollTo.mockClear();
+    onKeyboardDidShow?.();
+
+    expect(scrollTo).toHaveBeenCalledWith({ animated: false, y: 344 });
+    metrics.mockRestore();
+    keyboardListener.mockRestore();
+    scrollTo.mockRestore();
+  });
+
+  it("resets the import scroll position when the source changes", () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(
+      <TransactionImportScreen
+        onCancel={jest.fn()}
+        onImported={jest.fn()}
+        pickCsvFile={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+
+    expect(scrollTo).toHaveBeenCalledWith({ animated: false, y: 0 });
+    scrollTo.mockRestore();
+  });
+
   it("offers an explicit share-adjustment action for already saved transactions", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const asset = { ...lookup, isin: "INE040A01034" };

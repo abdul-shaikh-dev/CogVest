@@ -5,7 +5,7 @@ import {
   parseCamsKfinCas,
   parseCamsKfinCasWithFolioFingerprint,
 } from "../camsKfinCas";
-import { sanitizedCombinedDetailedCasFixture as fixture } from "./fixtures/camsKfinCas.fixture";
+import { sanitizedCombinedDetailedCasFixture as fixture, syntheticNativePageCasFixture } from "./fixtures/camsKfinCas.fixture";
 
 describe("CAMS + KFintech detailed CAS parser", () => {
   it("applies async opaque folio fingerprints without exposing raw folios", async () => {
@@ -285,6 +285,92 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.status).toBe("blocked");
   });
 
+  it("uses a native page-level table header for multiple schemes and skips only exact page boilerplate", () => {
+    const result = parseCamsKfinCas(syntheticNativePageCasFixture);
+
+    expect(result.errors).toEqual([]);
+    expect(result.administrativeNotices).toBe(1);
+    expect(result.status).toBe("ready");
+    expect(result.schemes.map((scheme) => scheme.events.map((event) => event.type))).toEqual([
+      ["purchaseSip"],
+      ["purchaseSip"],
+    ]);
+    expect(result.schemes[0]?.events[0]).toEqual(expect.objectContaining({
+      amount: "1000",
+      runningBalance: "10",
+      units: "10",
+    }));
+    expect(result.schemes[1]).toEqual(expect.objectContaining({
+      openingUnits: "1",
+      closingUnits: "3",
+    }));
+    expect(result.schemes[1]?.events).toHaveLength(1);
+  });
+
+  it("does not treat unverified systematic-investment numeric suffixes as descriptions", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace("Systematic Investment (1)", "Systematic Investment (2)"),
+    );
+
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "extraColumns",
+    }));
+    expect(result.status).toBe("blocked");
+  });
+
+  it("does not broadly ignore near-match administrative rows", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace(
+        "***Address Updated from KRA Data***",
+        "***Address Updated from KRA***",
+      ),
+    );
+
+    expect(result.administrativeNotices).toBe(0);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "missingColumns",
+    }));
+    expect(result.unsupportedEvents).toEqual([]);
+    expect(result.status).toBe("blocked");
+  });
+
+  it("does not let a page-level header mask a malformed local scheme header", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace(
+        "Opening Unit Balance: 1.000\n03-Jan-2024",
+        "Opening Unit Balance: 1.000\nDate Transaction Units Balance\n03-Jan-2024",
+      ),
+    );
+
+    expect(result.errors).toContainEqual(expect.objectContaining({ code: "missingTransactionHeader" }));
+    expect(result.status).toBe("blocked");
+  });
+
+  it("does not compose a page header across arbitrary prose", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace(
+        "Date Transaction Amount Units Price Unit / (INR)(INR)Balance",
+        "Date Transaction\nunrelated prose\nAmount Units Price Unit Balance",
+      ),
+    );
+
+    expect(result.errors.filter((error) => error.code === "missingTransactionHeader")).toHaveLength(2);
+    expect(result.status).toBe("blocked");
+  });
+
+  it("keeps unproven page-like content blocked", () => {
+    const result = parseCamsKfinCas(
+      syntheticNativePageCasFixture.replace("Page 1 of 2", "Page summary content"),
+    );
+
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "orphanedContent",
+    }));
+  });
+
   it("rejects a partial transaction header even when balances are unchanged", () => {
     const noTransactions = fixture.replace(
       [
@@ -375,6 +461,16 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.status).toBe("blocked");
   });
 
+  it("blocks a bare cancellation explicitly without guessing its unit effect", () => {
+    const result = parseCamsKfinCas(singleSchemeFixture("17-Jul-2024 ***Cancelled***", "10.0000000"));
+
+    expect(result.errors).toEqual([]);
+    expect(result.unsupportedEvents).toEqual([
+      expect.objectContaining({ type: "cancelled" }),
+    ]);
+    expect(result.status).toBe("blocked");
+  });
+
   it("rejects invalid and unsupported transaction dates", () => {
     const invalid = parseCamsKfinCas(
       singleSchemeFixture("31-Feb-2024 Purchase 100.00 1.0000000 100.0000 11.0000000", "11.0000000"),
@@ -450,7 +546,7 @@ describe("CAMS + KFintech detailed CAS parser", () => {
     expect(result.status).toBe("ready");
   });
 
-  it("preserves a date-only row instead of joining it to the next transaction", () => {
+  it("keeps an incomplete financial row malformed instead of downgrading it to unknown", () => {
     const result = parseCamsKfinCas(
       singleSchemeFixture(
         [
@@ -461,14 +557,14 @@ describe("CAMS + KFintech detailed CAS parser", () => {
       ),
     );
 
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: "malformedTransaction",
+      detail: "missingColumns",
+    }));
     expect(result.schemes[0]?.events).toEqual([
-      expect.objectContaining({ disposition: "unsupported", type: "unknown" }),
       expect.objectContaining({ disposition: "importable", type: "purchase" }),
     ]);
-    expect(result.unsupportedEvents).toEqual([
-      expect.objectContaining({ type: "unknown" }),
-    ]);
+    expect(result.unsupportedEvents).toEqual([]);
     expect(result.status).toBe("blocked");
   });
 

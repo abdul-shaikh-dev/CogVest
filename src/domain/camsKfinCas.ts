@@ -4,6 +4,7 @@ export const camsKfinCasSourceFormat = "cams-kfin-cas";
 export const camsKfinCasSourceVersion = "combined-detailed-v1";
 
 export type CasEventType =
+  | "cancelled"
   | "purchase"
   | "purchaseSip"
   | "redemption"
@@ -87,6 +88,7 @@ export type CasUnsupportedEvent = {
 };
 
 export type CasParseResult = {
+  administrativeNotices: number;
   coverage?: {
     from: string;
     to: string;
@@ -162,6 +164,7 @@ export function parseCamsKfinCas(
         },
       ],
       schemes: [],
+      administrativeNotices: 0,
       source,
       status: "blocked",
       unsupportedEvents: [],
@@ -181,7 +184,9 @@ export function parseCamsKfinCas(
   const errors: CasParseError[] = [];
   const schemes: CasSchemeBlock[] = [];
   const unsupportedEvents: CasUnsupportedEvent[] = [];
+  let administrativeNotices = 0;
   const consumedClosingRows = new Set<number>();
+  const pageBoilerplateRows = findPageBoilerplateRows(lines);
   const folioFingerprintOwners = new Map<string, string>();
   let headerStart = 0;
   // Raw folios exist only during this parse and become statement-local labels.
@@ -254,7 +259,15 @@ export function parseCamsKfinCas(
     const schemeHeaderLines = firstTransactionOffset >= 0
       ? schemeRegion.slice(0, firstTransactionOffset)
       : schemeRegion;
-    if (!hasTransactionHeader(schemeHeaderLines.join(" "))) {
+    const localHeaderCandidate = schemeHeaderLines.some(isTransactionHeaderCandidate);
+    const pageStart = findPageStart(lines, index);
+    const firstPageOpening = findNextLine(lines, pageStart, openingPattern);
+    const sharedPageHeader = firstPageOpening >= 0 && firstPageOpening <= index
+      ? hasTransactionHeaderBlock(lines.slice(pageStart, firstPageOpening))
+      : false;
+    if (localHeaderCandidate
+      ? !hasTransactionHeaderBlock(schemeHeaderLines)
+      : !hasTransactionHeaderBlock(schemeHeaderLines) && !sharedPageHeader) {
       errors.push({
         code: "missingTransactionHeader",
         message: "A scheme block has no recognized detailed transaction table header.",
@@ -265,6 +278,11 @@ export function parseCamsKfinCas(
       ? index + 1 + firstTransactionOffset
       : closingIndex;
     for (let rowIndex = transactionStart; rowIndex < closingIndex; rowIndex += 1) {
+      if (pageBoilerplateRows.has(rowIndex)) continue;
+      if (isAdministrativeRow(lines[rowIndex])) {
+        administrativeNotices += 1;
+        continue;
+      }
       if (isTransactionHeaderFragment(lines[rowIndex])) continue;
       if (!transactionCandidatePattern.test(lines[rowIndex])) {
         errors.push({
@@ -307,12 +325,13 @@ export function parseCamsKfinCas(
       ) {
         const dateMatch = transactionRowPattern.exec(lines[rowIndex]);
         const date = dateMatch ? parseCasDate(dateMatch[1]) : undefined;
-        if (date) {
+        const classification = classifyEvent(dateMatch?.[2] ?? "");
+        if (date && classification.type === "cancelled") {
           event = {
             date,
-            disposition: "unsupported",
+            disposition: classification.disposition,
             rowNumber: rowIndex + 1,
-            type: "unknown",
+            type: classification.type,
           };
           rowErrors.length = 0;
         }
@@ -367,6 +386,7 @@ export function parseCamsKfinCas(
   }
 
   return {
+    administrativeNotices,
     ...(coverage ? { coverage } : {}),
     errors,
     schemes,
@@ -474,6 +494,10 @@ function parseTransactionLine(
     return undefined;
   }
   const values = numericTokens;
+  if (values.length === 5 && values[0] === "(1)" &&
+      /systematic\s+investment(?:\s+existing\s+folio\s+with\s+sip)?$/iu.test(parts.join(" "))) {
+    values.shift();
+  }
   if (values.length === 3) {
     errors.push({
       code: "missingRunningBalance",
@@ -530,6 +554,9 @@ function classifyEvent(
 ): Pick<CasStatementEvent, "disposition" | "type"> {
   const normalized = description.toLowerCase();
   if (!units) {
+    if (/^\*{3}\s*cancelled\s*\*{3}$/u.test(normalized)) {
+      return { disposition: "unsupported", type: "cancelled" };
+    }
     return /stamp\s+duty/u.test(normalized)
       ? { disposition: "preservedCharge", type: "stampDuty" }
       : { disposition: "unsupported", type: "unknown" };
@@ -548,7 +575,7 @@ function classifyEvent(
   if (signedUnits.isNegative()) {
     return { disposition: "unsupported", type: "redemption" };
   }
-  if (/\bsip\b|systematic\s+investment|instal+ment/u.test(normalized)) {
+  if (/\bsip\b|\bsys\.?\s*investment\b|systematic\s+investment|instal+ment/u.test(normalized)) {
     return { disposition: "importable", type: "purchaseSip" };
   }
   if (/purchase/u.test(normalized)) {
@@ -644,6 +671,54 @@ function isTransactionHeaderFragment(line: string) {
   return line
     .replace(/\b(?:Date|Transaction|Amount|Units|Price|NAV|Unit|Balance|INR)\b/giu, "")
     .replace(/[()\s/|-]/gu, "") === "";
+}
+
+function isTransactionHeaderCandidate(line: string) {
+  const matches = line.match(/\b(?:Date|Transaction|Amount|Units|Price|NAV|Balance)\b/giu);
+  return (matches?.length ?? 0) >= 2;
+}
+
+function hasTransactionHeaderBlock(lines: string[]) {
+  for (let start = 0; start < lines.length; start += 1) {
+    if (!isTransactionHeaderFragment(lines[start])) continue;
+    let text = "";
+    for (let index = start; index < lines.length && isTransactionHeaderFragment(lines[index]); index += 1) {
+      text = `${text} ${lines[index]}`;
+      if (hasTransactionHeader(text)) return true;
+    }
+  }
+  return false;
+}
+
+function isAdministrativeRow(line: string) {
+  return new RegExp(`^${dateToken}\\s+\\*{3}Address Updated from KRA Data\\*{3}$`, "iu").test(line);
+}
+
+function findPageStart(lines: string[], before: number) {
+  for (let index = before - 1; index >= 0; index -= 1) {
+    if (/^Page\s+\d+\s+of\s+\d+$/iu.test(lines[index])) return index;
+  }
+  return 0;
+}
+
+function findPageBoilerplateRows(lines: string[]) {
+  const rows = new Set<number>();
+  for (let index = 0; index < lines.length - 2; index += 1) {
+    if (!/^Page\s+\d+\s+of\s+\d+$/iu.test(lines[index]) ||
+        !/^CAMSCASWS-\S+\s+Version:\S+(?:\s+\S+)?$/iu.test(lines[index + 1]) ||
+        !/^Consolidated Account Statement$/iu.test(lines[index + 2])) continue;
+    rows.add(index);
+    rows.add(index + 1);
+    rows.add(index + 2);
+    let cursor = index + 3;
+    if (new RegExp(`^${dateToken}\\s+(?:To|-)\\s+${dateToken}$`, "iu").test(lines[cursor] ?? "")) {
+      rows.add(cursor++);
+    }
+    while (cursor < lines.length && isTransactionHeaderFragment(lines[cursor])) {
+      rows.add(cursor++);
+    }
+  }
+  return rows;
 }
 
 function parseCasDate(value: string) {
