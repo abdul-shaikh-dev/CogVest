@@ -15,6 +15,11 @@ import {
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { searchAssetLookupResults as searchAssetLookupResultsService } from "@/src/services/assetLookup";
 import {
+  lookupAmfiSchemeClassifications as lookupAmfiSchemeClassificationsService,
+  type AmfiSchemeClassification,
+  type AmfiSchemeLookupResult,
+} from "@/src/services/mutualFunds/amfiSchemeCatalog";
+import {
   readCasStatementForImport,
   type CasPdfSourceFile,
   type CasStatementImportReview,
@@ -32,7 +37,8 @@ import {
   type TransactionCsvResolution,
   type TransactionImportMode,
 } from "./transactionImport";
-import { compatibleTransactionCandidate, conflictingHistoricalRows, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import { assetFromCasScheme, casFundAllocationCandidates, compatibleTransactionCandidate, conflictingHistoricalRows, inferCasFundAllocation, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 
 export { transactionCsvMaxBytes };
 
@@ -51,6 +57,9 @@ export type SelectedTransactionImportFile = PickedTransactionCsv & {
 export type PickedCasStatement = CasPdfSourceFile;
 
 export type UseTransactionImportOptions = {
+  lookupAmfiSchemeClassifications?: (input: {
+    isins: string[];
+  }) => Promise<AmfiSchemeLookupResult>;
   now?: () => Date;
   onImported: (result: TransactionImportCommandResult) => void;
   pickCasStatement?: () => Promise<PickedCasStatement | undefined>;
@@ -66,6 +75,7 @@ export type UseTransactionImportOptions = {
 };
 
 type ResolutionGroup = {
+  casClassificationRequired?: boolean;
   identityConflict?: boolean;
   candidates: Asset[];
   key: string;
@@ -150,10 +160,15 @@ function groupResolutions(resolutions: TransactionCsvResolution[], existingAsset
       continue;
     }
     groups.set(key, {
+      casClassificationRequired: Boolean(
+        resolution.candidates?.length &&
+        resolution.candidates.every((candidate) => candidate.id.startsWith("cas:")),
+      ),
       candidates: resolution.candidates ?? [],
       key,
       rowNumbers: [resolution.row.rowNumber],
-      title: titleForResolution(resolution),
+      title: resolution.candidates?.find((candidate) => candidate.id.startsWith("cas:"))?.name
+        ?? titleForResolution(resolution),
     });
   }
   for (const group of groups.values()) {
@@ -204,6 +219,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 export function useTransactionImport({
+  lookupAmfiSchemeClassifications = lookupAmfiSchemeClassificationsService,
   now = () => new Date(),
   onImported,
   pickCasStatement,
@@ -225,6 +241,7 @@ export function useTransactionImport({
   const [files, setFiles] = useState<SelectedTransactionImportFile[]>([]);
   const [fileSummaries, setFileSummaries] = useState<Record<string, string>>({});
   const [casPassword, setCasPassword] = useState("");
+  const [casClassificationNotice, setCasClassificationNotice] = useState<string>();
   const [casReview, setCasReview] = useState<CasStatementImportReview>();
   const [casReviewErrors, setCasReviewErrors] = useState<string[]>([]);
   const [casSource, setCasSource] = useState<PickedCasStatement>();
@@ -254,6 +271,7 @@ export function useTransactionImport({
     setUnsupportedEvents([]);
     setCasReview(undefined);
     setCasReviewErrors([]);
+    setCasClassificationNotice(undefined);
     setSharedCutover("");
     setCutoverByOpeningPositionId({});
   }
@@ -261,7 +279,18 @@ export function useTransactionImport({
   async function resolveRows(
     rows: TransactionCsvResolution["row"][],
     analysisId: number,
+    casSchemes: CasSchemeReview[] = [],
+    amfiClassifications: Record<string, AmfiSchemeClassification> = {},
   ) {
+    const casSchemesByIsin = new Map<string, CasSchemeReview[]>();
+    for (const scheme of casSchemes) {
+      const isin = normalizeIsin(scheme.isin);
+      if (!isin) continue;
+      casSchemesByIsin.set(isin, [
+        ...(casSchemesByIsin.get(isin) ?? []),
+        scheme,
+      ]);
+    }
     const byKey = new Map<string, TransactionCsvResolution[]>();
     for (const row of rows) {
       const seed: TransactionCsvResolution = { row, status: "unresolved" };
@@ -287,6 +316,45 @@ export function useTransactionImport({
         const selected = selectedAssetsRef.current.get(identityKey(first));
         if (selected && seeds.every((seed) => compatibleTransactionCandidate(selected, seed.row))) {
           return seeds.map((seed) => ({ ...seed, asset: selected, candidates: cachedCandidates, status: "ready" as const }));
+        }
+        const normalizedIsin = first.row.identity.kind === "isin"
+          ? normalizeIsin(first.row.identity.value)
+          : undefined;
+        const matchingCasSchemes = normalizedIsin
+          ? casSchemesByIsin.get(normalizedIsin)
+          : undefined;
+        const amfiClassification = normalizedIsin
+          ? amfiClassifications[normalizedIsin]
+          : undefined;
+        const inferredAllocations = new Set(
+          amfiClassification
+            ? [amfiClassification.allocation].filter(
+              (allocation): allocation is "debt" | "equity" => Boolean(allocation),
+            )
+            : matchingCasSchemes
+              ?.map((scheme) => inferCasFundAllocation(scheme.name))
+              .filter((allocation): allocation is "debt" | "equity" => Boolean(allocation)),
+        );
+        const inferredAllocation = inferredAllocations.size === 1
+          ? [...inferredAllocations][0]
+          : undefined;
+        const casAsset = matchingCasSchemes?.[0] && inferredAllocation
+          ? assetFromCasScheme(matchingCasSchemes[0], inferredAllocation)
+          : undefined;
+        if (casAsset) {
+          return seeds.map((seed) => ({
+            ...seed,
+            asset: casAsset,
+            status: "ready" as const,
+          }));
+        }
+        if (matchingCasSchemes?.[0]) {
+          const candidates = casFundAllocationCandidates(matchingCasSchemes[0]);
+          return seeds.map((seed) => ({
+            ...seed,
+            candidates,
+            status: "selectionRequired" as const,
+          }));
         }
         if (cachedCandidates?.length) return seeds.map((seed) => ({ ...seed, candidates: cachedCandidates, status: "selectionRequired" as const }));
         try {
@@ -437,7 +505,29 @@ export function useTransactionImport({
       ]);
       setUnsupportedCount(normalization.unsupportedEvents.length);
       setUnsupportedEvents(normalization.unsupportedEvents);
-      await resolveRows(normalization.rows, analysisId);
+      const savedIsins = new Set(
+        store.getState().assets
+          .map((asset) => normalizeIsin(asset.isin))
+          .filter((isin): isin is string => Boolean(isin)),
+      );
+      const newIsins = [...new Set(
+        normalization.schemes
+          .map((scheme) => normalizeIsin(scheme.isin))
+          .filter((isin): isin is string => Boolean(isin && !savedIsins.has(isin))),
+      )];
+      const amfiLookup = normalization.rows.length > 0 && newIsins.length > 0
+        ? await lookupAmfiSchemeClassifications({
+          isins: newIsins,
+        })
+        : { classifications: {} };
+      if (analysisId !== analysisIdRef.current) return;
+      setCasClassificationNotice(amfiLookup.failure);
+      await resolveRows(
+        normalization.rows,
+        analysisId,
+        normalization.schemes,
+        amfiLookup.classifications,
+      );
     } catch (error) {
       if (analysisId !== analysisIdRef.current) return;
       setScreenError(
@@ -622,6 +712,7 @@ export function useTransactionImport({
     confirmImport,
     acceptSuggestedMatches,
     casPassword,
+    casClassificationNotice,
     casReview,
     casReviewErrors,
     casSource,

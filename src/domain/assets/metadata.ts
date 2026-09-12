@@ -67,7 +67,7 @@ const instrumentTypesByClass: Record<
     "other",
   ],
   etf: ["etf"],
-  stock: ["stock"],
+  stock: ["stock", "mutualFund", "arbitrageFund"],
 };
 
 type MetadataDefaults = {
@@ -144,12 +144,20 @@ export function getInstrumentTypeOptions(assetClass: Asset["assetClass"]) {
 export function normalizeAssetMetadata(asset: Asset): Asset {
   const defaults = getDefaultAssetMetadata(asset.assetClass);
   const isin = normalizeIsin(asset.isin);
+  const instrumentType = asset.instrumentType ?? defaults.instrumentType;
+  const quoteSourceId = asset.quoteSourceId ?? (
+    instrumentType === "stock" ||
+    instrumentType === "etf" ||
+    instrumentType === "crypto"
+      ? asset.ticker
+      : undefined
+  );
 
   return {
     ...asset,
-    instrumentType: asset.instrumentType ?? defaults.instrumentType,
+    instrumentType,
     ...(isin === undefined ? {} : { isin }),
-    quoteSourceId: asset.quoteSourceId ?? asset.ticker,
+    ...(quoteSourceId === undefined ? {} : { quoteSourceId }),
     sectorType: asset.sectorType ?? defaults.sectorType,
   };
 }

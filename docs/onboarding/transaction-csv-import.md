@@ -81,8 +81,9 @@ silently discard them.
 6. Confirm exact Tradebook suggestions together or select an ambiguous match.
    The selection applies to every transaction for that ISIN. ISIN lookup falls
    back to each distinct source symbol, so an old ticker does not suppress a
-   newer one. Generic CSV and CAS matching still require explicit selection.
-   Provider results are never saved silently.
+   newer one. Generic CSV matching still requires explicit selection. CAS fund
+   identity comes from the statement; only an uncertain allocation category
+   requires one fund-level choice. Provider results are never saved silently.
 7. Confirm **Holdings measured as of** for each existing opening position. One
    shared date can be used, with a per-holding correction when required.
 8. Read the dry-run totals, duplicate/conflict messages, unsupported rows, and
@@ -143,6 +144,25 @@ transaction history. This adapter is not arbitrary PDF import or Kuvera login
 integration. The source-specific review remains separate from the generic CSV
 template; no real account statement belongs in repository test fixtures.
 
+For a valid detailed statement, CogVest uses each normalized ISIN and printed
+scheme name to create one local mutual-fund holding when the portfolio has no
+same-ISIN asset. Transactions from multiple folios with the same ISIN share that
+holding. This does not create or imply a Yahoo listing, exchange, current quote,
+or live-price guarantee. Existing same-ISIN assets remain authoritative. Users
+review and confirm the complete batch; they do not confirm every CAS transaction.
+
+Mutual fund describes the investment vehicle; it does not mean Debt. CogVest
+looks up the exact ISIN in AMFI's current NAV catalogue and reads the structured
+scheme category. Clear equity schemes are stored in the Equity allocation bucket,
+and clear debt schemes in Debt. For an AMFI `Other` category, allocation is only
+inferred when the catalogue's canonical name contains explicit equity or debt
+evidence. Hybrid, arbitrage, commodity, conflicting, missing, or unavailable
+categories are not guessed: the user chooses Equity or Debt once for that fund,
+and the choice applies to all its statement transactions. This V1 choice is an
+allocation presentation decision; CogVest still retains the mutual-fund or
+arbitrage-fund instrument type. A catalogue outage does not send CAS identities
+to Yahoo and does not weaken balance reconciliation.
+
 Layout and reconciliation failures appear in one expandable problem summary,
 with extracted row references. They are not reported as skipped transactions.
 Exact dated, value-free `***Address Updated from KRA Data***` and
@@ -185,6 +205,12 @@ proof that an arbitrary customer statement is supported. The wholly invented PDF
 can be regenerated with Python + reportlab using
 `scripts/fixtures/generate-cas-native-pdf.py`; its public test password is
 `synthetic-cas-test`. Never replace this fixture with a customer statement.
+Run `npm run maestro:test -- e2e/cas-native-fresh-portfolio.yaml` to verify the
+separate empty-portfolio contract: the statement creates one local fund per ISIN,
+classifies the synthetic equity fund without per-transaction confirmation,
+persists after restart, and deduplicates on repeat import without inventing an
+exchange or quote-provider identity. Unit tests cover the one-time classification
+choice required for hybrid or otherwise uncertain funds.
 Run Metro without `CI=1` during editing: CI mode disables file watching and can
 serve old JavaScript even after reinstalling a fresh debug APK. The Android
 emulator may connect directly to `10.0.2.2:8081`, bypassing `adb reverse`; verify

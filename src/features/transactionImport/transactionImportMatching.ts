@@ -1,9 +1,60 @@
 import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin } from "@/src/domain/assets";
+import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 import type { TransactionCsvCandidate } from "@/src/domain/transactionCsv";
 import type { Asset } from "@/src/types";
 import { splitCanonicalIsin, stockSplitCatalog } from "@/src/domain/stockSplitCatalog";
+import {
+  inferMutualFundAllocationFromName,
+  type MutualFundAllocation,
+} from "@/src/domain/mutualFundClassification";
 
 const normalized = (value?: string) => value?.trim().toUpperCase() ?? "";
+
+export type CasFundAllocation = MutualFundAllocation;
+
+export function inferCasFundAllocation(
+  name: string,
+): CasFundAllocation | undefined {
+  return inferMutualFundAllocationFromName(name);
+}
+
+export function assetFromCasScheme(
+  scheme: CasSchemeReview,
+  allocation = inferCasFundAllocation(scheme.name),
+): Asset | undefined {
+  const isin = normalizeIsin(scheme.isin);
+  const name = scheme.name.trim();
+  if (!isin || !name || !allocation) return undefined;
+
+  const normalizedName = name.toUpperCase();
+  const instrumentType = /\bLIQUID\b/u.test(normalizedName)
+    ? "liquidFund"
+    : /\bARBITRAGE\b/u.test(normalizedName)
+      ? "arbitrageFund"
+      : "mutualFund";
+
+  return {
+    assetClass: allocation === "equity" ? "stock" : "debt",
+    currency: "INR",
+    id: `cas:${isin}`,
+    instrumentType,
+    isin,
+    name,
+    sectorType: instrumentType === "liquidFund"
+      ? "liquidity"
+      : allocation === "debt"
+        ? "fixedIncome"
+        : "other",
+    symbol: isin,
+    ticker: isin,
+  };
+}
+
+export function casFundAllocationCandidates(scheme: CasSchemeReview) {
+  return (["equity", "debt"] as const)
+    .map((allocation) => assetFromCasScheme(scheme, allocation))
+    .filter((asset): asset is Asset => asset !== undefined);
+}
 
 /** A quote listing is not evidence that two historical securities have equal units. */
 export function conflictingHistoricalRows(
