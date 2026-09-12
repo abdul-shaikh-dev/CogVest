@@ -17,6 +17,7 @@ import { transactionImportSources } from "@/src/domain/transactionImportSources"
 import { demergerCatalog } from "@/src/domain/demergers";
 import { decimal } from "@/src/domain/precision";
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
+import type { AmfiSchemeLookupResult } from "@/src/services/mutualFunds/amfiSchemeCatalog";
 import { casPdfMaxBytes, casPdfMaxPages } from "@/src/services/import-export";
 import type { PortfolioStoreState, TransactionImportCommandResult } from "@/src/store";
 import { colors, radii, spacing } from "@/src/theme";
@@ -31,6 +32,7 @@ import { CasImportProblems } from "./CasImportProblems";
 import type { Asset } from "@/src/types";
 
 type TransactionImportScreenProps = {
+  lookupAmfiSchemeClassifications?: (input: { isins: string[] }) => Promise<AmfiSchemeLookupResult>;
   now?: () => Date;
   onCancel: () => void;
   onImported: (result: TransactionImportCommandResult) => void;
@@ -249,8 +251,11 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       {controller.groups.length > 0 ? <PremiumCard style={styles.card}>
         <SectionHeader title={controller.sourceId === "camsKfinCasPdfV1" ? "Review fund identities" : "Match your holdings"} />
         <AppText color="secondary" testID="transaction-import-match-summary">{controller.sourceId === "camsKfinCasPdfV1"
-          ? `${matched.length} identified from this statement • ${unresolved.length} need attention. Each ISIN maps to one local holding.`
+          ? `${matched.length} classified • ${unresolved.length} need classification. Each ISIN maps to one local holding.`
           : `${matched.length} matched • ${unresolved.length} to confirm. Each choice applies to every transaction for that holding.`}</AppText>
+        {controller.sourceId === "camsKfinCasPdfV1" && controller.casClassificationNotice && unresolved.length > 0
+          ? <AppText color="secondary" testID="cas-classification-notice" variant="caption">{controller.casClassificationNotice}</AppText>
+          : null}
         {identityConflicts.length > 0 ? <>
           <AppText testID="transaction-import-identity-conflicts" weight="bold">{identityConflicts.length} historical identities need corporate-action review</AppText>
           <AppText color="secondary">Different ISINs point to the same current listing. Their quantities cannot safely be combined yet. Keep the original rows; do not delete transactions to bypass this check. Corporate-action import support is needed before these histories can be combined.</AppText>
@@ -372,10 +377,11 @@ function HoldingMatch({ group, onSelect }: {
             : "Suggested match",
     ].filter(Boolean).join(" • ")}</AppText> : null}
     <AppText color="secondary" variant="caption">{group.rowNumbers.length} {group.rowNumbers.length === 1 ? "transaction" : "transactions"}{chosen ? ` • ${group.title}` : ""}</AppText>
+    {!chosen && group.casClassificationRequired ? <AppText color="secondary">Fund identity is verified from the statement. Choose how it should appear in your portfolio allocation; this applies to every transaction for this fund.</AppText> : null}
     {chosen && group.candidates.length > 0 ? <AppButton onPress={() => setChanging(!changing)} testID={`transaction-import-change-${group.key}`} title={changing ? "Keep this match" : "Change match"} variant="secondary" /> : null}
     {!chosen && group.candidates.length === 0 ? <AppText color="secondary">No matching listing was found. This holding needs a verified asset match before its history can be imported.</AppText> : null}
     {!chosen || changing ? <View style={styles.actions}>
-      {group.candidates.map((candidate) => <AppButton key={candidate.id} onPress={() => { onSelect(group.key, candidate); setChanging(false); }} testID={`transaction-import-asset-${group.key}-candidate-${candidate.id}`} title={`${candidate.name} • ${candidate.ticker}`} variant="secondary" />)}
+      {group.candidates.map((candidate) => <AppButton key={`${candidate.id}:${candidate.assetClass}`} onPress={() => { onSelect(group.key, candidate); setChanging(false); }} testID={`transaction-import-asset-${group.key}-candidate-${candidate.id}${group.casClassificationRequired ? `-${candidate.assetClass}` : ""}`} title={group.casClassificationRequired ? `Classify as ${candidate.assetClass === "stock" ? "Equity" : "Debt"}` : `${candidate.name} • ${candidate.ticker}`} variant="secondary" />)}
     </View> : null}
   </View>;
 }

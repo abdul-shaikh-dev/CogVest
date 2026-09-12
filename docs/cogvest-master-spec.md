@@ -314,8 +314,16 @@ For a valid detailed CAS, the statement's normalized ISIN and scheme name form
 the verified local mutual-fund identity. A fresh portfolio creates one local
 holding per unique ISIN and groups every folio and transaction under it without
 requiring provider search or per-transaction confirmation. Existing same-ISIN
-assets are reused. CogVest must not invent an exchange or quote-provider listing;
-the final atomic batch confirmation and all reconciliation gates remain required.
+assets are reused. Mutual fund is the instrument type, not an allocation class.
+CogVest resolves the ISIN against AMFI's current scheme catalogue and uses its
+structured category to place an unambiguous equity scheme in Equity or debt
+scheme in Debt. For AMFI `Other` categories, only explicit canonical scheme-name
+evidence may supply that allocation. Hybrid, arbitrage, commodity, contradictory,
+and unavailable classifications require one Equity/Debt allocation choice for
+the fund; that choice applies to all its transactions. CogVest must not invent an
+exchange or quote-provider listing. AMFI failure never blocks statement parsing
+or weakens reconciliation; it only moves uncertain funds to this classification
+step. The final atomic batch confirmation and all reconciliation gates remain required.
 Numeric/unknown financial events and
 balance mismatches still block import. Nonzero statement-opening units must not
 disappear: full-history rebuilds require a statement from before the first

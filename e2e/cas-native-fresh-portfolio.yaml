@@ -26,7 +26,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-match-summary
     direction: DOWN
-- assertVisible: ".*1 identified from this statement.*0 need attention.*"
+- assertVisible: ".*1 classified.*0 need classification.*"
 - assertNotVisible: "No matching listing was found"
 - tapOn:
     id: transaction-import-show-matched
@@ -55,7 +55,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: e2e-asset-inf000000001-classification
     direction: DOWN
-- assertVisible: "Classification: debt.*mutualFund.*diversified"
+- assertVisible: "Classification: stock.*mutualFund.*other"
 - assertVisible: "Market: INR.*unset.*unset"
 - assertVisible: "Values: invested .*1,200.00.*quantity 12"
 - stopApp

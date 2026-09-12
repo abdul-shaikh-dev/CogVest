@@ -332,6 +332,15 @@ describe("TransactionImportScreen", () => {
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={onImported}
+        lookupAmfiSchemeClassifications={async () => ({
+          classifications: {
+            INF000000001: {
+              allocation: "equity",
+              category: "Equity Scheme - Sectoral/Thematic",
+              schemeName: "Sample Equity Fund - Direct Growth",
+            },
+          },
+        })}
         pickCasStatement={async () => ({
           size: 4096,
           uri: "content://synthetic-statement.pdf",
@@ -418,7 +427,7 @@ describe("TransactionImportScreen", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("transaction-import-match-summary"))
-        .toHaveTextContent(/1 identified from this statement • 0 need attention/u),
+        .toHaveTextContent(/1 classified • 0 need classification/u),
     );
     expect(searchAssetLookupResults).not.toHaveBeenCalled();
     expect(screen.queryByText(/No matching listing was found/u)).toBeNull();
@@ -431,13 +440,13 @@ describe("TransactionImportScreen", () => {
 
     expect(store.getState().assets).toEqual([
       expect.objectContaining({
-        assetClass: "debt",
+        assetClass: "stock",
         currency: "INR",
         id: "cas:INF000000001",
         instrumentType: "mutualFund",
         isin: "INF000000001",
         name: "Sample Equity Fund - Direct Growth",
-        sectorType: "diversified",
+        sectorType: "other",
         symbol: "INF000000001",
         ticker: "INF000000001",
       }),
@@ -448,6 +457,78 @@ describe("TransactionImportScreen", () => {
     expect(store.getState().trades.every(
       (trade) => trade.assetId === "cas:INF000000001",
     )).toBe(true);
+  });
+
+  it("asks once how an AMFI hybrid fund should appear in allocation", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onImported = jest.fn();
+    const searchAssetLookupResults = jest.fn();
+    const screen = render(
+      <TransactionImportScreen
+        lookupAmfiSchemeClassifications={async () => ({
+          classifications: {
+            INF000000004: {
+              category: "Hybrid Schemes - Arbitrage Fund",
+              schemeName: "Sample Arbitrage Fund - Direct Growth",
+            },
+          },
+        })}
+        onCancel={jest.fn()}
+        onImported={onImported}
+        pickCasStatement={async () => ({ size: 4096, uri: "content://synthetic-hybrid.pdf" })}
+        pickCsvFile={jest.fn()}
+        readCasStatement={async () => ({
+          normalization: {
+            errors: [], parserErrors: [], preservedCharges: [], unsupportedEvents: [],
+            rows: [1, 2].map((rowNumber) => ({
+              account: `folio_${"a".repeat(64)}`,
+              currency: "INR" as const,
+              description: "Purchase",
+              externalId: `cas:hybrid:${rowNumber}`,
+              fingerprint: `cas-hybrid-${rowNumber}`,
+              identity: { kind: "isin" as const, value: "INF000000004" },
+              isin: "INF000000004",
+              quantity: 5,
+              rowNumber,
+              source: { format: "cams-kfin-cas" as const, version: "combined-detailed-v1" as const },
+              tradeDate: `2024-0${rowNumber}-02`,
+              transactionType: "buy" as const,
+              unitPrice: 100,
+            })),
+            schemes: [{
+              closingUnits: "10", events: [], folioLabel: "Folio 1",
+              importableTransactions: 2, isin: "INF000000004",
+              name: "Sample Arbitrage Fund - Direct Growth", openingUnits: "0",
+              registrar: "CAMS" as const,
+            }],
+          },
+          pageCount: 1,
+        })}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    fireEvent.press(screen.getByTestId("select-cas-statement"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary"))
+      .toHaveTextContent(/0 classified • 1 need classification/u));
+    expect(screen.getByText(/Fund identity is verified from the statement/u)).toBeTruthy();
+    expect(searchAssetLookupResults).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
+
+    fireEvent.press(screen.getByText("Classify as Equity"));
+    await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary"))
+      .toHaveTextContent(/1 classified • 0 need classification/u));
+    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    expect(store.getState().assets).toEqual([expect.objectContaining({
+      assetClass: "stock",
+      id: "cas:INF000000004",
+      instrumentType: "arbitrageFund",
+      isin: "INF000000004",
+    })]);
+    expect(store.getState().trades).toHaveLength(2);
   });
 
   it("adds, reorders, and removes annual Zerodha files before one dry run", async () => {

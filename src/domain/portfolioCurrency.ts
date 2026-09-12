@@ -16,13 +16,17 @@ function isSupportedIndianTicker(asset: Asset) {
   );
 }
 
+function requiresExchangeListing(asset: Asset) {
+  return asset.instrumentType === "stock" || asset.instrumentType === "etf";
+}
+
 export function getV1AssetCurrencyIssue(asset: Asset): string | undefined {
   if (asset.currency !== V1_REPORTING_CURRENCY) {
     return `${asset.name} uses ${asset.currency}; CogVest V1 supports INR holdings only.`;
   }
 
   if (
-    (asset.assetClass === "stock" || asset.assetClass === "etf") &&
+    requiresExchangeListing(asset) &&
     !isSupportedIndianTicker(asset)
   ) {
     return `${asset.name} is not linked to a supported NSE or BSE instrument.`;
