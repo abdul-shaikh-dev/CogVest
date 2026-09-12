@@ -3,8 +3,9 @@ import {
   normalizeAssetMetadata,
   normalizeIsin,
 } from "@/src/domain/assets";
-import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
+import { getCalendarDatePart, isFutureCalendarDate, parseCalendarDate } from "@/src/domain/dates";
 import { normalizeTrade } from "@/src/domain/financialRecords";
+import { decimal } from "@/src/domain/precision";
 import {
   matchesOpeningPosition,
   reconcileTransactions,
@@ -45,6 +46,7 @@ export type TransactionImportPlanError = {
     | "duplicateAssetIdentity"
     | "futureDate"
     | "historicalIdentityConflict"
+    | "incompleteCasHistory"
     | "invalidCutover"
     | "missingCutover"
     | "missingSourceCoverage"
@@ -85,8 +87,18 @@ export type TransactionImportPlan = {
   };
 };
 
+export type CasOpeningEvidence = {
+  coverageFrom?: string;
+  schemes: Array<{
+    folioLabel: string;
+    isin: string;
+    openingUnits: string;
+  }>;
+};
+
 type BuildTransactionImportPlanInput = {
   batchId: string;
+  casOpeningEvidence?: CasOpeningEvidence;
   cutoverByOpeningPositionId?: Record<string, string>;
   mode: TransactionImportMode;
   now?: Date;
@@ -290,8 +302,157 @@ function transactionCalendarDate(transaction: Trade) {
   return getCalendarDatePart(transaction.date) ?? transaction.date;
 }
 
+function previousCalendarDate(value: string) {
+  const parsed = parseCalendarDate(value);
+  if (!parsed) return undefined;
+  const date = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day - 1));
+  return date.toISOString().slice(0, 10);
+}
+
+function validateCasOpeningEvidence({
+  assetsById,
+  casOpeningEvidence,
+  cutoverByOpeningPositionId,
+  errors,
+  mode,
+  resolutions,
+  sharedCutover,
+  state,
+}: Pick<
+  BuildTransactionImportPlanInput,
+  | "casOpeningEvidence"
+  | "cutoverByOpeningPositionId"
+  | "mode"
+  | "resolutions"
+  | "sharedCutover"
+  | "state"
+> & {
+  assetsById: Map<string, Asset>;
+  errors: TransactionImportPlanError[];
+}) {
+  const incomingCasIsins = new Set<string>();
+  for (const resolution of resolutions) {
+    if (resolution.row.source?.format !== "cams-kfin-cas") continue;
+    const rowIsin = resolution.row.identity.kind === "isin"
+      ? normalizeIsin(resolution.row.identity.value)
+      : normalizeIsin(resolution.row.isin);
+    const canonicalIsin = splitCanonicalIsin(rowIsin);
+    if (!canonicalIsin) {
+      errors.push({
+        code: "incompleteCasHistory",
+        message: "A CAS transaction has no verifiable scheme identity. Use a detailed CAS beginning with the first investment.",
+        rowNumber: resolution.row.rowNumber,
+      });
+      continue;
+    }
+    incomingCasIsins.add(canonicalIsin);
+  }
+
+  if (!casOpeningEvidence) {
+    if (incomingCasIsins.size > 0) {
+      errors.push({
+        code: "incompleteCasHistory",
+        message: "CAS opening-balance evidence is missing. Read the detailed CAS again before importing any transactions.",
+      });
+    }
+    return;
+  }
+
+  const openingsByIsin = new Map<string, ReturnType<typeof decimal>>();
+  try {
+    for (const scheme of casOpeningEvidence.schemes) {
+      const isin = splitCanonicalIsin(normalizeIsin(scheme.isin));
+      if (!isin) throw new Error("invalid ISIN");
+      const opening = decimal(scheme.openingUnits);
+      if (opening.isNegative()) throw new Error("negative opening units");
+      openingsByIsin.set(isin, (openingsByIsin.get(isin) ?? decimal(0)).plus(opening));
+    }
+  } catch {
+    errors.push({
+      code: "incompleteCasHistory",
+      message: "The CAS opening quantities cannot be verified. Use a detailed CAS beginning with the first investment.",
+    });
+    return;
+  }
+
+  const missingEvidence = [...incomingCasIsins].some((isin) => !openingsByIsin.has(isin));
+  if (missingEvidence) {
+    errors.push({
+      code: "incompleteCasHistory",
+      message: "CAS opening-balance evidence does not cover every incoming scheme. Read the detailed CAS again before importing any transactions.",
+    });
+  }
+
+  const nonzeroOpenings = [...openingsByIsin].filter(([, units]) => !units.isZero());
+  if (nonzeroOpenings.length === 0) return;
+  if (mode === "fullHistory") {
+    errors.push({
+      code: "incompleteCasHistory",
+      message: "This CAS starts with an existing opening balance, so it is not complete investment history. Use a detailed CAS beginning with the first investment, or add later activity against a matching saved opening balance.",
+    });
+    return;
+  }
+
+  const requiredCutover = casOpeningEvidence.coverageFrom
+    ? previousCalendarDate(casOpeningEvidence.coverageFrom)
+    : undefined;
+  if (!requiredCutover) {
+    errors.push({
+      code: "incompleteCasHistory",
+      message: "The CAS statement start date is missing or invalid, so its opening units cannot be matched safely. Use a detailed CAS beginning with the first investment.",
+    });
+    return;
+  }
+
+  for (const [isin, openingUnits] of nonzeroOpenings) {
+    const mappedAssets = [...assetsById.values()].filter((asset) => {
+      const assetIsin = normalizeIsin(asset.isin);
+      return assetIsin !== undefined && splitCanonicalIsin(assetIsin) === isin;
+    });
+    const uniqueAssets = [...new Map(mappedAssets.map((asset) => [asset.id, asset])).values()];
+    if (uniqueAssets.length !== 1) {
+      errors.push({
+        code: "incompleteCasHistory",
+        message: "A nonzero CAS opening balance could not be mapped to one resolved holding. Resolve that scheme, or use a detailed CAS beginning with the first investment.",
+      });
+      continue;
+    }
+
+    const asset = uniqueAssets[0];
+    const baselines = state.openingPositions.filter((position) => position.assetId === asset.id);
+    if (baselines.length !== 1) {
+      errors.push({
+        assetId: asset.id,
+        code: "incompleteCasHistory",
+        message: "This CAS starts with existing units, but the resolved holding does not have exactly one saved opening balance. Add or correct the opening balance, or use a detailed CAS beginning with the first investment.",
+      });
+      continue;
+    }
+
+    const baseline = baselines[0];
+    if (!decimal(baseline.quantity).equals(openingUnits)) {
+      errors.push({
+        assetId: asset.id,
+        code: "incompleteCasHistory",
+        message: `The CAS opening quantity does not exactly match the saved opening balance for ${asset.name}. Correct the opening balance, or use a detailed CAS beginning with the first investment.`,
+      });
+      continue;
+    }
+
+    const cutover = resolveCutover({ cutoverByOpeningPositionId, openingPosition: baseline, sharedCutover });
+    if (cutover !== requiredCutover) {
+      errors.push({
+        assetId: asset.id,
+        code: "incompleteCasHistory",
+        message: `Set the Add later activity date for ${asset.name} to ${requiredCutover}, the calendar day before this CAS begins, or use a detailed CAS beginning with the first investment.`,
+      });
+    }
+  }
+}
+
 export function buildTransactionImportPlan({
   batchId,
+  casOpeningEvidence,
   cutoverByOpeningPositionId,
   mode,
   now = new Date(),
@@ -387,6 +548,17 @@ export function buildTransactionImportPlan({
     };
     rowsByAssetId.set(asset.id, [...(rowsByAssetId.get(asset.id) ?? []), item]);
   }
+
+  validateCasOpeningEvidence({
+    assetsById,
+    casOpeningEvidence,
+    cutoverByOpeningPositionId,
+    errors,
+    mode,
+    resolutions,
+    sharedCutover,
+    state,
+  });
 
   const existingExternal = new Map<string, Trade>();
   const existingFingerprints = new Map<string, Trade>();

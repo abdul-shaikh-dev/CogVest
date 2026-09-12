@@ -73,6 +73,32 @@ describe("CAMS + KFintech CAS normalization", () => {
 
     expect(result.parserErrors).not.toEqual([]);
     expect(result.rows).toEqual([]);
+    expect(result.preservedNotices).toEqual([]);
+  });
+
+  it("normalizes real transactions while preserving cancellation review evidence", () => {
+    const parsed = parseFixture(
+      fixture.replace(
+        "15/02/2024 Purchase",
+        "17-Jul-2024 ***Cancelled***\n15/02/2024 Purchase",
+      ),
+    );
+    const result = normalizeCamsKfinCas(parsed);
+
+    expect(result.parserErrors).toEqual([]);
+    expect(result.rows).toHaveLength(2);
+    expect(result.preservedNotices).toEqual([{
+      date: "2024-07-17",
+      folioLabel: "Folio 1",
+      rowNumber: 12,
+      type: "cancelled",
+    }]);
+    expect(result.schemes[0]?.events).toContainEqual({
+      date: "2024-07-17",
+      disposition: "preservedNotice",
+      rowNumber: 12,
+      type: "cancelled",
+    });
   });
 
   it("fails closed when exact values cannot cross the numeric model boundary", () => {

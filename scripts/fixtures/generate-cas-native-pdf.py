@@ -38,6 +38,7 @@ pages = [
         "Date Transaction Amount Units Price Unit / (INR)(INR)Balance",
         "03-Feb-2024 Sys. Investment(NAV Dt : 02/02/2024) (1/12) 200.00 2.000 100.0000 12.000",
         "30-Oct-2024 ***Address Updated from KRA Data***",
+        "31-Oct-2024 ***Cancelled***",
         "Closing Unit Balance: 12.000",
     ],
 ]

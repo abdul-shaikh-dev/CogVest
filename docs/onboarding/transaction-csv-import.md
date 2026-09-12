@@ -146,9 +146,26 @@ template; no real account statement belongs in repository test fixtures.
 Layout and reconciliation failures appear in one expandable problem summary,
 with extracted row references. They are not reported as skipped transactions.
 Recognized administrative address updates are counted separately from investment
-activity. A cancellation without amounts or units remains an explicit unsupported
-event: CogVest must not infer a reversal or silently discard it. Printed opening,
-running and closing unit balances must still reconcile.
+activity. An exact, dated `***Cancelled***` line with no financial values is retained
+as a notice in statement review, not converted into a purchase or reversal. This
+does not claim that it means SIP cancellation. The user does not need to remember
+or confirm its meaning. Only recorded financial transactions are imported, and
+all printed opening, running and closing unit balances must still reconcile.
+Cancellations containing numeric financial values, unfamiliar descriptions,
+detached financial columns, and reconciliation failures still block the batch.
+Notices remain visible for that review; they are not new persisted trades or a
+stored copy of the statement. Import identities and repeat-import rules are unchanged.
+
+A statement can start after the investor already owned units. Those opening units
+have no acquisition cost in the transaction table and must never be dropped or
+invented. **Rebuild from history** requires zero opening units for every scheme;
+request a detailed statement beginning before the first investment if needed.
+**Add later activity** can use nonzero opening units only against a uniquely
+matched saved opening balance, with matching aggregate units and a cutover on the
+day before the statement starts. The saved cost basis is retained. Missing or
+mismatched baselines block import, including schemes with no in-period purchases.
+Earlier imported trades alone are not currently a substitute for that verified
+opening record. A cancellation fix does not make an incomplete statement complete.
 
 The Android password field uses keyboard avoidance and content-position scrolling.
 The synthetic `e2e/standalone/cas-password-focus.yaml` journey checks the label and
@@ -160,12 +177,16 @@ For the native-reader success path, install a fresh **debug** APK with Metro,
 push `e2e/fixtures/cas-native-synthetic.pdf` to Android Downloads, then run
 `npm run maestro:test -- e2e/cas-native-import.yaml`. This disposable-data journey
 uses the existing development-only seed and verifies wrong-password retry,
-two-page parsing, a 12-unit / INR 1,200 holding, unchanged cash records, restart
+two-page parsing including a value-free cancellation notice, a 12-unit / INR 1,200 holding, unchanged cash records, restart
 persistence, and repeat-import deduplication. It is not release-mode evidence or
 proof that an arbitrary customer statement is supported. The wholly invented PDF
 can be regenerated with Python + reportlab using
 `scripts/fixtures/generate-cas-native-pdf.py`; its public test password is
 `synthetic-cas-test`. Never replace this fixture with a customer statement.
+Run Metro without `CI=1` during editing: CI mode disables file watching and can
+serve old JavaScript even after reinstalling a fresh debug APK. The Android
+emulator may connect directly to `10.0.2.2:8081`, bypassing `adb reverse`; verify
+the server on that port is the current checkout before claiming current-code E2E.
 
 ### Common Import Rules
 

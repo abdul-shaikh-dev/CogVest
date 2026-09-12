@@ -305,6 +305,13 @@ layouts. These do not authorize arbitrary Excel files, other broker statements,
 arbitrary PDFs, tax-lot files, or inferred corporate actions. See
 `docs/onboarding/transaction-csv-import.md` for source limits and reconciliation.
 
+CAS review retains an exact value-free cancellation notice without inventing a
+trade or requiring the user's recollection. Numeric/unknown financial events and
+balance mismatches still block import. Nonzero statement-opening units must not
+disappear: full-history rebuilds require a statement from before the first
+investment; later-activity imports require a matching saved opening balance and
+statement-boundary date. See the source contract for conservative coverage limits.
+
 Tradebook review groups transactions by holding and preserves confirmed matches
 while annual files are added/reordered. Exact symbol/exchange/currency matches
 can be explicitly accepted as a batch; ambiguous identities still require a

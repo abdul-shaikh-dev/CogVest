@@ -1,6 +1,7 @@
 import { parseTransactionCsv, transactionCsvHeaders } from "@/src/domain/transactionCsv";
 import {
   buildTransactionImportPlan,
+  type CasOpeningEvidence,
   transactionImportSourceFormat,
   type TransactionCsvResolution,
 } from "@/src/features/transactionImport/transactionImport";
@@ -93,6 +94,7 @@ function csvRow(input: {
 
 function plan(input: {
   assets?: Asset[];
+  casOpeningEvidence?: CasOpeningEvidence;
   mode: "fullHistory" | "supplemental";
   openingPositions?: OpeningPosition[];
   resolutions: TransactionCsvResolution[];
@@ -103,6 +105,7 @@ function plan(input: {
 }) {
   return buildTransactionImportPlan({
     batchId: "batch-1",
+    casOpeningEvidence: input.casOpeningEvidence,
     mode: input.mode,
     now: new Date("2026-08-23T00:00:00.000Z"),
     resolutions: input.resolutions,
@@ -216,6 +219,10 @@ describe("transaction import planner", () => {
       };
 
       const result = plan({
+        casOpeningEvidence: {
+          coverageFrom: "2025-01-01",
+          schemes: [{ folioLabel: "Folio 1", isin: "INE000000001", openingUnits: "0" }],
+        },
         mode,
         openingPositions: mode === "fullHistory" ? [] : undefined,
         resolutions: [row],
@@ -245,6 +252,10 @@ describe("transaction import planner", () => {
       version: "combined-detailed-v1",
     };
     const initial = plan({
+      casOpeningEvidence: {
+        coverageFrom: "2025-01-01",
+        schemes: [{ folioLabel: "Folio 1", isin: "INE000000001", openingUnits: "0" }],
+      },
       mode: "supplemental",
       resolutions: [casRow],
       sharedCutover: "2025-03-01",
@@ -261,6 +272,10 @@ describe("transaction import planner", () => {
     );
 
     const result = plan({
+      casOpeningEvidence: {
+        coverageFrom: "2025-01-01",
+        schemes: [{ folioLabel: "Folio 1", isin: "INE000000001", openingUnits: "0" }],
+      },
       mode: "supplemental",
       resolutions: [casRow, otherRow],
       sharedCutover: "2025-03-01",

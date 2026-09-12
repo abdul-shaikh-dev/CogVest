@@ -141,7 +141,16 @@ describe("portfolio backup replacement", () => {
 
   it("recognizes the same CAS import after restoring its records and identity salt", async () => {
     const digest = async (text: string) => createHash("sha256").update(text).digest("hex");
-    const statement = sanitizedCombinedDetailedCasFixture.split("Another Sample Mutual Fund")[0];
+    const statement = sanitizedCombinedDetailedCasFixture.split("Another Sample Mutual Fund")[0]
+      .replace("Opening Unit Balance: 10.0000000", "Opening Unit Balance: 0.0000000")
+      .replace("125.0000 18.0000000", "125.0000 8.0000000")
+      .replace("125.0000 22.0000000", "125.0000 12.0000000")
+      .replace("Closing Unit Balance: 22.0000000", "Closing Unit Balance: 12.0000000")
+      .replace("INR 3,300.00", "INR 1,800.00");
+    const casOpeningEvidence = {
+      coverageFrom: "2024-01-01",
+      schemes: [{ folioLabel: "Folio 1", isin: "INF000000001", openingUnits: "0" }],
+    };
     const asset: Asset = {
       assetClass: "stock",
       currency: "INR",
@@ -171,6 +180,7 @@ describe("portfolio backup replacement", () => {
     const importedRows = await parseRows(sourceStorage);
     const initialPlan = buildTransactionImportPlan({
       batchId: "cas-import-before-backup",
+      casOpeningEvidence,
       mode: "supplemental",
       now: now(),
       resolutions: resolutions(importedRows, asset),
@@ -192,6 +202,7 @@ describe("portfolio backup replacement", () => {
     const beforeTrades = restoredStore.getState().trades;
     const repeatPlan = buildTransactionImportPlan({
       batchId: "cas-import-after-restore",
+      casOpeningEvidence,
       mode: "supplemental",
       now: now(),
       resolutions: resolutions(restoredRows, restoredStore.getState().assets[0]),
@@ -199,6 +210,7 @@ describe("portfolio backup replacement", () => {
     });
 
     expect(restoredRows).toEqual(importedRows);
+    expect(repeatPlan.errors).toEqual([]);
     expect(repeatPlan.duplicates).toBe(importedRows.length);
     expect(repeatPlan.summary.additions).toBe(0);
     expect(repeatPlan.command).toBeUndefined();
