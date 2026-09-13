@@ -100,8 +100,8 @@ it("labels PPF-excluded history and masks its values without presenting it as fu
       store={store}
     />,
   );
-  expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
   expect(await screen.findByText("Market and cash history available")).toBeTruthy();
+  expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
   expect(screen.getByText(/Market and cash history is available through August 2026/u)).toBeTruthy();
   fireEvent.press(screen.getByLabelText("Snapshot status details"));
   fireEvent.press(screen.getByLabelText("Open Holdings"));
@@ -118,7 +118,7 @@ it("labels PPF-excluded history and masks its values without presenting it as fu
   expect(panel.queryByText("₹26K")).toBeNull();
 });
 
-it("explains PPF exclusion even with only one reconstructed month", () => {
+it("explains PPF exclusion even with only one reconstructed month", async () => {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
   store.getState().addAsset(stockAsset);
   store.getState().addOpeningPosition({
@@ -132,6 +132,7 @@ it("explains PPF exclusion even with only one reconstructed month", () => {
     createdAt: "2026-09-10T00:00:00Z",
   });
   const screen = render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
+  expect(await screen.findByText("Market and cash history available")).toBeTruthy();
   expect(screen.getByText(/PPF is excluded: earlier balances are unknown/)).toBeTruthy();
   expect(screen.queryByText("Record at least 2 monthly snapshots to compare portfolio and asset trends.")).toBeNull();
 });
@@ -394,6 +395,8 @@ describe("ProgressScreen", () => {
 
     expect(await screen.findByText("Building monthly history")).toBeTruthy();
     expect(await screen.findByText(/0 of 2 months checked/u)).toBeTruthy();
+    expect(screen.getByTestId("progress-trends-building")).toBeTruthy();
+    expect(screen.queryByText("Portfolio Growth")).toBeNull();
     fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.queryByLabelText("Review month-end snapshot")).toBeNull();
     fireEvent.press(screen.getByText("Close snapshot status"));
@@ -410,6 +413,8 @@ describe("ProgressScreen", () => {
     expect(
       await screen.findByText(/2 missing month snapshots generated automatically/u),
     ).toBeTruthy();
+    expect(screen.queryByTestId("progress-trends-building")).toBeNull();
+    expect(screen.getByText("Portfolio Growth")).toBeTruthy();
   });
 
   it("offers retry instead of review when historical prices are unavailable", async () => {
@@ -437,6 +442,7 @@ describe("ProgressScreen", () => {
     expect(await screen.findByText("Historical prices are unavailable")).toBeTruthy();
     expect(screen.getByText(/1 month is waiting for a historical price/u)).toBeTruthy();
     fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    expect(screen.getByText(/HDFC Bank could not be priced for 2026-07/u)).toBeTruthy();
     expect(screen.queryByLabelText(/Review.*month-end/u)).toBeNull();
     fireEvent.press(screen.getByLabelText("Retry monthly history"));
     await waitFor(() => expect(historicalPriceFetcher).toHaveBeenCalledTimes(2));

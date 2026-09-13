@@ -373,7 +373,12 @@ Verified stock-split events from a bounded reviewed catalog apply during import
 with a change summary and final batch confirmation, not per-event confirmation.
 Coverage includes IRCTC's 2021 subdivision and Easy Trip's ordered November 2022
 subdivision/bonus chain. Arbitrary CSV action rows and unknown events remain unsupported. Historical
-prices with unresolved adjustment units stay unavailable. See the scope and
+Yahoo closes are treated as present-unit adjusted. For a complete verified event
+chain, CogVest converts them back to the target month's units using catalog terms;
+Yahoo event dates must cover the same adjustment dates, while Yahoo's lossy ratio
+metadata is not authoritative. Converted cache records use the explicit
+`reconciled-historical-close` basis. Unknown or missing event dates, legacy cached closes,
+and current/manual price fallbacks across a later action stay unavailable. See the scope and
 remaining gates in [the stock-split contract](onboarding/stock-split-contract.md).
 
 Berger Paints' 2023, HDFC Bank's 2025, Reliance's 2024 and Easy Trip's November

@@ -94,11 +94,16 @@ complete verified adjustment chain through the provider's adjustment horizon,
 including events after the requested chart end date. Dividend-adjusted values
 must not be used as historical cash-market closes.
 
-Until that price contract is proven, affected history stays unavailable rather
-than rendering fabricated performance. The month-end provider now requests
-split evidence through the retrieval date and rejects cross-split prices,
-including events after the requested month. Known pre-event cached prices are
-also excluded from snapshot valuation.
+The month-end provider requests split evidence through the retrieval date.
+Yahoo's historical closes are present-unit adjusted even when the later action
+falls outside the requested month. CogVest converts a close back to target-month
+units only when every later provider event date is represented by the asset's
+complete verified catalog. Catalog terms supply the conversion factor because
+Yahoo may aggregate same-day actions or omit one leg from its ratio metadata.
+Unknown, missing, malformed, or duplicate provider event dates fail closed.
+Converted records use `reconciled-historical-close`; an unmarked historical close
+is not retroactively trusted. Known pre-event legacy cached prices and current/manual fallbacks remain excluded
+because their unit basis is not proven.
 Invalidate incompatible cached historical prices. Recompute affected automatic
 snapshots when sound evidence exists, or mark them for reconciliation. Preserve
 manually confirmed snapshots and disclose discrepancies without overwriting them.
@@ -187,9 +192,9 @@ Local evidence: `.expo/issue333-final-pc.log`,
 `.expo/issue333-final-build.log`, `.expo/issue333-final-maestro.log`,
 `.expo/issue333-position-restart.png`. These local artifacts are not committed.
 
-Remaining: authorized private broker reconciliation (#337), additional verified
-catalog coverage, and reconstructed cross-split historical prices. Current
-history guards intentionally show unavailable data rather than wrong valuations.
+Remaining: authorized private broker reconciliation (#337) and additional verified
+catalog coverage. Issue #372 adds catalog-reconciled cross-action month-end prices;
+unverified event chains still show unavailable data rather than wrong valuations.
 Long historical lookups now cover the adjustment horizon and may fetch more
 data; no throughput improvement is claimed. Native sale/restore journeys still
 need dedicated evidence; their accounting and persistence paths have unit tests.

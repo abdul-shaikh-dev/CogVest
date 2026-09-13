@@ -343,6 +343,7 @@ const tradeSchema = z.discriminatedUnion("type", [
 
 const historicalPriceBasisSchema = z.enum([
   "historical-close",
+  "reconciled-historical-close",
   "cached-historical-close",
   "latest-local-fallback",
   "manual-fallback",

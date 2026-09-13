@@ -14,6 +14,7 @@ export type Quote = {
 
 export type HistoricalPriceBasis =
   | "historical-close"
+  | "reconciled-historical-close"
   | "cached-historical-close"
   | "latest-local-fallback"
   | "manual-fallback"

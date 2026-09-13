@@ -983,6 +983,7 @@ function ProgressTrendCards({
   assetChartData,
   assetChartRange,
   isReducedMotionEnabled,
+  isHistoryBuilding,
   maskWealthValues,
   onAssetCustomRangeChange,
   onAssetRangeChange,
@@ -998,6 +999,7 @@ function ProgressTrendCards({
   assetChartData: MonthlyProgressChartData;
   assetChartRange: MonthlyChartRange;
   isReducedMotionEnabled: boolean;
+  isHistoryBuilding: boolean;
   maskWealthValues: boolean;
   onAssetCustomRangeChange: (range: MonthlyChartCustomRange) => void;
   onAssetRangeChange: (range: MonthlyChartRange) => void;
@@ -1009,6 +1011,19 @@ function ProgressTrendCards({
   minimal: boolean;
   ppfExcludedHistory: { estimatedMonths: string[]; missingMonths: string[] } | null;
 }) {
+  if (isHistoryBuilding) {
+    return (
+      <PremiumCard testID="progress-trends-building">
+        <SectionHeader title="Trend history is still building" />
+        <View style={styles.chartPlaceholder}>
+          <AppText color="secondary" align="center">
+            Charts will appear when CogVest finishes checking the stored months.
+          </AppText>
+        </View>
+      </PremiumCard>
+    );
+  }
+
   if (
     portfolioChartData.availableMonths.length < 2 &&
     assetChartData.availableMonths.length < 2
@@ -1183,10 +1198,9 @@ function SnapshotStatusCard({
       onPress: onReview,
     };
   }
-  const visibleWarnings = status.kind === "records-incomplete"
+  const visibleWarnings = status.kind === "records-incomplete" || status.kind === "missing-price"
     ? status.warnings.slice(0, 3)
-    : status.kind === "missing-price" ||
-        status.kind === "incomplete-ppf" ||
+    : status.kind === "incomplete-ppf" ||
         status.kind === "reconstructed-history"
       ? []
       : status.warnings;
@@ -1238,7 +1252,7 @@ function SnapshotStatusCard({
           {warning}
         </AppText>
       ))}
-      {status.kind === "records-incomplete" && status.warnings.length > visibleWarnings.length ? (
+      {(status.kind === "records-incomplete" || status.kind === "missing-price") && status.warnings.length > visibleWarnings.length ? (
         <AppText color="secondary" variant="caption">
           {status.warnings.length - visibleWarnings.length} more affected months.
         </AppText>
@@ -1350,6 +1364,7 @@ export function ProgressScreen({
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
+              isHistoryBuilding={progress.snapshotAutomationStatus.kind === "checking" || progress.snapshotAutomationStatus.kind === "generating"}
               maskWealthValues={progress.preferences.maskWealthValues}
               onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}
@@ -1435,6 +1450,7 @@ export function ProgressScreen({
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
+              isHistoryBuilding={progress.snapshotAutomationStatus.kind === "checking" || progress.snapshotAutomationStatus.kind === "generating"}
               maskWealthValues={progress.preferences.maskWealthValues}
               onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}

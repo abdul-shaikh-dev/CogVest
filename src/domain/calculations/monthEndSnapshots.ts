@@ -115,10 +115,13 @@ type PriceSelectionBasis = HistoricalPriceBasis;
 type PriceSelection = {
   basis: PriceSelectionBasis;
   price?: number;
+  unavailableReason?: "later-share-adjustment" | "listing-unavailable" | "missing-price";
+  availableFrom?: string;
 };
 
 const confirmedPriceBases = new Set<HistoricalPriceBasis>([
   "historical-close",
+  "reconciled-historical-close",
   "cached-historical-close",
 ]);
 
@@ -297,6 +300,7 @@ function toSnapshotPriceBasis(
   if (normalized.size === 1) {
     return [...normalized][0] as
       | "historical-close"
+      | "reconciled-historical-close"
       | "latest-local-fallback"
       | "manual-fallback"
       | "unavailable";
@@ -376,18 +380,27 @@ function selectAssetPrice({
   quoteCache: QuoteCache;
   targetMonth: string;
 }): PriceSelection {
-  // Current-unit fallback and legacy cached closes cannot value pre-split units.
-  if (asset.stockSplits?.some((event) => event.effectiveDate.slice(0, 7) > targetMonth)) {
-    return { basis: "unavailable" };
-  }
+  const hasLaterShareAdjustment = asset.stockSplits?.some(
+    (event) => event.effectiveDate.slice(0, 7) > targetMonth,
+  );
   const historicalQuote =
     historicalQuotes[historicalQuoteCacheKey(asset.id, targetMonth)];
 
-  if (historicalQuote && isV1CompatibleQuote(asset, historicalQuote)) {
+  if (
+    historicalQuote &&
+    isV1CompatibleQuote(asset, historicalQuote) &&
+    (!hasLaterShareAdjustment ||
+      historicalQuote.basis === "reconciled-historical-close")
+  ) {
     return {
       basis: historicalQuote.basis,
       price: historicalQuote.price,
     };
+  }
+
+  // Current-unit fallbacks and legacy cached closes cannot value pre-action units.
+  if (hasLaterShareAdjustment) {
+    return { basis: "unavailable", unavailableReason: "later-share-adjustment" };
   }
 
   const latestQuote = quoteCache[asset.id];
@@ -421,7 +434,23 @@ function selectAssetPrice({
     };
   }
 
-  return { basis: "unavailable" };
+  return { basis: "unavailable", unavailableReason: "missing-price" };
+}
+
+function pendingHoldingWarning(
+  asset: Asset,
+  selection: PriceSelection | undefined,
+  targetMonth: string,
+) {
+  if (selection?.unavailableReason === "later-share-adjustment") {
+    return `${asset.name} could not be priced for ${targetMonth}: a later verified share adjustment requires a reconciled historical close.`;
+  }
+
+  if (selection?.unavailableReason === "listing-unavailable") {
+    return `${asset.name} could not be valued for ${targetMonth}: its verified successor listing was unavailable until ${selection.availableFrom}.`;
+  }
+
+  return `${asset.name} could not be priced for ${targetMonth}: no usable historical or current price was available.`;
 }
 
 export function getPreviousCompletedMonth(now: Date) {
@@ -723,7 +752,11 @@ export function buildGeneratedMonthEndSnapshot({
           assets.some((parent) => parent.demerger?.eventId === event.id && parent.demerger.childAssetId === asset.id),
         );
         return childEvent && monthEndCalendarDate < childEvent.availableFrom
-          ? { basis: "unavailable" as const }
+          ? {
+              availableFrom: childEvent.availableFrom,
+              basis: "unavailable" as const,
+              unavailableReason: "listing-unavailable" as const,
+            }
           : selectAssetPrice({
               asset,
               historicalQuotes,
@@ -768,9 +801,13 @@ export function buildGeneratedMonthEndSnapshot({
     return {
       snapshot: null,
       status: "insufficient-data",
-      warnings: [
-        `${pendingHoldings.length} holding${pendingHoldings.length === 1 ? "" : "s"} could not be valued for ${targetMonth}. Refresh prices or enter a manual fallback before creating this snapshot.`,
-      ],
+      warnings: pendingHoldings.map((holding) =>
+        pendingHoldingWarning(
+          holding.asset,
+          priceSelectionsByAssetId.get(holding.asset.id),
+          targetMonth,
+        ),
+      ),
     };
   }
   const pricedAssets = holdings.map((holding) => ({

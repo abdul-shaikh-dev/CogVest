@@ -7,6 +7,7 @@ import {
   shouldReplaceProvisionalSnapshot,
 } from "@/src/domain/calculations";
 import { historicalQuoteCacheKey } from "@/src/types";
+import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
 import type {
   Asset,
   CashEntry,
@@ -163,6 +164,124 @@ describe("demerger month-end snapshots", () => {
     } });
     expect(result.status).toBe("created");
     expect(result.snapshot).toMatchObject({ portfolioValue: 14000, investedValue: 10000, monthlyInvestment: 0 });
+  });
+
+  it("identifies an unlisted successor instead of fabricating its month-end value", () => {
+    const parent: Asset = { ...stockAsset, isin: "INE002A01018", demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" } };
+    const child: Asset = { ...stockAsset, id: "jio", name: "Jio Financial", symbol: "JIOFIN", ticker: "JIOFIN.NS", isin: "INE758E01017" };
+    const result = buildGeneratedMonthEndSnapshot({
+      assets: [parent, child],
+      openingPositions: [],
+      cashEntries: [],
+      existingSnapshots: [],
+      quoteCache: {},
+      trades: [trade({ date: "2023-01-01", quantity: 100, pricePerUnit: 100, totalValue: 10000 })],
+      targetMonth: "2023-07",
+      now: new Date("2023-08-15T12:00:00Z"),
+      historicalQuotes: {
+        [historicalQuoteCacheKey(parent.id, "2023-07")]: {
+          assetId: parent.id,
+          asOfMonth: "2023-07",
+          basis: "reconciled-historical-close",
+          currency: "INR",
+          fetchedAt: "2023-08-01T12:00:00Z",
+          price: 120,
+          source: "yahoo",
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      snapshot: null,
+      status: "insufficient-data",
+      warnings: [
+        "Jio Financial could not be valued for 2023-07: its verified successor listing was unavailable until 2023-08-21.",
+      ],
+    });
+  });
+});
+
+describe("share-adjustment month-end snapshots", () => {
+  const relianceBonus = bonusShareCatalog.find(
+    (event) => event.id === "RELIANCE-2024-10-28-bonus-v1",
+  )!;
+  const adjustedAsset: Asset = {
+    ...stockAsset,
+    isin: relianceBonus.newIsin,
+    stockSplits: [relianceBonus],
+  };
+
+  it("uses a reconciled historical close with the pre-bonus quantity", () => {
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      assets: [adjustedAsset],
+      historicalQuotes: {
+        [historicalQuoteCacheKey(adjustedAsset.id, "2024-09")]: {
+          assetId: adjustedAsset.id,
+          asOfMonth: "2024-09",
+          basis: "reconciled-historical-close",
+          currency: "INR",
+          fetchedAt: "2024-11-01T00:00:00Z",
+          price: 200,
+          source: "yahoo",
+        },
+      },
+      now: new Date("2024-11-15T12:00:00Z"),
+      targetMonth: "2024-09",
+      trades: [trade({
+        assetId: adjustedAsset.id,
+        date: "2024-09-01",
+        pricePerUnit: 100,
+        quantity: 10,
+        totalValue: 1000,
+      })],
+    }));
+
+    expect(result).toMatchObject({
+      status: "created",
+      snapshot: {
+        equityValue: 2000,
+        investedValue: 1000,
+        portfolioValue: 2000,
+      },
+    });
+  });
+
+  it("does not use a current-unit fallback before a later bonus", () => {
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      assets: [adjustedAsset],
+      historicalQuotes: {
+        [historicalQuoteCacheKey(adjustedAsset.id, "2024-09")]: {
+          assetId: adjustedAsset.id,
+          asOfMonth: "2024-09",
+          basis: "historical-close",
+          currency: "INR",
+          fetchedAt: "2024-10-01T00:00:00Z",
+          price: 200,
+          source: "yahoo",
+        },
+      },
+      now: new Date("2024-11-15T12:00:00Z"),
+      quoteCache: {
+        [adjustedAsset.id]: {
+          assetId: adjustedAsset.id,
+          asOf: "2024-11-14T00:00:00Z",
+          currency: "INR",
+          price: 100,
+          source: "yahoo",
+        },
+      },
+      targetMonth: "2024-09",
+      trades: [trade({
+        assetId: adjustedAsset.id,
+        date: "2024-09-01",
+        pricePerUnit: 100,
+        quantity: 10,
+        totalValue: 1000,
+      })],
+    }));
+
+    expect(result.status).toBe("insufficient-data");
+    expect(result.snapshot).toBeNull();
   });
 });
 
@@ -674,7 +793,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       snapshot: null,
       status: "insufficient-data",
       warnings: [
-        "1 holding could not be valued for 2026-07. Refresh prices or enter a manual fallback before creating this snapshot.",
+        "Reliance Industries could not be priced for 2026-07: no usable historical or current price was available.",
       ],
     });
   });

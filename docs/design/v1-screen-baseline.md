@@ -421,7 +421,11 @@ Accepted chart direction:
   reconstructed history names its market-and-cash scope and latest available
   month. Neither state may imply that a partial chart is a full portfolio history.
 - status details summarize repeated month failures instead of rendering one
-  near-identical provider or PPF warning for every missing month
+  near-identical provider or PPF warning for every missing month. Group repeated
+  failures by holding and affected range; name a verified successor listing
+  window when that is the reason a month cannot be valued
+- while automatic history is actively appending months, show a stable chart
+  placeholder and mount the charts only after the backfill settles
 
 Do not fake production chart history. If neither full snapshots nor explicitly
 scoped reconstructed history is available, show an honest empty state. Missing
