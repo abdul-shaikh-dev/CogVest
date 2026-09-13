@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react-native";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
 
 import { getMissingCompletedSnapshotMonths } from "@/src/domain/calculations";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -571,6 +571,80 @@ describe("useProgress", () => {
       message: "All completed month snapshots are already recorded.",
       status: "already-exists",
     });
+  });
+
+  it("reports shared progress while a multi-month backfill is running", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedBackfillRecords(store);
+    const releases: Array<() => void> = [];
+    const historicalPriceFetcher = jest.fn().mockImplementation(
+      ({ asset, targetMonth }: { asset: Asset; targetMonth: string }) =>
+        new Promise((resolve) => {
+          releases.push(() => resolve({
+            ok: true as const,
+            quote: {
+              assetId: asset.id,
+              asOfMonth: targetMonth,
+              basis: "historical-close" as const,
+              currency: "INR" as const,
+              fetchedAt: "2026-03-10T10:00:00.000Z",
+              price: 1500,
+              source: "yahoo" as const,
+            },
+          }));
+        }),
+    );
+    const rootAutomation = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-03-10T10:00:00.000Z"),
+        store,
+      }),
+    );
+    const visibleProgress = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-03-10T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    let automation!: ReturnType<typeof rootAutomation.result.current.ensureMonthEndSnapshot>;
+    let visibleAutomation!: ReturnType<typeof visibleProgress.result.current.ensureMonthEndSnapshot>;
+    act(() => {
+      automation = rootAutomation.result.current.ensureMonthEndSnapshot();
+      visibleAutomation = visibleProgress.result.current.ensureMonthEndSnapshot();
+    });
+
+    await waitFor(() => {
+      expect(visibleProgress.result.current.snapshotAutomationStatus.progress).toEqual({
+        checkedCount: 0,
+        currentMonth: "2026-01",
+        totalCount: 2,
+      });
+    });
+
+    act(() => releases[0]?.());
+    await waitFor(() => {
+      expect(visibleProgress.result.current.snapshotAutomationStatus.progress).toEqual({
+        checkedCount: 1,
+        currentMonth: "2026-02",
+        totalCount: 2,
+      });
+      expect(visibleProgress.result.current.snapshotAutomationStatus.snapshot?.month).toBe(
+        "2026-01",
+      );
+    });
+
+    act(() => releases[1]?.());
+    await act(async () => {
+      await Promise.all([automation, visibleAutomation]);
+    });
+
+    expect(visibleProgress.result.current.snapshotAutomationStatus.progress).toBeNull();
+    expect(visibleProgress.result.current.snapshotAutomationStatus.message).toBe(
+      "2 missing month snapshots generated automatically.",
+    );
   });
 
   it("fills only partial gaps without replacing existing snapshots", async () => {

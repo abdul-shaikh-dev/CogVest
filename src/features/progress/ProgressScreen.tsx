@@ -37,6 +37,7 @@ import {
   normalizePercentage,
 } from "@/src/domain/precision";
 import { useReducedMotionPreference } from "@/src/hooks";
+import type { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { colors, interaction, radii, spacing } from "@/src/theme";
@@ -44,6 +45,7 @@ import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
 type ProgressScreenProps = {
+  historicalPriceFetcher?: typeof resolveHistoricalPrice;
   now?: Date;
   onReviewSnapshot?: () => void;
   store?: StoreApi<PortfolioStoreState>;
@@ -1085,6 +1087,19 @@ function SnapshotStatusCard({
   const provisionalMonthLabels = status.provisionalMonths.map(formatMonth);
   const latestProvisionalMonth =
     provisionalMonthLabels[provisionalMonthLabels.length - 1];
+  const latestStoredMonth = status.snapshot?.month
+    ? formatMonth(status.snapshot.month)
+    : null;
+  const statusTitle = status.progress
+    ? "Building monthly history"
+    : "Month-end snapshot";
+  const statusMessage = status.progress
+    ? `${status.progress.checkedCount} of ${status.progress.totalCount} ${status.progress.totalCount === 1 ? "month" : "months"} checked. Checking ${formatMonth(status.progress.currentMonth)}.${
+        latestStoredMonth
+          ? ` Latest stored: ${latestStoredMonth}.`
+          : " Completed months will appear as they are saved."
+      } Keep CogVest open to continue.`
+    : status.message;
   const provisionalMonthCopy = provisionalMonthLabels.length
     ? provisionalMonthLabels.length > 2
       ? `Estimated prices remain for ${provisionalMonthLabels.length} months, latest ${latestProvisionalMonth}. Review if you have better month-end values.`
@@ -1096,8 +1111,8 @@ function SnapshotStatusCard({
       <Pressable accessibilityRole="button" accessibilityLabel="Snapshot status and review" onPress={() => setOpen(true)} style={styles.snapshotStatusCard} testID="month-end-snapshot-status-card">
         <View style={styles.snapshotStatusHeader}>
           <View style={styles.snapshotCopy}>
-            <AppText weight="bold">Month-end snapshot</AppText>
-            <AppText color="secondary" variant="caption">{status.message}</AppText>
+            <AppText weight="bold">{statusTitle}</AppText>
+            <AppText color="secondary" variant="caption">{statusMessage}</AppText>
           </View>
           <AppText color="secondary" variant="caption">Details</AppText>
         </View>
@@ -1113,18 +1128,20 @@ function SnapshotStatusCard({
     >
       <View style={styles.snapshotStatusHeader}>
         <View style={styles.snapshotCopy}>
-          <AppText weight="bold">Month-end snapshot</AppText>
+          <AppText weight="bold">{statusTitle}</AppText>
           <AppText color="secondary" variant="caption">
-            {status.message}
+            {statusMessage}
           </AppText>
         </View>
-        <AppButton
-          accessibilityLabel="Review month-end snapshot"
-          onPress={() => { setOpen(false); onReview(); }}
-          style={styles.snapshotReviewAction}
-          title="Review"
-          variant="secondary"
-        />
+        {status.progress ? null : (
+          <AppButton
+            accessibilityLabel="Review month-end snapshot"
+            onPress={() => { setOpen(false); onReview(); }}
+            style={styles.snapshotReviewAction}
+            title="Review"
+            variant="secondary"
+          />
+        )}
       </View>
       {status.warnings.map((warning) => (
         <AppText color="secondary" key={warning} variant="caption">
@@ -1156,11 +1173,12 @@ function SnapshotStatusCard({
 }
 
 export function ProgressScreen({
+  historicalPriceFetcher,
   now,
   onReviewSnapshot,
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
-  const progress = useProgress({ now, store });
+  const progress = useProgress({ historicalPriceFetcher, now, store });
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
   const hasRunAutomationRef = useRef(false);

@@ -1,4 +1,4 @@
-import { fireEvent, render, within } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
 
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
@@ -338,6 +338,61 @@ describe("ProgressScreen", () => {
     expect(getByLabelText("Snapshot status and review")).toBeTruthy();
     expect(queryByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
+  });
+
+  it("shows live backfill progress without offering review during generation", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const releases: Array<() => void> = [];
+    seedHoldingAndCash(store);
+    store.setState({
+      openingPositions: store.getState().openingPositions.map((position) => ({
+        ...position,
+        date: "2026-01-15T00:00:00.000Z",
+      })),
+    });
+    const historicalPriceFetcher = jest.fn().mockImplementation(
+      ({ asset, targetMonth }: { asset: Asset; targetMonth: string }) =>
+        new Promise((resolve) => {
+          releases.push(() => resolve({
+            ok: true as const,
+            quote: {
+              assetId: asset.id,
+              asOfMonth: targetMonth,
+              basis: "historical-close" as const,
+              currency: "INR" as const,
+              fetchedAt: "2026-03-10T10:00:00.000Z",
+              price: 1500,
+              source: "yahoo" as const,
+            },
+          }));
+        }),
+    );
+    const screen = render(
+      <ProgressScreen
+        historicalPriceFetcher={historicalPriceFetcher}
+        now={new Date("2026-03-10T10:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(await screen.findByText("Building monthly history")).toBeTruthy();
+    expect(await screen.findByText(/0 of 2 months checked/u)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Snapshot status and review"));
+    expect(screen.queryByLabelText("Review month-end snapshot")).toBeNull();
+    fireEvent.press(screen.getByText("Close snapshot status"));
+
+    await act(async () => {
+      releases[0]?.();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(releases).toHaveLength(2));
+    await act(async () => {
+      releases[1]?.();
+      await Promise.resolve();
+    });
+    expect(
+      await screen.findByText("2 missing month snapshots generated automatically."),
+    ).toBeTruthy();
   });
 
   it("labels provisional snapshot prices as estimates", async () => {

@@ -408,6 +408,11 @@ Accepted chart direction:
   ranges/selected-month controls
 - automatic status explanations, warnings and optional correction stay reachable
   on demand; do not turn automatic snapshots into a required monthly form
+- a long automatic backfill must never retain the idle "has not run yet" state
+  while stored months are appearing. Show checked/total months, the month being
+  checked and the latest stored month, and explain that CogVest must remain open.
+  Hide the correction action until generation finishes because it cannot resolve
+  an active provider lookup.
 
 Do not fake production chart history. If neither full snapshots nor explicitly
 scoped reconstructed history is available, show an honest empty state. Missing
