@@ -362,11 +362,11 @@ export function MonthlyHistoryPanel({
                         </AppText>
                         <AppText
                           align="right"
-                          color={minimal || maskWealthValues || change === null ? "secondary" : "primary"}
+                          color={maskWealthValues || change === null ? "secondary" : "primary"}
                           numberOfLines={2}
                           style={[
                             styles.historyValueColumn,
-                            !minimal && !maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
+                            !maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
                           ]}
                           weight="bold"
                         >
@@ -448,7 +448,7 @@ function MonthDetail({
       </AppText>
       <AppText
         color="secondary"
-        style={!minimal && !maskWealthValues && portfolioChange !== null ? portfolioChange < 0 ? styles.lossText : styles.gainText : undefined}
+        style={!maskWealthValues && portfolioChange !== null ? portfolioChange < 0 ? styles.lossText : styles.gainText : undefined}
         variant="caption"
         weight="bold"
       >
@@ -482,7 +482,7 @@ function MonthDetail({
                 <AppText weight="bold">{maskWealthValues ? maskedValue : formatCompactINR(metric.current)}</AppText>
                 <AppText
                   color="secondary"
-                  style={!minimal && !maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
+                  style={!maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
                   variant="caption"
                 >
                   {maskWealthValues

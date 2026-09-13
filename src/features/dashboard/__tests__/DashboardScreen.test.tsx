@@ -11,6 +11,7 @@ import { MASKED_INR_VALUE } from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { colors } from "@/src/theme";
 import type { Asset, Trade } from "@/src/types";
 
 const asset: Asset = {
@@ -568,6 +569,7 @@ describe("DashboardScreen", () => {
 
     expect(screen.getByText("Portfolio value")).toBeTruthy();
     expect(screen.getByText("Holdings P&L")).toBeTruthy();
+    expect(screen.getByText("+50.00%")).toHaveStyle({ color: colors.profit });
     expect(screen.getByText("Allocation")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.queryByText("This Month")).toBeNull();

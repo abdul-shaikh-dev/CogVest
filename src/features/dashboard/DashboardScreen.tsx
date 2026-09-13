@@ -323,11 +323,9 @@ export function DashboardScreen({
                 <MaskedValue
                   masked={dashboard.maskWealthValues}
                   style={
-                    isMinimalMode
-                      ? styles.minimalReturnText
-                      : totalPnL >= 0
-                        ? styles.positiveText
-                        : styles.negativeText
+                    totalPnL >= 0
+                      ? styles.positiveText
+                      : styles.negativeText
                   }
                   value={formatSignedCompactINR(totalPnL)}
                   weight={isMinimalMode ? "medium" : "bold"}
@@ -349,13 +347,10 @@ export function DashboardScreen({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  color={isMinimalMode ? "secondary" : undefined}
                   style={
-                    isMinimalMode
-                      ? undefined
-                      : totalPnLPct >= 0
-                        ? styles.positiveText
-                        : styles.negativeText
+                    totalPnLPct >= 0
+                      ? styles.positiveText
+                      : styles.negativeText
                   }
                   weight={isMinimalMode ? "medium" : "bold"}
                 >
@@ -904,9 +899,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: spacing.sm,
-  },
-  minimalReturnText: {
-    color: colors.text.secondary,
   },
   negativeText: {
     color: colors.loss,
