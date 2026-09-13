@@ -643,7 +643,7 @@ const quoteSchema = z.object({
   dayChangeAbs: finiteNumberSchema.optional(),
   dayChangePct: finiteNumberSchema.optional(),
   price: finiteNumberSchema,
-  source: z.enum(["yahoo", "coingecko", "manual"]),
+  source: z.enum(["amfi", "yahoo", "coingecko", "manual"]),
 });
 
 const historicalQuoteSchema = z.object({
@@ -653,7 +653,7 @@ const historicalQuoteSchema = z.object({
   currency: z.enum(["INR", "USD"]),
   fetchedAt: nonEmptyStringSchema,
   price: finiteNumberSchema,
-  source: z.enum(["yahoo", "coingecko", "manual"]),
+  source: z.enum(["amfi", "yahoo", "coingecko", "manual"]),
 });
 
 const quoteCacheSchema = z.record(z.string(), quoteSchema);

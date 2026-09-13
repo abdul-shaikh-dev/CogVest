@@ -147,8 +147,9 @@ template; no real account statement belongs in repository test fixtures.
 For a valid detailed statement, CogVest uses each normalized ISIN and printed
 scheme name to create one local mutual-fund holding when the portfolio has no
 same-ISIN asset. Transactions from multiple folios with the same ISIN share that
-holding. This does not create or imply a Yahoo listing, exchange, current quote,
-or live-price guarantee. Existing same-ISIN assets remain authoritative. Users
+holding. This does not create or imply a Yahoo listing or exchange. Current NAV
+refresh uses AMFI's official catalogue by exact ISIN after import, with the
+published NAV date retained as provenance. Existing same-ISIN assets remain authoritative. Users
 review and confirm the complete batch; they do not confirm every CAS transaction.
 
 Mutual fund describes the investment vehicle; it does not mean Debt. CogVest
@@ -201,13 +202,14 @@ push `e2e/fixtures/cas-native-synthetic.pdf` to Android Downloads, then run
 uses the existing development-only seed and verifies wrong-password retry,
 two-page parsing including a value-free cancellation notice, a 12-unit / INR 1,200 holding, unchanged cash records, restart
 persistence, and repeat-import deduplication. It is not release-mode evidence or
-proof that an arbitrary customer statement is supported. The wholly invented PDF
-can be regenerated with Python + reportlab using
+proof that an arbitrary customer statement is supported. The fixture's account
+and transaction data are invented; it references a public AMFI scheme identity
+so native NAV refresh can also be verified. It can be regenerated with Python + reportlab using
 `scripts/fixtures/generate-cas-native-pdf.py`; its public test password is
 `synthetic-cas-test`. Never replace this fixture with a customer statement.
 Run `npm run maestro:test -- e2e/cas-native-fresh-portfolio.yaml` to verify the
 separate empty-portfolio contract: the statement creates one local fund per ISIN,
-classifies the synthetic equity fund without per-transaction confirmation,
+classifies it without per-transaction confirmation, refreshes its AMFI NAV,
 persists after restart, and deduplicates on repeat import without inventing an
 exchange or quote-provider identity. Unit tests cover the one-time classification
 choice required for hybrid or otherwise uncertain funds.

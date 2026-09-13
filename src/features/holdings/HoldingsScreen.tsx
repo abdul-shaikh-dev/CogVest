@@ -1417,7 +1417,9 @@ function HoldingDetails({
         <AppText color="secondary" variant="caption">
           {isPending
             ? "Refresh or enter manually"
-            : holding.lastUpdated
+            : holding.lastUpdated && holding.quoteSource === "amfi"
+              ? `NAV dated ${formatDate(holding.lastUpdated)}`
+              : holding.lastUpdated
               ? `Updated ${formatPriceTimestamp(holding.lastUpdated)}`
               : "Local position price"}
         </AppText>
@@ -1582,6 +1584,10 @@ function formatSignedCompactINR(value: number) {
 function formatSource(source?: string) {
   if (!source) {
     return "Manual";
+  }
+
+  if (source === "amfi") {
+    return "AMFI";
   }
 
   return source.charAt(0).toUpperCase() + source.slice(1);

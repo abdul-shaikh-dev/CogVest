@@ -1,6 +1,6 @@
 import type { Currency } from "./asset";
 
-export type QuoteSource = "yahoo" | "coingecko" | "manual";
+export type QuoteSource = "amfi" | "yahoo" | "coingecko" | "manual";
 
 export type Quote = {
   assetId: string;

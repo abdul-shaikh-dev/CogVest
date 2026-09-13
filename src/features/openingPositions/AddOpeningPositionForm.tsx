@@ -77,6 +77,9 @@ function formatSignedINR(value: number) {
 }
 
 function quoteSourceLabel(quote: Quote) {
+  if (quote.source === "amfi") {
+    return "AMFI";
+  }
   if (quote.source === "yahoo") {
     return "Yahoo Finance";
   }

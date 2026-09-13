@@ -1,6 +1,8 @@
-"""Generate a wholly invented, password-protected Android CAS regression fixture.
+"""Generate a password-protected Android CAS regression fixture.
 
-Run with Python + reportlab. No customer statement is read or embedded.
+Transactions and account details are invented. The scheme name and ISIN are a
+public AMFI catalogue identity so native quote refresh can be verified without
+customer data.
 """
 
 from pathlib import Path
@@ -25,7 +27,7 @@ pages = [
         "Date Transaction Amount Units Price Unit / (INR)(INR)Balance",
         "Sample Mutual Fund",
         "Folio No: 10000000 / 01 PAN: AAAAA0000A KYC: OK",
-        "S100 - Sample Equity Fund - Direct Plan - Growth - ISIN: INF000000001",
+        "S100 - Aditya Birla Sun Life Large Cap Fund - Direct Plan - Growth - ISIN: INF209K01YY7",
         "Registrar : CAMS",
         "Opening Unit Balance: 0.000",
         "02-Jan-2024 Systematic Investment (1) 1,000.00 10.000 100.0000 10.000",

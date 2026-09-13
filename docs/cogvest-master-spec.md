@@ -219,6 +219,13 @@ All domain calculations must be pure functions under `src/domain/`.
   not a direct INR trading pair or an exchange-specific execution price.
 - Selected lookup identity, ticker, exchange, currency, quote source ID, and
   provider quote provenance must survive review and save.
+- Mutual-fund current valuations use AMFI's official catalogue by exact ISIN.
+  This applies to mutual, liquid, and arbitrage fund instruments in either the
+  Equity or Debt allocation bucket. The saved quote retains AMFI provenance and
+  the published NAV date; CogVest does not fabricate a Yahoo ticker or exchange.
+- AMFI NAVs use daily rather than intraday freshness semantics. Normal weekend
+  age remains current, while an older catalogue date is shown as stale. Provider
+  failures retain a valid cached or manual value and never invent a NAV.
 - Asset and quote currency compatibility must be proven before a record enters
   INR totals, allocation, P&L, or monthly snapshots.
 - Unsupported persisted records remain local and visible as excluded data; they

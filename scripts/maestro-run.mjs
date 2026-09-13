@@ -104,6 +104,7 @@ const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
 const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
 const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
 const casNativeFlow = "e2e/cas-native-import.yaml";
+const casNativeFreshPortfolioFlow = "e2e/cas-native-fresh-portfolio.yaml";
 const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
 const zerodhaTradebookFixtures = [
   "e2e/fixtures/zerodha-tradebook-2024.csv",
@@ -223,7 +224,7 @@ for (const flow of flows) {
       pushFixture(adbPath, fixture),
     );
   }
-  if (flow.replaceAll("\\", "/") === casNativeFlow) {
+  if ([casNativeFlow, casNativeFreshPortfolioFlow].includes(flow.replaceAll("\\", "/"))) {
     const adbPath = findExecutable("adb");
     if (!adbPath) {
       console.log("FAIL adb not found");
