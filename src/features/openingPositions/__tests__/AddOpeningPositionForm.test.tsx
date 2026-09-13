@@ -643,13 +643,13 @@ describe("AddOpeningPositionForm", () => {
     expect(
       StyleSheet.flatten(getByTestId("derived-preview-pnl").props.style),
     ).toMatchObject({
-      color: colors.text.secondary,
+      color: colors.profit,
       fontWeight: typography.weights.medium,
     });
     expect(
       StyleSheet.flatten(getByTestId("derived-preview-pnl-percent").props.style),
     ).toMatchObject({
-      color: colors.text.secondary,
+      color: colors.profit,
       fontWeight: typography.weights.medium,
     });
     expect(getByText("Cash impact")).toBeTruthy();

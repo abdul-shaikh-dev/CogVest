@@ -269,7 +269,6 @@ export function HoldingsScreen({
         item={item}
         key={item.holding.asset.id}
         masked={maskWealthValues}
-        minimal={isMinimalMode}
         onPress={() => {
           Keyboard.dismiss();
           setSelectedAssetId(item.holding.asset.id);
@@ -1202,11 +1201,10 @@ function HoldingRow({
   allocationAvailable,
   item,
   masked,
-  minimal,
   onPress,
 }: Pick<
   HoldingDetailsProps,
-  "allocationAvailable" | "item" | "masked" | "minimal"
+  "allocationAvailable" | "item" | "masked"
 > & { onPress: () => void }) {
   const { holding } = item;
   const pending = holding.currentValue === null;
@@ -1249,13 +1247,10 @@ function HoldingRow({
           {holding.unrealisedPnLPct !== null ? (
             <AppText
               variant="caption"
-              color={minimal ? "secondary" : undefined}
               style={
-                minimal
-                  ? undefined
-                  : (holding.unrealisedPnL ?? 0) >= 0
-                    ? styles.positiveText
-                    : styles.negativeText
+                (holding.unrealisedPnL ?? 0) >= 0
+                  ? styles.positiveText
+                  : styles.negativeText
               }
             >
               {formatPercentage(holding.unrealisedPnLPct)}
@@ -1340,7 +1335,7 @@ function HoldingDetails({
                 : formatSignedCompactINR(holding.unrealisedPnL)
             }
             style={
-              minimal || isPending
+              isPending
                 ? undefined
                 : positive
                   ? styles.positiveText
@@ -1348,7 +1343,10 @@ function HoldingDetails({
             }
           />
           {holding.unrealisedPnLPct !== null ? (
-            <AppText color="secondary" variant="caption">
+            <AppText
+              style={positive ? styles.positiveText : styles.negativeText}
+              variant="caption"
+            >
               {formatPercentage(holding.unrealisedPnLPct)} unrealized
             </AppText>
           ) : null}

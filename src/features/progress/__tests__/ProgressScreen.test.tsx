@@ -943,6 +943,7 @@ describe("ProgressScreen", () => {
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(getByText("Asset Momentum")).toBeTruthy();
+    expect(getByText("+30.66%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("monthly-history-panel")).toBeTruthy();
     expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();

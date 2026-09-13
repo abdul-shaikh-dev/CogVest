@@ -747,7 +747,7 @@ describe("HoldingsScreen", () => {
     expect(queryByTestId("holdings-insights-button")).toBeNull();
     expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
     expect(getByText("Invested ₹200")).toBeTruthy();
-    expect(getByText("+25.00%")).toBeTruthy();
+    expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
     expect(queryByText("Dominant position")).toBeNull();
     expect(queryByText("Best return")).toBeNull();
   });

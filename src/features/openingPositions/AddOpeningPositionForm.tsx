@@ -1074,13 +1074,10 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  color={isMinimalMode ? "secondary" : undefined}
                   style={
-                    isMinimalMode
-                      ? undefined
-                      : previewHolding.unrealisedPnL >= 0
-                        ? styles.positiveText
-                        : styles.negativeText
+                    previewHolding.unrealisedPnL >= 0
+                      ? styles.positiveText
+                      : styles.negativeText
                   }
                   testID="derived-preview-pnl"
                   weight={isMinimalMode ? "medium" : "bold"}
@@ -1097,13 +1094,10 @@ export function AddOpeningPositionForm({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  color={isMinimalMode ? "secondary" : undefined}
                   style={
-                    isMinimalMode
-                      ? undefined
-                      : previewHolding.unrealisedPnLPct >= 0
-                        ? styles.positiveText
-                        : styles.negativeText
+                    previewHolding.unrealisedPnLPct >= 0
+                      ? styles.positiveText
+                      : styles.negativeText
                   }
                   testID="derived-preview-pnl-percent"
                   weight={isMinimalMode ? "medium" : "bold"}

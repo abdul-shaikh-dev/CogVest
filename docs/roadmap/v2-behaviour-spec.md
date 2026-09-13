@@ -112,6 +112,8 @@ Verification and limitations: `docs/testing/contextual-nudges-evidence.md`.
 ## Acceptance Criteria
 
 - Minimal Mode hides daily noise without removing core actions.
+- Minimal Mode preserves semantic gain and loss colors on visible signed values;
+  explicit signs ensure direction never relies on color alone.
 - Behaviour fields remain optional.
 - Insights never sound scolding.
 - Duration comparison is limited to explicitly classified INR stocks listed on NSE/BSE, with one dated acquisition and no disposals/transfers or aggregate opening cutover. ETFs remain unavailable without reliable fund classification; the legacy `isTaxEligible` flag is not evidence.

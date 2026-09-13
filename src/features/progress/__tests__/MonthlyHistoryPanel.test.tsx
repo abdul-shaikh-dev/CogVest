@@ -3,6 +3,7 @@ import { Modal, ScrollView } from "react-native";
 
 import { MonthlyHistoryPanel } from "@/src/features/progress/MonthlyHistoryPanel";
 import type { MonthlyProgressSummary } from "@/src/domain/calculations";
+import { colors } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
 
 jest.mock("react-native-safe-area-context", () => ({
@@ -77,6 +78,20 @@ describe("MonthlyHistoryPanel", () => {
     createSummary("2026-04", { portfolioValue: 0 }),
     createSummary("2026-05", { portfolioValue: -20_000 }),
   ];
+
+  it("keeps signed monthly changes semantic in Minimal mode", () => {
+    const { getByTestId, getByText } = render(
+      <MonthlyHistoryPanel
+        maskWealthValues={false}
+        minimal
+        summaries={summaries}
+      />,
+    );
+
+    fireEvent.press(getByTestId("open-monthly-history"));
+
+    expect(getByText("+10.00%")).toHaveStyle({ color: colors.profit });
+  });
 
   describe("animation frame ownership", () => {
     beforeEach(() => jest.useFakeTimers());

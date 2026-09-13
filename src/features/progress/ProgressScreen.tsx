@@ -380,13 +380,10 @@ function SelectedMonthPanel({
           ]}>
             <View style={styles.gapOutcome}>
               <AppText
-                color={minimal ? "secondary" : undefined}
                 style={
-                  minimal
-                    ? undefined
-                    : difference >= 0
-                      ? styles.gainText
-                      : styles.lossText
+                  difference >= 0
+                    ? styles.gainText
+                    : styles.lossText
                 }
                 variant="title"
                 weight={minimal ? "medium" : "bold"}
@@ -463,15 +460,12 @@ function SelectedMonthPanel({
                   {formatCompactINR(item.values[selectedIndex] ?? 0)}
                 </AppText>
                 <AppText
-                  color={minimal ? "secondary" : undefined}
                   style={
-                    minimal
-                      ? undefined
-                      : change === null
-                        ? styles.neutralText
-                        : change >= 0
-                          ? styles.gainText
-                          : styles.lossText
+                    change === null
+                      ? styles.neutralText
+                      : change >= 0
+                        ? styles.gainText
+                        : styles.lossText
                   }
                   variant="caption"
                 >
