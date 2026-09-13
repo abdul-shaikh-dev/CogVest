@@ -513,7 +513,7 @@ describe("useProgress", () => {
 
     expect(store.getState().monthlySnapshots).toEqual([]);
     expect(automationResult?.warnings).toEqual([
-      "2026-07: This snapshot could not be completed. Refresh prices or enter a manual price for holdings with pending valuation.",
+      "HDFC Bank could not be priced for 2026-07: no usable historical or current price was available.",
     ]);
     expect(automationResult).toMatchObject({
       status: "insufficient-data",
@@ -630,6 +630,41 @@ describe("useProgress", () => {
     expect(result.current.snapshotAutomationStatus).toMatchObject({
       message: "All completed month snapshots are already recorded.",
       status: "already-exists",
+    });
+  });
+
+  it("groups repeated holding price failures across missing months", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedBackfillRecords(store);
+    store.setState({
+      openingPositions: store.getState().openingPositions.map((position) => ({
+        ...position,
+        currentPrice: undefined,
+      })),
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      error: "Historical price is temporarily unavailable.",
+      ok: false,
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-05-10T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(result.current.snapshotAutomationStatus).toMatchObject({
+      kind: "missing-price",
+      message: "4 months are waiting for historical prices.",
+      pendingMonths: ["2026-01", "2026-02", "2026-03", "2026-04"],
+      warnings: [
+        "HDFC Bank could not be priced across 4 months (2026-01 to 2026-04): no usable historical or current price was available.",
+      ],
     });
   });
 

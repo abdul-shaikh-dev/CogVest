@@ -2,7 +2,10 @@ import type {
   HistoricalPriceProviderInput,
   HistoricalPriceResult,
 } from "./types";
+import type { StockSplitEvent } from "@/src/types";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
+import { assertCatalogSplits } from "@/src/domain/stockSplitCatalog";
+import { decimal } from "@/src/domain/precision";
 import {
   coinGeckoMarketChartBaseUrl,
   defaultNow,
@@ -23,7 +26,16 @@ type YahooHistoricalChartResponse = {
         }>;
       };
       timestamp?: number[];
-      events?: { splits?: Record<string, { date?: number }> };
+      events?: {
+        splits?: Record<
+          string,
+          {
+            date?: number;
+            denominator?: number;
+            numerator?: number;
+          }
+        >;
+      };
     }>;
   };
 };
@@ -41,6 +53,15 @@ type CoinGeckoHistoricalPricePoint = {
   price: number;
   timestampMs: number;
 };
+
+type YahooSplit = {
+  date: string;
+};
+
+type YahooSplitResponse = Record<
+  string,
+  { date?: number; denominator?: number; numerator?: number }
+>;
 
 const invalidTargetMonthMessage =
   "Invalid target month. Expected YYYY-MM with month 01-12.";
@@ -64,6 +85,73 @@ function validateTargetMonth(targetMonth: string) {
 
 function getErrorMessage(prefix: string, error: unknown) {
   return `${prefix}: ${error instanceof Error ? error.message : "Unexpected error."}`;
+}
+
+function catalogSplitFactor(event: StockSplitEvent) {
+  const replacement = decimal(event.newShares).dividedBy(event.oldShares);
+
+  return event.kind === "bonus" ? replacement.plus(1) : replacement;
+}
+
+function reconcileYahooShareUnits({
+  asset,
+  close,
+  closeTimestamp,
+  splits,
+  targetMonth,
+  through,
+}: {
+  asset: HistoricalPriceProviderInput["asset"];
+  close: number;
+  closeTimestamp: number;
+  splits: YahooSplitResponse | undefined;
+  targetMonth: string;
+  through: string;
+}) {
+  assertCatalogSplits(asset);
+
+  if (splits !== undefined && (splits === null || typeof splits !== "object" || Array.isArray(splits))) {
+    throw new Error("Historical price units need corporate-action reconciliation.");
+  }
+
+  const closeDate = new Date(closeTimestamp * 1000).toISOString().slice(0, 10);
+  const throughDate = new Date(through).toISOString().slice(0, 10);
+  const providerEvents = Object.values(splits ?? {}).reduce<YahooSplit[]>((events, event) => {
+    if (!event || typeof event.date !== "number" || !Number.isFinite(event.date) ||
+        typeof event.numerator !== "number" || !Number.isFinite(event.numerator) || event.numerator <= 0 ||
+        typeof event.denominator !== "number" || !Number.isFinite(event.denominator) || event.denominator <= 0) {
+      throw new Error("Historical price units need corporate-action reconciliation.");
+    }
+
+    const date = new Date(event.date * 1000).toISOString().slice(0, 10);
+    if (date > closeDate && date <= throughDate) {
+      events.push({ date });
+    }
+    return events;
+  }, []);
+  const catalogEvents = (asset.stockSplits ?? []).filter(
+    (event) => event.effectiveDate > closeDate && event.effectiveDate <= throughDate,
+  );
+  const providerDates = new Set(providerEvents.map((event) => event.date));
+  const catalogDates = new Set(catalogEvents.map((event) => event.effectiveDate));
+
+  if (
+    providerEvents.length !== providerDates.size ||
+    providerDates.size !== catalogDates.size ||
+    [...providerDates].some((date) => !catalogDates.has(date))
+  ) {
+    throw new Error("Historical price units need corporate-action reconciliation.");
+  }
+
+  const targetMonthEnd = getMonthEndDateUtc(targetMonth).toISOString().slice(0, 10);
+  const targetUnitFactor = catalogEvents
+    .filter((event) => event.effectiveDate > targetMonthEnd)
+    .reduce((factor, event) => factor.times(catalogSplitFactor(event)), decimal(1));
+
+  return {
+    price: roundQuoteNumber(decimal(close).times(targetUnitFactor).toNumber()),
+    reconciled: !targetUnitFactor.equals(1),
+  };
 }
 
 export function getMonthEndDateUtc(targetMonth: string) {
@@ -122,8 +210,9 @@ export async function fetchYahooHistoricalPrice({
     }
 
     const providerId = asset.quoteSourceId ?? asset.ticker;
+    const fetchedAt = now();
     const response = await fetcher(
-      buildYahooHistoricalChartUrl(providerId, targetMonth, now()),
+      buildYahooHistoricalChartUrl(providerId, targetMonth, fetchedAt),
     );
 
     if (!response.ok) {
@@ -181,22 +270,26 @@ export async function fetchYahooHistoricalPrice({
       };
     }
 
-    const splits = result?.events?.splits;
-    if (splits !== undefined && (splits === null || typeof splits !== "object" || Array.isArray(splits) ||
-      Object.values(splits).some((event) => !event || typeof event.date !== "number" ||
-        !Number.isFinite(event.date) || event.date > latestClose.timestamp))) {
-      return { ok: false, error: "Historical price units need corporate-action reconciliation; an adjusted close was not accepted." };
-    }
+    const reconciledClose = reconcileYahooShareUnits({
+      asset,
+      close: latestClose.close,
+      closeTimestamp: latestClose.timestamp,
+      splits: result?.events?.splits,
+      targetMonth,
+      through: fetchedAt,
+    });
 
     return {
       ok: true,
       quote: {
         assetId: asset.id,
         asOfMonth: targetMonth,
-        basis: "historical-close",
+        basis: reconciledClose.reconciled
+          ? "reconciled-historical-close"
+          : "historical-close",
         currency: "INR",
-        fetchedAt: now(),
-        price: roundQuoteNumber(latestClose.close),
+        fetchedAt,
+        price: reconciledClose.price,
         source: "yahoo",
       },
     };

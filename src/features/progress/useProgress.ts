@@ -432,7 +432,7 @@ function automationWarningMessage(targetMonth: string, warning: string) {
   }
 
   if (warning.includes("could not be priced")) {
-    return `${targetMonth}: ${warning} Refresh prices or enter a manual price to complete this snapshot.`;
+    return warning.includes(targetMonth) ? warning : `${targetMonth}: ${warning}`;
   }
 
   if (warning.includes("could not be valued")) {
@@ -440,6 +440,37 @@ function automationWarningMessage(targetMonth: string, warning: string) {
   }
 
   return `${targetMonth}: Some portfolio records need review before this month can be completed.`;
+}
+
+function summarizeMonthlyWarnings(warnings: string[]) {
+  const uniqueWarnings = [...new Set(warnings)];
+  const groups = new Map<string, { months: string[]; prefix: string; suffix: string }>();
+  const ungrouped: string[] = [];
+
+  for (const warning of uniqueWarnings) {
+    const match = /^(.*) for (\d{4}-\d{2})(:.*)$/.exec(warning);
+    if (!match) {
+      ungrouped.push(warning);
+      continue;
+    }
+
+    const key = `${match[1]}${match[3]}`;
+    const group = groups.get(key) ?? { months: [], prefix: match[1], suffix: match[3] };
+    group.months.push(match[2]);
+    groups.set(key, group);
+  }
+
+  return [
+    ...ungrouped,
+    ...[...groups.values()].map(({ months, prefix, suffix }) => {
+      const orderedMonths = [...new Set(months)].sort();
+      if (orderedMonths.length === 1) {
+        return `${prefix} for ${orderedMonths[0]}${suffix}`;
+      }
+
+      return `${prefix} across ${orderedMonths.length} months (${orderedMonths[0]} to ${orderedMonths.at(-1)})${suffix}`;
+    }),
+  ];
 }
 
 function getSnapshotAutomationTargetMonths({
@@ -526,6 +557,7 @@ export function needsHistoricalPrice({
   if (
     cachedQuote?.currency === "INR" &&
     (cachedQuote.basis === "historical-close" ||
+      cachedQuote.basis === "reconciled-historical-close" ||
       cachedQuote.basis === "cached-historical-close")
   ) {
     return false;
@@ -945,6 +977,8 @@ export function useProgress({
           : "insufficient-data";
     const snapshot = latestCompletedSnapshot;
 
+    const summarizedWarnings = summarizeMonthlyWarnings(warnings);
+
     return {
       createdCount: createdSnapshots.length,
       incomeRefreshedCount: incomeRefreshedSnapshots.length,
@@ -956,7 +990,7 @@ export function useProgress({
       snapshot,
       status,
       targetMonths,
-      warnings: [...new Set(warnings)],
+      warnings: summarizedWarnings,
     };
   }
 

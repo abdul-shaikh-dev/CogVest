@@ -51,8 +51,9 @@ and hydration. Reimport/restart must never compound the same event twice.
 
 All existing effective-date quantity consumers share the event replay. Generated
 history is revisited when an event is attached; manual snapshots are preserved.
-Cross-action historical prices remain unavailable unless their unit basis is
-safe. This slice does not reconstruct adjusted prices or complete event feeds.
+Issue #372 permits cross-action month-end prices only when provider event dates
+and the complete verified catalog establish a safe conversion back to the target
+month's units. It does not create a general corporate-action feed.
 
 ## Acceptance and remaining scope
 
