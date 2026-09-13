@@ -413,6 +413,15 @@ Accepted chart direction:
   checked and the latest stored month, and explain that CogVest must remain open.
   Hide the correction action until generation finishes because it cannot resolve
   an active provider lookup.
+- snapshot status uses one clear state and next action: setup for an empty
+  portfolio, no action while checking or waiting for the first completed month,
+  retry for unavailable historical prices, Holdings for PPF or record gaps, and
+  optional review only for complete or estimated stored snapshots
+- incomplete PPF status states how many months lack a confirmed checkpoint;
+  reconstructed history names its market-and-cash scope and latest available
+  month. Neither state may imply that a partial chart is a full portfolio history.
+- status details summarize repeated month failures instead of rendering one
+  near-identical provider or PPF warning for every missing month
 
 Do not fake production chart history. If neither full snapshots nor explicitly
 scoped reconstructed history is available, show an honest empty state. Missing

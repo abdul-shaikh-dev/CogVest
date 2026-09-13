@@ -37,11 +37,16 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { projectDemergers } from "@/src/domain/demergers";
 import {
   calculatePpfPortfolioSummary,
+  getPpfAccountOpeningDate,
   getLinkedLegacyPpfAssetIds,
 } from "@/src/domain/ppf";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { historicalQuoteCacheKey, type MonthlySnapshot } from "@/src/types";
+import {
+  historicalQuoteCacheKey,
+  type MonthlySnapshot,
+  type PpfAccount,
+} from "@/src/types";
 import { createId } from "@/src/utils";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -69,8 +74,21 @@ export function emptyProgressFormValues() {
 export type ProgressFormValues = ReturnType<typeof emptyProgressFormValues>;
 export type ProgressFormErrors = Partial<Record<keyof ProgressFormValues, string>>;
 
-export type ProgressSnapshotAutomationStatus = {
+export type ProgressSnapshotStatusKind =
+  | "checking"
+  | "complete"
+  | "empty"
+  | "estimated"
+  | "generating"
+  | "incomplete-ppf"
+  | "missing-price"
+  | "records-incomplete"
+  | "waiting-for-first-month"
+  | "reconstructed-history";
+
+type SnapshotAutomationStatusState = {
   message: string;
+  pendingMonths: string[];
   progress: SnapshotAutomationProgress | null;
   provisionalMonths: string[];
   snapshot: MonthlySnapshot | null;
@@ -79,10 +97,16 @@ export type ProgressSnapshotAutomationStatus = {
   warnings: string[];
 };
 
+export type ProgressSnapshotAutomationStatus = SnapshotAutomationStatusState & {
+  availableThroughMonth: string | null;
+  kind: ProgressSnapshotStatusKind;
+};
+
 type MonthEndSnapshotAutomationRunResult = {
   createdCount: number;
   incomeRefreshedCount: number;
   lastCompletedMonth: string;
+  pendingMonths: string[];
   provisionalCount: number;
   provisionalMonths: string[];
   refreshedCount: number;
@@ -91,6 +115,65 @@ type MonthEndSnapshotAutomationRunResult = {
   targetMonths: string[];
   warnings: string[];
 };
+
+function getSnapshotStatusKind({
+  hasData,
+  hasIncompletePpfHistory,
+  hasReconstructedHistory,
+  status,
+}: {
+  hasData: boolean;
+  hasIncompletePpfHistory: boolean;
+  hasReconstructedHistory: boolean;
+  status: SnapshotAutomationStatusState;
+}): ProgressSnapshotStatusKind {
+  if (status.progress) return "generating";
+  if (!hasData) return "empty";
+  if (hasReconstructedHistory) return "reconstructed-history";
+  if (hasIncompletePpfHistory) return "incomplete-ppf";
+  if (status.warnings.some((warning) => warning.includes("Earlier PPF balances"))) {
+    return "incomplete-ppf";
+  }
+  if (
+    status.warnings.some(
+      (warning) =>
+        warning.includes("Refresh prices") ||
+        warning.includes("pending valuation") ||
+        warning.includes("could not be priced"),
+    )
+  ) {
+    return "missing-price";
+  }
+  if (status.warnings.length > 0) return "records-incomplete";
+  if (status.provisionalMonths.length > 0) return "estimated";
+  if (status.status === "idle") return "checking";
+  if (status.status === "insufficient-data") return "waiting-for-first-month";
+  return "complete";
+}
+
+function getIncompletePpfHistoryMonths(
+  accounts: PpfAccount[],
+  lastCompletedMonth: string,
+) {
+  const missingMonths = new Set<string>();
+
+  for (const account of accounts) {
+    if (account.legacyAssetId) continue;
+
+    const openingMonth = getPpfAccountOpeningDate(account).slice(0, 7);
+    const firstConfirmedMonth = account.balanceAsOf.slice(0, 7);
+    let cursor = new Date(`${openingMonth}-01T12:00:00Z`);
+
+    while (Number.isFinite(cursor.getTime())) {
+      const month = cursor.toISOString().slice(0, 7);
+      if (month >= firstConfirmedMonth || month > lastCompletedMonth) break;
+      missingMonths.add(month);
+      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1, 12));
+    }
+  }
+
+  return [...missingMonths].sort();
+}
 
 const inFlightSnapshotAutomationRuns = new WeakMap<
   StoreApi<PortfolioStoreState>,
@@ -270,6 +353,7 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
 function automationMessage({
   createdCount,
   incomeRefreshedCount,
+  pendingMonths,
   provisionalCount,
   refreshedCount,
   status,
@@ -277,6 +361,7 @@ function automationMessage({
 }: {
   createdCount: number;
   incomeRefreshedCount: number;
+  pendingMonths: string[];
   provisionalCount: number;
   refreshedCount: number;
   status: GeneratedSnapshotStatus;
@@ -301,6 +386,26 @@ function automationMessage({
       : `${incomeRefreshedCount} snapshots updated with newly recorded income.`;
   }
 
+  if (
+    pendingMonths.length > 0 &&
+    warnings.some(
+      (warning) =>
+        warning.includes("Refresh prices") ||
+        warning.includes("pending valuation") ||
+        warning.includes("could not be priced"),
+    )
+  ) {
+    return pendingMonths.length === 1
+      ? "1 month is waiting for a historical price."
+      : `${pendingMonths.length} months are waiting for historical prices.`;
+  }
+
+  if (pendingMonths.length > 0) {
+    return pendingMonths.length === 1
+      ? "1 month could not be completed from the recorded portfolio data."
+      : `${pendingMonths.length} months could not be completed from the recorded portfolio data.`;
+  }
+
   if (status === "created") {
     return createdCount === 1
       ? "1 missing month snapshot generated automatically."
@@ -315,7 +420,7 @@ function automationMessage({
     return "All completed month snapshots are already recorded.";
   }
 
-  return "Not enough portfolio data to generate a completed month snapshot yet.";
+  return "The first monthly snapshot will be created after a full portfolio month is complete.";
 }
 
 function automationWarningMessage(targetMonth: string, warning: string) {
@@ -488,8 +593,9 @@ export function useProgress({
   const [formValues, setFormValues] = useState(emptyProgressFormValues);
   const [errors, setErrors] = useState<ProgressFormErrors>({});
   const [snapshotAutomationStatus, setSnapshotAutomationStatus] =
-    useState<ProgressSnapshotAutomationStatus>(() => ({
-      message: "Month-end snapshot automation has not run yet.",
+    useState<SnapshotAutomationStatusState>(() => ({
+      message: "Checking completed months for missing snapshots.",
+      pendingMonths: [],
       progress: null,
       provisionalMonths: [],
       snapshot: null,
@@ -670,6 +776,7 @@ export function useProgress({
     const restoreEpoch = store.getState().restoreEpoch;
     const cancelledResult: MonthEndSnapshotAutomationRunResult = {
       createdCount: 0, incomeRefreshedCount: 0, lastCompletedMonth,
+      pendingMonths: [],
       provisionalCount: 0, provisionalMonths: [], refreshedCount: 0,
       snapshot: null, status: "insufficient-data", targetMonths: [], warnings: [],
     };
@@ -842,6 +949,7 @@ export function useProgress({
       createdCount: createdSnapshots.length,
       incomeRefreshedCount: incomeRefreshedSnapshots.length,
       lastCompletedMonth,
+      pendingMonths: unresolvedTargetMonths,
       provisionalCount,
       provisionalMonths,
       refreshedCount: refreshedSnapshots.length,
@@ -897,6 +1005,7 @@ export function useProgress({
             createdCount: 0,
             incomeRefreshedCount: 0,
             lastCompletedMonth: requestedLastCompletedMonth,
+            pendingMonths: [],
             provisionalCount: provisionalMonths.length,
             provisionalMonths,
             refreshedCount: 0,
@@ -910,6 +1019,7 @@ export function useProgress({
 
           setSnapshotAutomationStatus({
             message: automationMessage(result),
+            pendingMonths: result.pendingMonths,
             progress: null,
             provisionalMonths: result.provisionalMonths,
             snapshot: result.snapshot,
@@ -954,6 +1064,7 @@ export function useProgress({
 
       setSnapshotAutomationStatus({
         message: automationMessage(result),
+        pendingMonths: result.pendingMonths,
         progress: null,
         provisionalMonths: result.provisionalMonths,
         snapshot: result.snapshot,
@@ -966,6 +1077,49 @@ export function useProgress({
       return result;
     }
   }
+
+  const displayedAutomationStatus: SnapshotAutomationStatusState =
+    activeAutomationProgress
+      ? {
+          message: "Building monthly history.",
+          pendingMonths: [],
+          progress: activeAutomationProgress,
+          provisionalMonths: [],
+          snapshot: monthlySummaries[0]?.snapshot ?? null,
+          status: "idle",
+          targetMonth: activeAutomationProgress.currentMonth,
+          warnings: [],
+        }
+      : snapshotAutomationStatus;
+  const reconstructedThroughMonth = ppfExcludedHistory
+    ? [...ppfExcludedHistory.snapshots]
+        .sort((left, right) => right.month.localeCompare(left.month))[0]?.month ?? null
+    : null;
+  const incompletePpfHistoryMonths = getIncompletePpfHistoryMonths(
+    snapshot.ppfAccounts,
+    getPreviousCompletedMonth(now),
+  );
+  const presentedAutomationStatus = {
+    ...displayedAutomationStatus,
+    pendingMonths:
+      displayedAutomationStatus.pendingMonths.length > 0
+        ? displayedAutomationStatus.pendingMonths
+        : incompletePpfHistoryMonths,
+  };
+  const progressSnapshotAutomationStatus: ProgressSnapshotAutomationStatus = {
+    ...presentedAutomationStatus,
+    availableThroughMonth:
+      reconstructedThroughMonth ??
+      displayedAutomationStatus.snapshot?.month ??
+      monthlySummaries[0]?.snapshot.month ??
+      null,
+    kind: getSnapshotStatusKind({
+      hasData: hasData || monthlySummaries.length > 0,
+      hasIncompletePpfHistory: incompletePpfHistoryMonths.length > 0,
+      hasReconstructedHistory: ppfExcludedHistory !== null,
+      status: presentedAutomationStatus,
+    }),
+  };
 
   return {
     allocation,
@@ -998,17 +1152,7 @@ export function useProgress({
     setField,
     setPortfolioChartRange,
     setPortfolioChartCustomRange,
-    snapshotAutomationStatus: activeAutomationProgress
-      ? {
-          message: "Building monthly history.",
-          progress: activeAutomationProgress,
-          provisionalMonths: [],
-          snapshot: monthlySummaries[0]?.snapshot ?? null,
-          status: "idle" as const,
-          targetMonth: activeAutomationProgress.currentMonth,
-          warnings: [],
-        }
-      : snapshotAutomationStatus,
+    snapshotAutomationStatus: progressSnapshotAutomationStatus,
     totalInvested,
   };
 }

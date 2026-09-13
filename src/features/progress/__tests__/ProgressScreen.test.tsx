@@ -78,8 +78,9 @@ const stockAsset: Asset = {
   ticker: "HDFCBANK.NS",
 };
 
-it("labels PPF-excluded history and masks its values without presenting it as full snapshots", () => {
+it("labels PPF-excluded history and masks its values without presenting it as full snapshots", async () => {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+  const onOpenHoldings = jest.fn();
   store.getState().addAsset(stockAsset);
   store.getState().addOpeningPosition({
     assetId: stockAsset.id, averageCostPrice: 2500, currentPrice: 2600,
@@ -91,8 +92,20 @@ it("labels PPF-excluded history and masks its values without presenting it as fu
     balanceAsOf: "2026-09-10", confirmedBalance: 720000,
     createdAt: "2026-09-10T00:00:00Z",
   });
-  const screen = render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
+  const screen = render(
+    <ProgressScreen
+      historicalPriceFetcher={jest.fn().mockResolvedValue({ ok: false })}
+      now={new Date("2026-09-11T12:00:00Z")}
+      onOpenHoldings={onOpenHoldings}
+      store={store}
+    />,
+  );
   expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
+  expect(await screen.findByText("Market and cash history available")).toBeTruthy();
+  expect(screen.getByText(/Market and cash history is available through August 2026/u)).toBeTruthy();
+  fireEvent.press(screen.getByLabelText("Snapshot status details"));
+  fireEvent.press(screen.getByLabelText("Open Holdings"));
+  expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Tracked Growth")).toBeTruthy();
   expect(screen.getByText(/Some months use estimated prices/)).toBeTruthy();
   const panel = within(screen.getByTestId("portfolio-trend-selected-panel"));
@@ -220,15 +233,18 @@ describe("ProgressScreen", () => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(false);
   });
 
-  it("shows the no-snapshot state before monthly records exist", () => {
+  it("offers one setup action before portfolio history exists", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onSetUpPortfolio = jest.fn();
 
-    const { getByText } = render(<ProgressScreen store={store} />);
+    const screen = render(
+      <ProgressScreen onSetUpPortfolio={onSetUpPortfolio} store={store} />,
+    );
 
-    expect(getByText("No monthly snapshots yet")).toBeTruthy();
-    expect(
-      getByText("Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."),
-    ).toBeTruthy();
+    expect(screen.getByText("No portfolio history yet")).toBeTruthy();
+    expect(screen.queryByTestId("month-end-snapshot-status-card")).toBeNull();
+    fireEvent.press(screen.getByTestId("progress-empty-setup"));
+    expect(onSetUpPortfolio).toHaveBeenCalledTimes(1);
   });
 
   it("keeps pending valuation readable while masking no-snapshot portfolio values", () => {
@@ -329,13 +345,14 @@ describe("ProgressScreen", () => {
 
     const { findByText, getByLabelText, queryByTestId } = render(
       <ProgressScreen
+        historicalPriceFetcher={jest.fn().mockResolvedValue({ ok: false })}
         now={new Date("2026-08-02T10:00:00.000Z")}
         store={store}
       />,
     );
 
-    expect(await findByText("Month-end snapshot")).toBeTruthy();
-    expect(getByLabelText("Snapshot status and review")).toBeTruthy();
+    expect(await findByText("Some months use estimates")).toBeTruthy();
+    expect(getByLabelText("Snapshot status details")).toBeTruthy();
     expect(queryByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
@@ -377,7 +394,7 @@ describe("ProgressScreen", () => {
 
     expect(await screen.findByText("Building monthly history")).toBeTruthy();
     expect(await screen.findByText(/0 of 2 months checked/u)).toBeTruthy();
-    fireEvent.press(screen.getByLabelText("Snapshot status and review"));
+    fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.queryByLabelText("Review month-end snapshot")).toBeNull();
     fireEvent.press(screen.getByText("Close snapshot status"));
 
@@ -391,8 +408,67 @@ describe("ProgressScreen", () => {
       await Promise.resolve();
     });
     expect(
-      await screen.findByText("2 missing month snapshots generated automatically."),
+      await screen.findByText(/2 missing month snapshots generated automatically/u),
     ).toBeTruthy();
+  });
+
+  it("offers retry instead of review when historical prices are unavailable", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(stockAsset);
+    store.getState().addOpeningPosition({
+      assetId: stockAsset.id,
+      averageCostPrice: 1450,
+      date: "2026-07-15T00:00:00.000Z",
+      id: "opening-missing-history-price",
+      quantity: 10,
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      error: "Historical price is temporarily unavailable.",
+      ok: false,
+    });
+    const screen = render(
+      <ProgressScreen
+        historicalPriceFetcher={historicalPriceFetcher}
+        now={new Date("2026-08-02T10:00:00.000Z")}
+        store={store}
+      />,
+    );
+
+    expect(await screen.findByText("Historical prices are unavailable")).toBeTruthy();
+    expect(screen.getByText(/1 month is waiting for a historical price/u)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    expect(screen.queryByLabelText(/Review.*month-end/u)).toBeNull();
+    fireEvent.press(screen.getByLabelText("Retry monthly history"));
+    await waitFor(() => expect(historicalPriceFetcher).toHaveBeenCalledTimes(2));
+  });
+
+  it("directs incomplete PPF history to Holdings without listing every month", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onOpenHoldings = jest.fn();
+    store.getState().addPpfAccount({
+      balanceAsOf: "2026-09-10",
+      confirmedBalance: 720000,
+      createdAt: "2026-09-10T00:00:00Z",
+      id: "ppf-only",
+      nickname: "Primary PPF",
+      opening: { kind: "financialYear", financialYearStart: 2025 },
+      provider: "HDFC",
+      status: "active",
+    });
+    const screen = render(
+      <ProgressScreen
+        now={new Date("2026-09-11T12:00:00Z")}
+        onOpenHoldings={onOpenHoldings}
+        store={store}
+      />,
+    );
+
+    expect(await screen.findByText("Earlier PPF balances are missing")).toBeTruthy();
+    expect(screen.getByText(/for 17 months/u)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    expect(screen.queryByText(/^2025-04:/u)).toBeNull();
+    fireEvent.press(screen.getByLabelText("Open Holdings"));
+    expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   });
 
   it("labels provisional snapshot prices as estimates", async () => {
@@ -420,7 +496,7 @@ describe("ProgressScreen", () => {
     );
 
     expect(queryByText(/Estimated prices remain/u)).toBeNull();
-    fireEvent.press(getByLabelText("Snapshot status and review"));
+    fireEvent.press(getByLabelText("Snapshot status details"));
     expect(
       await findByText(
         "Estimated prices remain for May 2026. Review if you have better month-end values.",
@@ -454,7 +530,7 @@ describe("ProgressScreen", () => {
 
     const { findByText, getByLabelText } = render(<ProgressScreen store={store} />);
 
-    fireEvent.press(getByLabelText("Snapshot status and review"));
+    fireEvent.press(getByLabelText("Snapshot status details"));
     expect(await findByText("Month-end prices confirmed.")).toBeTruthy();
   });
 
@@ -500,7 +576,7 @@ describe("ProgressScreen", () => {
     );
 
     expect(queryByText(/Estimated prices remain/u)).toBeNull();
-    fireEvent.press(getByLabelText("Snapshot status and review"));
+    fireEvent.press(getByLabelText("Snapshot status details"));
     expect(
       await findByText(
         "Estimated prices remain for April 2026. Review if you have better month-end values.",
@@ -509,14 +585,25 @@ describe("ProgressScreen", () => {
     expect(queryByText("Month-end prices confirmed.")).toBeNull();
   });
 
-  it("opens the dedicated snapshot review flow", () => {
+  it("opens the dedicated snapshot review flow", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewSnapshot = jest.fn();
-    const { getByLabelText, queryByTestId } = render(
-      <ProgressScreen onReviewSnapshot={onReviewSnapshot} store={store} />,
+    seedHoldingAndCash(store);
+    store.getState().addMonthlySnapshot({
+      ...maySnapshot,
+      id: "snapshot-2026-07",
+      month: "2026-07",
+    });
+    const { findByText, getByLabelText, queryByTestId } = render(
+      <ProgressScreen
+        now={new Date("2026-08-02T10:00:00.000Z")}
+        onReviewSnapshot={onReviewSnapshot}
+        store={store}
+      />,
     );
 
-    fireEvent.press(getByLabelText("Snapshot status and review"));
+    expect(await findByText("Monthly history is up to date")).toBeTruthy();
+    fireEvent.press(getByLabelText("Snapshot status details"));
     fireEvent.press(getByLabelText("Review month-end snapshot"));
 
     expect(onReviewSnapshot).toHaveBeenCalledTimes(1);
