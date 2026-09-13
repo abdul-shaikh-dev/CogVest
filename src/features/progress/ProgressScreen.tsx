@@ -47,7 +47,9 @@ import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgres
 type ProgressScreenProps = {
   historicalPriceFetcher?: typeof resolveHistoricalPrice;
   now?: Date;
+  onOpenHoldings?: () => void;
   onReviewSnapshot?: () => void;
+  onSetUpPortfolio?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -920,6 +922,62 @@ function ChartCardHeader({ title, subtitle }: { title: string; subtitle: string 
   );
 }
 
+const snapshotStatusTitles: Record<
+  ProgressSnapshotAutomationStatus["kind"],
+  string
+> = {
+  checking: "Checking monthly history",
+  complete: "Monthly history is up to date",
+  empty: "No portfolio history yet",
+  estimated: "Some months use estimates",
+  generating: "Building monthly history",
+  "incomplete-ppf": "Earlier PPF balances are missing",
+  "missing-price": "Historical prices are unavailable",
+  "records-incomplete": "Portfolio history needs attention",
+  "reconstructed-history": "Market and cash history available",
+  "waiting-for-first-month": "Waiting for the first month-end",
+};
+
+function snapshotStatusMessage(status: ProgressSnapshotAutomationStatus) {
+  const availableThroughMonth = status.availableThroughMonth
+    ? formatMonth(status.availableThroughMonth)
+    : null;
+
+  if (status.progress) {
+    const checkedLabel = status.progress.totalCount === 1 ? "month" : "months";
+    const latestCopy = availableThroughMonth
+      ? ` Latest stored: ${availableThroughMonth}.`
+      : " Completed months will appear as they are saved.";
+
+    return `${status.progress.checkedCount} of ${status.progress.totalCount} ${checkedLabel} checked. Checking ${formatMonth(status.progress.currentMonth)}.${latestCopy} Keep CogVest open to continue.`;
+  }
+
+  if (status.kind === "reconstructed-history") {
+    return `Market and cash history is available${availableThroughMonth ? ` through ${availableThroughMonth}` : ""}. Full portfolio snapshots need earlier confirmed PPF balances.`;
+  }
+
+  if (status.kind === "incomplete-ppf") {
+    const pendingCopy = status.pendingMonths.length > 0
+      ? ` for ${status.pendingMonths.length} ${status.pendingMonths.length === 1 ? "month" : "months"}`
+      : "";
+    return `Full portfolio history cannot be completed without earlier confirmed PPF balances${pendingCopy}.`;
+  }
+
+  if (status.kind === "missing-price") {
+    return `${status.message}${availableThroughMonth ? ` Latest full snapshot: ${availableThroughMonth}.` : ""} Try again when price data is available.`;
+  }
+
+  if (status.kind === "records-incomplete") {
+    return `${status.message}${availableThroughMonth ? ` Latest full snapshot: ${availableThroughMonth}.` : ""} Check the affected holdings before trying again.`;
+  }
+
+  if (status.kind === "complete" && availableThroughMonth) {
+    return `${status.message} Latest full snapshot: ${availableThroughMonth}.`;
+  }
+
+  return status.message;
+}
+
 function ProgressTrendCards({
   assetChartCustomRange,
   assetChartData,
@@ -1072,10 +1130,14 @@ function ProgressTrendCards({
 }
 
 function SnapshotStatusCard({
+  onOpenHoldings,
   onReview,
+  onRetry,
   status,
 }: {
+  onOpenHoldings: () => void;
   onReview: () => void;
+  onRetry: () => void;
   status: ProgressSnapshotAutomationStatus;
 }) {
   const [open, setOpen] = useState(false);
@@ -1087,19 +1149,47 @@ function SnapshotStatusCard({
   const provisionalMonthLabels = status.provisionalMonths.map(formatMonth);
   const latestProvisionalMonth =
     provisionalMonthLabels[provisionalMonthLabels.length - 1];
-  const latestStoredMonth = status.snapshot?.month
-    ? formatMonth(status.snapshot.month)
-    : null;
-  const statusTitle = status.progress
-    ? "Building monthly history"
-    : "Month-end snapshot";
-  const statusMessage = status.progress
-    ? `${status.progress.checkedCount} of ${status.progress.totalCount} ${status.progress.totalCount === 1 ? "month" : "months"} checked. Checking ${formatMonth(status.progress.currentMonth)}.${
-        latestStoredMonth
-          ? ` Latest stored: ${latestStoredMonth}.`
-          : " Completed months will appear as they are saved."
-      } Keep CogVest open to continue.`
-    : status.message;
+  const statusTitle = snapshotStatusTitles[status.kind];
+  const statusMessage = snapshotStatusMessage(status);
+  let action: {
+    accessibilityLabel: string;
+    label: string;
+    onPress: () => void;
+  } | null = null;
+
+  if (status.kind === "missing-price") {
+    action = {
+      accessibilityLabel: "Retry monthly history",
+      label: "Try again",
+      onPress: onRetry,
+    };
+  } else if (
+    status.kind === "incomplete-ppf" ||
+    status.kind === "reconstructed-history" ||
+    status.kind === "records-incomplete"
+  ) {
+    action = {
+      accessibilityLabel: "Open Holdings",
+      label: "Open Holdings",
+      onPress: onOpenHoldings,
+    };
+  } else if (status.kind === "complete" || status.kind === "estimated") {
+    action = {
+      accessibilityLabel:
+        status.kind === "estimated"
+          ? "Review estimated month-end values"
+          : "Review month-end snapshot",
+      label: status.kind === "estimated" ? "Review values" : "Review",
+      onPress: onReview,
+    };
+  }
+  const visibleWarnings = status.kind === "records-incomplete"
+    ? status.warnings.slice(0, 3)
+    : status.kind === "missing-price" ||
+        status.kind === "incomplete-ppf" ||
+        status.kind === "reconstructed-history"
+      ? []
+      : status.warnings;
   const provisionalMonthCopy = provisionalMonthLabels.length
     ? provisionalMonthLabels.length > 2
       ? `Estimated prices remain for ${provisionalMonthLabels.length} months, latest ${latestProvisionalMonth}. Review if you have better month-end values.`
@@ -1108,7 +1198,7 @@ function SnapshotStatusCard({
 
   return (
     <>
-      <Pressable accessibilityRole="button" accessibilityLabel="Snapshot status and review" onPress={() => setOpen(true)} style={styles.snapshotStatusCard} testID="month-end-snapshot-status-card">
+      <Pressable accessibilityRole="button" accessibilityLabel="Snapshot status details" onPress={() => setOpen(true)} style={styles.snapshotStatusCard} testID="month-end-snapshot-status-card">
         <View style={styles.snapshotStatusHeader}>
           <View style={styles.snapshotCopy}>
             <AppText weight="bold">{statusTitle}</AppText>
@@ -1133,21 +1223,26 @@ function SnapshotStatusCard({
             {statusMessage}
           </AppText>
         </View>
-        {status.progress ? null : (
+        {action ? (
           <AppButton
-            accessibilityLabel="Review month-end snapshot"
-            onPress={() => { setOpen(false); onReview(); }}
+            accessibilityLabel={action.accessibilityLabel}
+            onPress={() => { setOpen(false); action.onPress(); }}
             style={styles.snapshotReviewAction}
-            title="Review"
+            title={action.label}
             variant="secondary"
           />
-        )}
+        ) : null}
       </View>
-      {status.warnings.map((warning) => (
+      {visibleWarnings.map((warning) => (
         <AppText color="secondary" key={warning} variant="caption">
           {warning}
         </AppText>
       ))}
+      {status.kind === "records-incomplete" && status.warnings.length > visibleWarnings.length ? (
+        <AppText color="secondary" variant="caption">
+          {status.warnings.length - visibleWarnings.length} more affected months.
+        </AppText>
+      ) : null}
       {provisionalMonthCopy ? (
         <AppText color="secondary" variant="caption">
           {provisionalMonthCopy}
@@ -1175,7 +1270,9 @@ function SnapshotStatusCard({
 export function ProgressScreen({
   historicalPriceFetcher,
   now,
+  onOpenHoldings,
   onReviewSnapshot,
+  onSetUpPortfolio,
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
   const progress = useProgress({ historicalPriceFetcher, now, store });
@@ -1196,6 +1293,10 @@ export function ProgressScreen({
 
   function reviewSnapshot() {
     onReviewSnapshot?.();
+  }
+
+  function retrySnapshotAutomation() {
+    void progress.ensureMonthEndSnapshot();
   }
 
   return (
@@ -1237,7 +1338,9 @@ export function ProgressScreen({
             </View>
 
             <SnapshotStatusCard
+              onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
+              onRetry={retrySnapshotAutomation}
               status={progress.snapshotAutomationStatus}
             />
 
@@ -1302,7 +1405,9 @@ export function ProgressScreen({
             />
 
             <SnapshotStatusCard
+              onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
+              onRetry={retrySnapshotAutomation}
               status={progress.snapshotAutomationStatus}
             />
 
@@ -1376,16 +1481,13 @@ export function ProgressScreen({
             </PremiumCard>
           </>
         ) : (
-          <>
-            <EmptyState
-              title="No monthly snapshots yet"
-              message="Snapshots are created automatically once your portfolio has data. Review a snapshot only when a correction is needed."
-            />
-            <SnapshotStatusCard
-              onReview={reviewSnapshot}
-              status={progress.snapshotAutomationStatus}
-            />
-          </>
+          <EmptyState
+            actionLabel="Set up portfolio"
+            actionTestID="progress-empty-setup"
+            title="No portfolio history yet"
+            message="Add or import holdings, PPF balances, or cash activity. CogVest will create monthly history automatically after that."
+            onAction={() => onSetUpPortfolio?.()}
+          />
         )}
 
       </View>

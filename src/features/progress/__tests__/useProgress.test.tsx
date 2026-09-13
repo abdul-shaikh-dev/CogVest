@@ -222,9 +222,61 @@ describe("useProgress", () => {
     expect(result.current.snapshotAutomationStatus.warnings).toHaveLength(1);
     expect(result.current.snapshotAutomationStatus.warnings[0]).toContain("Earlier PPF balances are missing");
     expect(result.current.snapshotAutomationStatus.message).toContain("earlier PPF balances");
+    expect(result.current.snapshotAutomationStatus).toMatchObject({
+      availableThroughMonth: "2026-08",
+      kind: "reconstructed-history",
+    });
+    expect(result.current.snapshotAutomationStatus.pendingMonths.length).toBeGreaterThan(0);
     act(() => { result.current.setPortfolioChartRange("Custom");
       result.current.setPortfolioChartCustomRange({ startMonth: "2025-01", endMonth: "2025-06" }); });
     expect(result.current.portfolioChartData.monthLabels).toHaveLength(6);
+  });
+
+  it("identifies PPF-only history that needs an earlier confirmed balance", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount({
+      balanceAsOf: "2026-09-10",
+      confirmedBalance: 720000,
+      createdAt: "2026-09-10T00:00:00Z",
+      id: "ppf-only",
+      nickname: "Primary PPF",
+      opening: { kind: "financialYear", financialYearStart: 2025 },
+      provider: "HDFC",
+      status: "active",
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        now: new Date("2026-09-11T12:00:00Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+
+    expect(result.current.ppfExcludedHistory).toBeNull();
+    expect(result.current.snapshotAutomationStatus.kind).toBe("incomplete-ppf");
+    expect(result.current.snapshotAutomationStatus.availableThroughMonth).toBeNull();
+    expect(result.current.snapshotAutomationStatus.pendingMonths).toEqual([
+      "2025-04",
+      "2025-05",
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+    ]);
   });
 
   it("shares typed-income investment metrics with Cash without double-counting a funded buy", () => {
@@ -467,6 +519,12 @@ describe("useProgress", () => {
       status: "insufficient-data",
       lastCompletedMonth: "2026-07",
     });
+    expect(result.current.snapshotAutomationStatus).toMatchObject({
+      availableThroughMonth: null,
+      kind: "missing-price",
+      message: "1 month is waiting for a historical price.",
+      pendingMonths: ["2026-07"],
+    });
   });
 
   it("refreshes automatic income after a completed month is backfilled", async () => {
@@ -556,6 +614,8 @@ describe("useProgress", () => {
       "2026-04",
     ]);
     expect(result.current.snapshotAutomationStatus).toMatchObject({
+      availableThroughMonth: "2026-04",
+      kind: "complete",
       message: "4 missing month snapshots generated automatically.",
       status: "created",
       targetMonth: "2026-04",

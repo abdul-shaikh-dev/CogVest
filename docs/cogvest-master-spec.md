@@ -458,8 +458,13 @@ each month opens a dedicated breakdown, with Back restoring the history
 position. A multi-month automatic backfill reports the month being checked,
 checked/total progress, and the latest stored month while partial history grows;
 it asks the user to keep CogVest open and does not offer correction until the
-run finishes. Detailed interaction and accessibility rules live in the screen
-baseline (#275/#277/#351).
+run finishes. Snapshot status distinguishes an empty portfolio, first-month
+waiting, active generation, complete history, estimated prices, unavailable
+historical prices, incomplete PPF history, other incomplete records, and
+market-and-cash history reconstructed without PPF. Empty portfolios lead to
+setup, provider price failures offer retry rather than correction, and PPF or
+record gaps lead to Holdings. Detailed interaction and accessibility rules live
+in the screen baseline (#275/#277/#351).
 
 Cash Ledger owns deployable capital and cash movement.
 
