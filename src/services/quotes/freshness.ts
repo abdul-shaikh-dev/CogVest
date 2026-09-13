@@ -1,6 +1,7 @@
 import type { Quote, QuoteCache } from "@/src/types";
 
 export const QUOTE_FRESHNESS_THRESHOLD_MS = 15 * 60 * 1000;
+export const AMFI_QUOTE_FRESHNESS_THRESHOLD_MS = 4 * 24 * 60 * 60 * 1000;
 
 export type QuoteFreshness = "current" | "stale" | "manual" | "missing";
 
@@ -42,7 +43,11 @@ export function classifyQuoteFreshness(
     return "missing";
   }
 
-  return age <= QUOTE_FRESHNESS_THRESHOLD_MS ? "current" : "stale";
+  const threshold = quote.source === "amfi"
+    ? AMFI_QUOTE_FRESHNESS_THRESHOLD_MS
+    : QUOTE_FRESHNESS_THRESHOLD_MS;
+
+  return age <= threshold ? "current" : "stale";
 }
 
 export function summarizeQuoteFreshness(

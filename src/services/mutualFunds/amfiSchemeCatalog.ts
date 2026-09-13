@@ -3,15 +3,18 @@ import {
   inferMutualFundAllocationFromName,
   type MutualFundAllocation,
 } from "@/src/domain/mutualFundClassification";
-import type { QuoteFetcher } from "@/src/services/quotes";
+import type { QuoteFetcher } from "@/src/services/quotes/types";
 import { getDefaultFetcher } from "@/src/services/quotes/utils";
 
 export const amfiNavCatalogUrl =
   "https://portal.amfiindia.com/spages/NAVAll.txt";
+export const AMFI_CATALOG_CACHE_MS = 15 * 60 * 1000;
 
 export type AmfiSchemeClassification = {
   allocation?: MutualFundAllocation;
+  asOf?: string;
   category: string;
+  nav?: number;
   schemeName: string;
 };
 
@@ -21,6 +24,37 @@ export type AmfiSchemeLookupResult = {
 };
 
 const categoryHeading = /^(?:Open Ended|Close Ended|Closed Ended|Interval) Schemes?\((.+)\)$/iu;
+const amfiDate = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/u;
+const monthIndexes: Record<string, number> = {
+  APR: 3,
+  AUG: 7,
+  DEC: 11,
+  FEB: 1,
+  JAN: 0,
+  JUL: 6,
+  JUN: 5,
+  MAR: 2,
+  MAY: 4,
+  NOV: 10,
+  OCT: 9,
+  SEP: 8,
+};
+
+export function parseAmfiNavDate(value: string) {
+  const match = value.trim().match(amfiDate);
+  if (!match) return undefined;
+  const day = Number(match[1]);
+  const month = monthIndexes[match[2].toUpperCase()];
+  const year = Number(match[3]);
+  if (month === undefined) return undefined;
+  const date = new Date(Date.UTC(year, month, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month ||
+    date.getUTCDate() !== day
+  ) return undefined;
+  return date.toISOString();
+}
 
 export function allocationFromAmfiEvidence(
   category: string,
@@ -47,16 +81,27 @@ export function parseAmfiSchemeCatalog(text: string) {
     if (!category || !/^\d+;/u.test(line)) continue;
 
     const fields = line.split(";");
-    if (fields.length < 4) continue;
+    if (fields.length < 8) continue;
     const schemeName = fields[3].trim();
     const allocation = allocationFromAmfiEvidence(category, schemeName);
+    const parsedNav = Number(fields[6]);
+    const parsedAsOf = parseAmfiNavDate(fields[7]);
+    const validQuote = Number.isFinite(parsedNav) && parsedNav > 0 && parsedAsOf;
+    const asOf = validQuote ? parsedAsOf : undefined;
+    const nav = validQuote
+      ? parsedNav
+      : undefined;
     for (const rawIsin of [fields[1], fields[2]]) {
       const isin = normalizeIsin(rawIsin);
       if (!isin) continue;
       const prior = classifications[isin];
+      const quoteConflict = Boolean(
+        prior?.nav !== undefined &&
+        (prior.nav !== nav || prior.asOf !== asOf),
+      );
       classifications[isin] = prior && prior.allocation !== allocation
-        ? { category: `${prior.category}; ${category}`, schemeName }
-        : { ...(allocation ? { allocation } : {}), category, schemeName };
+        ? { asOf: quoteConflict ? undefined : asOf, category: `${prior.category}; ${category}`, nav: quoteConflict ? undefined : nav, schemeName }
+        : { ...(allocation ? { allocation } : {}), asOf, category, nav, schemeName };
     }
   }
 
@@ -64,10 +109,13 @@ export function parseAmfiSchemeCatalog(text: string) {
 }
 
 let cachedCatalog: Record<string, AmfiSchemeClassification> | undefined;
+let cachedAt = 0;
 let catalogRequest: Promise<Record<string, AmfiSchemeClassification>> | undefined;
 
 async function loadCatalog(fetcher: QuoteFetcher) {
-  if (cachedCatalog) return cachedCatalog;
+  if (cachedCatalog && Date.now() - cachedAt <= AMFI_CATALOG_CACHE_MS) {
+    return cachedCatalog;
+  }
   if (!catalogRequest) {
     catalogRequest = (async () => {
       const controller = new AbortController();
@@ -84,6 +132,7 @@ async function loadCatalog(fetcher: QuoteFetcher) {
           throw new Error("AMFI catalogue contained no scheme identities.");
         }
         cachedCatalog = parsed;
+        cachedAt = Date.now();
         return parsed;
       } finally {
         clearTimeout(timeout);
@@ -122,5 +171,6 @@ export async function lookupAmfiSchemeClassifications({
 
 export function clearAmfiSchemeCatalogCacheForTests() {
   cachedCatalog = undefined;
+  cachedAt = 0;
   catalogRequest = undefined;
 }

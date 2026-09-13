@@ -1,4 +1,5 @@
 import {
+  AMFI_QUOTE_FRESHNESS_THRESHOLD_MS,
   classifyQuoteFreshness,
   QUOTE_FRESHNESS_THRESHOLD_MS,
   summarizeQuoteFreshness,
@@ -45,6 +46,22 @@ describe("quote freshness", () => {
         now,
       ),
     ).toBe("manual");
+  });
+
+  it("uses daily freshness semantics for AMFI NAVs", () => {
+    const boundary = new Date(
+      now.getTime() - AMFI_QUOTE_FRESHNESS_THRESHOLD_MS,
+    ).toISOString();
+    const older = new Date(
+      now.getTime() - AMFI_QUOTE_FRESHNESS_THRESHOLD_MS - 1,
+    ).toISOString();
+
+    expect(classifyQuoteFreshness(quote("current", "amfi", boundary), now)).toBe(
+      "current",
+    );
+    expect(classifyQuoteFreshness(quote("stale", "amfi", older), now)).toBe(
+      "stale",
+    );
   });
 
   it("treats absent or invalid live quotes as missing", () => {

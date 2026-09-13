@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { fetchCoinGeckoQuote } from "./coinGecko";
 import { fetchYahooQuote } from "./yahooFinance";
+import { fetchAmfiQuote, isMutualFundAsset } from "../mutualFunds/amfiQuote";
 
 export const QUOTE_REFRESH_TIMEOUT_MS = 10_000;
 export const QUOTE_REFRESH_MAX_CONCURRENCY = 4;
@@ -31,7 +32,10 @@ export async function resolveQuote({
     };
   }
 
-  if (asset.assetClass === "debt") {
+  let result: QuoteResult;
+  if (isMutualFundAsset(asset)) {
+    result = await fetchAmfiQuote({ asset, fetcher, now, signal });
+  } else if (asset.assetClass === "debt") {
     if (cachedQuote) {
       return {
         ok: true,
@@ -43,12 +47,11 @@ export async function resolveQuote({
       error: "Debt assets require a manual current price.",
       ok: false,
     };
-  }
-
-  const result =
-    asset.assetClass === "crypto"
+  } else {
+    result = asset.assetClass === "crypto"
       ? await fetchCoinGeckoQuote({ asset, fetcher, now, signal })
       : await fetchYahooQuote({ asset, fetcher, now, signal });
+  }
 
   if (result.ok || !cachedQuote) {
     return result;
@@ -121,7 +124,9 @@ export async function refreshQuotes({
   signal,
 }: RefreshQuotesInput): Promise<QuoteRefreshResult> {
   const providerAssets = assets.filter(
-    (asset) => asset.assetClass !== "cash" && asset.assetClass !== "debt",
+    (asset) =>
+      isMutualFundAsset(asset) ||
+      (asset.assetClass !== "cash" && asset.assetClass !== "debt"),
   );
   const attempts: Array<RefreshAttempt | undefined> = new Array(
     providerAssets.length,

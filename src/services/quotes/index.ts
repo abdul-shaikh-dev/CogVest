@@ -24,6 +24,7 @@ export {
   resolveHistoricalPrice,
 } from "./historicalPrices";
 export {
+  AMFI_QUOTE_FRESHNESS_THRESHOLD_MS,
   classifyQuoteFreshness,
   QUOTE_FRESHNESS_THRESHOLD_MS,
   summarizeQuoteFreshness,
@@ -57,3 +58,4 @@ export type {
 } from "./freshness";
 export { createManualQuote } from "./utils";
 export { buildYahooChartUrl, fetchYahooQuote } from "./yahooFinance";
+export { fetchAmfiQuote, isMutualFundAsset } from "../mutualFunds/amfiQuote";

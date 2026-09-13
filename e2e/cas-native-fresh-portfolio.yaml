@@ -30,7 +30,8 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "No matching listing was found"
 - tapOn:
     id: transaction-import-show-matched
-- assertVisible: "INF000000001.*From statement"
+- assertVisible:
+    id: transaction-import-asset-isin:INF209K01YY7
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import
@@ -42,6 +43,12 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: holdings-screen
     timeout: 15000
+- tapOn:
+    id: holdings-refresh-pending-prices
+- extendedWaitUntil:
+    notVisible:
+      id: holdings-refresh-pending-prices
+    timeout: 20000
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible:
     id: e2e-evidence-screen
@@ -53,11 +60,20 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Duplicate identity count: 0"
 - scrollUntilVisible:
     element:
-      id: e2e-asset-inf000000001-classification
+      id: e2e-asset-inf209k01yy7-classification
     direction: DOWN
 - assertVisible: "Classification: stock.*mutualFund.*other"
 - assertVisible: "Market: INR.*unset.*unset"
-- assertVisible: "Values: invested .*1,200.00.*quantity 12"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-inf209k01yy7-quote
+    direction: DOWN
+- assertVisible: "Quote: amfi.*[0-9]"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-inf209k01yy7-values
+    direction: DOWN
+- assertVisible: "Values: invested .*1,200.00.*current.*quantity 12"
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -67,6 +83,11 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 1"
 - assertVisible: "Trade count: 2"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-inf209k01yy7-quote
+    direction: DOWN
+- assertVisible: "Quote: amfi.*[0-9]"
 - openLink: "cogvest:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
