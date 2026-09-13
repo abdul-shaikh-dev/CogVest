@@ -455,8 +455,11 @@ Monthly Progress owns statement-style progress: `Portfolio Growth`,
 `Asset Momentum`, a dated monthly answer, and compact snapshot status with
 optional correction. `Monthly History` opens a newest-first yearly overview;
 each month opens a dedicated breakdown, with Back restoring the history
-position. Detailed interaction and accessibility rules live in the screen
-baseline (#275/#277).
+position. A multi-month automatic backfill reports the month being checked,
+checked/total progress, and the latest stored month while partial history grows;
+it asks the user to keep CogVest open and does not offer correction until the
+run finishes. Detailed interaction and accessibility rules live in the screen
+baseline (#275/#277/#351).
 
 Cash Ledger owns deployable capital and cash movement.
 

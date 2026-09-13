@@ -71,6 +71,7 @@ export type ProgressFormErrors = Partial<Record<keyof ProgressFormValues, string
 
 export type ProgressSnapshotAutomationStatus = {
   message: string;
+  progress: SnapshotAutomationProgress | null;
   provisionalMonths: string[];
   snapshot: MonthlySnapshot | null;
   status: GeneratedSnapshotStatus | "idle";
@@ -96,6 +97,47 @@ const inFlightSnapshotAutomationRuns = new WeakMap<
   Promise<MonthEndSnapshotAutomationRunResult>
 >();
 const snapshotAutomationEpochs = new WeakMap<StoreApi<PortfolioStoreState>, number>();
+
+export type SnapshotAutomationProgress = {
+  checkedCount: number;
+  currentMonth: string;
+  totalCount: number;
+};
+
+const snapshotAutomationProgress = new WeakMap<
+  StoreApi<PortfolioStoreState>,
+  SnapshotAutomationProgress
+>();
+const snapshotAutomationProgressListeners = new WeakMap<
+  StoreApi<PortfolioStoreState>,
+  Set<() => void>
+>();
+
+function publishSnapshotAutomationProgress(
+  store: StoreApi<PortfolioStoreState>,
+  progress: SnapshotAutomationProgress | null,
+) {
+  if (progress) {
+    snapshotAutomationProgress.set(store, progress);
+  } else {
+    snapshotAutomationProgress.delete(store);
+  }
+  snapshotAutomationProgressListeners.get(store)?.forEach((listener) => listener());
+}
+
+function subscribeToSnapshotAutomationProgress(
+  store: StoreApi<PortfolioStoreState>,
+  listener: () => void,
+) {
+  const listeners = snapshotAutomationProgressListeners.get(store) ?? new Set();
+  listeners.add(listener);
+  snapshotAutomationProgressListeners.set(store, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) snapshotAutomationProgressListeners.delete(store);
+  };
+}
 
 type UseProgressInput = {
   historicalPriceFetcher?: typeof resolveHistoricalPrice;
@@ -420,6 +462,11 @@ export function useProgress({
   store = getPortfolioStore(),
 }: UseProgressInput = {}) {
   const snapshot = usePortfolioSnapshot(store);
+  const activeAutomationProgress = useSyncExternalStore(
+    (listener) => subscribeToSnapshotAutomationProgress(store, listener),
+    () => snapshotAutomationProgress.get(store) ?? null,
+    () => null,
+  );
   const currentCalendarMonth = formatLocalCalendarDate(now).slice(0, 7);
   // Keep chart-only partial history out of persisted full-portfolio snapshots.
   // Memoize the multi-month reconstruction, not cheap presentation calculations.
@@ -443,6 +490,7 @@ export function useProgress({
   const [snapshotAutomationStatus, setSnapshotAutomationStatus] =
     useState<ProgressSnapshotAutomationStatus>(() => ({
       message: "Month-end snapshot automation has not run yet.",
+      progress: null,
       provisionalMonths: [],
       snapshot: null,
       status: "idle",
@@ -630,7 +678,18 @@ export function useProgress({
     const incomeRefreshedSnapshots: MonthlySnapshot[] = [];
     const refreshedSnapshots: MonthlySnapshot[] = [];
 
-    for (const targetMonth of targetMonths) {
+    publishSnapshotAutomationProgress(store, {
+      checkedCount: 0,
+      currentMonth: targetMonths[0] ?? "",
+      totalCount: targetMonths.length,
+    });
+
+    for (const [targetIndex, targetMonth] of targetMonths.entries()) {
+      publishSnapshotAutomationProgress(store, {
+        checkedCount: targetIndex,
+        currentMonth: targetMonth,
+        totalCount: targetMonths.length,
+      });
       const state = store.getState();
       const existingSnapshot = state.monthlySnapshots.find(
         (snapshot) => snapshot.month === targetMonth,
@@ -656,7 +715,10 @@ export function useProgress({
           targetMonth,
         });
 
-        if (store.getState().restoreEpoch !== restoreEpoch) return cancelledResult;
+        if (store.getState().restoreEpoch !== restoreEpoch) {
+          publishSnapshotAutomationProgress(store, null);
+          return cancelledResult;
+        }
 
         if (historicalPriceResult.ok) {
           store.getState().upsertHistoricalQuote(historicalPriceResult.quote);
@@ -723,6 +785,12 @@ export function useProgress({
           createdSnapshots.push(result.snapshot);
         }
       }
+
+      publishSnapshotAutomationProgress(store, {
+        checkedCount: targetIndex + 1,
+        currentMonth: targetMonth,
+        totalCount: targetMonths.length,
+      });
     }
 
     const completedState = store.getState();
@@ -842,6 +910,7 @@ export function useProgress({
 
           setSnapshotAutomationStatus({
             message: automationMessage(result),
+            progress: null,
             provisionalMonths: result.provisionalMonths,
             snapshot: result.snapshot,
             status: result.status,
@@ -864,8 +933,17 @@ export function useProgress({
           .catch(() => undefined);
       }
 
-      const result = await run;
-      if (store.getState().restoreEpoch !== restoreEpoch) return result;
+      let result: MonthEndSnapshotAutomationRunResult;
+      try {
+        result = await run;
+      } catch (error) {
+        publishSnapshotAutomationProgress(store, null);
+        throw error;
+      }
+      if (store.getState().restoreEpoch !== restoreEpoch) {
+        publishSnapshotAutomationProgress(store, null);
+        return result;
+      }
 
       if (result.lastCompletedMonth !== requestedLastCompletedMonth) {
         if (inFlightSnapshotAutomationRuns.get(store) === run) {
@@ -876,12 +954,14 @@ export function useProgress({
 
       setSnapshotAutomationStatus({
         message: automationMessage(result),
+        progress: null,
         provisionalMonths: result.provisionalMonths,
         snapshot: result.snapshot,
         status: result.status,
         targetMonth: result.lastCompletedMonth,
         warnings: result.warnings,
       });
+      publishSnapshotAutomationProgress(store, null);
 
       return result;
     }
@@ -918,7 +998,17 @@ export function useProgress({
     setField,
     setPortfolioChartRange,
     setPortfolioChartCustomRange,
-    snapshotAutomationStatus,
+    snapshotAutomationStatus: activeAutomationProgress
+      ? {
+          message: "Building monthly history.",
+          progress: activeAutomationProgress,
+          provisionalMonths: [],
+          snapshot: monthlySummaries[0]?.snapshot ?? null,
+          status: "idle" as const,
+          targetMonth: activeAutomationProgress.currentMonth,
+          warnings: [],
+        }
+      : snapshotAutomationStatus,
     totalInvested,
   };
 }
