@@ -1,4 +1,5 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { ScrollView, TextInput } from "react-native";
 
 import { PpfAccountScreen } from "@/src/features/ppf";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -19,6 +20,48 @@ const account: PpfAccount = {
 };
 
 describe("PpfAccountScreen", () => {
+  it("reveals the first invalid field inline without clearing entered values", async () => {
+    const focus = jest.spyOn(TextInput.prototype, "focus");
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const screen = render(
+      <PpfAccountScreen
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
+    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+    fireEvent(screen.getByTestId("ppf-account-section"), "layout", {
+      nativeEvent: { layout: { y: 400 } },
+    });
+    fireEvent(screen.getByTestId("ppf-provider-field"), "layout", {
+      nativeEvent: { layout: { y: 160 } },
+    });
+    fireEvent.press(screen.getByTestId("review-ppf-account"));
+
+    expect(screen.getByText("Bank or Post Office is required.")).toBeTruthy();
+    expect(screen.getByText("Account suffix must contain the final 2 to 4 digits only.")).toBeTruthy();
+    expect(screen.queryByText("Provider is required.")).toBeNull();
+    expect(screen.getByTestId("ppf-suffix-input")).toHaveProp("value", "123456");
+    expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "250000");
+    expect(store.getState().ppfAccounts).toEqual([]);
+    await waitFor(() => expect(focus).toHaveBeenCalled());
+    expect(scrollTo).toHaveBeenCalledWith({ animated: true, y: 544 });
+
+    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    expect(screen.queryByText("Bank or Post Office is required.")).toBeNull();
+    expect(screen.getByTestId("ppf-suffix-input")).toHaveProp("value", "123456");
+    expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "250000");
+
+    focus.mockRestore();
+    scrollTo.mockRestore();
+  });
+
   it("reviews and saves a dedicated PPF account without market fields", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();

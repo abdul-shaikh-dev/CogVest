@@ -59,7 +59,7 @@ describe("PPF validation", () => {
       expect(result.errors).toEqual(
         expect.arrayContaining([
           "Nickname is required.",
-          "Provider is required.",
+          "Bank or Post Office is required.",
           "Account record time is invalid.",
           "Account suffix must contain the final 2 to 4 digits only.",
           "Confirmed balance must be zero or greater.",

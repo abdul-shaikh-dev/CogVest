@@ -51,7 +51,9 @@ export function validatePpfAccount(
       : account.opening.financialYearStart;
 
   if (account.nickname.trim().length === 0) errors.push("Nickname is required.");
-  if (account.provider.trim().length === 0) errors.push("Provider is required.");
+  if (account.provider.trim().length === 0) {
+    errors.push("Bank or Post Office is required.");
+  }
   if (!Number.isFinite(new Date(account.createdAt).getTime())) {
     errors.push("Account record time is invalid.");
   }

@@ -1,0 +1,25 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///ppf-account"
+- assertVisible:
+    id: "ppf-account-form-screen"
+- scrollUntilVisible:
+    element:
+      id: "ppf-balance-input"
+    direction: DOWN
+- tapOn:
+    id: "ppf-balance-input"
+- inputText: "250000"
+- scrollUntilVisible:
+    element:
+      id: "review-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "review-ppf-account"
+- assertVisible: "Bank or Post Office is required."
+- assertVisible:
+    id: "ppf-provider-input"

@@ -74,7 +74,8 @@ npm run maestro:test -- e2e/smoke-launch.yaml
 - `e2e/add-holding-asset-switch.yaml`: change assets mid-flow and prove stale
   quantity, cost, price, note, and conviction data do not leak.
 - `e2e/holdings.yaml`: create a position and verify Holdings.
-- `e2e/ppf-account.yaml`: create a confirmed PPF baseline and verify the
+- `e2e/ppf-account.yaml`: recover from inline Bank or Post Office validation,
+  create a confirmed PPF baseline, and verify the
   account in the dedicated Holdings section. Ledger date ordering and balance
   effects use deterministic Jest coverage so the baseline cannot be counted
   twice.

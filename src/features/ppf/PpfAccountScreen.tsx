@@ -1,5 +1,14 @@
-import { useState, useSyncExternalStore } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useRef, useState, useSyncExternalStore } from "react";
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -53,6 +62,35 @@ const statusOptions: Array<{ label: string; value: PpfAccountStatus }> = [
   { label: "Extended with contributions", value: "extendedWithContributions" },
   { label: "Continued without contributions", value: "continuedWithoutContributions" },
 ];
+
+type PpfAccountField =
+  | "nickname"
+  | "provider"
+  | "suffix"
+  | "openedOn"
+  | "openingFinancialYear"
+  | "extensionYear"
+  | "balance"
+  | "balanceAsOf"
+  | "fyContributions";
+
+type PpfFormSection = "account" | "opening" | "baseline";
+
+const ppfAccountErrorFields: Record<string, PpfAccountField> = {
+  "Nickname is required.": "nickname",
+  "Bank or Post Office is required.": "provider",
+  "Account suffix must contain the final 2 to 4 digits only.": "suffix",
+  "Confirmed balance must be zero or greater.": "balance",
+  "Balance date must be a valid non-future date.": "balanceAsOf",
+  "Opening date must be a valid non-future date.": "openedOn",
+  "Opening financial year is invalid.": "openingFinancialYear",
+  "Balance date cannot precede the opening financial year.": "balanceAsOf",
+  "Balance date cannot precede the exact opening date.": "balanceAsOf",
+  "Extended accounts require a confirmed extension start year.": "extensionYear",
+  "Extension must start at maturity or a later five-year block.": "extensionYear",
+  "Active accounts cannot have an extension start year.": "extensionYear",
+  "Baseline financial-year contributions are invalid.": "fyContributions",
+};
 
 function statusLabel(status: PpfAccountStatus) {
   return statusOptions.find((option) => option.value === status)?.label ?? status;
@@ -399,6 +437,45 @@ function PpfAccountForm({
   );
   const [reviewAccount, setReviewAccount] = useState<PpfAccount>();
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<PpfAccountField, string>>>({});
+  const scrollRef = useRef<ScrollView>(null);
+  const inputRefs = useRef<Partial<Record<PpfAccountField, TextInput | null>>>({});
+  const controlRefs = useRef<Partial<Record<PpfAccountField, View | null>>>({});
+  const sectionY = useRef<Partial<Record<PpfFormSection, number>>>({});
+  const fieldLayout = useRef<Partial<Record<PpfAccountField, { section: PpfFormSection; y: number }>>>({});
+
+  function clearFieldError(field: PpfAccountField) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function recordFieldLayout(field: PpfAccountField, section: PpfFormSection, y: number) {
+    fieldLayout.current[field] = { section, y };
+  }
+
+  function revealField(field: PpfAccountField) {
+    requestAnimationFrame(() => {
+      const input = inputRefs.current[field];
+      if (input) {
+        input.focus();
+      } else {
+        const handle = findNodeHandle(controlRefs.current[field] ?? null);
+        if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+      }
+      const layout = fieldLayout.current[field];
+      const sectionOffset = layout ? sectionY.current[layout.section] : undefined;
+      if (layout && sectionOffset !== undefined) {
+        scrollRef.current?.scrollTo({
+          animated: true,
+          y: Math.max(0, sectionOffset + layout.y - spacing.md),
+        });
+      }
+    });
+  }
 
   function buildAccount(): PpfAccount | null {
     const parsedBalance = Number(balance);
@@ -435,7 +512,18 @@ function PpfAccountForm({
     };
     const validation = validatePpfAccount(candidate, now);
     if (!validation.isValid) {
-      setError(validation.errors[0] ?? "Review the account details.");
+      const nextFieldErrors: Partial<Record<PpfAccountField, string>> = {};
+      for (const message of validation.errors) {
+        const field = ppfAccountErrorFields[message];
+        if (field && !nextFieldErrors[field]) nextFieldErrors[field] = message;
+      }
+      const firstField = validation.errors
+        .map((message) => ppfAccountErrorFields[message])
+        .find((field): field is PpfAccountField => Boolean(field));
+      const globalError = validation.errors.find((message) => !ppfAccountErrorFields[message]);
+      setFieldErrors(nextFieldErrors);
+      setError(globalError ?? "");
+      if (firstField) revealField(firstField);
       return null;
     }
     return candidate;
@@ -489,8 +577,9 @@ function PpfAccountForm({
   }
 
   return (
-    <ScreenContainer scroll testID="ppf-account-form-screen">
-      <View style={styles.content}>
+    <KeyboardAvoidingView behavior="height" style={styles.flex}>
+      <ScreenContainer scroll scrollRef={scrollRef} testID="ppf-account-form-screen">
+        <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={onBack} />}
           subtitle="Confirmed balance • local only"
@@ -504,13 +593,83 @@ function PpfAccountForm({
             </AppText>
           </PremiumCard>
         ) : null}
-        <PremiumCard>
-          <SectionHeader title="Account" />
-          <FormTextField label="Account nickname" onChangeText={setNickname} testID="ppf-nickname-input" value={nickname} />
-          <FormTextField label="Bank or Post Office" onChangeText={setProvider} placeholder="India Post" testID="ppf-provider-input" value={provider} />
-          <FormTextField keyboardType="number-pad" label="Account suffix (optional)" onChangeText={setSuffix} placeholder="Last 2 to 4 digits" testID="ppf-suffix-input" value={suffix} />
-        </PremiumCard>
-        <PremiumCard>
+          <View
+            onLayout={(event) => {
+              sectionY.current.account = event.nativeEvent.layout.y;
+            }}
+            testID="ppf-account-section"
+          >
+            <PremiumCard>
+              <SectionHeader title="Account" />
+              <View
+                onLayout={(event) =>
+                  recordFieldLayout("nickname", "account", event.nativeEvent.layout.y)
+                }
+              >
+                <FormTextField
+                  error={fieldErrors.nickname}
+                  inputRef={(node) => {
+                    inputRefs.current.nickname = node;
+                  }}
+                  label="Account nickname"
+                  onChangeText={(value) => {
+                    setNickname(value);
+                    clearFieldError("nickname");
+                  }}
+                  testID="ppf-nickname-input"
+                  value={nickname}
+                />
+              </View>
+              <View
+                onLayout={(event) =>
+                  recordFieldLayout("provider", "account", event.nativeEvent.layout.y)
+                }
+                testID="ppf-provider-field"
+              >
+                <FormTextField
+                  error={fieldErrors.provider}
+                  inputRef={(node) => {
+                    inputRefs.current.provider = node;
+                  }}
+                  label="Bank or Post Office"
+                  onChangeText={(value) => {
+                    setProvider(value);
+                    clearFieldError("provider");
+                  }}
+                  placeholder="India Post"
+                  testID="ppf-provider-input"
+                  value={provider}
+                />
+              </View>
+              <View
+                onLayout={(event) =>
+                  recordFieldLayout("suffix", "account", event.nativeEvent.layout.y)
+                }
+              >
+                <FormTextField
+                  error={fieldErrors.suffix}
+                  inputRef={(node) => {
+                    inputRefs.current.suffix = node;
+                  }}
+                  keyboardType="number-pad"
+                  label="Account suffix (optional)"
+                  onChangeText={(value) => {
+                    setSuffix(value);
+                    clearFieldError("suffix");
+                  }}
+                  placeholder="Last 2 to 4 digits"
+                  testID="ppf-suffix-input"
+                  value={suffix}
+                />
+              </View>
+            </PremiumCard>
+          </View>
+          <View
+            onLayout={(event) => {
+              sectionY.current.opening = event.nativeEvent.layout.y;
+            }}
+          >
+            <PremiumCard>
           <SectionHeader title="Opening and status" />
           <SelectionField
             label="Opening information"
@@ -522,25 +681,122 @@ function PpfAccountForm({
             testIDPrefix="ppf-opening-mode"
             value={openingMode}
           />
-          {openingMode === "date" ? (
-            <DatePickerField label="Opening date" onChange={setOpenedOn} testID="ppf-opening-date" value={openedOn} />
-          ) : (
-            <FormTextField keyboardType="number-pad" label="Opening financial year" onChangeText={setOpeningFinancialYear} placeholder="2020" testID="ppf-opening-fy-input" value={openingFinancialYear} />
-          )}
+              {openingMode === "date" ? (
+                <View onLayout={(event) => recordFieldLayout("openedOn", "opening", event.nativeEvent.layout.y)}>
+                  <DatePickerField
+                    error={fieldErrors.openedOn}
+                    fieldRef={(node) => {
+                      controlRefs.current.openedOn = node;
+                    }}
+                    label="Opening date"
+                    onChange={(value) => {
+                      setOpenedOn(value);
+                      clearFieldError("openedOn");
+                    }}
+                    testID="ppf-opening-date"
+                    value={openedOn}
+                  />
+                </View>
+              ) : (
+                <View onLayout={(event) => recordFieldLayout("openingFinancialYear", "opening", event.nativeEvent.layout.y)}>
+                  <FormTextField
+                    error={fieldErrors.openingFinancialYear}
+                    inputRef={(node) => {
+                      inputRefs.current.openingFinancialYear = node;
+                    }}
+                    keyboardType="number-pad"
+                    label="Opening financial year"
+                    onChangeText={(value) => {
+                      setOpeningFinancialYear(value);
+                      clearFieldError("openingFinancialYear");
+                    }}
+                    placeholder="2020"
+                    testID="ppf-opening-fy-input"
+                    value={openingFinancialYear}
+                  />
+                </View>
+              )}
           <SelectionField label="Account status" onChange={setStatus} options={statusOptions} testIDPrefix="ppf-status" value={status} />
-          {status === "extendedWithContributions" ? (
-            <FormTextField keyboardType="number-pad" label="Extension start financial year" onChangeText={setExtensionYear} placeholder="2036" testID="ppf-extension-fy-input" value={extensionYear} />
-          ) : null}
-        </PremiumCard>
-        <PremiumCard>
-          <SectionHeader title="Confirmed baseline" />
-          <FormTextField keyboardType="decimal-pad" label="Confirmed balance (INR)" onChangeText={setBalance} testID="ppf-balance-input" value={balance} />
-          <DatePickerField label="Balance confirmed on" onChange={setBalanceAsOf} testID="ppf-balance-date" value={balanceAsOf} />
-          <FormTextField keyboardType="decimal-pad" label="Contributed this financial year (optional)" onChangeText={setFyContributions} testID="ppf-fy-contribution-input" value={fyContributions} />
+              {status === "extendedWithContributions" ? (
+                <View onLayout={(event) => recordFieldLayout("extensionYear", "opening", event.nativeEvent.layout.y)}>
+                  <FormTextField
+                    error={fieldErrors.extensionYear}
+                    inputRef={(node) => {
+                      inputRefs.current.extensionYear = node;
+                    }}
+                    keyboardType="number-pad"
+                    label="Extension start financial year"
+                    onChangeText={(value) => {
+                      setExtensionYear(value);
+                      clearFieldError("extensionYear");
+                    }}
+                    placeholder="2036"
+                    testID="ppf-extension-fy-input"
+                    value={extensionYear}
+                  />
+                </View>
+              ) : null}
+            </PremiumCard>
+          </View>
+          <View
+            onLayout={(event) => {
+              sectionY.current.baseline = event.nativeEvent.layout.y;
+            }}
+          >
+            <PremiumCard>
+              <SectionHeader title="Confirmed baseline" />
+              <View onLayout={(event) => recordFieldLayout("balance", "baseline", event.nativeEvent.layout.y)}>
+                <FormTextField
+                  error={fieldErrors.balance}
+                  inputRef={(node) => {
+                    inputRefs.current.balance = node;
+                  }}
+                  keyboardType="decimal-pad"
+                  label="Confirmed balance (INR)"
+                  onChangeText={(value) => {
+                    setBalance(value);
+                    clearFieldError("balance");
+                  }}
+                  testID="ppf-balance-input"
+                  value={balance}
+                />
+              </View>
+              <View onLayout={(event) => recordFieldLayout("balanceAsOf", "baseline", event.nativeEvent.layout.y)}>
+                <DatePickerField
+                  error={fieldErrors.balanceAsOf}
+                  fieldRef={(node) => {
+                    controlRefs.current.balanceAsOf = node;
+                  }}
+                  label="Balance confirmed on"
+                  onChange={(value) => {
+                    setBalanceAsOf(value);
+                    clearFieldError("balanceAsOf");
+                  }}
+                  testID="ppf-balance-date"
+                  value={balanceAsOf}
+                />
+              </View>
+              <View onLayout={(event) => recordFieldLayout("fyContributions", "baseline", event.nativeEvent.layout.y)}>
+                <FormTextField
+                  error={fieldErrors.fyContributions}
+                  inputRef={(node) => {
+                    inputRefs.current.fyContributions = node;
+                  }}
+                  keyboardType="decimal-pad"
+                  label="Contributed this financial year (optional)"
+                  onChangeText={(value) => {
+                    setFyContributions(value);
+                    clearFieldError("fyContributions");
+                  }}
+                  testID="ppf-fy-contribution-input"
+                  value={fyContributions}
+                />
+              </View>
           <AppText color="secondary" variant="caption">
             Enter only the amount already included in this confirmed balance. No transaction dates will be invented.
           </AppText>
-        </PremiumCard>
+            </PremiumCard>
+          </View>
         {error ? <AppText selectable style={styles.error}>{error}</AppText> : null}
         <View style={styles.actions}>
           <AppButton
@@ -554,8 +810,9 @@ function PpfAccountForm({
           />
           <AppButton onPress={onBack} title="Cancel" variant="secondary" />
         </View>
-      </View>
-    </ScreenContainer>
+        </View>
+      </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 

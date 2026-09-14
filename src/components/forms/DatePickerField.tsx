@@ -1,6 +1,7 @@
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import type { Ref } from "react";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -13,6 +14,7 @@ import { colors, interaction, radii, spacing } from "@/src/theme";
 
 type DatePickerFieldProps = {
   error?: string;
+  fieldRef?: Ref<View>;
   label: string;
   maximumDate?: Date;
   onChange: (value: string) => void;
@@ -36,6 +38,7 @@ function formatDisplayDate(value: string) {
 
 export function DatePickerField({
   error,
+  fieldRef,
   label,
   maximumDate = new Date(),
   onChange,
@@ -63,6 +66,7 @@ export function DatePickerField({
         accessibilityRole="button"
         accessibilityState={{ expanded: isOpen }}
         onPress={() => setIsOpen(true)}
+        ref={fieldRef}
         style={({ pressed }) => [
           styles.field,
           error && styles.invalid,
