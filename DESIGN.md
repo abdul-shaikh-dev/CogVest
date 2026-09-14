@@ -206,6 +206,8 @@ Rules:
 - Follow the screen model: answer first, evidence second, action last.
 - Lead with the most important portfolio state.
 - Place actions near the context they affect.
+- Keep every interactive control at least 48 x 48 dp, including text-only and
+  compact icon actions; enlarge the target rather than the icon when needed.
 - Keep screens vertically scannable.
 - Group related metrics in cards.
 - Prefer fewer, clearer sections over many small widgets.

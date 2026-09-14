@@ -10,7 +10,11 @@ import {
 import { colors, interaction, radii, spacing } from "@/src/theme";
 
 import { AppText } from "./AppText";
-import { androidRipple, getPressedStateStyle } from "./pressableStyles";
+import {
+  androidRipple,
+  getPressedStateStyle,
+  minimumTouchTargetStyle,
+} from "./pressableStyles";
 
 type ButtonVariant = "destructive" | "primary" | "secondary" | "ghost";
 
@@ -78,7 +82,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.button,
     justifyContent: "center",
-    minHeight: interaction.minimumTouchTarget,
+    ...minimumTouchTargetStyle,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
