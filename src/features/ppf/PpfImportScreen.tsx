@@ -24,7 +24,7 @@ import {
 } from "@/src/domain/ppfCsvImport";
 import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { colors, radii, spacing } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
@@ -347,6 +347,12 @@ export function PpfImportScreen({
             Columns: date, type, amount, note. Use contribution, interest or withdrawal,
             positive INR amounts without commas, and YYYY-MM-DD dates. Up to 1,000 rows.
           </AppText>
+          <View style={styles.example} testID="ppf-import-baseline-example">
+            <AppText weight="bold">Opening balance stays separate</AppText>
+            <AppText color="secondary" variant="caption">
+              Example: enter an official INR 100,000 balance dated 2025-03-31 below, then start the CSV with later contributions, interest or withdrawals. Do not add that INR 100,000 again as a contribution row.
+            </AppText>
+          </View>
           <AppButton disabled={busy} onPress={chooseCsv} testID="ppf-import-choose-csv" title={isPicking ? "Choosing CSV..." : fileName ? "Choose another CSV" : "Choose CSV"} />
           <AppButton disabled={busy} onPress={saveTemplate} testID="ppf-import-save-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
           {fileName ? <AppText color="secondary" variant="caption">Selected: {fileName}</AppText> : null}
@@ -432,6 +438,7 @@ const styles = StyleSheet.create({
   checkboxText: { flex: 1 },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
+  example: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, gap: spacing.xs, padding: spacing.md },
   checkpointDates: { gap: spacing.xs },
   notes: { flexShrink: 1 },
   row: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between", minHeight: 36 },

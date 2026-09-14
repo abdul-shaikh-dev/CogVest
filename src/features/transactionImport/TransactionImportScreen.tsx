@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -29,16 +29,19 @@ import type {
 } from "./useTransactionImport";
 import { useTransactionImport } from "./useTransactionImport";
 import { CasImportProblems } from "./CasImportProblems";
+import { importSourceGuidance } from "./importSourceGuidance";
 import type { Asset } from "@/src/types";
 
 type TransactionImportScreenProps = {
   lookupAmfiSchemeClassifications?: (input: { isins: string[] }) => Promise<AmfiSchemeLookupResult>;
   now?: () => Date;
+  onAddPpfAccount?: () => void;
   onCancel: () => void;
   onImported: (result: TransactionImportCommandResult) => void;
   pickCasStatement?: () => Promise<PickedCasStatement | undefined>;
   pickCsvFile: () => Promise<PickedTransactionCsv | undefined>;
   readCasStatement?: UseTransactionImportOptions["readCasStatement"];
+  openExternalUrl?: (url: string) => Promise<unknown>;
   saveCsvTemplate?: () => Promise<string | undefined>;
   searchAssetLookupResults?: (input: { query: string }) => Promise<AssetLookupSearchResult>;
   store?: StoreApi<PortfolioStoreState>;
@@ -57,6 +60,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const [statementReviewY, setStatementReviewY] = useState<number>();
   const [templateStatus, setTemplateStatus] = useState<string>();
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [externalLinkStatus, setExternalLinkStatus] = useState<string>();
   const [showMatched, setShowMatched] = useState(false);
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [showHoldings, setShowHoldings] = useState(false);
@@ -90,6 +94,18 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     Keyboard.dismiss();
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
     controller.setSourceId(sourceId);
+    setExternalLinkStatus(undefined);
+  }
+
+  async function openSourceWebsite() {
+    const guidance = importSourceGuidance[controller.sourceId];
+    if (!guidance) return;
+    setExternalLinkStatus(undefined);
+    try {
+      await (props.openExternalUrl ?? Linking.openURL)(guidance.officialUrl);
+    } catch {
+      setExternalLinkStatus(`Could not open the website. In your browser, visit ${guidance.browserFallback}.`);
+    }
   }
 
   async function saveTemplate() {
@@ -117,6 +133,13 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     groups.set(key, { error, count: (prior?.count ?? 0) + 1 });
     return groups;
   }, new Map<string, { error: (typeof controller.plan.errors)[number]; count: number }>()).values()];
+  const hasSelectedInput = controller.files.length > 0 || Boolean(controller.casSource);
+  const hasVerifiedInput = hasSelectedInput &&
+    !controller.isResolving &&
+    !controller.screenError &&
+    controller.parseErrors.length === 0 &&
+    (controller.plan.summary.parsedRows > 0 || controller.unsupportedEvents.length > 0 || Boolean(controller.casReview));
+  const sourceGuidance = importSourceGuidance[controller.sourceId];
 
   return (
     <KeyboardAvoidingView behavior="height" style={styles.flex} onLayout={() => {
@@ -144,25 +167,28 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
               title={source.label}
             />
           ))}
+          {props.onAddPpfAccount ? (
+            <SourceAction
+              description="Use the dedicated account ledger and CSV template."
+              onPress={props.onAddPpfAccount}
+              testID="transaction-import-source-ppf"
+              title="PPF CSV"
+            />
+          ) : null}
         </View>
-        <View style={styles.divider} />
-        <SectionHeader title="How should history be applied?" />
-        <View style={styles.modeRow}>
-          <ModeButton
-            active={controller.mode === "supplemental"}
-            description="Keep your opening balances; add only later activity."
-            onPress={() => controller.setMode("supplemental")}
-            testID="transaction-import-mode-supplemental"
-            title="Add later activity"
-          />
-          <ModeButton
-            active={controller.mode === "fullHistory"}
-            description="Replace an opening balance only after exact reconciliation."
-            onPress={() => controller.setMode("fullHistory")}
-            testID="transaction-import-mode-full-history"
-            title="Rebuild from history"
-          />
-        </View>
+        {sourceGuidance ? <View style={styles.guide} testID="transaction-import-source-guide">
+          <View style={styles.divider} />
+          <SectionHeader title={`Get your ${sourceGuidance.fileLabel}`} />
+          {sourceGuidance.steps.map((step, index) => (
+            <View key={step} style={styles.guideStep}>
+              <AppText style={styles.stepNumber} weight="bold">{index + 1}</AppText>
+              <AppText color="secondary" style={styles.guideStepText}>{step}</AppText>
+            </View>
+          ))}
+          <AppButton onPress={openSourceWebsite} testID="open-import-source-website" title="Open official instructions" variant="secondary" />
+          <AppText color="secondary" variant="caption">Instructions verified {sourceGuidance.verifiedOn}. The provider website opens outside CogVest.</AppText>
+          {externalLinkStatus ? <AppText accessibilityLiveRegion="polite" color="secondary" testID="import-source-link-fallback" variant="caption">{externalLinkStatus}</AppText> : null}
+        </View> : null}
         <AppText color="secondary" variant="caption">{controller.sourceId === "camsKfinCasPdfV1" ? `PDFs can contain up to ${casPdfMaxPages} pages and ${casPdfMaxBytes / (1024 * 1024)} MB.` : `Each file can contain up to ${controller.maxRows} rows and 1 MB.`} Unsupported events stay visible and are never guessed.</AppText>
         {controller.sourceId === "cogvestCsvV1" ? <>
           <AppButton disabled={!props.saveCsvTemplate || isSavingTemplate || controller.isResolving || controller.isSaving} onPress={saveTemplate} testID="save-transaction-csv-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
@@ -205,13 +231,33 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           </View>
           <AppButton disabled={controller.isResolving || controller.isSaving} onPress={controller.retryCasStatement} testID="read-cas-statement" title="Read statement" variant="secondary" />
         </View> : null}
-        <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={controller.selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? (controller.casSource ? "Choose another statement" : "Choose CAS PDF") : controller.sourceId === "zerodhaTradebookEqV1" ? (controller.files.length > 0 ? "Add another Tradebook" : "Add Tradebook CSV") : (controller.files.length > 0 ? "Choose another CSV" : "Choose CSV")} />
+        <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={controller.selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? (controller.casSource ? "Choose another statement" : "I already have the CAS PDF") : controller.sourceId === "zerodhaTradebookEqV1" ? (controller.files.length > 0 ? "Add another Tradebook" : "I already have a Tradebook CSV") : (controller.files.length > 0 ? "Choose another CSV" : "I already have the CSV")} />
+        {controller.screenError ? <InlineError message={controller.screenError} testID="transaction-import-screen-error" /> : null}
+        {controller.parseErrors.map((error, index) => <InlineError key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
       </PremiumCard>
 
       </View>
       {controller.isResolving ? <PremiumCard testID="transaction-import-resolving"><AppText weight="bold">Checking transaction rows and matching holdings...</AppText><AppText color="secondary" variant="caption">Nothing changes until you confirm the dry run.</AppText></PremiumCard> : null}
-      {controller.screenError ? <ErrorCard message={controller.screenError} testID="transaction-import-screen-error" /> : null}
-      {controller.parseErrors.map((error, index) => <ErrorCard key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
+      {hasVerifiedInput ? <PremiumCard style={styles.card} testID="transaction-import-preflight">
+        <SectionHeader title="File check" />
+        <View style={styles.summaryGrid}>
+          <Summary label="Detected source" testID="transaction-import-detected-source" value={transactionImportSources.find((source) => source.id === controller.sourceId)?.label ?? "Unknown"} />
+          <Summary label="Coverage" testID="transaction-import-detected-coverage" value={controller.importCoverage ? `${controller.importCoverage.from} to ${controller.importCoverage.to}` : "Unknown"} />
+          <Summary label="Transactions" testID="transaction-import-detected-transactions" value={String(controller.plan.summary.parsedRows)} />
+          <Summary label="Holdings" testID="transaction-import-detected-holdings" value={String(controller.groups.length || controller.casReview?.normalization.schemes.length || 0)} />
+        </View>
+        {!controller.hasSavedInvestmentHistory ? <>
+          <AppText weight="bold">Rebuild from this history</AppText>
+          <AppText color="secondary">No saved investment history was found. CogVest will build holdings from the inspected records; existing Cash entries stay unchanged.</AppText>
+        </> : <>
+          <SectionHeader title="How should this file be applied?" />
+          <AppText color="secondary">Existing investment records were found. Keeping opening balances is the safer default unless this file contains complete history for the affected holdings.</AppText>
+          <View style={styles.modeRow}>
+            <ModeButton active={controller.mode === "supplemental"} description="Recommended: keep opening balances and add only later activity." onPress={() => controller.setMode("supplemental")} testID="transaction-import-mode-supplemental" title="Add later activity" />
+            <ModeButton active={controller.mode === "fullHistory"} description="Replace matching opening balances only after exact reconciliation and confirmation." onPress={() => controller.setMode("fullHistory")} testID="transaction-import-mode-full-history" title="Rebuild from history" />
+          </View>
+        </>}
+      </PremiumCard> : null}
       {controller.casReview ? <View onLayout={(event) => {
         setStatementReviewY(event.nativeEvent.layout.y);
       }} style={styles.card}>
@@ -390,6 +436,10 @@ function ModeButton({ active, description, onPress, testID, title }: { active: b
   return <Pressable accessibilityRole="radio" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.modeButton, active && styles.modeButtonActive]} testID={testID}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></Pressable>;
 }
 
+function SourceAction({ description, onPress, testID, title }: { description: string; onPress: () => void; testID: string; title: string }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={styles.modeButton} testID={testID}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></Pressable>;
+}
+
 function Summary({
   label,
   testID,
@@ -415,6 +465,10 @@ function ErrorCard({ message, testID }: { message: string; testID?: string }) {
   return <PremiumCard testID={testID}><AppText style={styles.error} weight="bold">{message}</AppText></PremiumCard>;
 }
 
+function InlineError({ message, testID }: { message: string; testID?: string }) {
+  return <View style={styles.inlineError} testID={testID}><AppText accessibilityLiveRegion="polite" style={styles.error} weight="bold">{message}</AppText></View>;
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
@@ -426,7 +480,11 @@ const styles = StyleSheet.create({
   fileDetails: { flex: 1, gap: spacing.xs },
   fileList: { gap: spacing.sm },
   fileRow: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.xs, minHeight: 64, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  guide: { gap: spacing.md },
+  guideStep: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm },
+  guideStepText: { flex: 1 },
   holdingPreview: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingTop: spacing.sm },
+  inlineError: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, padding: spacing.md },
   modeButton: { backgroundColor: colors.surface.elevated, borderRadius: radii.card, flexBasis: "100%", flexGrow: 1, gap: spacing.xs, minHeight: 64, padding: spacing.md },
   modeButtonActive: { borderColor: colors.primary, borderWidth: 1 },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
@@ -436,5 +494,6 @@ const styles = StyleSheet.create({
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   reviewHeading: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
   statementSelection: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, padding: spacing.sm },
+  stepNumber: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minWidth: 28, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, textAlign: "center" },
   unsupported: { gap: spacing.xs },
 });

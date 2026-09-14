@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -37,6 +37,7 @@ type QuickPortfolioSetupScreenProps = {
   onAddPpfAccount: () => void;
   onComplete: () => void;
   onExit: () => void;
+  onImportTransactions?: () => void;
   resolveQuote?: (input: ResolveQuoteInput) => Promise<QuoteResult>;
   searchAssetLookupResults?: (input: {
     query: string;
@@ -56,6 +57,7 @@ export function QuickPortfolioSetupScreen({
   onAddPpfAccount,
   onComplete,
   onExit,
+  onImportTransactions,
   resolveQuote,
   searchAssetLookupResults,
   sessionStore = getQuickSetupSessionStore(),
@@ -68,6 +70,7 @@ export function QuickPortfolioSetupScreen({
     store.getState,
   );
   const dashboard = useDashboard({ store });
+  const [showEntryChoice, setShowEntryChoice] = useState(true);
 
   useEffect(() => {
     sessionStore.getState().start();
@@ -225,6 +228,31 @@ export function QuickPortfolioSetupScreen({
     );
   }
 
+  if (onImportTransactions && showEntryChoice && savedCount === 0) {
+    return (
+      <ScreenContainer scroll testID="quick-setup-source-choice">
+        <ScreenHeader
+          leading={<IconButton accessibilityLabel="Exit portfolio setup" icon="close" onPress={onExit} />}
+          subtitle="Choose the quickest accurate starting point"
+          title="Set up portfolio"
+        />
+        <PremiumCard elevated style={styles.choiceCard}>
+          <SectionHeader title="Import from a statement" />
+          <AppText color="secondary">
+            Best when you have transaction history. CogVest checks the file before asking how it should affect existing records.
+          </AppText>
+          <AppButton onPress={onImportTransactions} testID="quick-setup-import-history" title="Choose investment source" />
+        </PremiumCard>
+        <PremiumCard style={styles.choiceCard}>
+          <SectionHeader title="Other ways to start" />
+          <AppButton onPress={() => setShowEntryChoice(false)} testID="quick-setup-add-manually" title="Add holdings manually" variant="secondary" />
+          <AppButton onPress={onAddPpfAccount} testID="quick-setup-add-ppf-from-choice" title="Set up PPF account" variant="secondary" />
+          <AppText color="secondary" variant="caption">You can combine these methods and add more sources later.</AppText>
+        </PremiumCard>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <AddOpeningPositionForm
       hardwareBackEnabled={hardwareBackEnabled}
@@ -245,6 +273,9 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.sm,
     paddingBottom: spacing.lg,
+  },
+  choiceCard: {
+    gap: spacing.md,
   },
   list: {
     gap: spacing.sm,

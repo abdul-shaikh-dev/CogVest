@@ -60,6 +60,13 @@ async function preview(screen: ReturnType<typeof render>) {
 }
 
 describe("PpfImportScreen", () => {
+  it("explains that the opening balance must not be repeated in CSV activity", () => {
+    const screen = renderScreen();
+
+    expect(screen.getByTestId("ppf-import-baseline-example")).toHaveTextContent(/Opening balance stays separate/u);
+    expect(screen.getByTestId("ppf-import-baseline-example")).toHaveTextContent(/Do not add that INR 100,000 again as a contribution row/u);
+  });
+
   it("creates a detached preview without mutating the store", async () => {
     const screen = renderScreen();
     await preview(screen);

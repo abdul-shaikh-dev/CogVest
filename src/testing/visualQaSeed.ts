@@ -48,6 +48,7 @@ export const visualQaAssets: Asset[] = [
     exchange: "NSE",
     id: "visual-qa-asset-niftybees",
     instrumentType: "etf",
+    isin: "INF204KB14I2",
     name: "Nifty 50 ETF",
     quoteSourceId: "NIFTYBEES.NS",
     sectorType: "diversified",
