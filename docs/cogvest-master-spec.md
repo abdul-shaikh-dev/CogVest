@@ -415,6 +415,19 @@ The import has two explicit modes:
   oversells, multiple baselines, and unknown-cost `transferIn` rows remain a
   dry-run error and cannot be committed.
 
+Quick Setup and Holdings share one guided source-import entry. It prioritizes
+Zerodha Equity Tradebook CSV and detailed CAMS + KFintech CAS, keeps CogVest CSV
+and the dedicated PPF path available, and explains how to obtain each supported
+input before file selection. A portfolio with no opening positions or trades,
+including a cash-only portfolio, does not choose an import mode up front; after
+successful inspection CogVest rebuilds from the verified history. Existing
+investment records receive a conservative supplemental recommendation only
+after the file's source, coverage, transactions, and affected holdings are
+known. Full-history replacement remains explicit and subject to exact
+reconciliation and confirmation. External provider links are user initiated;
+files and passwords remain local, and passwords are never saved. Maintained
+source details live in [the guided source import contract](onboarding/guided-source-import.md).
+
 Reconciliation adds quantity and cost basis for buys and costed `transferIn`
 rows, reduces quantity for sells and `transferOut` rows, and keeps the moving
 average cost unchanged when units are disposed. A `transferIn` without

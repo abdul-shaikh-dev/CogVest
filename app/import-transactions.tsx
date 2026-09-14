@@ -45,5 +45,12 @@ async function saveCsvTemplate() {
 }
 
 export default function ImportTransactionsRoute() {
-  return <TransactionImportScreen onCancel={() => router.back()} onImported={() => router.replace({ pathname: "/(tabs)/holdings", params: { statusMessage: "Transaction history imported." } })} pickCasStatement={pickCasStatement} pickCsvFile={pickCsvFile} saveCsvTemplate={saveCsvTemplate} />;
+  return <TransactionImportScreen
+    onAddPpfAccount={() => router.push("/ppf-account")}
+    onCancel={() => router.back()}
+    onImported={() => router.replace({ pathname: "/(tabs)/holdings", params: { statusMessage: "Transaction history imported." } })}
+    pickCasStatement={pickCasStatement}
+    pickCsvFile={pickCsvFile}
+    saveCsvTemplate={saveCsvTemplate}
+  />;
 }

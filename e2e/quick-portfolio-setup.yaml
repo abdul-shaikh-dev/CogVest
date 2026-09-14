@@ -13,6 +13,14 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
+      id: "quick-setup-source-choice"
+    timeout: 30000
+- takeScreenshot:
+    path: quick-setup-source-choice
+- tapOn:
+    id: "quick-setup-add-manually"
+- extendedWaitUntil:
+    visible:
       id: "add-holding-phase-asset"
     timeout: 30000
 - tapOn:
@@ -121,6 +129,8 @@ appId: com.abdulshaikh.cogvest
     timeout: 30000
 - tapOn:
     id: "dashboard-continue-setup-button"
+- tapOn:
+    id: "add-multiple-holdings-option"
 - assertVisible: "2 holdings saved locally"
 - takeScreenshot:
     path: quick-setup-resumed
@@ -152,6 +162,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "save-ppf-account"
+- tapOn:
+    id: "ppf-account-back"
 - assertVisible: "3 holdings saved locally"
 
 # Prove the dedicated account contributes to Debt allocation without a synthetic asset.

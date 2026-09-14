@@ -22,8 +22,10 @@ appId: com.abdulshaikh.cogvest
     timeout: 10000
 - tapOn:
     id: "transaction-import-source-zerodhaTradebookEqV1"
-- tapOn:
-    id: "transaction-import-mode-full-history"
+- scrollUntilVisible:
+    element:
+      id: "select-transaction-csv"
+    direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
 - tapOn: "Show roots"
@@ -37,9 +39,21 @@ appId: com.abdulshaikh.cogvest
     visible: "zerodha-tradebook-2024.csv"
     timeout: 10000
 - tapOn: "zerodha-tradebook-2024.csv"
-- extendedWaitUntil:
-    visible: "Add another Tradebook"
-    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-preflight"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-mode-full-history"
+    direction: DOWN
+- tapOn:
+    id: "transaction-import-mode-full-history"
+- scrollUntilVisible:
+    element:
+      id: "select-transaction-csv"
+    direction: UP
 - tapOn:
     id: "select-transaction-csv"
 - tapOn: "Show roots"
@@ -113,10 +127,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Opening position count: 3"
 - scrollUntilVisible:
     element:
-      id: "e2e-asset-hdfcbank-ns-values"
+      id: "e2e-asset-niftybees-ns-values"
     direction: DOWN
     timeout: 10000
-- assertVisible: "Values: invested ₹36,250.00 | current ₹41,956.25 | quantity 25"
+- assertVisible: "Values: invested ₹48,351.60 | current ₹50,553.36 | quantity 198"
 - openLink: "cogvest:///import-transactions"
 - extendedWaitUntil:
     visible:
@@ -124,16 +138,30 @@ appId: com.abdulshaikh.cogvest
     timeout: 10000
 - tapOn:
     id: "transaction-import-source-zerodhaTradebookEqV1"
-- tapOn:
-    id: "transaction-import-mode-full-history"
+- scrollUntilVisible:
+    element:
+      id: "select-transaction-csv"
+    direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
 - tapOn: "Show roots"
 - tapOn: "Downloads"
 - tapOn: "zerodha-tradebook-2024.csv"
-- extendedWaitUntil:
-    visible: "Add another Tradebook"
-    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-preflight"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-mode-full-history"
+    direction: DOWN
+- tapOn:
+    id: "transaction-import-mode-full-history"
+- scrollUntilVisible:
+    element:
+      id: "select-transaction-csv"
+    direction: UP
 - tapOn:
     id: "select-transaction-csv"
 - tapOn: "Show roots"

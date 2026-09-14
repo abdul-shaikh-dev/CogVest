@@ -1,2 +1,2 @@
 symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time
-HDFCBANK,INE040A01034,2024-01-15,NSE,EQ,EQ,buy,false,10,1000,ZV-E2E-TRADE-001,ZV-E2E-ORDER-001,2024-01-15T10:05:30
+NIFTYBEES,INF204KB14I2,2024-01-15,NSE,EQ,EQ,buy,false,100,244.2,ZV-E2E-TRADE-001,ZV-E2E-ORDER-001,2024-01-15T10:05:30

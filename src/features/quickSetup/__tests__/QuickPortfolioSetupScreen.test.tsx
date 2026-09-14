@@ -8,6 +8,29 @@ import { QuickPortfolioSetupScreen } from "../QuickPortfolioSetupScreen";
 import { createQuickSetupSessionStore } from "../quickSetupSession";
 
 describe("QuickPortfolioSetupScreen", () => {
+  it("starts a new portfolio with import, manual, and PPF choices", () => {
+    const onImportTransactions = jest.fn();
+    const onAddPpfAccount = jest.fn();
+    const screen = render(
+      <QuickPortfolioSetupScreen
+        onAddPpfAccount={onAddPpfAccount}
+        onComplete={jest.fn()}
+        onExit={jest.fn()}
+        onImportTransactions={onImportTransactions}
+        sessionStore={createQuickSetupSessionStore({ storage: createMemoryJsonStorage() })}
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      />,
+    );
+
+    expect(screen.getByTestId("quick-setup-source-choice")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("quick-setup-import-history"));
+    expect(onImportTransactions).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId("quick-setup-add-ppf-from-choice"));
+    expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId("quick-setup-add-manually"));
+    expect(screen.queryByTestId("quick-setup-source-choice")).toBeNull();
+  });
+
   it("restores confirmed progress and completes from the aggregate review", () => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),

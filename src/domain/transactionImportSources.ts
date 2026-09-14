@@ -22,12 +22,6 @@ export type TransactionImportSourceDefinition = {
 
 export const transactionImportSources: TransactionImportSourceDefinition[] = [
   {
-    description: "CogVest's versioned broker-neutral transaction template.",
-    id: "cogvestCsvV1",
-    label: "CogVest CSV",
-    multipleFiles: false,
-  },
-  {
     description: "Delivery-equity Tradebook files exported from Zerodha Console.",
     id: "zerodhaTradebookEqV1",
     label: "Zerodha Tradebook",
@@ -37,6 +31,12 @@ export const transactionImportSources: TransactionImportSourceDefinition[] = [
     description: "Detailed mutual-fund statement from CAMS + KFintech.",
     id: "camsKfinCasPdfV1",
     label: "CAMS + KFintech CAS",
+    multipleFiles: false,
+  },
+  {
+    description: "CogVest's versioned broker-neutral transaction template.",
+    id: "cogvestCsvV1",
+    label: "CogVest CSV",
     multipleFiles: false,
   },
 ];

@@ -246,12 +246,16 @@ export function useTransactionImport({
   const [casReviewErrors, setCasReviewErrors] = useState<string[]>([]);
   const [casSource, setCasSource] = useState<PickedCasStatement>();
   const [sourceId, setSourceIdState] =
-    useState<TransactionImportSourceId>("cogvestCsvV1");
+    useState<TransactionImportSourceId>("zerodhaTradebookEqV1");
   const [externalActivityConfirmed, setExternalActivityConfirmed] =
     useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [mode, setMode] = useState<TransactionImportMode>("supplemental");
+  const hasSavedInvestmentHistory =
+    snapshot.openingPositions.length > 0 || snapshot.trades.length > 0;
+  const [mode, setMode] = useState<TransactionImportMode>(() =>
+    hasSavedInvestmentHistory ? "supplemental" : "fullHistory",
+  );
   const [parseErrors, setParseErrors] = useState<TransactionCsvError[]>([]);
   const [resolutions, setResolutions] = useState<TransactionCsvResolution[]>([]);
   const [screenError, setScreenError] = useState<string>();
@@ -609,6 +613,7 @@ export function useTransactionImport({
     setFiles([]);
     setCasPassword("");
     setCasSource(undefined);
+    setMode(hasSavedInvestmentHistory ? "supplemental" : "fullHistory");
     clearAnalysis();
     setScreenError(undefined);
     setIsResolving(false);
@@ -626,6 +631,14 @@ export function useTransactionImport({
   }
 
   const groups = groupResolutions(resolutions, snapshot.assets);
+  const resolvedDates = resolutions
+    .map((resolution) => resolution.row.tradeDate.slice(0, 10))
+    .filter(Boolean)
+    .sort();
+  const importCoverage = casReview?.normalization.coverage ??
+    (resolvedDates.length > 0
+      ? { from: resolvedDates[0], to: resolvedDates[resolvedDates.length - 1] }
+      : undefined);
   function acceptSuggestedMatches() {
     const accepted = new Map<string, Asset>();
     for (const group of groups) {
@@ -722,6 +735,8 @@ export function useTransactionImport({
     files,
     fileSummaries,
     groups,
+    hasSavedInvestmentHistory,
+    importCoverage,
     isResolving,
     isSaving,
     maxFiles: transactionImportMaxFiles,

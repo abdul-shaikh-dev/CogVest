@@ -21,7 +21,11 @@ appId: com.abdulshaikh.cogvest
       id: "transaction-import-screen"
     timeout: 10000
 - tapOn:
-    id: "transaction-import-mode-full-history"
+    id: "transaction-import-source-cogvestCsvV1"
+- scrollUntilVisible:
+    element:
+      id: "select-transaction-csv"
+    direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
 - tapOn: "Show roots"
@@ -35,10 +39,22 @@ appId: com.abdulshaikh.cogvest
     visible: "transactions-import-v1.csv"
     timeout: 10000
 - tapOn: "transactions-import-v1.csv"
-- extendedWaitUntil:
-    visible:
-      id: "transaction-import-shared-cutover"
-    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-preflight"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-mode-full-history"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "transaction-import-mode-full-history"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "transaction-import-mode-full-history"
+    selected: true
 - scrollUntilVisible:
     element:
       id: "transaction-import-shared-cutover"
@@ -56,20 +72,27 @@ appId: com.abdulshaikh.cogvest
     timeout: 15000
 - scrollUntilVisible:
     element:
-      id: "transaction-import-holding-summary-visual-qa-asset-hdfc"
+      id: "transaction-import-show-balances"
     direction: DOWN
     centerElement: true
-    timeout: 10000
-- assertVisible:
-    id: "transaction-import-holding-summary-visual-qa-asset-hdfc"
+- tapOn:
+    id: "transaction-import-show-balances"
 - scrollUntilVisible:
     element:
-      id: "transaction-import-replacement-visual-qa-asset-hdfc"
+      id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
     direction: DOWN
     centerElement: true
     timeout: 10000
 - assertVisible:
-    id: "transaction-import-replacement-visual-qa-asset-hdfc"
+    id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-replacement-visual-qa-asset-niftybees"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- assertVisible:
+    id: "transaction-import-replacement-visual-qa-asset-niftybees"
 - takeScreenshot:
     path: transactions-csv-import-preview
 - scrollUntilVisible:
@@ -107,7 +130,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Opening position count: 3"
 - scrollUntilVisible:
     element:
-      id: "e2e-asset-hdfcbank-ns-values"
+      id: "e2e-asset-niftybees-ns-values"
     direction: DOWN
     timeout: 10000
-- assertVisible: "Values: invested ₹36,250.00 | current ₹41,956.25 | quantity 25"
+- assertVisible: "Values: invested ₹48,351.60 | current ₹50,553.36 | quantity 198"

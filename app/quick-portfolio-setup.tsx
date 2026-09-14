@@ -39,6 +39,7 @@ export default function QuickPortfolioSetupRoute() {
       }
       onComplete={() => router.replace("/(tabs)/dashboard")}
       onExit={() => router.back()}
+      onImportTransactions={() => router.push("/import-transactions")}
       resolveQuote={
         visualQaState === "lookup"
           ? async ({ asset }) => resolveVisualQaQuote(asset)
