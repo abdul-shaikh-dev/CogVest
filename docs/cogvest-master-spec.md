@@ -192,6 +192,9 @@ All domain calculations must be pure functions under `src/domain/`.
 - A sale must add its net proceeds to deployable cash in the same atomic store
   transition. Money leaving the tracked portfolio is recorded separately as a
   withdrawal.
+- The sale price is the actual execution price recorded by the user. A cached
+  provider or manual quote may be offered once as a clearly qualified suggestion,
+  but it is not an execution price and later quote updates never replace user input.
 - Cash additions are typed as income, capital contribution, or legacy
   uncategorized data. Purchase funding, sale proceeds, and withdrawals are
   distinct linked movement purposes.

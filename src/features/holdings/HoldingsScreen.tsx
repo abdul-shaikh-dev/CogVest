@@ -46,6 +46,7 @@ import type {
   QuoteRefreshResult,
   RefreshQuotesInput,
 } from "@/src/services/quotes";
+import { getHoldingQuoteContext } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
@@ -124,6 +125,7 @@ export function HoldingsScreen({
   statusMessage,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
+  const observedAt = now ?? new Date();
   const insets = useSafeAreaInsets();
   const [activePanel, setActivePanel] = useState<
     "add" | "insights" | "more" | "quotes"
@@ -157,7 +159,7 @@ export function HoldingsScreen({
     toggleMaskWealthValues,
     trades,
   } = useHoldings({
-    now,
+    now: observedAt,
     refreshQuotes,
     store,
   });
@@ -719,6 +721,7 @@ export function HoldingsScreen({
                   assets={assets}
                   masked={maskWealthValues}
                   minimal={isMinimalMode}
+                  now={observedAt}
                   openingPositions={openingPositions}
                   recordsVisible={selectedRecordsVisible}
                   trades={trades}
@@ -1244,6 +1247,7 @@ type HoldingDetailsProps = {
   item: HoldingReviewItem;
   masked: boolean;
   minimal: boolean;
+  now: Date;
   openingPositions: OpeningPosition[];
   recordsVisible: boolean;
   trades: Trade[];
@@ -1335,6 +1339,7 @@ function HoldingDetails({
   item,
   masked,
   minimal,
+  now,
   openingPositions,
   recordsVisible,
   onReviewOpeningPosition,
@@ -1351,6 +1356,7 @@ function HoldingDetails({
   );
   const assetTrades = trades.filter((trade) => trade.assetId === holding.asset.id);
   const firstPurchase = getFirstRecordedPurchase(assetOpeningPositions, assetTrades);
+  const quoteContext = getHoldingQuoteContext(holding, undefined, now);
   return (
     <View
       style={styles.expandedSection}
@@ -1382,6 +1388,11 @@ function HoldingDetails({
           variant="hero"
           weight="bold"
         />
+        <View style={styles.valueQuoteContext} testID={`holding-quote-context-${holding.asset.id}`}>
+          <AppText color="secondary" variant="caption">
+            {quoteContext.label}
+          </AppText>
+        </View>
         <View style={styles.performanceLine}>
           <MaskedValue
             masked={masked && holding.unrealisedPnL !== null}
@@ -1457,28 +1468,6 @@ function HoldingDetails({
         Allocation excludes cash and PPF. Purchase date is based on recorded
         history.
       </AppText>
-      <View style={styles.sourceRow}>
-        <View>
-          <AppText color="secondary" variant="caption">
-            Price source
-          </AppText>
-          <AppText variant="caption" weight="bold">
-            {isPending
-              ? "Valuation pending"
-              : formatSource(holding.quoteSource)}
-          </AppText>
-        </View>
-        <AppText color="secondary" variant="caption">
-          {isPending
-            ? "Refresh or enter manually"
-            : holding.lastUpdated && holding.quoteSource === "amfi"
-              ? `NAV dated ${formatDate(holding.lastUpdated)}`
-              : holding.lastUpdated
-              ? `Updated ${formatPriceTimestamp(holding.lastUpdated)}`
-              : "Local position price"}
-        </AppText>
-      </View>
-
       {isPending && onReviewOpeningPosition && assetOpeningPositions[0] ? (
         <AppButton
           title="Enter manual price"
@@ -1633,29 +1622,6 @@ function formatSignedCompactINR(value: number) {
   const amount = formatCompactINR(value);
 
   return value > 0 ? `+${amount}` : amount;
-}
-
-function formatSource(source?: string) {
-  if (!source) {
-    return "Manual";
-  }
-
-  if (source === "amfi") {
-    return "AMFI";
-  }
-
-  return source.charAt(0).toUpperCase() + source.slice(1);
-}
-
-function formatPriceTimestamp(value: string) {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZoneName: "short",
-  }).format(new Date(value));
 }
 
 const styles = StyleSheet.create({
@@ -1968,13 +1934,6 @@ const styles = StyleSheet.create({
   sectionHeadingCopy: {
     gap: 2,
   },
-  sourceRow: {
-    alignItems: "stretch",
-    borderTopColor: colors.border.subtle,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: spacing.xs,
-    paddingTop: spacing.md,
-  },
   statusCard: {
     backgroundColor: colors.surface.card,
     paddingVertical: spacing.sm,
@@ -1985,6 +1944,14 @@ const styles = StyleSheet.create({
   valueColumn: {
     alignItems: "flex-end",
     minWidth: 72,
+  },
+  valueQuoteContext: {
+    borderColor: colors.border.subtle,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   warningText: {
     color: colors.warning,

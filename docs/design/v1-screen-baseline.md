@@ -116,9 +116,11 @@ Incomplete allocation is explained once rather than repeated on every row.
 
 A row opens a separate full-height detail panel, not an inline expansion.
 Explicit Back and Android Back return to the same list/search/filter/scroll
-state. The panel leads with current value and return, followed by invested value,
-quantity, exact per-unit prices, allocation, classification, first recorded
-purchase (Unknown when history is incomplete), and source timestamp. Recorded
+state. The panel leads with current value and its compact Fresh, Stale, Manual,
+or Unavailable quote provenance, followed by return, invested value, quantity,
+exact per-unit prices, allocation, classification, and first recorded purchase
+(Unknown when history is incomplete). Quote source and as-of context stays beside
+the value it qualifies rather than below price history. Recorded
 purchase history is not a claim about the acquisition date of remaining lots.
 View records discloses existing correction/history actions; Sell / redeem
 remains separate. Opening those child routes hides the panel without discarding
@@ -127,6 +129,11 @@ the next Back returns to the preserved list/search/filter/scroll state. A
 successful correction returns to the same context with recalculated values. If
 the holding no longer exists after a mutation, return safely to the preserved
 list instead of reopening stale details.
+
+Sell / redeem labels the editable amount as the actual execution price. A saved
+quote may seed that field once, but nearby copy identifies its source, age, and
+freshness and tells the user to confirm it against the broker record. A quote
+refresh must never overwrite an execution price the user has entered or cleared.
 
 V3 issue #22 extends this same panel with Price history / Your holding value,
 not a competing detail route. Its behavior and limits are defined in
