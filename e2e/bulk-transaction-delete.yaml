@@ -1,0 +1,45 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///accounting-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: accounting-qa-screen
+    timeout: 30000
+- assertVisible: "Units 20; basis 1510; cash 0"
+- tapOn:
+    id: accounting-qa-toggle
+- extendedWaitUntil:
+    visible:
+      id: trade-history-screen
+    timeout: 10000
+- tapOn:
+    id: start-transaction-selection
+- tapOn:
+    id: review-trade-buy
+- assertVisible: "1 selected"
+- tapOn:
+    id: review-selected-transaction-deletion
+- assertVisible:
+    id: transaction-deletion-preview
+- takeScreenshot: .expo/issue336-bulk-delete-preview
+- pressKey: BACK
+- assertVisible: "1 selected"
+- tapOn: "Cancel selection"
+- assertVisible: ".*Purchase.*Accounting QA.*"
+- tapOn:
+    id: start-transaction-selection
+- tapOn:
+    id: select-all-transactions
+- tapOn:
+    id: review-selected-transaction-deletion
+- tapOn:
+    id: confirm-delete-selected-transactions
+- assertVisible: "1 transaction removed. Portfolio and automatic history updated."
+- tapOn: "Back to Holdings"
+- assertVisible: "Units 10; basis 500; cash 0"

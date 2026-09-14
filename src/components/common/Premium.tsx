@@ -5,6 +5,8 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type AccessibilityRole,
+  type AccessibilityState,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -47,6 +49,9 @@ type MetricGroupProps = {
 };
 
 type GroupedListRowProps = {
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityState?: AccessibilityState;
   destructive?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
   meta?: string;
@@ -54,6 +59,7 @@ type GroupedListRowProps = {
   testID?: string;
   title: string;
   value?: string;
+  selected?: boolean;
 };
 
 export type AdaptiveLayoutMode = "accessibility" | "large" | "standard";
@@ -290,6 +296,9 @@ export function assetClassLabel(assetClass: AssetClass) {
 }
 
 export function GroupedListRow({
+  accessibilityLabel,
+  accessibilityRole = "button",
+  accessibilityState,
   destructive = false,
   icon,
   meta,
@@ -297,6 +306,7 @@ export function GroupedListRow({
   testID,
   title,
   value,
+  selected = false,
 }: GroupedListRowProps) {
   const content = (
     <>
@@ -329,12 +339,14 @@ export function GroupedListRow({
   if (onPress) {
     return (
       <Pressable
-        accessibilityLabel={[title, meta, value].filter(Boolean).join(", ")}
-        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? [title, meta, value].filter(Boolean).join(", ")}
+        accessibilityRole={accessibilityRole}
+        accessibilityState={accessibilityState}
         android_ripple={androidRipple()}
         onPress={onPress}
         style={({ pressed }) => [
           styles.groupedRow,
+          selected && styles.groupedRowSelected,
           getPressedStateStyle({ pressed }),
         ]}
         testID={testID}
@@ -373,6 +385,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     minHeight: 58,
+  },
+  groupedRowSelected: {
+    backgroundColor: "rgba(52,199,89,0.10)",
+    borderRadius: radii.button,
+    marginHorizontal: spacing.xs * -1,
+    paddingHorizontal: spacing.xs,
   },
   header: {
     alignItems: "center",

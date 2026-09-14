@@ -141,5 +141,48 @@ describe("corporate-action portfolio import", () => {
       summary: { additions: 0, parsedRows: rows.length },
     });
     expect(duplicatePlan.command).toBeUndefined();
+
+    const dependentSale = {
+      assetId: "yahoo:JIOFIN.NS",
+      date: "2024-01-10",
+      id: "dependent-successor-sale",
+      pricePerUnit: 100,
+      quantity: 1,
+      totalValue: 100,
+      type: "sell" as const,
+    };
+    restarted.getState().addTrade(dependentSale);
+    expect(restarted.getState().previewTradeDeletion(restarted.getState().trades.filter((trade) => trade.importProvenance).map((trade) => trade.id))).toMatchObject({
+      reason: "corporateActionDependency",
+      status: "rejected",
+    });
+    expect(restarted.getState().trades).toContainEqual(dependentSale);
+    expect(restarted.getState().deleteTrade(dependentSale.id)).toMatchObject({ status: "applied" });
+
+    const deletion = restarted.getState().deleteTrades(restarted.getState().trades.map((trade) => trade.id));
+    expect(deletion).toMatchObject({
+      impact: {
+        affectedHoldings: expect.arrayContaining([
+          expect.objectContaining({ assetId: "yahoo:RELIANCE.NS", corporateActionRecalculated: true }),
+          expect.objectContaining({ assetId: "yahoo:JIOFIN.NS", corporateActionRecalculated: true }),
+          expect.objectContaining({ assetId: "yahoo:TMPV.NS", corporateActionRecalculated: true }),
+          expect.objectContaining({ assetId: "yahoo:TMCV.NS", corporateActionRecalculated: true }),
+        ]),
+        detachedDemergers: 2,
+        importedTransactions: rows.length,
+        transactions: rows.length,
+      },
+      status: "applied",
+    });
+    expect(restarted.getState().trades).toEqual([]);
+    expect(restarted.getState().assets.filter((asset) => asset.demerger)).toEqual([]);
+
+    const reimportPlan = buildPlan(restarted);
+    expect(reimportPlan).toMatchObject({
+      conflicts: 0,
+      duplicates: 0,
+      errors: [],
+      summary: { additions: rows.length, parsedRows: rows.length },
+    });
   });
 });
