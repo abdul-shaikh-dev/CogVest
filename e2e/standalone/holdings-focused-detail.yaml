@@ -60,9 +60,8 @@ appId: com.abdulshaikh.cogvest
     id: review-opening-position-screen
 - back
 - assertVisible:
-    id: holdings-screen
-- tapOn:
-    id: holding-row-visual-qa-asset-hdfc
+    id: holding-detail-modal
+- assertVisible: "Hide records"
 - scrollUntilVisible:
     element:
       id: holding-sell-redeem-visual-qa-asset-hdfc
@@ -74,4 +73,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: sell-redeem-back
 - assertVisible:
-    id: holdings-screen
+    id: holding-detail-modal
+- back
+- assertVisible:
+    id: holdings-search-input
+- assertVisible: "HDFC"

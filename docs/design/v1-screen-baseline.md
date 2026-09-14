@@ -121,7 +121,12 @@ quantity, exact per-unit prices, allocation, classification, first recorded
 purchase (Unknown when history is incomplete), and source timestamp. Recorded
 purchase history is not a claim about the acquisition date of remaining lots.
 View records discloses existing correction/history actions; Sell / redeem
-remains separate. Close the panel before entering those existing routes.
+remains separate. Opening those child routes hides the panel without discarding
+its state. Back or Cancel returns to the same holding and detail scroll position;
+the next Back returns to the preserved list/search/filter/scroll state. A
+successful correction returns to the same context with recalculated values. If
+the holding no longer exists after a mutation, return safely to the preserved
+list instead of reopening stale details.
 
 V3 issue #22 extends this same panel with Price history / Your holding value,
 not a competing detail route. Its behavior and limits are defined in
