@@ -168,6 +168,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deletePpfAccount: (accountId: string) => PpfAccountDeletionResult;
   deletePpfLedgerEntry: (entryId: string) => PpfLedgerMutationResult;
   deleteTrade: (tradeId: string) => TradeDeletionResult;
+  deleteTrades: (tradeIds: string[]) => TradeBatchDeletionResult;
   historicalQuoteCache: HistoricalQuoteCache;
   quoteCache: QuoteCache;
   removeAsset: (assetId: string) => void;
@@ -190,6 +191,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   recordTransactionImport: (
     input: TransactionImportCommandInput,
   ) => TransactionImportCommandResult;
+  previewTradeDeletion: (tradeIds: string[]) => TradeDeletionPreview;
   resetAffectedStorage: () => void;
   storageRecovery?: StorageRecoveryState;
   updateAsset: (asset: Asset) => void;
@@ -388,6 +390,49 @@ type TradeHistoryResult = {
   refreshedMonths: string[];
 };
 
+export type TradeDeletionImpact = {
+  affectedHoldings: {
+    assetId: string;
+    corporateActionRecalculated: boolean;
+    linkedCashEntries: number;
+    name: string;
+    transactions: number;
+  }[];
+  automaticSnapshots: number;
+  detachedDemergers: number;
+  earliestAffectedMonth: string;
+  importedTransactions: number;
+  linkedCashEntries: number;
+  transactions: number;
+};
+
+type TradeDeletionRejectionReason =
+  | "corporateActionDependency"
+  | "emptySelection"
+  | "inconsistentLink"
+  | "insufficientCash"
+  | "notFound"
+  | "oversold";
+
+export type TradeDeletionPreview =
+  | { impact: TradeDeletionImpact; status: "ready" }
+  | {
+      blockingAssetIds?: string[];
+      reason: TradeDeletionRejectionReason;
+      status: "rejected";
+    };
+
+export type TradeBatchDeletionResult =
+  | (TradeHistoryResult & {
+      impact: TradeDeletionImpact;
+      status: "applied";
+    })
+  | {
+      blockingAssetIds?: string[];
+      reason: TradeDeletionRejectionReason;
+      status: "rejected";
+    };
+
 export type TradeCorrectionResult =
   | (TradeHistoryResult & {
       cashEntry?: CashEntry;
@@ -403,7 +448,7 @@ export type TradeDeletionResult =
       trade: Trade;
     })
   | {
-      reason: "inconsistentLink" | "insufficientCash" | "notFound" | "oversold";
+      reason: TradeDeletionRejectionReason;
       status: "rejected";
     };
 
@@ -1541,6 +1586,146 @@ function isConsistentTradeCashLink(trade: Trade, entry: CashEntry) {
     : entry.type === "addition" && entry.purpose === "saleProceeds";
 }
 
+type PreparedTradeDeletion = {
+  assets: Asset[];
+  cashEntries: CashEntry[];
+  impact: TradeDeletionImpact;
+  linkedEntries: CashEntry[];
+  status: "ready";
+  trades: Trade[];
+};
+
+function prepareTradeDeletion(
+  state: PortfolioStoreState,
+  tradeIds: string[],
+  currentDate: Date,
+): PreparedTradeDeletion | Extract<TradeDeletionPreview, { status: "rejected" }> {
+  const selectedIds = new Set(tradeIds.filter((id) => id.trim().length > 0));
+  if (selectedIds.size === 0) return { reason: "emptySelection", status: "rejected" };
+
+  const selectedTrades = state.trades.filter((trade) => selectedIds.has(trade.id));
+  if (selectedTrades.length !== selectedIds.size) return { reason: "notFound", status: "rejected" };
+
+  const linkedEntries: CashEntry[] = [];
+  for (const trade of selectedTrades) {
+    const links = linkedCashEntriesForTrade(state, trade.id);
+    if (links.length > 1 || (links[0] && !isConsistentTradeCashLink(trade, links[0]))) {
+      return { reason: "inconsistentLink", status: "rejected" };
+    }
+    if (links[0]) linkedEntries.push(links[0]);
+  }
+
+  const trades = state.trades.filter((trade) => !selectedIds.has(trade.id));
+  const linkedEntryIds = new Set(linkedEntries.map((entry) => entry.id));
+  const cashEntries = state.cashEntries.filter((entry) => !linkedEntryIds.has(entry.id));
+  if (!hasNonnegativeCashTimeline(cashEntries)) {
+    return { reason: "insufficientCash", status: "rejected" };
+  }
+
+  let assets = state.assets;
+  const detachedParentIds = new Set<string>();
+  const corporateActionAffectedAssetIds = new Set<string>();
+  try {
+    const through = formatLocalCalendarDate(currentDate);
+    const currentAdjustments = projectDemergers(state, through);
+    for (const parent of state.assets.filter((asset) => asset.demerger)) {
+      const entitlement = currentAdjustments.find(
+        (adjustment): adjustment is Extract<DemergerAdjustment, { kind: "entitlement" }> =>
+          adjustment.eventId === parent.demerger!.eventId &&
+          adjustment.kind === "entitlement",
+      );
+      if (!entitlement || !entitlement.sourceRecordIds.some((id) => selectedIds.has(id))) continue;
+
+      const childId = parent.demerger!.childAssetId;
+      corporateActionAffectedAssetIds.add(parent.id);
+      corporateActionAffectedAssetIds.add(childId);
+      if (!entitlement.sourceRecordIds.every((id) => selectedIds.has(id))) continue;
+      const childStillHasRecords =
+        state.openingPositions.some((position) => position.assetId === childId) ||
+        trades.some((trade) => trade.assetId === childId);
+      if (childStillHasRecords) continue;
+
+      detachedParentIds.add(parent.id);
+    }
+    if (detachedParentIds.size > 0) {
+      assets = state.assets.map((asset) => {
+        if (!detachedParentIds.has(asset.id)) return asset;
+        const { demerger: _demerger, ...withoutDemerger } = asset;
+        return withoutDemerger;
+      });
+    }
+  } catch {
+    return { reason: "corporateActionDependency", status: "rejected" };
+  }
+
+  let adjustments: DemergerAdjustment[];
+  try {
+    adjustments = projectDemergers(
+      { assets, openingPositions: state.openingPositions, trades },
+      formatLocalCalendarDate(currentDate),
+    );
+  } catch {
+    return { reason: "corporateActionDependency", status: "rejected" };
+  }
+
+  const blockingAssetIds = assets
+    .filter((asset) => wouldOversellAsset(
+      asset.id,
+      state.openingPositions,
+      trades,
+      asset.stockSplits,
+      adjustments.filter((event) => event.assetId === asset.id),
+    ))
+    .map((asset) => asset.id);
+  if (blockingAssetIds.length > 0) {
+    return { blockingAssetIds, reason: "oversold", status: "rejected" };
+  }
+
+  try {
+    validateSplitInventory({ ...state, assets, trades });
+  } catch {
+    return { reason: "corporateActionDependency", status: "rejected" };
+  }
+
+  const earliestAffectedMonth = [...selectedTrades.map(tradeMonth), ...linkedEntries.map((entry) => getCalendarDatePart(entry.date)?.slice(0, 7) ?? null)]
+    .filter((month): month is string => Boolean(month))
+    .sort()[0];
+  if (!earliestAffectedMonth) return { reason: "notFound", status: "rejected" };
+
+  const affectedAssetIds = new Set(selectedTrades.map((trade) => trade.assetId));
+  for (const assetId of corporateActionAffectedAssetIds) affectedAssetIds.add(assetId);
+  for (const parentId of detachedParentIds) {
+    affectedAssetIds.add(parentId);
+    const childId = state.assets.find((asset) => asset.id === parentId)?.demerger?.childAssetId;
+    if (childId) affectedAssetIds.add(childId);
+  }
+
+  return {
+    assets,
+    cashEntries,
+    impact: {
+      affectedHoldings: state.assets
+        .filter((asset) => affectedAssetIds.has(asset.id))
+        .map((asset) => ({
+          assetId: asset.id,
+          corporateActionRecalculated: corporateActionAffectedAssetIds.has(asset.id),
+          linkedCashEntries: linkedEntries.filter((entry) => selectedTrades.some((trade) => trade.id === entry.linkedTradeId && trade.assetId === asset.id)).length,
+          name: asset.name,
+          transactions: selectedTrades.filter((trade) => trade.assetId === asset.id).length,
+        })),
+      automaticSnapshots: state.monthlySnapshots.filter((snapshot) => snapshot.month >= earliestAffectedMonth && snapshot.generated?.source === "auto").length,
+      detachedDemergers: detachedParentIds.size,
+      earliestAffectedMonth,
+      importedTransactions: selectedTrades.filter((trade) => trade.importProvenance).length,
+      linkedCashEntries: linkedEntries.length,
+      transactions: selectedTrades.length,
+    },
+    linkedEntries,
+    status: "ready",
+    trades,
+  };
+}
+
 function linkedCashEntry(
   input: LinkedTradeCommandInput,
   purpose: "purchaseFunding" | "saleProceeds",
@@ -2529,59 +2714,43 @@ export function createPortfolioStore({
       const state = get();
       const trade = state.trades.find((item) => item.id === tradeId);
       if (!trade) return { reason: "notFound", status: "rejected" };
-
-      const linkedEntries = linkedCashEntriesForTrade(state, tradeId);
-      if (
-        linkedEntries.length > 1 ||
-        (linkedEntries[0] && !isConsistentTradeCashLink(trade, linkedEntries[0]))
-      ) {
-        return { reason: "inconsistentLink", status: "rejected" };
-      }
-
-      const trades = state.trades.filter((item) => item.id !== tradeId);
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits, projectDemergers({ ...state, trades }).filter((event) => event.assetId === trade.assetId))) {
-        return { reason: "oversold", status: "rejected" };
-      }
-
-      const linkedEntry = linkedEntries[0];
-      const cashEntries = linkedEntry
-        ? state.cashEntries.filter((entry) => entry.id !== linkedEntry.id)
-        : state.cashEntries;
-      if (linkedEntry && !hasNonnegativeCashTimeline(cashEntries)) {
-        return { reason: "insufficientCash", status: "rejected" };
-      }
-      const earliestAffectedMonth = [
-        tradeMonth(trade),
-        linkedEntry ? getCalendarDatePart(linkedEntry.date)?.slice(0, 7) : null,
-      ]
-        .filter((month): month is string => Boolean(month))
-        .sort()[0];
-
-      if (!earliestAffectedMonth) {
-        return { reason: "notFound", status: "rejected" };
-      }
+      const linkedEntry = linkedCashEntriesForTrade(state, tradeId)[0];
+      const result = get().deleteTrades([tradeId]);
+      if (result.status === "rejected") return { reason: result.reason, status: "rejected" };
+      return { ...result, cashEntry: linkedEntry, trade };
+    },
+    deleteTrades: (tradeIds) => {
+      const state = get();
+      const prepared = prepareTradeDeletion(state, tradeIds, now());
+      if (prepared.status === "rejected") return prepared;
 
       const history = rebuildPortfolioSnapshots({
-        cashEntries,
-        earliestAffectedMonth,
+        assets: prepared.assets,
+        cashEntries: prepared.cashEntries,
+        earliestAffectedMonth: prepared.impact.earliestAffectedMonth,
         now: now(),
         state,
-        trades,
+        trades: prepared.trades,
       });
       persistPortfolioTransition(storage, state, {
-        cashEntries,
+        assets: prepared.assets,
+        cashEntries: prepared.cashEntries,
         monthlySnapshots: history.monthlySnapshots,
-        trades,
+        trades: prepared.trades,
       });
-      set({ cashEntries, monthlySnapshots: history.monthlySnapshots, trades });
+      set({
+        assets: prepared.assets,
+        cashEntries: prepared.cashEntries,
+        monthlySnapshots: history.monthlySnapshots,
+        trades: prepared.trades,
+      });
 
       return {
-        cashEntry: linkedEntry,
+        impact: prepared.impact,
         pendingMonths: history.pendingMonths,
         provisionalMonths: history.provisionalMonths,
         refreshedMonths: history.refreshedMonths,
         status: "applied",
-        trade,
       };
     },
     historicalQuoteCache,
@@ -2621,6 +2790,12 @@ export function createPortfolioStore({
     },
     removeTrade: (tradeId) => {
       get().deleteTrade(tradeId);
+    },
+    previewTradeDeletion: (tradeIds) => {
+      const prepared = prepareTradeDeletion(get(), tradeIds, now());
+      return prepared.status === "rejected"
+        ? prepared
+        : { impact: prepared.impact, status: "ready" };
     },
     recordFundedBuy: (input) => {
       const state = get();

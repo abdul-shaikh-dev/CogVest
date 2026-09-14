@@ -1,4 +1,5 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Modal } from "react-native";
 
 import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -132,5 +133,64 @@ describe("TradeHistoryScreen", () => {
     expect(getByText("Transfer in")).toBeTruthy();
     expect(getByText(/acquisition basis 150 per unit/)).toBeTruthy();
     expect(queryByText("₹450.00")).toBeNull();
+  });
+
+  it("selects, previews, cancels, and confirms a scoped bulk deletion", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onBack = jest.fn();
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ amount: 1000, date: "2026-04-01", id: "cash", label: "Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade });
+    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
+
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    expect(screen.getByText("0 selected")).toBeTruthy();
+    fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
+    expect(screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityState).toEqual({ checked: true });
+    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    expect(screen.getByText("The transaction shown on this screen is selected.")).toBeTruthy();
+    expect(screen.getByText(/1 linked cash movement will be removed/u)).toBeTruthy();
+
+    act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+    expect(store.getState().trades).toHaveLength(1);
+    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
+    await waitFor(() => expect(store.getState().trades).toEqual([]));
+    expect(store.getState().cashEntries).toEqual([expect.objectContaining({ id: "cash" })]);
+    expect(screen.getByText(/1 transaction removed/u)).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("clears selection without navigating and labels select-all scope", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onBack = jest.fn();
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.getState().addTrade({ ...trade, date: "2026-05-10", id: "second" });
+    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
+
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    expect(screen.getByText("2 selected")).toBeTruthy();
+    fireEvent.press(screen.getByText("Cancel selection"));
+    expect(screen.getByText("Transaction history")).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+    expect(store.getState().trades).toHaveLength(2);
+  });
+
+  it("blocks a partial deletion that would leave a negative position", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const sale: Trade = { ...trade, date: "2026-05-10", id: "sale", type: "sell" };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.getState().addTrade(sale);
+    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
+    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    expect(screen.getByTestId("transaction-deletion-blocked")).toHaveTextContent(/more disposals than available units/u);
+    expect(screen.queryByTestId("confirm-delete-selected-transactions")).toBeNull();
+    expect(store.getState().trades).toHaveLength(2);
   });
 });
