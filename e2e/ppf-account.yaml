@@ -8,13 +8,24 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "ppf-account-form-screen"
 - tapOn:
+    id: "ppf-balance-input"
+- inputText: "100000"
+- scrollUntilVisible:
+    element:
+      id: "review-ppf-account"
+    direction: DOWN
+- tapOn:
+    id: "review-ppf-account"
+- assertVisible: "Bank or Post Office is required."
+- assertVisible:
+    id: "ppf-provider-input"
+- back
+- assertVisible: "Bank or Post Office is required."
+- tapOn:
     id: "ppf-provider-input"
 - inputText: "India Post"
 - hideKeyboard
-- tapOn:
-    id: "ppf-balance-input"
-- inputText: "100000"
-- hideKeyboard
+- assertNotVisible: "Bank or Post Office is required."
 - scrollUntilVisible:
     element:
       id: "review-ppf-account"

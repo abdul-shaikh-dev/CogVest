@@ -146,6 +146,9 @@ All domain calculations must be pure functions under `src/domain/`.
 - A confirmed balance and its `balance as of` date form the account baseline.
   CogVest does not invent earlier deposits, interest credits, units, prices, or
   market quotes.
+- PPF account validation is shown beside the field it describes. Review reveals
+  and focuses the first invalid field without clearing any entered values, and
+  user-facing errors use the same labels as the form.
 - Contributions increase confirmed value and invested capital. Official
   passbook or provider interest credits increase confirmed value but not
   invested capital. Withdrawals reduce confirmed value and invested capital,
