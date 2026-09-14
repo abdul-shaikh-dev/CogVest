@@ -4,7 +4,8 @@ import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import { colors } from "@/src/theme";
+import * as visualQaSeed from "@/src/testing/visualQaSeed";
+import { colors, interaction } from "@/src/theme";
 import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition } from "@/src/types";
 
 jest.mock("@/src/hooks", () => ({
@@ -951,6 +952,24 @@ describe("ProgressScreen", () => {
     expect(queryByText(/share/u)).toBeNull();
   });
 
+  it("keeps deterministic visual QA charts visible while automation is skipped", () => {
+    const visualQaSpy = jest
+      .spyOn(visualQaSeed, "isVisualQaSessionActive")
+      .mockReturnValue(true);
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+
+    const { getByTestId, getByText, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    expect(getByText("Portfolio Growth")).toBeTruthy();
+    expect(getByTestId("portfolio-trend-previous-month")).toBeTruthy();
+    expect(queryByTestId("progress-trends-building")).toBeNull();
+    visualQaSpy.mockRestore();
+  });
+
   it("navigates chart months independently and resets selection when ranges change", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
@@ -963,6 +982,15 @@ describe("ProgressScreen", () => {
 
     const selectedPanel = (testID: string) => getByTestId(testID);
     const button = (testID: string) => getByTestId(testID);
+
+    expect(button("portfolio-trend-previous-month")).toHaveStyle({
+      minHeight: interaction.minimumTouchTarget,
+      minWidth: interaction.minimumTouchTarget,
+    });
+    expect(button("portfolio-trend-next-month")).toHaveStyle({
+      minHeight: interaction.minimumTouchTarget,
+      minWidth: interaction.minimumTouchTarget,
+    });
 
     expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
       "May 2026",

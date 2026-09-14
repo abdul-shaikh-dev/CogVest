@@ -515,12 +515,14 @@ export function AddOpeningPositionForm({
               </AppText>
             </View>
             <TouchableOpacity
+              accessibilityLabel="Change selected asset"
               accessibilityRole="button"
               activeOpacity={0.74}
               onPress={() => {
                 setIsManualEntryExpanded(false);
                 changeSelectedAsset();
               }}
+              style={styles.selectedAssetChange}
               testID="selected-asset-change"
             >
               <AppText color="secondary" variant="caption" weight="bold">
@@ -1442,6 +1444,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: interaction.minimumTouchTarget,
+    minWidth: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.sm,
   },
   reviewSectionHeader: {
@@ -1460,6 +1463,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  selectedAssetChange: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    minWidth: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
   },
   successText: {
     color: colors.profit,

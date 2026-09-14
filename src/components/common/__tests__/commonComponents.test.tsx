@@ -85,7 +85,10 @@ describe("common UI primitives", () => {
   it("exposes button semantics and a readable default label", () => {
     const { getByRole } = render(<AppButton title="Save holding" />);
 
-    expect(getByRole("button", { name: "Save holding" })).toBeTruthy();
+    expect(getByRole("button", { name: "Save holding" })).toHaveStyle({
+      minHeight: interaction.minimumTouchTarget,
+      minWidth: interaction.minimumTouchTarget,
+    });
   });
 
   it("uses disabled opacity instead of pressed feedback", () => {

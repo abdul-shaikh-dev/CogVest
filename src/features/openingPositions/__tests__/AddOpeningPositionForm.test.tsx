@@ -12,7 +12,7 @@ import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
-import { colors, typography } from "@/src/theme";
+import { colors, interaction, typography } from "@/src/theme";
 import { assetSearchQaProviderCandidates } from "@/src/testing/assetSearchFixture";
 
 jest.mock("expo-haptics", () => ({
@@ -1513,6 +1513,14 @@ describe("AddOpeningPositionForm", () => {
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
+
+    expect(getByTestId("selected-asset-change")).toHaveStyle({
+      minHeight: interaction.minimumTouchTarget,
+      minWidth: interaction.minimumTouchTarget,
+    });
+    expect(getByTestId("selected-asset-change").props.accessibilityLabel).toBe(
+      "Change selected asset",
+    );
 
     fireEvent.press(getByTestId("selected-asset-change"));
 

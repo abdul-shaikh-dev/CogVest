@@ -1286,6 +1286,10 @@ export function ProgressScreen({
   const progress = useProgress({ historicalPriceFetcher, now, store });
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
+  const isHistoryBuilding =
+    !isVisualQaSessionActive() &&
+    (progress.snapshotAutomationStatus.kind === "checking" ||
+      progress.snapshotAutomationStatus.kind === "generating");
   const hasRunAutomationRef = useRef(false);
   const [summaryMonth, setSummaryMonth] = useState("");
   const selectedSummary = progress.monthlySummaries.find(item => item.snapshot.month === summaryMonth) ?? progress.latestSummary;
@@ -1358,7 +1362,7 @@ export function ProgressScreen({
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
-              isHistoryBuilding={progress.snapshotAutomationStatus.kind === "checking" || progress.snapshotAutomationStatus.kind === "generating"}
+              isHistoryBuilding={isHistoryBuilding}
               maskWealthValues={progress.preferences.maskWealthValues}
               onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}
@@ -1444,7 +1448,7 @@ export function ProgressScreen({
               assetChartData={progress.assetChartData}
               assetChartRange={progress.assetChartRange}
               isReducedMotionEnabled={isReducedMotionEnabled}
-              isHistoryBuilding={progress.snapshotAutomationStatus.kind === "checking" || progress.snapshotAutomationStatus.kind === "generating"}
+              isHistoryBuilding={isHistoryBuilding}
               maskWealthValues={progress.preferences.maskWealthValues}
               onAssetCustomRangeChange={progress.setAssetChartCustomRange}
               onAssetRangeChange={progress.setAssetChartRange}
