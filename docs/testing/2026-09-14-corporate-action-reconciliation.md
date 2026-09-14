@@ -33,6 +33,11 @@ catalog-backed split, bonus and demerger before confirmation. The saved Holdings
 screen then showed the expected open-position set and broker-aligned invested
 costs. Private screenshots remain local and are not reproduced here.
 
+After restarting CogVest, the owner selected the same six files again. The
+review classified every supplied row as a duplicate, with no additions,
+conflicts, unresolved matches or unsupported events. Final confirmation remained
+disabled, so the duplicate-only review could not write another batch.
+
 ## Public regression evidence
 
 `src/store/__tests__/corporateActionPortfolioImport.test.ts` combines invented
@@ -53,8 +58,6 @@ actions.
 
 ## Remaining release evidence
 
-- Restart the installed app and reimport the same six files to confirm
-  duplicate-only behavior on the distributed APK.
 - Compare current value and P&L only when both apps use the same captured prices
   or timestamp.
 - Record whether the owner accepts the edited annual source file as the available
