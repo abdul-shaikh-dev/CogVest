@@ -9,9 +9,8 @@ is a reconciliation gate, not a new corporate-action engine.
 ## Private local replay
 
 The six supplied annual Tradebook files were read locally and never committed or
-uploaded. One annual file had previously been edited by the owner while working
-around an Easy Trip import failure, so this replay cannot prove that the local
-files contain every row from the original broker exports.
+uploaded. The owner confirmed that the successful fresh-device import used the
+complete, unedited broker exports with every entry present.
 
 CogVest's production parser and full-history planner accounted for every row in
 the supplied files without unsupported or blocked rows. Every open-position
@@ -27,8 +26,8 @@ portfolio values are reproduced here.
 ## Fresh Android preview evidence
 
 The owner installed `v1.0.7-preview.1` without existing app data and imported all
-six available annual Tradebooks. The review reported every supplied row as new,
-with zero duplicates, conflicts or unsupported events. It disclosed each
+six complete, unedited annual Tradebooks. The review reported every supplied row
+as new, with zero duplicates, conflicts or unsupported events. It disclosed each
 catalog-backed split, bonus and demerger before confirmation. The saved Holdings
 screen then showed the expected open-position set and broker-aligned invested
 costs. Private screenshots remain local and are not reproduced here.
@@ -60,6 +59,3 @@ actions.
 
 - Compare current value and P&L only when both apps use the same captured prices
   or timestamp.
-- Record whether the owner accepts the edited annual source file as the available
-  baseline; otherwise obtain an unedited replacement before claiming complete
-  source-history coverage.
