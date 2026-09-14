@@ -24,6 +24,15 @@ Current value and P&L were not compared because the app and broker evidence did
 not share a captured quote timestamp. No private position, account, trade or
 portfolio values are reproduced here.
 
+## Fresh Android preview evidence
+
+The owner installed `v1.0.7-preview.1` without existing app data and imported all
+six available annual Tradebooks. The review reported every supplied row as new,
+with zero duplicates, conflicts or unsupported events. It disclosed each
+catalog-backed split, bonus and demerger before confirmation. The saved Holdings
+screen then showed the expected open-position set and broker-aligned invested
+costs. Private screenshots remain local and are not reproduced here.
+
 ## Public regression evidence
 
 `src/store/__tests__/corporateActionPortfolioImport.test.ts` combines invented
@@ -44,8 +53,8 @@ actions.
 
 ## Remaining release evidence
 
-- Perform the multi-file import on a fresh `v1.0.7-preview.1` installation, then
-  restart and reimport to confirm duplicate-only behavior on the distributed APK.
+- Restart the installed app and reimport the same six files to confirm
+  duplicate-only behavior on the distributed APK.
 - Compare current value and P&L only when both apps use the same captured prices
   or timestamp.
 - Record whether the owner accepts the edited annual source file as the available
