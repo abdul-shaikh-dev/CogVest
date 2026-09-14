@@ -29,6 +29,7 @@ import {
 import { getPortfolioStore, wouldOversellAsset, type PortfolioStoreState } from "@/src/store";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { StockSplitError } from "@/src/domain/stockSplits";
+import { getHoldingQuoteContext, type QuoteContext } from "@/src/services/quotes";
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -56,6 +57,7 @@ export type UseSellRedeemHoldingResult = {
   isSaving: boolean;
   notes: string;
   preview: SellRedeemPreview | null;
+  quoteContext: QuoteContext | null;
   quantity: string;
   save: () => SaveResult;
   sellPrice: string;
@@ -91,13 +93,14 @@ export function useSellRedeemHolding({
 }: UseSellRedeemHoldingInput): UseSellRedeemHoldingResult {
   const snapshot = usePortfolioSnapshot(store);
   const [quantity, setQuantity] = useState("");
-  const [sellPrice, setSellPrice] = useState("");
+  const [sellPrice, setSellPriceValue] = useState("");
   const [fees, setFees] = useState("");
   const [date, setDate] = useState(formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const suggestedPriceAppliedRef = useRef(false);
   const isSavingRef = useRef(false);
   const savedResultRef = useRef<SaveResult | null>(null);
   const tradeIdRef = useRef(createId("trade"));
@@ -129,6 +132,9 @@ export function useSellRedeemHolding({
     [assetId, snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades, now],
   );
   const holding = holdingsResult.holdings.find((candidate) => candidate.asset.id === assetId) ?? null;
+  const quoteContext = holding
+    ? getHoldingQuoteContext(holding, snapshot.quoteCache[assetId], now)
+    : null;
   const availableUnits = holding?.totalUnits ?? 0;
   const quantityValue = parseNumber(quantity);
   const sellPriceValue = parseNumber(sellPrice);
@@ -213,12 +219,19 @@ export function useSellRedeemHolding({
     if (
       holding?.currentPrice !== null &&
       holding &&
+      !suggestedPriceAppliedRef.current &&
       sellPrice.trim().length === 0 &&
       holding.currentPrice > 0
     ) {
-      setSellPrice(String(holding.currentPrice));
+      suggestedPriceAppliedRef.current = true;
+      setSellPriceValue(String(holding.currentPrice));
     }
   }, [holding, sellPrice]);
+
+  function setSellPrice(value: string) {
+    suggestedPriceAppliedRef.current = true;
+    setSellPriceValue(value);
+  }
 
   function validate() {
     const nextErrors: FieldErrors = {};
@@ -367,6 +380,7 @@ export function useSellRedeemHolding({
     isSaving,
     notes,
     preview,
+    quoteContext,
     quantity,
     save,
     sellPrice,

@@ -57,5 +57,7 @@ export type {
   QuoteFreshnessSummary,
 } from "./freshness";
 export { createManualQuote } from "./utils";
+export { getHoldingQuoteContext } from "./quoteContext";
+export type { QuoteContext } from "./quoteContext";
 export { buildYahooChartUrl, fetchYahooQuote } from "./yahooFinance";
 export { fetchAmfiQuote, isMutualFundAsset } from "../mutualFunds/amfiQuote";

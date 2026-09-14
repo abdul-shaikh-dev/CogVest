@@ -113,7 +113,7 @@ export function SellRedeemScreen({
                 value: formatUnits(flow.availableUnits),
               },
               {
-                label: "Current price",
+                label: "Saved quote",
                 value:
                   holding.currentPrice === null
                     ? "Unavailable"
@@ -129,6 +129,13 @@ export function SellRedeemScreen({
               },
             ]}
           />
+          <AppText
+            color="secondary"
+            testID="sell-redeem-quote-context"
+            variant="caption"
+          >
+            {flow.quoteContext?.label}
+          </AppText>
         </PremiumCard>
 
         <PremiumCard>
@@ -152,7 +159,7 @@ export function SellRedeemScreen({
               <FormTextField
                 error={flow.errors.sellPrice}
                 keyboardType="decimal-pad"
-                label="Sell price"
+                label="Actual execution price"
                 onChangeText={flow.setSellPrice}
                 placeholder="1700"
                 testID="sell-redeem-price-input"
@@ -160,6 +167,15 @@ export function SellRedeemScreen({
               />
             </View>
           </View>
+          <AppText
+            color="secondary"
+            testID="sell-redeem-price-guidance"
+            variant="caption"
+          >
+            {holding.currentPrice === null
+              ? "Enter the executed price from your broker record. No saved quote is available."
+              : `Suggested from the ${flow.quoteContext?.freshness ?? "saved"} saved quote. Confirm or replace it with the executed price; quote updates will not overwrite your entry.`}
+          </AppText>
           <View style={styles.formRow}>
             <View style={styles.formField}>
               <FormTextField

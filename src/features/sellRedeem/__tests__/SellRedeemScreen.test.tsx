@@ -87,6 +87,14 @@ describe("SellRedeemScreen", () => {
     expect(getByText("25")).toBeTruthy();
     expect(getByPlaceholderText("Max 25")).toBeTruthy();
     expect(getByText("Cash proceeds")).toBeTruthy();
+    expect(getByText("Saved quote")).toBeTruthy();
+    expect(getByTestId("sell-redeem-quote-context")).toHaveTextContent(
+      /Stale · Yahoo Finance · as of/,
+    );
+    expect(getByText("Actual execution price")).toBeTruthy();
+    expect(getByTestId("sell-redeem-price-guidance")).toHaveTextContent(
+      /Confirm or replace it with the executed price/,
+    );
     expect(
       getByText(
         "Net proceeds are added to deployable cash automatically. Record a withdrawal separately if the money leaves the portfolio.",
@@ -103,7 +111,7 @@ describe("SellRedeemScreen", () => {
     );
 
     fireEvent.changeText(getByLabelText("Quantity"), "5");
-    fireEvent.changeText(getByLabelText("Sell price"), "1700");
+    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
     fireEvent.changeText(getByLabelText("Fees"), "100");
     selectDate(getByTestId, "2026-05-20");
 
@@ -135,7 +143,7 @@ describe("SellRedeemScreen", () => {
     );
 
     fireEvent.changeText(getByLabelText("Quantity"), "1");
-    fireEvent.changeText(getByLabelText("Sell price"), "1700");
+    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
     selectDate(getByTestId, "2026-05-20");
 
     expect(getByTestId("sell-redeem-cash-link-summary")).toHaveTextContent(
@@ -152,7 +160,7 @@ describe("SellRedeemScreen", () => {
     );
 
     fireEvent.changeText(getByLabelText("Quantity"), "26");
-    fireEvent.changeText(getByLabelText("Sell price"), "1700");
+    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
@@ -167,5 +175,26 @@ describe("SellRedeemScreen", () => {
 
     expect(getByText("Holding not found")).toBeTruthy();
     expect(getByText("Open Holdings and choose an active position to sell or redeem.")).toBeTruthy();
+  });
+
+  it("keeps an unavailable quote distinct from the required execution price", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      assetId: asset.id,
+      averageCostPrice: 1450,
+      date: "2026-04-15",
+      id: "opening-hdfc",
+      quantity: 25,
+    });
+    const screen = render(<SellRedeemScreen assetId={asset.id} store={store} />);
+
+    expect(screen.getByTestId("sell-redeem-quote-context")).toHaveTextContent(
+      "Unavailable · no saved quote",
+    );
+    expect(screen.getByTestId("sell-redeem-price-input").props.value).toBe("");
+    expect(screen.getByTestId("sell-redeem-price-guidance")).toHaveTextContent(
+      /Enter the executed price from your broker record/,
+    );
   });
 });

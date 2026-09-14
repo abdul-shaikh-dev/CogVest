@@ -563,7 +563,9 @@ describe("HoldingsScreen", () => {
     expect(screen.getByText("23.8%")).toBeTruthy();
     expect(screen.getByText("First recorded purchase")).toBeTruthy();
     expect(screen.getByText("20 Apr 2026")).toBeTruthy();
-    expect(screen.getByText(/Updated .*\d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.getByTestId(`holding-quote-context-${asset.id}`)).toHaveTextContent(
+      /Stale · Yahoo Finance · as of/,
+    );
     fireEvent.press(screen.getByTestId("holding-detail-back"));
     fireEvent.press(screen.getByTestId("holdings-ppf-tab"));
     expect(
@@ -765,7 +767,9 @@ describe("HoldingsScreen", () => {
     expect(within(list).queryByText("Quantity")).toBeNull();
     expect(screen.getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
     expect(screen.getByText("Avg cost")).toBeTruthy();
-    expect(screen.getByText("Price source")).toBeTruthy();
+    expect(screen.getByTestId(`holding-quote-context-${asset.id}`)).toHaveTextContent(
+      /Stale · Yahoo Finance · as of/,
+    );
     fireEvent.press(screen.getByTestId("holding-detail-back"));
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
     expect(screen.getByTestId("holdings-search-input").props.value).toBe(

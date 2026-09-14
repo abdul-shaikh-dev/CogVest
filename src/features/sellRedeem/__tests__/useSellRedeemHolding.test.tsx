@@ -42,6 +42,37 @@ function seedStore() {
 }
 
 describe("useSellRedeemHolding", () => {
+  it("never overwrites an entered execution price when the saved quote changes", () => {
+    const store = seedStore();
+    const { result } = renderHook(() => useSellRedeemHolding({
+      assetId: hdfc.id,
+      now: new Date("2026-05-20T10:05:00.000Z"),
+      store,
+    }));
+
+    act(() => result.current.setSellPrice("1650"));
+    act(() => store.getState().upsertQuote({
+      asOf: "2026-05-20T10:04:00.000Z",
+      assetId: hdfc.id,
+      currency: "INR",
+      price: 1710,
+      source: "yahoo",
+    }));
+
+    expect(result.current.holding?.currentPrice).toBe(1710);
+    expect(result.current.sellPrice).toBe("1650");
+
+    act(() => result.current.setSellPrice(""));
+    act(() => store.getState().upsertQuote({
+      asOf: "2026-05-20T10:05:00.000Z",
+      assetId: hdfc.id,
+      currency: "INR",
+      price: 1720,
+      source: "yahoo",
+    }));
+    expect(result.current.sellPrice).toBe("");
+  });
+
   it("previews a sale above pre-split units but rejects it before the split date", () => {
     const store = seedStore();
     store.setState({

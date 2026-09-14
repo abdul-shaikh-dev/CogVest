@@ -1,0 +1,73 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- scrollUntilVisible:
+    element:
+      id: "holding-row-visual-qa-asset-hdfc"
+    direction: DOWN
+- tapOn:
+    id: "holding-row-visual-qa-asset-hdfc"
+- assertVisible:
+    id: "holding-quote-context-visual-qa-asset-hdfc"
+- assertVisible: "Stale · Yahoo Finance · as of.*"
+- scrollUntilVisible:
+    element:
+      id: "holding-sell-redeem-visual-qa-asset-hdfc"
+    direction: DOWN
+- tapOn:
+    id: "holding-sell-redeem-visual-qa-asset-hdfc"
+- assertVisible:
+    id: "sell-redeem-screen"
+- assertVisible: "Actual execution price"
+- assertVisible: "Suggested from the stale saved quote.*"
+- tapOn:
+    id: "sell-redeem-quantity-input"
+- inputText: "1"
+- tapOn:
+    id: "sell-redeem-price-input"
+- eraseText
+- inputText: "1600"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sell-redeem-save-button"
+    direction: DOWN
+- tapOn:
+    id: "sell-redeem-save-button"
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          direction: DOWN
+          duration: 700
+- assertVisible: "Quantity"
+- assertVisible: "24"
+- scrollUntilVisible:
+    element:
+      id: "holding-view-records"
+    direction: DOWN
+- tapOn:
+    id: "holding-view-records"
+- scrollUntilVisible:
+    element:
+      id: "review-transactions-visual-qa-asset-hdfc"
+    direction: DOWN
+- tapOn:
+    id: "review-transactions-visual-qa-asset-hdfc"
+- assertVisible:
+    id: "trade-history-screen"
+- assertVisible: ".*1 units at ₹1,600.00.*"
+- pressKey: BACK
+- assertVisible:
+    id: "holding-detail-modal"
