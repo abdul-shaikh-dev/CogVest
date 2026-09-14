@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
   Keyboard,
   Modal,
   PanResponder,
@@ -66,6 +67,7 @@ import { destinationAfterSwipe, isHorizontalIntent, type HoldingsDestination } f
 type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
 
 type HoldingsScreenProps = {
+  isActive?: boolean;
   openAddMenu?: boolean;
   onAddMenuOpened?: () => void;
   onOpenDuration?: () => void;
@@ -101,6 +103,7 @@ const exposureColors: Record<ExposureSegment["color"], string> = {
 };
 
 export function HoldingsScreen({
+  isActive = true,
   openAddMenu,
   onAddMenuOpened,
   onOpenDuration,
@@ -129,6 +132,8 @@ export function HoldingsScreen({
     "market" | "ppf"
   >("market");
   const scrollRef = useRef<ScrollView>(null);
+  const detailScrollRef = useRef<ScrollView>(null);
+  const detailScrollOffset = useRef(0);
   const verticalGesture = useRef(false);
   useEffect(() => {
     if (openAddMenu) {
@@ -160,6 +165,7 @@ export function HoldingsScreen({
   const isReducedMotionEnabled = useReducedMotionPreference();
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
   const [selectedAssetId, setSelectedAssetId] = useState<string>();
+  const [selectedRecordsVisible, setSelectedRecordsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const reviewItems = createHoldingReviewItems(holdings, rollupRows);
   const marketHoldings = holdings.filter(
@@ -255,9 +261,32 @@ export function HoldingsScreen({
     marketReviewItems.find(
       (item) => item.holding.asset.id === selectedAssetId,
     ) ?? reviewItems.find((item) => item.holding.asset.id === selectedAssetId);
+  useEffect(() => {
+    if (selectedAssetId && !selectedItem) {
+      detailScrollOffset.current = 0;
+      setSelectedRecordsVisible(false);
+      setSelectedAssetId(undefined);
+    }
+  }, [selectedAssetId, selectedItem]);
+
   function closeDetail() {
+    detailScrollOffset.current = 0;
+    setSelectedRecordsVisible(false);
     setSelectedAssetId(undefined);
   }
+  useEffect(() => {
+    if (!isActive || !selectedAssetId) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        closeDetail();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [isActive, selectedAssetId]);
+
   function renderHoldingRow(item: HoldingReviewItem) {
     return (
       <HoldingRow
@@ -271,6 +300,8 @@ export function HoldingsScreen({
         masked={maskWealthValues}
         onPress={() => {
           Keyboard.dismiss();
+          detailScrollOffset.current = 0;
+          setSelectedRecordsVisible(false);
           setSelectedAssetId(item.holding.asset.id);
         }}
       />
@@ -619,8 +650,14 @@ export function HoldingsScreen({
         {selectedItem ? (
           <Modal
             animationType={isReducedMotionEnabled ? "none" : "fade"}
-            visible
+            visible={isActive}
             onRequestClose={closeDetail}
+            onShow={() =>
+              detailScrollRef.current?.scrollTo({
+                animated: false,
+                y: detailScrollOffset.current,
+              })
+            }
             testID="holding-detail-modal"
           >
             <View
@@ -649,7 +686,28 @@ export function HoldingsScreen({
                   testID="holding-detail-mask"
                 />
               </View>
-              <ScrollView contentContainerStyle={styles.detailContent}>
+              {statusMessage ? (
+                <View
+                  accessibilityLiveRegion="polite"
+                  style={styles.detailStatus}
+                  testID="holding-detail-status-message"
+                >
+                  <PremiumCard style={styles.statusCard}>
+                    <AppText style={styles.positiveText} weight="bold">
+                      {statusMessage}
+                    </AppText>
+                  </PremiumCard>
+                </View>
+              ) : null}
+              <ScrollView
+                contentContainerStyle={styles.detailContent}
+                onScroll={(event) => {
+                  detailScrollOffset.current = event.nativeEvent.contentOffset.y;
+                }}
+                ref={detailScrollRef}
+                scrollEventThrottle={16}
+                testID="holding-detail-scroll"
+              >
                 <HoldingDetails
                   key={selectedItem.holding.asset.id}
                   allocationAvailable={
@@ -662,29 +720,24 @@ export function HoldingsScreen({
                   masked={maskWealthValues}
                   minimal={isMinimalMode}
                   openingPositions={openingPositions}
+                  recordsVisible={selectedRecordsVisible}
                   trades={trades}
+                  onToggleRecords={() =>
+                    setSelectedRecordsVisible((visible) => !visible)
+                  }
                   onReviewOpeningPosition={
                     onReviewOpeningPosition
-                      ? (id) => {
-                          closeDetail();
-                          onReviewOpeningPosition(id);
-                        }
+                      ? (id) => onReviewOpeningPosition(id)
                       : undefined
                   }
                   onReviewTrades={
                     onReviewTrades
-                      ? (id) => {
-                          closeDetail();
-                          onReviewTrades(id);
-                        }
+                      ? (id) => onReviewTrades(id)
                       : undefined
                   }
                   onSellRedeem={
                     onSellRedeem
-                      ? (id) => {
-                          closeDetail();
-                          onSellRedeem(id);
-                        }
+                      ? (id) => onSellRedeem(id)
                       : undefined
                   }
                 />
@@ -1192,7 +1245,9 @@ type HoldingDetailsProps = {
   masked: boolean;
   minimal: boolean;
   openingPositions: OpeningPosition[];
+  recordsVisible: boolean;
   trades: Trade[];
+  onToggleRecords: () => void;
   onReviewOpeningPosition?: (id: string) => void;
   onReviewTrades?: (id: string) => void;
   onSellRedeem?: (id: string) => void;
@@ -1281,15 +1336,16 @@ function HoldingDetails({
   masked,
   minimal,
   openingPositions,
+  recordsVisible,
   onReviewOpeningPosition,
   onReviewTrades,
   onSellRedeem,
+  onToggleRecords,
   trades,
 }: HoldingDetailsProps) {
   const { holding } = item;
   const isPending = holding.valuation.status === "pending";
   const positive = (holding.unrealisedPnL ?? 0) >= 0;
-  const [showRecords, setShowRecords] = useState(false);
   const assetOpeningPositions = openingPositions.filter(
     (position) => position.assetId === holding.asset.id,
   );
@@ -1435,14 +1491,14 @@ function HoldingDetails({
       {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
       (onReviewTrades && assetTrades.length > 0) ? (
         <GroupedListRow
-          title={showRecords ? "Hide records" : "View records"}
+          title={recordsVisible ? "Hide records" : "View records"}
           meta="Opening positions and corrections"
-          value={showRecords ? "−" : "›"}
+          value={recordsVisible ? "−" : "›"}
           testID="holding-view-records"
-          onPress={() => setShowRecords(!showRecords)}
+          onPress={onToggleRecords}
         />
       ) : null}
-      {showRecords && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
+      {recordsVisible && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
         <View style={styles.openingRecords}>
           <AppText color="secondary" variant="caption" weight="bold">
             Opening {assetOpeningPositions.length === 1 ? "record" : "records"}
@@ -1471,7 +1527,7 @@ function HoldingDetails({
         </View>
       ) : null}
 
-      {showRecords && onReviewTrades && assetTrades.length > 0 ? (
+      {recordsVisible && onReviewTrades && assetTrades.length > 0 ? (
         <AppButton
           title={`Review ${assetTrades.length} ${assetTrades.length === 1 ? "transaction" : "transactions"}`}
           variant="secondary"
@@ -1640,6 +1696,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.subtle,
   },
   detailContent: { padding: spacing.md, paddingBottom: spacing.xl },
+  detailStatus: { paddingHorizontal: spacing.md },
   detailIdentity: {
     flexDirection: "row",
     alignItems: "center",

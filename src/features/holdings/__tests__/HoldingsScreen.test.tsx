@@ -799,6 +799,81 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByTestId(`holding-sell-redeem-${asset.id}`));
 
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
+    expect(getByTestId("holding-detail-modal").props.visible).toBe(true);
+    expect(store.getState().trades).toHaveLength(1);
+  });
+
+  it("hides child-route details while inactive and restores their scroll context", () => {
+    const store = seedMixedHoldings();
+    const onSellRedeem = jest.fn();
+    const scrollTo = jest
+      .spyOn(ScrollView.prototype, "scrollTo")
+      .mockImplementation(() => undefined);
+    const ui = (isActive: boolean) => (
+      <SafeAreaProvider initialMetrics={testSafeAreaMetrics}>
+        <HoldingsScreen
+          isActive={isActive}
+          onReviewTrades={jest.fn()}
+          onSellRedeem={onSellRedeem}
+          store={store}
+        />
+      </SafeAreaProvider>
+    );
+    const screen = renderNative(ui(true));
+
+    fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
+    fireEvent.press(screen.getByTestId("holdings-filter-winners"));
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(screen.getByTestId("holding-view-records"));
+    expect(screen.getByTestId(`review-transactions-${asset.id}`)).toBeTruthy();
+    fireEvent.scroll(screen.getByTestId("holding-detail-scroll"), {
+      nativeEvent: { contentOffset: { y: 240 } },
+    });
+    fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
+
+    screen.rerender(ui(false));
+    expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
+
+    screen.rerender(ui(true));
+    act(() => {
+      screen.getByTestId("holding-detail-modal").props.onShow();
+    });
+
+    expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, y: 240 });
+    expect(screen.getByTestId(`review-transactions-${asset.id}`)).toBeTruthy();
+    expect(screen.getByTestId("holdings-search-input").props.value).toBe(
+      "Reliance",
+    );
+    expect(
+      screen.getByTestId("holdings-filter-winners").props.accessibilityState
+        .selected,
+    ).toBe(true);
+    scrollTo.mockRestore();
+  });
+
+  it("returns to the preserved list when a mutation removes the selected holding", () => {
+    const store = seedMixedHoldings();
+    const screen = render(<HoldingsScreen store={store} />);
+
+    fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    act(() => {
+      store.getState().addTrade({
+        assetId: asset.id,
+        date: "2026-04-21",
+        id: "trade-full-sale",
+        pricePerUnit: 110,
+        quantity: 2,
+        totalValue: 220,
+        type: "sell",
+      });
+    });
+
+    expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
+    expect(screen.getByTestId("holdings-search-input").props.value).toBe(
+      "Reliance",
+    );
+    expect(screen.getByText("No holdings match")).toBeTruthy();
   });
 
   it("opens a scalable transaction history from an expanded holding", () => {
@@ -813,6 +888,7 @@ describe("HoldingsScreen", () => {
     fireEvent.press(getByTestId(`review-transactions-${asset.id}`));
 
     expect(onReviewTrades).toHaveBeenCalledWith(asset.id);
+    expect(getByTestId("holding-detail-modal")).toBeTruthy();
   });
 
   it("keeps all transaction history reachable after a holding is fully sold", () => {
@@ -878,6 +954,21 @@ describe("HoldingsScreen", () => {
 
     expect(getByTestId("holdings-status-message")).toBeTruthy();
     expect(getByText("Portfolio history updated.")).toBeTruthy();
+  });
+
+  it("shows correction completion feedback inside restored holding details", () => {
+    const store = seedMixedHoldings();
+    const screen = render(
+      <HoldingsScreen
+        statusMessage="Portfolio history updated."
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+
+    expect(screen.getByTestId("holding-detail-status-message")).toBeTruthy();
+    expect(screen.getAllByText("Portfolio history updated.")).toHaveLength(2);
   });
 
   it("wires header Add Holding and value masking actions", () => {

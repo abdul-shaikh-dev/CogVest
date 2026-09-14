@@ -10,7 +10,7 @@ export default function TradeRoute() {
       tradeId={params.tradeId ?? ""}
       onCancel={() => router.back()}
       onComplete={(statusMessage) =>
-        router.replace({
+        router.dismissTo({
           pathname: "/(tabs)/holdings",
           params: { statusMessage },
         })

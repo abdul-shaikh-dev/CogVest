@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 
@@ -7,17 +8,18 @@ import { useQuickSetupSession } from "@/src/features/quickSetup";
 export default function HoldingsScreen() {
   const params = useLocalSearchParams<{ statusMessage?: string; openAddMenu?: string }>();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const [statusMessage, setStatusMessage] = useState<string>();
   const quickSetup = useQuickSetupSession();
 
   useEffect(() => {
-    if (!params.statusMessage) {
+    if (!isFocused || !params.statusMessage) {
       return;
     }
 
     setStatusMessage(params.statusMessage);
     router.setParams({ statusMessage: undefined });
-  }, [params.statusMessage]);
+  }, [isFocused, params.statusMessage]);
 
   useEffect(
     () =>
@@ -29,6 +31,7 @@ export default function HoldingsScreen() {
 
   return (
     <HoldingsFeatureScreen
+      isActive={isFocused}
       openAddMenu={params.openAddMenu === "true"}
       onAddMenuOpened={() => router.setParams({ openAddMenu: undefined })}
       onOpenDuration={() => router.push("/holding-duration")}

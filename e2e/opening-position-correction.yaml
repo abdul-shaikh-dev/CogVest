@@ -84,10 +84,12 @@ appId: com.abdulshaikh.cogvest
 - doubleTapOn:
     id: "save-opening-correction-button"
 - assertVisible:
-    id: "holdings-screen"
+    id: "holding-detail-modal"
 - assertVisible: "Portfolio history updated."
-- tapOn:
-    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      id: "holding-quantity-.*"
+    direction: UP
 - assertVisible:
     id: "holding-quantity-.*"
 - assertVisible: "3"
