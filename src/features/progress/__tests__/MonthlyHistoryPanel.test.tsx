@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
 import { Modal, ScrollView } from "react-native";
 
+import { MASKED_INR_VALUE } from "@/src/components/common";
 import { MonthlyHistoryPanel } from "@/src/features/progress/MonthlyHistoryPanel";
 import type { MonthlyProgressSummary } from "@/src/domain/calculations";
 import { colors } from "@/src/theme";
@@ -293,7 +294,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(UNSAFE_getByType(Modal).props.visible).toBe(false);
   });
 
-  it("masks financial values and omits financial notes", () => {
+  it("masks financial amounts while retaining percentages and unavailable states", () => {
     const unavailableSummary = createSummary("2026-06", {
       expenseRate: null,
       monthlyExpense: undefined,
@@ -318,12 +319,14 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(getByTestId("open-monthly-history"));
     fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
-    expect(getAllByText("₹••••").length).toBeGreaterThan(1);
-    expect(getAllByText("Hidden").length).toBeGreaterThan(1);
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(1);
+    expect(getAllByText("+717.28% vs May 2026")).toHaveLength(1);
+    expect(getAllByText("60.00% allocation")).toHaveLength(1);
+    expect(queryByText("Hidden")).toBeNull();
     expect(queryByText("Financial note for 2026-06: ₹123456")).toBeNull();
     expect(queryByText("₹1.23L")).toBeNull();
 
-    expect(queryByText("Unavailable")).toBeNull();
+    expect(getAllByText("Unavailable").length).toBeGreaterThan(1);
   });
 
   it("labels nullable snapshot and performance values as unavailable when unmasked", () => {

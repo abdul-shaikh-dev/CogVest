@@ -66,7 +66,7 @@ appId: com.abdulshaikh.cogvest
     checked: true
 - openLink: "cogvest:///holdings"
 - assertVisible: "Masking Test Asset"
-- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertVisible: "₹••••"
 - assertVisible: "+11.11%"
 - tapOn:
     id: "holding-row-.*"
@@ -84,5 +84,5 @@ appId: com.abdulshaikh.cogvest
     checked: true
 - openLink: "cogvest:///holdings"
 - assertVisible: "Masking Test Asset"
-- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertVisible: "₹••••"
 - assertVisible: "+11.11%"

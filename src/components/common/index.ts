@@ -2,7 +2,11 @@ export {};
 export { AppButton } from "./AppButton";
 export { AppText } from "./AppText";
 export { EmptyState } from "./EmptyState";
-export { MASKED_INR_VALUE, MaskedValue } from "./MaskedValue";
+export {
+  MASKED_INR_VALUE,
+  MASKED_VALUE_ACCESSIBILITY_LABEL,
+  MaskedValue,
+} from "./MaskedValue";
 export {
   assetClassLabel,
   CategoryIcon,

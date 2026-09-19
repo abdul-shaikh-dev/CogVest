@@ -9,7 +9,10 @@ import type { ReactElement } from "react";
 import { Modal, PanResponder, ScrollView, type GestureResponderEvent, type PanResponderGestureState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { MASKED_INR_VALUE } from "@/src/components/common";
+import {
+  MASKED_INR_VALUE,
+  MASKED_VALUE_ACCESSIBILITY_LABEL,
+} from "@/src/components/common";
 import { HoldingsScreen } from "@/src/features/holdings";
 import { useReducedMotionPreference } from "@/src/hooks/useReducedMotionPreference";
 import type {
@@ -586,11 +589,14 @@ describe("HoldingsScreen", () => {
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getByText, getAllByText, getByTestId } = render(
+    const { getAllByLabelText, getByText, getAllByText, getByTestId } = render(
       <HoldingsScreen store={store} />,
     );
     expect(getByText("Valuation pending")).toBeTruthy();
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(
+      getAllByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL).length,
+    ).toBeGreaterThan(0);
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(
       within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText(

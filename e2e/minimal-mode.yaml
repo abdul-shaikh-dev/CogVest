@@ -37,7 +37,8 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "This month"
 - openLink: "cogvest:///progress"
 - assertVisible: "Portfolio Growth"
-- assertVisible: "Month-end snapshot"
+- assertVisible:
+    id: "month-end-snapshot-status-card"
 - assertNotVisible: "What changed this month?"
 - openLink: "cogvest:///settings"
 - tapOn:
