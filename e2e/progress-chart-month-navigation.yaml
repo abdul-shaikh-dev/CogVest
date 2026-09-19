@@ -33,7 +33,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element:
       id: asset-trend-previous-month
-    direction: UP
+    direction: DOWN
 - tapOn:
     id: asset-trend-previous-month
 - assertVisible:
@@ -58,6 +58,19 @@ appId: com.abdulshaikh.cogvest
     text: "Apr 2026.*% versus Mar 2026.*"
 - assertNotVisible:
     id: asset-latest-summary
+- scrollUntilVisible:
+    element:
+      id: asset-trend-Debt
+    direction: DOWN
+- tapOn:
+    id: asset-trend-Debt
+- assertVisible:
+    id: asset-trend-focused-scale
+    text: "Debt scale.*Other asset lines hidden"
+- tapOn:
+    id: asset-trend-Debt
+- assertNotVisible:
+    id: asset-trend-focused-scale
 - scrollUntilVisible:
     element:
       id: portfolio-trend-previous-month

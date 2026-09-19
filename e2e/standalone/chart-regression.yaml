@@ -65,11 +65,19 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: asset-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: asset-trend-previous-month
+    direction: DOWN
 - tapOn:
     id: asset-trend-previous-month
+- scrollUntilVisible:
+    element:
+      id: asset-trend-selected-panel
+    direction: DOWN
 - assertVisible:
     id: asset-trend-selected-panel
-    text: "${PREVIOUS_MONTH}.*% versus previous visible month.*"
+    text: "${PREVIOUS_MONTH}.*% versus .*"
 - scrollUntilVisible:
     element:
       id: asset-trend-plot-region
@@ -89,7 +97,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element:
       id: open-monthly-history
-    direction: DOWN
+    direction: UP
 - tapOn:
     id: open-monthly-history
 - scrollUntilVisible:
@@ -100,7 +108,7 @@ appId: com.abdulshaikh.cogvest
     id: snapshot-month-2026-05
 - tapOn:
     id: snapshot-month-2026-05
-- assertVisible: "₹19.87L"
+- assertVisible: "₹19,87,450.00"
 - back
 - scrollUntilVisible:
     element:
@@ -116,7 +124,7 @@ appId: com.abdulshaikh.cogvest
     id: snapshot-month-2021-06
 - assertVisible:
     id: selected-snapshot-summary
-- assertVisible: "₹5.3L"
+- assertVisible: "₹5,30,000.00"
 - takeScreenshot: .expo/standalone-oldest-month
 - back
 - assertVisible:

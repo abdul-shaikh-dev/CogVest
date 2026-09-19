@@ -454,7 +454,10 @@ function resetPortfolioStoreForVisualQa(
 
 export function seedVisualQaPortfolio(
   store: StoreApi<PortfolioStoreState>,
-  { longHistory = false }: { longHistory?: boolean } = {},
+  {
+    historyMonths,
+    longHistory = false,
+  }: { historyMonths?: number; longHistory?: boolean } = {},
 ) {
   visualQaSessionActive = true;
   resetPortfolioStoreForVisualQa(store);
@@ -466,10 +469,12 @@ export function seedVisualQaPortfolio(
     state.addOpeningPosition(position),
   );
   visualQaCashEntries.forEach((entry) => state.addCashEntry(entry));
-  // Prepend deterministic history; preserve the standard seven-month baseline.
-  const olderSnapshots: MonthlySnapshot[] = longHistory
-    ? Array.from({ length: 53 }, (_, index) => {
-        const month = new Date(Date.UTC(2021, 5 + index, 1))
+  // Preserve the standard baseline and the established 60-month performance fixture.
+  const totalHistoryMonths = historyMonths ?? (longHistory ? 60 : visualQaMonthlySnapshots.length);
+  const olderSnapshotCount = Math.max(0, totalHistoryMonths - visualQaMonthlySnapshots.length);
+  const olderSnapshots: MonthlySnapshot[] = olderSnapshotCount > 0
+    ? Array.from({ length: olderSnapshotCount }, (_, index) => {
+        const month = new Date(Date.UTC(2025, 10 - olderSnapshotCount + index, 1))
           .toISOString().slice(0, 7);
         const equityValue = 300000 + index * 10000 + (index % 4) * 1500;
         const debtValue = 100000 + index * 2500;

@@ -12,6 +12,18 @@ appId: com.abdulshaikh.cogvest
       id: asset-history-panel
     timeout: 10000
 - assertVisible: "₹200.00"
+- assertVisible:
+    id: asset-history-visible-range
+- scrollUntilVisible:
+    element:
+      id: asset-history-selected-date
+    direction: DOWN
+- assertVisible:
+    id: asset-history-selected-date
+- scrollUntilVisible:
+    element:
+      id: asset-history-mode-holdingValue
+    direction: UP
 - tapOn:
     id: asset-history-mode-holdingValue
 - assertVisible: "₹1,000.00"

@@ -1308,6 +1308,17 @@ describe("ProgressScreen", () => {
       for (const chart of getAllByTestId("gifted-line-chart", { includeHiddenElements: true })) {
         const data = chart.props.data ?? chart.props.dataSet[0].data;
         expect(data).toHaveLength(count);
+        expect(data.at(-1).dataPointRadius).toBe(6);
+        expect(data.at(-1).hideDataPoint).toBe(false);
+        if (count > 24) {
+          expect(data.slice(0, -1).every((point: { dataPointRadius: number }) =>
+            point.dataPointRadius === 0)).toBe(true);
+          expect(data.slice(0, -1).every((point: { hideDataPoint: boolean }) =>
+            point.hideDataPoint)).toBe(true);
+        } else {
+          expect(data.slice(0, -1).every((point: { dataPointRadius: number }) =>
+            point.dataPointRadius === 3)).toBe(true);
+        }
         const lastX = chart.props.initialSpacing + (count - 1) * chart.props.spacing;
         expect(lastX + 6).toBeLessThan(chart.props.width);
         expect(data.filter((item: { label: string }) => item.label)).toHaveLength(3);
@@ -1318,6 +1329,51 @@ describe("ProgressScreen", () => {
         if (count > 12) expect(data[count - 1].label).toContain("\n");
       }
     }
+  });
+
+  it("gives a focused small asset series its own disclosed scale", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(chartSnapshot("2026-01", {
+      cryptoValue: 2,
+      debtValue: 10,
+      equityValue: 900000,
+      investedValue: 800000,
+      portfolioValue: 900012,
+    }));
+    store.getState().addMonthlySnapshot(chartSnapshot("2026-02", {
+      cryptoValue: 3,
+      debtValue: 12,
+      equityValue: 1000000,
+      investedValue: 900000,
+      portfolioValue: 1000015,
+    }));
+
+    const { getAllByTestId, getByTestId, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+    const initialAssetChart = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    })[1];
+    expect(initialAssetChart.props.dataSet).toHaveLength(3);
+    expect(initialAssetChart.props.maxValue).toBe(2000000);
+
+    fireEvent.press(getByTestId("asset-trend-Debt"));
+
+    const focusedAssetChart = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    })[1];
+    expect(focusedAssetChart.props.dataSet).toHaveLength(1);
+    expect(focusedAssetChart.props.dataSet[0].data.map((point: { value: number }) => point.value))
+      .toEqual([10, 12]);
+    expect(focusedAssetChart.props.maxValue).toBe(20);
+    expect(getByTestId("asset-trend-focused-scale")).toHaveTextContent(
+      "Debt scale · Other asset lines hidden",
+    );
+
+    fireEvent.press(getByTestId("asset-trend-Debt"));
+    expect(queryByTestId("asset-trend-focused-scale")).toBeNull();
+    expect(getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
+      .toHaveLength(3);
   });
 
   it("disables chart animation when reduced motion is enabled", () => {
