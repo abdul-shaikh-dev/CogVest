@@ -91,7 +91,7 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByText("+10.00%")).toHaveStyle({ color: colors.profit });
+    expect(getByText("+10.00% vs December 2025")).toHaveStyle({ color: colors.profit });
   });
 
   describe("animation frame ownership", () => {
@@ -168,7 +168,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(getByText("May")).toBeTruthy();
     expect(getByText("Apr")).toBeTruthy();
     expect(getByText("Mar")).toBeTruthy();
-    expect(getByText("Change")).toBeTruthy();
+    expect(getByText("Value change")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-02")).toThrow();
 
     fireEvent.press(getByTestId("history-year-2025"));
@@ -213,15 +213,15 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByText("No prior month")).toBeTruthy();
+    expect(getByText("No prior stored month")).toBeTruthy();
     fireEvent.press(getByTestId("snapshot-month-2026-01"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByText("January 2026")).toBeTruthy();
-    expect(getByText("+10.00% vs December 2025")).toBeTruthy();
+    expect(getByText("+10.00% vs December 2025 portfolio value change")).toBeTruthy();
 
     fireEvent.press(getByTestId("history-back"));
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
-    expect(getByText("No % baseline vs April 2026")).toBeTruthy();
+    expect(getByText("Percentage unavailable · prior value was zero portfolio value change")).toBeTruthy();
     expect(queryByText("Financial note for 2026-05: ₹-20000")).toBeTruthy();
   });
 
@@ -320,7 +320,7 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(1);
-    expect(getAllByText("+717.28% vs May 2026")).toHaveLength(1);
+    expect(getAllByText("+717.28% vs May 2026 portfolio value change")).toHaveLength(1);
     expect(getAllByText("60.00% allocation")).toHaveLength(1);
     expect(queryByText("Hidden")).toBeNull();
     expect(queryByText("Financial note for 2026-06: ₹123456")).toBeNull();

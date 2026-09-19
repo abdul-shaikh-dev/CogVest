@@ -38,7 +38,7 @@ appId: com.abdulshaikh.cogvest
     id: asset-trend-previous-month
 - assertVisible:
     id: asset-trend-selected-panel
-    text: "Apr 2026.*% versus previous visible month.*"
+    text: "Apr 2026.*% versus Mar 2026.*"
 - takeScreenshot: .expo/chart-month-asset-before-scroll
 - scrollUntilVisible:
     element:
@@ -55,7 +55,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - assertVisible:
     id: asset-trend-selected-panel
-    text: "Apr 2026.*% versus previous visible month.*"
+    text: "Apr 2026.*% versus Mar 2026.*"
 - assertNotVisible:
     id: asset-latest-summary
 - scrollUntilVisible:

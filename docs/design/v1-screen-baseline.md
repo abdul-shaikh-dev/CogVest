@@ -6,6 +6,7 @@ approved V2 issues and `docs/roadmap/v2-behaviour-spec.md` supersede its V1-only
 exclusions where applicable (including the implemented Minimal Mode).
 Use it with `DESIGN.md` and these supporting sources:
 
+- Financial labels and formats: `docs/design/financial-label-format-contract.md`
 - UX research baseline: `docs/design/v1-ux-research-baseline.md`
 - Current emulator evidence: `docs/testing/artifacts/visual-qa/latest/`
 
@@ -112,8 +113,8 @@ visual hierarchy. Its preview and interaction contract live in
 `docs/design/previews/holdings-focused-detail/` (PR #308). Search and existing
 filters precede a grouped list with hairline row separators. Each row shows
 name, symbol/instrument, honest Manual provenance, current value, signed return,
-invested amount and Allocation. Allocation uses market holdings only, excluding
-cash and PPF; never label it "Market share" or imply whole-portfolio allocation.
+invested amount and Market holdings share. This share uses market holdings only,
+excluding cash and PPF, and must not imply whole-portfolio allocation.
 Incomplete allocation is explained once rather than repeated on every row.
 
 A row opens a separate full-height detail panel, not an inline expansion.

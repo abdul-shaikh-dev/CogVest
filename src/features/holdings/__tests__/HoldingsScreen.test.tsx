@@ -266,6 +266,9 @@ describe("HoldingsScreen", () => {
     );
 
     expect(getByTestId("holdings-insights-button")).toBeTruthy();
+    expect(getByTestId("holdings-allocation-scope")).toHaveTextContent(
+      "Market holdings share · cash and PPF excluded",
+    );
     expect(queryByText("Dominant position")).toBeNull();
 
     fireEvent.press(getByTestId("holdings-insights-button"));
@@ -554,7 +557,7 @@ describe("HoldingsScreen", () => {
     expect(screen.getByTestId("holding-row-cash-asset")).toBeTruthy();
     expect(
       within(screen.getByTestId(`holding-row-${asset.id}`)).getByText(
-        "Allocation 23.8%",
+        "Market holdings share 23.8%",
       ),
     ).toBeTruthy();
     expect(
@@ -735,7 +738,7 @@ describe("HoldingsScreen", () => {
     expect(getByText("₹250")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
     expect(getByText("Invested ₹200")).toBeTruthy();
-    expect(getByText("Allocation 100.0%")).toBeTruthy();
+    expect(getByText("Market holdings share 100.0%")).toBeTruthy();
     expect(queryByText("Live price")).toBeNull();
     expect(queryByText("Manual price")).toBeNull();
     expect(queryByText(/fallback/i)).toBeNull();
@@ -1138,7 +1141,7 @@ describe("HoldingsScreen", () => {
 
     fireEvent.press(getByTestId("holdings-filter-high-allocation"));
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
-    expect(getList().getByText("Allocation 23.8%")).toBeTruthy();
+    expect(getList().getByText("Market holdings share 23.8%")).toBeTruthy();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 

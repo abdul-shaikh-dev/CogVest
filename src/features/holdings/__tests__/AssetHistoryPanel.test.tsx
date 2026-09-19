@@ -107,12 +107,12 @@ describe("AssetHistoryPanel", () => {
   it("moves across observed dates without inventing intermediate observations", () => {
     const screen = renderPanel();
 
-    expect(screen.getByText("2026-01-03")).toBeTruthy();
+    expect(screen.getByText("03 Jan 2026")).toBeTruthy();
     expect(screen.getByTestId("asset-history-next").props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(screen.getByTestId("asset-history-previous"));
-    expect(screen.getByText("2026-01-02")).toBeTruthy();
+    expect(screen.getByText("02 Jan 2026")).toBeTruthy();
     fireEvent.press(screen.getByTestId("asset-history-next"));
-    expect(screen.getByText("2026-01-03")).toBeTruthy();
+    expect(screen.getByText("03 Jan 2026")).toBeTruthy();
   });
 
   it("requests a new date range when a range control changes", () => {

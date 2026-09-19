@@ -183,6 +183,9 @@ describe("DashboardScreen", () => {
       ),
     ).toBeTruthy();
     expect(details.getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
+    expect(details.getByTestId("dashboard-exact-values")).toHaveTextContent(
+      "Exact values: portfolio ₹300.00 · invested ₹200.00 · holdings P&L +₹100.00",
+    );
     expect(details.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
     expect(
       details.getByText(
@@ -686,6 +689,9 @@ describe("DashboardScreen", () => {
       ),
     ).toBeTruthy();
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
+    expect(
+      allocationCard.getByText("Share of market holdings and cash · recorded PPF excluded"),
+    ).toBeTruthy();
     expect(allocationCard.getByText("150.00%")).toBeTruthy();
     expect(allocationCard.getByText("₹300")).toBeTruthy();
     expect(allocationCard.getByText("-50.00%")).toBeTruthy();
@@ -811,9 +817,11 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByLabelText, getAllByText, queryByLabelText, queryByText } = render(
+    const { getAllByLabelText, getAllByText, getByTestId, queryByLabelText, queryByTestId, queryByText } = render(
       <DashboardScreen store={store} />,
     );
+
+    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(
@@ -822,6 +830,7 @@ describe("DashboardScreen", () => {
     expect(queryByLabelText("₹300.00")).toBeNull();
     expect(queryByText("₹300.00")).toBeNull();
     expect(queryByText("+₹100.00")).toBeNull();
+    expect(queryByTestId("dashboard-exact-values")).toBeNull();
     expect(getAllByText("+50.00%").length).toBeGreaterThan(0);
   });
 

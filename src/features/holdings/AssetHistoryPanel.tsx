@@ -4,6 +4,7 @@ import { LineChart } from "react-native-gifted-charts";
 
 import { AppButton, AppText } from "@/src/components/common";
 import { buildAssetHistory, downsampleAssetHistory } from "@/src/domain/calculations/assetHistory";
+import { formatDate } from "@/src/domain/formatters";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import { colors, spacing } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
@@ -247,7 +248,7 @@ export function AssetHistoryPanel({
       ) : selected ? (
         <>
           <View accessibilityLiveRegion="polite" style={styles.readout}>
-            <AppText color="secondary">{selected.date}</AppText>
+            <AppText color="secondary">{formatDate(selected.date)}</AppText>
             <AppText testID="asset-history-selected-value" variant="title" weight="bold">
               {format(selected.value)}
             </AppText>
@@ -346,8 +347,8 @@ export function AssetHistoryPanel({
 
       {showDetails ? (
         <AppText color="secondary" variant="caption">
-          Requested {from} to {to}.
-          {history.entry ? ` Fetched ${history.entry.fetchedAt.slice(0, 10)}.` : ""} Observed dates only; missing prices are not filled. Long ranges show up to 500 sampled observations. Holding value begins when recorded quantity is known, includes transactions, and is not investment return. CoinGecko midnight observations are aligned to the preceding completed UTC day. No historical currency conversion is applied.
+          Requested {formatDate(from)} to {formatDate(to)}.
+          {history.entry ? ` Fetched ${formatDate(history.entry.fetchedAt)}.` : ""} Observed dates only; missing prices are not filled. Long ranges show up to 500 sampled observations. Holding value begins when recorded quantity is known, includes transactions, and is not investment return. CoinGecko midnight observations are aligned to the preceding completed UTC day. No historical currency conversion is applied.
         </AppText>
       ) : null}
     </View>

@@ -838,7 +838,7 @@ describe("ProgressScreen", () => {
       expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
         .toContain("+30.66% versus invested");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-        .toContain("+12.50% versus previous visible month");
+        .toContain("+12.50% versus Apr 2026");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
         .not.toContain("Cash");
     },
@@ -856,13 +856,13 @@ describe("ProgressScreen", () => {
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
       .toContain("-15.09% versus invested");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-      .toContain("-10.00% versus previous visible month");
+      .toContain("-10.00% versus Apr 2026");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-      .toContain("Change unavailable: previous visible value is zero");
-    expect(getByText("Change unavailable")).toBeTruthy();
+      .toContain("Change unavailable: Apr 2026 value is zero");
+    expect(getByText("Apr 2026 value was zero")).toBeTruthy();
     fireEvent.press(getByTestId("asset-trend-previous-month"));
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-      .toContain("First visible month; change unavailable");
+      .toContain("No prior stored month in this range; change unavailable");
   });
 
   it("describes a zero invested baseline and retains percentage context when masked", () => {
@@ -878,7 +878,7 @@ describe("ProgressScreen", () => {
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("May 2026. Asset amounts hidden.");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-      .toContain("versus previous visible month");
+      .toContain("versus Apr 2026");
   });
 
   it("renders portfolio growth and asset momentum charts without cash in asset trends", () => {
@@ -896,10 +896,10 @@ describe("ProgressScreen", () => {
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(
-      getByText("Portfolio value compared with invested capital"),
+      getByText("Stored portfolio value compared with invested capital · not investment return"),
     ).toBeTruthy();
     expect(getByText("Asset Momentum")).toBeTruthy();
-    expect(getByText("Absolute value trend - cash excluded")).toBeTruthy();
+    expect(getByText("Asset values over time · cash excluded · not investment return")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
