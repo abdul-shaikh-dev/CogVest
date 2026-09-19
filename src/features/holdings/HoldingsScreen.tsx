@@ -165,6 +165,7 @@ export function HoldingsScreen({
   });
   const isMinimalMode = displayMode === "minimal";
   const isReducedMotionEnabled = useReducedMotionPreference();
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
   const [selectedAssetId, setSelectedAssetId] = useState<string>();
   const [selectedRecordsVisible, setSelectedRecordsVisible] = useState(false);
@@ -598,27 +599,37 @@ export function HoldingsScreen({
           />
         ) : activeDestination === "market" ? (
           <>
-            <FilterRow
-              allocationAvailable={allocationAvailable}
-              counts={filterCounts}
-              onSelect={(filter) => {
-                if (filter !== "high-allocation" || allocationAvailable) {
-                  setSelectedFilter(filter);
-                }
-              }}
-              selected={effectiveFilter}
-            />
-
             <View style={styles.listHeading}>
               <AppText color="secondary" variant="caption">
                 {visibleItems.length} {visibleItems.length === 1 ? "position" : "positions"} · value order
               </AppText>
-              {!isMinimalMode ? (
+              <View style={styles.listActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${filtersVisible ? "Hide" : "Show"} holding filters. Current filter: ${getFilterLabel(effectiveFilter)}`}
+                  accessibilityState={{ expanded: filtersVisible }}
+                  onPress={() => setFiltersVisible((visible) => !visible)}
+                  style={styles.listAction}
+                  testID="holdings-filter-toggle"
+                >
+                  <Ionicons
+                    accessible={false}
+                    name="options-outline"
+                    size={18}
+                    color={colors.text.primary}
+                  />
+                  <AppText variant="caption" weight="bold">
+                    {effectiveFilter === "all"
+                      ? "Filter"
+                      : getFilterLabel(effectiveFilter)}
+                  </AppText>
+                </Pressable>
+                {!isMinimalMode ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Portfolio insights"
                   onPress={() => setActivePanel("insights")}
-                  style={styles.insightsAction}
+                  style={styles.listAction}
                   testID="holdings-insights-button"
                 >
                   <AppText variant="caption">Portfolio insights</AppText>
@@ -629,8 +640,22 @@ export function HoldingsScreen({
                     color={colors.text.primary}
                   />
                 </Pressable>
-              ) : null}
+                ) : null}
+              </View>
             </View>
+
+            {filtersVisible ? (
+              <FilterRow
+                allocationAvailable={allocationAvailable}
+                counts={filterCounts}
+                onSelect={(filter) => {
+                  if (filter !== "high-allocation" || allocationAvailable) {
+                    setSelectedFilter(filter);
+                  }
+                }}
+                selected={effectiveFilter}
+              />
+            ) : null}
 
             {visibleItems.length === 0 ? (
               <EmptyState
@@ -1427,6 +1452,64 @@ function HoldingDetails({
           weight="bold"
         />
       </PremiumCard>
+      <View style={styles.detailActions} testID="holding-primary-actions">
+        {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
+        (onReviewTrades && assetTrades.length > 0) ? (
+          <GroupedListRow
+            title={recordsVisible ? "Hide records" : "View records"}
+            meta="Opening positions and corrections"
+            value={recordsVisible ? "−" : "›"}
+            testID="holding-view-records"
+            onPress={onToggleRecords}
+          />
+        ) : null}
+        {onSellRedeem ? (
+          <GroupedListRow
+            title="Sell / redeem"
+            meta="Record a disposal and its cash proceeds"
+            value="›"
+            testID={`holding-sell-redeem-${holding.asset.id}`}
+            onPress={() => onSellRedeem(holding.asset.id)}
+          />
+        ) : null}
+      </View>
+      {recordsVisible && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
+        <View style={styles.openingRecords}>
+          <AppText color="secondary" variant="caption" weight="bold">
+            Opening {assetOpeningPositions.length === 1 ? "record" : "records"}
+          </AppText>
+          {assetOpeningPositions.map((position) => (
+            <View key={position.id} style={styles.openingRecordRow}>
+              <View style={styles.openingRecordCopy}>
+                <AppText variant="caption" weight="bold">
+                  {position.date === null
+                    ? "First purchase date unknown"
+                    : formatDate(position.date)}
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  {formatQuantity(position.quantity)} units · avg{" "}
+                  {formatCompactINR(position.averageCostPrice)}
+                </AppText>
+              </View>
+              <AppButton
+                title="Review"
+                variant="secondary"
+                testID={`review-opening-position-${position.id}`}
+                onPress={() => onReviewOpeningPosition(position.id)}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {recordsVisible && onReviewTrades && assetTrades.length > 0 ? (
+        <AppButton
+          title={`Review ${assetTrades.length} ${assetTrades.length === 1 ? "transaction" : "transactions"}`}
+          variant="secondary"
+          testID={`review-transactions-${holding.asset.id}`}
+          onPress={() => onReviewTrades(holding.asset.id)}
+        />
+      ) : null}
       <AppText variant="section" weight="bold">
         Your position
       </AppText>
@@ -1477,63 +1560,6 @@ function HoldingDetails({
         />
       ) : null}
 
-      {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
-      (onReviewTrades && assetTrades.length > 0) ? (
-        <GroupedListRow
-          title={recordsVisible ? "Hide records" : "View records"}
-          meta="Opening positions and corrections"
-          value={recordsVisible ? "−" : "›"}
-          testID="holding-view-records"
-          onPress={onToggleRecords}
-        />
-      ) : null}
-      {recordsVisible && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
-        <View style={styles.openingRecords}>
-          <AppText color="secondary" variant="caption" weight="bold">
-            Opening {assetOpeningPositions.length === 1 ? "record" : "records"}
-          </AppText>
-          {assetOpeningPositions.map((position) => (
-            <View key={position.id} style={styles.openingRecordRow}>
-              <View style={styles.openingRecordCopy}>
-                <AppText variant="caption" weight="bold">
-                  {position.date === null
-                    ? "First purchase date unknown"
-                    : formatDate(position.date)}
-                </AppText>
-                <AppText color="secondary" variant="caption">
-                  {formatQuantity(position.quantity)} units · avg{" "}
-                  {formatCompactINR(position.averageCostPrice)}
-                </AppText>
-              </View>
-              <AppButton
-                title="Review"
-                variant="secondary"
-                testID={`review-opening-position-${position.id}`}
-                onPress={() => onReviewOpeningPosition(position.id)}
-              />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {recordsVisible && onReviewTrades && assetTrades.length > 0 ? (
-        <AppButton
-          title={`Review ${assetTrades.length} ${assetTrades.length === 1 ? "transaction" : "transactions"}`}
-          variant="secondary"
-          testID={`review-transactions-${holding.asset.id}`}
-          onPress={() => onReviewTrades(holding.asset.id)}
-        />
-      ) : null}
-
-      {onSellRedeem ? (
-        <GroupedListRow
-          title="Sell / redeem"
-          meta="Record a disposal and its cash proceeds"
-          value="›"
-          testID={`holding-sell-redeem-${holding.asset.id}`}
-          onPress={() => onSellRedeem(holding.asset.id)}
-        />
-      ) : null}
     </View>
   );
 }
@@ -1653,6 +1679,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     columnGap: spacing.md,
   },
+  listActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  listAction: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
   detailScreen: { flex: 1, backgroundColor: colors.background },
   detailHeader: {
     flexDirection: "row",
@@ -1667,6 +1707,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+  },
+  detailActions: {
+    gap: spacing.xs,
   },
 
   assetCopy: {
@@ -1776,13 +1819,6 @@ const styles = StyleSheet.create({
   insightGrid: {
     flexDirection: "row",
     gap: spacing.sm,
-  },
-  insightsAction: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    minHeight: 48,
   },
   insightTitle: {
     fontSize: 17,

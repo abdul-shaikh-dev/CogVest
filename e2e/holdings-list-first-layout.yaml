@@ -23,6 +23,15 @@ appId: com.abdulshaikh.cogvest
     id: holding-row-visual-qa-asset-bitcoin
 - takeScreenshot: .expo/holdings-278-enlarged
 - tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible:
+    id: holding-primary-actions
+- assertVisible: "View records"
+- assertVisible: "Sell / redeem"
+- back
+- assertVisible:
+    id: holdings-search-input
+- tapOn:
     id: holdings-insights-button
 - assertVisible: "Dominant position"
 - assertVisible:

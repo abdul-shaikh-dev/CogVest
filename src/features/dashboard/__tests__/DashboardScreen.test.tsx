@@ -756,7 +756,7 @@ describe("DashboardScreen", () => {
     expect(allocationCard.getAllByText("₹420")).toHaveLength(1);
   });
 
-  it("keeps portfolio answer, allocation, quotes, and next review in the accepted order", () => {
+  it("keeps portfolio answer and monthly context ahead of secondary summaries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade({ ...buyTrade, conviction: 4 });
@@ -782,11 +782,14 @@ describe("DashboardScreen", () => {
     const heroIndex = indexOfText(testIds, "dashboard-portfolio-hero");
     const metricsIndex = indexOfText(testIds, "dashboard-top-metrics");
     const quoteIndex = indexOfText(testIds, "dashboard-quote-card");
+    const monthlyIndex = indexOfText(testIds, "dashboard-monthly-context");
     const allocationIndex = indexOfText(testIds, "dashboard-allocation-card");
     const supportIndex = indexOfText(testIds, "dashboard-support-card");
 
     expect(metricsIndex).toBeGreaterThan(heroIndex);
     expect(quoteIndex).toBeGreaterThan(metricsIndex);
+    expect(monthlyIndex).toBeGreaterThan(quoteIndex);
+    expect(monthlyIndex).toBeLessThan(allocationIndex);
     expect(quoteIndex).toBeLessThan(allocationIndex);
     expect(allocationIndex).toBeGreaterThan(metricsIndex);
     expect(supportIndex).toBeGreaterThan(allocationIndex);

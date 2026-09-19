@@ -488,6 +488,35 @@ export function DashboardScreen({
           </PremiumCard>
         ) : null}
 
+        {!isMinimalMode ? (
+          <PremiumCard testID="dashboard-monthly-context">
+            <SectionHeader title="This Month" />
+            <MetricGroup
+              metrics={[
+                {
+                  label: "Invested",
+                  masked: dashboard.maskWealthValues,
+                  value: formatCompactINR(dashboard.monthlyMetrics.investment),
+                },
+                {
+                  label: "Savings",
+                  value:
+                    dashboard.monthlyMetrics.savingsRate === null
+                      ? "Not enough data"
+                      : formatPercentage(dashboard.monthlyMetrics.savingsRate),
+                },
+                {
+                  label: "Cash change",
+                  masked: dashboard.maskWealthValues,
+                  value: formatSignedCompactINR(
+                    dashboard.monthlyMetrics.cashChange,
+                  ),
+                },
+              ]}
+            />
+          </PremiumCard>
+        ) : null}
+
         {hasAllocation ? (
           <PremiumCard testID="dashboard-allocation-card">
             <View
@@ -659,35 +688,6 @@ export function DashboardScreen({
             </Pressable>
           </View>
         </PremiumCard>
-
-        {!isMinimalMode ? (
-          <PremiumCard>
-            <SectionHeader title="This Month" />
-            <MetricGroup
-              metrics={[
-                {
-                  label: "Invested",
-                  masked: dashboard.maskWealthValues,
-                  value: formatCompactINR(dashboard.monthlyMetrics.investment),
-                },
-                {
-                  label: "Savings",
-                  value:
-                    dashboard.monthlyMetrics.savingsRate === null
-                      ? "Not enough data"
-                      : formatPercentage(dashboard.monthlyMetrics.savingsRate),
-                },
-                {
-                  label: "Cash change",
-                  masked: dashboard.maskWealthValues,
-                  value: formatSignedCompactINR(
-                    dashboard.monthlyMetrics.cashChange,
-                  ),
-                },
-              ]}
-            />
-          </PremiumCard>
-        ) : null}
 
         <InsightCards store={store} now={now} onOpen={onOpenInsight} />
       </View>
