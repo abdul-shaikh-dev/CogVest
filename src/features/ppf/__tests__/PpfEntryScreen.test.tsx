@@ -18,6 +18,35 @@ const account: PpfAccount = {
 };
 
 describe("PpfEntryScreen", () => {
+  it("keeps optional notes and contribution guidance behind retained disclosures", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount(account);
+    const screen = render(
+      <PpfEntryScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.queryByTestId("ppf-entry-notes")).toBeNull();
+    expect(screen.queryByTestId("ppf-contribution-rules-details")).toBeNull();
+    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    fireEvent.changeText(screen.getByTestId("ppf-entry-notes"), "Passbook note");
+    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    expect(screen.queryByTestId("ppf-entry-notes")).toBeNull();
+    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    expect(screen.getByTestId("ppf-entry-notes")).toHaveProp(
+      "value",
+      "Passbook note",
+    );
+
+    fireEvent.press(screen.getByTestId("ppf-contribution-rules-toggle"));
+    expect(screen.getByTestId("ppf-contribution-rules-details")).toBeTruthy();
+  });
+
   it("reviews and saves a valid contribution", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);

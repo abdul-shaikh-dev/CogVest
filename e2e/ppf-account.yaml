@@ -47,6 +47,49 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "ppf-confirmed-balance-card"
 - assertVisible: "₹1,00,000.00"
+- tapOn:
+    id: "add-ppf-entry"
+- assertVisible:
+    id: "ppf-entry-screen"
+- assertNotVisible:
+    id: "ppf-entry-notes"
+- assertVisible:
+    id: "ppf-contribution-rules-toggle"
+- tapOn:
+    id: "ppf-entry-note-toggle"
+- tapOn:
+    id: "ppf-entry-notes"
+- inputText: "Annual contribution"
+- hideKeyboard
+- tapOn:
+    id: "ppf-entry-note-toggle"
+- assertNotVisible:
+    id: "ppf-entry-notes"
+- tapOn:
+    id: "ppf-entry-note-toggle"
+- assertVisible: "Annual contribution"
+- tapOn:
+    id: "ppf-entry-amount"
+- inputText: "500"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "review-ppf-entry"
+    direction: DOWN
+- tapOn:
+    id: "review-ppf-entry"
+- assertVisible:
+    id: "ppf-entry-review-screen"
+- tapOn: "Edit entry"
+- scrollUntilVisible:
+    element:
+      id: "ppf-entry-notes"
+    direction: DOWN
+- assertVisible: "Annual contribution"
+- pressKey: BACK
+- assertVisible:
+    id: "ppf-confirmed-balance-card"
+- assertVisible: "₹1,00,000.00"
 - assertVisible:
     id: "ppf-ledger-actions"
 - assertVisible: "Add entry"

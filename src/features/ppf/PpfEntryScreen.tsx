@@ -1,5 +1,10 @@
 import { useState, useSyncExternalStore } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -17,7 +22,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getFinancialYearStart, validatePpfLedgerEntry } from "@/src/domain/ppf";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { colors, interaction, spacing } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -49,6 +54,9 @@ export function PpfEntryScreen({
   );
   const [date, setDate] = useState(existing?.date ?? formatLocalCalendarDate(now));
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [isNoteExpanded, setIsNoteExpanded] = useState(Boolean(existing?.notes));
+  const [areContributionRulesExpanded, setAreContributionRulesExpanded] =
+    useState(false);
   const [reason, setReason] = useState(existing?.type === "reconciliation" ? existing.reason : "");
   const [reviewEntry, setReviewEntry] = useState<PpfLedgerEntry>();
   const [error, setError] = useState("");
@@ -126,8 +134,9 @@ export function PpfEntryScreen({
   }
 
   return (
-    <ScreenContainer scroll testID="ppf-entry-screen">
-      <View style={styles.content}>
+    <KeyboardAvoidingView behavior="height" style={styles.flex}>
+      <ScreenContainer scroll testID="ppf-entry-screen">
+        <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back to PPF account" icon="arrow-back" onPress={onBack} />}
           subtitle={`${account.nickname} • confirmed ledger`}
@@ -161,12 +170,51 @@ export function PpfEntryScreen({
           {type === "reconciliation" ? (
             <FormTextField label="Why are you correcting the balance?" multiline onChangeText={setReason} placeholder="Matched India Post passbook" testID="ppf-entry-reason" value={reason} />
           ) : null}
-          <FormTextField label="Note (optional)" multiline onChangeText={setNotes} testID="ppf-entry-notes" value={notes} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isNoteExpanded }}
+            onPress={() => setIsNoteExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [
+              styles.optionalToggle,
+              pressed && styles.pressed,
+            ]}
+            testID="ppf-entry-note-toggle"
+          >
+            <AppText color="secondary" variant="caption" weight="bold">
+              {isNoteExpanded ? "Hide note" : notes ? "Show note" : "Add note"}
+            </AppText>
+          </Pressable>
+          {isNoteExpanded ? (
+            <FormTextField label="Note (optional)" multiline onChangeText={setNotes} testID="ppf-entry-notes" value={notes} />
+          ) : null}
         </PremiumCard>
         {type === "contribution" ? (
-          <AppText color="secondary" variant="caption">
-            CogVest shows the ₹500 minimum and ₹1.5 lakh maximum as non-blocking tracked context. Contributions must be in multiples of ₹50.
-          </AppText>
+          <View style={styles.rulesDisclosure}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: areContributionRulesExpanded }}
+              onPress={() =>
+                setAreContributionRulesExpanded((expanded) => !expanded)
+              }
+              style={styles.rulesToggle}
+              testID="ppf-contribution-rules-toggle"
+            >
+              <View style={styles.rulesCopy}>
+                <AppText weight="medium">Contribution rules</AppText>
+                <AppText color="secondary" variant="caption">
+                  ₹500 minimum · ₹1.5 lakh maximum · multiples of ₹50
+                </AppText>
+              </View>
+              <AppText color="secondary" variant="caption" weight="bold">
+                {areContributionRulesExpanded ? "Hide" : "Why"}
+              </AppText>
+            </Pressable>
+            {areContributionRulesExpanded ? (
+              <AppText color="secondary" variant="caption" testID="ppf-contribution-rules-details">
+                CogVest shows these limits as non-blocking tracked context. Confirm the official rules with your provider.
+              </AppText>
+            ) : null}
+          </View>
         ) : null}
         {error ? <AppText selectable style={styles.error}>{error}</AppText> : null}
         <View style={styles.actions}>
@@ -202,8 +250,9 @@ export function PpfEntryScreen({
             <AppButton onPress={() => setConfirmDelete(true)} title="Delete entry" variant="ghost" />
           )
         ) : null}
-      </View>
-    </ScreenContainer>
+        </View>
+      </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -226,6 +275,21 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
+  flex: { flex: 1 },
+  optionalToggle: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+  },
+  pressed: { opacity: interaction.pressedOpacity },
   reviewRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between", minHeight: 48 },
   reviewValue: { flex: 1, textAlign: "right" },
+  rulesCopy: { flex: 1, gap: spacing.xs },
+  rulesDisclosure: { gap: spacing.xs },
+  rulesToggle: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 48,
+  },
 });

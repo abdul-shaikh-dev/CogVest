@@ -14,6 +14,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
 import { colors, interaction, typography } from "@/src/theme";
 import { assetSearchQaProviderCandidates } from "@/src/testing/assetSearchFixture";
+import { saveRecentAssetSearch } from "../recentAssetSearches";
 
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
@@ -121,13 +122,41 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-screen")).toBeTruthy();
     expect(getByTestId("add-holding-step-asset")).toBeTruthy();
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
-    expect(getByText("Can't find your asset? Add manually")).toBeTruthy();
+    expect(getByText("Enter details manually")).toBeTruthy();
     expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(queryByTestId("continue-class-button")).toBeNull();
     expect(queryByTestId("add-holding-phase-class")).toBeNull();
     expect(queryByTestId("add-holding-phase-position")).toBeNull();
     expect(queryByTestId("derived-preview")).toBeNull();
     expect(queryByTestId("quantity-input")).toBeNull();
+  });
+
+  it("keeps recent searches behind a disclosure while manual entry stays visible", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const recentSearchStorage = createMemoryJsonStorage();
+    saveRecentAssetSearch("Nippon India ETF Nifty IT", recentSearchStorage);
+    const screen = render(
+      <AddOpeningPositionForm
+        recentSearchStorage={recentSearchStorage}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Enter details manually")).toBeTruthy();
+    expect(screen.queryByTestId("recent-asset-searches")).toBeNull();
+    expect(
+      screen.getByTestId("toggle-recent-asset-searches").props
+        .accessibilityState,
+    ).toEqual({ expanded: false });
+
+    fireEvent.press(screen.getByTestId("toggle-recent-asset-searches"));
+
+    expect(screen.getByTestId("recent-asset-searches")).toBeTruthy();
+    expect(screen.getByText("Nippon India ETF Nifty IT")).toBeTruthy();
+    expect(
+      screen.getByTestId("toggle-recent-asset-searches").props
+        .accessibilityState,
+    ).toEqual({ expanded: true });
   });
 
   it.each(["hardware", "toolbar", "footer"])(

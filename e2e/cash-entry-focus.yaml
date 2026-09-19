@@ -28,6 +28,16 @@ appId: com.abdulshaikh.cogvest
     id: "cash-label-input"
 - inputText: "UX12 contribution"
 - hideKeyboard
+- assertNotVisible:
+    id: "cash-notes-input"
+- tapOn:
+    id: "cash-notes-toggle"
+- assertVisible:
+    id: "cash-notes-input"
+- tapOn:
+    id: "cash-notes-input"
+- inputText: "Retained cash note"
+- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "close-cash-entry-button"
@@ -48,6 +58,11 @@ appId: com.abdulshaikh.cogvest
       id: "cash-label-input"
     direction: DOWN
 - assertVisible: "UX12 contribution"
+- scrollUntilVisible:
+    element:
+      id: "cash-notes-input"
+    direction: DOWN
+- assertVisible: "Retained cash note"
 - tapOn:
     id: "cash-label-input"
 # Keep the docked keyboard open while scrolling to Save.

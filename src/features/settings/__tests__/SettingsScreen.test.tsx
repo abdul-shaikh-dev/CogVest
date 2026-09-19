@@ -295,11 +295,15 @@ describe("SettingsScreen", () => {
   it("selects and persists Minimal display mode", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
-    const { getByTestId } = render(<SettingsScreen store={store} />);
+    const { getByTestId, queryByTestId, queryByText } = render(
+      <SettingsScreen store={store} />,
+    );
 
     expect(getByTestId("display-mode-standard").props.accessibilityState).toEqual({
       checked: true,
     });
+    expect(queryByTestId("nudge-minimal")).toBeNull();
+    expect(queryByText("A quieter view")).toBeNull();
 
     fireEvent.press(getByTestId("display-mode-minimal"));
 

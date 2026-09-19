@@ -252,6 +252,12 @@ and reachable above results. See `docs/testing/advanced-asset-search.md` for the
 behavior and verification contract. Optional provider logos are not required;
 retain the existing asset-class icons.
 
+The four phases use a quiet progress treatment rather than four competing
+buttons. Do not repeat an `Asset` section heading directly below the active
+`Asset` phase. Keep recent searches collapsed behind a count by default and keep
+manual entry visible as a secondary text action; expanding either disclosure
+must not hide the primary lookup path.
+
 Required flow:
 
 1. Search for an asset by familiar name or symbol.
@@ -332,6 +338,10 @@ session and offer an explicit `Continue portfolio setup` action. Back/cancel
 remain available. Show credited and estimated interest honestly; a starting
 balance that includes unknown historical interest cannot establish lifetime P&L.
 It is a focused full-screen flow, not a modal and not a spreadsheet grid.
+PPF ledger entry keeps its essential fields visible, collapses optional notes
+without discarding their value, and summarizes contribution limits before an
+optional explanatory disclosure. The form must remain usable above the docked
+Android keyboard at enlarged text sizes.
 
 - Empty Dashboard leads with `Set up your portfolio` and keeps `Add one holding`
   as a secondary action.
@@ -488,8 +498,10 @@ Linked investment funding should reduce available cash exactly once. Empty cash
 state should be acceptable and should not imply missing setup.
 
 The #284 entry panel groups amount, full-width calendar date, label and optional
-notes with the correctly named Save action. Deposit also has Contribution/Income
-purpose; withdrawal never pretends to be an investment purchase. Cancel and
+notes with the correctly named Save action. Notes are collapsed by default and
+retain their draft value when hidden, cancelled, or resumed. Deposit also has
+Contribution/Income purpose; withdrawal never pretends to be an investment
+purchase. Cancel and
 Android Back return to the ledger without saving and keep the same-type draft
 in memory. Switching entry type requires explicit discard when a draft exists.
 Do not promise durable draft recovery. Save failure retains the form and values;
@@ -506,6 +518,8 @@ Baseline groups:
 - Retain the local-first subtitle, without a duplicate Local only header badge.
 - Working preferences first: value masking with honest amount-only scope and
   Standard/Minimal display choices. Checked states must be accessible.
+- Standard/Minimal option descriptions are the complete explanation; do not add
+  a separate Minimal-mode nudge that repeats the same guidance.
 - Compact Privacy & storage disclosure: no account/cloud sync/analytics summary;
   app-private storage, separate-encryption limitation and disabled Android backup/
   transfer remain available in details, not implied to be encryption or recovery.
