@@ -110,6 +110,9 @@ it("labels PPF-excluded history and masks its values without presenting it as fu
   expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Tracked Growth")).toBeTruthy();
   expect(screen.getByText(/Some months use estimated prices/)).toBeTruthy();
+  expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(
+    /Comparison: unavailable until PPF history is complete/,
+  );
   const panel = within(screen.getByTestId("portfolio-trend-selected-panel"));
   expect(panel.getByText("Market + cash")).toBeTruthy();
   expect(panel.getByText("₹26K")).toBeTruthy();
@@ -1362,6 +1365,53 @@ describe("ProgressScreen", () => {
       expect(getByTestId(id)).toHaveStyle({ backgroundColor: colors.primary });
       expect(within(getByTestId(id)).getByText("3M")).toHaveStyle({ color: colors.text.inverse });
     }
+    expect(getByTestId("portfolio-chart-context")).toHaveTextContent(
+      /Displayed range.*Mar 2026 to May 2026.*3 stored months.*Comparison: invested capital/,
+    );
+    expect(getByTestId("asset-chart-context")).toHaveTextContent(
+      /Comparison: previous stored month/,
+    );
+  });
+
+  it("cancels a custom range without changing either chart or the monthly answer", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getAllByTestId, getByTestId, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+
+    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    expect(getByTestId("portfolio-custom-range-panel")).toBeTruthy();
+    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
+    fireEvent.press(getByTestId("portfolio-custom-range-cancel"));
+
+    expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
+    expect(getByTestId("portfolio-monthly-chart-range-All")).toHaveStyle({ backgroundColor: colors.primary });
+    expect(within(getByTestId("progress-monthly-answer")).getByText("₹13.85L")).toBeTruthy();
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
+    expect(portfolioChart.props.data).toHaveLength(3);
+    expect(assetChart.props.dataSet[0].data).toHaveLength(3);
+  });
+
+  it("treats Android Back as cancel in the custom range panel", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+
+    const { getByTestId, queryByTestId } = render(<ProgressScreen store={store} />);
+
+    fireEvent.press(getByTestId("asset-monthly-chart-range-Custom"));
+    fireEvent(getByTestId("asset-custom-range-modal"), "requestClose");
+
+    expect(queryByTestId("asset-custom-range-panel")).toBeNull();
+    expect(getByTestId("asset-monthly-chart-range-All")).toHaveStyle({ backgroundColor: colors.primary });
   });
 
   it("applies an independent custom range from persisted snapshot months", () => {

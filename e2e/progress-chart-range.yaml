@@ -24,6 +24,16 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "portfolio-monthly-chart-range-Custom"
 - assertVisible:
+    id: "portfolio-custom-range-panel"
+- tapOn:
+    id: "portfolio-custom-range-cancel"
+- assertNotVisible:
+    id: "portfolio-custom-range-panel"
+- assertVisible:
+    id: "portfolio-monthly-chart-range-All"
+- tapOn:
+    id: "portfolio-monthly-chart-range-Custom"
+- assertVisible:
     id: "portfolio-custom-range-start"
 - assertVisible:
     id: "portfolio-custom-range-end"
@@ -49,6 +59,8 @@ appId: com.abdulshaikh.cogvest
     id: "portfolio-custom-range-end-2026-05"
 - tapOn:
     id: "portfolio-custom-range-apply"
+- assertNotVisible:
+    id: "portfolio-custom-range-panel"
 - assertVisible:
     id: "portfolio-trend-selected-panel"
 - scrollUntilVisible:
@@ -57,14 +69,13 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "asset-monthly-chart-range-Custom"
-- scrollUntilVisible:
-    element:
-      id: "asset-custom-range-end"
-    direction: DOWN
 - assertVisible:
-    id: "asset-custom-range-start"
+    id: "asset-custom-range-panel"
+- back
+- assertNotVisible:
+    id: "asset-custom-range-panel"
 - assertVisible:
-    id: "asset-custom-range-end"
+    id: "asset-monthly-chart-range-All"
 - scrollUntilVisible:
     element:
       id: "asset-trend-selected-panel"
