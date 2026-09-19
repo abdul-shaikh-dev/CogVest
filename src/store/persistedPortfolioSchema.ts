@@ -347,6 +347,7 @@ const historicalPriceBasisSchema = z.enum([
   "cached-historical-close",
   "latest-local-fallback",
   "manual-fallback",
+  "demerger-cost-basis",
   "unavailable",
 ]);
 

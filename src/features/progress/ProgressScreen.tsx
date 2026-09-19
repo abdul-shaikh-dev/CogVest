@@ -1300,7 +1300,7 @@ export function ProgressScreen({
     }
 
     hasRunAutomationRef.current = true;
-    void progress.ensureMonthEndSnapshot();
+    void progress.ensureMonthEndSnapshot({ retryProvisional: false });
   }, [progress]);
 
   function reviewSnapshot() {

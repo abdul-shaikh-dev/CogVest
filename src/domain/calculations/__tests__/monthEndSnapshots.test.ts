@@ -166,7 +166,7 @@ describe("demerger month-end snapshots", () => {
     expect(result.snapshot).toMatchObject({ portfolioValue: 14000, investedValue: 10000, monthlyInvestment: 0 });
   });
 
-  it("identifies an unlisted successor instead of fabricating its month-end value", () => {
+  it("uses verified allocated cost provisionally before the successor can trade", () => {
     const parent: Asset = { ...stockAsset, isin: "INE002A01018", demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" } };
     const child: Asset = { ...stockAsset, id: "jio", name: "Jio Financial", symbol: "JIOFIN", ticker: "JIOFIN.NS", isin: "INE758E01017" };
     const result = buildGeneratedMonthEndSnapshot({
@@ -191,12 +191,20 @@ describe("demerger month-end snapshots", () => {
       },
     });
 
-    expect(result).toEqual({
-      snapshot: null,
-      status: "insufficient-data",
-      warnings: [
-        "Jio Financial could not be valued for 2023-07: its verified successor listing was unavailable until 2023-08-21.",
-      ],
+    expect(result).toMatchObject({
+      status: "created",
+      snapshot: {
+        generated: {
+          confidence: "provisional",
+          priceBasis: "mixed",
+          priceEvidence: expect.arrayContaining([
+            { assetId: "jio", basis: "demerger-cost-basis", price: 4.68 },
+          ]),
+          warnings: ["1 holding used verified demerger cost basis before listing."],
+        },
+        investedValue: 10000,
+        portfolioValue: 12468,
+      },
     });
   });
 });

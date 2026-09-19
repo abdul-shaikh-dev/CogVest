@@ -6,6 +6,8 @@ import type { StockSplitEvent } from "@/src/types";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { assertCatalogSplits } from "@/src/domain/stockSplitCatalog";
 import { decimal } from "@/src/domain/precision";
+import { fetchAmfiHistoricalNav } from "@/src/services/mutualFunds/amfiHistoricalNav";
+import { isMutualFundAsset } from "@/src/services/mutualFunds/amfiQuote";
 import {
   coinGeckoMarketChartBaseUrl,
   defaultNow,
@@ -211,8 +213,21 @@ export async function fetchYahooHistoricalPrice({
 
     const providerId = asset.quoteSourceId ?? asset.ticker;
     const fetchedAt = now();
+    const targetMonthEnd = getMonthEndDateUtc(targetMonth).toISOString().slice(0, 10);
+    const fetchedAtDate = new Date(fetchedAt).toISOString().slice(0, 10);
+    const latestLaterAdjustment = asset.stockSplits
+      ?.filter(
+        (event) =>
+          event.effectiveDate > targetMonthEnd &&
+          event.effectiveDate <= fetchedAtDate,
+      )
+      .sort((left, right) => right.effectiveDate.localeCompare(left.effectiveDate))[0];
+    const adjustmentThrough = latestLaterAdjustment
+      ? latestLaterAdjustment.availableFrom ?? latestLaterAdjustment.creditedDate ??
+        new Date(Date.parse(`${latestLaterAdjustment.effectiveDate}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+      : undefined;
     const response = await fetcher(
-      buildYahooHistoricalChartUrl(providerId, targetMonth, fetchedAt),
+      buildYahooHistoricalChartUrl(providerId, targetMonth, adjustmentThrough),
     );
 
     if (!response.ok) {
@@ -276,7 +291,7 @@ export async function fetchYahooHistoricalPrice({
       closeTimestamp: latestClose.timestamp,
       splits: result?.events?.splits,
       targetMonth,
-      through: fetchedAt,
+      through: adjustmentThrough ?? targetMonthEnd,
     });
 
     return {
@@ -377,6 +392,9 @@ export async function fetchCoinGeckoHistoricalPrice({
 }
 
 export function resolveHistoricalPrice(input: HistoricalPriceProviderInput) {
+  if (isMutualFundAsset(input.asset)) {
+    return fetchAmfiHistoricalNav(input);
+  }
   if (input.asset.assetClass === "cash" || input.asset.assetClass === "debt") {
     return Promise.resolve({
       error: "Historical provider prices are not available for this asset class.",

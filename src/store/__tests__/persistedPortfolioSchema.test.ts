@@ -471,6 +471,46 @@ describe("persisted portfolio schema", () => {
     ).toMatchObject({ success: true });
   });
 
+  it("preserves provisional demerger cost-basis evidence", () => {
+    expect(
+      parsePersistedPortfolio(
+        serialize({
+          assets: [validAsset],
+          monthlySnapshots: [
+            {
+              cashValue: 0,
+              cryptoValue: 0,
+              debtValue: 0,
+              equityValue: 468,
+              generated: {
+                confidence: "provisional",
+                generatedAt: "2023-08-01T00:00:00.000Z",
+                priceBasis: "demerger-cost-basis",
+                priceEvidence: [
+                  {
+                    assetId: validAsset.id,
+                    basis: "demerger-cost-basis",
+                    price: 4.68,
+                  },
+                ],
+                source: "auto",
+                warnings: [
+                  "1 holding used verified demerger cost basis before listing.",
+                ],
+              },
+              id: "snapshot-2023-07",
+              investedValue: 468,
+              month: "2023-07",
+              monthlyInvestment: 0,
+              portfolioValue: 468,
+            },
+          ],
+          schemaVersion: 13,
+        }),
+      ),
+    ).toMatchObject({ success: true });
+  });
+
   it("validates current quote caches without exposing their content on failure", () => {
     expect(
       parsePersistedQuoteCache(

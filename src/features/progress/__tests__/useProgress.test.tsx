@@ -1074,6 +1074,36 @@ describe("useProgress", () => {
     );
   });
 
+  it("does not retry existing estimates during startup but allows an explicit retry", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedHoldingAndCash(store);
+    store.getState().addMonthlySnapshot({
+      ...provisionalSnapshot(),
+      salary: 70000,
+    });
+    const historicalPriceFetcher = jest.fn().mockResolvedValue({
+      error: "Historical price is temporarily unavailable.",
+      ok: false,
+    });
+    const { result } = renderHook(() =>
+      useProgress({
+        historicalPriceFetcher,
+        now: new Date("2026-08-02T10:00:00.000Z"),
+        store,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot({ retryProvisional: false });
+    });
+    expect(historicalPriceFetcher).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.ensureMonthEndSnapshot();
+    });
+    expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("does not retry legacy aggregate-only automation that may contain user corrections", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
