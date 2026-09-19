@@ -13,7 +13,10 @@ import type { AssetLookupResult } from "@/src/services/assetLookup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, quoteCacheStorageKey } from "@/src/store";
 import { colors, interaction, typography } from "@/src/theme";
-import { assetSearchQaProviderCandidates } from "@/src/testing/assetSearchFixture";
+import {
+  assetSearchQaMixedNameCandidates,
+  assetSearchQaProviderCandidates,
+} from "@/src/testing/assetSearchFixture";
 import { saveRecentAssetSearch } from "../recentAssetSearches";
 
 jest.mock("expo-haptics", () => ({
@@ -89,6 +92,70 @@ describe("AddOpeningPositionForm", () => {
     await act(async () => { jest.advanceTimersByTime(400); });
     const rows = screen.getAllByRole("button").filter((row) => String(row.props.testID).startsWith("asset-lookup-result-"));
     expect(rows.map((row) => row.props.testID)).toEqual(results.map((result) => `asset-lookup-result-${result.id}`));
+  });
+
+  it("makes a mixed-name result set distinguishable without selecting or saving automatically", async () => {
+    jest.useFakeTimers();
+    const searchAssetLookupResults = jest.fn().mockResolvedValue({
+      failures: [],
+      results: assetSearchQaMixedNameCandidates,
+    });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(
+      <AddOpeningPositionForm
+        resolveQuote={jest.fn().mockResolvedValue({ ok: false, error: "No quote." })}
+        searchAssetLookupResults={searchAssetLookupResults}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByTestId("asset-discovery-active-filter")).toHaveTextContent("Showing: All assets");
+    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
+    await act(async () => { jest.advanceTimersByTime(400); });
+
+    await waitFor(() => {
+      expect(screen.getByText("Crypto asset")).toBeTruthy();
+      expect(screen.getByText("Not an NSE/BSE share")).toBeTruthy();
+      expect(screen.getAllByText("Company share")).toHaveLength(3);
+      expect(screen.getByText("ETF")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("selected-asset-summary")).toBeNull();
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+
+    const selected = assetSearchQaMixedNameCandidates.find((result) => result.ticker === "HDFCBANK.BO")!;
+    fireEvent.press(screen.getByTestId(`asset-lookup-result-${selected.id}`));
+
+    await waitFor(() => expect(screen.getByTestId("selected-asset-summary")).toBeTruthy());
+    expect(screen.getByText("HDFCBANK • HDFCBANK.BO • Yahoo Finance suggestion")).toBeTruthy();
+    expect(store.getState().assets).toEqual([]);
+    expect(store.getState().openingPositions).toEqual([]);
+  });
+
+  it("retries an unavailable lookup without changing the query or selecting a result", async () => {
+    jest.useFakeTimers();
+    const searchAssetLookupResults = jest.fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ failures: [], results: [assetSearchQaMixedNameCandidates[0]] });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(
+      <AddOpeningPositionForm searchAssetLookupResults={searchAssetLookupResults} store={store} />,
+    );
+
+    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
+    await act(async () => { jest.advanceTimersByTime(400); });
+    await waitFor(() => expect(screen.getByTestId("asset-lookup-retry")).toBeTruthy());
+
+    fireEvent.press(screen.getByTestId("asset-lookup-retry"));
+    await act(async () => { jest.advanceTimersByTime(400); });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("asset-lookup-result-asset-search-qa-hdfc-bank-nse")).toBeTruthy();
+    });
+    expect(searchAssetLookupResults).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("asset-lookup-input")).toHaveProp("value", "HDFC");
+    expect(screen.queryByTestId("selected-asset-summary")).toBeNull();
+    expect(store.getState().assets).toEqual([]);
   });
 
   beforeEach(() => {

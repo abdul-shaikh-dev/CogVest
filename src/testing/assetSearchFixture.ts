@@ -19,6 +19,21 @@ export const assetSearchQaSavedAssets: Asset[] = Array.from(
   (_, index) => {
     const number = index + 1;
     const code = pad(number);
+
+    if (index === 0) {
+      return {
+        assetClass: "stock",
+        currency: "INR",
+        id: "asset-search-qa-saved-0001",
+        instrumentType: "mutualFund",
+        name: "HDFC Balanced Advantage Fund - Direct Plan - Growth",
+        quoteSourceId: "INF179K01WA6",
+        sectorType: "diversified",
+        symbol: "INF179K01WA6",
+        ticker: "INF179K01WA6",
+      };
+    }
+
     const assetClass = number % 10 === 0 ? "etf" : "stock";
 
     return {
@@ -63,8 +78,52 @@ export const assetSearchQaProviderCandidates: AssetLookupResult[] = Array.from(
   },
 );
 
+export const assetSearchQaMixedNameCandidates: AssetLookupResult[] = [
+  {
+    assetClass: "stock", currency: "INR", exchange: "NSE", id: "asset-search-qa-hdfc-bank-nse",
+    instrumentType: "stock", instrumentTypeConfidence: "provider",
+    metadataReviewMessage: "Synthetic QA metadata. Confirm before saving.", name: "HDFC Bank Limited",
+    provider: "yahoo", quoteSourceId: "HDFCBANK.NS", sectorType: "financialServices",
+    sectorTypeConfidence: "provider", sourceLabel: "Yahoo Finance", symbol: "HDFCBANK", ticker: "HDFCBANK.NS",
+  },
+  {
+    assetClass: "stock", currency: "INR", exchange: "BSE", id: "asset-search-qa-hdfc-bank-bse",
+    instrumentType: "stock", instrumentTypeConfidence: "provider",
+    metadataReviewMessage: "Synthetic QA metadata. Confirm before saving.", name: "HDFC Bank Limited",
+    provider: "yahoo", quoteSourceId: "HDFCBANK.BO", sectorType: "financialServices",
+    sectorTypeConfidence: "provider", sourceLabel: "Yahoo Finance", symbol: "HDFCBANK", ticker: "HDFCBANK.BO",
+  },
+  {
+    assetClass: "stock", currency: "INR", exchange: "NSE", id: "asset-search-qa-hdfc-amc",
+    instrumentType: "stock", instrumentTypeConfidence: "provider",
+    metadataReviewMessage: "Synthetic QA metadata. Confirm before saving.", name: "HDFC Asset Management Company Limited",
+    provider: "yahoo", quoteSourceId: "HDFCAMC.NS", sectorType: "financialServices",
+    sectorTypeConfidence: "provider", sourceLabel: "Yahoo Finance", symbol: "HDFCAMC", ticker: "HDFCAMC.NS",
+  },
+  {
+    assetClass: "etf", currency: "INR", exchange: "NSE", id: "asset-search-qa-hdfc-etf",
+    instrumentType: "etf", instrumentTypeConfidence: "provider",
+    metadataReviewMessage: "Synthetic QA metadata. Confirm before saving.",
+    name: "HDFC Bank Nifty 50 Exchange Traded Fund - Growth Option with a deliberately long fixture name",
+    provider: "yahoo", quoteSourceId: "HDFCNIFETF.NS", sectorType: "diversified",
+    sectorTypeConfidence: "provider", sourceLabel: "Yahoo Finance", symbol: "HDFCNIFETF", ticker: "HDFCNIFETF.NS",
+  },
+  {
+    assetClass: "crypto", currency: "INR", exchange: "CRYPTO", id: "asset-search-qa-hdfc-rstock",
+    instrumentType: "crypto", instrumentTypeConfidence: "provider",
+    metadataReviewMessage: "Synthetic QA metadata. Confirm before saving.", name: "HDFC Bank rStock",
+    provider: "coingecko", quoteSourceId: "hdfc-bank-rstock", sectorType: "digitalAsset",
+    sectorTypeConfidence: "provider", sourceLabel: "CoinGecko", symbol: "HDFCR", ticker: "hdfc-bank-rstock",
+  },
+];
+
 export function createAssetSearchQaLookup(query: string) {
-  return prepareAssetLookupResults(query, assetSearchQaProviderCandidates);
+  return prepareAssetLookupResults(
+    query,
+    query.trim().toLowerCase().includes("hdfc")
+      ? assetSearchQaMixedNameCandidates
+      : assetSearchQaProviderCandidates,
+  );
 }
 
 export function seedAssetSearchQaStore(store: StoreApi<PortfolioStoreState>) {

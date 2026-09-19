@@ -11,6 +11,10 @@ export const discoveryFilters = [
   { label: "BSE", value: "BSE" },
 ] as const;
 
+export function discoveryFilterLabel(filter: DiscoveryFilter) {
+  return discoveryFilters.find((option) => option.value === filter)?.label ?? "All assets";
+}
+
 export function matchesDiscoveryFilter(asset: Pick<Asset, "assetClass" | "exchange">, filter: DiscoveryFilter) {
   return filter === "all" || asset.assetClass === filter || asset.exchange === filter;
 }

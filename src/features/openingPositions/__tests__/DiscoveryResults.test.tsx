@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -60,6 +60,51 @@ describe("DiscoveryResults", () => {
 
     expect(getAllByText("Select")).toHaveLength(20);
     expect(onSettled).toHaveBeenLastCalledWith(20);
+  });
+
+  it("exposes instrument and venue identity before explicit provider selection", () => {
+    const onSelect = jest.fn();
+    const crypto = {
+      ...providerResult(1),
+      assetClass: "crypto" as const,
+      exchange: "CRYPTO" as const,
+      instrumentType: "crypto" as const,
+      name: "HDFC Bank rStock with a long identifying name",
+      provider: "coingecko" as const,
+      sourceLabel: "CoinGecko",
+      symbol: "HDFCR",
+      ticker: "hdfc-bank-rstock",
+    };
+    const screen = render(
+      <DiscoveryResults kind="provider" items={[providerResult(0), crypto]} onSelect={onSelect} />,
+    );
+
+    expect(screen.getByText("Company share")).toBeTruthy();
+    expect(screen.getByText("NSE listing")).toBeTruthy();
+    expect(screen.getByText("Crypto asset")).toBeTruthy();
+    expect(screen.getByText("Not an NSE/BSE share")).toBeTruthy();
+    expect(screen.getByLabelText(
+      "Select HDFC Bank rStock with a long identifying name. Crypto asset. Not an NSE/BSE share. HDFCR.",
+    )).toBeTruthy();
+    expect(onSelect).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByTestId(`asset-lookup-result-${crypto.id}`));
+    expect(onSelect).toHaveBeenCalledWith(crypto);
+  });
+
+  it("labels saved mutual funds without implying an exchange listing", () => {
+    const fund = {
+      ...savedAsset(1),
+      exchange: undefined,
+      instrumentType: "mutualFund" as const,
+      name: "HDFC Balanced Advantage Fund - Direct Plan - Growth",
+    };
+    const screen = render(
+      <DiscoveryResults kind="saved" items={[fund]} onSelect={jest.fn()} />,
+    );
+
+    expect(screen.getByText("Mutual Fund")).toBeTruthy();
+    expect(screen.getByText("No exchange listing")).toBeTruthy();
   });
 
   it("eventually renders every requested provider row", () => {

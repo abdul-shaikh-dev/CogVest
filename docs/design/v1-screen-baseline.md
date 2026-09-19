@@ -284,6 +284,13 @@ entry is a fallback, not the primary perceived path.
 Autofilled ticker, instrument type, sector, currency, and price source must be
 reviewable before save.
 
+Mixed-name discovery results must make identity legible before selection. Lead
+with instrument type and venue: distinguish NSE/BSE company shares, ETFs,
+mutual funds without an exchange listing, and crypto that is not an NSE/BSE
+share. Keep relevance order, show the active filter near search, preserve
+provider/ticker metadata, and offer retry after total lookup failure. Retry does
+not select an asset or save portfolio data.
+
 The visual pattern should use progressive disclosure. Do not show the full
 search-result list, all metadata, all position fields, derived preview, and
 final review as one long expanded form. After selection, collapse search into a

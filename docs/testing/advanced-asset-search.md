@@ -13,6 +13,11 @@ Search does not create holdings or overwrite confirmed details.
   responses cannot replace the current query; previous-query results disappear.
 - Results retain metadata confidence, source identity, ticker, exchange,
   currency and safe confirmation behavior.
+- Every result leads with an explicit instrument label and venue. Company shares
+  say `Company share` plus `NSE listing` or `BSE listing`; ETFs and mutual funds
+  retain their own labels; crypto says `Crypto asset` and `Not an NSE/BSE share`.
+  The active filter is stated beside discovery. Provider failure offers a retry
+  for the unchanged query while manual entry remains available.
 - Providers may return fewer matches than requested. We rank/deduplicate the
   returned set, cap it at 100 and display 20 at a time. Load more reveals another
   20 already-returned candidates, not a fabricated provider cursor.
@@ -47,7 +52,9 @@ This development/token-gated route uses an isolated memory portfolio with 500
 saved assets and 200 provider candidates. It does not reset the installed
 portfolio or call external providers. Release builds cannot enable it.
 Test exact saved/provider matches, filters, pagination, explicit selection and
-manual entry. Warm up the form, then Reset metrics to start a fresh window.
+manual entry. The deterministic `HDFC` fixture must visibly distinguish NSE and
+BSE company shares, an ETF, a saved mutual fund and a similarly named crypto
+asset before selection. Warm up the form, then Reset metrics to start a fresh window.
 Capture metrics ends that window and exports one `[asset-search-qa] metrics`
 JSON console entry. Reset is required before collecting another window.
 
