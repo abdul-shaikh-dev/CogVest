@@ -420,9 +420,14 @@ Accepted chart direction:
 - Monthly History details compare the selected month with the previous calendar month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
-- the approved #275/#277 reading order is a dated monthly answer (portfolio,
-  market change, monthly investment), compact snapshot status, independent
-  charts, then `Monthly History` with a `View history` action
+- the reading order is a dated monthly answer (portfolio, market change,
+  monthly investment), its adjacent `Monthly History` action, compact snapshot
+  status, then the independent charts
+- each chart names its displayed month range, inspected month, comparison basis,
+  and data scope; the two chart ranges remain independent
+- choosing `Custom` opens a focused, cancellable range panel. Draft dates do not
+  change either chart or the headline month; `Apply range` commits only to the
+  chart that opened it, and Android Back behaves like Cancel
 - Monthly History opens in a panel, newest stored year and months first. Rows
   show portfolio value and change versus the immediately previous calendar
   month, including cross-year January comparisons; gaps/zero baselines must

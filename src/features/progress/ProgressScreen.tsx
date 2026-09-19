@@ -575,9 +575,14 @@ function TrendChart({
           testID={`${testIDPrefix}-previous-month`}
           title="‹" variant="secondary"
         />
-        <AppText align="center" style={styles.monthNavigationLabel} variant="caption" weight="bold">
-          {monthLabels[safeSelectedIndex] ?? ""}
-        </AppText>
+        <View style={styles.monthNavigationLabel}>
+          <AppText align="center" color="secondary" variant="caption">
+            Inspecting month
+          </AppText>
+          <AppText align="center" variant="caption" weight="bold">
+            {monthLabels[safeSelectedIndex] ?? ""}
+          </AppText>
+        </View>
         <AppButton
           accessibilityLabel={`${chartName}: next stored month`}
           disabled={safeSelectedIndex >= pointCount - 1}
@@ -700,10 +705,12 @@ function TrendChart({
 
 function ChartRangeSelector({
   onChange,
+  onOpenCustom,
   selectedRange,
   testIDPrefix,
 }: {
   onChange: (range: MonthlyChartRange) => void;
+  onOpenCustom: () => void;
   selectedRange: MonthlyChartRange;
   testIDPrefix: string;
 }) {
@@ -711,10 +718,15 @@ function ChartRangeSelector({
     <View style={styles.rangeSelector}>
       {MONTHLY_CHART_RANGES.map((range) => {
         const isSelected = selectedRange === range;
+        const chartName = testIDPrefix.startsWith("portfolio")
+          ? "Portfolio Growth"
+          : "Asset Momentum";
 
         return (
           <Pressable
-            accessibilityLabel={`${testIDPrefix.startsWith("portfolio") ? "Portfolio Growth" : "Asset Momentum"}: show ${range}`}
+            accessibilityLabel={range === "Custom"
+              ? `${chartName}: edit custom range`
+              : `${chartName}: show ${range}`}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
             android_ripple={androidRipple(
@@ -723,7 +735,7 @@ function ChartRangeSelector({
                 : interaction.rippleColor,
             )}
             key={range}
-            onPress={() => onChange(range)}
+            onPress={() => range === "Custom" ? onOpenCustom() : onChange(range)}
             style={({ pressed }) => [
               styles.rangeChip,
               minimumTouchTargetStyle,
@@ -850,17 +862,24 @@ function MonthPickerField({
 function CustomMonthRangeControls({
   appliedRange,
   availableMonths,
+  chartTitle,
+  onCancel,
   onApply,
   testIDPrefix,
 }: {
   appliedRange: MonthlyChartCustomRange;
   availableMonths: string[];
+  chartTitle: string;
+  onCancel: () => void;
   onApply: (range: MonthlyChartCustomRange) => void;
   testIDPrefix: string;
 }) {
+  const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotionPreference();
   const [startMonth, setStartMonth] = useState(appliedRange.startMonth);
   const [endMonth, setEndMonth] = useState(appliedRange.endMonth);
   const [error, setError] = useState<string | null>(null);
+  const [activePicker, setActivePicker] = useState<"end" | "start" | null>(null);
   const availableStartMonths = availableMonths.slice(0, -1);
   const availableEndMonths = availableMonths.filter(
     (month) => !startMonth || month > startMonth,
@@ -902,34 +921,155 @@ function CustomMonthRangeControls({
     onApply({ endMonth, startMonth });
   }
 
+  const activeMonths = activePicker === "start"
+    ? availableStartMonths
+    : availableEndMonths;
+  const activeValue = activePicker === "start" ? startMonth : endMonth;
+  const activeLabel = activePicker === "start" ? "From month" : "To month";
+
+  function closeOrReturn() {
+    if (activePicker) {
+      setActivePicker(null);
+      return;
+    }
+
+    onCancel();
+  }
+
   return (
-    <View style={styles.customRangePanel}>
-      <View style={styles.customRangeFields}>
-        <MonthPickerField
-          label="From month"
-          months={availableStartMonths}
-          onChange={changeStartMonth}
-          testID={`${testIDPrefix}-start`}
-          value={startMonth}
-        />
-        <MonthPickerField
-          label="To month"
-          months={availableEndMonths}
-          onChange={changeEndMonth}
-          testID={`${testIDPrefix}-end`}
-          value={endMonth}
-        />
+    <Modal
+      animationType={reducedMotion ? "none" : "fade"}
+      onRequestClose={closeOrReturn}
+      testID={`${testIDPrefix}-modal`}
+      transparent
+      visible
+    >
+      <View style={[styles.monthPickerOverlay, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View
+          accessibilityViewIsModal
+          style={styles.monthPickerSheet}
+          testID={`${testIDPrefix}-panel`}
+        >
+          {activePicker ? (
+            <>
+              <View style={styles.monthPickerHeader}>
+                <AppText variant="title" weight="bold">{activeLabel}</AppText>
+                <AppText color="secondary" variant="caption">Available completed months</AppText>
+              </View>
+              <ScrollView contentContainerStyle={styles.monthPickerOptions}>
+                {activeMonths.map((month) => {
+                  const isSelected = month === activeValue;
+                  return (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                      key={month}
+                      onPress={() => {
+                        if (activePicker === "start") changeStartMonth(month);
+                        else changeEndMonth(month);
+                        setActivePicker(null);
+                      }}
+                      style={({ pressed }) => [
+                        styles.monthPickerOption,
+                        isSelected ? styles.monthPickerOptionSelected : null,
+                        getPressedStateStyle({ pressed }),
+                      ]}
+                      testID={`${testIDPrefix}-${activePicker}-${month}`}
+                    >
+                      <AppText weight={isSelected ? "bold" : "medium"}>{formatMonth(month)}</AppText>
+                      {isSelected ? <AppText style={styles.gainText} variant="caption">Selected</AppText> : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              <AppButton onPress={() => setActivePicker(null)} title="Back to range" variant="secondary" />
+            </>
+          ) : (
+            <>
+              <View style={styles.monthPickerHeader}>
+                <AppText variant="title" weight="bold">{chartTitle} range</AppText>
+                <AppText color="secondary" variant="caption">
+                  Choose completed months. The chart changes only after you apply.
+                </AppText>
+              </View>
+              <View style={styles.customRangeFields}>
+                {([
+                  { key: "start", label: "From month", value: startMonth },
+                  { key: "end", label: "To month", value: endMonth },
+                ] as const).map((field) => (
+                  <View key={field.key} style={styles.customRangeField}>
+                    <AppText color="secondary" variant="caption">{field.label}</AppText>
+                    <Pressable
+                      accessibilityLabel={`Choose ${field.label.toLowerCase()}`}
+                      accessibilityRole="button"
+                      onPress={() => setActivePicker(field.key)}
+                      style={({ pressed }) => [styles.monthPickerField, getPressedStateStyle({ pressed })]}
+                      testID={`${testIDPrefix}-${field.key}`}
+                    >
+                      <AppText variant="caption" weight="bold">
+                        {field.value ? formatMonth(field.value) : "Choose month"}
+                      </AppText>
+                      <AppText color="secondary" variant="caption">Change</AppText>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+              {error ? (
+                <AppText style={styles.lossText} testID={`${testIDPrefix}-error`} variant="caption">
+                  {error}
+                </AppText>
+              ) : null}
+              <View style={styles.customRangeActions}>
+                <AppButton
+                  onPress={onCancel}
+                  style={styles.customRangeAction}
+                  testID={`${testIDPrefix}-cancel`}
+                  title="Cancel"
+                  variant="secondary"
+                />
+                <AppButton
+                  onPress={applyRange}
+                  style={styles.customRangeAction}
+                  testID={`${testIDPrefix}-apply`}
+                  title="Apply range"
+                />
+              </View>
+            </>
+          )}
+        </View>
       </View>
-      {error ? (
-        <AppText style={styles.lossText} testID={`${testIDPrefix}-error`} variant="caption">
-          {error}
-        </AppText>
-      ) : null}
-      <AppButton
-        onPress={applyRange}
-        testID={`${testIDPrefix}-apply`}
-        title="Apply range"
-      />
+    </Modal>
+  );
+}
+
+function ChartRangeContext({
+  comparison,
+  monthLabels,
+  testID,
+}: {
+  comparison: string;
+  monthLabels: string[];
+  testID: string;
+}) {
+  const firstMonth = monthLabels[0];
+  const lastMonth = monthLabels.at(-1);
+  const displayedRange = firstMonth && lastMonth
+    ? firstMonth === lastMonth
+      ? firstMonth
+      : `${firstMonth} to ${lastMonth}`
+    : "No stored months";
+
+  return (
+    <View style={styles.chartRangeContext} testID={testID}>
+      <AppText color="secondary" variant="caption">
+        Displayed range
+      </AppText>
+      <AppText variant="caption" weight="bold">
+        {displayedRange} · {monthLabels.length} stored {monthLabels.length === 1 ? "month" : "months"}
+      </AppText>
+      <AppText color="secondary" variant="caption">
+        Comparison: {comparison}
+      </AppText>
     </View>
   );
 }
@@ -1032,6 +1172,8 @@ function ProgressTrendCards({
   minimal: boolean;
   ppfExcludedHistory: { estimatedMonths: string[]; missingMonths: string[] } | null;
 }) {
+  const [customRangeTarget, setCustomRangeTarget] = useState<"asset" | "portfolio" | null>(null);
+
   if (isHistoryBuilding) {
     return (
       <PremiumCard testID="progress-trends-building">
@@ -1091,17 +1233,15 @@ function ProgressTrendCards({
         />
         <ChartRangeSelector
           onChange={onPortfolioRangeChange}
+          onOpenCustom={() => setCustomRangeTarget("portfolio")}
           selectedRange={portfolioChartRange}
           testIDPrefix="portfolio-monthly-chart-range"
         />
-        {portfolioChartRange === "Custom" ? (
-          <CustomMonthRangeControls
-            appliedRange={portfolioChartCustomRange}
-            availableMonths={portfolioChartData.availableMonths}
-            onApply={onPortfolioCustomRangeChange}
-            testIDPrefix="portfolio-custom-range"
-          />
-        ) : null}
+        <ChartRangeContext
+          comparison={ppfExcludedHistory ? "unavailable until PPF history is complete" : "invested capital"}
+          monthLabels={portfolioChartData.monthLabels}
+          testID="portfolio-chart-context"
+        />
         {portfolioChartData.hasEnoughHistory ? (
           <TrendChart
             partialHistory={ppfExcludedHistory !== null}
@@ -1129,17 +1269,15 @@ function ProgressTrendCards({
         />
         <ChartRangeSelector
           onChange={onAssetRangeChange}
+          onOpenCustom={() => setCustomRangeTarget("asset")}
           selectedRange={assetChartRange}
           testIDPrefix="asset-monthly-chart-range"
         />
-        {assetChartRange === "Custom" ? (
-          <CustomMonthRangeControls
-            appliedRange={assetChartCustomRange}
-            availableMonths={assetChartData.availableMonths}
-            onApply={onAssetCustomRangeChange}
-            testIDPrefix="asset-custom-range"
-          />
-        ) : null}
+        <ChartRangeContext
+          comparison="previous stored month"
+          monthLabels={assetChartData.monthLabels}
+          testID="asset-chart-context"
+        />
         {assetChartData.hasEnoughHistory ? (
           <>
             <TrendChart
@@ -1161,6 +1299,34 @@ function ProgressTrendCards({
           </View>
         )}
       </PremiumCard>
+      {customRangeTarget === "portfolio" ? (
+        <CustomMonthRangeControls
+          appliedRange={portfolioChartCustomRange}
+          availableMonths={portfolioChartData.availableMonths}
+          chartTitle="Portfolio Growth"
+          onCancel={() => setCustomRangeTarget(null)}
+          onApply={(range) => {
+            onPortfolioCustomRangeChange(range);
+            onPortfolioRangeChange("Custom");
+            setCustomRangeTarget(null);
+          }}
+          testIDPrefix="portfolio-custom-range"
+        />
+      ) : null}
+      {customRangeTarget === "asset" ? (
+        <CustomMonthRangeControls
+          appliedRange={assetChartCustomRange}
+          availableMonths={assetChartData.availableMonths}
+          chartTitle="Asset Momentum"
+          onCancel={() => setCustomRangeTarget(null)}
+          onApply={(range) => {
+            onAssetCustomRangeChange(range);
+            onAssetRangeChange("Custom");
+            setCustomRangeTarget(null);
+          }}
+          testIDPrefix="asset-custom-range"
+        />
+      ) : null}
     </>
   );
 }
@@ -1397,6 +1563,12 @@ export function ProgressScreen({
               </View>
             </View>
 
+            <MonthlyHistoryPanel
+              maskWealthValues={progress.preferences.maskWealthValues}
+              minimal={isMinimalMode}
+              summaries={progress.monthlySummaries}
+            />
+
             <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
@@ -1424,11 +1596,6 @@ export function ProgressScreen({
               minimal={isMinimalMode}
             />
 
-            <MonthlyHistoryPanel
-              maskWealthValues={progress.preferences.maskWealthValues}
-              minimal={isMinimalMode}
-              summaries={progress.monthlySummaries}
-            />
           </>
         ) : progress.hasData ? (
           <>
@@ -1582,7 +1749,7 @@ export function ProgressScreen({
 
 const styles = StyleSheet.create({
   monthNavigation: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  monthNavigationLabel: { flex: 1 },
+  monthNavigationLabel: { flex: 1, gap: 2 },
 
   monthlyAnswer: { gap: spacing.sm },
   heroValue: { fontSize: 40, lineHeight: 48 },
@@ -1644,11 +1811,24 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: spacing.sm,
   },
-  customRangePanel: {
-    backgroundColor: "#111113",
-    borderRadius: 14,
+  customRangeField: {
+    gap: spacing.xs,
+  },
+  customRangeActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
-    padding: spacing.sm,
+    justifyContent: "flex-end",
+  },
+  customRangeAction: {
+    flexGrow: 1,
+    minWidth: 120,
+  },
+  chartRangeContext: {
+    borderLeftColor: colors.border.subtle,
+    borderLeftWidth: 2,
+    gap: 2,
+    paddingLeft: spacing.sm,
   },
   gapOutcome: {
     flex: 1,
