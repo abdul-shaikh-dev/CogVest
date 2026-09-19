@@ -389,7 +389,10 @@ Accepted chart direction:
 - each chart card owns independent `3M`, `6M`, `1Y`, `All`, and `Custom`
   timeframe controls
 - custom ranges use inclusive start and end months chosen from available stored
-  snapshot months; do not present unavailable or hard-coded months
+  snapshot months; do not present unavailable or hard-coded months. Month choice
+  is year-first: keep the pending selection visible, expose only years containing
+  valid choices, then show only valid stored months in the selected year. End
+  choices exclude months equal to or earlier than the pending start month
 - selecting a month updates a compact summary above the plot. Portfolio Growth
   shows portfolio value, invested value, and the percentage and amount ahead or
   behind invested capital. Asset Momentum shows Equity, Debt, and Crypto values

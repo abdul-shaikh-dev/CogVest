@@ -73,6 +73,15 @@ function formatMonth(month: string) {
   }).format(new Date(Date.UTC(Number(year), monthIndex, 1)));
 }
 
+function formatShortMonth(month: string) {
+  const [year, monthPart] = month.split("-");
+
+  return new Intl.DateTimeFormat("en-IN", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
+}
+
 function formatSignedCompactINR(value: number) {
   const amount = formatCompactINR(Math.abs(value));
 
@@ -880,6 +889,8 @@ function CustomMonthRangeControls({
   const [endMonth, setEndMonth] = useState(appliedRange.endMonth);
   const [error, setError] = useState<string | null>(null);
   const [activePicker, setActivePicker] = useState<"end" | "start" | null>(null);
+  const [activeYear, setActiveYear] = useState("");
+  const [isChoosingYear, setIsChoosingYear] = useState(false);
   const availableStartMonths = availableMonths.slice(0, -1);
   const availableEndMonths = availableMonths.filter(
     (month) => !startMonth || month > startMonth,
@@ -926,8 +937,24 @@ function CustomMonthRangeControls({
     : availableEndMonths;
   const activeValue = activePicker === "start" ? startMonth : endMonth;
   const activeLabel = activePicker === "start" ? "From month" : "To month";
+  const activeYears = [...new Set(activeMonths.map((month) => month.slice(0, 4)))].sort();
+  const activeYearIndex = activeYears.indexOf(activeYear);
+  const activeYearMonths = activeMonths.filter((month) => month.startsWith(`${activeYear}-`));
+
+  function openPicker(field: "end" | "start") {
+    const value = field === "start" ? startMonth : endMonth;
+    const fieldMonths = field === "start" ? availableStartMonths : availableEndMonths;
+    setActivePicker(field);
+    setActiveYear((value || fieldMonths.at(-1) || "").slice(0, 4));
+    setIsChoosingYear(false);
+  }
 
   function closeOrReturn() {
+    if (isChoosingYear) {
+      setIsChoosingYear(false);
+      return;
+    }
+
     if (activePicker) {
       setActivePicker(null);
       return;
@@ -954,35 +981,111 @@ function CustomMonthRangeControls({
             <>
               <View style={styles.monthPickerHeader}>
                 <AppText variant="title" weight="bold">{activeLabel}</AppText>
-                <AppText color="secondary" variant="caption">Available completed months</AppText>
+                <AppText color="secondary" variant="caption">
+                  Current selection: {activeValue ? formatMonth(activeValue) : "Not selected"}
+                </AppText>
               </View>
-              <ScrollView contentContainerStyle={styles.monthPickerOptions}>
-                {activeMonths.map((month) => {
-                  const isSelected = month === activeValue;
-                  return (
+              {isChoosingYear ? (
+                <>
+                  <AppText color="secondary" variant="caption">
+                    Choose a year containing valid stored months.
+                  </AppText>
+                  <ScrollView contentContainerStyle={styles.yearPickerGrid}>
+                    {[...activeYears].reverse().map((year) => {
+                      const isSelected = year === activeYear;
+                      return (
+                        <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: isSelected }}
+                          key={year}
+                          onPress={() => {
+                            setActiveYear(year);
+                            setIsChoosingYear(false);
+                          }}
+                          style={({ pressed }) => [
+                            styles.yearPickerOption,
+                            minimumTouchTargetStyle,
+                            isSelected ? styles.monthPickerOptionSelected : null,
+                            getPressedStateStyle({ pressed }),
+                          ]}
+                          testID={`${testIDPrefix}-${activePicker}-year-${year}`}
+                        >
+                          <AppText weight={isSelected ? "bold" : "medium"}>{year}</AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                  <AppButton
+                    onPress={() => setIsChoosingYear(false)}
+                    title="Back to months"
+                    variant="secondary"
+                  />
+                </>
+              ) : (
+                <>
+                  <View style={styles.yearNavigator}>
+                    <AppButton
+                      accessibilityLabel={`Show previous available year for ${activeLabel.toLowerCase()}`}
+                      disabled={activeYearIndex <= 0}
+                      onPress={() => setActiveYear(activeYears[activeYearIndex - 1] ?? activeYear)}
+                      testID={`${testIDPrefix}-${activePicker}-previous-year`}
+                      title="‹"
+                      variant="secondary"
+                    />
                     <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: isSelected }}
-                      key={month}
-                      onPress={() => {
-                        if (activePicker === "start") changeStartMonth(month);
-                        else changeEndMonth(month);
-                        setActivePicker(null);
-                      }}
-                      style={({ pressed }) => [
-                        styles.monthPickerOption,
-                        isSelected ? styles.monthPickerOptionSelected : null,
-                        getPressedStateStyle({ pressed }),
-                      ]}
-                      testID={`${testIDPrefix}-${activePicker}-${month}`}
+                      accessibilityLabel={`Choose year. Showing ${activeYear}`}
+                      accessibilityRole="button"
+                      onPress={() => setIsChoosingYear(true)}
+                      style={({ pressed }) => [styles.yearPickerButton, getPressedStateStyle({ pressed })]}
+                      testID={`${testIDPrefix}-${activePicker}-choose-year`}
                     >
-                      <AppText weight={isSelected ? "bold" : "medium"}>{formatMonth(month)}</AppText>
-                      {isSelected ? <AppText style={styles.gainText} variant="caption">Selected</AppText> : null}
+                      <AppText color="secondary" variant="caption">Year</AppText>
+                      <AppText variant="title" weight="bold">{activeYear}</AppText>
                     </Pressable>
-                  );
-                })}
-              </ScrollView>
-              <AppButton onPress={() => setActivePicker(null)} title="Back to range" variant="secondary" />
+                    <AppButton
+                      accessibilityLabel={`Show next available year for ${activeLabel.toLowerCase()}`}
+                      disabled={activeYearIndex < 0 || activeYearIndex >= activeYears.length - 1}
+                      onPress={() => setActiveYear(activeYears[activeYearIndex + 1] ?? activeYear)}
+                      testID={`${testIDPrefix}-${activePicker}-next-year`}
+                      title="›"
+                      variant="secondary"
+                    />
+                  </View>
+                  <View style={styles.monthChoiceGrid}>
+                    {activeYearMonths.map((month) => {
+                      const isSelected = month === activeValue;
+                      return (
+                        <Pressable
+                          accessibilityLabel={formatMonth(month)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: isSelected }}
+                          key={month}
+                          onPress={() => {
+                            if (activePicker === "start") changeStartMonth(month);
+                            else changeEndMonth(month);
+                            setActivePicker(null);
+                          }}
+                          style={({ pressed }) => [
+                            styles.monthChoice,
+                            minimumTouchTargetStyle,
+                            isSelected ? styles.monthPickerOptionSelected : null,
+                            getPressedStateStyle({ pressed }),
+                          ]}
+                          testID={`${testIDPrefix}-${activePicker}-${month}`}
+                        >
+                          <AppText align="center" weight={isSelected ? "bold" : "medium"}>
+                            {formatShortMonth(month)}
+                          </AppText>
+                          {isSelected ? (
+                            <AppText align="center" style={styles.gainText} variant="caption">Selected</AppText>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <AppButton onPress={() => setActivePicker(null)} title="Back to range" variant="secondary" />
+                </>
+              )}
             </>
           ) : (
             <>
@@ -1002,7 +1105,7 @@ function CustomMonthRangeControls({
                     <Pressable
                       accessibilityLabel={`Choose ${field.label.toLowerCase()}`}
                       accessibilityRole="button"
-                      onPress={() => setActivePicker(field.key)}
+                      onPress={() => openPicker(field.key)}
                       style={({ pressed }) => [styles.monthPickerField, getPressedStateStyle({ pressed })]}
                       testID={`${testIDPrefix}-${field.key}`}
                     >
@@ -1896,6 +1999,20 @@ const styles = StyleSheet.create({
   monthPickerOptions: {
     gap: spacing.xs,
   },
+  monthChoice: {
+    borderRadius: 12,
+    flexBasis: "30%",
+    flexGrow: 1,
+    justifyContent: "center",
+    minWidth: 84,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  monthChoiceGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
   monthPickerOverlay: {
     backgroundColor: "rgba(0,0,0,0.72)",
     flex: 1,
@@ -1908,6 +2025,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     maxHeight: "72%",
     padding: spacing.md,
+  },
+  yearNavigator: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  yearPickerButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  yearPickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  yearPickerOption: {
+    alignItems: "center",
+    borderRadius: 12,
+    flexBasis: "30%",
+    flexGrow: 1,
+    justifyContent: "center",
+    minWidth: 84,
+    paddingHorizontal: spacing.sm,
   },
   neutralText: {
     color: colors.text.secondary,
