@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
-import { AssetHistoryPanel } from "../AssetHistoryPanel";
+import { AssetHistoryPanel, getVisiblePriceScale } from "../AssetHistoryPanel";
 import { useAssetHistory } from "../useAssetHistory";
 import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import type { Asset, OpeningPosition } from "@/src/types";
@@ -107,12 +107,69 @@ describe("AssetHistoryPanel", () => {
   it("moves across observed dates without inventing intermediate observations", () => {
     const screen = renderPanel();
 
-    expect(screen.getByText("03 Jan 2026")).toBeTruthy();
+    expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
+      "Observed date03 Jan 2026",
+    );
+    expect(screen.queryByText("3 / 3")).toBeNull();
     expect(screen.getByTestId("asset-history-next").props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(screen.getByTestId("asset-history-previous"));
-    expect(screen.getByText("02 Jan 2026")).toBeTruthy();
+    expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
+      "Observed date02 Jan 2026",
+    );
     fireEvent.press(screen.getByTestId("asset-history-next"));
-    expect(screen.getByText("03 Jan 2026")).toBeTruthy();
+    expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
+      "Observed date03 Jan 2026",
+    );
+  });
+
+  it("uses a disclosed visible-range scale for price without changing source values", () => {
+    mockHistory({
+      entry: entry([
+        { close: 100, date: "2026-01-01" },
+        { close: 101, date: "2026-01-02" },
+        { close: 102, date: "2026-01-03" },
+      ]),
+    });
+    const screen = renderPanel();
+    const chart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+
+    expect(chart.props.data.map((point: { value: number }) => point.value)).toEqual([100, 101, 102]);
+    expect(chart.props.yAxisOffset).toBeGreaterThan(0);
+    expect(chart.props.maxValue).toBeLessThan(10);
+    expect(chart.props.stepValue).toBe(chart.props.maxValue / 3);
+    expect(chart.props.data.map((point: { dataPointRadius: number }) => point.dataPointRadius)).toEqual([0, 0, 6]);
+    expect(screen.getByTestId("asset-history-visible-range")).toHaveTextContent(
+      /Axis starts at .*not zero/u,
+    );
+
+    fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
+    const holdingChart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+    expect(holdingChart.props.yAxisOffset).toBeUndefined();
+    expect(screen.queryByTestId("asset-history-visible-range")).toBeNull();
+  });
+
+  it("keeps a zero baseline when the visible price range includes zero", () => {
+    expect(getVisiblePriceScale([0, 0.01, 0.02]).yAxisOffset).toBe(0);
+    expect(getVisiblePriceScale([])).toEqual({
+      maxValue: 1,
+      stepValue: 1 / 3,
+      yAxisOffset: 0,
+    });
+  });
+
+  it("leaves missing-date gaps disconnected", () => {
+    mockHistory({
+      entry: entry([
+        { close: 100, date: "2026-01-01" },
+        { close: 110, date: "2026-01-10" },
+      ]),
+    });
+    const screen = renderPanel();
+    const chart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+
+    expect(chart.props.lineSegments).toEqual([
+      { color: "transparent", endIndex: 1, startIndex: 0 },
+    ]);
   });
 
   it("requests a new date range when a range control changes", () => {

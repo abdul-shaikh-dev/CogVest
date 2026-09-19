@@ -39,6 +39,7 @@ export default function VisualQaSeedRoute() {
           onPress: () => {
             try {
               seedVisualQaPortfolio(getPortfolioStore(), {
+                historyMonths: params.history === "extended" ? 120 : undefined,
                 longHistory: params.history === "long",
               });
               setSeeded(true);

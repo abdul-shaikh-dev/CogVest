@@ -152,6 +152,17 @@ function shouldShowAxisLabel(index: number, total: number) {
   return index === 0 || index === Math.floor((total - 1) / 2) || index === total - 1;
 }
 
+function getChartPointRadius(
+  pointCount: number,
+  index: number,
+  selectedIndex?: number,
+) {
+  if (index === selectedIndex) return 6;
+  if (pointCount <= 12) return 3;
+  if (pointCount <= 24) return 2;
+  return 0;
+}
+
 function toGiftedChartData(
   series: MonthlyProgressChartSeries,
   monthLabels: string[],
@@ -163,6 +174,7 @@ function toGiftedChartData(
   const spansYears = new Set(monthLabels.map((label) => label.split(" ")[1])).size > 1;
 
   return series.values.map((value, index) => {
+    const dataPointRadius = getChartPointRadius(total, index, selectedIndex);
     const showLabel = showAxisLabels && shouldShowAxisLabel(index, total);
     const label = showLabel
       ? spansYears
@@ -173,7 +185,8 @@ function toGiftedChartData(
       ? Math.min(72 * Math.max(1, labelLayout.fontScale), labelLayout.width / 3)
       : 72;
     return {
-      dataPointRadius: index === selectedIndex ? 6 : 3,
+      dataPointRadius,
+      hideDataPoint: dataPointRadius === 0,
       label,
       // Gifted Charts otherwise constrains labels to one point's spacing.
       ...(showLabel && labelLayout
@@ -534,9 +547,14 @@ function TrendChart({
   portfolioLabel?: string;
   partialHistory?: boolean;
 }) {
-  const maxValue = getChartMaxValue(series);
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
+  const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
+  const isPortfolioChart = testIDPrefix === "portfolio-trend";
+  const displayedSeries = !isPortfolioChart && focusedSeries
+    ? series.filter((item) => item.label === focusedSeries)
+    : series;
+  const maxValue = getChartMaxValue(displayedSeries);
   const yAxisWidth = Math.ceil(52 * Math.max(1, fontScale));
   const plotWidth = surfaceWidth > 0
     ? Math.max(1, surfaceWidth - yAxisWidth - spacing.xs - spacing.sm - 2 * StyleSheet.hairlineWidth)
@@ -556,14 +574,12 @@ function TrendChart({
     rulesLength: plotWidth,
     xAxisLength: plotWidth,
   };
-  const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const pointCount = series[0]?.values.length ?? 0;
   const spacingValue = getChartSpacing(pointCount, plotWidth);
   // The renderer's reveal animation captures its initial width. Refresh that
   // renderer on geometry changes, leaving this component's month state intact.
   const rendererKey = `${plotWidth}:${pointCount}`;
   const labelLayout = { spacing: spacingValue, width: plotWidth, fontScale };
-  const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
   );
@@ -615,6 +631,11 @@ function TrendChart({
         series={series}
         testIDPrefix={testIDPrefix}
       />
+      {!isPortfolioChart && focusedSeries ? (
+        <AppText color="secondary" testID={`${testIDPrefix}-focused-scale`} variant="caption">
+          {focusedSeries} scale · Other asset lines hidden
+        </AppText>
+      ) : null}
       <View style={styles.chartWithAxis} testID={`${testIDPrefix}-plot-region`}>
         <View
           accessible={false}
@@ -643,8 +664,6 @@ function TrendChart({
             data2={partialHistory ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
-            dataPointsRadius1={3}
-            dataPointsRadius2={3}
             disableScroll
             endFillColor="rgba(52,199,89,0)"
             endOpacity={0}
@@ -675,11 +694,10 @@ function TrendChart({
             {...axisProps}
             adjustToWidth
             curved
-            dataSet={series.map((item, index) => ({
+            dataSet={displayedSeries.map((item, index) => ({
               color: getDisplayedSeriesColor(item.label, focusedSeries),
               data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),
               dataPointsColor: getSeriesColor(item.label),
-              dataPointsRadius: 3,
               thickness: 3,
             }))}
             disableScroll

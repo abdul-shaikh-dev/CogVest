@@ -53,6 +53,18 @@ describe("seedVisualQaPortfolio", () => {
     expect(store.getState().monthlySnapshots).toHaveLength(7);
   });
 
+  it("seeds a separate 120-month visual comparison fixture", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    seedVisualQaPortfolio(store, { historyMonths: 120 });
+
+    const snapshots = store.getState().monthlySnapshots;
+    expect(snapshots).toHaveLength(120);
+    expect(new Set(snapshots.map((item) => item.month)).size).toBe(120);
+    expect(snapshots[0].month).toBe("2016-06");
+    expect(snapshots.at(-1)?.month).toBe("2026-05");
+  });
+
   it("creates a deterministic V1 parity dataset", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 

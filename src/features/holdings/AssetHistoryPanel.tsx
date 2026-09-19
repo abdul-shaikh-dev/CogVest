@@ -33,6 +33,23 @@ export function assetHistoryRange(months: number, now = new Date()) {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
+export function getVisiblePriceScale(values: number[], sections = 3) {
+  if (values.length === 0) {
+    return { maxValue: 1, stepValue: 1 / sections, yAxisOffset: 0 };
+  }
+
+  const minimumValue = Math.min(...values);
+  const maximumValue = Math.max(...values);
+  const observedSpan = maximumValue - minimumValue;
+  const padding = observedSpan > 0
+    ? observedSpan * 0.12
+    : Math.max(Math.abs(maximumValue) * 0.05, maximumValue < 1 ? 0.01 : 1);
+  const yAxisOffset = Math.max(0, minimumValue - padding);
+  const maxValue = Math.max(maximumValue + padding - yAxisOffset, Number.EPSILON);
+
+  return { maxValue, stepValue: maxValue / sections, yAxisOffset };
+}
+
 type AssetHistoryPanelProps = {
   asset: Asset;
   assets?: Asset[];
@@ -93,6 +110,9 @@ export function AssetHistoryPanel({
     firstValue && latestValue !== undefined
       ? (latestValue / firstValue - 1) * 100
       : null;
+  const visiblePriceScale = mode === "price"
+    ? getVisiblePriceScale(available.map((point) => point.value))
+    : null;
   const format = (value: number) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -131,7 +151,7 @@ export function AssetHistoryPanel({
     return {
       value: point.value,
       hideDataPoint: pointIndex !== index,
-      dataPointRadius: pointIndex === index ? 4 : 0,
+      dataPointRadius: pointIndex === index ? 6 : 0,
       dataPointColor: colors.text.primary,
       spacing: pointSpacing,
       ...(pointIndex === 0 || pointIndex === available.length - 1
@@ -259,6 +279,11 @@ export function AssetHistoryPanel({
               {changePct.toFixed(2)}% {mode === "price" ? "price change" : "value change"} · first to last observation
             </AppText>
           ) : null}
+          {visiblePriceScale && visiblePriceScale.yAxisOffset > 0 ? (
+            <AppText color="secondary" testID="asset-history-visible-range" variant="caption">
+              Visible price range · Axis starts at {format(visiblePriceScale.yAxisOffset)}, not zero
+            </AppText>
+          ) : null}
           {available.length > 1 ? (
             <View
               accessible={false}
@@ -277,9 +302,13 @@ export function AssetHistoryPanel({
                 initialSpacing={8}
                 isAnimated={false}
                 lineSegments={lineSegments}
+                maxValue={visiblePriceScale?.maxValue}
                 noOfSections={3}
+                roundToDigits={6}
                 rulesColor={colors.border.subtle}
+                showFractionalValues
                 spacing={labelSpacing}
+                stepValue={visiblePriceScale?.stepValue}
                 thickness={2}
                 width={plotWidth}
                 xAxisColor={colors.border.subtle}
@@ -287,6 +316,7 @@ export function AssetHistoryPanel({
                 xAxisLabelsHeight={36}
                 yAxisColor="transparent"
                 yAxisLabelWidth={60}
+                yAxisOffset={visiblePriceScale?.yAxisOffset}
                 yAxisTextStyle={styles.axis}
               />
             </View>
@@ -297,16 +327,21 @@ export function AssetHistoryPanel({
           )}
           <View style={styles.navigation}>
             <AppButton
+              accessibilityLabel={`Previous observed date before ${formatDate(selected.date)}`}
               disabled={index <= 0}
               onPress={() => setSelection(index - 1)}
               testID="asset-history-previous"
               title="Previous"
               variant="secondary"
             />
-            <AppText color="secondary" variant="caption">
-              {index + 1} / {available.length}
-            </AppText>
+            <View style={styles.navigationLabel} testID="asset-history-selected-date">
+              <AppText align="center" color="secondary" variant="caption">Observed date</AppText>
+              <AppText align="center" variant="caption" weight="bold">
+                {formatDate(selected.date)}
+              </AppText>
+            </View>
             <AppButton
+              accessibilityLabel={`Next observed date after ${formatDate(selected.date)}`}
               disabled={index >= available.length - 1}
               onPress={() => setSelection(index + 1)}
               testID="asset-history-next"
@@ -366,5 +401,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
+  navigationLabel: { flex: 1, gap: spacing.xs },
   axis: { color: colors.text.secondary, fontSize: 11 },
 });

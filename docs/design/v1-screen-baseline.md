@@ -408,6 +408,13 @@ Accepted chart direction:
   `docs/testing/chart-talkback-evidence.md` (#292).
 - chart selection is independent; changing its range resets to the latest
   visible stored month. Series-colored enlarged points mark that selection
+- chart markers are density-aware: retain regular markers through 12 stored
+  months, reduce them for medium ranges, and show only the enlarged inspected
+  point beyond 24 months. Do not remove observations from the line
+- Asset Momentum normally retains its shared zero-based comparison scale.
+  Selecting a legend item may isolate that asset on its own zero-based scale so
+  smaller Debt or Crypto movement remains inspectable; name the focused scale
+  and state that the other lines are hidden
 - latest-in-range asset insights retain explicit month and comparison dates,
   distinct from the inspected month; hide them when values are masked
 - CogVest owns month selection, figures, legend, masking, and accessibility text
@@ -420,6 +427,12 @@ Accepted chart direction:
   first/last labels align inward and multi-year ranges include the year. Renderer
   geometry refreshes after layout changes without resetting month selection.
   At enlarged font sizes, portfolio-summary groups stack instead of overlapping.
+- holding price history uses a padded visible-price scale when all visible
+  observations are above zero. Disclose the non-zero axis start with its exact
+  currency value; preserve source values and missing-date gaps. Holding-value
+  history remains zero-based because quantity changes are part of that view.
+  Previous/Next navigation names the selected observed date rather than an
+  internal observation index
 - Monthly History details compare the selected month with the previous calendar month
 - the main Progress screen includes only a compact month-end snapshot CTA; the
   full snapshot capture flow belongs outside the main review surface
