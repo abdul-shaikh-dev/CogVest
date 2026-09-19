@@ -39,6 +39,14 @@ appId: com.abdulshaikh.cogvest
     id: "portfolio-custom-range-end"
 - tapOn:
     id: "portfolio-custom-range-start"
+- tapOn:
+    id: "portfolio-custom-range-start-choose-year"
+- assertVisible:
+    id: "portfolio-custom-range-start-year-2025"
+- assertVisible:
+    id: "portfolio-custom-range-start-year-2026"
+- tapOn:
+    id: "portfolio-custom-range-start-year-2026"
 - scrollUntilVisible:
     element:
       id: "portfolio-custom-range-start-2026-03"

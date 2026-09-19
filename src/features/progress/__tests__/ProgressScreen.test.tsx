@@ -1483,6 +1483,89 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("portfolio-custom-range-error")).toBeNull();
   });
 
+  it("selects stored months across ten years through year-first navigation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    for (let index = 0; index < 120; index += 1) {
+      const month = new Date(Date.UTC(2016, index, 1)).toISOString().slice(0, 7);
+      store.getState().addMonthlySnapshot(chartSnapshot(month, {
+        cryptoValue: 100000,
+        debtValue: 200000,
+        equityValue: 700000 + index * 1000,
+        investedValue: 900000,
+        portfolioValue: 1000000 + index * 1000,
+      }));
+    }
+
+    const { getByTestId, getByText, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+
+    expect(getByText("Current selection: January 2016")).toBeTruthy();
+    expect(getByTestId("portfolio-custom-range-start-previous-year")).toBeDisabled();
+    expect(getByTestId("portfolio-custom-range-start-2016-01")).toBeTruthy();
+    expect(queryByTestId("portfolio-custom-range-start-2017-01")).toBeNull();
+
+    fireEvent.press(getByTestId("portfolio-custom-range-start-choose-year"));
+    expect(getByTestId("portfolio-custom-range-start-year-2025")).toBeTruthy();
+    expect(getByTestId("portfolio-custom-range-start-year-2016")).toBeTruthy();
+    expect(queryByTestId("portfolio-custom-range-start-year-2015")).toBeNull();
+    expect(queryByTestId("portfolio-custom-range-start-year-2026")).toBeNull();
+    fireEvent.press(getByTestId("portfolio-custom-range-start-year-2025"));
+
+    expect(getByTestId("portfolio-custom-range-start-next-year")).toBeDisabled();
+    expect(getByTestId("portfolio-custom-range-start-2025-11")).toBeTruthy();
+    expect(queryByTestId("portfolio-custom-range-start-2025-12")).toBeNull();
+    fireEvent.press(getByTestId("portfolio-custom-range-start-2025-11"));
+    fireEvent.press(getByTestId("portfolio-custom-range-apply"));
+
+    expect(getByTestId("portfolio-chart-context")).toHaveTextContent(
+      /Nov 2025 to Dec 2025.*2 stored months/,
+    );
+  });
+
+  it("keeps missing months and invalid end years out of sparse range choices", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    for (const month of ["2016-01", "2016-03", "2026-02", "2026-05"]) {
+      store.getState().addMonthlySnapshot(chartSnapshot(month, {
+        cryptoValue: 100000,
+        debtValue: 200000,
+        equityValue: 700000,
+        investedValue: 900000,
+        portfolioValue: 1000000,
+      }));
+    }
+
+    const { getAllByTestId, getByTestId, queryByTestId } = render(
+      <ProgressScreen store={store} />,
+    );
+    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+
+    expect(getByTestId("portfolio-custom-range-start-2016-01")).toBeTruthy();
+    expect(getByTestId("portfolio-custom-range-start-2016-03")).toBeTruthy();
+    expect(queryByTestId("portfolio-custom-range-start-2016-02")).toBeNull();
+    fireEvent.press(getByTestId("portfolio-custom-range-start-2016-03"));
+    fireEvent.press(getByTestId("portfolio-custom-range-end"));
+    fireEvent.press(getByTestId("portfolio-custom-range-end-choose-year"));
+
+    expect(queryByTestId("portfolio-custom-range-end-year-2016")).toBeNull();
+    expect(getByTestId("portfolio-custom-range-end-year-2026")).toBeTruthy();
+    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    expect(getByTestId("portfolio-custom-range-end-2026-02")).toBeTruthy();
+    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    expect(getByTestId("portfolio-custom-range-panel")).toBeTruthy();
+    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
+
+    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+      includeHiddenElements: true,
+    });
+    expect(portfolioChart.props.data).toHaveLength(4);
+    expect(assetChart.props.dataSet[0].data).toHaveLength(4);
+  });
+
   it("updates an existing month instead of creating duplicate snapshots", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
