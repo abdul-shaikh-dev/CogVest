@@ -15,6 +15,7 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///holdings"
 - assertVisible:
     id: holdings-search-input
+- assertVisible: "Market holdings share.*cash and PPF excluded"
 - assertNotVisible: "Track PPF as an account"
 - assertNotVisible: "Dominant position"
 - assertVisible:
@@ -30,12 +31,14 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - assertVisible: "HDFC Bank"
 - assertVisible: "Invested ₹36.25K"
+- assertVisible: "Market holdings share.*%"
 - assertNotVisible: "Nifty 50 ETF"
 - tapOn:
     id: holding-row-visual-qa-asset-hdfc
 - assertVisible:
     id: holding-expanded-visual-qa-asset-hdfc
 - assertVisible: "Quantity"
+- assertVisible: "Market holdings share"
 - takeScreenshot: .expo/holdings-278-expanded
 - tapOn:
     id: holding-detail-back

@@ -18,9 +18,18 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹12.38L"
 - assertVisible: "+24.44%"
 - assertVisible: "Using older and manual prices"
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-scope
+    direction: DOWN
+- assertVisible: "Share of market holdings and cash.*recorded PPF excluded"
 - assertNotVisible:
     id: dashboard-price-details
 - takeScreenshot: .expo/ux13-dashboard
+- scrollUntilVisible:
+    element:
+      id: dashboard-price-details-toggle
+    direction: UP
 - tapOn:
     id: dashboard-price-details-toggle
 - assertVisible:
@@ -30,6 +39,7 @@ appId: com.abdulshaikh.cogvest
       text: "Current holdings, cash and recorded PPF balances.*"
     direction: DOWN
 - assertVisible: "Current holdings, cash and recorded PPF balances.*Not a month-end snapshot."
+- assertVisible: "Exact values: portfolio.*invested.*holdings P&L.*"
 - takeScreenshot: .expo/ux13-price-details
 - tapOn:
     id: dashboard-price-details-toggle

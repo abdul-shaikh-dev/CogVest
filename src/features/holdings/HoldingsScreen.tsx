@@ -643,6 +643,9 @@ export function HoldingsScreen({
                 ) : null}
               </View>
             </View>
+            <AppText color="secondary" testID="holdings-allocation-scope" variant="caption">
+              Market holdings share · cash and PPF excluded
+            </AppText>
 
             {filtersVisible ? (
               <FilterRow
@@ -668,8 +671,7 @@ export function HoldingsScreen({
               </View>
             )}
             <AppText color="secondary" variant="caption">
-              Allocation across market holdings; excludes cash and PPF. Returns
-              are since investment, not today.
+              Returns are since investment, not today.
             </AppText>
           </>
         ) : null}
@@ -1320,6 +1322,9 @@ function HoldingRow({
         </View>
         <View style={styles.valueColumn}>
           <MaskedValue
+            exactValue={
+              pending ? undefined : formatINR(holding.currentValue!)
+            }
             masked={masked && !pending}
             value={
               pending
@@ -1345,13 +1350,14 @@ function HoldingRow({
       <View style={styles.compactMeta}>
         <MaskedValue
           color="secondary"
+          exactValue={`Invested ${formatINR(holding.totalInvested)}`}
           masked={masked}
           value={`Invested ${formatCompactINR(holding.totalInvested)}`}
           variant="caption"
         />
         {allocationAvailable && !pending ? (
           <AppText color="secondary" variant="caption">
-            Allocation {item.allocationPct.toFixed(1)}%
+            Market holdings share {item.allocationPct.toFixed(1)}%
           </AppText>
         ) : null}
       </View>
@@ -1529,7 +1535,7 @@ function HoldingDetails({
           }
         />
         <Detail
-          label="Allocation"
+          label="Market holdings share"
           value={
             allocationAvailable && !isPending
               ? `${item.allocationPct.toFixed(1)}%`
@@ -1548,7 +1554,7 @@ function HoldingDetails({
         {formatClassification(item)}
       </AppText>
       <AppText color="secondary" variant="caption">
-        Allocation excludes cash and PPF. Purchase date is based on recorded
+        Market holdings share excludes cash and PPF. Purchase date is based on recorded
         history.
       </AppText>
       {isPending && onReviewOpeningPosition && assetOpeningPositions[0] ? (

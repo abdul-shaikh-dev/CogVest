@@ -18,6 +18,9 @@ testing matrix for verification work, and roadmap/release documents only when
 those boundaries are affected. Historical previews and completed plans are
 supporting evidence, not sources of truth.
 
+Cross-screen financial scope, comparison wording, and value/date formatting
+follow `docs/design/financial-label-format-contract.md`.
+
 ### Active Version
 
 V2 tracker #137 is complete with standalone verification recorded in

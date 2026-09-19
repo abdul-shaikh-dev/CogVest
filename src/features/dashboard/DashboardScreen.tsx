@@ -260,6 +260,11 @@ export function DashboardScreen({
           </AppText>
           <MaskedValue
             adjustsFontSizeToFit
+            exactValue={
+              dashboard.totalValue === null
+                ? undefined
+                : formatINR(dashboard.totalValue)
+            }
             masked={dashboard.maskWealthValues && dashboard.totalValue !== null}
             minimumFontScale={0.74}
             numberOfLines={1}
@@ -301,6 +306,7 @@ export function DashboardScreen({
                 Invested
               </AppText>
               <MaskedValue
+                exactValue={formatINR(totalInvested)}
                 masked={dashboard.maskWealthValues}
                 value={formatCompactINR(totalInvested)}
                 weight="bold"
@@ -321,6 +327,7 @@ export function DashboardScreen({
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <MaskedValue
+                  exactValue={formatSignedINR(totalPnL)}
                   masked={dashboard.maskWealthValues}
                   style={
                     totalPnL >= 0
@@ -402,6 +409,12 @@ export function DashboardScreen({
                 <AppText color="secondary" variant="caption">
                   Saved-quote movement is not your portfolio return and may cover different price dates.
                 </AppText>
+                {!dashboard.maskWealthValues && dashboard.totalValue !== null ? (
+                  <AppText color="secondary" testID="dashboard-exact-values" variant="caption">
+                    Exact values: portfolio {formatINR(dashboard.totalValue)} · invested {formatINR(totalInvested)}
+                    {totalPnL === null ? "" : ` · holdings P&L ${formatSignedINR(totalPnL)}`}
+                  </AppText>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -446,6 +459,9 @@ export function DashboardScreen({
                   Gross holdings
                 </AppText>
                 <MaskedValue
+                  exactValue={formatINR(
+                    dashboard.rollupTotals.holdingsCurrentValue ?? 0,
+                  )}
                   masked={dashboard.maskWealthValues}
                   testID="dashboard-liability-gross"
                   value={formatCompactINR(
@@ -459,6 +475,7 @@ export function DashboardScreen({
                   Cash balance
                 </AppText>
                 <MaskedValue
+                  exactValue={formatINR(dashboard.cashBalance)}
                   masked={dashboard.maskWealthValues}
                   style={styles.negativeText}
                   testID="dashboard-liability-cash"
@@ -471,6 +488,9 @@ export function DashboardScreen({
                   Net portfolio
                 </AppText>
                 <MaskedValue
+                  exactValue={formatINR(
+                    dashboard.rollupTotals.totalCurrentValue ?? 0,
+                  )}
                   masked={dashboard.maskWealthValues}
                   style={
                     (dashboard.rollupTotals.totalCurrentValue ?? 0) < 0
@@ -494,6 +514,7 @@ export function DashboardScreen({
             <MetricGroup
               metrics={[
                 {
+                  exactValue: formatINR(dashboard.monthlyMetrics.investment),
                   label: "Invested",
                   masked: dashboard.maskWealthValues,
                   value: formatCompactINR(dashboard.monthlyMetrics.investment),
@@ -506,6 +527,7 @@ export function DashboardScreen({
                       : formatPercentage(dashboard.monthlyMetrics.savingsRate),
                 },
                 {
+                  exactValue: formatSignedINR(dashboard.monthlyMetrics.cashChange),
                   label: "Cash change",
                   masked: dashboard.maskWealthValues,
                   value: formatSignedCompactINR(
@@ -544,6 +566,9 @@ export function DashboardScreen({
                 </AppText>
               </Pressable>
             </View>
+            <AppText color="secondary" testID="dashboard-allocation-scope" variant="caption">
+              Share of market holdings and cash · recorded PPF excluded
+            </AppText>
             {hasNegativeCash ? (
               <AppText color="secondary" variant="caption">
                 {hasPositiveNetPortfolio
@@ -600,6 +625,7 @@ export function DashboardScreen({
                     ) : null}
                     <MaskedValue
                       color="secondary"
+                      exactValue={formatINR(item.value)}
                       masked={dashboard.maskWealthValues}
                       style={styles.allocationAmount}
                       value={formatCompactINR(item.value)}

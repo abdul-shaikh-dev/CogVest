@@ -21,7 +21,7 @@ import {
   getPressedStateStyle,
 } from "@/src/components/common";
 import type { MonthlyProgressSummary } from "@/src/domain/calculations";
-import { formatCompactINR, formatPercentage } from "@/src/domain/formatters";
+import { formatCompactINR, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { decimal, normalizePercentage } from "@/src/domain/precision";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { AssetClass } from "@/src/types";
@@ -79,17 +79,17 @@ function calculatePercentageChange(current: number, previous: number | undefined
 }
 
 function formatSignedValue(value: number) {
-  const amount = formatCompactINR(Math.abs(value));
+  const amount = formatINR(Math.abs(value));
 
   if (value > 0) return `+${amount}`;
   if (value < 0) return `-${amount}`;
   return amount;
 }
 
-function formatComparison(change: number | null, hasCalendarPrevious: boolean) {
-  if (!hasCalendarPrevious) return "No prior month";
-  if (change === null) return "No % baseline";
-  return formatPercentage(change);
+function formatComparison(change: number | null, previousMonth?: string) {
+  if (!previousMonth) return "No prior stored month";
+  if (change === null) return "Percentage unavailable · prior value was zero";
+  return `${formatPercentage(change)} vs ${formatMonth(previousMonth)}`;
 }
 
 function getAssetAllocation(summary: MonthlyProgressSummary, assetClass: AssetClass) {
@@ -327,7 +327,7 @@ export function MonthlyHistoryPanel({
                   <View style={styles.historyColumns}>
                     <AppText color="secondary" style={styles.historyMonthColumn} variant="caption">Month</AppText>
                     <AppText align="right" color="secondary" style={styles.historyValueColumn} variant="caption">Portfolio</AppText>
-                    <AppText align="right" color="secondary" style={styles.historyValueColumn} variant="caption">Change</AppText>
+                    <AppText align="right" color="secondary" style={styles.historyValueColumn} variant="caption">Value change</AppText>
                     <View style={styles.historyChevronColumn} />
                   </View>
                   {overviewSummaries.map((summary) => {
@@ -339,13 +339,13 @@ export function MonthlyHistoryPanel({
                     );
                     const comparison = formatComparison(
                       change,
-                      Boolean(previousSummary),
+                      previousSummary?.snapshot.month,
                     );
 
                     return (
                       <Pressable
                         accessibilityLabel={`View ${formatMonth(month)} details. Portfolio ${
-                          maskWealthValues ? "hidden" : formatCompactINR(summary.snapshot.portfolioValue)
+                          maskWealthValues ? "hidden" : formatINR(summary.snapshot.portfolioValue)
                         }. ${comparison}.`}
                         accessibilityRole="button"
                         android_ripple={androidRipple()}
@@ -360,6 +360,7 @@ export function MonthlyHistoryPanel({
                         <AppText style={styles.historyMonthColumn} weight="bold">{formatShortMonth(month)}</AppText>
                         <MaskedValue
                           align="right"
+                          exactValue={formatINR(summary.snapshot.portfolioValue)}
                           masked={maskWealthValues}
                           style={styles.historyValueColumn}
                           value={formatCompactINR(summary.snapshot.portfolioValue)}
@@ -449,9 +450,10 @@ function MonthDetail({
     <View style={styles.detail} testID="selected-snapshot-summary">
       <AppText color="secondary" variant="caption">Month-end portfolio value</AppText>
       <MaskedValue
+        exactValue={formatINR(snapshot.portfolioValue)}
         masked={maskWealthValues}
         style={styles.detailPortfolio}
-        value={formatCompactINR(snapshot.portfolioValue)}
+        value={formatINR(snapshot.portfolioValue)}
         weight="bold"
       />
       <AppText
@@ -460,9 +462,7 @@ function MonthDetail({
         variant="caption"
         weight="bold"
       >
-        {`${formatComparison(portfolioChange, Boolean(previousSummary))}${
-          previousSummary ? ` vs ${formatMonth(previousSummary.snapshot.month)}` : ""
-        }`}
+        {formatComparison(portfolioChange, previousSummary?.snapshot.month)} portfolio value change
       </AppText>
 
       <DetailSection title="What changed">
@@ -484,8 +484,9 @@ function MonthDetail({
               </View>
               <View style={styles.valueColumn}>
                 <MaskedValue
+                  exactValue={formatINR(metric.current)}
                   masked={maskWealthValues}
-                  value={formatCompactINR(metric.current)}
+                  value={formatINR(metric.current)}
                   weight="bold"
                 />
                 <AppText
@@ -493,9 +494,9 @@ function MonthDetail({
                   style={change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
                   variant="caption"
                 >
-                  {`${formatComparison(change, Boolean(previousSummary))}${
+                  {`${formatComparison(change, previousSummary?.snapshot.month)}${
                     previousSummary && !maskWealthValues
-                      ? ` · previous ${formatCompactINR(metric.previous ?? 0)}`
+                      ? ` · previous ${formatINR(metric.previous ?? 0)}`
                       : ""
                   }`}
                 </AppText>
@@ -564,7 +565,7 @@ function DetailRow({
       ? formatPercentage(value).replace("+", "")
       : signed
         ? formatSignedValue(value)
-        : formatCompactINR(value);
+        : formatINR(value);
 
   return (
     <View style={styles.detailRow}>

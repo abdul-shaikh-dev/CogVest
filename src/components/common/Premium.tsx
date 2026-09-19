@@ -38,6 +38,7 @@ type ScreenHeaderProps = {
 
 type Metric = {
   color?: "primary" | "secondary";
+  exactValue?: string;
   label: string;
   masked?: boolean;
   value: string;
@@ -233,6 +234,7 @@ export function MetricGroup({ metrics, testID }: MetricGroupProps) {
           </AppText>
           <MaskedValue
             color={metric.color ?? "primary"}
+            exactValue={metric.exactValue}
             masked={metric.masked}
             value={metric.value}
             weight="bold"

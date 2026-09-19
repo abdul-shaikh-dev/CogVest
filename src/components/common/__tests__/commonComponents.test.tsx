@@ -192,6 +192,21 @@ describe("common UI primitives", () => {
     expect(getByText("12.4%")).toBeTruthy();
   });
 
+  it("exposes an exact value for compact text only while unmasked", () => {
+    const { getByLabelText, queryByLabelText, rerender } = render(
+      <MaskedValue exactValue="₹1,23,456.78" value="₹1.23L" />,
+    );
+
+    expect(getByLabelText("₹1,23,456.78")).toBeTruthy();
+
+    rerender(
+      <MaskedValue exactValue="₹1,23,456.78" masked value="₹1.23L" />,
+    );
+
+    expect(queryByLabelText("₹1,23,456.78")).toBeNull();
+    expect(getByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL)).toBeTruthy();
+  });
+
   it("renders an empty state action when provided", () => {
     const { getByText } = render(
       <EmptyState

@@ -8,6 +8,7 @@ export const MASKED_VALUE_ACCESSIBILITY_LABEL = "Amount hidden";
 type MaskedValueType = "wealth" | "price" | "quantity" | "percentage";
 
 type MaskedValueProps = Omit<ComponentProps<typeof AppText>, "children"> & {
+  exactValue?: string;
   masked?: boolean;
   value: string;
   valueType?: MaskedValueType;
@@ -15,6 +16,7 @@ type MaskedValueProps = Omit<ComponentProps<typeof AppText>, "children"> & {
 
 export function MaskedValue({
   accessibilityLabel,
+  exactValue,
   masked = false,
   value,
   valueType = "wealth",
@@ -26,7 +28,9 @@ export function MaskedValue({
     <AppText
       {...textProps}
       accessibilityLabel={
-        shouldMask ? MASKED_VALUE_ACCESSIBILITY_LABEL : accessibilityLabel
+        shouldMask
+          ? MASKED_VALUE_ACCESSIBILITY_LABEL
+          : accessibilityLabel ?? exactValue
       }
     >
       {shouldMask ? MASKED_INR_VALUE : value}
