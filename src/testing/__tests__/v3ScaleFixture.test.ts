@@ -1,4 +1,10 @@
-import { validateBackupPayload } from "@/src/domain/portfolioBackup";
+import { createHash } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+
+import {
+  createPortfolioBackup,
+  validateBackupPayload,
+} from "@/src/domain/portfolioBackup";
 import {
   calculateHoldings,
 } from "@/src/domain/calculations";
@@ -92,5 +98,31 @@ describe("V3 scale fixture", () => {
     if (process.env.COGVEST_V3_BENCHMARK === "1") {
       console.info("[v3-scale-fixture] raw-pc-timings", JSON.stringify(result));
     }
+  });
+
+  const backupOutputPath = process.env.COGVEST_V3_BACKUP_OUTPUT;
+  const backupOutputTest = backupOutputPath === undefined ? it.skip : it;
+
+  backupOutputTest("writes an opt-in restore fixture without overwriting an existing file", async () => {
+    if (backupOutputPath === undefined) {
+      throw new Error("COGVEST_V3_BACKUP_OUTPUT is required.");
+    }
+
+    const fixture = createV3ScaleFixture();
+    const backup = await createPortfolioBackup(
+      {
+        casFolioSalt: null,
+        historicalQuoteCache: {},
+        portfolio: fixture.portfolio,
+        quoteCache: fixture.quoteCache,
+      },
+      {
+        appVersion: "v3-scale-fixture",
+        createdAt: fixture.now.toISOString(),
+      },
+      async (value) => createHash("sha256").update(value, "utf8").digest("hex"),
+    );
+
+    await writeFile(backupOutputPath, backup, { encoding: "utf8", flag: "wx" });
   });
 });
