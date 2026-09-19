@@ -6,6 +6,8 @@ import {
   AppText,
   EmptyState,
   IconButton,
+  MASKED_INR_VALUE,
+  MASKED_VALUE_ACCESSIBILITY_LABEL,
   MaskedValue,
   ScreenHeader,
   SectionHeader,
@@ -171,15 +173,22 @@ describe("common UI primitives", () => {
     expect(getMetricColumnCount(2)).toBe(1);
   });
 
-  it("masks INR wealth values without masking percentages", () => {
-    const { getByText } = render(
+  it("uses a fixed accessible token for wealth without masking percentages", () => {
+    const { getByLabelText, getByText, queryByLabelText } = render(
       <>
-        <MaskedValue masked value="₹1,23,456.78" valueType="wealth" />
+        <MaskedValue
+          accessibilityLabel="₹1,23,456.78"
+          masked
+          value="₹1,23,456.78"
+          valueType="wealth"
+        />
         <MaskedValue masked value="12.4%" valueType="percentage" />
       </>,
     );
 
-    expect(getByText("₹**** **,***.**")).toBeTruthy();
+    expect(getByText(MASKED_INR_VALUE)).toBeTruthy();
+    expect(getByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL)).toBeTruthy();
+    expect(queryByLabelText("₹1,23,456.78")).toBeNull();
     expect(getByText("12.4%")).toBeTruthy();
   });
 

@@ -7,6 +7,7 @@ import type { StoreApi } from "zustand/vanilla";
 
 import {
   AppText,
+  MASKED_INR_VALUE,
   GroupedListRow,
   PremiumCard,
   ScreenContainer,
@@ -89,7 +90,7 @@ export function SettingsScreen({
               Value masking
             </AppText>
             <AppText color="secondary">
-              Hide portfolio amounts. Preview ₹••,•••
+              Hide portfolio amounts. Preview {MASKED_INR_VALUE}
             </AppText>
             <AppText color="secondary" variant="caption">
               Quantities, percentages, and per-unit prices stay visible.

@@ -7,7 +7,10 @@ import {
   type RenderAPI,
 } from "@testing-library/react-native";
 
-import { MASKED_INR_VALUE } from "@/src/components/common";
+import {
+  MASKED_INR_VALUE,
+  MASKED_VALUE_ACCESSIBILITY_LABEL,
+} from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
@@ -808,9 +811,15 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByText, queryByText } = render(<DashboardScreen store={store} />);
+    const { getAllByLabelText, getAllByText, queryByLabelText, queryByText } = render(
+      <DashboardScreen store={store} />,
+    );
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+    expect(
+      getAllByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL).length,
+    ).toBeGreaterThan(0);
+    expect(queryByLabelText("₹300.00")).toBeNull();
     expect(queryByText("₹300.00")).toBeNull();
     expect(queryByText("+₹100.00")).toBeNull();
     expect(getAllByText("+50.00%").length).toBeGreaterThan(0);

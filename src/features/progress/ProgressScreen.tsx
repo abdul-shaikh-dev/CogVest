@@ -10,6 +10,8 @@ import {
   CategoryIcon,
   EmptyState,
   IconButton,
+  MASKED_INR_VALUE,
+  MaskedValue,
   MetricGroup,
   PremiumCard,
   ScreenContainer,
@@ -94,7 +96,6 @@ const chartWidth = 228;
 const chartSections = 2;
 const chartInitialSpacing = 18;
 const chartEndSpacing = 36;
-const maskedChartValueLabel = "₹••••";
 
 function getSeriesColor(label: string) {
   switch (label) {
@@ -124,7 +125,7 @@ function getChartMaxValue(series: MonthlyProgressChartSeries[]) {
 
 function formatChartYLabel(value: number | string, masked: boolean) {
   if (masked) {
-    return maskedChartValueLabel;
+    return MASKED_INR_VALUE;
   }
 
   return formatCompactINR(Number(value));
@@ -329,9 +330,12 @@ function SelectedMonthPanel({
             <AppText color="secondary" variant="caption">
               {item.label === "Portfolio" ? portfolioLabel : item.label}
             </AppText>
-            <AppText variant="caption" weight="bold">
-              {maskWealthValues ? maskedChartValueLabel : formatCompactINR(item.values[selectedIndex] ?? 0)}
-            </AppText>
+            <MaskedValue
+              masked={maskWealthValues}
+              value={formatCompactINR(item.values[selectedIndex] ?? 0)}
+              variant="caption"
+              weight="bold"
+            />
           </View>
         ))}
       </View>
@@ -355,7 +359,11 @@ function SelectedMonthPanel({
       <View
         accessibilityLabel={
           maskWealthValues
-            ? `${monthLabel}. ${portfolioLabel} values hidden.`
+            ? `${monthLabel}. ${portfolioLabel} amounts hidden. ${
+                differencePercentage === null
+                  ? "Percentage unavailable: invested value is zero"
+                  : `${formatPercentage(differencePercentage)} versus invested`
+              }.`
             : `${monthLabel}. ${portfolioLabel} ${formatCompactINR(
                 portfolioValue,
               )}. Invested ${formatCompactINR(
@@ -371,13 +379,10 @@ function SelectedMonthPanel({
         style={styles.selectedPanel}
         testID={`${testIDPrefix}-selected-panel`}
       >
-        {maskWealthValues ? (
-          <AppText color="secondary">Performance values hidden</AppText>
-        ) : (
-          <View style={[
-            styles.portfolioSelectionContent,
-            fontScale > 1.15 ? { flexDirection: "column", alignItems: "stretch" } : null,
-          ]}>
+        <View style={[
+          styles.portfolioSelectionContent,
+          fontScale > 1.15 ? { flexDirection: "column", alignItems: "stretch" } : null,
+        ]}>
             <View style={styles.gapOutcome}>
               <AppText
                 style={
@@ -392,30 +397,31 @@ function SelectedMonthPanel({
                   ? "Unavailable"
                   : formatPercentage(differencePercentage)}
               </AppText>
-              <AppText color="secondary" variant="caption">
-                {`${formatSignedCompactINR(difference)} ${direction}`}
-              </AppText>
+              <View style={styles.gapValueRow}>
+                <MaskedValue
+                  color="secondary"
+                  masked={maskWealthValues}
+                  value={formatSignedCompactINR(difference)}
+                  variant="caption"
+                />
+                <AppText color="secondary" variant="caption">{direction}</AppText>
+              </View>
             </View>
             <View style={styles.gapValues}>
               <View style={styles.gapValueRow}>
                 <AppText color="secondary" variant="caption">
                   {portfolioLabel}
                 </AppText>
-                <AppText variant="caption" weight="bold">
-                  {formatCompactINR(portfolioValue)}
-                </AppText>
+                <MaskedValue masked={maskWealthValues} value={formatCompactINR(portfolioValue)} variant="caption" weight="bold" />
               </View>
               <View style={styles.gapValueRow}>
                 <AppText color="secondary" variant="caption">
                   Invested
                 </AppText>
-                <AppText variant="caption" weight="bold">
-                  {formatCompactINR(investedValue)}
-                </AppText>
+                <MaskedValue masked={maskWealthValues} value={formatCompactINR(investedValue)} variant="caption" weight="bold" />
               </View>
             </View>
           </View>
-        )}
       </View>
     );
   }
@@ -424,7 +430,17 @@ function SelectedMonthPanel({
     <View
       accessibilityLabel={
         maskWealthValues
-          ? `${monthLabel}. Asset values hidden.`
+          ? `${monthLabel}. Asset amounts hidden. ${series
+              .map((item) => {
+                const change = getSelectedChange(item.values, selectedIndex);
+                const changeLabel = selectedIndex === 0
+                  ? "First visible month; change unavailable"
+                  : change === null
+                    ? "Change unavailable: previous visible value is zero"
+                    : `${formatPercentage(change)} versus previous visible month`;
+                return `${item.label}. ${changeLabel}`;
+              })
+              .join(". ")}.`
           : `${monthLabel}. ${series
               .map((item) => {
                 const change = getSelectedChange(item.values, selectedIndex);
@@ -444,10 +460,7 @@ function SelectedMonthPanel({
       style={styles.selectedPanel}
       testID={`${testIDPrefix}-selected-panel`}
     >
-      {maskWealthValues ? (
-        <AppText color="secondary">Asset values hidden</AppText>
-      ) : (
-        <View style={[styles.assetSelectionGrid, fontScale > 1.15 ? styles.assetSelectionStack : null]}>
+      <View style={[styles.assetSelectionGrid, fontScale > 1.15 ? styles.assetSelectionStack : null]}>
           {series.map((item) => {
             const change = getSelectedChange(item.values, selectedIndex);
 
@@ -456,9 +469,11 @@ function SelectedMonthPanel({
                 <AppText color="secondary" variant="caption">
                   {item.label}
                 </AppText>
-                <AppText weight="bold">
-                  {formatCompactINR(item.values[selectedIndex] ?? 0)}
-                </AppText>
+                <MaskedValue
+                  masked={maskWealthValues}
+                  value={formatCompactINR(item.values[selectedIndex] ?? 0)}
+                  weight="bold"
+                />
                 <AppText
                   style={
                     change === null
@@ -478,8 +493,7 @@ function SelectedMonthPanel({
               </View>
             );
           })}
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -1337,17 +1351,28 @@ export function ProgressScreen({
               <MonthPickerField label="Month-end value"
                 months={progress.monthlySummaries.map(item => item.snapshot.month)}
                 value={selectedSummary.snapshot.month} onChange={setSummaryMonth} testID="progress-summary-month" />
-              <AppText style={styles.heroValue} weight="bold">
-                {progress.preferences.maskWealthValues ? maskedChartValueLabel : formatCompactINR(selectedSummary.snapshot.portfolioValue)}
-              </AppText>
+              <MaskedValue
+                masked={progress.preferences.maskWealthValues}
+                style={styles.heroValue}
+                value={formatCompactINR(selectedSummary.snapshot.portfolioValue)}
+                weight="bold"
+              />
               <View style={styles.answerMetrics}>
                 <View style={styles.answerMetric}>
                   <AppText color="secondary" variant="caption">Market change</AppText>
-                  <AppText weight="bold">{progress.preferences.maskWealthValues && selectedSummary.performance.marketMovement !== null ? maskedChartValueLabel : formatOptionalSignedCompactINR(selectedSummary.performance.marketMovement)}</AppText>
+                  <MaskedValue
+                    masked={progress.preferences.maskWealthValues && selectedSummary.performance.marketMovement !== null}
+                    value={formatOptionalSignedCompactINR(selectedSummary.performance.marketMovement)}
+                    weight="bold"
+                  />
                 </View>
                 <View style={styles.answerMetric}>
                   <AppText color="secondary" variant="caption">Monthly investment</AppText>
-                  <AppText weight="bold">{progress.preferences.maskWealthValues ? maskedChartValueLabel : formatCompactINR(selectedSummary.snapshot.monthlyInvestment)}</AppText>
+                  <MaskedValue
+                    masked={progress.preferences.maskWealthValues}
+                    value={formatCompactINR(selectedSummary.snapshot.monthlyInvestment)}
+                    weight="bold"
+                  />
                 </View>
               </View>
             </View>
@@ -1411,7 +1436,7 @@ export function ProgressScreen({
                 },
                 {
                   label: "Investment rate",
-                  masked: progress.preferences.maskWealthValues,
+                  masked: false,
                   value:
                     progress.investmentRate === null
                       ? "Not enough data"
@@ -1430,14 +1455,28 @@ export function ProgressScreen({
             {isMinimalMode ? null : (
               <PremiumCard>
                 <SectionHeader title="What changed this month?" />
-                <AppText color="secondary">
-                  Monthly investment: {progress.preferences.maskWealthValues ? maskedChartValueLabel : formatINR(progress.monthlyInvestment)}
+                <AppText
+                  accessibilityLabel={
+                    progress.preferences.maskWealthValues
+                      ? "Monthly investment: amount hidden"
+                      : undefined
+                  }
+                  color="secondary"
+                >
+                  Monthly investment: {progress.preferences.maskWealthValues ? MASKED_INR_VALUE : formatINR(progress.monthlyInvestment)}
                 </AppText>
-                <AppText color="secondary">
+                <AppText
+                  accessibilityLabel={
+                    progress.preferences.maskWealthValues && progress.monthlyIncome !== null
+                      ? "Typed income: amount hidden"
+                      : undefined
+                  }
+                  color="secondary"
+                >
                   Typed income:{" "}
                   {progress.monthlyIncome === null
                     ? "Not enough data"
-                    : progress.preferences.maskWealthValues ? maskedChartValueLabel : formatINR(progress.monthlyIncome)}
+                    : progress.preferences.maskWealthValues ? MASKED_INR_VALUE : formatINR(progress.monthlyIncome)}
                 </AppText>
                 <AppText color="secondary">
                   Expense rate needs explicit expense tracking and is not shown in V1.
@@ -1486,10 +1525,13 @@ export function ProgressScreen({
                     <AppText weight="bold">{assetClassLabel(item.assetClass)}</AppText>
                   </View>
                   <View style={styles.assetValue}>
-                    <AppText>{progress.preferences.maskWealthValues ? maskedChartValueLabel : formatINR(item.value)}</AppText>
+                    <MaskedValue
+                      masked={progress.preferences.maskWealthValues}
+                      value={formatINR(item.value)}
+                    />
                     {item.percentage === null ? null : (
                       <AppText color="secondary" variant="caption">
-                        {progress.preferences.maskWealthValues ? "Hidden" : formatPercentage(item.percentage).replace("+", "")}
+                        {formatPercentage(item.percentage).replace("+", "")}
                       </AppText>
                     )}
                   </View>

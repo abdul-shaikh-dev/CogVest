@@ -3,6 +3,7 @@ import Constants from "expo-constants";
 import { fireEvent, render } from "@testing-library/react-native";
 
 import { SettingsScreen } from "@/src/features/settings";
+import { MASKED_INR_VALUE } from "@/src/components/common";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
@@ -69,7 +70,9 @@ describe("SettingsScreen", () => {
     expect(
       getByTestId("privacy-details-toggle").props.accessibilityState,
     ).toEqual({ expanded: false });
-    expect(getByText("Hide portfolio amounts. Preview ₹••,•••")).toBeTruthy();
+    expect(
+      getByText(`Hide portfolio amounts. Preview ${MASKED_INR_VALUE}`),
+    ).toBeTruthy();
 
     fireEvent.press(getByTestId("privacy-details-toggle"));
 

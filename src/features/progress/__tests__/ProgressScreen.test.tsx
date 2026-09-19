@@ -1,5 +1,6 @@
 import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
 
+import { MASKED_INR_VALUE } from "@/src/components/common";
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -864,7 +865,7 @@ describe("ProgressScreen", () => {
       .toContain("First visible month; change unavailable");
   });
 
-  it("describes a zero invested baseline and keeps masked summaries free of performance data", () => {
+  it("describes a zero invested baseline and retains percentage context when masked", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot({ ...maySnapshot, investedValue: 0 });
@@ -873,9 +874,11 @@ describe("ProgressScreen", () => {
       .toContain("Percentage unavailable: invested value is zero");
     fireEvent.press(getByTestId("progress-mask-toggle"));
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
-      .toBe("May 2026. Portfolio values hidden.");
+      .toBe("May 2026. Portfolio amounts hidden. Percentage unavailable: invested value is zero.");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
-      .toBe("May 2026. Asset values hidden.");
+      .toContain("May 2026. Asset amounts hidden.");
+    expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toContain("versus previous visible month");
   });
 
   it("renders portfolio growth and asset momentum charts without cash in asset trends", () => {
@@ -1066,7 +1069,7 @@ describe("ProgressScreen", () => {
     });
   });
 
-  it("masks chart-native y labels when wealth masking is enabled", () => {
+  it("masks chart amounts while keeping percentages visible", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -1083,11 +1086,11 @@ describe("ProgressScreen", () => {
       includeHiddenElements: true,
     });
 
-    expect(getAllByText("₹••••").length).toBeGreaterThanOrEqual(3);
+    expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(3);
     expect(queryByText("₹20L")).toBeNull();
     expect(queryByText("₹13,85,000.00")).toBeNull();
     expect(
-      within(getByTestId("progress-monthly-answer")).getAllByText("₹••••").length,
+      within(getByTestId("progress-monthly-answer")).getAllByText(MASKED_INR_VALUE).length,
     ).toBeGreaterThanOrEqual(3);
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
@@ -1095,9 +1098,11 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("open-monthly-history"));
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
-    expect(getAllByText("Hidden").length).toBeGreaterThan(0);
-    expect(portfolioChart.props.formatYLabel("2000000")).toBe("₹••••");
-    expect(assetChart.props.formatYLabel("2000000")).toBe("₹••••");
+    expect(getAllByText("+30.66%").length).toBeGreaterThan(0);
+    expect(getAllByText("37.50%").length).toBeGreaterThan(0);
+    expect(queryByText("Hidden")).toBeNull();
+    expect(portfolioChart.props.formatYLabel("2000000")).toBe(MASKED_INR_VALUE);
+    expect(assetChart.props.formatYLabel("2000000")).toBe(MASKED_INR_VALUE);
   });
 
   it.each([

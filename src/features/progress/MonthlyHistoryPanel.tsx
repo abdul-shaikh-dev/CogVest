@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppButton,
   AppText,
+  MaskedValue,
   assetClassLabel,
   CategoryIcon,
   PremiumCard,
@@ -37,7 +38,6 @@ type AssetMetric = {
   previous: number | undefined;
 };
 
-const maskedValue = "₹••••";
 const assetClasses: AssetClass[] = ["stock", "debt", "crypto", "cash"];
 
 function formatMonth(month: string) {
@@ -337,9 +337,10 @@ export function MonthlyHistoryPanel({
                       summary.snapshot.portfolioValue,
                       previousSummary?.snapshot.portfolioValue,
                     );
-                    const comparison = maskWealthValues
-                      ? "Hidden"
-                      : formatComparison(change, Boolean(previousSummary));
+                    const comparison = formatComparison(
+                      change,
+                      Boolean(previousSummary),
+                    );
 
                     return (
                       <Pressable
@@ -357,16 +358,20 @@ export function MonthlyHistoryPanel({
                         testID={`snapshot-month-${month}`}
                       >
                         <AppText style={styles.historyMonthColumn} weight="bold">{formatShortMonth(month)}</AppText>
-                        <AppText align="right" style={styles.historyValueColumn} weight="bold">
-                          {maskWealthValues ? maskedValue : formatCompactINR(summary.snapshot.portfolioValue)}
-                        </AppText>
+                        <MaskedValue
+                          align="right"
+                          masked={maskWealthValues}
+                          style={styles.historyValueColumn}
+                          value={formatCompactINR(summary.snapshot.portfolioValue)}
+                          weight="bold"
+                        />
                         <AppText
                           align="right"
-                          color={maskWealthValues || change === null ? "secondary" : "primary"}
+                          color={change === null ? "secondary" : "primary"}
                           numberOfLines={2}
                           style={[
                             styles.historyValueColumn,
-                            !maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
+                            change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
                           ]}
                           weight="bold"
                         >
@@ -443,31 +448,30 @@ function MonthDetail({
   return (
     <View style={styles.detail} testID="selected-snapshot-summary">
       <AppText color="secondary" variant="caption">Month-end portfolio value</AppText>
-      <AppText style={styles.detailPortfolio} weight="bold">
-        {maskWealthValues ? maskedValue : formatCompactINR(snapshot.portfolioValue)}
-      </AppText>
+      <MaskedValue
+        masked={maskWealthValues}
+        style={styles.detailPortfolio}
+        value={formatCompactINR(snapshot.portfolioValue)}
+        weight="bold"
+      />
       <AppText
         color="secondary"
-        style={!maskWealthValues && portfolioChange !== null ? portfolioChange < 0 ? styles.lossText : styles.gainText : undefined}
+        style={portfolioChange !== null ? portfolioChange < 0 ? styles.lossText : styles.gainText : undefined}
         variant="caption"
         weight="bold"
       >
-        {maskWealthValues
-          ? "Hidden"
-          : `${formatComparison(portfolioChange, Boolean(previousSummary))}${
-              previousSummary ? ` vs ${formatMonth(previousSummary.snapshot.month)}` : ""
-            }`}
+        {`${formatComparison(portfolioChange, Boolean(previousSummary))}${
+          previousSummary ? ` vs ${formatMonth(previousSummary.snapshot.month)}` : ""
+        }`}
       </AppText>
 
       <DetailSection title="What changed">
         {assetMetrics.map((metric) => {
           const change = calculatePercentageChange(metric.current, metric.previous);
           const allocation = getAssetAllocation(summary, metric.assetClass);
-          const detail = maskWealthValues
-            ? "Hidden"
-            : allocation === undefined
-              ? "Allocation unavailable"
-              : `${formatPercentage(allocation).replace("+", "")} allocation`;
+          const detail = allocation === undefined
+            ? "Allocation unavailable"
+            : `${formatPercentage(allocation).replace("+", "")} allocation`;
 
           return (
             <View key={metric.assetClass} style={styles.detailRow}>
@@ -479,17 +483,21 @@ function MonthDetail({
                 </View>
               </View>
               <View style={styles.valueColumn}>
-                <AppText weight="bold">{maskWealthValues ? maskedValue : formatCompactINR(metric.current)}</AppText>
+                <MaskedValue
+                  masked={maskWealthValues}
+                  value={formatCompactINR(metric.current)}
+                  weight="bold"
+                />
                 <AppText
                   color="secondary"
-                  style={!maskWealthValues && change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
+                  style={change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
                   variant="caption"
                 >
-                  {maskWealthValues
-                    ? "Hidden"
-                    : `${formatComparison(change, Boolean(previousSummary))}${
-                        previousSummary ? ` · previous ${formatCompactINR(metric.previous ?? 0)}` : ""
-                      }`}
+                  {`${formatComparison(change, Boolean(previousSummary))}${
+                    previousSummary && !maskWealthValues
+                      ? ` · previous ${formatCompactINR(metric.previous ?? 0)}`
+                      : ""
+                  }`}
                 </AppText>
               </View>
             </View>
@@ -550,20 +558,24 @@ function DetailRow({
   signed?: boolean;
   value: number | null | undefined;
 }) {
-  const displayValue = maskWealthValues
-    ? "Hidden"
-    : value === null || value === undefined
-      ? "Unavailable"
-      : percentage
-        ? formatPercentage(value).replace("+", "")
-        : signed
-          ? formatSignedValue(value)
-          : formatCompactINR(value);
+  const displayValue = value === null || value === undefined
+    ? "Unavailable"
+    : percentage
+      ? formatPercentage(value).replace("+", "")
+      : signed
+        ? formatSignedValue(value)
+        : formatCompactINR(value);
 
   return (
     <View style={styles.detailRow}>
       <AppText style={styles.detailRowLabel}>{label}</AppText>
-      <AppText align="right" weight="bold">{displayValue}</AppText>
+      <MaskedValue
+        align="right"
+        masked={maskWealthValues && !percentage && value !== null && value !== undefined}
+        value={displayValue}
+        valueType={percentage ? "percentage" : "wealth"}
+        weight="bold"
+      />
     </View>
   );
 }

@@ -518,8 +518,15 @@ Baseline groups:
 - Retain the local-first subtitle, without a duplicate Local only header badge.
 - Working preferences first: value masking with honest amount-only scope and
   Standard/Minimal display choices. Checked states must be accessible.
+- Masked INR amounts use the fixed `₹••••` token, independent of magnitude or
+  precision, and expose `Amount hidden` rather than the underlying amount to
+  accessibility services. Quantities, percentages and per-unit prices remain
+  visible under the established amount-only scope.
 - Standard/Minimal option descriptions are the complete explanation; do not add
   a separate Minimal-mode nudge that repeats the same guidance.
+- Minimal is an emphasis and optional-insight reduction mode, not a separate
+  dense layout. Preserve essential records, actions and minimum touch targets;
+  do not compress them merely to shorten the screen.
 - Compact Privacy & storage disclosure: no account/cloud sync/analytics summary;
   app-private storage, separate-encryption limitation and disabled Android backup/
   transfer remain available in details, not implied to be encryption or recovery.

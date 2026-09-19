@@ -26,7 +26,9 @@ starting with full-portfolio backup/restore #24. Settings provides manual,
 unencrypted backup export and replacement-only restore, with validation, a
 count preview, and explicit confirmation. Its compatibility and recovery contract is in
 `docs/roadmap/backup-restore-contract.md`.
-Minimal Mode is implemented. The descriptive behavior engine (#18) powers
+Minimal Mode is implemented as an emphasis and optional-insight reduction mode,
+not a separate compact layout. It preserves every essential record, action, and
+minimum touch target. The descriptive behavior engine (#18) powers
 Dashboard investment-pattern entries and read-only insight details (#19).
 Holding duration (#20) is an on-demand informational reference for unambiguous
 Indian listed-stock records, not tax eligibility or a tax calculator. ETF
