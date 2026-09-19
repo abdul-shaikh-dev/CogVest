@@ -44,7 +44,7 @@ import type {
 } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
-import { discoveryFilters } from "./assetDiscovery";
+import { discoveryFilterLabel, discoveryFilters } from "./assetDiscovery";
 import { DiscoveryResults } from "./DiscoveryResults";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
@@ -171,6 +171,7 @@ export function AddOpeningPositionForm({
     assetClass,
     assetName,
     averageCostPrice,
+    canRetryLookup,
     changeSelectedAsset,
     continueFromAsset,
     continueFromClass,
@@ -209,6 +210,7 @@ export function AddOpeningPositionForm({
     quoteSourceId,
     quoteStatus,
     quickSetupDuplicate,
+    retryLookup,
     resetReview,
     reviewAsset,
     reviewOpeningPosition,
@@ -608,6 +610,9 @@ export function AddOpeningPositionForm({
               }}
               testIDPrefix="asset-discovery-filter"
             />
+            <AppText color="secondary" testID="asset-discovery-active-filter" variant="caption">
+              Showing: {discoveryFilterLabel(discoveryFilter)}
+            </AppText>
             {matchingExistingAssets.length > 0 ? (
               <View
                 style={styles.lookupResults}
@@ -625,9 +630,19 @@ export function AddOpeningPositionForm({
               </View>
             ) : null}
             {lookupStatus ? (
-              <AppText color="secondary" variant="caption">
-                {isLookupSearching ? "Searching..." : lookupStatus}
-              </AppText>
+              <View style={styles.lookupStatus}>
+                <AppText color="secondary" variant="caption">
+                  {isLookupSearching ? "Searching..." : lookupStatus}
+                </AppText>
+                {canRetryLookup ? (
+                  <AppButton
+                    onPress={retryLookup}
+                    testID="asset-lookup-retry"
+                    title="Try search again"
+                    variant="ghost"
+                  />
+                ) : null}
+              </View>
             ) : null}
             {lookupResults.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
@@ -1434,6 +1449,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   lookupResults: {
+    gap: spacing.xs,
+  },
+  lookupStatus: {
+    alignItems: "flex-start",
     gap: spacing.xs,
   },
   manualFields: {

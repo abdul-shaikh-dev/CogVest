@@ -144,6 +144,8 @@ export function useAddOpeningPosition({
     useState<Quote | undefined>();
   const [isLookupSearching, setIsLookupSearching] = useState(false);
   const [lookupStatus, setLookupStatus] = useState("");
+  const [canRetryLookup, setCanRetryLookup] = useState(false);
+  const [lookupRetryKey, setLookupRetryKey] = useState(0);
   const [quoteStatus, setQuoteStatus] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>(
@@ -479,6 +481,7 @@ export function useAddOpeningPosition({
       setLookupResults([]);
       setLookupStatus("");
       setIsLookupSearching(false);
+      setCanRetryLookup(false);
       return undefined;
     }
 
@@ -486,6 +489,7 @@ export function useAddOpeningPosition({
       setLookupResults([]);
       setLookupStatus("Type at least 2 characters to search.");
       setIsLookupSearching(false);
+      setCanRetryLookup(false);
       return undefined;
     }
 
@@ -494,6 +498,7 @@ export function useAddOpeningPosition({
 
     setIsLookupSearching(true);
     setLookupStatus("Searching public asset directories...");
+    setCanRetryLookup(false);
 
     const timeout = setTimeout(async () => {
       try {
@@ -521,6 +526,7 @@ export function useAddOpeningPosition({
           matchingExistingAssets.length === 0
         ) {
           setLookupStatus("Lookup unavailable. You can enter details manually.");
+          setCanRetryLookup(true);
         } else if (result.failures.length > 0) {
           setLookupStatus("Some sources are unavailable. Showing available matches; manual entry is also available.");
         }
@@ -528,6 +534,7 @@ export function useAddOpeningPosition({
         if (!isCancelled) {
           setLookupResults([]);
           setLookupStatus("Lookup unavailable. You can enter details manually.");
+          setCanRetryLookup(true);
         }
       } finally {
         if (!isCancelled) {
@@ -543,11 +550,18 @@ export function useAddOpeningPosition({
     };
   }, [
     lookupQuery,
+    lookupRetryKey,
     matchingExistingAssets.length,
     searchAssetLookupResults,
     snapshot.assets,
     savedAssetMatcher,
   ]);
+
+  function retryLookup() {
+    if (lookupQuery.trim().length >= 2 && !isLookupSearching) {
+      setLookupRetryKey((key) => key + 1);
+    }
+  }
 
   function changeSelectedAsset() {
     invalidateQuoteRequest();
@@ -1024,9 +1038,11 @@ export function useAddOpeningPosition({
     instrumentTypeConfidence,
     isSaving,
     isLookupSearching,
+    canRetryLookup,
     lookupQuery,
     lookupResults: visibleLookupResults,
     lookupStatus,
+    retryLookup,
     matchingExistingAssets: visibleSavedAssets,
     discoveryFilter,
     setDiscoveryFilter,

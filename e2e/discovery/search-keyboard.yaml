@@ -1,0 +1,28 @@
+appId: com.abdulshaikh.cogvest
+---
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "asset-lookup-input"
+- inputText: "HDFC"
+- assertVisible:
+    id: "asset-lookup-input"
+- takeScreenshot: ".expo/ux12-search-keyboard"
+- hideKeyboard
+- back
+- assertVisible:
+    id: "holding-exit-confirmation"
+- tapOn:
+    id: "holding-keep-editing"
+- assertVisible:
+    id: "add-holding-phase-asset"

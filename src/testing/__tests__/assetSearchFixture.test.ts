@@ -2,6 +2,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import {
   assetSearchQaFixtureCounts,
+  assetSearchQaMixedNameCandidates,
   assetSearchQaProviderCandidates,
   assetSearchQaSavedAssets,
   createAssetSearchQaLookup,
@@ -32,5 +33,21 @@ describe("asset search QA fixture", () => {
     );
     expect(results).toHaveLength(100);
     expect(results[0]).toMatchObject({ symbol: "CAND0042" });
+  });
+
+  it("provides a deterministic mixed-name set without changing identity metadata", () => {
+    const results = createAssetSearchQaLookup("HDFC");
+
+    expect(results).toHaveLength(assetSearchQaMixedNameCandidates.length);
+    expect(results).toEqual(expect.arrayContaining([
+      expect.objectContaining({ exchange: "NSE", instrumentType: "stock", ticker: "HDFCBANK.NS" }),
+      expect.objectContaining({ exchange: "BSE", instrumentType: "stock", ticker: "HDFCBANK.BO" }),
+      expect.objectContaining({ exchange: "NSE", instrumentType: "etf", ticker: "HDFCNIFETF.NS" }),
+      expect.objectContaining({ exchange: "CRYPTO", instrumentType: "crypto", quoteSourceId: "hdfc-bank-rstock" }),
+    ]));
+    expect(assetSearchQaSavedAssets[0]).toMatchObject({
+      instrumentType: "mutualFund",
+      name: "HDFC Balanced Advantage Fund - Direct Plan - Growth",
+    });
   });
 });
