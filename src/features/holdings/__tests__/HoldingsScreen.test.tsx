@@ -652,6 +652,7 @@ describe("HoldingsScreen", () => {
     const { getByTestId, getByText, queryByText } = render(
       <HoldingsScreen store={store} />,
     );
+    fireEvent.press(getByTestId("holdings-filter-toggle"));
     expect(
       getByTestId("holdings-filter-high-allocation").props.accessibilityState
         .disabled,
@@ -717,6 +718,8 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Dominant position")).toBeNull();
     expect(queryByText("Best return")).toBeNull();
     expect(queryByText("Top 3")).toBeNull();
+    expect(queryByText("All 1")).toBeNull();
+    fireEvent.press(getByTestId("holdings-filter-toggle"));
     expect(getByText("All 1")).toBeTruthy();
     expect(getByText("Winners 1")).toBeTruthy();
     expect(getByText("Losers 0")).toBeTruthy();
@@ -760,6 +763,7 @@ describe("HoldingsScreen", () => {
       screen.getByTestId("holdings-search-input"),
       "Reliance",
     );
+    fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
     fireEvent.press(screen.getByTestId("holdings-filter-winners"));
     const list = screen.getByTestId("holdings-list");
     fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
@@ -795,15 +799,28 @@ describe("HoldingsScreen", () => {
   it("exposes a Sell / redeem action from expanded holding details", () => {
     const store = seedMixedHoldings();
     const onSellRedeem = jest.fn();
-    const { getByTestId } = render(
+    const screen = render(
       <HoldingsScreen store={store} onSellRedeem={onSellRedeem} />,
     );
 
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-    fireEvent.press(getByTestId(`holding-sell-redeem-${asset.id}`));
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    const detailChildren = screen
+      .getByTestId(`holding-expanded-${asset.id}`)
+      .children.filter((child: unknown) => typeof child !== "string") as Array<{
+        props: { children?: unknown; testID?: string };
+      }>;
+    const actionsIndex = detailChildren.findIndex(
+      (child) => child.props.testID === "holding-primary-actions",
+    );
+    const positionIndex = detailChildren.findIndex(
+      (child) => child.props.children === "Your position",
+    );
+    expect(actionsIndex).toBeGreaterThan(-1);
+    expect(positionIndex).toBeGreaterThan(actionsIndex);
+    fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
 
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
-    expect(getByTestId("holding-detail-modal").props.visible).toBe(true);
+    expect(screen.getByTestId("holding-detail-modal").props.visible).toBe(true);
     expect(store.getState().trades).toHaveLength(1);
   });
 
@@ -826,6 +843,7 @@ describe("HoldingsScreen", () => {
     const screen = renderNative(ui(true));
 
     fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
+    fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
     fireEvent.press(screen.getByTestId("holdings-filter-winners"));
     fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     fireEvent.press(screen.getByTestId("holding-view-records"));
@@ -1083,13 +1101,17 @@ describe("HoldingsScreen", () => {
   it("filters visible holdings by winners, losers, high allocation, and search", () => {
     const store = seedMixedHoldings();
 
-    const { getByTestId } = render(<HoldingsScreen store={store} />);
+    const { getByTestId, queryByTestId } = render(
+      <HoldingsScreen store={store} />,
+    );
     const getList = () => within(getByTestId("holdings-list"));
 
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
+    expect(queryByTestId("holdings-filter-losers")).toBeNull();
 
+    fireEvent.press(getByTestId("holdings-filter-toggle"));
     fireEvent.press(getByTestId("holdings-filter-losers"));
     expect(getByTestId("holdings-filter-losers")).toHaveStyle({
       backgroundColor: colors.primary,

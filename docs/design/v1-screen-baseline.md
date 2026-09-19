@@ -64,6 +64,8 @@ Baseline structure:
 - local portfolio header naming current valuation, with mask and refresh actions
 - large `Portfolio Value` hero
 - total gain/loss context, invested value, P&L, and return
+- current-month investment, savings, and cash-change context before allocation
+  and snapshot explanation in the standard display mode
 - compact visual allocation card with an `Open Holdings` action
 - compact price freshness beside the hero, not a separate status card; an
   accessible `Price details` disclosure contains coverage counts and saved-quote
@@ -122,7 +124,9 @@ exact per-unit prices, allocation, classification, and first recorded purchase
 (Unknown when history is incomplete). Quote source and as-of context stays beside
 the value it qualifies rather than below price history. Recorded
 purchase history is not a claim about the acquisition date of remaining lots.
-View records discloses existing correction/history actions; Sell / redeem
+View records and Sell / redeem follow the value summary, before position metadata
+and price history, so account work does not require traversing secondary evidence.
+View records still discloses existing correction/history actions and Sell / redeem
 remains separate. Opening those child routes hides the panel without discarding
 its state. Back or Cancel returns to the same holding and detail scroll position;
 the next Back returns to the preserved list/search/filter/scroll state. A
@@ -147,8 +151,11 @@ transactions and full valuation detail remain under More. Masking is available
 in the header and detail panel as well as More. Keep Add in the header with
 single entry, Quick Setup, imports and Add PPF. Normal saved-price status belongs
 in valuation details; refresh outcomes and incomplete valuations remain visible.
-Filters wrap instead of clipping; enlarged text may stack the list heading and
-insights action. Do not shrink text to preserve a single control row.
+Filters use one explicit disclosure beside the list heading so the first holding
+is not delayed by a wrapped chip row. The active non-All filter remains named on
+the disclosure; opening it preserves the existing counted All / Winners / Losers /
+High allocation choices. Enlarged text may stack the list heading, filter, and
+insights actions. Do not shrink text to preserve a single control row.
 
 PPF accounts use a counted destination alongside Market when both exist;
 both taps and deliberate horizontal swipes switch destinations. Keep the tabs
@@ -159,11 +166,12 @@ PPF-only portfolios open their accounts. Do not put an absent-account promotion
 above the market list. Existing/legacy PPF access must survive the hierarchy
 change. Each account row leads with nickname/provider and confirmed balance, then
 shows balance date, invested basis, and lifecycle context. The account detail
-uses progressive disclosure for financial-year contribution capacity, official
-interest, a separately labelled estimate, maturity/extension state, and ledger
-history. Add/edit and ledger actions require a review step before saving.
+places Add entry, Import CSV, and ledger history immediately after the confirmed
+balance and financial-year contribution context. Official interest, its separately
+labelled estimate, and maturity/extension state follow as supporting account
+evidence. Add/edit and ledger actions require a review step before saving.
 
-Import transaction CSV is a secondary action in the account's Ledger section.
+Import CSV is a secondary action in the account's Ledger section.
 Its separate screen offers a saved sample template, file selection, opening
 checkpoint/date, included FY contributions and optional closing-balance check.
 Keep file errors beside the picker. Preview displays old/new balances, coverage,

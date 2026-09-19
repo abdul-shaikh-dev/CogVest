@@ -130,6 +130,34 @@ describe("PpfAccountScreen", () => {
     ).toBeTruthy();
   });
 
+  it("places ledger actions before secondary interest and timeline content", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const onEntry = jest.fn();
+    const onImport = jest.fn();
+    store.getState().addPpfAccount(account);
+
+    const screen = render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={onEntry}
+        onImport={onImport}
+        store={store}
+      />,
+    );
+    const tree = JSON.stringify(screen.toJSON());
+
+    expect(tree.indexOf("ppf-ledger-actions")).toBeLessThan(
+      tree.indexOf("ppf-interest-card"),
+    );
+    fireEvent.press(screen.getByTestId("add-ppf-entry"));
+    fireEvent.press(screen.getByTestId("ppf-import-csv"));
+    expect(onEntry).toHaveBeenCalledWith(account.id);
+    expect(onImport).toHaveBeenCalledWith(account.id);
+  });
+
   it("does not imply that same-day baseline interest was estimated", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-08-15" });

@@ -224,6 +224,68 @@ export function PpfAccountScreen({
           Capacity uses only PPF contributions recorded in CogVest. It is context, not a contribution recommendation.
         </AppText>
 
+        <View style={styles.sectionHeading} testID="ppf-ledger-actions">
+          <SectionHeader title="Ledger" />
+          <View style={styles.ledgerActions}>
+            <AppButton
+              onPress={() => onEntry(account.id)}
+              testID="add-ppf-entry"
+              title="Add entry"
+              variant="secondary"
+            />
+            {onImport ? (
+              <AppButton
+                title="Import CSV"
+                variant="secondary"
+                testID="ppf-import-csv"
+                onPress={() => onImport(account.id)}
+              />
+            ) : null}
+          </View>
+        </View>
+        {entries.length === 0 ? (
+          <PremiumCard>
+            <AppText weight="bold">No ledger entries yet</AppText>
+            <AppText color="secondary" variant="caption">
+              Record contributions, official interest, withdrawals, or a passbook balance correction.
+            </AppText>
+          </PremiumCard>
+        ) : (
+          <PremiumCard testID="ppf-ledger-list">
+            {[...entries]
+              .sort((left, right) => comparePpfLedgerEntries(right, left))
+              .map((entry, index) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={entry.id}
+                  onPress={() => onEntry(account.id, entry.id)}
+                  style={({ pressed }) => [
+                    styles.ledgerRow,
+                    index < entries.length - 1 && styles.separator,
+                    getPressedStateStyle({ pressed }),
+                  ]}
+                  testID={`ppf-ledger-entry-${entry.id}`}
+                >
+                  <View style={styles.flex}>
+                    <AppText weight="bold">{entryLabel(entry.type)}</AppText>
+                    <AppText color="secondary" variant="caption">
+                      {formatDate(entry.date)}
+                    </AppText>
+                  </View>
+                  <MaskedValue
+                    masked={masked}
+                    value={
+                      entry.type === "reconciliation"
+                        ? formatINR(entry.confirmedBalance)
+                        : `${entry.type === "withdrawal" ? "-" : "+"}${formatINR(entry.amount)}`
+                    }
+                    weight="bold"
+                  />
+                </Pressable>
+              ))}
+          </PremiumCard>
+        )}
+
         <PremiumCard testID="ppf-interest-card">
           <SectionHeader title="Interest" />
           <View style={styles.detailRow}>
@@ -285,62 +347,6 @@ export function PpfAccountScreen({
             Dates are informational and derived from the opening financial year you confirmed.
           </AppText>
         </PremiumCard>
-
-        <View style={styles.sectionHeading}>
-          <SectionHeader title="Ledger" />
-          <AppButton
-            onPress={() => onEntry(account.id)}
-            testID="add-ppf-entry"
-            title="Add entry"
-            variant="secondary"
-          />
-        </View>
-        {onImport ? (
-          <AppButton title="Import transaction CSV" variant="secondary" testID="ppf-import-csv"
-            onPress={() => onImport(account.id)} />
-        ) : null}
-        {entries.length === 0 ? (
-          <PremiumCard>
-            <AppText weight="bold">No ledger entries yet</AppText>
-            <AppText color="secondary" variant="caption">
-              Record contributions, official interest, withdrawals, or a passbook balance correction.
-            </AppText>
-          </PremiumCard>
-        ) : (
-          <PremiumCard testID="ppf-ledger-list">
-            {[...entries]
-              .sort((left, right) => comparePpfLedgerEntries(right, left))
-              .map((entry, index) => (
-                <Pressable
-                  accessibilityRole="button"
-                  key={entry.id}
-                  onPress={() => onEntry(account.id, entry.id)}
-                  style={({ pressed }) => [
-                    styles.ledgerRow,
-                    index < entries.length - 1 && styles.separator,
-                    getPressedStateStyle({ pressed }),
-                  ]}
-                  testID={`ppf-ledger-entry-${entry.id}`}
-                >
-                  <View style={styles.flex}>
-                    <AppText weight="bold">{entryLabel(entry.type)}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {formatDate(entry.date)}
-                    </AppText>
-                  </View>
-                  <MaskedValue
-                    masked={masked}
-                    value={
-                      entry.type === "reconciliation"
-                        ? formatINR(entry.confirmedBalance)
-                        : `${entry.type === "withdrawal" ? "-" : "+"}${formatINR(entry.amount)}`
-                    }
-                    weight="bold"
-                  />
-                </Pressable>
-              ))}
-          </PremiumCard>
-        )}
 
         {isConfirmingDelete ? (
           <PremiumCard testID="delete-ppf-confirmation">
@@ -851,8 +857,19 @@ const styles = StyleSheet.create({
   error: { color: colors.loss },
   flex: { flex: 1 },
   ledgerRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, minHeight: 64, paddingVertical: spacing.sm },
+  ledgerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
   metric: { flex: 1 },
   metricRow: { flexDirection: "row", gap: spacing.cardGap },
-  sectionHeading: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  sectionHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
   separator: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
 });
