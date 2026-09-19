@@ -42,4 +42,6 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "sell-redeem-back"
 - assertVisible:
-    id: "holdings-screen"
+    id: "holding-detail-modal"
+- assertVisible: "HDFC Bank"
+- takeScreenshot: ".expo/ux-closeout-return-context"
