@@ -1182,13 +1182,16 @@ function SnapshotStatusCard({
       label: "Open Holdings",
       onPress: onOpenHoldings,
     };
-  } else if (status.kind === "complete" || status.kind === "estimated") {
+  } else if (status.kind === "estimated") {
     action = {
-      accessibilityLabel:
-        status.kind === "estimated"
-          ? "Review estimated month-end values"
-          : "Review month-end snapshot",
-      label: status.kind === "estimated" ? "Review values" : "Review",
+      accessibilityLabel: "Refresh estimated month-end prices",
+      label: "Refresh prices",
+      onPress: onRetry,
+    };
+  } else if (status.kind === "complete") {
+    action = {
+      accessibilityLabel: "Review month-end snapshot",
+      label: "Review",
       onPress: onReview,
     };
   }
