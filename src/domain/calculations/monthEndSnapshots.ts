@@ -303,6 +303,7 @@ function toSnapshotPriceBasis(
       | "reconciled-historical-close"
       | "latest-local-fallback"
       | "manual-fallback"
+      | "demerger-cost-basis"
       | "unavailable";
   }
 
@@ -329,6 +330,8 @@ function buildWarnings(bases: PriceSelectionBasis[]) {
         summary.latestLocalFallback += 1;
       } else if (basis === "manual-fallback") {
         summary.manualFallback += 1;
+      } else if (basis === "demerger-cost-basis") {
+        summary.demergerCostBasis += 1;
       } else if (basis === "unavailable") {
         summary.unavailable += 1;
       }
@@ -338,6 +341,7 @@ function buildWarnings(bases: PriceSelectionBasis[]) {
     {
       latestLocalFallback: 0,
       manualFallback: 0,
+      demergerCostBasis: 0,
       unavailable: 0,
     },
   );
@@ -355,6 +359,15 @@ function buildWarnings(bases: PriceSelectionBasis[]) {
   if (counts.manualFallback > 0) {
     warnings.push(
       formatHoldingWarning(counts.manualFallback, "used manual price fallback"),
+    );
+  }
+
+  if (counts.demergerCostBasis > 0) {
+    warnings.push(
+      formatHoldingWarning(
+        counts.demergerCostBasis,
+        "used verified demerger cost basis before listing",
+      ),
     );
   }
 
@@ -751,11 +764,21 @@ export function buildGeneratedMonthEndSnapshot({
         const childEvent = demergerCatalog.find((event) =>
           assets.some((parent) => parent.demerger?.eventId === event.id && parent.demerger.childAssetId === asset.id),
         );
-        return childEvent && monthEndCalendarDate < childEvent.availableFrom
+        const childAdjustment = monthDemergerAdjustments.find(
+          (event) => event.assetId === asset.id && event.kind === "entitlement",
+        );
+        const childEntitlement = childAdjustment?.kind === "entitlement"
+          ? childAdjustment
+          : undefined;
+        return childEvent &&
+          monthEndCalendarDate < childEvent.availableFrom &&
+          childEntitlement?.quantity
           ? {
               availableFrom: childEvent.availableFrom,
-              basis: "unavailable" as const,
-              unavailableReason: "listing-unavailable" as const,
+              basis: "demerger-cost-basis" as const,
+              price: decimal(childEntitlement.cost)
+                .dividedBy(childEntitlement.quantity)
+                .toNumber(),
             }
           : selectAssetPrice({
               asset,
@@ -778,7 +801,9 @@ export function buildGeneratedMonthEndSnapshot({
 
     cache[asset.id] = {
       assetId: asset.id,
-      asOf: now.toISOString(),
+      // The listing date lets the holdings calculator admit this explicit
+      // pre-listing estimate; snapshot evidence retains its cost-basis origin.
+      asOf: selection.availableFrom ?? now.toISOString(),
       currency: asset.currency,
       price: selection.price,
       source: "manual",

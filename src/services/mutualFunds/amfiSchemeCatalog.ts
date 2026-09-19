@@ -14,7 +14,9 @@ export type AmfiSchemeClassification = {
   allocation?: MutualFundAllocation;
   asOf?: string;
   category: string;
+  fundHouse?: string;
   nav?: number;
+  schemeCode?: string;
   schemeName: string;
 };
 
@@ -70,18 +72,25 @@ export function allocationFromAmfiEvidence(
 export function parseAmfiSchemeCatalog(text: string) {
   const classifications: Record<string, AmfiSchemeClassification> = {};
   let category = "";
+  let fundHouse = "";
 
   for (const rawLine of text.replace(/^\uFEFF/u, "").split(/\r?\n/u)) {
     const line = rawLine.trim();
     const heading = line.match(categoryHeading);
     if (heading) {
       category = heading[1].trim();
+      fundHouse = "";
       continue;
     }
-    if (!category || !/^\d+;/u.test(line)) continue;
+    if (!category || !line) continue;
+    if (!/^\d+;/u.test(line)) {
+      if (!line.includes(";")) fundHouse = line;
+      continue;
+    }
 
     const fields = line.split(";");
     if (fields.length < 8) continue;
+    const schemeCode = fields[0].trim();
     const schemeName = fields[3].trim();
     const allocation = allocationFromAmfiEvidence(category, schemeName);
     const parsedNav = Number(fields[6]);
@@ -100,8 +109,8 @@ export function parseAmfiSchemeCatalog(text: string) {
         (prior.nav !== nav || prior.asOf !== asOf),
       );
       classifications[isin] = prior && prior.allocation !== allocation
-        ? { asOf: quoteConflict ? undefined : asOf, category: `${prior.category}; ${category}`, nav: quoteConflict ? undefined : nav, schemeName }
-        : { ...(allocation ? { allocation } : {}), asOf, category, nav, schemeName };
+        ? { asOf: quoteConflict ? undefined : asOf, category: `${prior.category}; ${category}`, ...(fundHouse ? { fundHouse } : {}), nav: quoteConflict ? undefined : nav, schemeCode, schemeName }
+        : { ...(allocation ? { allocation } : {}), asOf, category, ...(fundHouse ? { fundHouse } : {}), nav, schemeCode, schemeName };
     }
   }
 

@@ -27,7 +27,7 @@ export function useMonthEndSnapshotAutomation({
     }
 
     hasRunRef.current = true;
-    void ensureMonthEndSnapshot();
+    void ensureMonthEndSnapshot({ retryProvisional: false });
   }, [enabled, ensureMonthEndSnapshot]);
 
   return progress.snapshotAutomationStatus;

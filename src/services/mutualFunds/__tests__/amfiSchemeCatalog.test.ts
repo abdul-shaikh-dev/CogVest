@@ -12,10 +12,13 @@ const fixture = [
   "Example Mutual Fund",
   "100001;INF000000001;-;Example Large Cap Fund;Direct Plan;Growth;10;11-Sep-2026",
   "Open Ended Schemes(Debt Scheme - Liquid Fund)",
+  "Example Mutual Fund",
   "100002;INF000000002;INF000000003;Example Liquid Fund;Direct Plan;IDCW;10;11-Sep-2026",
   "Open Ended Schemes(Hybrid Schemes - Arbitrage Fund)",
+  "Example Mutual Fund",
   "100003;INF000000004;-;Example Arbitrage Fund;Direct Plan;Growth;10;11-Sep-2026",
   "Open Ended Schemes(Other Scheme - Index Funds)",
+  "Example Mutual Fund",
   "100004;INF000000005;-;Example Nifty IT Index Fund;Direct Plan;Growth;10;11-Sep-2026",
   "100005;INF000000006;-;Example Nifty G-Sec Index Fund;Direct Plan;Growth;10;11-Sep-2026",
   "100006;INF000000007;-;Example Gold Index Fund;Direct Plan;Growth;10;11-Sep-2026",
@@ -78,6 +81,7 @@ describe("AMFI scheme catalogue", () => {
     const malformed = [
       "Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Plan;Option;Net Asset Value;Date",
       "Open Ended Schemes(Equity Scheme - Large Cap Fund)",
+      "Example Mutual Fund",
       "100001;INF000000008;-;Invalid NAV Fund;Direct Plan;Growth;0;11-Sep-2026",
       "100002;INF000000009;-;Invalid Date Fund;Direct Plan;Growth;12.5;not-a-date",
     ].join("\n");

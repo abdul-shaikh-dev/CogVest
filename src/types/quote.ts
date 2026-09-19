@@ -18,6 +18,7 @@ export type HistoricalPriceBasis =
   | "cached-historical-close"
   | "latest-local-fallback"
   | "manual-fallback"
+  | "demerger-cost-basis"
   | "unavailable";
 
 export type HistoricalQuote = {

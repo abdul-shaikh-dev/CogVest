@@ -482,6 +482,7 @@ describe("ProgressScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot({
       ...maySnapshot,
+      salary: undefined,
       generated: {
         confidence: "provisional",
         generatedAt: "2026-06-01T00:00:00.000Z",
@@ -509,6 +510,7 @@ describe("ProgressScreen", () => {
         "Estimated prices remain for May 2026. Review if you have better month-end values.",
       ),
     ).toBeTruthy();
+    expect(getByLabelText("Refresh estimated month-end prices")).toBeTruthy();
     expect(getByText("Close snapshot status")).toBeTruthy();
     expect(queryByText(/provisional|historical|fallback/i)).toBeNull();
     fireEvent.press(getByText("Close snapshot status"));
