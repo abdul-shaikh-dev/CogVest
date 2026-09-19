@@ -126,7 +126,12 @@ describe("CashScreen", () => {
     fireEvent.press(getByTestId("cash-purpose-income"));
     fireEvent.changeText(getByLabelText("Amount"), "1250");
     fireEvent.changeText(getByLabelText("Label"), "April salary");
-    fireEvent.changeText(getByLabelText("Notes"), "Keep for the next buy");
+    expect(getByTestId("cash-notes-toggle").props.accessibilityState).toEqual({
+      expanded: false,
+    });
+    expect(queryByTestId("cash-notes-input")).toBeNull();
+    fireEvent.press(getByTestId("cash-notes-toggle"));
+    fireEvent.changeText(getByLabelText("Note (optional)"), "Keep for the next buy");
     selectDate(getByTestId, "2026-04-20");
     fireEvent.press(getByTestId("close-cash-entry-button"));
 
@@ -138,7 +143,7 @@ describe("CashScreen", () => {
     expect(getByTestId("cash-entry-modal")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1250");
     expect(getByLabelText("Label")).toHaveProp("value", "April salary");
-    expect(getByLabelText("Notes")).toHaveProp(
+    expect(getByLabelText("Note (optional)")).toHaveProp(
       "value",
       "Keep for the next buy",
     );

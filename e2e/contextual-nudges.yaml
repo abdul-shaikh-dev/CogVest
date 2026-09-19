@@ -15,13 +15,11 @@ appId: com.abdulshaikh.cogvest
     visible: "Visual QA portfolio seeded."
     timeout: 30000
 - openLink: "cogvest:///settings"
-- assertVisible:
-    id: "nudge-minimal"
-- takeScreenshot: .expo/issue21-settings
-- tapOn:
-    id: "dismiss-nudge-minimal"
 - assertNotVisible:
     id: "nudge-minimal"
+- assertVisible:
+    id: "display-mode-minimal"
+- takeScreenshot: .expo/issue21-settings
 - openLink: "cogvest:///insight?kind=conviction"
 - assertVisible:
     id: "nudge-insights"
@@ -116,7 +114,7 @@ appId: com.abdulshaikh.cogvest
       text: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
     direction: DOWN
 - assertVisible: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
-# Cold launch proves dismissal persistence, not just local component state.
+# Cold launch proves the remaining nudge dismissals persist, not just local state.
 - stopApp
 - launchApp
 - extendedWaitUntil:

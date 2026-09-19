@@ -100,6 +100,7 @@ export function CashScreen({
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(() => formatLocalCalendarDate(now));
   const [notes, setNotes] = useState("");
+  const [areNotesExpanded, setAreNotesExpanded] = useState(false);
   const [errors, setErrors] = useState<CashEntryFormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
@@ -147,6 +148,7 @@ export function CashScreen({
     setLabel("");
     setDate(formatLocalCalendarDate(now));
     setNotes("");
+    setAreNotesExpanded(false);
     setErrors({});
   }
 
@@ -399,13 +401,30 @@ export function CashScreen({
             testID="cash-label-input"
             value={label}
           />
-          <FormTextField
-            label="Notes"
-            multiline
-            onChangeText={setNotes}
-            placeholder="Optional note"
-            value={notes}
-          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: areNotesExpanded }}
+            onPress={() => setAreNotesExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [
+              styles.optionalToggle,
+              pressed && styles.pressed,
+            ]}
+            testID="cash-notes-toggle"
+          >
+            <AppText color="secondary" variant="caption" weight="bold">
+              {areNotesExpanded ? "Hide note" : notes ? "Show note" : "Add note"}
+            </AppText>
+          </Pressable>
+          {areNotesExpanded ? (
+            <FormTextField
+              label="Note (optional)"
+              multiline
+              onChangeText={setNotes}
+              placeholder="Why this cash moved"
+              testID="cash-notes-input"
+              value={notes}
+            />
+          ) : null}
           <AppButton
             accessibilityState={{ busy: isSaving, disabled: isSaving }}
             disabled={isSaving}
@@ -419,7 +438,7 @@ export function CashScreen({
             </AppText>
           ) : null}
           <AppText color="secondary" variant="caption">
-            Cancel keeps this draft here for now. Nothing is recorded until you save.
+            Draft stays here if you cancel. Nothing is recorded until you save.
           </AppText>
           </View>
         ) : null}
@@ -505,6 +524,11 @@ const styles = StyleSheet.create({
   monthlyInsightText: {
     flex: 1,
     textAlign: "right",
+  },
+  optionalToggle: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
   },
   pressed: {
     opacity: interaction.pressedOpacity,

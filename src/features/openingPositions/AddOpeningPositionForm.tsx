@@ -246,6 +246,8 @@ export function AddOpeningPositionForm({
   } = holding;
   const isMinimalMode = snapshot.preferences.displayMode === "minimal";
   const [isManualEntryExpanded, setIsManualEntryExpanded] = useState(false);
+  const [areRecentSearchesExpanded, setAreRecentSearchesExpanded] =
+    useState(false);
   const [arePositionOptionsExpanded, setArePositionOptionsExpanded] = useState(false);
   const [areReviewDetailsExpanded, setAreReviewDetailsExpanded] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -441,6 +443,7 @@ export function AddOpeningPositionForm({
 
           return (
             <Pressable
+              accessibilityLabel={`${phase.label}, step ${index + 1} of ${displayPhases.length}`}
               accessibilityRole="button"
               accessibilityState={{ disabled: isDisabled, selected: isActive }}
               disabled={isDisabled}
@@ -504,7 +507,6 @@ export function AddOpeningPositionForm({
 
       {currentPhase === "asset" ? (
       <PremiumCard testID="add-holding-phase-asset">
-        <SectionHeader title="Asset" />
         {hasSelectedAssetSummary ? (
           <View style={styles.selectedAssetSummary} testID="selected-asset-summary">
             <CategoryIcon assetClass={assetClass} size={20} />
@@ -544,20 +546,55 @@ export function AddOpeningPositionForm({
               testID="asset-lookup-input"
               value={lookupQuery}
             />
-            <AppButton
-              accessibilityState={{ expanded: false }}
-              onPress={() => setIsManualEntryExpanded(true)}
-              testID="toggle-manual-asset-entry"
-              title="Can't find your asset? Add manually"
-              variant="ghost"
-            />
-            {lookupQuery.trim().length === 0 && recentSearches.length > 0 ? (
-              <View style={styles.lookupResults}>
-                <SectionHeader title="Recent searches" />
+            <View style={styles.discoveryActions}>
+              {lookupQuery.trim().length === 0 && recentSearches.length > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: areRecentSearchesExpanded }}
+                  onPress={() =>
+                    setAreRecentSearchesExpanded((expanded) => !expanded)
+                  }
+                  style={({ pressed }) => [
+                    styles.discoveryAction,
+                    pressed && styles.pressed,
+                  ]}
+                  testID="toggle-recent-asset-searches"
+                >
+                  <AppText color="secondary" variant="caption" weight="bold">
+                    Recent searches ({recentSearches.length})
+                  </AppText>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: false }}
+                onPress={() => setIsManualEntryExpanded(true)}
+                style={({ pressed }) => [
+                  styles.discoveryAction,
+                  pressed && styles.pressed,
+                ]}
+                testID="toggle-manual-asset-entry"
+              >
+                <AppText color="secondary" variant="caption" weight="bold">
+                  Enter details manually
+                </AppText>
+              </Pressable>
+            </View>
+            {lookupQuery.trim().length === 0 &&
+            recentSearches.length > 0 &&
+            areRecentSearchesExpanded ? (
+              <View style={styles.lookupResults} testID="recent-asset-searches">
                 {recentSearches.map((query) => (
                   <AppButton key={query} title={query} variant="ghost" onPress={() => setLookupQuery(query)} />
                 ))}
-                <AppButton title="Clear recent searches" variant="ghost" onPress={clearSearchHistory} />
+                <AppButton
+                  title="Clear recent searches"
+                  variant="ghost"
+                  onPress={() => {
+                    clearSearchHistory();
+                    setAreRecentSearchesExpanded(false);
+                  }}
+                />
               </View>
             ) : null}
             {recentSearchStatus ? <AppText color="secondary" variant="caption">{recentSearchStatus}</AppText> : null}
@@ -658,7 +695,7 @@ export function AddOpeningPositionForm({
             title={
               isManualEntryExpanded
                 ? "Use asset search instead"
-                : "Can't find your asset? Add manually"
+                : "Enter details manually"
             }
             variant="ghost"
           />
@@ -1488,8 +1525,8 @@ const styles = StyleSheet.create({
   },
   stepItem: {
     alignItems: "center",
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
+    borderBottomColor: "transparent",
+    borderBottomWidth: 2,
     flex: 1,
     flexDirection: "row",
     gap: spacing.xs,
@@ -1502,18 +1539,30 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   stepItemActive: {
-    backgroundColor: "rgba(52,199,89,0.12)",
+    borderBottomColor: colors.primary,
   },
   stepItemComplete: {
-    backgroundColor: "rgba(46,125,82,0.1)",
+    borderBottomColor: colors.border.subtle,
   },
   stepItemDisabled: {
-    opacity: 0.5,
+    opacity: 0.72,
   },
   stepper: {
     flexDirection: "row",
     gap: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  discoveryAction: {
+    alignItems: "center",
+    flexGrow: 1,
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  discoveryActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   summaryCard: {
     alignItems: "center",
