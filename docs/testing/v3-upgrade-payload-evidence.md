@@ -92,6 +92,43 @@ Equal counts alone cannot pass. A mismatch must be investigated, not solved by
 dropping changed fields from comparison. This test does not perform an install
 or independently prove that the operator supplied correctly sequenced exports.
 
+For a cross-version run where normal startup may add month-end snapshots, set
+the additive-snapshot mode. This still requires every pre-existing snapshot and
+every other payload field to match exactly:
+
+```powershell
+$env:COGVEST_UPGRADE_BEFORE = '.expo/upgrade-before.json'
+$env:COGVEST_UPGRADE_AFTER = '.expo/upgrade-after.json'
+$env:COGVEST_UPGRADE_ALLOW_SNAPSHOT_ADDITIONS = '1'
+try {
+  npm test -- src/testing/__tests__/upgradeBackupComparison.test.ts
+} finally {
+  Remove-Item Env:COGVEST_UPGRADE_BEFORE,Env:COGVEST_UPGRADE_AFTER,Env:COGVEST_UPGRADE_ALLOW_SNAPSHOT_ADDITIONS
+}
+```
+
+## Cross-Version Scale Result
+
+On 19 September 2026, EAS-signed internal preview version 1.0.7/code 8
+(`b270ef3`, build `5986f4cd-55b8-474c-b923-e9e25f52ed2a`) was upgraded in place
+to preview version 1.0.8/code 9 (`d4eebcc`, build
+`a0deeefa-5b92-4c96-961e-95cd813aadc3`). The signing certificates matched and
+`adb install -r` preserved app data. Production exports before and after upgrade
+were validated and compared exactly:
+
+- 250 assets, 250 opening positions and 1,000 trades were unchanged.
+- Current quotes, preferences, CAS salt and all other exported fields were
+  unchanged.
+- All 60 pre-upgrade monthly snapshots were unchanged.
+- The complete payloads matched; only backup-envelope creation metadata and
+  checksum differed.
+
+The installed app also opened Dashboard and rendered/scrolled all 250 Holdings
+rows without Metro. Daily price history is an intentionally disposable cache
+outside the backup contract. The original five-asset synthetic emulator
+portfolio was restored after verification. The resulting `npm run test:verify`
+passed typecheck, 1,713 tests across 164 passing suites, and Expo Doctor 17/17.
+
 ## Status
 
 `npm run test:v1:pc` passed: typecheck, 1,261 tests across 129 suites, Expo
@@ -99,7 +136,9 @@ Doctor 17/17, Android Doctor and strict installed-package smoke. Two tests were
 skipped in the default run: the existing skip and the opt-in export assertion.
 With both actual export paths configured, all five comparison tests passed.
 
-The former full-payload comparison gap is resolved for this existing synthetic
-portfolio and same-version reinstall. Cross-version migration, populated
-trade/PPF/CAS installed fixtures, combined-scale Android performance and #248's
-statement evidence are not proven by this run. Keep #138 open and #299 parked.
+The former full-payload comparison gap is resolved for both the original
+same-version synthetic fixture and the 1.0.7-to-1.0.8 combined-scale fixture
+with populated trades. Populated PPF/CAS installed fixtures and standalone
+release Android performance are not fully proven. CDSL/NSDL evaluation #248 was
+removed from V3 scope by owner decision on 19 September 2026. Keep #138 open and
+#299 parked.

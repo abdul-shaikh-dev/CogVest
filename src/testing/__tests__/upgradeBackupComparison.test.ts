@@ -7,6 +7,7 @@ import {
   type BackupPayload,
 } from "@/src/domain/portfolioBackup";
 import {
+  compareUpgradeBackupPreservation,
   compareUpgradeBackupTexts,
   nodeSha256Digest,
 } from "@/src/testing/upgradeBackupComparison";
@@ -188,6 +189,72 @@ describe("upgrade backup comparison", () => {
     );
   });
 
+  it("allows only additive month-end automation while preserving prior payload data", async () => {
+    const beforePayload = payload();
+    beforePayload.portfolio.monthlySnapshots.push({
+      cashValue: 0,
+      cryptoValue: 0,
+      debtValue: 0,
+      equityValue: 100,
+      id: "snapshot-2026-01",
+      investedValue: 90,
+      month: "2026-01",
+      monthlyInvestment: 10,
+      portfolioValue: 100,
+    });
+    beforePayload.portfolio.monthlySnapshots.push({
+      cashValue: 0,
+      cryptoValue: 0,
+      debtValue: 0,
+      equityValue: 105,
+      id: "snapshot-2026-02",
+      investedValue: 95,
+      month: "2026-02",
+      monthlyInvestment: 5,
+      portfolioValue: 105,
+    });
+    const afterPayload = structuredClone(beforePayload);
+    afterPayload.portfolio.monthlySnapshots.push({
+      cashValue: 0,
+      cryptoValue: 0,
+      debtValue: 0,
+      equityValue: 110,
+      id: "snapshot-2026-03",
+      investedValue: 100,
+      month: "2026-03",
+      monthlyInvestment: 10,
+      portfolioValue: 110,
+    });
+
+    await expect(compareUpgradeBackupPreservation(
+      await backup(beforePayload),
+      await backup(afterPayload),
+    )).resolves.toMatchObject({
+      addedMonthlySnapshots: 1,
+      payloadsMatch: false,
+      preexistingPayloadPreserved: true,
+    });
+
+    const changedExisting = structuredClone(afterPayload);
+    changedExisting.portfolio.monthlySnapshots[0].portfolioValue = 101;
+    changedExisting.portfolio.monthlySnapshots[0].equityValue = 101;
+    const changedQuote = structuredClone(afterPayload);
+    changedQuote.quoteCache["asset-1"].price = 101;
+    const reorderedExisting = structuredClone(afterPayload);
+    reorderedExisting.portfolio.monthlySnapshots = [
+      reorderedExisting.portfolio.monthlySnapshots[1],
+      reorderedExisting.portfolio.monthlySnapshots[0],
+      ...reorderedExisting.portfolio.monthlySnapshots.slice(2),
+    ];
+
+    for (const candidate of [changedExisting, changedQuote, reorderedExisting]) {
+      await expect(compareUpgradeBackupPreservation(
+        await backup(beforePayload),
+        await backup(candidate),
+      )).resolves.toMatchObject({ preexistingPayloadPreserved: false });
+    }
+  });
+
   it("returns one safe error for malformed, checksum, and unsupported-field inputs", async () => {
     const valid = await backup();
     const checksumCorrupt = JSON.parse(valid) as Record<string, unknown>;
@@ -205,6 +272,7 @@ describe("upgrade backup comparison", () => {
 
 const beforePath = process.env.COGVEST_UPGRADE_BEFORE;
 const afterPath = process.env.COGVEST_UPGRADE_AFTER;
+const allowSnapshotAdditions = process.env.COGVEST_UPGRADE_ALLOW_SNAPSHOT_ADDITIONS === "1";
 const upgradeFileTest = beforePath === undefined && afterPath === undefined ? it.skip : it;
 
 upgradeFileTest("compares configured upgrade backup files without exposing file details", async () => {
@@ -214,16 +282,27 @@ upgradeFileTest("compares configured upgrade backup files without exposing file 
 
   try {
     assertDistinctBackupPaths(beforePath, afterPath);
-    const comparison = await compareUpgradeBackupTexts(
-      await readBoundedBackupText(beforePath),
-      await readBoundedBackupText(afterPath),
-    );
-    expect(comparison.payloadsMatch).toBe(true);
+    const beforeText = await readBoundedBackupText(beforePath);
+    const afterText = await readBoundedBackupText(afterPath);
+    const comparison = allowSnapshotAdditions
+      ? await compareUpgradeBackupPreservation(beforeText, afterText)
+      : await compareUpgradeBackupTexts(beforeText, afterText);
+    if (allowSnapshotAdditions) {
+      expect(comparison).toMatchObject({ preexistingPayloadPreserved: true });
+    } else {
+      expect(comparison.payloadsMatch).toBe(true);
+    }
     console.info("[upgrade-backup-comparison]", JSON.stringify({
       after: comparison.after,
+      ...("addedMonthlySnapshots" in comparison
+        ? { addedMonthlySnapshots: comparison.addedMonthlySnapshots }
+        : {}),
       before: comparison.before,
       collectionsMatch: comparison.collectionsMatch,
       payloadsMatch: comparison.payloadsMatch,
+      ...("preexistingPayloadPreserved" in comparison
+        ? { preexistingPayloadPreserved: comparison.preexistingPayloadPreserved }
+        : {}),
     }));
   } catch {
     throw new Error("Configured upgrade backup comparison failed.");

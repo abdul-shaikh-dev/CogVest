@@ -23,6 +23,11 @@ export type UpgradeBackupComparison = {
   payloadsMatch: boolean;
 };
 
+export type UpgradeBackupPreservationComparison = UpgradeBackupComparison & {
+  addedMonthlySnapshots: number;
+  preexistingPayloadPreserved: boolean;
+};
+
 export const nodeSha256Digest: BackupDigest = async (text) =>
   createHash("sha256").update(text, "utf8").digest("hex");
 
@@ -79,5 +84,51 @@ export async function compareUpgradeBackupTexts(
     };
   } catch {
     throw new Error("Backup comparison could not be completed.");
+  }
+}
+
+/**
+ * Allows only new monthly snapshots created by normal post-upgrade automation.
+ * Every pre-upgrade record and every other payload field must remain unchanged.
+ */
+export async function compareUpgradeBackupPreservation(
+  beforeText: string,
+  afterText: string,
+  digest: BackupDigest = nodeSha256Digest,
+): Promise<UpgradeBackupPreservationComparison> {
+  try {
+    if (beforeText === afterText) throw new Error("identical backup texts");
+    const [before, after] = await Promise.all([
+      parsePortfolioBackup(beforeText, digest),
+      parsePortfolioBackup(afterText, digest),
+    ]);
+    const exact = await compareUpgradeBackupTexts(beforeText, afterText, digest);
+    const beforeSnapshots = before.payload.portfolio.monthlySnapshots;
+    const beforeSnapshotIds = new Set(beforeSnapshots.map((snapshot) => snapshot.id));
+    const preservedAfterSnapshots = after.payload.portfolio.monthlySnapshots.filter(
+      (snapshot) => beforeSnapshotIds.has(snapshot.id),
+    );
+    const preexistingSnapshotsPreserved =
+      canonicalJson(preservedAfterSnapshots) === canonicalJson(beforeSnapshots);
+    const portfolioWithoutSnapshots = (payload: BackupPayload) => ({
+      ...payload,
+      portfolio: {
+        ...payload.portfolio,
+        monthlySnapshots: [],
+      },
+    });
+
+    return {
+      ...exact,
+      addedMonthlySnapshots:
+        after.payload.portfolio.monthlySnapshots.length - beforeSnapshots.length,
+      preexistingPayloadPreserved:
+        after.payload.portfolio.monthlySnapshots.length >= beforeSnapshots.length &&
+        preexistingSnapshotsPreserved &&
+        canonicalJson(portfolioWithoutSnapshots(after.payload)) ===
+          canonicalJson(portfolioWithoutSnapshots(before.payload)),
+    };
+  } catch {
+    throw new Error("Backup preservation comparison could not be completed.");
   }
 }
