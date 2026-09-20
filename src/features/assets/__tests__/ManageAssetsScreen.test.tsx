@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { ManageAssetsScreen } from "@/src/features/assets";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -28,6 +28,91 @@ const closedAsset: Asset = {
 };
 
 describe("ManageAssetsScreen", () => {
+  it("keeps Back in the fixed header and exposes complete asset identity", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const longFund: Asset = {
+      ...activeAsset,
+      id: "asset-long-fund",
+      instrumentType: "mutualFund",
+      isin: "INF109KC13E2",
+      name: "ICICI Prudential Nifty IT Index Fund - Direct Plan - Growth (Non-Demat)",
+      symbol: "INF109KC13E2",
+      ticker: "INF109KC13E2",
+    };
+    store.getState().addAsset(longFund);
+    const onBack = jest.fn();
+    const screen = render(<ManageAssetsScreen onBack={onBack} onReviewAsset={jest.fn()} store={store} />);
+
+    expect(screen.getByTestId("manage-assets-back")).toHaveProp("accessibilityLabel", "Back to Holdings");
+    fireEvent.press(screen.getByTestId("manage-assets-back"));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(`manage-asset-name-${longFund.id}`).props.numberOfLines).toBeUndefined();
+    expect(screen.getByTestId(`manage-asset-${longFund.id}`).props.accessibilityLabel).toContain(
+      "ICICI Prudential Nifty IT Index Fund - Direct Plan - Growth (Non-Demat), INF109KC13E2, Mutual Fund, Equity, Closed",
+    );
+  });
+
+  it("searches by name, symbol, ticker, and ISIN without losing the query", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const searchableAsset: Asset = {
+      ...activeAsset,
+      isin: "INE040A01034",
+      name: "HDFC Bank Limited",
+      symbol: "HDFCBANK",
+      ticker: "HDFCBANK.NS",
+    };
+    store.getState().addAsset(searchableAsset);
+    store.getState().addAsset(closedAsset);
+    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+    const input = screen.getByTestId("manage-assets-search-input");
+
+    for (const query of ["hdfc bank", "HDFCBANK", "hdfcbank.ns", "INE040A01034"]) {
+      fireEvent.changeText(input, query);
+      expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("1 of 2 assets");
+      expect(screen.getByText("HDFC Bank Limited")).toBeTruthy();
+      expect(screen.queryByText("Closed Fund")).toBeNull();
+      expect(input).toHaveProp("value", query);
+    }
+  });
+
+  it("preserves search context while a reviewed asset changes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(activeAsset);
+    store.getState().addAsset(closedAsset);
+    const onReviewAsset = jest.fn();
+    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={onReviewAsset} store={store} />);
+
+    fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Closed Fund");
+    fireEvent.press(screen.getByTestId(`manage-asset-${closedAsset.id}`));
+    expect(onReviewAsset).toHaveBeenCalledWith(closedAsset.id);
+
+    act(() => store.setState({ assets: [activeAsset] }));
+    expect(screen.getByTestId("manage-assets-search-input")).toHaveProp("value", "Closed Fund");
+    expect(screen.getByText("No matching assets")).toBeTruthy();
+  });
+
+  it.each([4, 30, 52])("renders a searchable %i-asset fixture", (count) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.setState({
+      assets: Array.from({ length: count }, (_, index): Asset => ({
+        ...activeAsset,
+        id: `asset-${index}`,
+        name: index === count - 1
+          ? "Navi Nasdaq100 US Specific Equity Passive Fund of Fund - Direct Plan - Growth (Non-Demat)"
+          : `Saved Asset ${index + 1}`,
+        quoteSourceId: `ASSET${index}.NS`,
+        symbol: `ASSET${index}`,
+        ticker: `ASSET${index}.NS`,
+      })),
+    });
+    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+
+    expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent(`${count} assets`);
+    fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Navi Nasdaq100");
+    expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent(`1 of ${count} assets`);
+    expect(screen.getByText(/Navi Nasdaq100 US Specific Equity Passive Fund/u)).toBeTruthy();
+  });
+
   it("keeps post-split residual units active and labels unresolved quantities unavailable", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const stockSplits: NonNullable<Asset["stockSplits"]> = [{

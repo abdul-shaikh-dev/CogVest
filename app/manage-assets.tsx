@@ -7,7 +7,7 @@ export default function ManageAssetsRoute() {
     <ManageAssetsScreen
       onBack={() => router.replace("/(tabs)/holdings")}
       onReviewAsset={(assetId) => {
-        router.push({ pathname: "/asset", params: { assetId } });
+        router.push({ pathname: "/asset", params: { assetId, returnTo: "manage-assets" } });
       }}
     />
   );
