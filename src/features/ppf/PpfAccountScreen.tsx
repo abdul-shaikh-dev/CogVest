@@ -1,6 +1,7 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   AccessibilityInfo,
+  BackHandler,
   findNodeHandle,
   KeyboardAvoidingView,
   Pressable,
@@ -472,12 +473,50 @@ function PpfAccountForm({
   );
   const [reviewAccount, setReviewAccount] = useState<PpfAccount>();
   const [error, setError] = useState("");
+  const [confirmExit, setConfirmExit] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<PpfAccountField, string>>>({});
   const scrollRef = useRef<ScrollView>(null);
   const inputRefs = useRef<Partial<Record<PpfAccountField, TextInput | null>>>({});
   const controlRefs = useRef<Partial<Record<PpfAccountField, View | null>>>({});
   const sectionY = useRef<Partial<Record<PpfFormSection, number>>>({});
   const fieldLayout = useRef<Partial<Record<PpfAccountField, { section: PpfFormSection; y: number }>>>({});
+
+  const isDirty =
+    nickname !== (account?.nickname ?? legacyName ?? "My PPF") ||
+    provider !== (account?.provider ?? "") ||
+    suffix !== (account?.accountNumberSuffix ?? "") ||
+    openingMode !== (account?.opening.kind ?? "financialYear") ||
+    openedOn !== (account?.opening.kind === "date" ? account.opening.openedOn : "") ||
+    openingFinancialYear !== String(account?.opening.kind === "financialYear" ? account.opening.financialYearStart : currentFinancialYear) ||
+    balance !== (account ? String(account.confirmedBalance) : "") ||
+    balanceAsOf !== (account?.balanceAsOf ?? formatLocalCalendarDate(now)) ||
+    fyContributions !== (account?.baselineFinancialYearContributions ? String(account.baselineFinancialYearContributions.amount) : "") ||
+    status !== (account?.status ?? "active") ||
+    extensionYear !== (account?.confirmedExtensionStartFinancialYear ? String(account.confirmedExtensionStartFinancialYear) : "");
+
+  function requestBack() {
+    if (reviewAccount) {
+      setReviewAccount(undefined);
+      return;
+    }
+    if (confirmExit) {
+      setConfirmExit(false);
+      return;
+    }
+    if (isDirty) {
+      setConfirmExit(true);
+      return;
+    }
+    onBack();
+  }
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      requestBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [confirmExit, isDirty, reviewAccount]);
 
   function clearFieldError(field: PpfAccountField) {
     setFieldErrors((current) => {
@@ -564,12 +603,33 @@ function PpfAccountForm({
     return candidate;
   }
 
+  if (confirmExit) {
+    return (
+      <ScreenContainer scroll testID="ppf-account-exit-confirmation">
+        <View style={styles.content}>
+          <ScreenHeader title="Discard account changes?" subtitle="Your unsaved edits will be lost" />
+          <PremiumCard>
+            <AppText color="secondary">Return to the populated editor or discard these unsaved changes.</AppText>
+          </PremiumCard>
+          <View style={styles.actions}>
+            <AppButton onPress={() => setConfirmExit(false)} testID="keep-editing-ppf-account" title="Keep editing" />
+            <AppButton onPress={onBack} testID="discard-ppf-account" title="Discard changes" variant="destructive" />
+          </View>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (reviewAccount) {
     const candidate = reviewAccount;
     return (
       <ScreenContainer scroll testID="ppf-account-review-screen">
         <View style={styles.content}>
-          <ScreenHeader title="Review PPF account" subtitle="Confirm before saving • local only" />
+          <ScreenHeader
+            leading={<IconButton accessibilityLabel="Back to account editor" icon="arrow-back" onPress={() => setReviewAccount(undefined)} />}
+            title="Review PPF account"
+            subtitle="Confirm before saving • local only"
+          />
           <PremiumCard>
             <SectionHeader title={candidate.nickname} />
             <Detail label="Provider" value={candidate.provider} />
@@ -604,7 +664,7 @@ function PpfAccountForm({
               testID="save-ppf-account"
               title="Save PPF account"
             />
-            <AppButton onPress={() => setReviewAccount(undefined)} title="Edit details" variant="secondary" />
+            <AppButton onPress={() => setReviewAccount(undefined)} testID="edit-ppf-account-details" title="Edit details" variant="secondary" />
           </View>
         </View>
       </ScreenContainer>
@@ -616,7 +676,7 @@ function PpfAccountForm({
       <ScreenContainer scroll scrollRef={scrollRef} testID="ppf-account-form-screen">
         <View style={styles.content}>
         <ScreenHeader
-          leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={onBack} />}
+          leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={requestBack} />}
           subtitle="Confirmed balance • local only"
           title={account ? "Edit PPF account" : "Add PPF account"}
         />
@@ -843,7 +903,7 @@ function PpfAccountForm({
             testID="review-ppf-account"
             title="Review account"
           />
-          <AppButton onPress={onBack} title="Cancel" variant="secondary" />
+          <AppButton onPress={requestBack} title="Cancel" variant="secondary" />
         </View>
         </View>
       </ScreenContainer>
