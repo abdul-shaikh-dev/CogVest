@@ -3,17 +3,20 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ReviewTradeScreen } from "@/src/features/trades";
 
 export default function TradeRoute() {
-  const params = useLocalSearchParams<{ tradeId?: string }>();
+  const params = useLocalSearchParams<{ returnTo?: "cash"; tradeId?: string }>();
+  const returnsToCash = params.returnTo === "cash";
 
   return (
     <ReviewTradeScreen
       tradeId={params.tradeId ?? ""}
-      onCancel={() => router.back()}
+      onCancel={() => returnsToCash ? router.dismissTo("/(tabs)/cash") : router.back()}
       onComplete={(statusMessage) =>
-        router.dismissTo({
-          pathname: "/(tabs)/holdings",
-          params: { statusMessage },
-        })
+        returnsToCash
+          ? router.dismissTo("/(tabs)/cash")
+          : router.dismissTo({
+              pathname: "/(tabs)/holdings",
+              params: { statusMessage },
+            })
       }
     />
   );

@@ -283,16 +283,18 @@ export function CashScreen({
             <SectionHeader title="Recent cash ledger" />
             {entries.map((entry) => (
               <CashEntryRow
+                accessibilityHint={isLinkedCashEntry(entry)
+                  ? "Opens the route to its owning investment transaction"
+                  : undefined}
                 correctionHint={
                   isLinkedCashEntry(entry)
-                    ? "Managed with its investment transaction"
+                    ? "Review through its investment transaction"
                     : onCorrectEntry ? "Tap to review or correct" : undefined
                 }
                 entry={entry}
                 key={entry.id}
                 masked={maskWealthValues}
-                onPress={!isLinkedCashEntry(entry) && onCorrectEntry
-                  ? () => onCorrectEntry(entry.id) : undefined}
+                onPress={onCorrectEntry ? () => onCorrectEntry(entry.id) : undefined}
               />
             ))}
           </View>

@@ -12,6 +12,7 @@ import { colors, spacing } from "@/src/theme";
 import type { CashEntry } from "@/src/types";
 
 type CashEntryRowProps = {
+  accessibilityHint?: string;
   correctionHint?: string;
   entry: CashEntry;
   masked?: boolean;
@@ -44,6 +45,7 @@ function getCashEntryMovement(entry: CashEntry) {
 }
 
 export function CashEntryRow({
+  accessibilityHint = "Opens this cash entry for review and correction",
   correctionHint,
   entry,
   masked = false,
@@ -86,7 +88,7 @@ export function CashEntryRow({
 
   return (
     <Pressable
-      accessibilityHint="Opens this manual cash entry for review and correction"
+      accessibilityHint={accessibilityHint}
       accessibilityLabel={`Review ${entry.label}`}
       accessibilityRole="button"
       android_ripple={androidRipple()}

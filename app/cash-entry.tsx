@@ -10,6 +10,10 @@ export default function CashEntryRoute() {
       entryId={params.entryId ?? ""}
       onCancel={() => router.back()}
       onComplete={() => router.back()}
+      onReviewLinkedTrade={(tradeId) => router.push({
+        pathname: "/trade",
+        params: { returnTo: "cash", tradeId },
+      })}
     />
   );
 }

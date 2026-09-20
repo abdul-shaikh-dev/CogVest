@@ -15,6 +15,7 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
+import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { CashEntry, CashEntryType } from "@/src/types";
@@ -31,6 +32,7 @@ type ReviewCashEntryScreenProps = {
   now?: Date;
   onCancel: () => void;
   onComplete: () => void;
+  onReviewLinkedTrade?: (tradeId: string) => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -71,6 +73,7 @@ export function ReviewCashEntryScreen({
   now = new Date(),
   onCancel,
   onComplete,
+  onReviewLinkedTrade,
   store = getPortfolioStore(),
 }: ReviewCashEntryScreenProps) {
   const snapshot = usePortfolioSnapshot(store);
@@ -113,6 +116,14 @@ export function ReviewCashEntryScreen({
   }
 
   if (isLinkedCashEntry(entry)) {
+    const linkedTradeCandidate = snapshot.trades.find((trade) => trade.id === entry.linkedTradeId);
+    const linkedTrade = linkedTradeCandidate && (linkedTradeCandidate.type === "buy" || linkedTradeCandidate.type === "sell")
+      ? linkedTradeCandidate
+      : undefined;
+    const linkedAsset = linkedTrade
+      ? snapshot.assets.find((asset) => asset.id === linkedTrade.assetId)
+      : undefined;
+
     return (
       <ScreenContainer testID="review-cash-entry-screen">
         <View style={styles.content}>
@@ -121,13 +132,29 @@ export function ReviewCashEntryScreen({
             subtitle="Linked investment movement"
           />
           <PremiumCard>
-            <SectionHeader title={entry.label} />
-            <AppText color="secondary">
-              This movement is managed with its investment transaction. Correct
-              the owning purchase or sale so the asset and cash records stay in
-              sync.
-            </AppText>
+            <SectionHeader title={linkedTrade ? entry.label : "Linked transaction unavailable"} />
+            {linkedTrade ? <>
+              <AppText color="secondary">
+                This movement is managed with its investment transaction. Review
+                the owning {linkedTrade.type === "buy" ? "purchase" : "sale"} so the asset and cash records stay in sync.
+              </AppText>
+              <AppText color="secondary" variant="caption" testID="linked-cash-owner-summary">
+                {linkedAsset?.name ?? "Unknown holding"} · {linkedTrade.type === "buy" ? "Purchase" : "Sale"} · {formatDate(linkedTrade.date)}
+              </AppText>
+            </> : <>
+              <AppText color="secondary" testID="linked-cash-owner-missing">
+                This cash movement points to a transaction that is no longer available. It remains read-only so Cash and investment history cannot diverge.
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                Return to the Cash Ledger. Restore a backup or reimport the complete source history if this link should exist.
+              </AppText>
+            </>}
           </PremiumCard>
+          {linkedTrade && onReviewLinkedTrade ? <AppButton
+            onPress={() => onReviewLinkedTrade(linkedTrade.id)}
+            testID="review-linked-cash-transaction"
+            title="Review linked transaction"
+          /> : null}
           <AppButton
             title="Back to Cash Ledger"
             variant="secondary"

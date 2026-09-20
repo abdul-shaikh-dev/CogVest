@@ -1,4 +1,4 @@
-const mockParams: { assetId?: string; openingPositionId?: string; tradeId?: string } = {};
+const mockParams: { assetId?: string; entryId?: string; openingPositionId?: string; returnTo?: string; tradeId?: string } = {};
 const mockBack = jest.fn();
 const mockDismissTo = jest.fn();
 const mockPush = jest.fn();
@@ -25,6 +25,13 @@ jest.mock("@/src/features/trades", () => ({
   TradeHistoryScreen: () => null,
 }));
 
+jest.mock("@/src/features/cash", () => ({
+  ReviewCashEntryScreen: () => null,
+}));
+
+const CashEntryRoute =
+  require("../../app/cash-entry").default as typeof import("../../app/cash-entry").default;
+
 const HoldingTransactionsRoute =
   require("../../app/holding-transactions").default as typeof import("../../app/holding-transactions").default;
 const OpeningPositionRoute =
@@ -37,7 +44,9 @@ const TradeRoute =
 describe("holding child routes", () => {
   beforeEach(() => {
     delete mockParams.assetId;
+    delete mockParams.entryId;
     delete mockParams.openingPositionId;
+    delete mockParams.returnTo;
     delete mockParams.tradeId;
     mockBack.mockClear();
     mockDismissTo.mockClear();
@@ -103,5 +112,32 @@ describe("holding child routes", () => {
       pathname: "/(tabs)/holdings",
       params: { statusMessage: "Transaction saved." },
     });
+  });
+
+  it("opens a linked transaction from Cash and returns cancellation or completion to Cash", () => {
+    mockParams.entryId = "cash-1";
+    const cashRoute = CashEntryRoute() as {
+      props: { entryId: string; onCancel: () => void; onReviewLinkedTrade: (tradeId: string) => void };
+    };
+
+    expect(cashRoute.props.entryId).toBe("cash-1");
+    cashRoute.props.onCancel();
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    cashRoute.props.onReviewLinkedTrade("trade-1");
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/trade",
+      params: { returnTo: "cash", tradeId: "trade-1" },
+    });
+
+    mockParams.tradeId = "trade-1";
+    mockParams.returnTo = "cash";
+    const tradeRoute = TradeRoute() as {
+      props: { onCancel: () => void; onComplete: (message: string) => void };
+    };
+    tradeRoute.props.onCancel();
+    tradeRoute.props.onComplete("Transaction saved.");
+
+    expect(mockDismissTo).toHaveBeenNthCalledWith(1, "/(tabs)/cash");
+    expect(mockDismissTo).toHaveBeenNthCalledWith(2, "/(tabs)/cash");
   });
 });

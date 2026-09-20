@@ -3,7 +3,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { ReviewCashEntryScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
-import type { CashEntry } from "@/src/types";
+import type { Asset, CashEntry, Trade } from "@/src/types";
 
 const manualEntry: CashEntry = {
   amount: 1000,
@@ -13,6 +13,25 @@ const manualEntry: CashEntry = {
   notes: "Initial note",
   purpose: "capitalContribution",
   type: "addition",
+};
+
+const linkedAsset: Asset = {
+  assetClass: "stock",
+  currency: "INR",
+  id: "asset-hdfc",
+  name: "HDFC Bank",
+  symbol: "HDFCBANK",
+  ticker: "HDFCBANK.NS",
+};
+
+const linkedBuy: Trade = {
+  assetId: linkedAsset.id,
+  date: "2026-07-20",
+  id: "trade-buy",
+  pricePerUnit: 500,
+  quantity: 2,
+  totalValue: 1000,
+  type: "buy",
 };
 
 function createStore(entry: CashEntry = manualEntry) {
@@ -142,28 +161,86 @@ describe("ReviewCashEntryScreen", () => {
     expect(getByText(/investment-rate insights unavailable/)).toBeTruthy();
   });
 
-  it("keeps linked investment movements read-only", () => {
+  it.each([
+    { purpose: "purchaseFunding" as const, trade: linkedBuy, typeLabel: "Purchase" },
+    { purpose: "saleProceeds" as const, trade: { ...linkedBuy, id: "trade-sale", type: "sell" as const }, typeLabel: "Sale" },
+  ])("routes a linked $typeLabel through its owning transaction", ({ purpose, trade, typeLabel }) => {
     const { store } = createStore({
       ...manualEntry,
-      id: "cash-trade-sale",
-      linkedTradeId: "trade-sale",
-      purpose: "saleProceeds",
+      id: `cash-${trade.id}`,
+      linkedTradeId: trade.id,
+      purpose,
     });
-    const { getByText, queryByTestId } = render(
+    store.getState().addAsset(linkedAsset);
+    store.getState().addTrade(trade);
+    const onCancel = jest.fn();
+    const onReviewLinkedTrade = jest.fn();
+    const { getByTestId, getByText, queryByTestId } = render(
       <ReviewCashEntryScreen
-        entryId="cash-trade-sale"
-        onCancel={jest.fn()}
+        entryId={`cash-${trade.id}`}
+        onCancel={onCancel}
         onComplete={jest.fn()}
+        onReviewLinkedTrade={onReviewLinkedTrade}
         store={store}
       />,
     );
 
     expect(getByText("Linked investment movement")).toBeTruthy();
-    expect(
-      getByText(/Correct the owning purchase or sale/),
-    ).toBeTruthy();
+    expect(getByTestId("linked-cash-owner-summary")).toHaveTextContent(new RegExp(`HDFC Bank · ${typeLabel} ·`, "u"));
     expect(queryByTestId("save-cash-correction-button")).toBeNull();
     expect(queryByTestId("delete-cash-entry-button")).toBeNull();
+    fireEvent.press(getByTestId("review-linked-cash-transaction"));
+    expect(onReviewLinkedTrade).toHaveBeenCalledWith(trade.id);
+    fireEvent.press(getByText("Back to Cash Ledger"));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a stale linked movement read-only and explains recovery", () => {
+    const { store } = createStore({
+      ...manualEntry,
+      id: "cash-missing-trade",
+      linkedTradeId: "trade-missing",
+      purpose: "purchaseFunding",
+    });
+    const screen = render(
+      <ReviewCashEntryScreen
+        entryId="cash-missing-trade"
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        onReviewLinkedTrade={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Linked transaction unavailable")).toBeTruthy();
+    expect(screen.getByTestId("linked-cash-owner-missing")).toHaveTextContent(/no longer available/u);
+    expect(screen.getByText(/Restore a backup or reimport the complete source history/u)).toBeTruthy();
+    expect(screen.queryByTestId("review-linked-cash-transaction")).toBeNull();
+    expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
+  });
+
+  it("does not reveal linked transaction values while wealth masking is active", () => {
+    const { store } = createStore({
+      ...manualEntry,
+      id: "cash-trade-buy",
+      linkedTradeId: linkedBuy.id,
+      purpose: "purchaseFunding",
+    });
+    store.getState().addAsset(linkedAsset);
+    store.getState().addTrade(linkedBuy);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = render(
+      <ReviewCashEntryScreen
+        entryId="cash-trade-buy"
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        onReviewLinkedTrade={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByTestId("review-linked-cash-transaction")).toBeTruthy();
+    expect(screen.queryByText(/₹|1,000|500\.00/u)).toBeNull();
   });
 
   it("requires reveal for a saved amount and resets when masking returns", async () => {

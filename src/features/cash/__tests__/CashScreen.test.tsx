@@ -464,7 +464,7 @@ describe("CashScreen", () => {
     expect(getByText("+₹8,400.00")).toBeTruthy();
   });
 
-  it("opens manual entries for correction and keeps linked entries read-only", () => {
+  it("opens manual and linked entries through their safe review routes", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCorrectEntry = jest.fn();
     store.getState().addCashEntry({
@@ -491,12 +491,13 @@ describe("CashScreen", () => {
 
     expect(getByText("Tap to review or correct")).toBeTruthy();
     expect(
-      getByText("Managed with its investment transaction"),
+      getByText("Review through its investment transaction"),
     ).toBeTruthy();
     fireEvent.press(getByLabelText("Review Broker cash"));
+    fireEvent.press(getByLabelText("Review Investment purchase"));
 
-    expect(onCorrectEntry).toHaveBeenCalledWith("cash-manual");
-    expect(() => getByLabelText("Review Investment purchase")).toThrow();
+    expect(onCorrectEntry).toHaveBeenNthCalledWith(1, "cash-manual");
+    expect(onCorrectEntry).toHaveBeenNthCalledWith(2, "cash-linked");
   });
 
   it("shows income-based metrics as unavailable for unclassified legacy additions", () => {
