@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { ScrollView, TextInput } from "react-native";
+import { BackHandler, ScrollView, TextInput } from "react-native";
 
 import { PpfAccountScreen } from "@/src/features/ppf";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -89,6 +89,30 @@ describe("PpfAccountScreen", () => {
     expect(onComplete).toHaveBeenCalledWith(store.getState().ppfAccounts[0].id);
     expect(getByTestId("ppf-account-screen")).toBeTruthy();
     expect(getByText("My PPF")).toBeTruthy();
+  });
+
+  it("returns from account review to populated fields and protects dirty exit", () => {
+    let hardwareBack: (() => boolean) | undefined;
+    const backSpy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
+      hardwareBack = () => handler() === true;
+      return { remove: jest.fn() };
+    });
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const onBack = jest.fn();
+    const screen = render(<PpfAccountScreen now={now} onBack={onBack} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+
+    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "100000");
+    fireEvent.press(screen.getByTestId("review-ppf-account"));
+    act(() => { hardwareBack?.(); });
+    expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "100000");
+    expect(onBack).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText("Back"));
+    expect(screen.getByText("Discard account changes?")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("keep-editing-ppf-account"));
+    expect(screen.getByTestId("ppf-provider-input")).toHaveProp("value", "India Post");
+    backSpy.mockRestore();
   });
 
   it("separates confirmed balance, official interest, and estimated interest", () => {

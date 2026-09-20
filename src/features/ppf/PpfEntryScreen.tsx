@@ -1,8 +1,13 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
+  AccessibilityInfo,
+  BackHandler,
+  findNodeHandle,
   KeyboardAvoidingView,
   Pressable,
+  ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
@@ -29,6 +34,15 @@ import type { PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
 
 type EntryType = PpfLedgerEntry["type"];
+type EntryField = "amount" | "date" | "reason";
+
+const entryErrorFields: Record<string, EntryField> = {
+  "Entry amount must be greater than zero.": "amount",
+  "Entry date must be a valid non-future date.": "date",
+  "PPF contributions must be in multiples of ₹50.": "amount",
+  "Reconciled balance must be zero or greater.": "amount",
+  "Reconciliation reason is required.": "reason",
+};
 
 export function PpfEntryScreen({
   accountId,
@@ -62,10 +76,54 @@ export function PpfEntryScreen({
   const [reason, setReason] = useState(existing?.type === "reconciliation" ? existing.reason : "");
   const [reviewEntry, setReviewEntry] = useState<PpfLedgerEntry>();
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<EntryField, string>>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const amountRef = useRef<TextInput>(null);
+  const dateRef = useRef<View>(null);
+  const reasonRef = useRef<TextInput>(null);
+  const fieldY = useRef<Partial<Record<EntryField, number>>>({});
   const { isRevealed, reveal } = useSensitiveValueReveal(
     snapshot.preferences.maskWealthValues,
   );
+
+  const initialType = existing?.type ?? "contribution";
+  const initialAmount = existing
+    ? String(existing.type === "reconciliation" ? existing.confirmedBalance : existing.amount)
+    : "";
+  const initialDate = existing?.date ?? formatLocalCalendarDate(now);
+  const initialReason = existing?.type === "reconciliation" ? existing.reason : "";
+  const isDirty =
+    type !== initialType ||
+    amount !== initialAmount ||
+    date !== initialDate ||
+    notes !== (existing?.notes ?? "") ||
+    reason !== initialReason;
+
+  function requestBack() {
+    if (reviewEntry) {
+      setReviewEntry(undefined);
+      return;
+    }
+    if (confirmExit) {
+      setConfirmExit(false);
+      return;
+    }
+    if (isDirty) {
+      setConfirmExit(true);
+      return;
+    }
+    onBack();
+  }
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      requestBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [confirmExit, isDirty, reviewEntry]);
 
   if (!account || (entryId && !existing)) {
     return (
@@ -112,17 +170,59 @@ export function PpfEntryScreen({
           : { ...base, amount: parsedAmount, type };
     const validation = validatePpfLedgerEntry(entry, now);
     if (!validation.isValid) {
-      setError(validation.errors[0] ?? "Review this entry.");
+      const nextFieldErrors: Partial<Record<EntryField, string>> = {};
+      for (const message of validation.errors) {
+        const field = entryErrorFields[message];
+        if (field && !nextFieldErrors[field]) nextFieldErrors[field] = message;
+      }
+      const firstField = validation.errors
+        .map((message) => entryErrorFields[message])
+        .find((field): field is EntryField => Boolean(field));
+      setFieldErrors(nextFieldErrors);
+      setError(validation.errors.find((message) => !entryErrorFields[message]) ?? "");
+      if (firstField) {
+        requestAnimationFrame(() => {
+          const input = firstField === "amount" ? amountRef.current : firstField === "reason" ? reasonRef.current : null;
+          if (input) input.focus();
+          else {
+            const handle = findNodeHandle(dateRef.current);
+            if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+          }
+          scrollRef.current?.scrollTo({ animated: true, y: Math.max(0, (fieldY.current[firstField] ?? 0) - spacing.md) });
+        });
+      }
       return null;
     }
+    setFieldErrors({});
     return entry;
+  }
+
+  if (confirmExit) {
+    return (
+      <ScreenContainer scroll testID="ppf-entry-exit-confirmation">
+        <View style={styles.content}>
+          <ScreenHeader title="Discard entry changes?" subtitle="Your unsaved edits will be lost" />
+          <PremiumCard>
+            <AppText color="secondary">Return to the populated editor or discard these unsaved changes.</AppText>
+          </PremiumCard>
+          <View style={styles.actions}>
+            <AppButton onPress={() => setConfirmExit(false)} testID="keep-editing-ppf-entry" title="Keep editing" />
+            <AppButton onPress={onBack} testID="discard-ppf-entry" title="Discard changes" variant="destructive" />
+          </View>
+        </View>
+      </ScreenContainer>
+    );
   }
 
   if (reviewEntry) {
     return (
       <ScreenContainer scroll testID="ppf-entry-review-screen">
         <View style={styles.content}>
-          <ScreenHeader title="Review PPF entry" subtitle="Confirm before saving • local only" />
+          <ScreenHeader
+            leading={<IconButton accessibilityLabel="Back to entry editor" icon="arrow-back" onPress={() => setReviewEntry(undefined)} />}
+            title="Review PPF entry"
+            subtitle="Confirm before saving • local only"
+          />
           <PremiumCard>
             <SectionHeader title={entryLabel(reviewEntry.type)} />
             <ReviewRow label="Account" value={account.nickname} />
@@ -151,7 +251,7 @@ export function PpfEntryScreen({
               testID="save-ppf-entry"
               title="Save entry"
             />
-            <AppButton onPress={() => setReviewEntry(undefined)} title="Edit entry" variant="secondary" />
+            <AppButton onPress={() => setReviewEntry(undefined)} testID="edit-ppf-entry" title="Edit entry" variant="secondary" />
           </View>
         </View>
       </ScreenContainer>
@@ -160,10 +260,10 @@ export function PpfEntryScreen({
 
   return (
     <KeyboardAvoidingView behavior="height" style={styles.flex}>
-      <ScreenContainer scroll testID="ppf-entry-screen">
+      <ScreenContainer scroll scrollRef={scrollRef} testID="ppf-entry-screen">
         <View style={styles.content}>
         <ScreenHeader
-          leading={<IconButton accessibilityLabel="Back to PPF account" icon="arrow-back" onPress={onBack} />}
+          leading={<IconButton accessibilityLabel="Back to PPF account" icon="arrow-back" onPress={requestBack} />}
           subtitle={`${account.nickname} • confirmed ledger`}
           title={existing ? "Review PPF entry" : "Add PPF entry"}
         />
@@ -174,6 +274,7 @@ export function PpfEntryScreen({
             onChange={(value) => {
               setType(value);
               setError("");
+              setFieldErrors({});
             }}
             options={[
               { label: "Contribution", value: "contribution" },
@@ -184,16 +285,24 @@ export function PpfEntryScreen({
             testIDPrefix="ppf-entry-type"
             value={type}
           />
-          <FormTextField
-            keyboardType="decimal-pad"
-            label={type === "reconciliation" ? "Confirmed balance (INR)" : "Amount (INR)"}
-            onChangeText={setAmount}
-            testID="ppf-entry-amount"
-            value={amount}
-          />
-          <DatePickerField label={type === "reconciliation" ? "Balance confirmed on" : "Entry date"} onChange={setDate} testID="ppf-entry-date" value={date} />
+          <View onLayout={(event) => { fieldY.current.amount = event.nativeEvent.layout.y; }}>
+            <FormTextField
+              error={fieldErrors.amount}
+              inputRef={amountRef}
+              keyboardType="decimal-pad"
+              label={type === "reconciliation" ? "Confirmed balance (INR)" : "Amount (INR)"}
+              onChangeText={(value) => { setAmount(value); setFieldErrors((current) => ({ ...current, amount: undefined })); }}
+              testID="ppf-entry-amount"
+              value={amount}
+            />
+          </View>
+          <View onLayout={(event) => { fieldY.current.date = event.nativeEvent.layout.y; }}>
+            <DatePickerField error={fieldErrors.date} fieldRef={dateRef} label={type === "reconciliation" ? "Balance confirmed on" : "Entry date"} onChange={(value) => { setDate(value); setFieldErrors((current) => ({ ...current, date: undefined })); }} testID="ppf-entry-date" value={date} />
+          </View>
           {type === "reconciliation" ? (
-            <FormTextField label="Why are you correcting the balance?" multiline onChangeText={setReason} placeholder="Matched India Post passbook" testID="ppf-entry-reason" value={reason} />
+            <View onLayout={(event) => { fieldY.current.reason = event.nativeEvent.layout.y; }}>
+              <FormTextField error={fieldErrors.reason} inputRef={reasonRef} label="Why are you correcting the balance?" multiline onChangeText={(value) => { setReason(value); setFieldErrors((current) => ({ ...current, reason: undefined })); }} placeholder="Matched India Post passbook" testID="ppf-entry-reason" value={reason} />
+            </View>
           ) : null}
           <Pressable
             accessibilityRole="button"
@@ -252,7 +361,7 @@ export function PpfEntryScreen({
             testID="review-ppf-entry"
             title="Review entry"
           />
-          <AppButton onPress={onBack} title="Cancel" variant="secondary" />
+          <AppButton onPress={requestBack} title="Cancel" variant="secondary" />
         </View>
         {existing ? (
           confirmDelete ? (
