@@ -178,6 +178,56 @@ describe("TradeHistoryScreen", () => {
     expect(store.getState().trades).toHaveLength(2);
   });
 
+  it("announces distinct same-date transactions with identity, detail, and selection state", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const secondAsset: Asset = {
+      ...asset,
+      id: "asset-reliance",
+      name: "Reliance Industries",
+      symbol: "RELIANCE",
+      ticker: "RELIANCE.NS",
+    };
+    const sameDateTrade: Trade = {
+      ...trade,
+      assetId: secondAsset.id,
+      id: "trade-reliance",
+      pricePerUnit: 2500,
+      quantity: 3,
+      totalValue: 7500,
+    };
+    store.getState().addAsset(asset);
+    store.getState().addAsset(secondAsset);
+    store.getState().addTrade(trade);
+    store.getState().addTrade(sameDateTrade);
+    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    expect(screen.getByTestId("transaction-selection-count").props.accessibilityLiveRegion).toBe("polite");
+    expect(screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityLabel).toMatch(
+      /Not selected, HDFC Bank, Purchase, .*2 units at ₹100\.00, total ₹200\.00, transaction 1 of 2/u,
+    );
+    expect(screen.getByTestId(`review-trade-${sameDateTrade.id}`).props.accessibilityLabel).toMatch(
+      /Not selected, Reliance Industries, Purchase, .*3 units at ₹2,500\.00, total ₹7,500\.00, transaction 2 of 2/u,
+    );
+
+    fireEvent.press(screen.getByTestId(`review-trade-${sameDateTrade.id}`));
+    expect(screen.getByTestId(`review-trade-${sameDateTrade.id}`).props.accessibilityLabel).toMatch(/^Selected,/u);
+    expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("1 selected");
+  });
+
+  it("keeps financial detail out of accessible selection labels while values are masked", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    const label = screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityLabel as string;
+    expect(label).toMatch(/Not selected, HDFC Bank, Purchase, .*values masked, transaction 1 of 1/u);
+    expect(label).not.toMatch(/₹|2 units|100|200/u);
+  });
+
   it("blocks a partial deletion that would leave a negative position", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const sale: Trade = { ...trade, date: "2026-05-10", id: "sale", type: "sell" };
