@@ -46,6 +46,13 @@ export function formatLocalCalendarDate(date: Date) {
   ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+export function formatMonthYear(date: Date) {
+  return date.toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function calendarDateToLocalDate(value: string) {
   const parsed = parseCalendarDate(value);
 

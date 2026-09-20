@@ -4,6 +4,7 @@ import type { StoreApi } from "zustand/vanilla";
 import {
   calculateAllocation,
   calculateCashBalance,
+  calculateCashMonthlyMetrics,
   calculateConsolidatedHoldingRows,
   calculateHoldings,
   calculateInstrumentAllocation,
@@ -70,8 +71,9 @@ type UseDashboardInput = {
 export type DashboardMonthlyMetrics = {
   cashAdded: number;
   cashChange: number;
+  incomeStatus: "available" | "unavailable";
   investment: number;
-  savingsRate: number | null;
+  investmentRate: number | null;
 };
 
 export type DashboardState = {
@@ -190,14 +192,23 @@ function calculateMonthlyMetrics(
       .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
   );
   const totalInvestment = investment.plus(ppfInvestment);
+  const cashMetrics = calculateCashMonthlyMetrics({
+    cashEntries: state.cashEntries,
+    now,
+    openingPositions: state.openingPositions,
+    trades: state.trades,
+  });
 
   return {
     cashAdded: normalizeMoney(cashAdded),
     cashChange: normalizeMoney(cashAdded.minus(cashWithdrawn)),
+    incomeStatus: cashMetrics.incomeStatus,
     investment: normalizeMoney(totalInvestment),
-    savingsRate:
-      cashAdded.greaterThan(0)
-        ? normalizePercentage(totalInvestment.dividedBy(cashAdded).times(100))
+    investmentRate:
+      cashMetrics.incomeStatus === "available"
+        ? normalizePercentage(
+            totalInvestment.dividedBy(cashMetrics.income).times(100),
+          )
         : null,
   };
 }

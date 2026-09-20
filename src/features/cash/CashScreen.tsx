@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard, KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -15,7 +15,7 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
@@ -32,6 +32,10 @@ import { useCash } from "./useCash";
 type CashScreenProps = {
   now?: Date;
   onCorrectEntry?: (entryId: string) => void;
+  onIncomeEntryClosed?: () => void;
+  onIncomeEntryOpened?: () => void;
+  onIncomeRecorded?: () => void;
+  openIncomeEntry?: boolean;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -72,13 +76,17 @@ function getCashEntryModeCopy(mode: CashEntryMode) {
 
 function formatInvestmentRate(investmentRate: number | null) {
   return investmentRate === null
-    ? "--"
+    ? "Unavailable"
     : `${investmentRate.toFixed(2)}%`;
 }
 
 export function CashScreen({
   now = new Date(),
   onCorrectEntry,
+  onIncomeEntryClosed,
+  onIncomeEntryOpened,
+  onIncomeRecorded,
+  openIncomeEntry = false,
   store = getPortfolioStore(),
 }: CashScreenProps) {
   const {
@@ -94,6 +102,7 @@ export function CashScreen({
   const [mode, setMode] = useState<CashEntryMode | null>(null);
   const [isEntryVisible, setIsEntryVisible] = useState(false);
   const [pendingMode, setPendingMode] = useState<CashEntryMode | null>(null);
+  const [pendingPurpose, setPendingPurpose] = useState<AdditionPurpose>();
   const [additionPurpose, setAdditionPurpose] =
     useState<AdditionPurpose>("capitalContribution");
   const [amount, setAmount] = useState("");
@@ -107,10 +116,19 @@ export function CashScreen({
   const entryIdRef = useRef(createId("cash"));
   const modeCopy = mode ? getCashEntryModeCopy(mode) : null;
 
+  useEffect(() => {
+    if (!openIncomeEntry) return;
+    openEntry("addition", "income");
+    onIncomeEntryOpened?.();
+  }, [openIncomeEntry]);
+
   function closeEntry() {
     if (isSavingRef.current) return;
     Keyboard.dismiss();
     setIsEntryVisible(false);
+    if (mode === "addition" && additionPurpose === "income") {
+      onIncomeEntryClosed?.();
+    }
   }
 
   function requestEntryClose() {
@@ -121,13 +139,27 @@ export function CashScreen({
     closeEntry();
   }
 
-  function openEntry(nextMode: CashEntryMode) {
+  function openEntry(
+    nextMode: CashEntryMode,
+    nextPurpose?: AdditionPurpose,
+  ) {
     if (isSavingRef.current) return;
     const hasDraft = Boolean(amount || label || notes ||
       date !== formatLocalCalendarDate(now) || additionPurpose !== "capitalContribution");
-    if (mode && mode !== nextMode && hasDraft) {
+    if (
+      mode &&
+      hasDraft &&
+      (mode !== nextMode ||
+        (nextMode === "addition" &&
+          nextPurpose !== undefined &&
+          additionPurpose !== nextPurpose))
+    ) {
       setPendingMode(nextMode);
+      setPendingPurpose(nextPurpose);
       return;
+    }
+    if (nextMode === "addition" && nextPurpose !== undefined) {
+      setAdditionPurpose(nextPurpose);
     }
     setMode(nextMode);
     setIsEntryVisible(true);
@@ -136,11 +168,20 @@ export function CashScreen({
   function discardAndSwitch() {
     if (!pendingMode || isSavingRef.current) return;
     resetForm();
-    setAdditionPurpose("capitalContribution");
+    setAdditionPurpose(pendingPurpose ?? "capitalContribution");
     entryIdRef.current = createId("cash");
     setMode(pendingMode);
     setPendingMode(null);
+    setPendingPurpose(undefined);
     setIsEntryVisible(true);
+  }
+
+  function keepDraft() {
+    if (pendingMode === "addition" && pendingPurpose === "income") {
+      onIncomeEntryClosed?.();
+    }
+    setPendingMode(null);
+    setPendingPurpose(undefined);
   }
 
   function resetForm() {
@@ -189,6 +230,9 @@ export function CashScreen({
       Keyboard.dismiss();
       setIsEntryVisible(false);
       setMode(null);
+      if (mode === "addition" && additionPurpose === "income") {
+        onIncomeRecorded?.();
+      }
     } catch {
       setErrors({
         save: "This cash entry could not be saved safely. Review it and try again.",
@@ -227,12 +271,13 @@ export function CashScreen({
           ))}
         </View>
 
+        <SectionHeader title={`${formatMonthYear(now)} activity`} />
         <MetricGroup
           metrics={[
             {
-              label: "Added",
+              label: "Contributions",
               masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.added),
+              value: formatCompactINR(monthlyMetrics.contributions),
             },
             {
               label: "Invested",
@@ -245,7 +290,7 @@ export function CashScreen({
               value:
                 monthlyMetrics.incomeStatus === "available"
                   ? formatCompactINR(monthlyMetrics.income)
-                  : "--",
+                  : "Unavailable",
             },
             {
               label: "Investment rate",
@@ -254,11 +299,21 @@ export function CashScreen({
           ]}
         />
         {monthlyMetrics.incomeStatus !== "available" ? (
-          <AppText color="secondary" variant="caption" testID="cash-income-explanation">
-            {monthlyMetrics.income > 0
-              ? "Classify older deposits as income or contributions to calculate this month's income and investment rate."
-              : "Record income to calculate this month's investment rate. Contributions are not income."}
-          </AppText>
+          <View style={styles.incomeRecovery} testID="cash-income-explanation">
+            <AppText color="secondary" style={styles.incomeRecoveryCopy} variant="caption">
+              {monthlyMetrics.income > 0
+                ? "Review unclassified deposits to calculate the investment rate."
+                : "Income is separate from contributions."}
+            </AppText>
+            {monthlyMetrics.income === 0 ? (
+              <AppButton
+                onPress={() => openEntry("addition", "income")}
+                testID="cash-record-income"
+                title="Record income"
+                variant="ghost"
+              />
+            ) : null}
+          </View>
         ) : null}
 
         {displayMode === "standard" && monthlyMetrics.invested > 0 ? (
@@ -447,12 +502,22 @@ export function CashScreen({
         </ScreenContainer>
       </KeyboardAvoidingView>
     </Modal>
-    <Modal animationType="none" transparent visible={pendingMode !== null} onRequestClose={() => setPendingMode(null)}>
+    <Modal
+      animationType="none"
+      onRequestClose={keepDraft}
+      transparent
+      visible={pendingMode !== null}
+    >
       <View style={styles.confirmBackdrop}>
         <PremiumCard>
           <AppText variant="title" weight="bold">Discard this draft?</AppText>
           <AppText color="secondary">Start a new {pendingMode === "addition" ? "deposit" : "withdrawal"} instead? Your unsaved {mode === "addition" ? "deposit" : "withdrawal"} will be removed.</AppText>
-          <AppButton onPress={() => setPendingMode(null)} title="Keep draft" testID="cash-keep-draft-button" variant="secondary" />
+          <AppButton
+            onPress={keepDraft}
+            testID="cash-keep-draft-button"
+            title="Keep draft"
+            variant="secondary"
+          />
           <AppButton onPress={discardAndSwitch} title="Discard and continue" testID="cash-discard-draft-button" variant="destructive" />
         </PremiumCard>
       </View>
@@ -511,6 +576,17 @@ const styles = StyleSheet.create({
   },
   history: {
     gap: spacing.cardGap,
+  },
+  incomeRecovery: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    justifyContent: "space-between",
+  },
+  incomeRecoveryCopy: {
+    flex: 1,
+    minWidth: 180,
   },
   monthlyInsight: {
     alignItems: "center",
