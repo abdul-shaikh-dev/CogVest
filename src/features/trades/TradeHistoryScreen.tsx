@@ -133,7 +133,9 @@ export function TradeHistoryScreen({
           />
         ) : (
           <PremiumCard style={styles.historyCard}>
-            <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : "Transaction history"} />
+            <View accessibilityLiveRegion={isSelecting ? "polite" : "none"} testID={isSelecting ? "transaction-selection-count" : undefined}>
+              <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : "Transaction history"} />
+            </View>
             {isSelecting ? (
               <View style={styles.selectionActions}>
                 <AppButton
@@ -162,10 +164,11 @@ export function TradeHistoryScreen({
                 variant="secondary"
               />
             )}
-            {trades.map((trade) => (
+            {trades.map((trade, index) => (
               (() => {
                 const isManual = isManualTrade(trade);
-                const currency = snapshot.assets.find((item) => item.id === trade.assetId)?.currency;
+                const tradeAsset = snapshot.assets.find((item) => item.id === trade.assetId);
+                const currency = tradeAsset?.currency;
                 const title = isManual
                   ? trade.type === "buy" ? "Purchase" : "Sale"
                   : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
@@ -184,11 +187,20 @@ export function TradeHistoryScreen({
                     ? "\nRealized gain unavailable: incomplete or unsupported history"
                     : `\nRealized gain ${gain >= 0 ? "+" : ""}${formatCurrency(gain, currency)} · after fees`;
                 }
+                const selectionDetails = snapshot.preferences.maskWealthValues
+                  ? "values masked"
+                  : isManual
+                    ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}, total ${currency ? formatCurrency(trade.totalValue, currency) : "unavailable"}`
+                    : `${trade.quantity} units, ${
+                        trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
+                          ? `acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : `${trade.acquisitionCostPerUnit} per unit`}`
+                          : "no execution price"
+                      }`;
 
                 return (
                   <GroupedListRow
                     accessibilityLabel={isSelecting
-                      ? `${selectedTradeIds.has(trade.id) ? "Selected" : "Not selected"}, ${title}, ${formatDate(trade.date)}`
+                      ? `${selectedTradeIds.has(trade.id) ? "Selected" : "Not selected"}, ${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}, transaction ${index + 1} of ${trades.length}`
                       : undefined}
                     accessibilityRole={isSelecting ? "checkbox" : "button"}
                     accessibilityState={isSelecting ? { checked: selectedTradeIds.has(trade.id) } : undefined}
@@ -204,7 +216,7 @@ export function TradeHistoryScreen({
                     key={trade.id}
                     meta={description}
                     selected={isSelecting && selectedTradeIds.has(trade.id)}
-                    title={`${title}${asset ? "" : ` · ${snapshot.assets.find((item) => item.id === trade.assetId)?.name ?? "Unknown holding"}`}`}
+                    title={`${title}${asset ? "" : ` · ${tradeAsset?.name ?? "Unknown holding"}`}`}
                     value={
                       snapshot.preferences.maskWealthValues || !isManual || !currency
                         ? undefined
