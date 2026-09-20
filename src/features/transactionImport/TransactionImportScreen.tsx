@@ -64,6 +64,8 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const [showMatched, setShowMatched] = useState(false);
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [showHoldings, setShowHoldings] = useState(false);
+  const [showSourceHelp, setShowSourceHelp] = useState(false);
+  const [showCasStatementDetails, setShowCasStatementDetails] = useState(false);
 
   useEffect(() => {
     if (!controller.casReview || controller.isResolving || !statementReviewY) return;
@@ -95,6 +97,8 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
     controller.setSourceId(sourceId);
     setExternalLinkStatus(undefined);
+    setShowSourceHelp(false);
+    setShowCasStatementDetails(false);
   }
 
   async function openSourceWebsite() {
@@ -140,6 +144,17 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     controller.parseErrors.length === 0 &&
     (controller.plan.summary.parsedRows > 0 || controller.unsupportedEvents.length > 0 || Boolean(controller.casReview));
   const sourceGuidance = importSourceGuidance[controller.sourceId];
+  const casSchemes = controller.casReview?.normalization.schemes ?? [];
+  const casReadyTransactions = casSchemes.reduce((total, scheme) => total + scheme.importableTransactions, 0);
+  const replacementHoldings = controller.mode === "fullHistory"
+    ? controller.plan.holdings.filter((holding) => holding.baseline)
+    : [];
+  const exactReplacements = replacementHoldings.filter((holding) => holding.replacementExact).length;
+
+  function selectFile() {
+    setShowCasStatementDetails(false);
+    void controller.selectFile();
+  }
 
   return (
     <KeyboardAvoidingView behavior="height" style={styles.flex} onLayout={() => {
@@ -176,18 +191,28 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
             />
           ) : null}
         </View>
+        {!hasSelectedInput ? <AppButton disabled={controller.isResolving || controller.isSaving} onPress={selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? "Choose CAS PDF" : controller.sourceId === "zerodhaTradebookEqV1" ? "Choose Tradebook CSV" : "Choose CSV"} /> : null}
         {sourceGuidance ? <View style={styles.guide} testID="transaction-import-source-guide">
-          <View style={styles.divider} />
-          <SectionHeader title={`Get your ${sourceGuidance.fileLabel}`} />
-          {sourceGuidance.steps.map((step, index) => (
-            <View key={step} style={styles.guideStep}>
-              <AppText style={styles.stepNumber} weight="bold">{index + 1}</AppText>
-              <AppText color="secondary" style={styles.guideStepText}>{step}</AppText>
-            </View>
-          ))}
-          <AppButton onPress={openSourceWebsite} testID="open-import-source-website" title="Open official instructions" variant="secondary" />
-          <AppText color="secondary" variant="caption">Instructions verified {sourceGuidance.verifiedOn}. The provider website opens outside CogVest.</AppText>
-          {externalLinkStatus ? <AppText accessibilityLiveRegion="polite" color="secondary" testID="import-source-link-fallback" variant="caption">{externalLinkStatus}</AppText> : null}
+          <AppButton
+            accessibilityState={{ expanded: showSourceHelp }}
+            onPress={() => setShowSourceHelp(!showSourceHelp)}
+            testID="transaction-import-toggle-source-guide"
+            title={showSourceHelp ? `Hide ${sourceGuidance.fileLabel} instructions` : `How to get a ${sourceGuidance.fileLabel}`}
+            variant="secondary"
+          />
+          {showSourceHelp ? <View style={styles.guide} testID="transaction-import-source-guide-details">
+            <View style={styles.divider} />
+            <SectionHeader title={`Get your ${sourceGuidance.fileLabel}`} />
+            {sourceGuidance.steps.map((step, index) => (
+              <View key={step} style={styles.guideStep}>
+                <AppText style={styles.stepNumber} weight="bold">{index + 1}</AppText>
+                <AppText color="secondary" style={styles.guideStepText}>{step}</AppText>
+              </View>
+            ))}
+            <AppButton onPress={openSourceWebsite} testID="open-import-source-website" title="Open official instructions" variant="secondary" />
+            <AppText color="secondary" variant="caption">Instructions verified {sourceGuidance.verifiedOn}. The provider website opens outside CogVest.</AppText>
+            {externalLinkStatus ? <AppText accessibilityLiveRegion="polite" color="secondary" testID="import-source-link-fallback" variant="caption">{externalLinkStatus}</AppText> : null}
+          </View> : null}
         </View> : null}
         <AppText color="secondary" variant="caption">{controller.sourceId === "camsKfinCasPdfV1" ? `PDFs can contain up to ${casPdfMaxPages} pages and ${casPdfMaxBytes / (1024 * 1024)} MB.` : `Each file can contain up to ${controller.maxRows} rows and 1 MB.`} Unsupported events stay visible and are never guessed.</AppText>
         {controller.sourceId === "cogvestCsvV1" ? <>
@@ -231,7 +256,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           </View>
           <AppButton disabled={controller.isResolving || controller.isSaving} onPress={controller.retryCasStatement} testID="read-cas-statement" title="Read statement" variant="secondary" />
         </View> : null}
-        <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={controller.selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? (controller.casSource ? "Choose another statement" : "I already have the CAS PDF") : controller.sourceId === "zerodhaTradebookEqV1" ? (controller.files.length > 0 ? "Add another Tradebook" : "I already have a Tradebook CSV") : (controller.files.length > 0 ? "Choose another CSV" : "I already have the CSV")} />
+        {hasSelectedInput ? <AppButton disabled={controller.isResolving || controller.isSaving || (controller.sourceId === "zerodhaTradebookEqV1" && controller.files.length >= controller.maxFiles)} onPress={selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? "Choose another statement" : controller.sourceId === "zerodhaTradebookEqV1" ? "Add another Tradebook" : "Choose another CSV"} /> : null}
         {controller.screenError ? <InlineError message={controller.screenError} testID="transaction-import-screen-error" /> : null}
         {controller.parseErrors.map((error, index) => <InlineError key={`${error.code}-${error.rowNumber ?? index}`} message={`${error.rowNumber ? `Row ${error.rowNumber}: ` : ""}${error.message}`} />)}
       </PremiumCard>
@@ -272,7 +297,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary">{controller.plan.errors.find((error) => error.code === "incompleteCasHistory")?.message}</AppText>
           <AppText color="secondary" variant="caption">Nothing has been imported. Do not remove statement rows to get past this check.</AppText>
         </View> : null}
-        <AppText color="secondary">Review the schemes and printed balances before importing. Folio numbers stay private and appear only as statement-local labels.</AppText>
+        <AppText color="secondary" testID="cas-statement-summary">{casSchemes.length} {casSchemes.length === 1 ? "scheme" : "schemes"} • {casReadyTransactions} {casReadyTransactions === 1 ? "transaction" : "transactions"} ready. Folio numbers stay private.</AppText>
         {(controller.casReview.normalization.administrativeNotices ?? 0) > 0 ? <AppText color="secondary" variant="caption" testID="cas-administrative-notices">{controller.casReview.normalization.administrativeNotices} administrative notices identified (address updates or nominee registration). These are not investment transactions and do not change balances.</AppText> : null}
         {controller.casReview.normalization.coverage ? <AppText color="secondary" testID="cas-statement-coverage" variant="caption">Statement coverage: {controller.casReview.normalization.coverage.from} to {controller.casReview.normalization.coverage.to}</AppText> : null}
         {(controller.casReview.normalization.preservedNotices?.length ?? 0) > 0 ? <View style={styles.card} testID="cas-preserved-notices">
@@ -280,16 +305,17 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">The statement lists a cancellation without financial values. Only the recorded transactions will be imported; no purchase or reversal is created from this notice. All printed unit balances must still reconcile.</AppText>
           {controller.casReview.normalization.preservedNotices?.map((notice) => <AppText key={`${notice.folioLabel}-${notice.rowNumber}`} color="secondary" variant="caption">{notice.folioLabel} · {notice.date} · Cancelled</AppText>)}
         </View> : null}
-        {controller.casReview.normalization.schemes.map((scheme) => <View key={`${scheme.folioLabel}-${scheme.isin}`} style={styles.holdingPreview}>
-          <View style={styles.reviewHeading}>
-            <View style={styles.fileDetails}>
-              <AppText weight="bold">{scheme.name}</AppText>
-              <AppText color="secondary" variant="caption">{scheme.folioLabel} • {scheme.registrar} • {scheme.isin}</AppText>
+        {casSchemes.length > 0 ? <AppButton accessibilityState={{ expanded: showCasStatementDetails }} onPress={() => setShowCasStatementDetails(!showCasStatementDetails)} testID="cas-toggle-scheme-details" title={showCasStatementDetails ? "Hide scheme balances" : `Review ${casSchemes.length} scheme ${casSchemes.length === 1 ? "balance" : "balances"}`} variant="secondary" /> : null}
+        {showCasStatementDetails ? <View style={styles.schemeList} testID="cas-scheme-details">{casSchemes.map((scheme) => <View key={`${scheme.folioLabel}-${scheme.isin}`} style={styles.holdingPreview}>
+            <View style={styles.reviewHeading}>
+              <View style={styles.fileDetails}>
+                <AppText weight="bold">{scheme.name}</AppText>
+                <AppText color="secondary" variant="caption">{scheme.folioLabel} • {scheme.registrar} • {scheme.isin}</AppText>
+              </View>
+              <AppText weight="bold">{scheme.importableTransactions} ready</AppText>
             </View>
-            <AppText weight="bold">{scheme.importableTransactions} ready</AppText>
-          </View>
-          <AppText color="secondary" variant="caption">Opening {scheme.openingUnits} units • Closing {scheme.closingUnits} units</AppText>
-        </View>)}
+            <AppText color="secondary" variant="caption">Opening {scheme.openingUnits} units • Closing {scheme.closingUnits} units</AppText>
+          </View>)}</View> : null}
         {controller.casReview.normalization.preservedCharges.length > 0 ? <AppText color="secondary" variant="caption" testID="cas-preserved-charges">{controller.casReview.normalization.preservedCharges.length} stamp-duty {controller.casReview.normalization.preservedCharges.length === 1 ? "entry is" : "entries are"} preserved as review evidence and not imported as a trade.</AppText> : null}
         </PremiumCard>
       </View> : null}
@@ -361,6 +387,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
         <AppText color="secondary" variant="caption">Cash Ledger is unchanged. Fees and taxes stay with imported transaction metadata; V1 does not calculate tax lots.</AppText>
+        {replacementHoldings.length > 0 ? <View style={styles.holdingPreview} testID="transaction-import-replacement-summary">
+          <AppText weight="bold">Opening balance consequences</AppText>
+          <AppText color="secondary" variant="caption">{exactReplacements} of {replacementHoldings.length} opening {replacementHoldings.length === 1 ? "balance" : "balances"} will be replaced after confirmation.{replacementHoldings.length > exactReplacements ? ` ${replacementHoldings.length - exactReplacements} will stay unchanged unless the imported history reconciles exactly.` : ""}</AppText>
+        </View> : null}
         {controller.plan.holdings.length > 0 ? <AppButton onPress={() => setShowHoldings(!showHoldings)} testID="transaction-import-show-balances" title={showHoldings ? "Hide resulting balances" : `Review ${controller.plan.holdings.length} resulting balances`} variant="secondary" /> : null}
         {controller.plan.holdings.some((holding) => holding.asset.stockSplits?.length) ? <View testID="transaction-import-split-summary" style={styles.holdingPreview}>
           <AppText weight="bold">{controller.plan.holdings.some((holding) => holding.asset.stockSplits?.some((event) => event.kind === "bonus")) ? "Share adjustments included" : "Stock splits included"}</AppText>
@@ -493,6 +523,7 @@ const styles = StyleSheet.create({
   summary: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   reviewHeading: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
+  schemeList: { gap: spacing.sm },
   statementSelection: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, padding: spacing.sm },
   stepNumber: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minWidth: 28, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, textAlign: "center" },
   unsupported: { gap: spacing.xs },
