@@ -29,14 +29,19 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
-  it("shows acquisition guidance before technical history choices and retains an offline fallback", async () => {
+  it("keeps repeat file selection immediate while retaining expandable acquisition guidance", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const openExternalUrl = jest.fn().mockRejectedValue(new Error("offline"));
     const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} openExternalUrl={openExternalUrl} pickCsvFile={jest.fn()} store={store} />);
 
     fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    expect(screen.getByTestId("select-transaction-csv")).toHaveTextContent("Choose Tradebook CSV");
+    expect(screen.queryByText("Get your Tradebook CSV")).toBeNull();
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: false });
+    fireEvent.press(screen.getByTestId("transaction-import-toggle-source-guide"));
     expect(screen.getByText("Get your Tradebook CSV")).toBeTruthy();
     expect(screen.getByText(/no more than 365 days/u)).toBeTruthy();
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: true });
     expect(screen.queryByTestId("transaction-import-mode-full-history")).toBeNull();
     fireEvent.press(screen.getByTestId("open-import-source-website"));
     await waitFor(() => expect(screen.getByTestId("import-source-link-fallback")).toHaveTextContent(/support\.zerodha\.com/u));
@@ -328,6 +333,9 @@ describe("TransactionImportScreen", () => {
     fireEvent.press(getByTestId("read-cas-statement"));
     await waitFor(() => expect(getByTestId("cas-statement-review")).toBeTruthy());
     expect(getByText("Statement selected")).toBeTruthy();
+    expect(getByTestId("cas-statement-summary")).toHaveTextContent(/1 scheme • 1 transaction ready/u);
+    expect(queryByText("Folio 1 • CAMS • INF000000001")).toBeNull();
+    fireEvent.press(getByTestId("cas-toggle-scheme-details"));
     expect(getByText("Folio 1 • CAMS • INF000000001")).toBeTruthy();
     expect(getByText("Cancellation notice retained in this review")).toBeTruthy();
     expect(getByText("Folio 1 · 2024-02-01 · Cancelled")).toBeTruthy();
@@ -660,6 +668,9 @@ describe("TransactionImportScreen", () => {
     fireEvent.press(getByTestId("transaction-import-no-external-activity"));
     await waitFor(() =>
       expect(getByTestId("confirm-transaction-import").props.accessibilityState?.disabled).not.toBe(true),
+    );
+    expect(getByTestId("transaction-import-replacement-summary")).toHaveTextContent(
+      /1 of 1 opening balance will be replaced after confirmation/u,
     );
 
     fireEvent.press(getByTestId("select-transaction-csv"));
