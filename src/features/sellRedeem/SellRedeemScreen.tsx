@@ -12,8 +12,10 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
   assetClassLabel,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
@@ -46,6 +48,10 @@ export function SellRedeemScreen({
   store = getPortfolioStore(),
 }: SellRedeemScreenProps) {
   const flow = useSellRedeemHolding({ assetId, now, store });
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    flow.maskWealthValues,
+  );
+  const maskAggregateValues = flow.maskWealthValues && !isRevealed;
   const backAction = onCancel ? (
     <IconButton
       accessibilityLabel="Back to Holdings"
@@ -121,7 +127,7 @@ export function SellRedeemScreen({
               },
               {
                 label: "Current value",
-                masked: false,
+                masked: maskAggregateValues,
                 value:
                   holding.currentValue === null
                     ? "Unavailable"
@@ -136,6 +142,12 @@ export function SellRedeemScreen({
           >
             {flow.quoteContext?.label}
           </AppText>
+          {maskAggregateValues ? (
+            <SensitiveValueReveal
+              onReveal={reveal}
+              testID="reveal-sell-redeem"
+            />
+          ) : null}
         </PremiumCard>
 
         <PremiumCard>
@@ -209,33 +221,43 @@ export function SellRedeemScreen({
 
           <View style={styles.previewPanel}>
             <SectionHeader title="Proceeds preview" />
-          {flow.preview ? (
-            <View style={styles.previewGrid}>
-              <PreviewValue label="Gross proceeds" value={formatINR(flow.preview.grossProceeds)} />
-              <PreviewValue label="Fees" value={formatINR(flow.preview.fees)} />
-              <PreviewValue
-                emphasized
-                label="Net proceeds"
-                value={formatINR(flow.preview.netProceeds)}
-              />
-              <PreviewValue
-                label="Remaining units"
-                value={formatUnits(flow.preview.remainingUnits)}
-              />
-              <PreviewValue
-                label="Remaining value"
-                value={
-                  flow.preview.remainingValue === null
-                    ? "Unavailable"
-                    : formatINR(flow.preview.remainingValue)
-                }
-              />
-            </View>
-          ) : (
-            <AppText color="secondary" variant="caption">
-              Enter a valid quantity and sell price to preview proceeds.
-            </AppText>
-          )}
+            {flow.preview ? (
+              <View style={styles.previewGrid}>
+                <PreviewValue
+                  label="Gross proceeds"
+                  masked={maskAggregateValues}
+                  value={formatINR(flow.preview.grossProceeds)}
+                />
+                <PreviewValue
+                  label="Fees"
+                  masked={maskAggregateValues}
+                  value={formatINR(flow.preview.fees)}
+                />
+                <PreviewValue
+                  emphasized
+                  label="Net proceeds"
+                  masked={maskAggregateValues}
+                  value={formatINR(flow.preview.netProceeds)}
+                />
+                <PreviewValue
+                  label="Remaining units"
+                  value={formatUnits(flow.preview.remainingUnits)}
+                />
+                <PreviewValue
+                  label="Remaining value"
+                  masked={maskAggregateValues}
+                  value={
+                    flow.preview.remainingValue === null
+                      ? "Unavailable"
+                      : formatINR(flow.preview.remainingValue)
+                  }
+                />
+              </View>
+            ) : (
+              <AppText color="secondary" variant="caption">
+                Enter a valid quantity and sell price to preview proceeds.
+              </AppText>
+            )}
           </View>
         </PremiumCard>
 
@@ -246,9 +268,16 @@ export function SellRedeemScreen({
             withdrawal separately if the money leaves the portfolio.
           </AppText>
           {flow.preview ? (
-            <AppText testID="sell-redeem-cash-link-summary" weight="bold">
-              {formatINR(flow.preview.netProceeds)} will be added to Cash Ledger
-            </AppText>
+            <View testID="sell-redeem-cash-link-summary">
+              <AppText color="secondary" variant="caption">
+                Net proceeds added to Cash Ledger
+              </AppText>
+              <MaskedValue
+                masked={maskAggregateValues}
+                value={formatINR(flow.preview.netProceeds)}
+                weight="bold"
+              />
+            </View>
           ) : null}
         </PremiumCard>
 
@@ -279,10 +308,12 @@ export function SellRedeemScreen({
 function PreviewValue({
   emphasized,
   label,
+  masked = false,
   value,
 }: {
   emphasized?: boolean;
   label: string;
+  masked?: boolean;
   value: string;
 }) {
   return (
@@ -291,7 +322,7 @@ function PreviewValue({
         {label}
       </AppText>
       <MaskedValue
-        masked={false}
+        masked={masked}
         value={value}
         variant={emphasized ? "title" : "body"}
         weight="bold"

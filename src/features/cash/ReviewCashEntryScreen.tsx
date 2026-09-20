@@ -9,7 +9,9 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
@@ -92,6 +94,9 @@ export function ReviewCashEntryScreen({
   const [errors, setErrors] = useState<CashEntryFormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    snapshot.preferences.maskWealthValues,
+  );
   const actionInFlightRef = useRef(false);
 
   if (!entry) {
@@ -127,6 +132,30 @@ export function ReviewCashEntryScreen({
             title="Back to Cash Ledger"
             variant="secondary"
             onPress={onCancel}
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!isRevealed) {
+    return (
+      <ScreenContainer testID="review-cash-entry-screen">
+        <View style={styles.content}>
+          <ScreenHeader
+            title="Review Cash Entry"
+            subtitle={`${entry.label} · values masked`}
+          />
+          <PremiumCard>
+            <SensitiveValueReveal
+              onReveal={reveal}
+              testID="reveal-cash-entry"
+            />
+          </PremiumCard>
+          <AppButton
+            onPress={onCancel}
+            title="Back to Cash Ledger"
+            variant="secondary"
           />
         </View>
       </ScreenContainer>

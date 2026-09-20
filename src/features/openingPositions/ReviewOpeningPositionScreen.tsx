@@ -9,7 +9,9 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
@@ -100,6 +102,9 @@ export function ReviewOpeningPositionScreen({
   const [errors, setErrors] = useState<CorrectionErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    snapshot.preferences.maskWealthValues,
+  );
   const actionInFlightRef = useRef(false);
 
   if (!currentPosition || !initialPosition || !asset) {
@@ -117,6 +122,30 @@ export function ReviewOpeningPositionScreen({
 
   const position = initialPosition;
   const positionAsset = asset;
+
+  if (!isRevealed) {
+    return (
+      <ScreenContainer testID="review-opening-position-screen">
+        <View style={styles.content}>
+          <ScreenHeader
+            title="Review Opening Position"
+            subtitle={`${positionAsset.name} · values masked`}
+          />
+          <PremiumCard>
+            <SensitiveValueReveal
+              onReveal={reveal}
+              testID="reveal-opening-position"
+            />
+          </PremiumCard>
+          <AppButton
+            onPress={onCancel}
+            title="Back to Holdings"
+            variant="secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   function validate() {
     const values: OpeningPositionFormValues = {

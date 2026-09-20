@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -9,7 +9,9 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
@@ -68,18 +70,10 @@ export function ReviewTradeScreen({
   const [errors, setErrors] = useState<Errors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(
-    () => !snapshot.preferences.maskWealthValues,
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    snapshot.preferences.maskWealthValues,
   );
-  const wasMaskingRef = useRef(snapshot.preferences.maskWealthValues);
   const actionInFlightRef = useRef(false);
-
-  useLayoutEffect(() => {
-    if (snapshot.preferences.maskWealthValues && !wasMaskingRef.current) {
-      setIsRevealed(false);
-    }
-    wasMaskingRef.current = snapshot.preferences.maskWealthValues;
-  }, [snapshot.preferences.maskWealthValues]);
 
   if (!currentTrade || !trade || !asset) {
     return (
@@ -103,14 +97,9 @@ export function ReviewTradeScreen({
             subtitle={`${asset.name} · values masked`}
           />
           <PremiumCard>
-            <SectionHeader title="Reveal to review" />
-            <AppText color="secondary">
-              Sensitive transaction values are hidden by your masking setting.
-            </AppText>
-            <AppButton
-              title="Reveal transaction"
-              testID="reveal-trade-button"
-              onPress={() => setIsRevealed(true)}
+            <SensitiveValueReveal
+              onReveal={reveal}
+              testID="reveal-trade"
             />
           </PremiumCard>
           <AppButton title="Back to Holdings" variant="secondary" onPress={onCancel} />

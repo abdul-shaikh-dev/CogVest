@@ -21,8 +21,10 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
   getPressedStateStyle,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import {
   DatePickerField,
@@ -120,6 +122,9 @@ export function PpfAccountScreen({
   );
   const [isEditing, setIsEditing] = useState(!existing);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    snapshot.preferences.maskWealthValues,
+  );
 
   if (accountId && !existing) {
     return (
@@ -135,6 +140,30 @@ export function PpfAccountScreen({
   }
 
   if (isEditing) {
+    if (existing && !isRevealed) {
+      return (
+        <ScreenContainer testID="ppf-account-form-screen">
+          <View style={styles.content}>
+            <ScreenHeader
+              title="Edit PPF account"
+              subtitle={`${existing.nickname} · values masked`}
+            />
+            <PremiumCard>
+              <SensitiveValueReveal
+                onReveal={reveal}
+                testID="reveal-ppf-account"
+              />
+            </PremiumCard>
+            <AppButton
+              onPress={() => setIsEditing(false)}
+              title="Back"
+              variant="secondary"
+            />
+          </View>
+        </ScreenContainer>
+      );
+    }
+
     return (
       <PpfAccountForm
         key={existing?.id ?? "new"}
