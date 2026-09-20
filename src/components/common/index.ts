@@ -27,3 +27,7 @@ export {
   minimumTouchTargetStyle,
 } from "./pressableStyles";
 export { ScreenContainer } from "./ScreenContainer";
+export {
+  SensitiveValueReveal,
+  useSensitiveValueReveal,
+} from "./SensitiveValueReveal";

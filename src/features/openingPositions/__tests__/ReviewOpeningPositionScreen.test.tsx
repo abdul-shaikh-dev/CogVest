@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { ReviewOpeningPositionScreen } from "@/src/features/openingPositions";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -48,6 +48,35 @@ function createStore() {
 }
 
 describe("ReviewOpeningPositionScreen", () => {
+  it("requires reveal before exposing saved aggregate values", async () => {
+    const { store } = createStore();
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = render(
+      <ReviewOpeningPositionScreen
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        openingPositionId={openingPosition.id}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Reveal to review")).toBeTruthy();
+    expect(screen.queryByTestId("opening-correction-average-cost-input")).toBeNull();
+    expect(screen.queryByText("1450")).toBeNull();
+    fireEvent.press(screen.getByTestId("reveal-opening-position-button"));
+    expect(screen.getByTestId("opening-correction-average-cost-input")).toHaveProp(
+      "value",
+      "1450",
+    );
+
+    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await waitFor(() => {
+      expect(screen.getByText("Reveal to review")).toBeTruthy();
+      expect(screen.queryByTestId("opening-correction-average-cost-input")).toBeNull();
+    });
+  });
+
   it("corrects the source record once after rapid repeated save presses", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();

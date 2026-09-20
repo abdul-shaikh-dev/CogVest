@@ -55,6 +55,7 @@ export type UseSellRedeemHoldingResult = {
   fees: string;
   holding: Holding | null;
   isSaving: boolean;
+  maskWealthValues: boolean;
   notes: string;
   preview: SellRedeemPreview | null;
   quoteContext: QuoteContext | null;
@@ -378,6 +379,7 @@ export function useSellRedeemHolding({
     fees,
     holding,
     isSaving,
+    maskWealthValues: snapshot.preferences.maskWealthValues,
     notes,
     preview,
     quoteContext,

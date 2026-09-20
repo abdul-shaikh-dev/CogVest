@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { ScrollView, TextInput } from "react-native";
 
 import { PpfAccountScreen } from "@/src/features/ppf";
@@ -196,6 +196,35 @@ describe("PpfAccountScreen", () => {
 
     expect(getByText("Not available yet")).toBeTruthy();
     expect(queryByText("₹1,00,000.00")).toBeNull();
+  });
+
+  it("requires reveal before editing a saved PPF baseline", async () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount(account);
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId("edit-ppf-account"));
+    expect(screen.getByText("Reveal to review")).toBeTruthy();
+    expect(screen.queryByTestId("ppf-balance-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("reveal-ppf-account-button"));
+    expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "100000");
+
+    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await waitFor(() => {
+      expect(screen.getByText("Reveal to review")).toBeTruthy();
+      expect(screen.queryByTestId("ppf-balance-input")).toBeNull();
+    });
   });
 
   it("renders same-day ledger entries in the deterministic replay order", () => {

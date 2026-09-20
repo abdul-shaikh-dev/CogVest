@@ -1,9 +1,9 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { PpfEntryScreen } from "@/src/features/ppf";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import type { PpfAccount } from "@/src/types";
+import type { PpfAccount, PpfLedgerEntry } from "@/src/types";
 
 const now = new Date("2026-08-15T10:00:00.000Z");
 const account: PpfAccount = {
@@ -18,6 +18,61 @@ const account: PpfAccount = {
 };
 
 describe("PpfEntryScreen", () => {
+  it("keeps a new blank entry usable while masking is enabled", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount(account);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = render(
+      <PpfEntryScreen
+        accountId={account.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByTestId("ppf-entry-amount")).toBeTruthy();
+    expect(screen.queryByTestId("reveal-ppf-entry")).toBeNull();
+  });
+
+  it("requires reveal for an existing entry and resets when masking returns", async () => {
+    const entry: PpfLedgerEntry = {
+      accountId: account.id,
+      amount: 500,
+      date: "2026-08-01",
+      id: "ppf-entry-1",
+      recordedAt: "2026-08-01T10:00:00.000Z",
+      type: "contribution",
+    };
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount(account);
+    store.getState().addPpfLedgerEntry(entry);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = render(
+      <PpfEntryScreen
+        accountId={account.id}
+        entryId={entry.id}
+        now={now}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Reveal to review")).toBeTruthy();
+    expect(screen.queryByTestId("ppf-entry-amount")).toBeNull();
+    fireEvent.press(screen.getByTestId("reveal-ppf-entry-button"));
+    expect(screen.getByTestId("ppf-entry-amount")).toHaveProp("value", "500");
+
+    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await waitFor(() => {
+      expect(screen.getByText("Reveal to review")).toBeTruthy();
+      expect(screen.queryByTestId("ppf-entry-amount")).toBeNull();
+    });
+  });
+
   it("keeps optional notes and contribution guidance behind retained disclosures", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);

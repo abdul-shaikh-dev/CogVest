@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { ReviewCashEntryScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -164,6 +164,37 @@ describe("ReviewCashEntryScreen", () => {
     ).toBeTruthy();
     expect(queryByTestId("save-cash-correction-button")).toBeNull();
     expect(queryByTestId("delete-cash-entry-button")).toBeNull();
+  });
+
+  it("requires reveal for a saved amount and resets when masking returns", async () => {
+    const { store } = createStore();
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = render(
+      <ReviewCashEntryScreen
+        entryId={manualEntry.id}
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("Reveal to review")).toBeTruthy();
+    expect(screen.queryByTestId("cash-correction-amount-input")).toBeNull();
+    expect(screen.queryByText("1000")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("reveal-cash-entry-button"));
+    expect(screen.getByTestId("cash-correction-amount-input")).toHaveProp(
+      "value",
+      "1000",
+    );
+
+    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Reveal to review")).toBeTruthy();
+      expect(screen.queryByTestId("cash-correction-amount-input")).toBeNull();
+    });
   });
 
   it("handles a stale entry ID safely", () => {

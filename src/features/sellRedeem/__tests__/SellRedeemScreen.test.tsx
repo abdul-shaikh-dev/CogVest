@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { SellRedeemScreen } from "@/src/features/sellRedeem";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -106,7 +106,7 @@ describe("SellRedeemScreen", () => {
   it("updates preview and saves the linked proceeds", async () => {
     const store = seedStore();
     const onSaved = jest.fn();
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getAllByText, getByLabelText, getByTestId, getByText } = render(
       <SellRedeemScreen assetId={asset.id} store={store} onSaved={onSaved} />,
     );
 
@@ -117,7 +117,7 @@ describe("SellRedeemScreen", () => {
 
     await waitFor(() => {
       expect(getByText("Net proceeds")).toBeTruthy();
-      expect(getByText("₹8,400.00")).toBeTruthy();
+      expect(getAllByText("₹8,400.00")).toHaveLength(2);
     });
 
     fireEvent.press(getByTestId("sell-redeem-save-button"));
@@ -138,7 +138,7 @@ describe("SellRedeemScreen", () => {
 
   it("shows derived linked proceeds without editable cash fields", () => {
     const store = seedStore();
-    const { getByLabelText, getByTestId, queryByTestId } = render(
+    const { getAllByText, getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
@@ -146,9 +146,8 @@ describe("SellRedeemScreen", () => {
     fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
     selectDate(getByTestId, "2026-05-20");
 
-    expect(getByTestId("sell-redeem-cash-link-summary")).toHaveTextContent(
-      "₹1,700.00 will be added to Cash Ledger",
-    );
+    expect(getByText("Net proceeds added to Cash Ledger")).toBeTruthy();
+    expect(getAllByText("₹1,700.00")).toHaveLength(3);
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
     expect(queryByTestId("sell-redeem-link-cash-toggle")).toBeNull();
   });
@@ -196,5 +195,34 @@ describe("SellRedeemScreen", () => {
     expect(screen.getByTestId("sell-redeem-price-guidance")).toHaveTextContent(
       /Enter the executed price from your broker record/,
     );
+  });
+
+  it("masks aggregate values until reveal while keeping units and prices visible", async () => {
+    const store = seedStore();
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = render(<SellRedeemScreen assetId={asset.id} store={store} />);
+
+    expect(screen.getByText("25")).toBeTruthy();
+    expect(screen.getByText("₹1.7K")).toBeTruthy();
+    expect(screen.getAllByLabelText("Amount hidden").length).toBeGreaterThan(0);
+    expect(screen.queryByText("₹41.95K")).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText("Quantity"), "5");
+    fireEvent.changeText(screen.getByLabelText("Actual execution price"), "1700");
+    fireEvent.changeText(screen.getByLabelText("Fees"), "100");
+    selectDate(screen.getByTestId, "2026-05-20");
+    expect(screen.queryByText("₹8,400.00")).toBeNull();
+    expect(screen.getByText("Remaining units")).toBeTruthy();
+    expect(screen.getByText("20")).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("reveal-sell-redeem-button"));
+    expect(screen.getAllByText("₹8,400.00")).toHaveLength(2);
+
+    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await waitFor(() => {
+      expect(screen.queryByText("₹8,400.00")).toBeNull();
+      expect(screen.getByTestId("reveal-sell-redeem-button")).toBeTruthy();
+    });
   });
 });

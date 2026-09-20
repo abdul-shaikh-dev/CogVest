@@ -170,7 +170,7 @@ describe("ReviewTradeScreen", () => {
 
   it("hides an open correction form when masking is enabled", async () => {
     const { store } = createStore();
-    const { getByText, queryByTestId } = render(
+    const { getByText, getByTestId, queryByTestId } = render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -186,6 +186,13 @@ describe("ReviewTradeScreen", () => {
 
     await waitFor(() => expect(getByText("Reveal to review")).toBeTruthy());
     expect(queryByTestId("trade-correction-quantity-input")).toBeNull();
+
+    act(() => {
+      store.getState().updatePreferences({ maskWealthValues: false });
+    });
+    await waitFor(() => {
+      expect(getByTestId("trade-correction-quantity-input")).toBeTruthy();
+    });
   });
 
   it("describes an unlinked legacy transaction honestly", () => {

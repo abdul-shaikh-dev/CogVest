@@ -15,7 +15,9 @@ import {
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  SensitiveValueReveal,
   SectionHeader,
+  useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
@@ -61,11 +63,34 @@ export function PpfEntryScreen({
   const [reviewEntry, setReviewEntry] = useState<PpfLedgerEntry>();
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { isRevealed, reveal } = useSensitiveValueReveal(
+    snapshot.preferences.maskWealthValues,
+  );
 
   if (!account || (entryId && !existing)) {
     return (
       <ScreenContainer testID="ppf-entry-screen">
         <EmptyState actionLabel="Back" message="The account or entry is no longer available." onAction={onBack} title="PPF entry unavailable" />
+      </ScreenContainer>
+    );
+  }
+
+  if (existing && !isRevealed) {
+    return (
+      <ScreenContainer testID="ppf-entry-screen">
+        <View style={styles.content}>
+          <ScreenHeader
+            title="Review PPF entry"
+            subtitle={`${account.nickname} · values masked`}
+          />
+          <PremiumCard>
+            <SensitiveValueReveal
+              onReveal={reveal}
+              testID="reveal-ppf-entry"
+            />
+          </PremiumCard>
+          <AppButton onPress={onBack} title="Back" variant="secondary" />
+        </View>
       </ScreenContainer>
     );
   }
