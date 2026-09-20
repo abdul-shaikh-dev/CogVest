@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
 
 import { ReviewAssetScreen } from "@/src/features/assets";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -28,6 +28,61 @@ function createStore() {
 }
 
 describe("ReviewAssetScreen", () => {
+  it("keeps deletion actions reachable and cancels safely", async () => {
+    const longName =
+      "HDFC Bank Limited Long-Term Employee Retirement Portfolio Holding";
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({ ...asset, name: longName });
+    const screen = render(
+      <ReviewAssetScreen
+        assetId={asset.id}
+        onCancel={jest.fn()}
+        onComplete={jest.fn()}
+        store={store}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId("delete-asset-button"));
+
+    const content = within(screen.getByTestId("asset-deletion-content"));
+    expect(content.getByText(`Delete ${longName}?`)).toBeTruthy();
+    expect(
+      content.getByText(
+        "Removes 0 opening positions, 0 transactions, 0 linked cash movements, 0 current quotes, and 0 historical quotes. Manual cash entries and manual snapshots stay intact.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId("asset-deletion-sheet")).toHaveStyle({
+      maxHeight: "100%",
+    });
+    expect(screen.getByTestId("asset-deletion-sheet")).toHaveProp(
+      "accessibilityViewIsModal",
+      true,
+    );
+    expect(screen.getByTestId("asset-deletion-confirmation")).toHaveProp(
+      "statusBarTranslucent",
+      true,
+    );
+    expect(content.queryByText("Keep asset")).toBeNull();
+    expect(content.queryByText("Delete permanently")).toBeNull();
+    expect(screen.getByTestId("keep-asset-button")).toBeTruthy();
+    expect(screen.getByTestId("confirm-delete-asset-button")).toBeTruthy();
+
+    act(() => {
+      screen.getByTestId("asset-deletion-confirmation").props.onRequestClose();
+    });
+
+    expect(screen.queryByText(`Delete ${longName}?`)).toBeNull();
+    expect(store.getState().assets).toHaveLength(1);
+
+    fireEvent.press(screen.getByTestId("delete-asset-button"));
+    fireEvent.press(screen.getByTestId("keep-asset-button"));
+    expect(screen.queryByText(`Delete ${longName}?`)).toBeNull();
+    expect(screen.getByTestId("delete-asset-button")).toHaveProp(
+      "accessibilityLabel",
+      "Review deletion",
+    );
+  });
+
   it("explains why a linked demerger holding cannot be deleted", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

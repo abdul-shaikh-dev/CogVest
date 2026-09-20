@@ -1,5 +1,14 @@
-import { useRef, useState, useSyncExternalStore } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -159,7 +168,20 @@ export function ReviewAssetScreen({
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const deleteReviewButtonRef = useRef<View>(null);
+  const keepAssetButtonRef = useRef<View>(null);
   const actionInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!isConfirmingDelete) return;
+
+    const frame = requestAnimationFrame(() => {
+      const handle = findNodeHandle(keepAssetButtonRef.current);
+      if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [isConfirmingDelete]);
 
   if (!currentAsset || !initialAsset) {
     return (
@@ -203,6 +225,16 @@ export function ReviewAssetScreen({
     quotes: snapshot.quoteCache[assetId] ? 1 : 0,
     trades: tradeIds.size,
   };
+  const deletionImpact = `Removes ${impact.openingPositions} opening position${impact.openingPositions === 1 ? "" : "s"}, ${impact.trades} transaction${impact.trades === 1 ? "" : "s"}, ${impact.linkedCashEntries} linked cash movement${impact.linkedCashEntries === 1 ? "" : "s"}, ${impact.quotes} current quote${impact.quotes === 1 ? "" : "s"}, and ${impact.historicalQuotes} historical quote${impact.historicalQuotes === 1 ? "" : "s"}. Manual cash entries and manual snapshots stay intact.`;
+  const snapshotImpact = `${impact.automaticSnapshots} automatic monthly snapshot${impact.automaticSnapshots === 1 ? "" : "s"} may be recalculated from the remaining records.`;
+
+  function dismissDeleteConfirmation() {
+    setIsConfirmingDelete(false);
+    requestAnimationFrame(() => {
+      const handle = findNodeHandle(deleteReviewButtonRef.current);
+      if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+    });
+  }
 
   function correctedAsset(): Asset {
     return {
@@ -314,32 +346,63 @@ export function ReviewAssetScreen({
         <PremiumCard style={styles.dangerCard}>
           <SectionHeader title="Delete asset and history" />
           <AppText color="secondary" variant="caption">
-            Removes {impact.openingPositions} opening position{impact.openingPositions === 1 ? "" : "s"}, {impact.trades} transaction{impact.trades === 1 ? "" : "s"}, {impact.linkedCashEntries} linked cash movement{impact.linkedCashEntries === 1 ? "" : "s"}, {impact.quotes} current quote{impact.quotes === 1 ? "" : "s"}, and {impact.historicalQuotes} historical quote{impact.historicalQuotes === 1 ? "" : "s"}. Manual cash entries and manual snapshots stay intact.
+            {deletionImpact}
           </AppText>
           <AppText color="secondary" variant="caption">
-            {impact.automaticSnapshots} automatic monthly snapshot{impact.automaticSnapshots === 1 ? "" : "s"} may be recalculated from the remaining records.
+            {snapshotImpact}
           </AppText>
-          <AppButton disabled={isSaving} onPress={() => setIsConfirmingDelete(true)} testID="delete-asset-button" title="Review deletion" variant="ghost" textColor="primary" />
+          <AppButton
+            buttonRef={deleteReviewButtonRef}
+            disabled={isSaving}
+            onPress={() => setIsConfirmingDelete(true)}
+            testID="delete-asset-button"
+            title="Review deletion"
+            variant="ghost"
+            textColor="primary"
+          />
         </PremiumCard>
 
         <Modal
           animationType="fade"
-          onRequestClose={() => setIsConfirmingDelete(false)}
+          onRequestClose={dismissDeleteConfirmation}
+          statusBarTranslucent
+          testID="asset-deletion-confirmation"
           transparent
           visible={isConfirmingDelete}
         >
-          <View style={styles.confirmationBackdrop}>
-            <View accessibilityViewIsModal style={styles.confirmationSheet}>
-              <SectionHeader title={`Delete ${stableAsset.name}?`} />
-              <AppText color="secondary">
-                This permanently removes the asset and every linked record listed on the previous screen. Manual cash entries and manual snapshots remain.
-              </AppText>
+          <SafeAreaView edges={["top", "right", "bottom", "left"]} style={styles.confirmationBackdrop}>
+            <View
+              accessibilityViewIsModal
+              importantForAccessibility="yes"
+              style={styles.confirmationSheet}
+              testID="asset-deletion-sheet"
+            >
+              <ScrollView
+                contentContainerStyle={styles.confirmationContent}
+                showsVerticalScrollIndicator
+                style={styles.confirmationScroll}
+                testID="asset-deletion-content"
+              >
+                <SectionHeader title={`Delete ${stableAsset.name}?`} />
+                <AppText color="secondary">
+                  This permanently removes this asset and its linked portfolio history.
+                </AppText>
+                <AppText color="secondary">{deletionImpact}</AppText>
+                <AppText color="secondary">{snapshotImpact}</AppText>
+              </ScrollView>
               <View style={styles.confirmationActions}>
-                <AppButton disabled={isSaving} onPress={() => setIsConfirmingDelete(false)} title="Keep asset" variant="secondary" />
+                <AppButton
+                  buttonRef={keepAssetButtonRef}
+                  disabled={isSaving}
+                  onPress={dismissDeleteConfirmation}
+                  testID="keep-asset-button"
+                  title="Keep asset"
+                  variant="secondary"
+                />
                 <AppButton disabled={isSaving} onPress={deleteAsset} testID="confirm-delete-asset-button" title="Delete permanently" variant="destructive" />
               </View>
             </View>
-          </View>
+          </SafeAreaView>
         </Modal>
       </View>
     </ScreenContainer>
@@ -349,8 +412,10 @@ export function ReviewAssetScreen({
 const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: spacing.sm },
   confirmationActions: { gap: spacing.sm },
-  confirmationBackdrop: { backgroundColor: "rgba(0,0,0,0.78)", flex: 1, justifyContent: "center", padding: spacing.lg },
-  confirmationSheet: { backgroundColor: colors.surface.card, borderRadius: radii.sheet, gap: spacing.md, padding: spacing.lg },
+  confirmationBackdrop: { backgroundColor: "rgba(0,0,0,0.78)", flex: 1, justifyContent: "center", padding: spacing.md },
+  confirmationContent: { gap: spacing.md, paddingBottom: spacing.sm },
+  confirmationScroll: { flexShrink: 1 },
+  confirmationSheet: { backgroundColor: colors.surface.card, borderRadius: radii.sheet, gap: spacing.md, maxHeight: "100%", padding: spacing.lg },
   content: { gap: spacing.cardGap },
   dangerCard: { gap: spacing.md },
   error: { color: colors.loss },

@@ -1,9 +1,10 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, Ref } from "react";
 import {
   Pressable,
   StyleSheet,
   type PressableProps,
   type StyleProp,
+  type View,
   type ViewStyle,
 } from "react-native";
 
@@ -19,6 +20,7 @@ import {
 type ButtonVariant = "destructive" | "primary" | "secondary" | "ghost";
 
 type AppButtonProps = Omit<PressableProps, "children" | "style"> & {
+  buttonRef?: Ref<View>;
   style?: StyleProp<ViewStyle>;
   textColor?: ComponentProps<typeof AppText>["color"];
   title: string;
@@ -38,6 +40,7 @@ export function getButtonInteractionStyle({
 export function AppButton({
   accessibilityLabel,
   accessibilityRole = "button",
+  buttonRef,
   disabled,
   style,
   textColor,
@@ -55,6 +58,7 @@ export function AppButton({
   return (
     <Pressable
       {...props}
+      ref={buttonRef}
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityRole={accessibilityRole}
       android_ripple={androidRipple(
