@@ -22,6 +22,7 @@ import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
 
 type ReviewTradeScreenProps = {
+  backLabel?: string;
   now?: Date;
   onCancel: () => void;
   onComplete: (message: string) => void;
@@ -47,6 +48,7 @@ function failureMessage(reason?: string) {
 }
 
 export function ReviewTradeScreen({
+  backLabel = "Back to Holdings",
   now = new Date(),
   onCancel,
   onComplete,
@@ -79,7 +81,7 @@ export function ReviewTradeScreen({
     return (
       <ScreenContainer testID="review-trade-screen">
         <EmptyState
-          actionLabel="Back to Holdings"
+          actionLabel={backLabel}
           message="It may have already been removed or its holding may have changed."
           title="Transaction unavailable"
           onAction={onCancel}
@@ -102,7 +104,7 @@ export function ReviewTradeScreen({
               testID="reveal-trade"
             />
           </PremiumCard>
-          <AppButton title="Back to Holdings" variant="secondary" onPress={onCancel} />
+          <AppButton title={backLabel} variant="secondary" onPress={onCancel} />
         </View>
       </ScreenContainer>
     );
@@ -137,7 +139,7 @@ export function ReviewTradeScreen({
               </AppText>
             ) : null}
           </PremiumCard>
-          <AppButton title="Back to Holdings" variant="secondary" onPress={onCancel} />
+          <AppButton title={backLabel} variant="secondary" onPress={onCancel} />
         </View>
       </ScreenContainer>
     );

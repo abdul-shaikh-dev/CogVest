@@ -3,6 +3,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { AppButton, AppText } from "@/src/components/common";
 import { calculateHoldings, calculateCashBalance } from "@/src/domain/calculations";
+import { ReviewCashEntryScreen } from "@/src/features/cash";
 import { SellRedeemScreen } from "@/src/features/sellRedeem";
 import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -10,6 +11,35 @@ import { createPortfolioStore } from "@/src/store";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 
 const now = new Date("2026-09-10T12:00:00Z");
+
+function MissingLinkedCashQa() {
+  const [store] = useState(() => {
+    const store = createPortfolioStore({
+      storage: createMemoryJsonStorage(),
+      now: () => now,
+    });
+    store.getState().addCashEntry({
+      amount: 2400,
+      date: "2026-08-18",
+      id: "qa-missing-linked-cash",
+      label: "Unavailable holding sale proceeds",
+      linkedTradeId: "qa-missing-trade",
+      purpose: "saleProceeds",
+      type: "addition",
+    });
+    return store;
+  });
+
+  return (
+    <ReviewCashEntryScreen
+      entryId="qa-missing-linked-cash"
+      now={now}
+      onCancel={() => {}}
+      onComplete={() => {}}
+      store={store}
+    />
+  );
+}
 
 function EnabledAccountingQa() {
   const [store] = useState(() => {
@@ -37,7 +67,8 @@ function EnabledAccountingQa() {
 }
 
 export default function AccountingQaRoute() {
-  const { token } = useLocalSearchParams<{ token?: string }>();
+  const { run, token } = useLocalSearchParams<{ run?: string; token?: string }>();
   if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) return <AppText testID="accounting-qa-blocked">Accounting QA is unavailable.</AppText>;
+  if (run === "missing-linked-cash") return <MissingLinkedCashQa />;
   return <EnabledAccountingQa />;
 }

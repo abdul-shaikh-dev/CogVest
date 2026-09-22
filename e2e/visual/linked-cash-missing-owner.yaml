@@ -1,0 +1,20 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- openLink: "cogvest:///accounting-qa?token=cogvest-local-visual-qa&run=missing-linked-cash"
+- assertVisible:
+    id: "review-cash-entry-screen"
+- assertVisible: "Linked transaction unavailable"
+- assertVisible:
+    id: "linked-cash-owner-missing"
+- assertNotVisible: "Review linked transaction"
+- assertNotVisible: "₹2,400.00"
+- assertVisible: "Back to Cash Ledger"

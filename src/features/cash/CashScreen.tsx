@@ -8,6 +8,7 @@ import {
   AppText,
   EmptyState,
   HeroMetric,
+  MASKED_INR_VALUE,
   MetricGroup,
   PremiumCard,
   ScreenContainer,
@@ -320,8 +321,10 @@ export function CashScreen({
           <View style={styles.monthlyInsight}>
             <AppText weight="bold">This month</AppText>
             <AppText color="secondary" style={styles.monthlyInsightText}>
-              {monthlyMovementSummary ===
-              "No investment cash movement this month"
+              {maskWealthValues
+                ? `${MASKED_INR_VALUE} moved into investments this month`
+                : monthlyMovementSummary ===
+                  "No investment cash movement this month"
                 ? "No movement yet"
                 : monthlyMovementSummary}
             </AppText>
