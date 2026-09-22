@@ -267,7 +267,7 @@ describe("HoldingsScreen", () => {
 
     expect(getByTestId("holdings-insights-button")).toBeTruthy();
     expect(getByTestId("holdings-allocation-scope")).toHaveTextContent(
-      "Market holdings share · cash and PPF excluded",
+      "Value order · Weight excludes cash and PPF",
     );
     expect(queryByText("Dominant position")).toBeNull();
 
@@ -557,7 +557,7 @@ describe("HoldingsScreen", () => {
     expect(screen.getByTestId("holding-row-cash-asset")).toBeTruthy();
     expect(
       within(screen.getByTestId(`holding-row-${asset.id}`)).getByText(
-        "Market holdings share 23.8%",
+        "23.8%",
       ),
     ).toBeTruthy();
     expect(
@@ -566,7 +566,7 @@ describe("HoldingsScreen", () => {
       ),
     ).toBeNull();
     fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
-    expect(screen.getByText("23.8%")).toBeTruthy();
+    expect(screen.getAllByText("23.8%").length).toBeGreaterThan(0);
     expect(screen.getByText("First recorded purchase")).toBeTruthy();
     expect(screen.getByText("20 Apr 2026")).toBeTruthy();
     expect(screen.getByTestId(`holding-quote-context-${asset.id}`)).toHaveTextContent(
@@ -640,7 +640,12 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("holdings-pending-valuations")).toBeTruthy();
     expect(getByText("1 valuation pending")).toBeTruthy();
     expect(getByText("Valuation pending")).toBeTruthy();
-    expect(getByText("Invested ₹200")).toBeTruthy();
+    expect(
+      within(getByTestId(`holding-row-${asset.id}`)).getByText("Invested"),
+    ).toBeTruthy();
+    expect(
+      within(getByTestId(`holding-row-${asset.id}`)).getByText("₹200"),
+    ).toBeTruthy();
 
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     fireEvent.press(getByTestId(`holding-enter-manual-price-${asset.id}`));
@@ -737,8 +742,13 @@ describe("HoldingsScreen", () => {
     expect(getByText("RELIANCE · Stock")).toBeTruthy();
     expect(getByText("₹250")).toBeTruthy();
     expect(getByText("+25.00%")).toBeTruthy();
-    expect(getByText("Invested ₹200")).toBeTruthy();
-    expect(getByText("Market holdings share 100.0%")).toBeTruthy();
+    const row = within(getByTestId(`holding-row-${asset.id}`));
+    expect(row.getByText("Invested")).toBeTruthy();
+    expect(row.getByText("₹200")).toBeTruthy();
+    expect(row.getByText("P&L")).toBeTruthy();
+    expect(row.getByText("+₹50")).toBeTruthy();
+    expect(row.getByText("Weight")).toBeTruthy();
+    expect(row.getByText("100.0%")).toBeTruthy();
     expect(queryByText("Live price")).toBeNull();
     expect(queryByText("Manual price")).toBeNull();
     expect(queryByText(/fallback/i)).toBeNull();
@@ -750,17 +760,87 @@ describe("HoldingsScreen", () => {
     expect(getByText("Asset mix")).toBeTruthy();
   });
 
+  it("keeps fund identity useful, formats tiny weights, and exposes a complete spoken summary", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const fund: Asset = {
+      assetClass: "stock",
+      currency: "INR",
+      id: "asset-index-fund",
+      instrumentType: "mutualFund",
+      name: "ICICI Prudential Nifty IT Index Fund - Direct Plan - Growth",
+      symbol: "INF109KC13E2",
+      ticker: "INF109KC13E2",
+    };
+    const largeHolding: Asset = {
+      ...asset,
+      id: "asset-large",
+      name: "Large holding",
+      symbol: "LARGE",
+      ticker: "LARGE.NS",
+    };
+    store.getState().addAsset(fund);
+    store.getState().addAsset(largeHolding);
+    store.getState().addOpeningPosition({
+      assetId: fund.id,
+      averageCostPrice: 1,
+      currentPrice: 1,
+      date: "2026-04-20",
+      id: "opening-fund",
+      quantity: 1,
+    });
+    store.getState().addOpeningPosition({
+      assetId: largeHolding.id,
+      averageCostPrice: 10_000,
+      currentPrice: 10_000,
+      date: "2026-04-20",
+      id: "opening-large",
+      quantity: 1,
+    });
+
+    const screen = render(<HoldingsScreen store={store} />);
+    const fundRow = screen.getByTestId(`holding-row-${fund.id}`);
+    const spokenSummary = fundRow.props.accessibilityLabel as string;
+
+    expect(fundRow).toHaveTextContent(/Mutual Fund · Equity.*Manual/u);
+    expect(within(fundRow).queryByText(/INF109KC13E2/u)).toBeNull();
+    expect(
+      within(screen.getByTestId(`holding-weight-${fund.id}`)).getByText(
+        "<0.1%",
+      ),
+    ).toBeTruthy();
+    expect(spokenSummary).toContain("Current value ₹1.00");
+    expect(spokenSummary).toContain("Invested ₹1.00");
+    expect(spokenSummary).toContain("Unrealised P and L ₹0.00, 0.00%");
+    expect(spokenSummary).toContain("Weight <0.1%");
+  });
+
+  it("keeps spoken wealth amounts private while preserving signed return context", () => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = render(<HoldingsScreen store={store} />);
+    const row = screen.getByTestId(`holding-row-${asset.id}`);
+    const spokenSummary = row.props.accessibilityLabel as string;
+
+    expect(spokenSummary).toContain("Current value hidden");
+    expect(spokenSummary).toContain("Invested value hidden");
+    expect(spokenSummary).toContain("Unrealised P and L hidden, +25.00%");
+    expect(spokenSummary).not.toContain("₹250.00");
+    expect(spokenSummary).not.toContain("₹200.00");
+  });
+
   it("keeps scannable holdings and exposure while hiding review prompts in Minimal mode", () => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getAllByText, getByText, queryByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText } = render(
       <HoldingsScreen store={store} />,
     );
 
     expect(queryByTestId("holdings-insights-button")).toBeNull();
     expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
-    expect(getByText("Invested ₹200")).toBeTruthy();
+    expect(
+      within(getByTestId(`holding-row-${asset.id}`)).getByText("₹200"),
+    ).toBeTruthy();
     expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
     expect(queryByText("Dominant position")).toBeNull();
     expect(queryByText("Best return")).toBeNull();
@@ -1141,7 +1221,7 @@ describe("HoldingsScreen", () => {
 
     fireEvent.press(getByTestId("holdings-filter-high-allocation"));
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
-    expect(getList().getByText("Market holdings share 23.8%")).toBeTruthy();
+    expect(getList().getByText("23.8%")).toBeTruthy();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 

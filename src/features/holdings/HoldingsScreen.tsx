@@ -600,8 +600,12 @@ export function HoldingsScreen({
         ) : activeDestination === "market" ? (
           <>
             <View style={styles.listHeading}>
-              <AppText color="secondary" variant="caption">
-                {visibleItems.length} {visibleItems.length === 1 ? "position" : "positions"} · value order
+              <AppText
+                color="secondary"
+                testID="holdings-allocation-scope"
+                variant="caption"
+              >
+                Value order · Weight excludes cash and PPF
               </AppText>
               <View style={styles.listActions}>
                 <Pressable
@@ -643,9 +647,6 @@ export function HoldingsScreen({
                 ) : null}
               </View>
             </View>
-            <AppText color="secondary" testID="holdings-allocation-scope" variant="caption">
-              Market holdings share · cash and PPF excluded
-            </AppText>
 
             {filtersVisible ? (
               <FilterRow
@@ -1294,10 +1295,18 @@ function HoldingRow({
 > & { onPress: () => void }) {
   const { holding } = item;
   const pending = holding.currentValue === null;
+  const pnlAvailable = holding.unrealisedPnL !== null;
+  const weightAvailable = allocationAvailable && !pending;
+  const identity = getHoldingRowIdentity(holding.asset);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open ${holding.asset.name} details`}
+      accessibilityLabel={getHoldingRowAccessibilityLabel({
+        identity,
+        item,
+        masked,
+        weightAvailable,
+      })}
       accessibilityHint="Opens a separate holding detail panel"
       android_ripple={androidRipple()}
       onPress={onPress}
@@ -1308,15 +1317,10 @@ function HoldingRow({
       testID={`holding-row-${holding.asset.id}`}
     >
       <View style={styles.compactRow}>
-        <CategoryIcon assetClass={holding.asset.assetClass} size={22} />
         <View style={styles.assetCopy}>
           <AppText weight="bold">{holding.asset.name}</AppText>
           <AppText color="secondary" variant="caption">
-            {holding.asset.symbol} ·{" "}
-            {instrumentTypeLabel(
-              holding.asset.instrumentType ??
-                (holding.asset.assetClass === "stock" ? "stock" : "other"),
-            )}
+            {identity}
             {holding.quoteSource === "manual" ? " · Manual" : ""}
           </AppText>
         </View>
@@ -1333,33 +1337,67 @@ function HoldingRow({
             }
             weight="bold"
           />
-          {holding.unrealisedPnLPct !== null ? (
-            <AppText
-              variant="caption"
-              style={
-                (holding.unrealisedPnL ?? 0) >= 0
-                  ? styles.positiveText
-                  : styles.negativeText
-              }
-            >
-              {formatPercentage(holding.unrealisedPnLPct)}
-            </AppText>
-          ) : null}
         </View>
       </View>
-      <View style={styles.compactMeta}>
-        <MaskedValue
-          color="secondary"
-          exactValue={`Invested ${formatINR(holding.totalInvested)}`}
-          masked={masked}
-          value={`Invested ${formatCompactINR(holding.totalInvested)}`}
-          variant="caption"
-        />
-        {allocationAvailable && !pending ? (
+      <View style={styles.holdingMetrics}>
+        <View
+          style={styles.holdingMetric}
+          testID={`holding-invested-${holding.asset.id}`}
+        >
           <AppText color="secondary" variant="caption">
-            Market holdings share {item.allocationPct.toFixed(1)}%
+            Invested
           </AppText>
-        ) : null}
+          <MaskedValue
+            exactValue={formatINR(holding.totalInvested)}
+            masked={masked}
+            value={formatCompactINR(holding.totalInvested)}
+            weight="bold"
+          />
+        </View>
+        <View
+          style={styles.holdingMetric}
+          testID={`holding-pnl-${holding.asset.id}`}
+        >
+          <AppText color="secondary" variant="caption">
+            P&amp;L
+          </AppText>
+          {pnlAvailable ? (
+            <View style={styles.pnlMetricValue}>
+              <MaskedValue
+                exactValue={formatINR(holding.unrealisedPnL!)}
+                masked={masked}
+                value={formatSignedCompactINR(holding.unrealisedPnL!)}
+                weight="bold"
+              />
+              <AppText
+                variant="caption"
+                style={
+                  holding.unrealisedPnL! >= 0
+                    ? styles.positiveText
+                    : styles.negativeText
+                }
+                weight="bold"
+              >
+                {formatPercentage(holding.unrealisedPnLPct ?? 0)}
+              </AppText>
+            </View>
+          ) : (
+            <AppText color="secondary" weight="bold">
+              —
+            </AppText>
+          )}
+        </View>
+        <View
+          style={styles.holdingMetric}
+          testID={`holding-weight-${holding.asset.id}`}
+        >
+          <AppText color="secondary" variant="caption">
+            Weight
+          </AppText>
+          <AppText color={weightAvailable ? "primary" : "secondary"} weight="bold">
+            {weightAvailable ? formatHoldingWeight(item.allocationPct) : "—"}
+          </AppText>
+        </View>
       </View>
     </Pressable>
   );
@@ -1656,6 +1694,71 @@ function formatSignedCompactINR(value: number) {
   return value > 0 ? `+${amount}` : amount;
 }
 
+function formatHoldingWeight(value: number) {
+  if (value > 0 && value < 0.05) return "<0.1%";
+  return `${value.toFixed(1)}%`;
+}
+
+function isRawIsin(value: string) {
+  return /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/u.test(value.trim().toUpperCase());
+}
+
+function getHoldingRowIdentity(asset: Asset) {
+  const instrumentType =
+    asset.instrumentType ??
+    (asset.assetClass === "stock" ? "stock" : "other");
+  const parts = [
+    isRawIsin(asset.symbol) ? undefined : asset.symbol,
+    instrumentTypeLabel(instrumentType),
+    instrumentType === "mutualFund"
+      ? assetClassLabel(asset.assetClass)
+      : undefined,
+  ];
+
+  return parts.filter(Boolean).join(" · ");
+}
+
+function getHoldingRowAccessibilityLabel({
+  identity,
+  item,
+  masked,
+  weightAvailable,
+}: {
+  identity: string;
+  item: HoldingReviewItem;
+  masked: boolean;
+  weightAvailable: boolean;
+}) {
+  const { holding } = item;
+  const currentValue =
+    holding.currentValue === null
+      ? "Current value unavailable"
+      : masked
+        ? "Current value hidden"
+        : `Current value ${formatINR(holding.currentValue)}`;
+  const invested = masked
+    ? "Invested value hidden"
+    : `Invested ${formatINR(holding.totalInvested)}`;
+  const pnl =
+    holding.unrealisedPnL === null
+      ? "Unrealised P and L unavailable"
+      : masked
+        ? `Unrealised P and L hidden, ${formatPercentage(holding.unrealisedPnLPct ?? 0)}`
+        : `Unrealised P and L ${formatINR(holding.unrealisedPnL)}, ${formatPercentage(holding.unrealisedPnLPct ?? 0)}`;
+  const weight = weightAvailable
+    ? `Weight ${formatHoldingWeight(item.allocationPct)}`
+    : "Weight unavailable";
+
+  return [
+    `Open ${holding.asset.name} details`,
+    identity,
+    currentValue,
+    invested,
+    pnl,
+    weight,
+  ].join(". ");
+}
+
 const styles = StyleSheet.create({
   performanceLine: {
     flexDirection: "row",
@@ -1721,13 +1824,6 @@ const styles = StyleSheet.create({
   assetCopy: {
     flex: 1,
     gap: 2,
-  },
-  compactMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingLeft: 34,
-    flexWrap: "wrap",
-    gap: spacing.xs,
   },
   compactRow: {
     alignItems: "flex-start",
@@ -1812,6 +1908,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: spacing.cardInner,
   },
+  holdingMetric: {
+    flex: 1,
+    gap: 2,
+    minWidth: 84,
+  },
+  holdingMetrics: {
+    columnGap: spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: spacing.xs,
+  },
   holdingsList: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.card,
@@ -1869,6 +1976,12 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
+  },
+  pnlMetricValue: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   ppfAccountCard: {
     alignItems: "center",

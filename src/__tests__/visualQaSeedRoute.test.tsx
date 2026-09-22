@@ -7,10 +7,15 @@ const mockSeedVisualQaPortfolio = jest.fn();
 const mockGetPortfolioStore = jest.fn(() => ({ getState: jest.fn() }));
 let mockToken: string | undefined = "cogvest-local-visual-qa";
 let mockHistory: string | undefined;
+let mockHoldings: string | undefined;
 
 jest.mock("expo-router", () => ({
   router: { replace: jest.fn() },
-  useLocalSearchParams: () => ({ token: mockToken, history: mockHistory }),
+  useLocalSearchParams: () => ({
+    holdings: mockHoldings,
+    history: mockHistory,
+    token: mockToken,
+  }),
 }));
 
 jest.mock("@/src/store", () => ({
@@ -36,6 +41,7 @@ describe("visual QA seed deep link", () => {
     jest.clearAllMocks();
     mockToken = "cogvest-local-visual-qa";
     mockHistory = undefined;
+    mockHoldings = undefined;
   });
 
   it("does not replace local data until the developer confirms", () => {
@@ -89,5 +95,16 @@ describe("visual QA seed deep link", () => {
       router: { replace: jest.Mock };
     };
     expect(router.replace).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("requires confirmation before preparing thirty holdings", () => {
+    mockHoldings = "30";
+    render(<VisualQaSeedRoute />);
+    expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
+    act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
+    expect(mockSeedVisualQaPortfolio).toHaveBeenCalledWith(
+      mockGetPortfolioStore.mock.results.at(-1)?.value,
+      expect.objectContaining({ holdingCount: 30 }),
+    );
   });
 });
