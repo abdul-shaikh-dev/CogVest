@@ -132,8 +132,9 @@ describe("holding child routes", () => {
     mockParams.tradeId = "trade-1";
     mockParams.returnTo = "cash";
     const tradeRoute = TradeRoute() as {
-      props: { onCancel: () => void; onComplete: (message: string) => void };
+      props: { backLabel: string; onCancel: () => void; onComplete: (message: string) => void };
     };
+    expect(tradeRoute.props.backLabel).toBe("Back to Cash Ledger");
     tradeRoute.props.onCancel();
     tradeRoute.props.onComplete("Transaction saved.");
 

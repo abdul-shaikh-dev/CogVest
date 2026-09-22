@@ -551,15 +551,24 @@ describe("CashScreen", () => {
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addCashEntry({
       amount: 1000,
-      date: "2026-04-20",
+      date: "2026-09-20",
       id: "cash-1",
       label: "Broker cash",
       purpose: "capitalContribution",
       type: "addition",
     });
+    store.getState().addCashEntry({
+      amount: 300,
+      date: "2026-09-21",
+      id: "cash-linked-buy",
+      label: "Masked asset purchase",
+      linkedTradeId: "trade-linked-buy",
+      purpose: "purchaseFunding",
+      type: "withdrawal",
+    });
 
     const { getAllByText, getByTestId, getByText, queryByText } = render(
-      <CashScreen store={store} />,
+      <CashScreen now={new Date(2026, 8, 22, 12)} store={store} />,
     );
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
@@ -568,7 +577,11 @@ describe("CashScreen", () => {
     expect(getByTestId("cash-income-explanation")).toBeTruthy();
     expect(queryByText("Not enough data")).toBeNull();
     expect(getByText("Broker cash")).toBeTruthy();
+    expect(
+      getByText(`${MASKED_INR_VALUE} moved into investments this month`),
+    ).toBeTruthy();
     expect(queryByText("₹1,000.00")).toBeNull();
+    expect(queryByText("₹300 moved into investments this month")).toBeNull();
   });
 
   it("opens the income recovery form preselected and reports a saved income entry", async () => {
