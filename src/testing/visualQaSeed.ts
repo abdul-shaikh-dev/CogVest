@@ -455,17 +455,64 @@ function resetPortfolioStoreForVisualQa(
 export function seedVisualQaPortfolio(
   store: StoreApi<PortfolioStoreState>,
   {
+    holdingCount,
     historyMonths,
     longHistory = false,
-  }: { historyMonths?: number; longHistory?: boolean } = {},
+  }: {
+    holdingCount?: number;
+    historyMonths?: number;
+    longHistory?: boolean;
+  } = {},
 ) {
   visualQaSessionActive = true;
   resetPortfolioStoreForVisualQa(store);
 
   const state = store.getState();
+  const additionalHoldingCount = Math.max(
+    0,
+    (holdingCount ?? visualQaOpeningPositions.length) -
+      visualQaOpeningPositions.length,
+  );
+  const scaleAssets: Asset[] = Array.from(
+    { length: additionalHoldingCount },
+    (_, index) => {
+      const sequence = index + 1;
+      const isFund = sequence % 7 === 0;
+      const isEtf = !isFund && sequence % 5 === 0;
+      const symbol = isFund
+        ? `INF000000${String(sequence).padStart(3, "0")}`
+        : `QA${String(sequence).padStart(2, "0")}`;
 
-  visualQaAssets.forEach((asset) => state.addAsset(asset));
-  visualQaOpeningPositions.forEach((position) =>
+      return {
+        assetClass: isEtf ? "etf" : "stock",
+        currency: "INR",
+        exchange: "NSE",
+        id: `visual-qa-scale-asset-${sequence}`,
+        instrumentType: isFund ? "mutualFund" : isEtf ? "etf" : "stock",
+        name:
+          sequence % 6 === 0
+            ? `Long Horizon Quality Compounders Portfolio Holding ${sequence}`
+            : isFund
+              ? `Visual QA Equity Index Fund ${sequence} - Direct Growth`
+              : `Visual QA Holding ${sequence}`,
+        sectorType: isFund || isEtf ? "diversified" : "other",
+        symbol,
+        ticker: symbol,
+      };
+    },
+  );
+  const scalePositions: OpeningPosition[] = scaleAssets.map((asset, index) => ({
+    assetId: asset.id,
+    averageCostPrice: 100 + index * 5,
+    currentPrice:
+      index % 3 === 0 ? 88 + index * 5 : 116 + index * 5,
+    date: "2025-04-15T00:00:00.000Z",
+    id: `visual-qa-scale-opening-${index + 1}`,
+    quantity: 10 + index,
+  }));
+
+  [...visualQaAssets, ...scaleAssets].forEach((asset) => state.addAsset(asset));
+  [...visualQaOpeningPositions, ...scalePositions].forEach((position) =>
     state.addOpeningPosition(position),
   );
   visualQaCashEntries.forEach((entry) => state.addCashEntry(entry));

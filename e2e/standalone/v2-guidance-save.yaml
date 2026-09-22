@@ -93,7 +93,8 @@ appId: com.abdulshaikh.cogvest
     id: holdings-search-input
 - inputText: "Guidance Holding"
 - hideKeyboard
-- assertVisible: "Invested ₹200"
+- assertVisible: "Invested"
+- assertVisible: "₹200"
 - assertVisible: "₹250"
 # Cold launch proves dismissal persistence, not just local component state.
 - stopApp
@@ -127,6 +128,7 @@ appId: com.abdulshaikh.cogvest
     id: holdings-search-input
 - inputText: "Guidance Holding"
 - hideKeyboard
-- assertVisible: "Invested ₹200"
+- assertVisible: "Invested"
+- assertVisible: "₹200"
 - assertVisible: "₹250"
 - takeScreenshot: .expo/v2-release-guidance-retained

@@ -16,7 +16,8 @@ appId: com.abdulshaikh.cogvest
     id: holdings-search-input
 - inputText: "HDFC"
 - hideKeyboard
-- assertVisible: "Invested ₹36.25K"
+- assertVisible:
+    id: holding-invested-visual-qa-asset-hdfc
 - tapOn:
     id: holding-row-visual-qa-asset-hdfc
 - assertVisible:
@@ -35,7 +36,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: holding-detail-back
 - assertVisible: "HDFC"
-- assertVisible: "Invested ₹36.25K"
+- assertVisible:
+    id: holding-invested-visual-qa-asset-hdfc
 - takeScreenshot: .expo/holdings-focused-list
 - tapOn:
     id: holding-row-visual-qa-asset-hdfc

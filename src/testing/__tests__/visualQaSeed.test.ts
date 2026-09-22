@@ -65,6 +65,22 @@ describe("seedVisualQaPortfolio", () => {
     expect(snapshots.at(-1)?.month).toBe("2026-05");
   });
 
+  it("optionally expands the installed-app fixture to thirty holdings", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+
+    seedVisualQaPortfolio(store, { holdingCount: 30 });
+
+    const state = store.getState();
+    expect(state.openingPositions).toHaveLength(30);
+    expect(state.assets).toHaveLength(31);
+    expect(
+      state.assets.some((asset) => asset.instrumentType === "mutualFund"),
+    ).toBe(true);
+    expect(
+      state.assets.some((asset) => asset.name.startsWith("Long Horizon")),
+    ).toBe(true);
+  });
+
   it("creates a deterministic V1 parity dataset", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 

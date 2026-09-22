@@ -27,7 +27,7 @@ appId: com.abdulshaikh.cogvest
     id: "holdings-search-input"
 - assertNotVisible:
     id: "holdings-insights-button"
-- assertVisible: "Invested ₹11L"
+- assertVisible: "Invested"
 - assertNotVisible: "Dominant position"
 - assertNotVisible: "Best return"
 - openLink: "cogvest:///cash"

@@ -111,11 +111,13 @@ not repeat Dashboard's portfolio-value hero.
 The focused-detail direction approved on 8 September 2026 supersedes the #278
 visual hierarchy. Its preview and interaction contract live in
 `docs/design/previews/holdings-focused-detail/` (PR #308). Search and existing
-filters precede a grouped list with hairline row separators. Each row shows
-name, symbol/instrument, honest Manual provenance, current value, signed return,
-invested amount and Market holdings share. This share uses market holdings only,
-excluding cash and PPF, and must not imply whole-portfolio allocation.
-Incomplete allocation is explained once rather than repeated on every row.
+filters precede a grouped list with hairline row separators. Each row leads with
+name, useful instrument identity, honest Manual provenance and current value,
+followed by aligned Invested, signed P&L amount and percentage, and Weight
+metrics. Weight uses market holdings only, excluding cash and PPF, and must not
+imply whole-portfolio allocation. Raw identifiers such as an ISIN belong in
+holding details rather than the list. Incomplete allocation is explained once
+rather than repeated on every row.
 
 A row opens a separate full-height detail panel, not an inline expansion.
 Explicit Back and Android Back return to the same list/search/filter/scroll

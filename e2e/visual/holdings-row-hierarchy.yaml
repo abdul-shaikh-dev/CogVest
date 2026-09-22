@@ -1,0 +1,54 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Dashboard"
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible: "4 market positions"
+- assertVisible: "Value order.*Weight excludes cash and PPF"
+- assertVisible:
+    id: holding-invested-visual-qa-asset-bitcoin
+- assertVisible:
+    id: holding-pnl-visual-qa-asset-bitcoin
+- assertVisible:
+    id: holding-weight-visual-qa-asset-bitcoin
+- assertNotVisible: "Market holdings share.*%"
+- takeScreenshot: .expo/issue398-four-holdings
+- tapOn:
+    id: holdings-header-mask-toggle
+- assertNotVisible: "₹13.9L"
+- assertVisible: "+26.40%"
+- takeScreenshot: .expo/issue398-four-holdings-masked
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&holdings=30"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- assertVisible: "30 market positions"
+- takeScreenshot: .expo/issue398-thirty-holdings
+- tapOn:
+    id: holdings-search-input
+- inputText: "Long Horizon"
+- hideKeyboard
+- assertVisible: "Long Horizon Quality Compounders Portfolio Holding 24"
+- assertVisible: "Invested"
+- assertVisible: "P&L"
+- assertVisible: "Weight"
+- takeScreenshot: .expo/issue398-long-name-holdings

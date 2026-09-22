@@ -72,7 +72,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: view-holding-button
 - assertVisible: "Sample ETF"
-- assertVisible: "Invested ₹180"
+- assertVisible: "Invested"
+- assertVisible: "₹180"
 - assertVisible: "Equity · ETF · Diversified"
 - stopApp
 - launchApp
@@ -84,5 +85,6 @@ appId: com.abdulshaikh.cogvest
     id: tab-holdings
 - assertVisible: "Sample ETF"
 - assertVisible: "Equity · ETF · Diversified"
-- assertVisible: "Invested ₹180"
+- assertVisible: "Invested"
+- assertVisible: "₹180"
 - takeScreenshot: .expo/asset-class-280-saved-etf
