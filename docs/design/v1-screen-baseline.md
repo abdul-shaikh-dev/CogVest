@@ -454,10 +454,12 @@ Accepted chart direction:
   change either chart or the headline month; `Apply range` commits only to the
   chart that opened it, and Android Back behaves like Cancel
 - Monthly History opens in a panel, newest stored year and months first. Rows
-  show portfolio value and change versus the immediately previous calendar
-  month, including cross-year January comparisons; gaps/zero baselines must
-  not produce fabricated percentages. Value change includes contributions and
-  is not labelled investment return
+  show portfolio value and a compact signed monthly change. The year selector
+  stays on one horizontally scrollable line, including long histories. A row's
+  full accessibility label and month details name the immediately previous
+  calendar month, including cross-year January comparisons; gaps/zero baselines
+  must not produce fabricated percentages. Estimated prices are disclosed.
+  Monthly change includes contributions and is not labelled investment return
 - tapping a month opens its dedicated detail view at the top of the same panel,
   not an accordion or stacked modal. Back restores the history year and scroll
   position; Android Back goes detail -> history -> Progress

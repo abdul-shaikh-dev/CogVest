@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
+import { act, cleanup, fireEvent, render, within } from "@testing-library/react-native";
 import { Modal, ScrollView } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
@@ -91,7 +91,10 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByText("+10.00% vs December 2025")).toHaveStyle({ color: colors.profit });
+    expect(getByText("+10.00%")).toHaveStyle({ color: colors.profit });
+    expect(getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain(
+      "Monthly change +10.00% compared with December 2025",
+    );
   });
 
   describe("animation frame ownership", () => {
@@ -168,7 +171,8 @@ describe("MonthlyHistoryPanel", () => {
     expect(getByText("May")).toBeTruthy();
     expect(getByText("Apr")).toBeTruthy();
     expect(getByText("Mar")).toBeTruthy();
-    expect(getByText("Value change")).toBeTruthy();
+    expect(getByText("Monthly change")).toBeTruthy();
+    expect(getByText("Includes deposits and withdrawals")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-02")).toThrow();
 
     fireEvent.press(getByTestId("history-year-2025"));
@@ -206,6 +210,82 @@ describe("MonthlyHistoryPanel", () => {
     ]);
   });
 
+  it("keeps eleven years on one scrollable selector and selects an older year", () => {
+    const longHistory = Array.from({ length: 11 }, (_, index) =>
+      createSummary(`${2016 + index}-01`),
+    );
+    const screen = render(
+      <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={longHistory} />,
+    );
+
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+
+    expect(screen.getByTestId("history-year-scroll").props.horizontal).toBe(true);
+    expect(screen.getByTestId("history-year-2026").props.accessibilityState).toEqual({ selected: true });
+    fireEvent.press(screen.getByTestId("history-year-2016"));
+    expect(screen.getByTestId("history-year-2016").props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByTestId("snapshot-month-2016-01")).toBeTruthy();
+  });
+
+  it("shows only actual monthly changes and explains gaps, first months, and zero baselines", () => {
+    const screen = render(
+      <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
+    );
+
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+
+    const january = screen.getByTestId("snapshot-month-2026-01");
+    expect(within(january).getByText("+10.00%")).toBeTruthy();
+    expect(within(january).queryByText(/vs December/u)).toBeNull();
+    const march = screen.getByTestId("snapshot-month-2026-03");
+    expect(within(march).getByText("—")).toBeTruthy();
+    expect(march.props.accessibilityLabel).toContain("No snapshot for February 2026");
+    const may = screen.getByTestId("snapshot-month-2026-05");
+    expect(within(may).getByText("—")).toBeTruthy();
+    expect(may.props.accessibilityLabel).toContain("April 2026 portfolio value was zero");
+
+    fireEvent.press(screen.getByTestId("history-year-2025"));
+    const first = screen.getByTestId("snapshot-month-2025-12");
+    expect(within(first).getByText("—")).toBeTruthy();
+    expect(first.props.accessibilityLabel).toContain("First stored month; monthly change unavailable");
+  });
+
+  it("marks estimated comparisons and keeps full context in details", () => {
+    const april = createSummary("2026-04", { portfolioValue: 100_000 });
+    april.snapshot.generated = {
+      confidence: "provisional",
+      generatedAt: "2026-05-01T00:00:00.000Z",
+      priceBasis: "manual-fallback",
+      source: "auto",
+      warnings: [],
+    };
+    const may = createSummary("2026-05", { portfolioValue: 110_000 });
+    const screen = render(
+      <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[april, may]} />,
+    );
+
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    const mayRow = screen.getByTestId("snapshot-month-2026-05");
+    expect(within(mayRow).getByText("Estimated")).toBeTruthy();
+    expect(mayRow.props.accessibilityLabel).toContain("Comparison uses estimated prices");
+    fireEvent.press(mayRow);
+    expect(screen.getByText("This comparison uses estimated prices.")).toBeTruthy();
+    expect(screen.getByText("Portfolio change includes deposits and withdrawals; it is not investment return.")).toBeTruthy();
+  });
+
+  it("masks the portfolio amount in the row label while keeping signed change context", () => {
+    const screen = render(
+      <MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />,
+    );
+
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    const january = screen.getByTestId("snapshot-month-2026-01");
+    expect(within(january).getByText(MASKED_INR_VALUE)).toBeTruthy();
+    expect(within(january).getByText("+10.00%")).toBeTruthy();
+    expect(january.props.accessibilityLabel).toContain("Portfolio hidden");
+    expect(january.props.accessibilityLabel).not.toContain("₹1,10,000.00");
+  });
+
   it("opens a dedicated month page and compares only with the immediate calendar month", () => {
     const { getByTestId, getByText, queryByText } = render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
@@ -213,7 +293,9 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByText("No prior stored month")).toBeTruthy();
+    expect(getByTestId("snapshot-month-2026-03").props.accessibilityLabel).toContain(
+      "No snapshot for February 2026",
+    );
     fireEvent.press(getByTestId("snapshot-month-2026-01"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByText("January 2026")).toBeTruthy();

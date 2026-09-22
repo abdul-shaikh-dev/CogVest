@@ -1,0 +1,75 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: UP
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-05
+- takeScreenshot: .expo/monthly-history-short
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&history=extended"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: UP
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: history-year-2026
+- takeScreenshot: .expo/monthly-history-long
+- swipe:
+    start: "85%,33%"
+    end: "15%,33%"
+    duration: 500
+- swipe:
+    start: "85%,33%"
+    end: "15%,33%"
+    duration: 500
+- swipe:
+    start: "85%,33%"
+    end: "15%,33%"
+    duration: 500
+- assertVisible:
+    id: history-year-2016
+- tapOn:
+    id: history-year-2016
+- assertVisible:
+    id: snapshot-month-2016-06
+- takeScreenshot: .expo/monthly-history-oldest-year
