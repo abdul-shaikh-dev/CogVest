@@ -30,7 +30,7 @@ appId: com.abdulshaikh.cogvest
     id: "snapshot-month-2026-05"
 - assertVisible:
     id: "selected-snapshot-summary"
-- assertVisible: "₹19.87L"
+- assertVisible: "₹19,87,450.00"
 - takeScreenshot: .expo/progress-277-month-detail
 - scrollUntilVisible:
     element: "May parity seed"
@@ -42,14 +42,14 @@ appId: com.abdulshaikh.cogvest
     id: "selected-snapshot-summary"
 - tapOn:
     id: "snapshot-month-2026-04"
-- assertVisible: "₹19.29L"
+- assertVisible: "₹19,29,450.00"
 - tapOn:
     id: "history-back"
 - tapOn:
     id: "history-year-2025"
 - tapOn:
     id: "snapshot-month-2025-11"
-- assertVisible: "₹14.4L"
+- assertVisible: "₹14,40,000.00"
 - back
 - assertVisible:
     id: "snapshot-month-2025-11"
