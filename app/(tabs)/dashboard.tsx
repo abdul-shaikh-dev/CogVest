@@ -18,6 +18,12 @@ export default function DashboardScreen() {
       onOpenProgress={() => {
         router.navigate("/(tabs)/progress");
       }}
+      onRecordIncome={() => {
+        router.navigate({
+          pathname: "/(tabs)/cash",
+          params: { openIncomeEntry: "true", returnTo: "dashboard" },
+        });
+      }}
       onQuickSetup={() => {
         router.navigate({ pathname: "/(tabs)/holdings", params: { openAddMenu: "true" } });
       }}

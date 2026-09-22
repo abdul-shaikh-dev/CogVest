@@ -527,7 +527,7 @@ describe("CashScreen", () => {
     );
 
     expect(getByText("Investment rate")).toBeTruthy();
-    expect(getAllByText("--")).toHaveLength(2);
+    expect(getAllByText("Unavailable")).toHaveLength(2);
     expect(getByTestId("cash-income-explanation")).toBeTruthy();
     expect(queryByText("Not enough data")).toBeNull();
   });
@@ -564,10 +564,42 @@ describe("CashScreen", () => {
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("Masked preview")).toBeNull();
-    expect(getAllByText("--")).toHaveLength(2);
+    expect(getAllByText("Unavailable")).toHaveLength(2);
     expect(getByTestId("cash-income-explanation")).toBeTruthy();
     expect(queryByText("Not enough data")).toBeNull();
     expect(getByText("Broker cash")).toBeTruthy();
     expect(queryByText("₹1,000.00")).toBeNull();
+  });
+
+  it("opens the income recovery form preselected and reports a saved income entry", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onIncomeEntryOpened = jest.fn();
+    const onIncomeRecorded = jest.fn();
+    const screen = render(
+      <CashScreen
+        now={new Date(2026, 8, 20, 12)}
+        onIncomeEntryOpened={onIncomeEntryOpened}
+        onIncomeRecorded={onIncomeRecorded}
+        openIncomeEntry
+        store={store}
+      />,
+    );
+
+    expect(onIncomeEntryOpened).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("cash-purpose-income")).toHaveProp(
+      "accessibilityState",
+      { selected: true },
+    );
+    fireEvent.changeText(screen.getByLabelText("Amount"), "50000");
+    fireEvent.changeText(screen.getByLabelText("Label"), "Salary");
+    fireEvent.press(screen.getByTestId("save-cash-entry-button"));
+
+    await waitFor(() => {
+      expect(onIncomeRecorded).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("0.00%")).toBeTruthy();
+    });
+    expect(store.getState().cashEntries[0]).toEqual(
+      expect.objectContaining({ amount: 50000, purpose: "income" }),
+    );
   });
 });

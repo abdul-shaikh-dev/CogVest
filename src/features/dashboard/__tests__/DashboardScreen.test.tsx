@@ -540,9 +540,9 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.getByText("Open Progress")).toBeTruthy();
-    expect(screen.getByText("This Month")).toBeTruthy();
+    expect(screen.getByText("September 2026 activity")).toBeTruthy();
     expect(screen.getByText("Cash change")).toBeTruthy();
-    expect(screen.getByText("Not enough data")).toBeTruthy();
+    expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.queryByText("Cash balance")).toBeNull();
     expect(screen.queryByText("Holdings")).toBeNull();
     expect(screen.queryByText("Quote Status")).toBeNull();
@@ -553,6 +553,24 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Conviction pattern")).toBeTruthy();
     expect(screen.queryByText(/LTCG/i)).toBeNull();
     expect(screen.queryByText(/Minimal Mode/i)).toBeNull();
+  });
+
+  it("offers a direct income recovery action when the monthly rate is unavailable", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onRecordIncome = jest.fn();
+    const screen = render(
+      <DashboardScreen
+        now={new Date(2026, 8, 20, 12)}
+        onRecordIncome={onRecordIncome}
+        store={store}
+      />,
+    );
+
+    expect(screen.getByText("September 2026 activity")).toBeTruthy();
+    expect(screen.getByText("Investment rate")).toBeTruthy();
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("dashboard-record-income"));
+    expect(onRecordIncome).toHaveBeenCalledTimes(1);
   });
 
   it("keeps essential portfolio evidence while removing optional commentary in Minimal mode", () => {

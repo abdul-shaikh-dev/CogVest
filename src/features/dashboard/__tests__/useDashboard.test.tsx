@@ -267,7 +267,7 @@ describe("useDashboard", () => {
     ]);
   });
 
-  it("derives current-month investment, cash change, and savings rate", () => {
+  it("derives current-month investment, cash change, and typed-income rate", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
     store.getState().addTrade({
@@ -336,8 +336,9 @@ describe("useDashboard", () => {
     expect(result.current.monthlyMetrics).toEqual({
       cashAdded: 1000,
       cashChange: 750,
+      incomeStatus: "available",
       investment: 400,
-      savingsRate: 40,
+      investmentRate: 40,
     });
   });
 

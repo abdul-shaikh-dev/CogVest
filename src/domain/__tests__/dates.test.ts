@@ -1,6 +1,7 @@
 import {
   calendarDateToLocalDate,
   formatLocalCalendarDate,
+  formatMonthYear,
   getCalendarDatePart,
   isEffectiveCalendarDate,
   isFutureCalendarDate,
@@ -37,6 +38,10 @@ describe("local calendar dates", () => {
     jest.spyOn(earlyIndiaMorning, "getDate").mockReturnValue(22);
 
     expect(formatLocalCalendarDate(earlyIndiaMorning)).toBe("2026-07-22");
+  });
+
+  it("formats an explicit local month and year", () => {
+    expect(formatMonthYear(new Date(2026, 8, 20, 12))).toBe("September 2026");
   });
 
   it("extracts and validates the calendar portion of legacy timestamps", () => {
