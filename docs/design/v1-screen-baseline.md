@@ -252,14 +252,16 @@ V3 issue #23 extends this shared discovery flow with exact-match ranking,
 clearable local recent searches, exchange/type filters and 20-result pages
 (100 public-result cap). Saved assets stay first; manual entry remains separate
 and reachable above results. See `docs/testing/advanced-asset-search.md` for the
-behavior and verification contract. Optional provider logos are not required;
-retain the existing asset-class icons.
+behavior and verification contract. Optional provider logos are not required.
+Discovery rows use explicit instrument and venue text instead of repeating the
+same category as an icon.
 
-The four phases use a quiet progress treatment rather than four competing
-buttons. Do not repeat an `Asset` section heading directly below the active
-`Asset` phase. Keep recent searches collapsed behind a count by default and keep
-manual entry visible as a secondary text action; expanding either disclosure
-must not hide the primary lookup path.
+Discovery uses a compact `1 of 4` progress indicator (`1 of 3` in Quick Setup),
+with the current action and total exposed to accessibility. Later phases retain
+their backward phase navigation and review safeguards. Do not repeat an `Asset`
+section heading. The filter's selected value appears once, in its compact picker
+beside secondary actions, not again as `Showing`. Keep recent searches collapsed
+behind a count by default and manual entry visible above the results.
 
 Required flow:
 
@@ -286,12 +288,15 @@ entry is a fallback, not the primary perceived path.
 Autofilled ticker, instrument type, sector, currency, and price source must be
 reviewable before save.
 
-Mixed-name discovery results must make identity legible before selection. Lead
-with instrument type and venue: distinguish NSE/BSE company shares, ETFs,
+Mixed-name discovery results must make identity legible before selection. Show
+the complete name, immediately followed by instrument type and venue: distinguish NSE/BSE company shares, ETFs,
 mutual funds without an exchange listing, and crypto that is not an NSE/BSE
 share. Keep relevance order, show the active filter near search, preserve
 provider/ticker metadata, and offer retry after total lookup failure. Retry does
-not select an asset or save portfolio data.
+not select an asset or save portfolio data. Use separated rows rather than nested
+cards and filled badges; keep explicit Select/Use actions and wrap long names.
+Identical symbol/ticker values appear once, but different identifiers, currency
+and provider source remain visible.
 
 The visual pattern should use progressive disclosure. Do not show the full
 search-result list, all metadata, all position fields, derived preview, and

@@ -1,0 +1,110 @@
+appId: com.abdulshaikh.cogvest
+---
+# Deterministic synthetic discovery; no records are saved. Pass SHOT for captures.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: asset-lookup-input
+    timeout: 30000
+- assertVisible: "1 of 4"
+- assertVisible: "All assets"
+- assertNotVisible: "Showing: All assets"
+- takeScreenshot: .expo/${SHOT}-discovery
+- tapOn:
+    id: asset-discovery-filter-picker
+- tapOn:
+    id: asset-discovery-filter-BSE
+- assertVisible: "BSE"
+- assertVisible: "No matches for this filter.*"
+- takeScreenshot: .expo/${SHOT}-empty-filter
+- tapOn:
+    id: asset-discovery-filter-picker
+- tapOn:
+    id: asset-discovery-filter-all
+- tapOn:
+    id: toggle-manual-asset-entry
+- assertVisible:
+    id: manual-asset-fields
+- tapOn:
+    id: toggle-manual-asset-entry
+- tapOn:
+    id: asset-lookup-input
+- inputText: HDFC
+- assertVisible:
+    id: asset-lookup-input
+- takeScreenshot: .expo/${SHOT}-keyboard
+- hideKeyboard
+- openLink: "cogvest:///asset-search-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: asset-search-qa-screen
+    timeout: 30000
+- tapOn:
+    id: asset-search-qa-warmup
+- tapOn:
+    id: asset-lookup-input
+- inputText: HDFC
+- hideKeyboard
+- repeat:
+    times: 12
+    while:
+      notVisible: ".*No exchange listing.*"
+    commands:
+      - swipe:
+          start: 50%, 90%
+          end: 50%, 65%
+          duration: 500
+- assertVisible: "HDFC Balanced Advantage Fund - Direct Plan - Growth"
+- assertVisible: ".*No exchange listing.*"
+- takeScreenshot: .expo/${SHOT}-saved-fund
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: asset-lookup-result-asset-search-qa-hdfc-bank-bse
+    commands:
+      - swipe:
+          start: 50%, 90%
+          end: 50%, 65%
+          duration: 500
+- assertVisible: ".*Company share.*"
+- assertVisible: ".*BSE listing.*"
+- takeScreenshot: .expo/${SHOT}-listings
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: asset-lookup-result-asset-search-qa-hdfc-rstock
+    commands:
+      - swipe:
+          start: 50%, 90%
+          end: 50%, 65%
+          duration: 500
+- assertVisible: ".*Crypto asset.*"
+- assertVisible: ".*Not an NSE/BSE share.*"
+- assertNotVisible:
+    id: selected-asset-summary
+- takeScreenshot: .expo/${SHOT}-crypto
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: asset-lookup-result-asset-search-qa-hdfc-bank-bse
+    commands:
+      - swipe:
+          start: 50%, 65%
+          end: 50%, 90%
+          duration: 500
+- waitForAnimationToEnd
+- tapOn:
+    id: asset-lookup-result-asset-search-qa-hdfc-bank-bse
+- assertVisible:
+    id: selected-asset-summary
+- assertVisible: "HDFCBANK.*HDFCBANK.BO.*Yahoo Finance suggestion"
+- assertVisible: "Assets: 500; openings: 0"
+- takeScreenshot: .expo/${SHOT}-selected

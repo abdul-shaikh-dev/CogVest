@@ -1,12 +1,12 @@
 import { memo } from "react";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
-import { AppText, CategoryIcon, assetClassLabel } from "@/src/components/common";
+import { AppText, assetClassLabel } from "@/src/components/common";
 import {
   getDefaultAssetMetadata,
   instrumentTypeLabel,
 } from "@/src/domain/assets";
 import type { Asset } from "@/src/types";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { colors, interaction, spacing } from "@/src/theme";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 function resultInstrumentLabel(result: Pick<AssetLookupResult, "instrumentType">) {
@@ -41,19 +41,15 @@ export const DiscoveryResultRow = memo(function DiscoveryResultRow({ result, onS
   return <TouchableOpacity accessibilityLabel={`Select ${result.name}. ${instrument}. ${venue}. ${result.symbol}.`} accessibilityRole="button"
     activeOpacity={0.74} onPress={() => onSelect(result)} style={styles.row}
     testID={`asset-lookup-result-${result.id}`}>
-    <CategoryIcon assetClass={result.assetClass} size={18} />
     <View style={styles.copy}>
-      <View style={styles.identityBadges}>
-        <View style={styles.badge} testID={`asset-lookup-instrument-${result.id}`}>
-          <AppText variant="caption" weight="bold">{instrument}</AppText>
-        </View>
-        <View style={styles.badge} testID={`asset-lookup-venue-${result.id}`}>
-          <AppText color="secondary" variant="caption" weight="bold">{venue}</AppText>
-        </View>
-      </View>
       <AppText weight="bold">{result.name}</AppText>
-      <AppText color="secondary" variant="caption">{result.symbol} • {result.ticker} • {result.currency}</AppText>
-      <AppText color="secondary" variant="caption">Price identity: {result.sourceLabel}</AppText>
+      <AppText variant="caption" testID={`asset-lookup-instrument-${result.id}`}>
+        <AppText variant="caption" weight="bold">{instrument}</AppText>
+        {" • "}
+        <AppText color="secondary" variant="caption" testID={`asset-lookup-venue-${result.id}`}>{venue}</AppText>
+      </AppText>
+      <AppText color="secondary" variant="caption">{[...new Set([result.symbol, result.ticker]), result.currency].join(" • ")}</AppText>
+      <AppText color="secondary" variant="caption">{result.sourceLabel}</AppText>
     </View>
     <AppText color="secondary" variant="caption" weight="bold">Select</AppText>
   </TouchableOpacity>;
@@ -69,34 +65,25 @@ export const SavedAssetRow = memo(function SavedAssetRow({ asset, onSelect }: {
   return <TouchableOpacity accessibilityLabel={`Use ${asset.name}. Saved ${instrument}. ${venue}. ${asset.symbol}.`} accessibilityRole="button"
     activeOpacity={0.74} onPress={() => onSelect(asset)} style={styles.savedRow}
     testID={`existing-asset-${asset.id}`}>
-    <CategoryIcon assetClass={asset.assetClass} size={18} />
     <View style={styles.savedCopy}>
-      <View style={styles.identityBadges}>
-        <View style={styles.badge} testID={`saved-asset-instrument-${asset.id}`}>
-          <AppText variant="caption" weight="bold">{instrument}</AppText>
-        </View>
-        <View style={styles.badge} testID={`saved-asset-venue-${asset.id}`}>
-          <AppText color="secondary" variant="caption" weight="bold">{venue}</AppText>
-        </View>
-      </View>
       <AppText weight="bold">{asset.name}</AppText>
-      <AppText color="secondary" variant="caption">{asset.symbol} • {asset.ticker ?? assetClassLabel(asset.assetClass)} • {asset.currency}</AppText>
+      <AppText variant="caption" testID={`saved-asset-instrument-${asset.id}`}>
+        <AppText variant="caption" weight="bold">{instrument}</AppText>
+        {" • "}
+        <AppText color="secondary" variant="caption" testID={`saved-asset-venue-${asset.id}`}>{venue}</AppText>
+      </AppText>
+      <AppText color="secondary" variant="caption">{[...new Set([asset.symbol, asset.ticker ?? assetClassLabel(asset.assetClass)]), asset.currency].join(" • ")}</AppText>
     </View>
     <AppText color="secondary" variant="caption" weight="bold">Use</AppText>
   </TouchableOpacity>;
 });
 
 const styles = StyleSheet.create({
-  savedRow: { alignItems: "flex-start", backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle, borderRadius: radii.button,
-    borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm,
-    minHeight: interaction.minimumTouchTarget, padding: spacing.sm },
-  savedCopy: { flex: 1, gap: spacing.xs },
-  row: { alignItems: "flex-start", borderColor: colors.border.subtle, borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, padding: spacing.sm, minHeight: 56 },
+  savedRow: { alignItems: "flex-start", borderBottomColor: colors.border.subtle,
+    borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm,
+    minHeight: interaction.minimumTouchTarget, paddingVertical: spacing.sm },
+  savedCopy: { flex: 1, gap: spacing.xs, minWidth: 0 },
+  row: { alignItems: "flex-start", borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 56 },
   copy: { flex: 1, gap: spacing.xs, minWidth: 0 },
-  identityBadges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  badge: { backgroundColor: colors.surface.elevated, borderColor: colors.border.subtle,
-    borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.sm, paddingVertical: 2 },
 });

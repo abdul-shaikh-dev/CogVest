@@ -109,7 +109,9 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    expect(screen.getByTestId("asset-discovery-active-filter")).toHaveTextContent("Showing: All assets");
+    expect(screen.getByTestId("asset-discovery-filter-picker")).toHaveProp("accessibilityValue", { text: "All assets" });
+    expect(screen.getAllByText("All assets")).toHaveLength(1);
+    expect(screen.queryByText("Showing: All assets")).toBeNull();
     fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
     await act(async () => { jest.advanceTimersByTime(400); });
 
@@ -187,7 +189,11 @@ describe("AddOpeningPositionForm", () => {
     );
 
     expect(getByTestId("add-holding-screen")).toBeTruthy();
-    expect(getByTestId("add-holding-step-asset")).toBeTruthy();
+    expect(getByTestId("add-holding-step-asset")).toHaveProp("accessibilityRole", "progressbar");
+    expect(getByTestId("add-holding-step-asset")).toHaveProp("accessibilityValue", {
+      min: 1, max: 4, now: 1, text: "Step 1 of 4: Choose asset",
+    });
+    expect(queryByTestId("add-holding-step-class")).toBeNull();
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
     expect(getByText("Enter details manually")).toBeTruthy();
     expect(queryByTestId("manual-asset-fields")).toBeNull();

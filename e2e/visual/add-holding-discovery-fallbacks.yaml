@@ -1,0 +1,39 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run immediately after add-holding-discovery in the same synthetic QA session.
+- tapOn:
+    id: selected-asset-change
+- assertVisible:
+    id: toggle-recent-asset-searches
+- tapOn:
+    id: toggle-recent-asset-searches
+- assertVisible:
+    id: recent-asset-searches
+- takeScreenshot: .expo/${SHOT}-recent
+- tapOn: Clear recent searches
+- assertNotVisible:
+    id: toggle-recent-asset-searches
+- openLink: "cogvest:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- tapOn:
+    id: asset-lookup-input
+- eraseText
+- inputText: no-match-ux412
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: asset-lookup-retry
+    direction: DOWN
+- assertVisible: "Lookup unavailable.*"
+- takeScreenshot: .expo/${SHOT}-failure
+- tapOn:
+    id: asset-lookup-retry
+- assertNotVisible:
+    id: selected-asset-summary
+- scrollUntilVisible:
+    element:
+      id: toggle-manual-asset-entry
+    direction: UP
+- tapOn:
+    id: toggle-manual-asset-entry
+- assertVisible:
+    id: manual-asset-fields

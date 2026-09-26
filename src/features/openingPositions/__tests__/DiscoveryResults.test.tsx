@@ -107,6 +107,19 @@ describe("DiscoveryResults", () => {
     expect(screen.getByText("No exchange listing")).toBeTruthy();
   });
 
+  it("keeps long names and complete identity while removing identical ticker repetition", () => {
+    const result = { ...providerResult(1), name: "A deliberately long fund name - Direct Plan - Growth", symbol: "FUND1", ticker: "FUND1" };
+    const onSelect = jest.fn();
+    const screen = render(<DiscoveryResults kind="provider" items={[result]} onSelect={onSelect} />);
+    expect(screen.getByText(result.name).props.numberOfLines).toBeUndefined();
+    expect(screen.getByText("FUND1 • INR")).toBeTruthy();
+    expect(screen.getByText("Yahoo Finance")).toBeTruthy();
+    expect(screen.getByText("Company share")).toBeTruthy();
+    expect(screen.getByText("NSE listing")).toBeTruthy();
+    fireEvent.press(screen.getByTestId(`asset-lookup-result-${result.id}`));
+    expect(onSelect).toHaveBeenCalledWith(result);
+  });
+
   it("eventually renders every requested provider row", () => {
     const { getAllByText } = render(
       <DiscoveryResults
