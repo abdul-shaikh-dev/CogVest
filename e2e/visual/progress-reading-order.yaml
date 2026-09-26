@@ -37,7 +37,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element:
       id: open-monthly-history
-    direction: DOWN
+    direction: UP
 - tapOn:
     id: open-monthly-history
 - waitForAnimationToEnd:

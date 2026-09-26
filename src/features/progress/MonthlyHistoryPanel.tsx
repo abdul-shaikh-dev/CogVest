@@ -16,7 +16,6 @@ import {
   MaskedValue,
   assetClassLabel,
   CategoryIcon,
-  PremiumCard,
   androidRipple,
   getPressedStateStyle,
 } from "@/src/components/common";
@@ -235,23 +234,15 @@ export function MonthlyHistoryPanel({
 
   return (
     <>
-      <PremiumCard style={styles.entryCard} testID="monthly-history-panel">
-        <View style={styles.entryCopy}>
-          <AppText variant="title" weight="bold">
-            Monthly History
-          </AppText>
-          <AppText color="secondary" variant="caption">
-            Review stored month-end values and changes.
-          </AppText>
-        </View>
+      <View testID="monthly-history-panel">
         <AppButton
+          accessibilityLabel="Open monthly history"
           onPress={openHistory}
-          style={styles.entryAction}
           testID="open-monthly-history"
-          title="View history"
-          variant="secondary"
+          title="History"
+          variant="ghost"
         />
-      </PremiumCard>
+      </View>
 
       <Modal
         animationType="none"
@@ -648,9 +639,6 @@ const styles = StyleSheet.create({
   },
   detailRowLabel: { flex: 1, minWidth: 0 },
   detailSection: { gap: spacing.xs, marginTop: spacing.md },
-  entryAction: { alignSelf: "stretch" },
-  entryCard: { alignItems: "stretch", gap: spacing.md },
-  entryCopy: { flex: 1, gap: spacing.xs },
   gainText: { color: colors.profit },
   headerButton: { alignItems: "center", justifyContent: "center", minHeight: interaction.minimumTouchTarget, minWidth: 64 },
   historyColumns: { alignItems: "center", flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },

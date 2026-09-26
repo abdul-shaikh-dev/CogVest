@@ -1,0 +1,56 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&history=${HISTORY}"
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: progress-summary-month
+    direction: UP
+- assertVisible:
+    id: open-monthly-history
+- assertVisible: "₹19.87L"
+- takeScreenshot: .expo/${SHOT}-overview
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-Portfolio
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: .expo/${SHOT}-portfolio
+- assertVisible: "₹19.87L"
+- assertVisible: "₹17.21L"
+- scrollUntilVisible:
+    element:
+      id: asset-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: asset-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: asset-trend-Debt
+    direction: DOWN
+- tapOn:
+    id: asset-trend-Debt
+- assertVisible: "Debt scale.*"
+- takeScreenshot: .expo/${SHOT}-debt

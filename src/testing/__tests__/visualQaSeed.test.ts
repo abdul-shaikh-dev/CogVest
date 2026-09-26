@@ -32,6 +32,22 @@ describe("visual QA harness access", () => {
 });
 
 describe("seedVisualQaPortfolio", () => {
+  it("seeds a missing April and an estimated May without changing values", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedVisualQaPortfolio(store, { sparseHistory: true });
+    expect(store.getState().monthlySnapshots).toHaveLength(6);
+    expect(store.getState().monthlySnapshots.some(item => item.month === "2026-04")).toBe(false);
+    expect(store.getState().monthlySnapshots.at(-1)).toMatchObject({
+      month: "2026-05", portfolioValue: 1987450,
+      generated: { confidence: "provisional" },
+    });
+  });
+  it.each([3, 12])("seeds exactly %i months ending at the shared latest month", (historyMonths) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedVisualQaPortfolio(store, { historyMonths });
+    expect(store.getState().monthlySnapshots).toHaveLength(historyMonths);
+    expect(store.getState().monthlySnapshots.at(-1)?.month).toBe("2026-05");
+  });
   it("optionally seeds sixty consecutive months without changing the latest baseline", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedVisualQaPortfolio(store, { longHistory: true });

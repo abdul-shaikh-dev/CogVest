@@ -81,7 +81,7 @@ describe("visual QA seed deep link", () => {
     act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
     expect(mockSeedVisualQaPortfolio).toHaveBeenCalledWith(
       mockGetPortfolioStore.mock.results.at(-1)?.value,
-      { longHistory: true },
+      { longHistory: true, sparseHistory: false },
     );
   });
 
