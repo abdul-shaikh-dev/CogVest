@@ -44,7 +44,7 @@ import type {
 } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
-import { discoveryFilterLabel, discoveryFilters } from "./assetDiscovery";
+import { discoveryFilters } from "./assetDiscovery";
 import { DiscoveryResults } from "./DiscoveryResults";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
@@ -182,7 +182,6 @@ export function AddOpeningPositionForm({
     date,
     dateUnknown,
     errors,
-    getPhaseIndex,
     handleConfirm,
     instrumentType,
     instrumentTypeConfidence,
@@ -431,7 +430,20 @@ export function AddOpeningPositionForm({
   }, [hardwareBackEnabled, onCancel, quickSetup, requestExit, goBack]);
 
   function renderStepper() {
-    const currentIndex = getPhaseIndex(currentPhase);
+    if (currentPhase === "asset") {
+      return (
+        <View accessible accessibilityRole="progressbar" accessibilityLabel="Add Holding progress"
+          accessibilityValue={{ min: 1, max: displayPhases.length, now: 1, text: `Step 1 of ${displayPhases.length}: Choose asset` }}
+          style={styles.discoveryProgress} testID="add-holding-step-asset">
+          <AppText color="secondary" variant="caption">1 of {displayPhases.length}</AppText>
+          <View style={styles.progressTrack}>
+            {displayPhases.map((phase, index) => (
+              <View key={phase.key} style={[styles.progressSegment, index === 0 && styles.progressSegmentActive]} />
+            ))}
+          </View>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.stepper}>
@@ -543,12 +555,23 @@ export function AddOpeningPositionForm({
                 setLookupQuery(value);
                 setQuoteStatus("");
               }}
-              placeholder="Search name, symbol, or ticker"
+              placeholder="Name, symbol, or ticker"
               returnKeyType="search"
               testID="asset-lookup-input"
               value={lookupQuery}
             />
             <View style={styles.discoveryActions}>
+              <SelectionField
+                compact
+                label="Filter results"
+                options={discoveryFilters}
+                value={discoveryFilter}
+                onChange={(value) => {
+                  onDiscoveryAction?.("filter");
+                  setDiscoveryFilter(value);
+                }}
+                testIDPrefix="asset-discovery-filter"
+              />
               {lookupQuery.trim().length === 0 && recentSearches.length > 0 ? (
                 <Pressable
                   accessibilityRole="button"
@@ -600,19 +623,6 @@ export function AddOpeningPositionForm({
               </View>
             ) : null}
             {recentSearchStatus ? <AppText color="secondary" variant="caption">{recentSearchStatus}</AppText> : null}
-            <SelectionField
-              label="Filter results"
-              options={discoveryFilters}
-              value={discoveryFilter}
-              onChange={(value) => {
-                onDiscoveryAction?.("filter");
-                setDiscoveryFilter(value);
-              }}
-              testIDPrefix="asset-discovery-filter"
-            />
-            <AppText color="secondary" testID="asset-discovery-active-filter" variant="caption">
-              Showing: {discoveryFilterLabel(discoveryFilter)}
-            </AppText>
             {matchingExistingAssets.length > 0 ? (
               <View
                 style={styles.lookupResults}
@@ -1573,16 +1583,26 @@ const styles = StyleSheet.create({
   },
   discoveryAction: {
     alignItems: "center",
-    flexGrow: 1,
+    flexShrink: 1,
     justifyContent: "center",
     minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.sm,
   },
   discoveryActions: {
+    alignItems: "center",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
   },
+  discoveryProgress: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  progressTrack: { flex: 1, flexDirection: "row", gap: spacing.xs },
+  progressSegment: { flex: 1, height: 3, backgroundColor: colors.border.subtle },
+  progressSegmentActive: { backgroundColor: colors.primary },
   summaryCard: {
     alignItems: "center",
     flexDirection: "row",

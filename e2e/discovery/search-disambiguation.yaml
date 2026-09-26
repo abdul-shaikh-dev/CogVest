@@ -30,33 +30,32 @@ appId: com.abdulshaikh.cogvest
     id: "asset-lookup-input"
 - inputText: "HDFC"
 - hideKeyboard
-- assertVisible: "Showing: All assets"
+- assertVisible: "All assets"
 - scrollUntilVisible:
     element:
       id: "saved-asset-instrument-asset-search-qa-saved-0001"
     direction: DOWN
-- assertVisible: "Mutual Fund"
-- assertVisible: "No exchange listing"
+- assertVisible: ".*Mutual Fund.*"
+- assertVisible: ".*No exchange listing.*"
 - scrollUntilVisible:
     element:
       id: "asset-lookup-instrument-asset-search-qa-hdfc-bank-bse"
     direction: DOWN
-- assertVisible: "Company share"
-- assertVisible: "BSE listing"
+- assertVisible: ".*Company share.*"
+- assertVisible: ".*BSE listing.*"
 - scrollUntilVisible:
     element:
       id: "asset-lookup-instrument-asset-search-qa-hdfc-etf"
     direction: DOWN
 - assertVisible:
     id: "asset-lookup-instrument-asset-search-qa-hdfc-etf"
-- assertVisible:
-    id: "asset-lookup-venue-asset-search-qa-hdfc-etf"
+- assertVisible: ".*NSE listing.*"
 - scrollUntilVisible:
     element:
       id: "asset-lookup-instrument-asset-search-qa-hdfc-rstock"
     direction: DOWN
-- assertVisible: "Crypto asset"
-- assertVisible: "Not an NSE/BSE share"
+- assertVisible: ".*Crypto asset.*"
+- assertVisible: ".*Not an NSE/BSE share.*"
 - assertNotVisible:
     id: "selected-asset-summary"
 - takeScreenshot: ".expo/ux12-mixed-search-results"

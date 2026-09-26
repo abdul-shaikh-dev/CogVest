@@ -16,6 +16,7 @@ export type SelectionOption<T extends string> = {
 };
 
 type SelectionFieldProps<T extends string> = {
+  compact?: boolean;
   helperText?: string;
   helperTestID?: string;
   label: string;
@@ -26,6 +27,7 @@ type SelectionFieldProps<T extends string> = {
 };
 
 export function SelectionField<T extends string>({
+  compact = false,
   helperText,
   helperTestID,
   label,
@@ -43,18 +45,20 @@ export function SelectionField<T extends string>({
       <Pressable
         accessibilityHint={`Select ${label.toLowerCase()}`}
         accessibilityLabel={label}
+        accessibilityValue={compact ? { text: selectedOption?.label ?? value } : undefined}
         accessibilityRole="button"
         onPress={() => setIsOpen(true)}
         style={({ pressed }) => [
           styles.field,
+          compact && styles.compactField,
           pressed && styles.pressed,
         ]}
         testID={`${testIDPrefix}-picker`}
       >
-        <View style={styles.copy}>
-          <AppText color="secondary" variant="caption">
+        <View style={[styles.copy, compact && styles.compactCopy]}>
+          {!compact ? <AppText color="secondary" variant="caption">
             {label}
-          </AppText>
+          </AppText> : null}
           <AppText weight="bold">{selectedOption?.label ?? value}</AppText>
           {helperText ? (
             <AppText
@@ -127,6 +131,16 @@ export function SelectionField<T extends string>({
 }
 
 const styles = StyleSheet.create({
+  compactField: {
+    alignSelf: "flex-start",
+    flexShrink: 1,
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  compactCopy: {
+    flex: 0,
+    flexShrink: 1,
+  },
   backdrop: {
     backgroundColor: "rgba(0,0,0,0.72)",
     flex: 1,
