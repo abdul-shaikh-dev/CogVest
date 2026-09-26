@@ -146,11 +146,13 @@ export function ScreenHeader({
 
 export function IconButton({
   accessibilityLabel,
+  disabled = false,
   icon,
   onPress,
   testID,
 }: {
   accessibilityLabel: string;
+  disabled?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   onPress?: () => void;
   testID?: string;
@@ -159,10 +161,13 @@ export function IconButton({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       android_ripple={androidRipple()}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
+        disabled && { opacity: 0.4 },
         minimumTouchTargetStyle,
         getPressedStateStyle({ pressed }),
       ]}

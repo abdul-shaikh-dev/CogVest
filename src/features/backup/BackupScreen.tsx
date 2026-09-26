@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, StyleSheet, View } from "react-native";
+import { useFocusEffect, usePreventRemove } from "@react-navigation/native";
 
 import {
   AppButton,
@@ -66,6 +67,29 @@ export function BackupScreen({
   const [status, setStatus] = useState<string>();
   const isMounted = useRef(true);
   const operationRef = useRef<AbortController | undefined>(undefined);
+
+  const handleBack = useCallback(() => {
+    if (operationRef.current) return;
+    if (restoreStep === "confirmation") {
+      setStatus(undefined);
+      setRestoreStep("preview");
+    } else if (restoreStep === "preview") {
+      setPrepared(undefined);
+      setStatus(undefined);
+      setRestoreStep("warning");
+    } else {
+      onBack();
+    }
+  }, [onBack, restoreStep]);
+
+  usePreventRemove(isBusy || restoreStep === "confirmation" || restoreStep === "preview", handleBack);
+  useFocusEffect(useCallback(() => {
+    const listener = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleBack();
+      return true;
+    });
+    return () => listener.remove();
+  }, [handleBack]));
 
   useEffect(() => {
     isMounted.current = true;
@@ -139,13 +163,13 @@ export function BackupScreen({
   }
 
   async function replacePortfolio() {
-    if (!prepared) return;
+    if (!prepared || restoreStep !== "confirmation") return;
     const operation = startOperation();
     if (!operation) return;
     setStatus(undefined);
     try {
       await restorePortfolioBackup(prepared, operation.signal);
-      if (isMounted.current) onRestored();
+      updateAfterAsync(onRestored);
     } catch (error) {
       updateAfterAsync(() => {
         setPrepared(undefined);
@@ -164,14 +188,14 @@ export function BackupScreen({
     <ScreenContainer scroll testID="backup-screen">
       <View style={styles.content}>
         <ScreenHeader
-          leading={<IconButton accessibilityLabel="Back" icon="chevron-back" onPress={() => { if (!isBusy) onBack(); }} testID="backup-back" />}
+          leading={<IconButton accessibilityLabel="Back" disabled={isBusy} icon="chevron-back" onPress={handleBack} testID="backup-back" />}
           subtitle={isRestore ? "Review before replacing local data" : "Manual file • local control"}
           title={title}
         />
 
         {status ? (
           <PremiumCard testID="backup-status">
-            <AppText color="secondary">{status}</AppText>
+            <AppText accessibilityLiveRegion="polite" color="secondary">{status}</AppText>
           </PremiumCard>
         ) : null}
 
@@ -239,7 +263,7 @@ export function BackupScreen({
           <SectionHeader title="Replace this portfolio?" />
           <AppText color="secondary">This replaces the portfolio on this device. It does not merge portfolios.</AppText>
           <AppText color="secondary" variant="caption">The backup was created {formatBackupCreatedAt(prepared.review.createdAt)}. This action cannot be undone from this screen.</AppText>
-          <AppButton disabled={isBusy} onPress={() => setRestoreStep("preview")} title="Back to review" variant="secondary" />
+          <AppButton disabled={isBusy} onPress={handleBack} title="Back to review" variant="secondary" />
           <AppButton disabled={isBusy} onPress={() => void replacePortfolio()} testID="confirm-restore-replacement" title={isBusy ? "Replacing portfolio..." : "Replace this device's portfolio"} variant="destructive" />
         </PremiumCard>
         ) : null}

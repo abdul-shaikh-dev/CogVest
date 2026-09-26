@@ -1,5 +1,5 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
@@ -7,6 +7,9 @@ import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import RootLayout from "../../app/_layout";
 
 const mockResetAffectedStorage = jest.fn();
+let mockRestoreEpoch = 0;
+const mockReplace = jest.fn();
+const mockDismissAll = jest.fn();
 
 jest.mock("@/src/features/progress", () => ({
   useMonthEndSnapshotAutomation: jest.fn(),
@@ -17,6 +20,7 @@ jest.mock("@/src/store", () => ({
     getState: () => ({
       resetAffectedStorage: mockResetAffectedStorage,
       storageRecovery: undefined,
+      restoreEpoch: mockRestoreEpoch,
     }),
     subscribe: () => () => undefined,
   }),
@@ -34,7 +38,9 @@ jest.mock("expo-router", () => {
       testID: `stack-screen-${name}`,
     });
 
-  return { Stack, usePathname: () => "/dashboard" };
+  return { Stack, usePathname: () => "/dashboard", router: {
+    canDismiss: () => true, dismissAll: () => mockDismissAll(), replace: (path: string) => mockReplace(path),
+  } };
 });
 
 jest.mock("expo-status-bar", () => {
@@ -51,6 +57,8 @@ jest.mock("react-native-safe-area-context", () => {
   return {
     SafeAreaProvider: ({ children }: { children: React.ReactNode }) =>
       React.createElement("SafeAreaProvider", {}, children),
+    SafeAreaView: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("SafeAreaView", {}, children),
   };
 });
 
@@ -66,6 +74,23 @@ jest.mock("react-native-gesture-handler", () => {
 describe("RootLayout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRestoreEpoch = 0;
+  });
+
+  it("keeps readable restore completion outside the remounted navigation tree", async () => {
+    const view = render(<RootLayout />);
+    await waitFor(() => expect(view.getByTestId("stack-screen-(tabs)")).toBeTruthy());
+    expect(view.queryByTestId("backup-restore-done")).toBeNull();
+    mockRestoreEpoch = 1;
+    view.rerender(<RootLayout />);
+    await waitFor(() => expect(view.getByTestId("backup-restore-done")).toBeTruthy());
+    expect(view.getByText("Portfolio restored").props.accessibilityLiveRegion).toBe("polite");
+    expect(mockDismissAll).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith("/");
+    fireEvent.press(view.getByTestId("backup-restore-done"));
+    expect(view.queryByTestId("backup-restore-done")).toBeNull();
+    view.rerender(<RootLayout />);
+    expect(view.queryByTestId("backup-restore-done")).toBeNull();
   });
 
   it("wraps navigation with the gesture handler root required by native navigation", async () => {
