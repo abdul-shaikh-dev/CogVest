@@ -561,6 +561,11 @@ Baseline groups:
 - Retain the local-first subtitle, without a duplicate Local only header badge.
 - Working preferences first: value masking with honest amount-only scope and
   Standard/Minimal display choices. Checked states must be accessible.
+- Display modes form one named radio group with concrete descriptions of what
+  appears or is hidden. Use radio indicators, not redundant Choose/Selected text.
+- Disclosures use up/down chevrons with expanded/collapsed accessibility state;
+  backup destinations use forward chevrons. Passive information has neither a
+  navigation indicator nor a button role. Decorative icons are not focus stops.
 - Masked INR amounts use the fixed `₹••••` token, independent of magnitude or
   precision, and expose `Amount hidden` rather than the underlying amount to
   accessibility services. Quantities, percentages and per-unit prices remain

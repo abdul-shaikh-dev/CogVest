@@ -61,6 +61,7 @@ type GroupedListRowProps = {
   title: string;
   value?: string;
   selected?: boolean;
+  showChevron?: boolean;
 };
 
 export type AdaptiveLayoutMode = "accessibility" | "large" | "standard";
@@ -309,6 +310,7 @@ export function GroupedListRow({
   title,
   value,
   selected = false,
+  showChevron = false,
 }: GroupedListRowProps) {
   const content = (
     <>
@@ -334,6 +336,10 @@ export function GroupedListRow({
         <AppText color="secondary" variant="caption" weight="medium">
           {value}
         </AppText>
+      ) : null}
+      {showChevron && onPress ? (
+        <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
+          name="chevron-forward" size={20} color={colors.text.secondary} />
       ) : null}
     </>
   );
