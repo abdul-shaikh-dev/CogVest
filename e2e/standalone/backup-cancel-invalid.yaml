@@ -54,6 +54,9 @@ appId: com.abdulshaikh.cogvest
       visible: CogVest-QA
     commands:
       - tapOn: CogVest-QA
+- scrollUntilVisible:
+    element: invalid-portfolio-backup.json
+    direction: DOWN
 - tapOn: invalid-portfolio-backup.json
 - assertVisible: "This backup could not be read or validated. Choose an intact, supported CogVest backup. Your portfolio has not changed."
 - assertNotVisible:

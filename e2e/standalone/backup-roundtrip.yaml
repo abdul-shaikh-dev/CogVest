@@ -4,7 +4,8 @@ appId: com.abdulshaikh.cogvest
 # Requires the Android picker to start in Documents/CogVest-QA.
 # Exports first, changes preferences, restores that backup, and cold-reopens.
 # Never resets app data. Do not run against a real portfolio.
-- launchApp
+- launchApp:
+    stopApp: false
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
@@ -66,8 +67,47 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: continue-restore-confirmation
+- back
+- assertVisible:
+    id: backup-restore-preview
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- tapOn:
+    id: backup-back
+- assertVisible:
+    id: backup-restore-preview
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- swipe:
+    start: 1%, 50%
+    end: 80%, 50%
+    duration: 500
+- assertVisible:
+    id: backup-restore-preview
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
 - tapOn:
     id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-done
+    timeout: 30000
+- assertVisible: "Portfolio restored.*"
+- takeScreenshot: .expo/backup-restore-success
+- tapOn:
+    id: backup-restore-done
 - extendedWaitUntil:
     visible:
       id: dashboard-screen

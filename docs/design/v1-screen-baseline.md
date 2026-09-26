@@ -593,6 +593,22 @@ as locked or future only if they appear at all.
 Future controls should be hidden when they add clutter without helping local-
 first trust.
 
+## Backup Navigation And Feedback
+
+- Header, Android and gesture Back share the same stage behavior: confirmation
+  returns to the populated review, review returns to file selection, and file
+  selection/export exits the route. Errors keep the current stage's Back behavior;
+  a failed replacement discards its stale review and returns to selection.
+- While an operation is active, app navigation is blocked and the header Back
+  button is visibly and semantically disabled. Android's file picker retains its
+  own cancellation; cancelling it leaves the portfolio unchanged.
+- Replacement always requires the separate destructive confirmation. Going back
+  does not restore or silently accept the review.
+- Export and failure updates use a polite live region. Successful restore keeps
+  a readable acknowledgement outside the navigation tree that is reset after
+  replacement; Open Dashboard or Android Back dismisses it. It is not replayed
+  after a cold launch.
+
 ## Data Consistency Rules
 
 - Dashboard totals, Holdings totals, allocation, and Progress snapshot values

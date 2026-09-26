@@ -1,0 +1,62 @@
+appId: com.abdulshaikh.cogvest
+---
+# Opt-in synthetic portfolio only. Pass BACKUP_FILE from the roundtrip export.
+# Android's picker must already be in Documents/CogVest-QA.
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///backup?mode=restore"
+- scrollUntilVisible:
+    element:
+      id: choose-backup-file
+    direction: DOWN
+- tapOn:
+    id: choose-backup-file
+- scrollUntilVisible:
+    element: ${BACKUP_FILE}
+    direction: DOWN
+- tapOn: ${BACKUP_FILE}
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 15000
+- back
+- assertVisible:
+    id: backup-restore-warning
+- scrollUntilVisible:
+    element:
+      id: choose-backup-file
+    direction: DOWN
+- tapOn:
+    id: choose-backup-file
+- scrollUntilVisible:
+    element: ${BACKUP_FILE}
+    direction: DOWN
+- tapOn: ${BACKUP_FILE}
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: continue-restore-confirmation
+- assertVisible:
+    id: backup-restore-confirmation
+- takeScreenshot: .expo/backup-narrow-confirmation
+- tapOn:
+    id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-done
+    timeout: 30000
+- assertVisible: "Portfolio restored"
+- takeScreenshot: .expo/backup-narrow-success
+- back
+- assertVisible:
+    id: dashboard-screen
+- assertNotVisible:
+    id: backup-restore-done

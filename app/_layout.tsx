@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -13,10 +14,11 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
+import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
 import { getPortfolioStore } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
-import { colors } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 
 function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
   useMonthEndSnapshotAutomation({ enabled });
@@ -69,9 +71,12 @@ export default function RootLayout() {
   const restoreEpoch = useSyncExternalStore(store.subscribe,
     () => store.getState().restoreEpoch, () => store.getState().restoreEpoch);
   const previousRestoreEpoch = useRef(restoreEpoch);
+  const [showRestoreComplete, setShowRestoreComplete] = useState(false);
   useEffect(() => {
     if (previousRestoreEpoch.current === restoreEpoch) return;
     previousRestoreEpoch.current = restoreEpoch;
+    // Keep completion outside the keyed navigation tree: restoring unmounts it.
+    setShowRestoreComplete(true);
     if (router.canDismiss()) router.dismissAll();
     router.replace("/");
   }, [restoreEpoch]);
@@ -108,6 +113,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
+        <Modal visible={showRestoreComplete} onRequestClose={() => setShowRestoreComplete(false)} animationType="fade">
+          <ScreenContainer scroll>
+            <PremiumCard style={styles.restoreComplete}>
+              <AppText accessibilityLiveRegion="polite" variant="title" weight="bold">Portfolio restored</AppText>
+              <AppText color="secondary">Your backup has replaced the portfolio on this device.</AppText>
+              <AppButton onPress={() => setShowRestoreComplete(false)} testID="backup-restore-done" title="Open Dashboard" />
+            </PremiumCard>
+          </ScreenContainer>
+        </Modal>
         {recovery ? (
           <RecoveryScreen
             affectedAreas={recovery.incidents.map(
@@ -213,6 +227,10 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  restoreComplete: {
+    gap: spacing.lg,
+    marginTop: spacing.xl,
+  },
   assetGate: {
     alignItems: "center",
     backgroundColor: colors.background,

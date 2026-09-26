@@ -1,5 +1,11 @@
 import type { ComponentProps } from "react";
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { usePreventRemove } from "@react-navigation/native";
+
+jest.mock("@react-navigation/native", () => ({
+  usePreventRemove: jest.fn(),
+  useFocusEffect: (effect: () => void) => require("react").useEffect(effect, [effect]),
+}));
 
 import {
   BackupScreen,
@@ -33,6 +39,46 @@ function renderScreen(overrides: Partial<ComponentProps<typeof BackupScreen>> = 
 }
 
 describe("BackupScreen", () => {
+  it("returns header and intercepted navigation Back to the populated review", async () => {
+    const onBack = jest.fn();
+    const view = renderScreen({ onBack });
+    fireEvent.press(view.getByTestId("choose-backup-file"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
+    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    fireEvent.press(view.getByTestId("backup-back"));
+    expect(view.getByText("This device: 1 • Backup: 3")).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
+    expect(blocked).toBe(true);
+    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    expect(view.getByTestId("backup-restore-preview")).toBeTruthy();
+    fireEvent.press(view.getByTestId("backup-back"));
+    expect(view.getByTestId("backup-restore-warning")).toBeTruthy();
+    fireEvent.press(view.getByTestId("backup-back"));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks Back during export and announces a readable failure", async () => {
+    let reject!: (error: Error) => void;
+    const onBack = jest.fn();
+    const view = renderScreen({ initialMode: "export", onBack,
+      exportPortfolioBackup: () => new Promise((_, fail) => { reject = fail; }),
+    });
+    fireEvent.press(view.getByTestId("choose-backup-location"));
+    expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(view.getByTestId("backup-back"));
+    const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
+    expect(blocked).toBe(true);
+    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    expect(onBack).not.toHaveBeenCalled();
+    await act(async () => reject(new Error("Could not save backup.")));
+    expect(view.getByText("Could not save backup.").props.accessibilityLiveRegion).toBe("polite");
+    expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(view.getByTestId("backup-back"));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("warns before export and treats a cancelled location picker as neutral", async () => {
     const exportPortfolioBackup = jest.fn(async () => undefined);
     const { getByTestId, getByText, queryByTestId } = renderScreen({
@@ -44,6 +90,29 @@ describe("BackupScreen", () => {
     fireEvent.press(getByTestId("choose-backup-location"));
     await waitFor(() => expect(exportPortfolioBackup).toHaveBeenCalledTimes(1));
     expect(queryByTestId("backup-status")).toBeNull();
+  });
+
+  it("keeps replacement busy until completion and does not repeat the operation", async () => {
+    let finish!: () => void;
+    const onBack = jest.fn();
+    const restorePortfolioBackup = jest.fn(() => new Promise<void>(resolve => { finish = resolve; }));
+    const onRestored = jest.fn();
+    const view = renderScreen({ onBack, onRestored, restorePortfolioBackup });
+    fireEvent.press(view.getByTestId("choose-backup-file"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
+    expect(restorePortfolioBackup).not.toHaveBeenCalled();
+    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    fireEvent.press(view.getByTestId("confirm-restore-replacement"));
+    fireEvent.press(view.getByTestId("confirm-restore-replacement"));
+    fireEvent.press(view.getByText("Back to review"));
+    expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(true);
+    const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
+    expect(blocked).toBe(true);
+    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    expect(onBack).not.toHaveBeenCalled();
+    expect(restorePortfolioBackup).toHaveBeenCalledTimes(1);
+    await act(async () => finish());
+    expect(onRestored).toHaveBeenCalledTimes(1);
   });
 
   it("only previews a selected backup and shows original and backup counts", async () => {
