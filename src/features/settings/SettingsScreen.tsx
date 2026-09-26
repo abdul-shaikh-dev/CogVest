@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import Constants from "expo-constants";
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
@@ -96,7 +97,7 @@ export function SettingsScreen({
               Quantities, percentages, and per-unit prices stay visible.
             </AppText>
           </View>
-          <View style={[styles.switchTrack, maskWealthValues && styles.switchOn]}>
+          <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, maskWealthValues && styles.switchOn]}>
             <View
               style={[
                 styles.switchThumb,
@@ -108,15 +109,15 @@ export function SettingsScreen({
 
         <PremiumCard testID="display-mode-settings">
           <SectionHeader title="Display" />
-          <View accessibilityRole="radiogroup" style={styles.modeOptions}>
+          <View testID="display-mode-options" accessibilityLabel="Display mode" accessibilityRole="radiogroup" style={styles.modeOptions}>
             {([
               {
-                description: "Full portfolio context and review prompts.",
+                description: "Monthly activity, portfolio insights and optional guidance.",
                 label: "Standard",
                 value: "standard" as const,
               },
               {
-                description: "Essential values with a calmer visual hierarchy.",
+                description: "Hides monthly activity, insights and guidance. Keeps core values and actions.",
                 label: "Minimal",
                 value: "minimal" as const,
               },
@@ -126,6 +127,7 @@ export function SettingsScreen({
               return (
                 <Pressable
                   accessibilityLabel={`${option.label} display mode`}
+                  accessibilityHint={option.description}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
                   key={option.value}
@@ -139,19 +141,20 @@ export function SettingsScreen({
                   ]}
                   testID={`display-mode-${option.value}`}
                 >
+                  <Ionicons
+                    accessible={false}
+                    importantForAccessibility="no-hide-descendants"
+                    name={selected ? "radio-button-on" : "radio-button-off"}
+                    size={24}
+                    color={selected ? colors.primary : colors.text.secondary}
+                    style={styles.controlIcon}
+                  />
                   <View style={styles.toggleCopy}>
                     <AppText weight="bold">{option.label}</AppText>
                     <AppText color="secondary" variant="caption">
                       {option.description}
                     </AppText>
                   </View>
-                  <AppText
-                    color={selected ? "primary" : "secondary"}
-                    variant="caption"
-                    weight="bold"
-                  >
-                    {selected ? "Selected" : "Choose"}
-                  </AppText>
                 </Pressable>
               );
             })}
@@ -176,9 +179,9 @@ export function SettingsScreen({
                 No account • No cloud sync • No analytics
               </AppText>
             </View>
-            <AppText color="secondary" variant="caption" weight="bold">
-              {isPrivacyDetailsExpanded ? "Hide" : "Show"}
-            </AppText>
+            <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
+              name={isPrivacyDetailsExpanded ? "chevron-up" : "chevron-down"}
+              size={20} color={colors.text.secondary} style={styles.controlIcon} />
           </Pressable>
           {isPrivacyDetailsExpanded ? (
             <View style={styles.privacyDetails} testID="privacy-storage-details">
@@ -226,6 +229,7 @@ export function SettingsScreen({
             icon="save-outline"
             meta="Save an unencrypted manual copy to a location you choose."
             onPress={() => router.push("/backup?mode=export")}
+            showChevron
             testID="backup-portfolio-action"
             title="Back up portfolio"
           />
@@ -233,6 +237,7 @@ export function SettingsScreen({
             icon="arrow-undo-outline"
             meta="Review a backup before it replaces this device's portfolio."
             onPress={() => router.push("/backup?mode=restore")}
+            showChevron
             testID="restore-backup-action"
             title="Restore backup"
           />
@@ -253,9 +258,9 @@ export function SettingsScreen({
                 Sources and dates of price updates
               </AppText>
             </View>
-            <AppText color="secondary" variant="caption" weight="bold">
-              {isPriceDetailsExpanded ? "Hide" : "Show"}
-            </AppText>
+            <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
+              name={isPriceDetailsExpanded ? "chevron-up" : "chevron-down"}
+              size={20} color={colors.text.secondary} style={styles.controlIcon} />
           </Pressable>
           {isPriceDetailsExpanded ? (
             <View style={styles.privacyDetails} testID="settings-price-details">
@@ -310,6 +315,9 @@ export function SettingsScreen({
 }
 
 const styles = StyleSheet.create({
+  controlIcon: {
+    flexShrink: 0,
+  },
   priceDate: {
     gap: spacing.xs,
     paddingVertical: spacing.sm,

@@ -27,6 +27,33 @@ const mockedConstants = Constants as unknown as {
 };
 
 describe("SettingsScreen", () => {
+  it("uses named choices and disclosures without generic action text", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const view = render(<SettingsScreen store={store} />);
+    expect(view.getByTestId("display-mode-options").props.accessibilityRole).toBe("radiogroup");
+    const standard = view.getByRole("radio", { name: "Standard display mode" });
+    const minimal = view.getByRole("radio", { name: "Minimal display mode" });
+    expect(minimal.props.accessibilityHint).toContain("Keeps core values and actions");
+    expect(standard.props.accessibilityState.checked).toBe(true);
+    fireEvent.press(minimal);
+    expect(standard.props.accessibilityState.checked).toBe(false);
+    expect(minimal.props.accessibilityState.checked).toBe(true);
+    fireEvent.press(minimal);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+    fireEvent.press(standard);
+    expect(store.getState().preferences.displayMode).toBe("standard");
+    for (const label of ["Choose", "Selected", "Show", "Hide"]) {
+      expect(view.queryByText(label)).toBeNull();
+    }
+    for (const id of ["privacy-details-toggle", "settings-price-details-toggle"]) {
+      const disclosure = view.getByTestId(id);
+      expect(disclosure.props.accessibilityRole).toBe("button");
+      expect(disclosure.props.accessibilityState.expanded).toBe(false);
+      fireEvent.press(disclosure);
+      expect(disclosure.props.accessibilityState.expanded).toBe(true);
+    }
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockedConstants.expoConfig = { version: "test-version" };

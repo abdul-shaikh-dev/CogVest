@@ -1,0 +1,49 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: value-mask-toggle
+- tapOn:
+    id: value-mask-toggle
+- tapOn:
+    id: display-mode-minimal
+- takeScreenshot: .expo/${SHOT}-choices
+- tapOn:
+    id: display-mode-standard
+- scrollUntilVisible:
+    element:
+      id: privacy-details-toggle
+    direction: DOWN
+- tapOn:
+    id: privacy-details-toggle
+- scrollUntilVisible:
+    element:
+      text: "Manual portfolio backups are available.*"
+    direction: DOWN
+- assertVisible: "Manual portfolio backups are available.*"
+- takeScreenshot: .expo/${SHOT}-privacy
+- scrollUntilVisible:
+    element:
+      id: privacy-details-toggle
+    direction: UP
+- tapOn:
+    id: privacy-details-toggle
+- scrollUntilVisible:
+    element:
+      id: settings-price-details-toggle
+    direction: DOWN
+- takeScreenshot: .expo/${SHOT}-destinations
+- tapOn:
+    id: settings-price-details-toggle
+- scrollUntilVisible:
+    element:
+      text: "No separate price updates saved yet."
+    direction: DOWN
+- assertVisible: "No separate price updates saved yet."
+- takeScreenshot: .expo/${SHOT}-prices
