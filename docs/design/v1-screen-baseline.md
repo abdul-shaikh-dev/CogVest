@@ -448,8 +448,18 @@ Accepted chart direction:
 - the reading order is a dated monthly answer (portfolio, market change,
   monthly investment), its adjacent `Monthly History` action, compact snapshot
   status, then the independent charts
-- each chart names its displayed month range, inspected month, comparison basis,
-  and data scope; the two chart ranges remain independent
+- each chart shows one concise date range and selected month, without repeated
+  `Displayed range`, `Comparison`, or `Inspecting month` headings. Portfolio
+  differences are labelled `Gap vs invested`, never investment return. The two
+  chart ranges remain independent; scope stays in the chart subtitle
+- `Value by asset class` uses signed monthly value changes, with exact comparison
+  months and unavailable reasons in accessibility labels. Missing calendar months
+  break the plotted lines and show no change percentage across the gap. Entirely
+  zero series are omitted, but a series with any nonzero value remains available
+- snapshot status is one concise Details row; selected estimated values carry a
+  local estimate label. Full provenance and recovery actions stay in Details
+- narrow enlarged-text charts use endpoint-only axis labels when three labels
+  would crowd. All stored observations and selected-month controls remain intact
 - choosing `Custom` opens a focused, cancellable range panel. Draft dates do not
   change either chart or the headline month; `Apply range` commits only to the
   chart that opened it, and Android Back behaves like Cancel

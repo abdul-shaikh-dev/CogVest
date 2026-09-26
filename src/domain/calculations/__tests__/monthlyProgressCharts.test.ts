@@ -30,6 +30,24 @@ function snapshot(
 }
 
 describe("buildMonthlyProgressChartData", () => {
+  it("preserves values while identifying calendar gaps and estimated points", () => {
+    const snapshots = [
+      snapshot("2025-12", { portfolioValue: 100 }),
+      snapshot("2026-01", { portfolioValue: 110 }),
+      snapshot("2026-03", {
+        portfolioValue: 130,
+        generated: { source: "auto", confidence: "provisional", priceBasis: "manual-fallback", generatedAt: "2026-04-01T00:00:00Z", warnings: [] },
+      }),
+    ];
+    const data = buildMonthlyProgressChartData(snapshots, "All");
+    expect(data.gapAfterIndices).toEqual([1]);
+    expect(data.estimatedIndices).toEqual([2]);
+    expect(data.portfolioSeries[0].values).toEqual([100, 110, 130]);
+    expect(buildMonthlyProgressChartData(snapshots, "Custom", {
+      startMonth: "2025-12", endMonth: "2026-01",
+    }).gapAfterIndices).toEqual([]);
+  });
+
   const monthlySnapshots = [
     snapshot("2025-11", {
       cashValue: 120000,

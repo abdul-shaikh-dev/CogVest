@@ -458,10 +458,12 @@ export function seedVisualQaPortfolio(
     holdingCount,
     historyMonths,
     longHistory = false,
+    sparseHistory = false,
   }: {
     holdingCount?: number;
     historyMonths?: number;
     longHistory?: boolean;
+    sparseHistory?: boolean;
   } = {},
 ) {
   visualQaSessionActive = true;
@@ -541,8 +543,16 @@ export function seedVisualQaPortfolio(
         };
       })
     : [];
-  [...olderSnapshots, ...visualQaMonthlySnapshots].forEach((snapshot) =>
-    state.addMonthlySnapshot(snapshot),
-  );
+  [...olderSnapshots, ...visualQaMonthlySnapshots]
+    .slice(-totalHistoryMonths)
+    .filter((snapshot) => !sparseHistory || snapshot.month !== "2026-04")
+    .forEach((snapshot) => state.addMonthlySnapshot(
+      sparseHistory && snapshot.month === "2026-05"
+        ? { ...snapshot, generated: {
+            source: "auto", confidence: "provisional", priceBasis: "manual-fallback",
+            generatedAt: "2026-06-01T00:00:00.000Z", warnings: [],
+          } }
+        : snapshot,
+    ));
   visualQaQuotes.forEach((quote) => state.upsertQuote(quote));
 }

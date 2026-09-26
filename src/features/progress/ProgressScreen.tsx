@@ -175,7 +175,10 @@ function toGiftedChartData(
 
   return series.values.map((value, index) => {
     const dataPointRadius = getChartPointRadius(total, index, selectedIndex);
-    const showLabel = showAxisLabels && shouldShowAxisLabel(index, total);
+    const endpointsOnly = labelLayout && labelLayout.fontScale > 1.15 && labelLayout.width < 250;
+    const showLabel = showAxisLabels && (endpointsOnly
+      ? index === 0 || index === total - 1
+      : shouldShowAxisLabel(index, total));
     const label = showLabel
       ? spansYears
         ? (monthLabels[index] ?? "").replace(" ", "\n")
@@ -332,6 +335,7 @@ function SelectedMonthPanel({
   testIDPrefix,
   portfolioLabel = "Portfolio",
   partialHistory = false,
+  hasPreviousCalendarMonth = true,
 }: {
   maskWealthValues: boolean;
   minimal: boolean;
@@ -342,6 +346,7 @@ function SelectedMonthPanel({
   testIDPrefix: string;
   portfolioLabel?: string;
   partialHistory?: boolean;
+  hasPreviousCalendarMonth?: boolean;
 }) {
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const { fontScale } = useWindowDimensions();
@@ -423,7 +428,7 @@ function SelectedMonthPanel({
                   : formatPercentage(differencePercentage)}
               </AppText>
               <AppText color="secondary" variant="caption">
-                Value gap vs invested
+                Gap vs invested
               </AppText>
               <View style={styles.gapValueRow}>
                 <MaskedValue
@@ -433,7 +438,6 @@ function SelectedMonthPanel({
                   value={formatSignedCompactINR(difference)}
                   variant="caption"
                 />
-                <AppText color="secondary" variant="caption">{direction}</AppText>
               </View>
             </View>
             <View style={styles.gapValues}>
@@ -461,9 +465,11 @@ function SelectedMonthPanel({
         maskWealthValues
           ? `${monthLabel}. Asset amounts hidden. ${series
               .map((item) => {
-                const change = getSelectedChange(item.values, selectedIndex);
+                const change = hasPreviousCalendarMonth ? getSelectedChange(item.values, selectedIndex) : null;
                 const changeLabel = selectedIndex === 0
                   ? "No prior stored month in this range; change unavailable"
+                  : !hasPreviousCalendarMonth
+                    ? "Previous calendar month is missing; change unavailable"
                   : change === null
                     ? `Change unavailable: ${previousMonthLabel ?? "prior stored month"} value is zero`
                     : `${formatPercentage(change)} versus ${previousMonthLabel ?? "previous stored month"}`;
@@ -472,9 +478,11 @@ function SelectedMonthPanel({
               .join(". ")}.`
           : `${monthLabel}. ${series
               .map((item) => {
-                const change = getSelectedChange(item.values, selectedIndex);
+                const change = hasPreviousCalendarMonth ? getSelectedChange(item.values, selectedIndex) : null;
                 const changeLabel = selectedIndex === 0
                   ? "No prior stored month in this range; change unavailable"
+                  : !hasPreviousCalendarMonth
+                    ? "Previous calendar month is missing; change unavailable"
                   : change === null
                     ? `Change unavailable: ${previousMonthLabel ?? "prior stored month"} value is zero`
                     : `${formatPercentage(change)} versus ${previousMonthLabel ?? "previous stored month"}`;
@@ -491,7 +499,7 @@ function SelectedMonthPanel({
     >
       <View style={[styles.assetSelectionGrid, fontScale > 1.15 ? styles.assetSelectionStack : null]}>
           {series.map((item) => {
-            const change = getSelectedChange(item.values, selectedIndex);
+            const change = hasPreviousCalendarMonth ? getSelectedChange(item.values, selectedIndex) : null;
 
             return (
               <View key={item.label} style={styles.assetSelectionMetric}>
@@ -514,11 +522,7 @@ function SelectedMonthPanel({
                   }
                   variant="caption"
                 >
-                  {change === null
-                    ? selectedIndex === 0
-                      ? "No prior stored month"
-                      : `${previousMonthLabel ?? "Prior stored month"} value was zero`
-                    : `${formatPercentage(change)} vs ${previousMonthLabel ?? "prior stored month"}`}
+                  {change === null ? "—" : formatPercentage(change)}
                 </AppText>
               </View>
             );
@@ -537,6 +541,8 @@ function TrendChart({
   testIDPrefix,
   portfolioLabel = "Portfolio",
   partialHistory = false,
+  estimatedIndices,
+  gapAfterIndices,
 }: {
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
@@ -546,14 +552,18 @@ function TrendChart({
   testIDPrefix: string;
   portfolioLabel?: string;
   partialHistory?: boolean;
+  estimatedIndices: number[];
+  gapAfterIndices: number[];
 }) {
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
+  const visibleSeries = isPortfolioChart ? series : series.filter(item => item.values.some(value => value !== 0));
   const displayedSeries = !isPortfolioChart && focusedSeries
-    ? series.filter((item) => item.label === focusedSeries)
-    : series;
+    ? visibleSeries.filter((item) => item.label === focusedSeries)
+    : visibleSeries;
+  const gapSegments = gapAfterIndices.map(index => ({ startIndex: index, endIndex: index + 1, color: "transparent" }));
   const maxValue = getChartMaxValue(displayedSeries);
   const yAxisWidth = Math.ceil(52 * Math.max(1, fontScale));
   const plotWidth = surfaceWidth > 0
@@ -588,7 +598,7 @@ function TrendChart({
     Math.max(pointCount - 1, 0),
   );
 
-  const chartName = isPortfolioChart ? "Portfolio Growth" : "Asset Momentum";
+  const chartName = isPortfolioChart ? "Portfolio Growth" : "Value by asset class";
 
   return (
     <View style={styles.chartBlock}>
@@ -601,12 +611,12 @@ function TrendChart({
           title="‹" variant="secondary"
         />
         <View style={styles.monthNavigationLabel}>
-          <AppText align="center" color="secondary" variant="caption">
-            Inspecting month
-          </AppText>
           <AppText align="center" variant="caption" weight="bold">
             {monthLabels[safeSelectedIndex] ?? ""}
           </AppText>
+          {estimatedIndices.includes(safeSelectedIndex) ? (
+            <AppText align="center" color="secondary" variant="caption">Estimated</AppText>
+          ) : null}
         </View>
         <AppButton
           accessibilityLabel={`${chartName}: next stored month`}
@@ -628,7 +638,8 @@ function TrendChart({
             : undefined
         }
         selectedIndex={safeSelectedIndex}
-        series={series}
+        series={visibleSeries}
+        hasPreviousCalendarMonth={!gapAfterIndices.includes(safeSelectedIndex - 1)}
         testIDPrefix={testIDPrefix}
       />
       {!isPortfolioChart && focusedSeries ? (
@@ -636,7 +647,9 @@ function TrendChart({
           {focusedSeries} scale · Other asset lines hidden
         </AppText>
       ) : null}
-      <View style={styles.chartWithAxis} testID={`${testIDPrefix}-plot-region`}>
+      {visibleSeries.length === 0 ? (
+        <AppText color="secondary">No asset-class value in this range.</AppText>
+      ) : <View style={styles.chartWithAxis} testID={`${testIDPrefix}-plot-region`}>
         <View
           accessible={false}
           importantForAccessibility="no-hide-descendants"
@@ -650,7 +663,9 @@ function TrendChart({
             key={`portfolio:${rendererKey}`}
             {...axisProps}
             adjustToWidth
-            areaChart
+            areaChart={gapSegments.length === 0}
+            lineSegments={gapSegments}
+            lineSegments2={gapSegments}
             color1={getDisplayedSeriesColor(
               series[0]?.label ?? "",
               focusedSeries,
@@ -669,7 +684,7 @@ function TrendChart({
             endOpacity={0}
             endSpacing={chartEndSpacing}
             initialSpacing={chartInitialSpacing}
-            intersectionAreaConfig={partialHistory ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
+            intersectionAreaConfig={partialHistory || gapSegments.length > 0 ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated={!isReducedMotionEnabled}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
@@ -698,6 +713,7 @@ function TrendChart({
               color: getDisplayedSeriesColor(item.label, focusedSeries),
               data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),
               dataPointsColor: getSeriesColor(item.label),
+              lineSegments: gapSegments,
               thickness: 3,
             }))}
             disableScroll
@@ -718,12 +734,12 @@ function TrendChart({
             />
           )}
         </View>
-      </View>
+      </View>}
       <TrendLegend
         portfolioLabel={portfolioLabel}
         focusedSeries={focusedSeries}
         onFocusSeries={setFocusedSeries}
-        series={series}
+        series={visibleSeries}
         testIDPrefix={testIDPrefix}
       />
     </View>
@@ -747,7 +763,7 @@ function ChartRangeSelector({
         const isSelected = selectedRange === range;
         const chartName = testIDPrefix.startsWith("portfolio")
           ? "Portfolio Growth"
-          : "Asset Momentum";
+          : "Value by asset class";
 
         return (
           <Pressable
@@ -816,11 +832,11 @@ function MonthPickerField({
         ]}
         testID={testID}
       >
-        <AppText variant="caption" weight="bold">
+        <AppText style={{ flex: 1 }} variant="caption" weight="bold">
           {value ? formatMonth(value) : "Choose month"}
         </AppText>
         <AppText color="secondary" variant="caption">
-          Change
+          ⌄
         </AppText>
       </Pressable>
       <Modal
@@ -1164,12 +1180,12 @@ function CustomMonthRangeControls({
 }
 
 function ChartRangeContext({
-  comparison,
   monthLabels,
+  hasGaps,
   testID,
 }: {
-  comparison: string;
   monthLabels: string[];
+  hasGaps: boolean;
   testID: string;
 }) {
   const firstMonth = monthLabels[0];
@@ -1183,13 +1199,7 @@ function ChartRangeContext({
   return (
     <View style={styles.chartRangeContext} testID={testID}>
       <AppText color="secondary" variant="caption">
-        Displayed range
-      </AppText>
-      <AppText variant="caption" weight="bold">
-        {displayedRange} · {monthLabels.length} stored {monthLabels.length === 1 ? "month" : "months"}
-      </AppText>
-      <AppText color="secondary" variant="caption">
-        Comparison: {comparison}
+        {displayedRange}{hasGaps ? " · Missing months" : ""}
       </AppText>
     </View>
   );
@@ -1359,8 +1369,8 @@ function ProgressTrendCards({
           testIDPrefix="portfolio-monthly-chart-range"
         />
         <ChartRangeContext
-          comparison={ppfExcludedHistory ? "unavailable until PPF history is complete" : "invested capital"}
           monthLabels={portfolioChartData.monthLabels}
+          hasGaps={portfolioChartData.gapAfterIndices.length > 0}
           testID="portfolio-chart-context"
         />
         {portfolioChartData.hasEnoughHistory ? (
@@ -1372,6 +1382,8 @@ function ProgressTrendCards({
             maskWealthValues={maskWealthValues}
             minimal={minimal}
             monthLabels={portfolioChartData.monthLabels}
+            estimatedIndices={portfolioChartData.estimatedIndices}
+            gapAfterIndices={portfolioChartData.gapAfterIndices}
             series={ppfExcludedHistory ? portfolioChartData.portfolioSeries.filter(item => item.label !== "Invested") : portfolioChartData.portfolioSeries}
             testIDPrefix="portfolio-trend"
           />
@@ -1385,8 +1397,8 @@ function ProgressTrendCards({
       </PremiumCard>
       <PremiumCard>
         <ChartCardHeader
-          subtitle={ppfExcludedHistory ? "Market asset values over time · cash and PPF excluded · not investment return" : "Asset values over time · cash excluded · not investment return"}
-          title="Asset Momentum"
+          subtitle={ppfExcludedHistory ? "Cash and PPF excluded · includes money added or withdrawn" : "Cash excluded · includes money added or withdrawn"}
+          title="Value by asset class"
         />
         <ChartRangeSelector
           onChange={onAssetRangeChange}
@@ -1395,8 +1407,8 @@ function ProgressTrendCards({
           testIDPrefix="asset-monthly-chart-range"
         />
         <ChartRangeContext
-          comparison="previous stored month"
           monthLabels={assetChartData.monthLabels}
+          hasGaps={assetChartData.gapAfterIndices.length > 0}
           testID="asset-chart-context"
         />
         {assetChartData.hasEnoughHistory ? (
@@ -1408,6 +1420,8 @@ function ProgressTrendCards({
               maskWealthValues={maskWealthValues}
               minimal={minimal}
               monthLabels={assetChartData.monthLabels}
+              estimatedIndices={assetChartData.estimatedIndices}
+              gapAfterIndices={assetChartData.gapAfterIndices}
               series={assetChartData.assetSeries}
               testIDPrefix="asset-trend"
             />
@@ -1438,7 +1452,7 @@ function ProgressTrendCards({
         <CustomMonthRangeControls
           appliedRange={assetChartCustomRange}
           availableMonths={assetChartData.availableMonths}
-          chartTitle="Asset Momentum"
+          chartTitle="Value by asset class"
           onCancel={() => setCustomRangeTarget(null)}
           onApply={(range) => {
             onAssetCustomRangeChange(range);
@@ -1523,11 +1537,13 @@ function SnapshotStatusCard({
 
   return (
     <>
-      <Pressable accessibilityRole="button" accessibilityLabel="Snapshot status details" onPress={() => setOpen(true)} style={styles.snapshotStatusCard} testID="month-end-snapshot-status-card">
+      <Pressable accessibilityRole="button" accessibilityLabel="Snapshot status details" accessibilityValue={{ text: statusTitle }} accessibilityLiveRegion="polite" onPress={() => setOpen(true)} style={styles.snapshotStatusCard} testID="month-end-snapshot-status-card">
         <View style={styles.snapshotStatusHeader}>
           <View style={styles.snapshotCopy}>
             <AppText weight="bold">{statusTitle}</AppText>
-            <AppText color="secondary" variant="caption">{statusMessage}</AppText>
+            {status.progress ? (
+              <AppText color="secondary" variant="caption">{status.progress.checkedCount} of {status.progress.totalCount} months checked</AppText>
+            ) : null}
           </View>
           <AppText color="secondary" variant="caption">Details</AppText>
         </View>
@@ -1648,9 +1664,16 @@ export function ProgressScreen({
         {selectedSummary ? (
           <>
             <View style={styles.monthlyAnswer} testID="progress-monthly-answer">
+              <View style={styles.summaryActions}>
               <MonthPickerField label="Month-end value"
                 months={progress.monthlySummaries.map(item => item.snapshot.month)}
                 value={selectedSummary.snapshot.month} onChange={setSummaryMonth} testID="progress-summary-month" />
+              <MonthlyHistoryPanel
+                maskWealthValues={progress.preferences.maskWealthValues}
+                minimal={isMinimalMode}
+                summaries={progress.monthlySummaries}
+              />
+              </View>
               <MaskedValue
                 exactValue={formatINR(selectedSummary.snapshot.portfolioValue)}
                 masked={progress.preferences.maskWealthValues}
@@ -1658,6 +1681,9 @@ export function ProgressScreen({
                 value={formatCompactINR(selectedSummary.snapshot.portfolioValue)}
                 weight="bold"
               />
+              {getMonthlySnapshotPriceConfidence(selectedSummary.snapshot) === "provisional" ? (
+                <AppText color="secondary" variant="caption">Estimated month-end value</AppText>
+              ) : null}
               <View style={styles.answerMetrics}>
                 <View style={styles.answerMetric}>
                   <AppText color="secondary" variant="caption">Market change</AppText>
@@ -1683,12 +1709,6 @@ export function ProgressScreen({
                 </View>
               </View>
             </View>
-
-            <MonthlyHistoryPanel
-              maskWealthValues={progress.preferences.maskWealthValues}
-              minimal={isMinimalMode}
-              summaries={progress.monthlySummaries}
-            />
 
             <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
@@ -1873,6 +1893,7 @@ const styles = StyleSheet.create({
   monthNavigationLabel: { flex: 1, gap: 2 },
 
   monthlyAnswer: { gap: spacing.sm },
+  summaryActions: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm },
   heroValue: { fontSize: 40, lineHeight: 48 },
   answerMetrics: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   answerMetric: { flex: 1, minWidth: 120, gap: spacing.xs },
@@ -1946,10 +1967,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   chartRangeContext: {
-    borderLeftColor: colors.border.subtle,
-    borderLeftWidth: 2,
-    gap: 2,
-    paddingLeft: spacing.sm,
+    gap: spacing.xs,
   },
   gapOutcome: {
     flex: 1,
@@ -2113,6 +2131,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   snapshotStatusCard: {
+    minHeight: interaction.minimumTouchTarget,
     backgroundColor: colors.surface.card,
     borderRadius: radii.button,
     gap: spacing.xs,

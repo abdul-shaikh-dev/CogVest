@@ -44,8 +44,11 @@ export default function VisualQaSeedRoute() {
             try {
               seedVisualQaPortfolio(getPortfolioStore(), {
                 holdingCount: params.holdings === "30" ? 30 : undefined,
-                historyMonths: params.history === "extended" ? 120 : undefined,
+                historyMonths: params.history === "extended" ? 120
+                  : params.history === "3" ? 3
+                  : params.history === "12" ? 12 : undefined,
                 longHistory: params.history === "long",
+                sparseHistory: params.history === "sparse",
               });
               setSeeded(true);
             } catch (error) {

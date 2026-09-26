@@ -1,0 +1,42 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- tapOn:
+    id: progress-mask-toggle
+- assertNotVisible: "₹19.87L"
+- takeScreenshot: .expo/issue400-masked-overview
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-Portfolio
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: "₹19.87L"
+- assertNotVisible: "₹17.21L"
+- takeScreenshot: .expo/issue400-masked-chart
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: DOWN
+- tapOn:
+    id: display-mode-minimal
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- tapOn:
+    id: progress-mask-toggle
+- assertVisible: "₹19.87L"
+- takeScreenshot: .expo/issue400-minimal-overview
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-Portfolio
+    direction: DOWN
+    centerElement: true
+- assertVisible: "₹19.87L"
+- takeScreenshot: .expo/issue400-minimal-chart

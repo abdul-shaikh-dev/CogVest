@@ -1,4 +1,5 @@
-import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { Dimensions } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
@@ -104,15 +105,13 @@ it("labels PPF-excluded history and masks its values without presenting it as fu
   );
   expect(await screen.findByText("Market and cash history available")).toBeTruthy();
   expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
-  expect(screen.getByText(/Market and cash history is available through August 2026/u)).toBeTruthy();
   fireEvent.press(screen.getByLabelText("Snapshot status details"));
+  expect(screen.getByText(/Market and cash history is available through August 2026/u)).toBeTruthy();
   fireEvent.press(screen.getByLabelText("Open Holdings"));
   expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Tracked Growth")).toBeTruthy();
   expect(screen.getByText(/Some months use estimated prices/)).toBeTruthy();
-  expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(
-    /Comparison: unavailable until PPF history is complete/,
-  );
+  expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(/Aug 2026/u);
   const panel = within(screen.getByTestId("portfolio-trend-selected-panel"));
   expect(panel.getByText("Market + cash")).toBeTruthy();
   expect(panel.getByText("₹26K")).toBeTruthy();
@@ -415,9 +414,8 @@ describe("ProgressScreen", () => {
       releases[1]?.();
       await Promise.resolve();
     });
-    expect(
-      await screen.findByText(/2 missing month snapshots generated automatically/u),
-    ).toBeTruthy();
+    expect(await screen.findByText("Monthly history is up to date")).toBeTruthy();
+    expect(store.getState().monthlySnapshots).toHaveLength(2);
     expect(screen.queryByTestId("progress-trends-building")).toBeNull();
     expect(screen.getByText("Portfolio Growth")).toBeTruthy();
   });
@@ -445,8 +443,8 @@ describe("ProgressScreen", () => {
     );
 
     expect(await screen.findByText("Historical prices are unavailable")).toBeTruthy();
-    expect(screen.getByText(/1 month is waiting for a historical price/u)).toBeTruthy();
     fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    expect(screen.getByText(/1 month is waiting for a historical price/u)).toBeTruthy();
     expect(screen.getByText(/HDFC Bank could not be priced for 2026-07/u)).toBeTruthy();
     expect(screen.queryByLabelText(/Review.*month-end/u)).toBeNull();
     fireEvent.press(screen.getByLabelText("Retry monthly history"));
@@ -475,8 +473,8 @@ describe("ProgressScreen", () => {
     );
 
     expect(await screen.findByText("Earlier PPF balances are missing")).toBeTruthy();
-    expect(screen.getByText(/for 17 months/u)).toBeTruthy();
     fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    expect(screen.getByText(/for 17 months/u)).toBeTruthy();
     expect(screen.queryByText(/^2025-04:/u)).toBeNull();
     fireEvent.press(screen.getByLabelText("Open Holdings"));
     expect(onOpenHoldings).toHaveBeenCalledTimes(1);
@@ -730,7 +728,7 @@ describe("ProgressScreen", () => {
     expect(within(monthlyAnswer).getByText("+₹65K")).toBeTruthy();
     expect(within(monthlyAnswer).getByText("₹60K")).toBeTruthy();
     expect(within(monthlyAnswer).queryByText("Net contribution")).toBeNull();
-    expect(getByText("Monthly History")).toBeTruthy();
+    expect(within(monthlyAnswer).getByText("History")).toBeTruthy();
     expect(queryByText("Snapshot history")).toBeNull();
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
@@ -759,7 +757,7 @@ describe("ProgressScreen", () => {
     );
 
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
-    expect(getByText("Monthly History")).toBeTruthy();
+    expect(getByText("History")).toBeTruthy();
     fireEvent.press(getByTestId("open-monthly-history"));
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
@@ -862,7 +860,7 @@ describe("ProgressScreen", () => {
       .toContain("-10.00% versus Apr 2026");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("Change unavailable: Apr 2026 value is zero");
-    expect(getByText("Apr 2026 value was zero")).toBeTruthy();
+    expect(getByText("—")).toBeTruthy();
     fireEvent.press(getByTestId("asset-trend-previous-month"));
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("No prior stored month in this range; change unavailable");
@@ -901,8 +899,8 @@ describe("ProgressScreen", () => {
     expect(
       getByText("Stored portfolio value compared with invested capital · not investment return"),
     ).toBeTruthy();
-    expect(getByText("Asset Momentum")).toBeTruthy();
-    expect(getByText("Asset values over time · cash excluded · not investment return")).toBeTruthy();
+    expect(getByText("Value by asset class")).toBeTruthy();
+    expect(getByText("Cash excluded · includes money added or withdrawn")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
     expect(getByText("+30.66%")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
@@ -951,7 +949,7 @@ describe("ProgressScreen", () => {
     );
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
-    expect(getByText("Asset Momentum")).toBeTruthy();
+    expect(getByText("Value by asset class")).toBeTruthy();
     expect(getByText("+30.66%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("monthly-history-panel")).toBeTruthy();
     expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
@@ -1185,7 +1183,17 @@ describe("ProgressScreen", () => {
       includeHiddenElements: true,
     });
 
-    for (const chart of [portfolioChart, assetChart]) {
+      const hasAssetValue = snapshots.some((snapshot) =>
+        [snapshot.equityValue, snapshot.debtValue, snapshot.cryptoValue].some(
+          (value) => value !== 0,
+        ),
+      );
+      expect(Boolean(assetChart)).toBe(hasAssetValue);
+      if (!hasAssetValue) {
+        expect(screen.getByText("No asset-class value in this range.")).toBeTruthy();
+      }
+
+    for (const chart of [portfolioChart, assetChart].filter(Boolean)) {
       expect(chart.props.maxValue).toBe(expectedMax);
       expect(chart.props.stepValue).toBe(expectedStep);
       expect(chart.props.stepValue).toBe(
@@ -1284,7 +1292,32 @@ describe("ProgressScreen", () => {
     assertSpacingRelationship(assetChart);
   });
 
-  it.each([3, 12, 60, 120])("keeps all %i months and readable sparse labels inside the measured plot", (count) => {
+    it("uses endpoint-only labels in narrow enlarged-text charts", () => {
+      const original = Dimensions.get("window");
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      ["2025-12", "2026-01", "2026-02"].forEach(month => {
+        store.getState().addMonthlySnapshot(chartSnapshot(month, {
+          cryptoValue: 0, debtValue: 10, equityValue: 100, investedValue: 90, portfolioValue: 110,
+        }));
+      });
+      try {
+        act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1.3 } }));
+        const view = render(<ProgressScreen store={store} />);
+        fireEvent(view.getByTestId("portfolio-trend-chart", { includeHiddenElements: true }), "layout", {
+          nativeEvent: { layout: { width: 280 } },
+        });
+        const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
+        expect(chart.props.data.map((point: { label: string }) => point.label)).toEqual([
+          "Dec\n2025", "", "Feb\n2026",
+        ]);
+        expect(chart.props.data).toHaveLength(3);
+        view.unmount();
+      } finally {
+        act(() => Dimensions.set({ window: original }));
+      }
+    });
+
+    it.each([3, 12, 60, 120])("keeps all %i months and readable sparse labels inside the measured plot", (count) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     for (let index = 0; index < count; index++) {
       const month = new Date(Date.UTC(2016, index, 1)).toISOString().slice(0, 7);
@@ -1321,7 +1354,8 @@ describe("ProgressScreen", () => {
         }
         const lastX = chart.props.initialSpacing + (count - 1) * chart.props.spacing;
         expect(lastX + 6).toBeLessThan(chart.props.width);
-        expect(data.filter((item: { label: string }) => item.label)).toHaveLength(3);
+          const expectedLabels = Dimensions.get("window").fontScale > 1.15 && chart.props.width < 250 ? 2 : 3;
+          expect(data.filter((item: { label: string }) => item.label)).toHaveLength(expectedLabels);
         const lastLabel = data[count - 1].labelComponent();
         expect(lastLabel.props.style.width).toBeGreaterThan(50);
         expect(lastLabel.props.align).toBe("right");
@@ -1329,6 +1363,31 @@ describe("ProgressScreen", () => {
         if (count > 12) expect(data[count - 1].label).toContain("\n");
       }
     }
+  });
+
+  it("breaks lines at missing months and withholds their monthly percentage", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot({ ...maySnapshot, id: "july", month: "2026-07" });
+    const screen = render(<ProgressScreen store={store} />);
+    const [portfolio, asset] = screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true });
+    expect(portfolio.props.areaChart).toBe(false);
+    expect(portfolio.props.lineSegments).toEqual([{ startIndex: 0, endIndex: 1, color: "transparent" }]);
+    expect(asset.props.dataSet[0].lineSegments).toEqual(portfolio.props.lineSegments);
+    expect(screen.getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
+      .toContain("Previous calendar month is missing; change unavailable");
+    expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(/Missing months/u);
+  });
+
+  it("hides only series that stay zero across the selected range", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0 });
+    store.getState().addMonthlySnapshot({ ...maySnapshot, cryptoValue: 0, debtValue: 0 });
+    const screen = render(<ProgressScreen store={store} />);
+    expect(screen.queryByTestId("asset-trend-Crypto")).toBeNull();
+    expect(screen.getByTestId("asset-trend-Debt")).toBeTruthy();
+    expect(screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
+      .toHaveLength(2);
   });
 
   it("gives a focused small asset series its own disclosed scale", () => {
@@ -1422,10 +1481,10 @@ describe("ProgressScreen", () => {
       expect(within(getByTestId(id)).getByText("3M")).toHaveStyle({ color: colors.text.inverse });
     }
     expect(getByTestId("portfolio-chart-context")).toHaveTextContent(
-      /Displayed range.*Mar 2026 to May 2026.*3 stored months.*Comparison: invested capital/,
+      "Mar 2026 to May 2026",
     );
     expect(getByTestId("asset-chart-context")).toHaveTextContent(
-      /Comparison: previous stored month/,
+      "Mar 2026 to May 2026",
     );
   });
 
@@ -1577,7 +1636,7 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
     expect(getByTestId("portfolio-chart-context")).toHaveTextContent(
-      /Nov 2025 to Dec 2025.*2 stored months/,
+      "Nov 2025 to Dec 2025",
     );
   });
 
