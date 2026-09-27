@@ -1,0 +1,99 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after final-primary-tabs, preserving the synthetic seeded session.
+- launchApp:
+    stopApp: false
+- openLink: "cogvest:///holdings"
+- scrollUntilVisible:
+    element:
+      id: holding-row-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible: "25"
+- assertVisible: "₹1,450.00"
+- takeScreenshot: .expo/ux-final/${SHOT}/holding-detail
+- tapOn:
+    id: holding-detail-back
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: trade-history-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/holding-records
+- openLink: "cogvest:///holding-duration"
+- assertVisible:
+    id: holding-duration-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/holding-history
+- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: review-asset-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/asset-correction
+- openLink: "cogvest:///manage-assets"
+- assertVisible:
+    id: manage-assets-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/manage-assets
+- openLink: "cogvest:///backup"
+- assertVisible: "This backup contains sensitive financial information and is not encrypted."
+- takeScreenshot: .expo/ux-final/${SHOT}/backup
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible:
+    id: insight-detail-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/insight
+- openLink: "cogvest:///add-holding"
+- assertVisible: "1 of 4"
+- takeScreenshot: .expo/ux-final/${SHOT}/add-holding
+- openLink: "cogvest:///holdings"
+- openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
+- assertVisible:
+    id: add-holding-phase-review
+- takeScreenshot: .expo/ux-final/${SHOT}/holding-review
+- openLink: "cogvest:///quick-portfolio-setup"
+- assertVisible:
+    id: quick-setup-source-choice
+- takeScreenshot: .expo/ux-final/${SHOT}/quick-setup
+- openLink: "cogvest:///import-holdings"
+- assertVisible:
+    id: holding-import-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/holdings-import
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- takeScreenshot: .expo/ux-final/${SHOT}/tradebook-source
+- scrollUntilVisible:
+    element:
+      id: transaction-import-toggle-source-guide
+    direction: DOWN
+- tapOn:
+    id: transaction-import-toggle-source-guide
+- scrollUntilVisible:
+    element:
+      text: "Get your .*"
+    direction: DOWN
+- takeScreenshot: .expo/ux-final/${SHOT}/tradebook-guide
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-camsKfinCasPdfV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- takeScreenshot: .expo/ux-final/${SHOT}/cas-source
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- takeScreenshot: .expo/ux-final/${SHOT}/cas-password
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-cogvestCsvV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-cogvestCsvV1
+- takeScreenshot: .expo/ux-final/${SHOT}/transaction-csv-source
+- openLink: "cogvest:///import-ppf"
+- assertVisible:
+    id: ppf-import-screen
+- takeScreenshot: .expo/ux-final/${SHOT}/ppf-import-missing-account
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- assertVisible: "Monthly History"
+- takeScreenshot: .expo/ux-final/${SHOT}/monthly-history

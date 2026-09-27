@@ -22,6 +22,11 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "ticker-input"
 - inputText: "RELIANCE.NS"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "quote-source-id-input"
+    direction: DOWN
 - tapOn:
     id: "quote-source-id-input"
 - inputText: "RELIANCE.NS"

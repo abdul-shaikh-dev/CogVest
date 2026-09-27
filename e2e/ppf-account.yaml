@@ -87,6 +87,15 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "Annual contribution"
 - pressKey: BACK
+- assertVisible: "Discard entry changes?"
+- tapOn: "Keep editing"
+- scrollUntilVisible:
+    element:
+      id: "ppf-entry-notes"
+    direction: DOWN
+- assertVisible: "Annual contribution"
+- pressKey: BACK
+- tapOn: "Discard changes"
 - assertVisible:
     id: "ppf-confirmed-balance-card"
 - assertVisible: "₹1,00,000.00"
