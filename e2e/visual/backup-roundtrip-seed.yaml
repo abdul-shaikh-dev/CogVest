@@ -1,0 +1,16 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic emulator only; no private portfolio data.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- assertVisible: "Replace local developer data?"
+- tapOn: "Replace with visual QA data"
+- assertVisible: "Visual QA portfolio seeded."
+- openLink: "cogvest:///dashboard"
+- assertVisible:
+    id: dashboard-screen

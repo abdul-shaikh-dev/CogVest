@@ -41,6 +41,9 @@ appId: com.abdulshaikh.cogvest
     id: restore-backup-action
 - tapOn:
     id: choose-backup-file
+- scrollUntilVisible:
+    element: ${output.backupName}
+    direction: DOWN
 - tapOn: ${output.backupName}
 - extendedWaitUntil:
     visible:
