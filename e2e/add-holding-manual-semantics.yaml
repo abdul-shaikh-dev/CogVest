@@ -85,3 +85,4 @@ appId: com.abdulshaikh.cogvest
       text: "Position 1 manual price: ₹1,300.00"
     direction: DOWN
 - assertVisible: "Position 1 manual price: ₹1,300.00"
+- takeScreenshot: .expo/ux-enlarged/manual-holding-saved
