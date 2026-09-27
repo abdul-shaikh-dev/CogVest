@@ -23,6 +23,10 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: review-trade-buy
 - assertVisible: "1 selected"
+- scrollUntilVisible:
+    element:
+      id: review-selected-transaction-deletion
+    direction: DOWN
 - tapOn:
     id: review-selected-transaction-deletion
 - assertVisible:
@@ -36,6 +40,10 @@ appId: com.abdulshaikh.cogvest
     id: start-transaction-selection
 - tapOn:
     id: select-all-transactions
+- scrollUntilVisible:
+    element:
+      id: review-selected-transaction-deletion
+    direction: DOWN
 - tapOn:
     id: review-selected-transaction-deletion
 - tapOn:

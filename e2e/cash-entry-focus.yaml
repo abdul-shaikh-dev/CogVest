@@ -80,6 +80,11 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "UX12 contribution"
     direction: DOWN
+- scrollUntilVisible:
+    element:
+      text: "+₹1,000.00"
+    direction: DOWN
+    centerElement: true
 - assertVisible: "+₹1,000.00"
 - scrollUntilVisible:
     element:
@@ -125,6 +130,11 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "UX12 withdrawal"
     direction: DOWN
+- scrollUntilVisible:
+    element:
+      text: "-₹250.00"
+    direction: DOWN
+    centerElement: true
 - assertVisible: "-₹250.00"
 - takeScreenshot: .expo/ux12-cash-ledger
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"

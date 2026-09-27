@@ -62,5 +62,9 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: sell-redeem-save-button
 - assertVisible: "Units 0; basis 0; cash 2990"
+- scrollUntilVisible:
+    element:
+      text: ".*Realized gain.*1,187.00.*after fees.*"
+    direction: DOWN
 - assertVisible: ".*Realized gain.*1,187.00.*after fees.*"
 - takeScreenshot: .expo/issue317-full-exit
