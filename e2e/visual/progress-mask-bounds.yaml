@@ -1,0 +1,43 @@
+appId: com.abdulshaikh.cogvest
+---
+# STATE: empty, populated, masked. Disposable emulator; synthetic data only.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow:
+    when:
+      true: ${STATE != "empty"}
+    commands:
+      - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+      - assertVisible: "Replace local developer data?"
+      - tapOn: "Replace with visual QA data"
+      - assertVisible: "Visual QA portfolio seeded."
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-screen
+- waitForAnimationToEnd
+- assertVisible: "Mask values"
+- runFlow:
+    when:
+      true: ${STATE == "empty"}
+    commands:
+      - assertVisible: "No portfolio history yet"
+- runFlow:
+    when:
+      true: ${STATE != "empty"}
+    commands:
+      - assertVisible: "₹19.87L"
+- runFlow:
+    when:
+      true: ${STATE == "masked"}
+    commands:
+      - tapOn:
+          id: progress-mask-toggle
+      - assertVisible: "Show values"
+      - assertNotVisible: "₹19.87L"
+      - assertVisible: "₹••••"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/issue429/${SHOT}-${STATE}

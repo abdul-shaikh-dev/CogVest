@@ -1,0 +1,22 @@
+{
+  "serial": "emulator-5554",
+  "fontScale": 1.3,
+  "testId": "dashboard-mask-toggle",
+  "label": "Mask values",
+  "screen": {
+    "width": 1080,
+    "height": 2400,
+    "density": 480
+  },
+  "bounds": {
+    "left": 720,
+    "top": 447,
+    "right": 864,
+    "bottom": 591
+  },
+  "widthDp": 48,
+  "heightDp": 48,
+  "minimumDp": 48,
+  "horizontalInsetDp": 16,
+  "errors": []
+}

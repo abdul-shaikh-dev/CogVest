@@ -1,0 +1,22 @@
+{
+  "serial": "emulator-5554",
+  "fontScale": 1.3,
+  "testId": "holdings-header-mask-toggle",
+  "label": "Hide values",
+  "screen": {
+    "width": 1080,
+    "height": 2400,
+    "density": 480
+  },
+  "bounds": {
+    "left": 552,
+    "top": 447,
+    "right": 696,
+    "bottom": 591
+  },
+  "widthDp": 48,
+  "heightDp": 48,
+  "minimumDp": 48,
+  "horizontalInsetDp": 16,
+  "errors": []
+}

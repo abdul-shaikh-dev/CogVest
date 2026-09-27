@@ -1,0 +1,11 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after populated Progress; preserve the seeded session.
+- launchApp:
+    stopApp: false
+- openLink: ${ROUTE}
+- assertVisible:
+    id: ${CONTROL}
+- waitForAnimationToEnd
+- assertVisible: ${LABEL}
+- takeScreenshot: .expo/issue429/${SHOT}
