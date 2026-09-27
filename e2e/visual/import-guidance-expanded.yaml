@@ -1,0 +1,80 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run with SHOT=default or narrow. In-app guidance only, not provider browsing.
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///import-transactions"
+- assertVisible:
+    id: transaction-import-screen
+- tapOn:
+    id: transaction-import-source-zerodhaTradebookEqV1
+- scrollUntilVisible:
+    element:
+      id: transaction-import-toggle-source-guide
+    direction: DOWN
+- tapOn:
+    id: transaction-import-toggle-source-guide
+- scrollUntilVisible:
+    element:
+      text: "In Zerodha Console, open Reports, then Tradebook, and select the Equity segment."
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-tradebook-top
+- scrollUntilVisible:
+    element:
+      id: open-import-source-website
+    direction: DOWN
+- assertVisible: "Add each annual file needed for your history. Tradebooks may omit external transfers and some corporate actions."
+- takeScreenshot: .expo/ux-guidance/${SHOT}-tradebook-bottom
+- openLink: "cogvest:///dashboard"
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: transaction-import-toggle-source-guide
+    direction: DOWN
+- tapOn:
+    id: transaction-import-toggle-source-guide
+- scrollUntilVisible:
+    element:
+      text: "Request CAS - CAMS + KFintech and choose Detailed, not Summary."
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-cas-top
+- scrollUntilVisible:
+    element:
+      id: open-import-source-website
+    direction: DOWN
+- assertVisible: "Create the PDF password on the provider website. Enter it only when CogVest reads the downloaded PDF."
+- takeScreenshot: .expo/ux-guidance/${SHOT}-cas-bottom
+- openLink: "cogvest:///dashboard"
+- openLink: "cogvest:///import-transactions"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-cogvestCsvV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-cogvestCsvV1
+- scrollUntilVisible:
+    element:
+      id: save-transaction-csv-template
+    direction: DOWN
+- assertVisible:
+    id: save-transaction-csv-template
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-transaction-csv
+- openLink: "cogvest:///import-holdings"
+- assertVisible: "Start with the CogVest template"
+- scrollUntilVisible:
+    element:
+      id: save-holdings-csv-template
+    direction: DOWN
+- assertVisible:
+    id: save-holdings-csv-template
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-holdings-csv
