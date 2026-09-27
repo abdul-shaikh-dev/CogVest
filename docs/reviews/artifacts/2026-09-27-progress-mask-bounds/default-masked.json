@@ -1,0 +1,22 @@
+{
+  "serial": "emulator-5554",
+  "fontScale": 1,
+  "testId": "progress-mask-toggle",
+  "label": "Show values",
+  "screen": {
+    "width": 1280,
+    "height": 2856,
+    "density": 480
+  },
+  "bounds": {
+    "left": 1088,
+    "top": 225,
+    "right": 1232,
+    "bottom": 369
+  },
+  "widthDp": 48,
+  "heightDp": 48,
+  "minimumDp": 48,
+  "horizontalInsetDp": 16,
+  "errors": []
+}
