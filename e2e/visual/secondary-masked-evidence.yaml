@@ -1,0 +1,54 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic emulator only; SHOT=default or narrow.
+- runFlow: backup-roundtrip-seed.yaml
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: value-mask-toggle
+- assertVisible:
+    id: value-mask-toggle
+    checked: true
+- openLink: "cogvest:///holdings"
+- scrollUntilVisible:
+    element:
+      id: holding-row-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible: "₹••••"
+- assertNotVisible: "₹36,250.00"
+- assertNotVisible: "₹41,956.25"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-detail
+- openLink: "cogvest:///holding-duration"
+- assertVisible: "Holdings and acquisition dates are hidden while values are masked."
+- assertNotVisible: "HDFC Bank"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-duration
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible:
+    id: insight-detail-screen
+- assertVisible: "Values and supporting records are hidden. Use Show values when you are ready."
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-insight
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: trade-history-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-records
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: review-opening-position-screen
+- assertVisible:
+    id: reveal-opening-position
+- assertNotVisible: "₹36,250.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-review
+- openLink: "cogvest:///sell-redeem?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: sell-redeem-screen
+- assertVisible:
+    id: reveal-sell-redeem
+- assertNotVisible: "₹41,956.25"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/${SHOT}-masked-sale

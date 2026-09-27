@@ -1,0 +1,21 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after e2e/ppf-account.yaml, which leaves its synthetic account open.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      text: "Import CSV"
+    direction: DOWN
+- tapOn: "Import CSV"
+- assertVisible:
+    id: ppf-import-screen
+- assertVisible: "Opening balance stays separate"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/narrow-ppf-guidance-top
+- scrollUntilVisible:
+    element:
+      id: ppf-import-baseline-contribution
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-guidance/narrow-ppf-guidance-baseline
