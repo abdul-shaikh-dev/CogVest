@@ -33,7 +33,15 @@ appId: com.abdulshaikh.cogvest
     id: transaction-deletion-preview
 - takeScreenshot: .expo/issue336-bulk-delete-preview
 - pressKey: BACK
+- scrollUntilVisible:
+    element:
+      text: "1 selected"
+    direction: UP
 - assertVisible: "1 selected"
+- scrollUntilVisible:
+    element:
+      text: "Cancel selection"
+    direction: UP
 - tapOn: "Cancel selection"
 - assertVisible: ".*Purchase.*Accounting QA.*"
 - tapOn:
@@ -49,5 +57,10 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: confirm-delete-selected-transactions
 - assertVisible: "1 transaction removed. Portfolio and automatic history updated."
+- scrollUntilVisible:
+    element:
+      text: "Back to Holdings"
+    direction: UP
 - tapOn: "Back to Holdings"
 - assertVisible: "Units 10; basis 500; cash 0"
+- takeScreenshot: .expo/ux-enlarged/bulk-delete-result

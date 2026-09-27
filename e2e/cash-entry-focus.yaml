@@ -125,6 +125,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Save withdrawal"
 - tapOn:
     id: "save-cash-entry-button"
+- scrollUntilVisible:
+    element:
+      text: "₹750.00"
+    direction: UP
 - assertVisible: "₹750.00"
 - scrollUntilVisible:
     element:
@@ -139,3 +143,4 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux12-cash-ledger
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Cash entry count: 2"
+- takeScreenshot: .expo/ux-enlarged/cash-saved-entry-count
