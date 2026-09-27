@@ -13,6 +13,8 @@ appId: com.abdulshaikh.cogvest
     element:
       id: choose-backup-file
     direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
 - tapOn:
     id: choose-backup-file
 - scrollUntilVisible:
