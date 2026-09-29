@@ -37,6 +37,7 @@ function payload(): BackupPayload {
         purpose: "capitalContribution" as const,
         type: "addition" as const,
       }],
+      futuresAccounts: [],
       monthlySnapshots: [],
       openingPositions: [],
       ppfAccounts: [],
@@ -47,7 +48,7 @@ function payload(): BackupPayload {
         hasCompletedOnboarding: true,
         maskWealthValues: false,
       },
-      schemaVersion: 13,
+      schemaVersion: 14,
       trades: [],
     },
     quoteCache: {

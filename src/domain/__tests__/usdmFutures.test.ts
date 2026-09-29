@@ -8,6 +8,7 @@ const openingAt = "2026-01-01T00:00:00Z";
 const asOf = "2026-02-01T00:00:00Z";
 const currentAt = "2026-01-31T23:00:00Z";
 const base: UsdmFuturesAccount = {
+  id: "futures-main",
   settlementAsset: "USDT",
   marginMode: "cross",
   positionMode: "one-way",
@@ -69,6 +70,10 @@ describe("USDT cross-margin one-way futures replay", () => {
 
   it("does not count pre-cutover trades again", () => {
     expect(() => replay({ ...base, events: [execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z")] })).toThrow("outside the wallet replay window");
+  });
+
+  it("rejects impossible dates rather than normalizing execution history", () => {
+    expect(() => replay({ ...base, events: [execution("bad", "buy", "1", "100", "2026-02-30T00:00:00Z")] })).toThrow("ISO timestamp");
   });
 
   it("rejects a reversal, duplicate ID, unsupported precision and wrong currency", () => {

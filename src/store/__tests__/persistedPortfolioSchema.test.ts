@@ -51,8 +51,15 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 14 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 15 }))).toEqual({
       reason: "unsupported-schema",
+      success: false,
+    });
+  });
+
+  it("requires the Futures collection in a V14 portfolio", () => {
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 14, assets: [] }))).toEqual({
+      reason: "invalid-shape",
       success: false,
     });
   });

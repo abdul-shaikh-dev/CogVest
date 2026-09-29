@@ -30,6 +30,7 @@ export type UsdmFuturesWalletEvent = {
 export type UsdmFuturesEvent = UsdmFuturesExecution | UsdmFuturesWalletEvent;
 
 export type UsdmFuturesAccount = {
+  id: string;
   settlementAsset: "USDT";
   marginMode: "cross";
   positionMode: "one-way";
@@ -82,7 +83,7 @@ type RunningPosition = {
 };
 
 function native(value: string, label: string, allowNegative = false) {
-  if (!/^-?\d+(?:\.\d{1,8})?$/.test(value) || (!allowNegative && value.startsWith("-"))) {
+  if (value.length > 64 || !/^-?\d+(?:\.\d{1,8})?$/.test(value) || (!allowNegative && value.startsWith("-"))) {
     throw new Error(`${label} must be a decimal string with at most 8 places.`);
   }
   return decimal(value);
@@ -96,7 +97,11 @@ function positive(value: string, label: string) {
 
 function timestamp(value: string, label: string) {
   const parsed = Date.parse(value);
-  if (!/^\d{4}-\d\d-\d\dT/.test(value) || !/(Z|[+-]\d\d:\d\d)$/.test(value) || !Number.isFinite(parsed)) {
+  const parts = /^(\d{4})-(\d\d)-(\d\d)T/.exec(value);
+  const localDate = parts && new Date(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])));
+  if (!parts || !localDate || localDate.getUTCFullYear() !== Number(parts[1]) ||
+      localDate.getUTCMonth() + 1 !== Number(parts[2]) || localDate.getUTCDate() !== Number(parts[3]) ||
+      !/(Z|[+-]\d\d:\d\d)$/.test(value) || !Number.isFinite(parsed)) {
     throw new Error(`${label} must be an ISO timestamp with timezone.`);
   }
   return parsed;
@@ -123,6 +128,7 @@ export function replayUsdmFutures(
     maxMarkAgeMs?: number;
   },
 ): UsdmReplay {
+  if (!account.id.trim()) throw new Error("Futures account ID is required.");
   if (account.settlementAsset !== "USDT" || account.marginMode !== "cross" || account.positionMode !== "one-way") {
     throw new Error("Only cross-margin, one-way USDT futures are supported.");
   }
@@ -251,4 +257,16 @@ export function replayUsdmFutures(
       : null,
     valuationStatus: status,
   };
+}
+
+export function validateUsdmFuturesAccount(account: UsdmFuturesAccount): void {
+  const latest = Math.max(
+    Date.parse(account.openingAt),
+    ...account.events.map((event) => Date.parse(event.at)),
+  );
+  replayUsdmFutures(account, {
+    asOf: new Date(latest).toISOString(),
+    marks: [],
+    walletReconciled: false,
+  });
 }
