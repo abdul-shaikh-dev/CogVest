@@ -1,4 +1,5 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
@@ -113,7 +114,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 14;
+export const portfolioSchemaVersion = 15;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -542,23 +543,8 @@ type StoredPortfolioSnapshot = Partial<
   schemaVersion?: number;
 };
 
-function normalizeCashEntry(entry: StoredCashEntry): CashEntry {
-  return {
-    ...entry,
-    purpose:
-      entry.purpose ??
-      (entry.type === "withdrawal" ? "withdrawal" : "legacyUncategorized"),
-  };
-}
-
-function normalizeMonthlySnapshot(snapshot: MonthlySnapshot): MonthlySnapshot {
-  if (snapshot.generated?.source !== "auto" || snapshot.salary !== 0) {
-    return snapshot;
-  }
-
-  const { salary: _legacyUnknownSalary, ...normalized } = snapshot;
-  return normalized;
-}
+const normalizeCashEntry = migrateInvestingCashEntry;
+const normalizeMonthlySnapshot = migrateInvestingSnapshot;
 
 function migrateOpeningPosition(
   position: StoredOpeningPosition,
@@ -685,7 +671,12 @@ function readPortfolioSnapshot(
   }
 
   try {
-    return { data: migrate(parsed.data) };
+    const data = migrate(parsed.data);
+    if (parsed.data.schemaVersion !== portfolioSchemaVersion) {
+      // One atomic record replacement; a failed write retains the original for recovery.
+      storage.setItem(portfolioStorageKey, data as JsonValue);
+    }
+    return { data };
   } catch {
     return {
       data: createEmptyPortfolioSnapshot(),
@@ -823,7 +814,7 @@ function isValidManualCashEntry(entry: CashEntry, now = new Date()) {
   const hasValidPurpose =
     entry.type === "withdrawal"
       ? entry.purpose === "withdrawal"
-      : ["capitalContribution", "income", "legacyUncategorized"].includes(
+      : ["capitalContribution", "legacyUncategorized"].includes(
           entry.purpose,
         );
 

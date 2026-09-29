@@ -293,7 +293,7 @@ describe("useDashboard", () => {
     ]);
   });
 
-  it("derives current-month investment, cash change, and typed-income rate", () => {
+  it("derives current-month investment and Cash change without household rates", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
     store.getState().addTrade({
@@ -313,7 +313,7 @@ describe("useDashboard", () => {
       date: "2026-05-01",
       id: "cash-addition",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -351,7 +351,7 @@ describe("useDashboard", () => {
       date: "2026-05-22",
       id: "future-cash",
       label: "Future salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
 
@@ -362,9 +362,7 @@ describe("useDashboard", () => {
     expect(result.current.monthlyMetrics).toEqual({
       cashAdded: 1000,
       cashChange: 750,
-      incomeStatus: "available",
       investment: 400,
-      investmentRate: 40,
     });
   });
 

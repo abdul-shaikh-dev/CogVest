@@ -112,11 +112,9 @@ const monthlySnapshot: MonthlySnapshot = {
   id: "snapshot-2026-05",
   investedValue: 1060000,
   month: "2026-05",
-  monthlyExpense: 40000,
   monthlyInvestment: 60000,
   notes: "May close",
   portfolioValue: 1385000,
-  salary: 160000,
 };
 
 describe("portfolio store", () => {
@@ -230,7 +228,10 @@ describe("portfolio store", () => {
       1450.123456789,
     );
     expect(store.getState().trades).toEqual(legacySnapshot.trades);
-    expect(storage.getRawItem(portfolioStorageKey)).toBe(originalRaw);
+    const migratedRaw = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
+    expect(migratedRaw.trades).toEqual(JSON.parse(originalRaw!).trades);
+    expect(migratedRaw.cashEntries).toEqual(legacySnapshot.cashEntries);
+    expect(migratedRaw.schemaVersion).toBe(portfolioSchemaVersion);
   });
 
   it("completes fractional buy and sell cycles at the quantity quantum", () => {
@@ -2595,7 +2596,6 @@ describe("portfolio store", () => {
         weightedExternalFlow: 22500,
       },
       portfolioValue: 1050000,
-      salary: 0,
     });
     store.getState().upsertHistoricalQuote({
       assetId: "asset-reliance",
@@ -2815,9 +2815,9 @@ describe("portfolio store", () => {
     expect(store.getState().schemaVersion).toBe(portfolioSchemaVersion);
   });
 
-  it("migrates legacy automatic zero income to unknown without changing manual values", () => {
+  it("retires household fields from automatic and manual legacy snapshots", () => {
     const storage = createMemoryJsonStorage();
-    const automaticZero: MonthlySnapshot = {
+    const automaticZero = {
       ...monthlySnapshot,
       generated: {
         generatedAt: "2026-06-01T00:00:00.000Z",
@@ -2827,8 +2827,9 @@ describe("portfolio store", () => {
       },
       id: "snapshot-auto-zero",
       salary: 0,
+      monthlyExpense: 123,
     };
-    const manualZero: MonthlySnapshot = {
+    const manualZero = {
       ...monthlySnapshot,
       generated: {
         generatedAt: "2026-06-01T00:00:00.000Z",
@@ -2839,7 +2840,7 @@ describe("portfolio store", () => {
       id: "snapshot-manual-zero",
       salary: 0,
     };
-    const automaticIncome: MonthlySnapshot = {
+    const automaticIncome = {
       ...automaticZero,
       id: "snapshot-auto-income",
       salary: 160000,
@@ -2857,13 +2858,11 @@ describe("portfolio store", () => {
     const snapshots = createPortfolioStore({ storage }).getState()
       .monthlySnapshots;
 
-    expect(
-      snapshots.find((item) => item.id === automaticZero.id)?.salary,
-    ).toBeUndefined();
-    expect(snapshots.find((item) => item.id === manualZero.id)?.salary).toBe(0);
-    expect(
-      snapshots.find((item) => item.id === automaticIncome.id)?.salary,
-    ).toBe(160000);
+    for (const snapshot of snapshots) {
+      expect(snapshot).not.toHaveProperty("salary");
+      expect(snapshot).not.toHaveProperty("monthlyExpense");
+      expect(snapshot.portfolioValue).toBe(monthlySnapshot.portfolioValue);
+    }
   });
 
   it.each([

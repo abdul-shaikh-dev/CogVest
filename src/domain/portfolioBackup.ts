@@ -1,4 +1,5 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { projectDemergers } from "@/src/domain/demergers";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
@@ -251,7 +252,7 @@ function validateGraph(payload: BackupPayload) {
     if (!entry.linkedTradeId &&
       entry.purpose !== "purchaseFunding" &&
       entry.purpose !== "saleProceeds" && entry.purpose !== "futuresTransfer" &&
-      (entry.type === "withdrawal" ? entry.purpose !== "withdrawal" : !["capitalContribution", "income", "legacyUncategorized"].includes(entry.purpose))) fail("cash entry purpose is invalid");
+      (entry.type === "withdrawal" ? entry.purpose !== "withdrawal" : !["capitalContribution", "legacyUncategorized"].includes(entry.purpose))) fail("cash entry purpose is invalid");
   }
   validateCashLinks(portfolio.cashEntries, portfolio.trades);
   validateFuturesCashLinks(portfolio.cashEntries, portfolio.futuresAccounts);
@@ -260,8 +261,6 @@ function validateGraph(payload: BackupPayload) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/u.test(snapshot.month) || months.has(snapshot.month)) fail("monthly snapshots must have unique valid months");
     months.add(snapshot.month);
     for (const [label, value] of Object.entries({ cashValue: snapshot.cashValue, cryptoValue: snapshot.cryptoValue, debtValue: snapshot.debtValue, equityValue: snapshot.equityValue, investedValue: snapshot.investedValue, monthlyInvestment: snapshot.monthlyInvestment, portfolioValue: snapshot.portfolioValue })) requireFinancialValue(value, `snapshot ${label}`);
-    if (snapshot.monthlyExpense !== undefined) requireFinancialValue(snapshot.monthlyExpense, "snapshot monthly expense", 0);
-    if (snapshot.salary !== undefined) requireFinancialValue(snapshot.salary, "snapshot salary", 0);
     if (!isWithinQuantum(snapshot.portfolioValue, decimal(snapshot.cashValue).plus(snapshot.cryptoValue).plus(snapshot.debtValue).plus(snapshot.equityValue), moneyQuantum)) fail("snapshot total is inconsistent");
     if (snapshot.generated) requireIsoTimestamp(snapshot.generated.generatedAt, "snapshot generation time");
     snapshot.generated?.priceEvidence?.forEach((evidence) => { if (!assetIds.has(evidence.assetId)) fail("snapshot evidence has a dangling asset"); });
@@ -297,20 +296,27 @@ function parsePayload(raw: unknown): BackupPayload {
   requireExactKeys(raw, ["portfolio", "quoteCache", "historicalQuoteCache", "casFolioSalt"], "payload");
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
-  if (![9, 10, 11, 12, 13, 14].includes(portfolioRaw.schemaVersion as number)) fail("portfolio must be a complete supported snapshot");
-  const isV14 = portfolioRaw.schemaVersion === 14;
-  requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(isV14 ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
-  if (!isPlainObject(portfolioRaw.preferences) || ["assets", "cashEntries", ...(isV14 ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].some((key) => !Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
+  if (![9, 10, 11, 12, 13, 14, 15].includes(portfolioRaw.schemaVersion as number)) fail("portfolio must be a complete supported snapshot");
+  const hasFuturesAccounts = (portfolioRaw.schemaVersion as number) >= 14;
+  requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
+  if (!isPlainObject(portfolioRaw.preferences) || ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].some((key) => !Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
   if (!parsed.success) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);
+  if ((parsed.data.cashEntries ?? []).some((entry) => entry.purpose === undefined)) fail("complete backup cash entries require a purpose");
   const quoteCache = parsePersistedQuoteCache(JSON.stringify(raw.quoteCache));
   const historicalQuoteCache = parsePersistedHistoricalQuoteCache(JSON.stringify(raw.historicalQuoteCache));
   if (!quoteCache.success || !historicalQuoteCache.success) fail("quote cache records are invalid");
   assertNoDiscardedFields(raw.quoteCache, quoteCache.data);
   assertNoDiscardedFields(raw.historicalQuoteCache, historicalQuoteCache.data);
-  const portfolio = { ...parsed.data, futuresAccounts: parsed.data.futuresAccounts ?? [], schemaVersion: 14 } as RawPortfolioSnapshot;
+  for (const snapshot of parsed.data.monthlySnapshots ?? []) {
+    if (snapshot.salary !== undefined) requireFinancialValue(snapshot.salary, "legacy salary", 0);
+    if (snapshot.monthlyExpense !== undefined) requireFinancialValue(snapshot.monthlyExpense, "legacy expense", 0);
+  }
+  // Validate legacy classification before mapping; malformed direction must not be repaired.
+  if ((parsed.data.cashEntries ?? []).some((entry) => entry.purpose === "income" && entry.type !== "addition")) fail("legacy income direction is invalid");
+  const portfolio = { ...parsed.data, cashEntries: (parsed.data.cashEntries ?? []).map(migrateInvestingCashEntry), monthlySnapshots: (parsed.data.monthlySnapshots ?? []).map(migrateInvestingSnapshot), futuresAccounts: parsed.data.futuresAccounts ?? [], schemaVersion: 15 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;
@@ -357,9 +363,9 @@ export async function parsePortfolioBackup(text: string, digest: BackupDigest): 
   if (raw.format !== portfolioBackupFormat || raw.formatVersion !== portfolioBackupFormatVersion) fail("format version is unsupported");
   if (typeof raw.createdAt !== "string" || typeof raw.appVersion !== "string" || raw.appVersion.trim().length === 0 || typeof raw.checksum !== "string") fail("envelope metadata is invalid");
   requireIsoTimestamp(raw.createdAt, "backup creation time");
-  const payload = validateBackupPayload(raw.payload);
   // Verify the original signed bytes, not the schema-upgraded payload.
   const body: BackupEnvelopeWithoutChecksum = { appVersion: raw.appVersion, createdAt: raw.createdAt, format: portfolioBackupFormat, formatVersion: portfolioBackupFormatVersion, payload: raw.payload as BackupPayload };
   if (raw.checksum !== await checksum(body, digest)) fail("checksum does not match");
+  const payload = validateBackupPayload(raw.payload);
   return freeze({ appVersion: raw.appVersion, createdAt: raw.createdAt, payload: JSON.parse(JSON.stringify(payload)) as BackupPayload });
 }

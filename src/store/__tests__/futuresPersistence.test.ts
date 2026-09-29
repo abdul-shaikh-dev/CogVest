@@ -64,7 +64,7 @@ describe("Futures account persistence", () => {
     const storage = createMemoryJsonStorage({ [portfolioStorageKey]: { schemaVersion: 13, assets: [], cashEntries: [], monthlySnapshots: [], openingPositions: [], ppfAccounts: [], ppfLedgerEntries: [], preferences: { maskWealthValues: false }, trades: [] } });
     const store = createPortfolioStore({ storage, now });
     expect(store.getState().futuresAccounts).toEqual([]);
-    expect(store.getState().schemaVersion).toBe(14);
+    expect(store.getState().schemaVersion).toBe(15);
   });
 
   it("preserves closed trades from before the wallet cutover across restart and restore", () => {

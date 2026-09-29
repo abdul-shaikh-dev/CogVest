@@ -29,8 +29,6 @@ function getCashEntryMovement(entry: CashEntry) {
   switch (entry.purpose) {
     case "capitalContribution":
       return "Capital added to deployable cash";
-    case "income":
-      return "Income added to deployable cash";
     case "purchaseFunding":
       return "Funded an investment purchase";
     case "saleProceeds":

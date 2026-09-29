@@ -158,7 +158,7 @@ describe("ReviewCashEntryScreen", () => {
     );
 
     expect(getByText("Uncategorized")).toBeTruthy();
-    expect(getByText(/investment-rate insights unavailable/)).toBeTruthy();
+    expect(getByText(/monthly performance unavailable/)).toBeTruthy();
   });
 
   it.each([

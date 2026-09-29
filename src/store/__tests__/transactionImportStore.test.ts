@@ -176,7 +176,6 @@ describe("transaction import persistence", () => {
       month: "2025-04",
       monthlyInvestment: 0,
       portfolioValue: 1000,
-      salary: 0,
     };
     store.getState().addMonthlySnapshot(staleApril);
 

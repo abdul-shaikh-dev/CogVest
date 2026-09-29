@@ -31,10 +31,8 @@ const aprilSnapshot: MonthlySnapshot = {
   id: "snapshot-2026-04",
   investedValue: 1000000,
   month: "2026-04",
-  monthlyExpense: 30000,
   monthlyInvestment: 50000,
   portfolioValue: 1260000,
-  salary: 150000,
 };
 
 const maySnapshot: MonthlySnapshot = {
@@ -45,7 +43,6 @@ const maySnapshot: MonthlySnapshot = {
   id: "snapshot-2026-05",
   investedValue: 1060000,
   month: "2026-05",
-  monthlyExpense: 40000,
   monthlyInvestment: 60000,
   notes: "May close",
   performanceBasis: {
@@ -55,7 +52,6 @@ const maySnapshot: MonthlySnapshot = {
     weightedExternalFlow: 60000,
   },
   portfolioValue: 1385000,
-  salary: 160000,
 };
 
 const marchSnapshot: MonthlySnapshot = {
@@ -66,10 +62,8 @@ const marchSnapshot: MonthlySnapshot = {
   id: "snapshot-2026-03",
   investedValue: 1295000,
   month: "2026-03",
-  monthlyExpense: 54000,
   monthlyInvestment: 50000,
   portfolioValue: 1475000,
-  salary: 170000,
 };
 
 const stockAsset: Asset = {
@@ -155,7 +149,7 @@ function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
     date: "2026-07-01T00:00:00.000Z",
     id: "cash-salary",
     label: "Salary added",
-    purpose: "income",
+    purpose: "capitalContribution",
     type: "addition",
   };
 
@@ -175,7 +169,7 @@ function seedCurrentMonthMetrics(
       date: "2026-07-01T00:00:00.000Z",
       id: "cash-income",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
   }
@@ -274,7 +268,7 @@ describe("ProgressScreen", () => {
     expect(getByText("Valuation pending")).toBeTruthy();
   });
 
-  it("shows the typed-income investment rate before snapshots exist", () => {
+  it("shows investing activity without household rates before snapshots exist", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedCurrentMonthMetrics(store);
 
@@ -285,13 +279,13 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    expect(getByText("Investment rate")).toBeTruthy();
-    expect(getByText("20.00%")).toBeTruthy();
-    expect(getByText("Typed income: ₹50,000.00")).toBeTruthy();
+    expect(() => getByText("Investment rate")).toThrow();
+    expect(queryByText("Typed income: ₹50,000.00")).toBeNull();
+    expect(getByText("Monthly investment: ₹10,000.00")).toBeTruthy();
     expect(queryByText("Savings")).toBeNull();
   });
 
-  it("shows an unavailable investment rate when typed income is missing", () => {
+  it("does not ask for household income when showing investing activity", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedCurrentMonthMetrics(store, { includeIncome: false });
 
@@ -302,9 +296,8 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    expect(getByText("Investment rate")).toBeTruthy();
-    expect(getByText("Not enough data")).toBeTruthy();
-    expect(getByText("Typed income: Not enough data")).toBeTruthy();
+    expect(() => getByText("Investment rate")).toThrow();
+    expect(getByText("Monthly investment: ₹10,000.00")).toBeTruthy();
   });
 
   it("shows balances without allocation percentages for a negative net portfolio", () => {
@@ -484,7 +477,6 @@ describe("ProgressScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot({
       ...maySnapshot,
-      salary: undefined,
       generated: {
         confidence: "provisional",
         generatedAt: "2026-06-01T00:00:00.000Z",
@@ -638,10 +630,25 @@ describe("ProgressScreen", () => {
     expect(getByTestId("snapshot-notes-input").props.value).toBe("May close");
   });
 
-  it("renders unknown snapshot income as an empty review field", () => {
+  it("requires explicit reveal for masked snapshot correction without changing preferences", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { salary: _salary, ...unknownIncomeSnapshot } = maySnapshot;
-    store.getState().addMonthlySnapshot(unknownIncomeSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const { getByTestId, queryByTestId, unmount } = render(
+      <ReviewSnapshotScreen onCancel={jest.fn()} onComplete={jest.fn()} store={store} />,
+    );
+    expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
+    fireEvent.press(getByTestId("reveal-snapshot-button"));
+    expect(getByTestId("snapshot-portfolio-input").props.value).toBe("1385000");
+    expect(store.getState().preferences.maskWealthValues).toBe(true);
+    unmount();
+    const reopened = render(<ReviewSnapshotScreen onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    expect(reopened.queryByTestId("snapshot-portfolio-input")).toBeNull();
+  });
+
+  it("does not render retired household fields in snapshot review", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(maySnapshot);
 
     const { getByTestId } = render(
       <ReviewSnapshotScreen
@@ -651,7 +658,8 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    expect(getByTestId("snapshot-salary-input").props.value).toBe("");
+    expect(() => getByTestId("snapshot-salary-input")).toThrow();
+    expect(() => getByTestId("snapshot-expense-input")).toThrow();
   });
 
   it("cancels a review without persisting field changes", () => {
@@ -691,8 +699,6 @@ describe("ProgressScreen", () => {
     fireEvent.changeText(getByTestId("snapshot-crypto-input"), "45000");
     fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
     fireEvent.changeText(getByTestId("snapshot-investment-input"), "60000");
-    fireEvent.changeText(getByTestId("snapshot-salary-input"), "160000");
-    fireEvent.changeText(getByTestId("snapshot-expense-input"), "40000");
     fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
@@ -703,14 +709,12 @@ describe("ProgressScreen", () => {
       equityValue: 880000,
       investedValue: 1060000,
       month: "2026-05",
-      monthlyExpense: 40000,
       monthlyInvestment: 60000,
       performanceBasis: {
         reason: "manual-snapshot",
         status: "unavailable",
       },
       portfolioValue: 1385000,
-      salary: 160000,
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
@@ -1100,7 +1104,7 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getAllByText("+30.66%").length).toBeGreaterThan(0);
-    expect(getAllByText("37.50%").length).toBeGreaterThan(0);
+    expect(queryByText("37.50%")).toBeNull();
     expect(queryByText("Hidden")).toBeNull();
     expect(portfolioChart.props.formatYLabel("2000000")).toBe(MASKED_INR_VALUE);
     expect(assetChart.props.formatYLabel("2000000")).toBe(MASKED_INR_VALUE);
@@ -1701,7 +1705,6 @@ describe("ProgressScreen", () => {
     fireEvent.changeText(getByTestId("snapshot-crypto-input"), "50000");
     fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
     fireEvent.changeText(getByTestId("snapshot-investment-input"), "70000");
-    fireEvent.changeText(getByTestId("snapshot-salary-input"), "160000");
     fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);

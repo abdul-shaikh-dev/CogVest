@@ -16,10 +16,6 @@ appId: com.abdulshaikh.cogvest
     id: "cash-label-input"
 - inputText: "Test contribution"
 - hideKeyboard
-- tapOn:
-    id: "cash-date-input"
-- inputText: "2026-07-18"
-- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "save-cash-entry-button"

@@ -62,7 +62,7 @@ function flowWeight(isoDate: string, targetMonth: string) {
 function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null {
   if (
     entry.type === "addition" &&
-    (entry.purpose === "capitalContribution" || entry.purpose === "income")
+    entry.purpose === "capitalContribution"
   ) {
     return { amount: decimal(entry.amount), date: entry.date };
   }

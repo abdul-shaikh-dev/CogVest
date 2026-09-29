@@ -86,7 +86,7 @@ describe("verified split import", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
     const backup = store.getState().captureBackup().payload;
     const { futuresAccounts: _currentOnly, ...legacyPortfolio } = backup.portfolio;
-    expect(validateBackupPayload({ ...backup, portfolio: { ...legacyPortfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(14);
+    expect(validateBackupPayload({ ...backup, portfolio: { ...legacyPortfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(15);
   });
 
   it("revisits old automatic snapshots when attaching a split but preserves manual snapshots", () => {

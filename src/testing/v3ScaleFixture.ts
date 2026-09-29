@@ -128,7 +128,6 @@ function snapshots(): MonthlySnapshot[] {
       id: `v3-snapshot-${monthAt(index)}`,
       investedValue: 900_000 + index * 8_000,
       month: monthAt(index),
-      monthlyExpense: 30_000,
       monthlyInvestment: 8_000,
       portfolioValue: equityValue + debtValue + cryptoValue + cashValue,
     };

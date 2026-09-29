@@ -380,7 +380,7 @@ const monthlySnapshotSchema = z.object({
   id: nonEmptyStringSchema,
   investedValue: finiteNumberSchema,
   month: nonEmptyStringSchema,
-  monthlyExpense: finiteNumberSchema.optional(),
+  monthlyExpense: finiteNumberSchema.nonnegative().optional(),
   monthlyInvestment: finiteNumberSchema,
   notes: z.string().optional(),
   performanceBasis: z
@@ -405,7 +405,7 @@ const monthlySnapshotSchema = z.object({
     ])
     .optional(),
   portfolioValue: finiteNumberSchema,
-  salary: finiteNumberSchema.optional(),
+  salary: finiteNumberSchema.nonnegative().optional(),
 });
 
 const ppfOpeningSchema = z.discriminatedUnion("kind", [
@@ -514,6 +514,7 @@ const schemaVersionSchema = z.union([
   z.literal(12),
   z.literal(13),
   z.literal(14),
+  z.literal(15),
 ]);
 
 const nativeFuturesAmountSchema = z.string().regex(/^-?\d+(?:\.\d{1,8})?$/);
@@ -596,12 +597,22 @@ const persistedPortfolioSchema = z
     trades: z.array(tradeSchema).optional(),
   })
   .superRefine((portfolio, context) => {
-    if (portfolio.schemaVersion === 14 && portfolio.futuresAccounts === undefined) {
-      context.addIssue({ code: "custom", message: "V14 requires futures accounts.", path: ["futuresAccounts"] });
+    if ((portfolio.schemaVersion === 14 || portfolio.schemaVersion === 15) && portfolio.futuresAccounts === undefined) {
+      context.addIssue({ code: "custom", message: "V14 and later require futures accounts.", path: ["futuresAccounts"] });
     }
     const futuresIds = (portfolio.futuresAccounts ?? []).map((account) => account.id);
     if (new Set(futuresIds).size !== futuresIds.length) {
       context.addIssue({ code: "custom", message: "Futures account IDs must be unique.", path: ["futuresAccounts"] });
+    }
+    if (portfolio.schemaVersion === 15) {
+      (portfolio.cashEntries ?? []).forEach((entry, index) => {
+        if (entry.purpose === "income" || entry.purpose === undefined) context.addIssue({ code: "custom", message: "An investing Cash purpose is required.", path: ["cashEntries", index, "purpose"] });
+      });
+      (portfolio.monthlySnapshots ?? []).forEach((snapshot, index) => {
+        for (const field of ["salary", "monthlyExpense"] as const) {
+          if (Object.hasOwn(snapshot, field)) context.addIssue({ code: "custom", message: "Household metadata is retired.", path: ["monthlySnapshots", index, field] });
+        }
+      });
     }
     const currencyByAssetId = new Map(
       (portfolio.assets ?? []).map((asset) => [asset.id, asset.currency]),
@@ -792,7 +803,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

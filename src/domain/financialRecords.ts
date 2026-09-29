@@ -16,6 +16,9 @@ import {
 } from "./precision";
 
 export function normalizeCashEntry(entry: CashEntry): CashEntry {
+  if ((entry.purpose as string) === "income") {
+    throw new Error("Income is retired; add investing Cash instead.");
+  }
   return {
     ...entry,
     amount: normalizeMoney(entry.amount),
@@ -86,6 +89,9 @@ export function normalizeTrade<T extends Trade>(trade: T): T {
 export function normalizeMonthlySnapshot(
   snapshot: MonthlySnapshot,
 ): MonthlySnapshot {
+  if (Object.hasOwn(snapshot, "salary") || Object.hasOwn(snapshot, "monthlyExpense")) {
+    throw new Error("Household metadata is retired.");
+  }
   return {
     ...snapshot,
     cashValue: normalizeMoney(snapshot.cashValue),
@@ -106,9 +112,6 @@ export function normalizeMonthlySnapshot(
         }
       : {}),
     investedValue: normalizeMoney(snapshot.investedValue),
-    ...(snapshot.monthlyExpense === undefined
-      ? {}
-      : { monthlyExpense: normalizeMoney(snapshot.monthlyExpense) }),
     monthlyInvestment: normalizeMoney(snapshot.monthlyInvestment),
     ...(snapshot.performanceBasis
       ? {
@@ -127,9 +130,6 @@ export function normalizeMonthlySnapshot(
         }
       : {}),
     portfolioValue: normalizeMoney(snapshot.portfolioValue),
-    ...(snapshot.salary === undefined
-      ? {}
-      : { salary: normalizeMoney(snapshot.salary) }),
   };
 }
 

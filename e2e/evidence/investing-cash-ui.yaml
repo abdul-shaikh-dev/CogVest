@@ -1,0 +1,26 @@
+appId: com.abdulshaikh.cogvest
+---
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Standard mode"
+- tapOn: "Show values"
+- runFlow:
+    file: investing-cash-screens.yaml
+    env:
+      PREFIX: "${SIZE}-standard"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Minimal mode"
+- tapOn: "Mask values"
+- runFlow:
+    file: investing-cash-screens.yaml
+    env:
+      PREFIX: "${SIZE}-minimal-masked"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Standard mode"
+- tapOn: "Show values"

@@ -475,8 +475,6 @@ function MonthDetail({
       signed: true,
       value: previousSummary ? summary.performance.marketMovement : null,
     },
-    { label: "Salary", value: snapshot.salary },
-    { label: "Expenses", value: snapshot.monthlyExpense },
   ];
 
   return (
@@ -557,18 +555,6 @@ function MonthDetail({
             value={row.value}
           />
         ))}
-        <DetailRow
-          label="Investment rate"
-          maskWealthValues={maskWealthValues}
-          percentage
-          value={summary.savingsRate}
-        />
-        <DetailRow
-          label="Expense rate"
-          maskWealthValues={maskWealthValues}
-          percentage
-          value={summary.expenseRate}
-        />
       </DetailSection>
 
       {snapshot.notes && !maskWealthValues ? (

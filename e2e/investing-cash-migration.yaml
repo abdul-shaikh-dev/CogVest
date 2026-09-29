@@ -1,0 +1,55 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: qa-stage-legacy
+- tapOn: "Stage legacy data"
+- assertVisible: "Legacy schema 14 staged; cold restart required"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- assertVisible: "PASS: full payload preserved; schema 15"
+- assertVisible: "Futures: 1 linked transfer"
+- takeScreenshot: investing-cash-migration-payload
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- assertVisible: "PASS: full payload preserved; schema 15"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=cash"
+- assertVisible:
+    id: cash-screen
+- assertNotVisible: "Income"
+- assertNotVisible: "Investment rate"
+- takeScreenshot: investing-cash-migrated-ledger
+- tapOn:
+    id: cash-entry-deposit
+- assertNotVisible: "Deposit purpose"
+- takeScreenshot: investing-cash-deposit
+- tapOn:
+    id: close-cash-entry-button
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- assertVisible:
+    id: review-snapshot-screen
+- scrollUntilVisible:
+    element:
+      id: snapshot-investment-input
+    direction: DOWN
+- assertNotVisible: "Salary"
+- assertNotVisible: "Monthly expense"
+- takeScreenshot: investing-cash-snapshot-fields

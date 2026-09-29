@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Keyboard, KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -21,7 +21,7 @@ import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 import { colors, interaction, radii, spacing } from "@/src/theme";
-import type { CashEntryPurpose, CashEntryType } from "@/src/types";
+import type { CashEntryType } from "@/src/types";
 
 import {
   type CashEntryFormErrors,
@@ -33,24 +33,10 @@ import { useCash } from "./useCash";
 type CashScreenProps = {
   now?: Date;
   onCorrectEntry?: (entryId: string) => void;
-  onIncomeEntryClosed?: () => void;
-  onIncomeEntryOpened?: () => void;
-  onIncomeRecorded?: () => void;
-  openIncomeEntry?: boolean;
   store?: StoreApi<PortfolioStoreState>;
 };
 
 type CashEntryMode = CashEntryType;
-type AdditionPurpose = Extract<
-  CashEntryPurpose,
-  "capitalContribution" | "income"
->;
-
-const additionPurposes: { label: string; value: AdditionPurpose }[] = [
-  { label: "Contribution", value: "capitalContribution" },
-  { label: "Income", value: "income" },
-];
-
 function getCashEntryModeLabel(mode: CashEntryMode) {
   return mode === "addition" ? "Deposit" : "Withdraw";
 }
@@ -75,19 +61,9 @@ function getCashEntryModeCopy(mode: CashEntryMode) {
       };
 }
 
-function formatInvestmentRate(investmentRate: number | null) {
-  return investmentRate === null
-    ? "Unavailable"
-    : `${investmentRate.toFixed(2)}%`;
-}
-
 export function CashScreen({
   now = new Date(),
   onCorrectEntry,
-  onIncomeEntryClosed,
-  onIncomeEntryOpened,
-  onIncomeRecorded,
-  openIncomeEntry = false,
   store = getPortfolioStore(),
 }: CashScreenProps) {
   const {
@@ -103,9 +79,6 @@ export function CashScreen({
   const [mode, setMode] = useState<CashEntryMode | null>(null);
   const [isEntryVisible, setIsEntryVisible] = useState(false);
   const [pendingMode, setPendingMode] = useState<CashEntryMode | null>(null);
-  const [pendingPurpose, setPendingPurpose] = useState<AdditionPurpose>();
-  const [additionPurpose, setAdditionPurpose] =
-    useState<AdditionPurpose>("capitalContribution");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(() => formatLocalCalendarDate(now));
@@ -117,19 +90,10 @@ export function CashScreen({
   const entryIdRef = useRef(createId("cash"));
   const modeCopy = mode ? getCashEntryModeCopy(mode) : null;
 
-  useEffect(() => {
-    if (!openIncomeEntry) return;
-    openEntry("addition", "income");
-    onIncomeEntryOpened?.();
-  }, [openIncomeEntry]);
-
   function closeEntry() {
     if (isSavingRef.current) return;
     Keyboard.dismiss();
     setIsEntryVisible(false);
-    if (mode === "addition" && additionPurpose === "income") {
-      onIncomeEntryClosed?.();
-    }
   }
 
   function requestEntryClose() {
@@ -140,27 +104,17 @@ export function CashScreen({
     closeEntry();
   }
 
-  function openEntry(
-    nextMode: CashEntryMode,
-    nextPurpose?: AdditionPurpose,
-  ) {
+  function openEntry(nextMode: CashEntryMode) {
     if (isSavingRef.current) return;
     const hasDraft = Boolean(amount || label || notes ||
-      date !== formatLocalCalendarDate(now) || additionPurpose !== "capitalContribution");
+      date !== formatLocalCalendarDate(now));
     if (
       mode &&
       hasDraft &&
-      (mode !== nextMode ||
-        (nextMode === "addition" &&
-          nextPurpose !== undefined &&
-          additionPurpose !== nextPurpose))
+      mode !== nextMode
     ) {
       setPendingMode(nextMode);
-      setPendingPurpose(nextPurpose);
       return;
-    }
-    if (nextMode === "addition" && nextPurpose !== undefined) {
-      setAdditionPurpose(nextPurpose);
     }
     setMode(nextMode);
     setIsEntryVisible(true);
@@ -169,20 +123,14 @@ export function CashScreen({
   function discardAndSwitch() {
     if (!pendingMode || isSavingRef.current) return;
     resetForm();
-    setAdditionPurpose(pendingPurpose ?? "capitalContribution");
     entryIdRef.current = createId("cash");
     setMode(pendingMode);
     setPendingMode(null);
-    setPendingPurpose(undefined);
     setIsEntryVisible(true);
   }
 
   function keepDraft() {
-    if (pendingMode === "addition" && pendingPurpose === "income") {
-      onIncomeEntryClosed?.();
-    }
     setPendingMode(null);
-    setPendingPurpose(undefined);
   }
 
   function resetForm() {
@@ -202,7 +150,7 @@ export function CashScreen({
     const result = validateCashEntryForm({
       amount,
       date,
-      label,
+      label: label.trim() || (mode === "addition" ? "Cash added" : "Cash withdrawn"),
       now,
     });
 
@@ -219,21 +167,17 @@ export function CashScreen({
         amount: result.parsedAmount,
         date: date.trim(),
         id: entryIdRef.current,
-        label: label.trim(),
+        label: label.trim() || (mode === "addition" ? "Cash added" : "Cash withdrawn"),
         notes,
-        purpose: mode === "addition" ? additionPurpose : "withdrawal",
+        purpose: mode === "addition" ? "capitalContribution" : "withdrawal",
         type: mode,
       });
       await Promise.resolve();
       entryIdRef.current = createId("cash");
       resetForm();
-      setAdditionPurpose("capitalContribution");
       Keyboard.dismiss();
       setIsEntryVisible(false);
       setMode(null);
-      if (mode === "addition" && additionPurpose === "income") {
-        onIncomeRecorded?.();
-      }
     } catch {
       setErrors({
         save: "This cash entry could not be saved safely. Review it and try again.",
@@ -276,46 +220,17 @@ export function CashScreen({
         <MetricGroup
           metrics={[
             {
-              label: "Contributions",
+              label: "Cash added",
               masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.contributions),
+              value: formatCompactINR(monthlyMetrics.added),
             },
             {
               label: "Invested",
               masked: maskWealthValues,
               value: formatCompactINR(monthlyMetrics.invested),
             },
-            {
-              label: "Income",
-              masked: maskWealthValues && monthlyMetrics.incomeStatus === "available",
-              value:
-                monthlyMetrics.incomeStatus === "available"
-                  ? formatCompactINR(monthlyMetrics.income)
-                  : "Unavailable",
-            },
-            {
-              label: "Investment rate",
-              value: formatInvestmentRate(monthlyMetrics.investmentRate),
-            },
           ]}
         />
-        {monthlyMetrics.incomeStatus !== "available" ? (
-          <View style={styles.incomeRecovery} testID="cash-income-explanation">
-            <AppText color="secondary" style={styles.incomeRecoveryCopy} variant="caption">
-              {monthlyMetrics.income > 0
-                ? "Review unclassified deposits to calculate the investment rate."
-                : "Income is separate from contributions."}
-            </AppText>
-            {monthlyMetrics.income === 0 ? (
-              <AppButton
-                onPress={() => openEntry("addition", "income")}
-                testID="cash-record-income"
-                title="Record income"
-                variant="ghost"
-              />
-            ) : null}
-          </View>
-        ) : null}
 
         {displayMode === "standard" && monthlyMetrics.invested > 0 ? (
           <View style={styles.monthlyInsight}>
@@ -389,47 +304,6 @@ export function CashScreen({
               </AppText>
             </View>
           </View>
-          {mode === "addition" ? (
-            <View style={styles.purposeGroup}>
-              <AppText color="secondary" variant="caption" weight="bold">
-                Deposit purpose
-              </AppText>
-              <View style={styles.segmentedControl}>
-                {additionPurposes.map((purpose) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      selected: additionPurpose === purpose.value,
-                    }}
-                    key={purpose.value}
-                    onPress={() => setAdditionPurpose(purpose.value)}
-                    style={({ pressed }) => [
-                      styles.segment,
-                      additionPurpose === purpose.value && styles.segmentActive,
-                      pressed && styles.pressed,
-                    ]}
-                    testID={`cash-purpose-${purpose.value}`}
-                  >
-                    <AppText
-                      color={
-                        additionPurpose === purpose.value
-                          ? "primary"
-                          : "secondary"
-                      }
-                      style={
-                        additionPurpose === purpose.value
-                          ? styles.segmentActiveText
-                          : undefined
-                      }
-                      weight="bold"
-                    >
-                      {purpose.label}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ) : null}
           <View style={styles.formFields}>
             <View style={styles.formRowField}>
               <FormTextField
@@ -455,7 +329,7 @@ export function CashScreen({
           </View>
           <FormTextField
             error={errors.label}
-            label="Label"
+            label="Label (optional)"
             onChangeText={setLabel}
             placeholder={getCashEntryPlaceholder(mode)}
             testID="cash-label-input"
@@ -580,17 +454,6 @@ const styles = StyleSheet.create({
   history: {
     gap: spacing.cardGap,
   },
-  incomeRecovery: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    justifyContent: "space-between",
-  },
-  incomeRecoveryCopy: {
-    flex: 1,
-    minWidth: 180,
-  },
   monthlyInsight: {
     alignItems: "center",
     backgroundColor: colors.surface.card,
@@ -613,28 +476,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: interaction.pressedOpacity,
-  },
-  purposeGroup: {
-    gap: spacing.xs,
-  },
-  segment: {
-    alignItems: "center",
-    borderRadius: radii.button,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: interaction.minimumTouchTarget,
-    paddingVertical: spacing.xs,
-  },
-  segmentActive: {
-    backgroundColor: colors.surface.elevated,
-  },
-  segmentActiveText: {
-    color: colors.primary,
-  },
-  segmentedControl: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
-    flexDirection: "row",
-    padding: spacing.xs,
   },
 });

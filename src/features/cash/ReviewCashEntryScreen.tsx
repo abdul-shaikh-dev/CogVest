@@ -39,7 +39,6 @@ type ReviewCashEntryScreenProps = {
 
 const standardManualPurposes: { label: string; value: ManualCashPurpose }[] = [
   { label: "Contribution", value: "capitalContribution" },
-  { label: "Income", value: "income" },
 ];
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
@@ -48,7 +47,6 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
 
 function getInitialPurpose(entry?: CashEntry): ManualCashPurpose {
   if (
-    entry?.purpose === "income" ||
     entry?.purpose === "legacyUncategorized"
   ) {
     return entry.purpose;
@@ -332,7 +330,7 @@ export function ReviewCashEntryScreen({
             ))}
           </View>
 
-          {type === "addition" ? (
+          {type === "addition" && initialEntry?.purpose === "legacyUncategorized" ? (
             <View style={styles.purposeGroup}>
               <AppText color="secondary" variant="caption" weight="bold">
                 Deposit purpose
@@ -368,8 +366,8 @@ export function ReviewCashEntryScreen({
               </View>
               {purpose === "legacyUncategorized" ? (
                 <AppText color="secondary" variant="caption">
-                  Choose a specific purpose when possible. Uncategorized
-                  deposits keep investment-rate insights unavailable.
+                  Confirm whether this was money added for investing. Uncategorized
+                  deposits keep monthly performance unavailable.
                 </AppText>
               ) : null}
             </View>
