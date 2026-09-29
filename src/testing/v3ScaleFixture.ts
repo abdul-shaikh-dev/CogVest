@@ -160,6 +160,7 @@ export function createV3ScaleFixture(): V3ScaleFixture {
   const portfolio: RawPortfolioSnapshot = {
     assets,
     cashEntries: [],
+    futuresAccounts: [],
     monthlySnapshots: snapshots(),
     openingPositions,
     ppfAccounts: [],

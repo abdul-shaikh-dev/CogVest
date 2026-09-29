@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getCalendarDatePart } from "@/src/domain/dates";
+import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import {
   calculatePpfConfirmedBalance,
   comparePpfLedgerEntries,
@@ -510,12 +511,78 @@ const schemaVersionSchema = z.union([
   z.literal(11),
   z.literal(12),
   z.literal(13),
+  z.literal(14),
 ]);
+
+const nativeFuturesAmountSchema = z.string().regex(/^-?\d+(?:\.\d{1,8})?$/);
+const nonnegativeFuturesAmountSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);
+const positiveFuturesAmountSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/).refine((value) => Number(value) > 0);
+const futuresContractSchema = z.string().regex(/^[A-Z0-9]+USDT$/);
+const futuresEventBaseSchema = z.object({ id: nonEmptyStringSchema, at: nonEmptyStringSchema });
+const futuresEventSchema = z.discriminatedUnion("type", [
+  futuresEventBaseSchema.extend({
+    type: z.literal("execution"), contract: futuresContractSchema,
+    side: z.enum(["buy", "sell"]), quantity: positiveFuturesAmountSchema,
+    price: positiveFuturesAmountSchema, feeUsdt: nonnegativeFuturesAmountSchema,
+    leverage: positiveFuturesAmountSchema.optional(),
+  }).strict(),
+  futuresEventBaseSchema.extend({
+    type: z.literal("funding"), contract: futuresContractSchema,
+    amountUsdt: nativeFuturesAmountSchema,
+  }).strict(),
+  futuresEventBaseSchema.extend({
+    type: z.literal("transfer"), transferBoundary: z.enum(["internal", "external"]),
+    amountUsdt: nativeFuturesAmountSchema,
+  }).strict(),
+]);
+const futuresRateSchema = z.object({
+  inrPerUsdt: positiveFuturesAmountSchema,
+  observedAt: nonEmptyStringSchema,
+  source: nonEmptyStringSchema,
+}).strict();
+const futuresMarkSchema = z.object({
+  contract: futuresContractSchema,
+  priceUsdt: positiveFuturesAmountSchema,
+  reportedMarginUsdt: nonnegativeFuturesAmountSchema.optional(),
+  observedAt: nonEmptyStringSchema,
+  source: nonEmptyStringSchema,
+}).strict();
+const futuresAccountSchema = z.object({
+  id: nonEmptyStringSchema,
+  settlementAsset: z.literal("USDT"),
+  marginMode: z.literal("cross"),
+  positionMode: z.literal("one-way"),
+  openingAt: nonEmptyStringSchema,
+  openingWalletUsdt: nativeFuturesAmountSchema,
+  openingRate: futuresRateSchema.optional(),
+  events: z.array(futuresEventSchema).max(10_000),
+  eventRates: z.array(futuresRateSchema.extend({ eventId: nonEmptyStringSchema }).strict()).max(10_000).optional(),
+  valuation: z.object({
+    asOf: nonEmptyStringSchema,
+    marks: z.array(futuresMarkSchema).max(1_000),
+    inrRate: futuresRateSchema,
+    reconciliation: z.object({
+      observedWalletUsdt: nativeFuturesAmountSchema,
+      observedAt: nonEmptyStringSchema,
+      source: nonEmptyStringSchema,
+      allOpenPositionsConfirmed: z.boolean(),
+      allWalletEventsConfirmed: z.boolean(),
+      portfolioBoundaryConfirmed: z.boolean().optional(),
+    }).strict(),
+  }).strict().optional(),
+}).strict().superRefine((account, context) => {
+  try {
+    validateUsdmFuturesAccount(account);
+  } catch {
+    context.addIssue({ code: "custom", message: "Futures account ledger is invalid." });
+  }
+});
 
 const persistedPortfolioSchema = z
   .object({
     assets: z.array(assetSchema).optional(),
     cashEntries: z.array(cashEntrySchema).optional(),
+    futuresAccounts: z.array(futuresAccountSchema).max(10).optional(),
     monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
     openingPositions: z.array(openingPositionSchema).optional(),
     ppfAccounts: z.array(ppfAccountSchema).optional(),
@@ -525,6 +592,13 @@ const persistedPortfolioSchema = z
     trades: z.array(tradeSchema).optional(),
   })
   .superRefine((portfolio, context) => {
+    if (portfolio.schemaVersion === 14 && portfolio.futuresAccounts === undefined) {
+      context.addIssue({ code: "custom", message: "V14 requires futures accounts.", path: ["futuresAccounts"] });
+    }
+    const futuresIds = (portfolio.futuresAccounts ?? []).map((account) => account.id);
+    if (new Set(futuresIds).size !== futuresIds.length) {
+      context.addIssue({ code: "custom", message: "Futures account IDs must be unique.", path: ["futuresAccounts"] });
+    }
     const currencyByAssetId = new Map(
       (portfolio.assets ?? []).map((asset) => [asset.id, asset.currency]),
     );
@@ -714,7 +788,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

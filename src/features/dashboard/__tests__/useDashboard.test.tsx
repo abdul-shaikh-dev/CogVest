@@ -4,6 +4,7 @@ import { useDashboard } from "@/src/features/dashboard/useDashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { Asset, PpfAccount, Trade } from "@/src/types";
+import type { UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 
 const stockAsset: Asset = {
   assetClass: "stock",
@@ -47,6 +48,31 @@ const buyEtf: Trade = {
 };
 
 describe("useDashboard", () => {
+  it("includes only reconciled Futures wallet equity, never contract notional", () => {
+    const now = new Date("2026-09-29T12:00:00Z");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+    const account: UsdmFuturesAccount = {
+      id: "binance-usdm-main", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way",
+      openingAt: "2026-09-01T00:00:00Z", openingWalletUsdt: "1000",
+      openingRate: { inrPerUsdt: "90", observedAt: "2026-09-01T00:00:00Z", source: "Manual dated quote" },
+      events: [{ type: "execution", id: "open", at: "2026-09-02T00:00:00Z", contract: "BTCUSDT", side: "buy", quantity: "1", price: "100", feeUsdt: "1", leverage: "10" }],
+      eventRates: [{ eventId: "open", inrPerUsdt: "90", observedAt: "2026-09-02T00:00:00Z", source: "Manual dated quote" }],
+      valuation: {
+        asOf: "2026-09-29T11:00:00Z", marks: [{ contract: "BTCUSDT", priceUsdt: "120", observedAt: "2026-09-29T11:00:00Z", source: "Binance mark" }],
+        inrRate: { inrPerUsdt: "90", observedAt: "2026-09-29T11:00:00Z", source: "Manual dated quote" },
+        reconciliation: { observedWalletUsdt: "999", observedAt: "2026-09-29T11:00:00Z", source: "Binance Futures wallet", allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true },
+      },
+    };
+    act(() => store.getState().saveFuturesAccount(account));
+    const { result } = renderHook(() => useDashboard({ now, store }));
+    expect(result.current.totalValue).toBe(91710);
+    expect(result.current.rollupTotals.totalInvested).toBe(90000);
+    expect(result.current.rollupTotals.pnl).toBe(1710);
+    expect(result.current.futuresEquityInr).toBe(91710);
+    act(() => store.getState().saveFuturesAccount({ ...account, valuation: undefined }));
+    expect(result.current.totalValue).toBeNull();
+    expect(result.current.rollupTotals.valuationCoverage.status).toBe("incomplete");
+  });
   it("derives total, allocation, day change, quote freshness, and conviction readiness", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);

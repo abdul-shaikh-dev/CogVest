@@ -1,4 +1,5 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { projectDemergers, demergerCatalog } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
@@ -111,7 +112,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 13;
+export const portfolioSchemaVersion = 14;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -119,6 +120,7 @@ export { historicalQuoteCacheKey };
 export type RawPortfolioSnapshot = {
   assets: Asset[];
   cashEntries: CashEntry[];
+  futuresAccounts: UsdmFuturesAccount[];
   monthlySnapshots: MonthlySnapshot[];
   openingPositions: OpeningPosition[];
   ppfAccounts: PpfAccount[];
@@ -146,6 +148,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   }) => { status: "applied" | "alreadyApplied" } | { status: "rejected"; reason: string };
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
+  saveFuturesAccount: (account: UsdmFuturesAccount) => void;
+  deleteFuturesAccount: (accountId: string) => void;
   clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
   correctAsset: (asset: Asset) => AssetCorrectionResult;
@@ -491,6 +495,7 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
   return {
     assets: [],
     cashEntries: [],
+    futuresAccounts: [],
     monthlySnapshots: [],
     openingPositions: [],
     ppfAccounts: [],
@@ -614,6 +619,7 @@ function migratePortfolioSnapshot(
   return {
     assets,
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
+    futuresAccounts: stored.futuresAccounts ?? [],
     monthlySnapshots: (stored.monthlySnapshots ?? []).map(
       normalizeMonthlySnapshot,
     ),
@@ -738,6 +744,7 @@ function selectRawSnapshot(
   return {
     assets: state.assets,
     cashEntries: state.cashEntries,
+    futuresAccounts: state.futuresAccounts,
     monthlySnapshots: state.monthlySnapshots,
     openingPositions: state.openingPositions,
     ppfAccounts: state.ppfAccounts,
@@ -1950,6 +1957,33 @@ export function createPortfolioStore({
 
       persistPortfolioTransition(storage, state, { assets });
       set({ assets });
+    },
+    saveFuturesAccount: (account) => {
+      const state = get();
+      validateUsdmFuturesAccount(account);
+      if (Date.parse(account.openingAt) > now().getTime() ||
+          account.events.some((event) => Date.parse(event.at) > now().getTime()) ||
+          (account.valuation && Date.parse(account.valuation.asOf) > now().getTime())) {
+        throw new Error("Futures records cannot be dated in the future.");
+      }
+      const futuresAccounts = [
+        ...state.futuresAccounts.filter((current) => current.id !== account.id),
+        account,
+      ];
+      if (!parsePersistedPortfolio(JSON.stringify({
+        ...selectRawSnapshot(state), futuresAccounts,
+      })).success) {
+        throw new Error("Futures account records are invalid.");
+      }
+      persistPortfolioTransition(storage, state, { futuresAccounts });
+      set({ futuresAccounts });
+    },
+    deleteFuturesAccount: (accountId) => {
+      const state = get();
+      if (!state.futuresAccounts.some((account) => account.id === accountId)) return;
+      const futuresAccounts = state.futuresAccounts.filter((account) => account.id !== accountId);
+      persistPortfolioTransition(storage, state, { futuresAccounts });
+      set({ futuresAccounts });
     },
     addCashEntry: (cashEntry) => {
       const state = get();

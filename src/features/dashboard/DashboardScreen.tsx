@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { router } from "expo-router";
 import {
   Pressable,
   StyleSheet,
@@ -81,7 +82,7 @@ function formatUnsignedPercentage(value: number) {
   return formatPercentage(value).replace("+", "");
 }
 
-type DisplayAllocationClass = "cash" | "crypto" | "debt" | "equity";
+type DisplayAllocationClass = "cash" | "crypto" | "debt" | "equity" | "futures";
 
 type DisplayAllocationItem = {
   assetClass: DisplayAllocationClass;
@@ -92,8 +93,9 @@ type DisplayAllocationItem = {
 function toDisplayAllocation(
   holdings: Holding[],
   cashBalance: number,
+  futuresEquityInr: number | null,
 ): DisplayAllocationItem[] {
-  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+  if (futuresEquityInr === null || futuresEquityInr < 0 || holdings.some((holding) => holding.valuation.status === "pending")) {
     return [];
   }
 
@@ -102,6 +104,7 @@ function toDisplayAllocation(
     crypto: decimal(0),
     debt: decimal(0),
     equity: decimal(0),
+    futures: decimal(futuresEquityInr),
   };
 
   for (const holding of holdings) {
@@ -116,7 +119,7 @@ function toDisplayAllocation(
 
   const totalValue = sumFinancialValues(Object.values(values));
 
-  return (["equity", "debt", "crypto", "cash"] as const)
+  return (["equity", "debt", "crypto", "futures", "cash"] as const)
     .map((assetClass) => ({
       assetClass,
       percentage:
@@ -130,6 +133,7 @@ function toDisplayAllocation(
 }
 
 function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
+  if (assetClass === "futures") return "Futures equity";
   if (assetClass === "equity") {
     return "Equity";
   }
@@ -138,6 +142,7 @@ function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
 }
 
 function getAllocationColor(assetClass: DisplayAllocationClass) {
+  if (assetClass === "futures") return colors.cryptoAmber;
   if (assetClass === "cash") {
     return colors.cashBlue;
   }
@@ -185,6 +190,7 @@ export function DashboardScreen({
   const displayAllocation = toDisplayAllocation(
     dashboard.holdings,
     dashboard.cashBalance,
+    dashboard.futuresEquityInr,
   );
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
   const positiveAllocationTotal = normalizeMoney(
@@ -199,12 +205,15 @@ export function DashboardScreen({
   const totalInvested = dashboard.rollupTotals.totalInvested;
   const totalPnL = dashboard.rollupTotals.pnl;
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
+  const pendingFuturesCount = dashboard.futuresContributions.filter((item) => item.status === "pending").length;
+  const hasNegativeFuturesEquity = dashboard.futuresEquityInr !== null && dashboard.futuresEquityInr < 0;
   const hasNegativeCash = dashboard.cashBalance < 0;
   const hasCompleteValuation =
     dashboard.rollupTotals.valuationCoverage.status === "complete";
   const hasPositiveNetPortfolio =
     (dashboard.rollupTotals.totalCurrentValue ?? 0) > 0;
   const quoteStatus = getQuoteStatus({
+    hasFutures: dashboard.futuresContributions.length > 0,
     isRefreshing: dashboard.isRefreshing,
     quoteFailed: dashboard.quoteFailed.length,
     quoteFreshness: dashboard.quoteFreshness,
@@ -282,12 +291,10 @@ export function DashboardScreen({
           />
           <View style={styles.heroContextRow}>
             {!hasCompleteValuation ? (
-              <AppText color="secondary" variant="caption">
-                {dashboard.rollupTotals.valuationCoverage.pendingHoldings} holding
-                {dashboard.rollupTotals.valuationCoverage.pendingHoldings === 1
-                  ? ""
-                  : "s"}{" "}
-                need a price. Invested value remains available.
+              <AppText color="secondary" style={styles.heroContextText} variant="caption">
+                {pendingFuturesCount > 0
+                  ? `${pendingFuturesCount} Futures wallet${pendingFuturesCount === 1 ? "" : "s"} pending. Review below to complete the total.`
+                  : `${dashboard.rollupTotals.valuationCoverage.pendingHoldings} holding${dashboard.rollupTotals.valuationCoverage.pendingHoldings === 1 ? " needs" : "s need"} a price. Invested value remains available.`}
               </AppText>
             ) : null}
           </View>
@@ -307,7 +314,7 @@ export function DashboardScreen({
               ]}
             >
               <AppText color="secondary" variant="caption">
-                Invested
+                {dashboard.futuresContributions.some((item) => item.status === "pending") ? "Known invested" : "Invested"}
               </AppText>
               <MaskedValue
                 exactValue={formatINR(totalInvested)}
@@ -325,7 +332,7 @@ export function DashboardScreen({
               ]}
             >
               <AppText color="secondary" variant="caption">
-                Holdings P&L
+                {dashboard.futuresContributions.length ? "Portfolio P&L" : "Holdings P&L"}
               </AppText>
               {totalPnL === null ? (
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
@@ -352,7 +359,7 @@ export function DashboardScreen({
               ]}
             >
               <AppText color="secondary" variant="caption">
-                Holdings P&L %
+                {dashboard.futuresContributions.length ? "Portfolio P&L %" : "Holdings P&L %"}
               </AppText>
               {totalPnLPct === null ? (
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
@@ -379,7 +386,7 @@ export function DashboardScreen({
               style={styles.priceDisclosure}
               testID="dashboard-price-details-toggle"
             >
-              <AppText color="secondary" style={quoteStatus.prominent ? styles.warningText : undefined} variant="caption">
+              <AppText color="secondary" style={[styles.priceDisclosureLabel, quoteStatus.prominent && styles.warningText]} variant="caption">
                 {quoteStatus.title}
               </AppText>
               <AppText color="secondary" variant="caption">
@@ -416,13 +423,22 @@ export function DashboardScreen({
                 {!dashboard.maskWealthValues && dashboard.totalValue !== null ? (
                   <AppText color="secondary" testID="dashboard-exact-values" variant="caption">
                     Exact values: portfolio {formatINR(dashboard.totalValue)} · invested {formatINR(totalInvested)}
-                    {totalPnL === null ? "" : ` · holdings P&L ${formatSignedINR(totalPnL)}`}
+                    {totalPnL === null ? "" : ` · ${dashboard.futuresContributions.length ? "portfolio" : "holdings"} P&L ${formatSignedINR(totalPnL)}`}
                   </AppText>
                 ) : null}
               </View>
             ) : null}
           </View>
         </PremiumCard>
+
+        {dashboard.futuresContributions.length ? <PremiumCard testID="dashboard-futures-status">
+          <AppText weight="bold">USDT Futures</AppText>
+          {dashboard.futuresContributions.map((item) => <View key={item.accountId}>
+            <AppText color="secondary">{item.status === "ready" ? "Reconciled wallet equity included; notional excluded." : `Portfolio total pending: ${item.reason}`}</AppText>
+            {item.equityInr !== null ? <MaskedValue value={formatCompactINR(Number(item.equityInr))} exactValue={formatINR(Number(item.equityInr))} masked={dashboard.maskWealthValues} /> : null}
+          </View>)}
+          <AppButton title="Review Futures" variant="secondary" onPress={() => router.push("/futures")} />
+        </PremiumCard> : null}
 
         {quickSetupSavedCount > 0 &&
         onQuickSetup &&
@@ -631,7 +647,7 @@ export function DashboardScreen({
                   adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked,
                 ]}>
                   <View style={styles.allocationLegendLabel}>
-                    <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass} size={20} />
+                    <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass === "futures" ? "crypto" : item.assetClass} size={20} />
                     <AppText variant="body">
                       {getDisplayAllocationLabel(item.assetClass)}
                     </AppText>
@@ -658,7 +674,9 @@ export function DashboardScreen({
         ) : (
           <EmptyState
             actionLabel={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "Review Futures"
+                : hasCompleteValuation
                 ? onQuickSetup
                   ? quickSetupSavedCount > 0
                     ? "Continue portfolio setup"
@@ -666,33 +684,41 @@ export function DashboardScreen({
                   : onAddTrade
                     ? "Add Holding"
                   : undefined
-                : "Refresh prices"
+                : pendingFuturesCount > 0 ? "Review Futures" : "Refresh prices"
             }
             actionTestID={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "dashboard-review-negative-futures"
+                : hasCompleteValuation
                 ? onQuickSetup
                   ? "quick-setup-button"
                   : "add-trade-button"
-                : "dashboard-refresh-pending-prices"
+                : pendingFuturesCount > 0 ? "dashboard-review-pending-futures" : "dashboard-refresh-pending-prices"
             }
             message={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet."
+                : hasCompleteValuation
                 ? quickSetupSavedCount > 0
                   ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} already saved. Continue when ready.`
                   : onQuickSetup
                     ? "Choose manual entry or import holdings and transaction history. Your records stay local."
                     : "Add your first portfolio entry to build holdings automatically."
-                : "Allocation will appear after every holding has a current valuation."
+                : pendingFuturesCount > 0
+                  ? "Reconcile the Futures wallet to complete portfolio allocation."
+                  : "Allocation will appear after every holding has a current valuation."
             }
             title={
-              hasCompleteValuation ? "No allocation yet" : "Allocation unavailable"
+              hasCompleteValuation && !hasNegativeFuturesEquity ? "No allocation yet" : "Allocation unavailable"
             }
             onAction={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? () => router.push("/futures")
+                : hasCompleteValuation
                 ? onQuickSetup ?? onAddTrade
-                : () => {
-                    void dashboard.refresh();
-                  }
+                : pendingFuturesCount > 0
+                  ? () => router.push("/futures")
+                  : () => { void dashboard.refresh(); }
             }
             onSecondaryAction={
               hasCompleteValuation && onQuickSetup ? onAddTrade : undefined
@@ -741,11 +767,13 @@ export function DashboardScreen({
 }
 
 function getQuoteStatus({
+  hasFutures,
   isRefreshing,
   quoteFailed,
   quoteFreshness,
   quoteTimedOut,
 }: {
+  hasFutures: boolean;
   isRefreshing: boolean;
   quoteFailed: number;
   quoteFreshness: QuoteFreshnessSummary;
@@ -785,9 +813,11 @@ function getQuoteStatus({
 
   if (quoteFreshness.status === "empty") {
     return {
-      detail: "Cash and recorded PPF balances do not need market quotes.",
+      detail: hasFutures
+        ? "Futures mark, wallet and INR evidence are reviewed separately."
+        : "Cash and recorded PPF balances do not need market quotes.",
       prominent: false,
-      title: "No market prices needed",
+      title: hasFutures ? "No spot prices needed" : "No market prices needed",
     };
   }
 
@@ -817,6 +847,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.sm,
+  },
+  priceDisclosureLabel: {
+    flexShrink: 1,
   },
   priceDetails: {
     gap: spacing.sm,
@@ -894,8 +927,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroContextRow: {
-    alignItems: "center",
-    flexDirection: "row",
+    alignItems: "flex-start",
+    flexDirection: "column",
+  },
+  heroContextText: {
+    flexShrink: 1,
+    width: "100%",
   },
   heroMetricCell: {
     flex: 1,

@@ -1,0 +1,168 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "dashboard-screen"
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: "futures-screen"
+- tapOn:
+    id: "futures-opening-wallet"
+- eraseText: 50
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: "futures-save-account"
+- assertVisible: "1000 USDT"
+- scrollUntilVisible:
+    element:
+      id: "futures-add-event"
+    direction: DOWN
+- tapOn:
+    id: "futures-add-event"
+- scrollUntilVisible:
+    element:
+      id: "futures-quantity"
+    direction: DOWN
+- tapOn:
+    id: "futures-quantity"
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "futures-price"
+    direction: DOWN
+- tapOn:
+    id: "futures-price"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "futures-fee"
+    direction: DOWN
+- tapOn:
+    id: "futures-fee"
+- eraseText: 10
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "futures-leverage"
+    direction: DOWN
+- tapOn:
+    id: "futures-leverage"
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "futures-save-event"
+    direction: DOWN
+- tapOn:
+    id: "futures-save-event"
+- scrollUntilVisible:
+    element:
+      text: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element: "Edit"
+    direction: DOWN
+- tapOn: "Edit"
+- scrollUntilVisible:
+    element:
+      id: "futures-price"
+    direction: DOWN
+- tapOn:
+    id: "futures-price"
+- eraseText: 20
+- inputText: "120"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "futures-save-event"
+    direction: DOWN
+- tapOn:
+    id: "futures-save-event"
+- scrollUntilVisible:
+    element:
+      text: "Qty 1.*Entry 120 USDT.*"
+    direction: UP
+- assertVisible: "Qty 1.*Entry 120 USDT.*"
+- openLink: "cogvest:///backup?mode=export"
+- assertVisible: "This backup contains sensitive financial information and is not encrypted."
+- tapOn:
+    id: choose-backup-location
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000
+- copyTextFrom: ".*saved. Keep this unencrypted file somewhere you trust."
+- evalScript: ${output.backupName = maestro.copiedText.split(' saved.')[0]}
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn: "Delete wallet"
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-save-account
+- openLink: "cogvest:///backup?mode=restore"
+- tapOn:
+    id: choose-backup-file
+- scrollUntilVisible:
+    element: ${output.backupName}
+    direction: DOWN
+- tapOn: ${output.backupName}
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 15000
+- assertVisible: "Futures accounts"
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- tapOn:
+    id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-done
+    timeout: 30000
+- tapOn:
+    id: backup-restore-done
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-screen
+- scrollUntilVisible:
+    element:
+      text: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element:
+      text: "Qty 1.*Entry 120 USDT.*"
+    direction: DOWN
+- assertVisible: "Qty 1.*Entry 120 USDT.*"
+- launchApp:
+    clearState: false
+- assertVisible: "Review Futures"
+- tapOn: "Review Futures"
+- assertVisible:
+    id: "futures-screen"
+- scrollUntilVisible:
+    element:
+      text: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element:
+      text: "Qty 1.*Entry 120 USDT.*"
+    direction: DOWN
+- assertVisible: "Qty 1.*Entry 120 USDT.*"

@@ -94,7 +94,7 @@ describe("DashboardScreen", () => {
       <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
     );
 
-    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText(/1 holding needs a price/u)).toBeTruthy();
     expect(getByText("Price coverage needs attention")).toBeTruthy();
     expect(queryByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
     expect(queryByText("Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.")).toBeNull();
@@ -106,7 +106,7 @@ describe("DashboardScreen", () => {
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
 
     fireEvent.press(getByTestId("dashboard-mask-toggle"));
-    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText(/1 holding needs a price/u)).toBeTruthy();
     expect(getByText("Valuation pending")).toBeTruthy();
 
     fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
@@ -140,6 +140,36 @@ describe("DashboardScreen", () => {
     fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not present a negative Futures wallet as an empty allocation", () => {
+    const now = new Date("2026-09-29T12:00:00Z");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+    store.getState().saveFuturesAccount({
+      id: "futures-negative", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way",
+      openingAt: "2026-09-29T11:00:00Z", openingWalletUsdt: "10", events: [{
+        type: "execution", id: "open-long", at: "2026-09-29T11:10:00Z", contract: "BTCUSDT",
+        side: "buy", quantity: "1", price: "100", feeUsdt: "0", leverage: "10",
+      }],
+      openingRate: { inrPerUsdt: "90", observedAt: "2026-09-29T11:00:00Z", source: "Manual quote" },
+      valuation: {
+        asOf: "2026-09-29T11:30:00Z", marks: [{
+          contract: "BTCUSDT", priceUsdt: "80", observedAt: "2026-09-29T11:30:00Z", source: "Binance mark",
+        }],
+        inrRate: { inrPerUsdt: "90", observedAt: "2026-09-29T11:30:00Z", source: "Manual quote" },
+        reconciliation: {
+          observedWalletUsdt: "10", observedAt: "2026-09-29T11:30:00Z", source: "Binance wallet",
+          allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true,
+        },
+      },
+    });
+    const screen = render(<DashboardScreen now={now} store={store} />);
+    expect(screen.getByText("No spot prices needed")).toBeTruthy();
+    expect(screen.queryByText("No market prices needed")).toBeNull();
+    expect(screen.getByText("Allocation unavailable")).toBeTruthy();
+    expect(screen.getByText("Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet.")).toBeTruthy();
+    expect(screen.queryByText("No allocation yet")).toBeNull();
+    expect(screen.getByTestId("dashboard-review-negative-futures")).toBeTruthy();
   });
 
   it("toggles price basis and saved-quote movement through an accessible disclosure", () => {

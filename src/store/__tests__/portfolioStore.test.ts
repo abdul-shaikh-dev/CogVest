@@ -2471,6 +2471,7 @@ describe("portfolio store", () => {
     expect(persisted).toEqual({
       assets: [asset],
       cashEntries: [cashEntry],
+      futuresAccounts: [],
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       ppfAccounts: [],

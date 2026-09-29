@@ -10,7 +10,6 @@ import {
   calculateInstrumentAllocation,
   calculatePortfolioDayChange,
   calculatePortfolioRollupTotals,
-  calculatePortfolioTotal,
   calculateSectorAllocation,
   getConvictionReadiness,
   type AllocationItem,
@@ -53,6 +52,7 @@ import {
   calculatePpfPortfolioSummary,
   getLinkedLegacyPpfAssetIds,
 } from "@/src/domain/ppf";
+import { calculateUsdmPortfolioContribution, type UsdmPortfolioContribution } from "@/src/domain/usdmFutures";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -84,6 +84,8 @@ export type DashboardState = {
   dayChange: PortfolioDayChange;
   displayMode: DisplayMode;
   holdings: Holding[];
+  futuresContributions: (UsdmPortfolioContribution & { accountId: string })[];
+  futuresEquityInr: number | null;
   instrumentAllocation: MetadataAllocationItem[];
   isRefreshing: boolean;
   maskWealthValues: boolean;
@@ -259,12 +261,43 @@ export function useDashboard({
   );
   const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
   const rollupRows = calculateConsolidatedHoldingRows(holdings);
-  const rollupTotals = calculatePortfolioRollupTotals(
+  const spotRollupTotals = calculatePortfolioRollupTotals(
     rollupRows,
     cashBalance,
     holdings,
     ppfSummary,
   );
+  const futuresContributions = snapshot.futuresAccounts.map((account) => ({
+    accountId: account.id,
+    ...calculateUsdmPortfolioContribution(account, now.toISOString()),
+  }));
+  const pendingFutures = futuresContributions.filter((item) => item.status === "pending");
+  const futuresEquity = sumFinancialValues(futuresContributions.map((item) => item.equityInr ?? 0));
+  const futuresInvested = sumFinancialValues(futuresContributions.map((item) => item.investedInr ?? 0));
+  const combinedInvested = decimal(spotRollupTotals.totalInvested).plus(futuresInvested);
+  const combinedValue = spotRollupTotals.totalCurrentValue === null || pendingFutures.length
+    ? null : decimal(spotRollupTotals.totalCurrentValue).plus(futuresEquity);
+  const combinedPnl = spotRollupTotals.pnl === null || pendingFutures.length
+    ? null : decimal(spotRollupTotals.pnl).plus(futuresEquity).minus(futuresInvested);
+  const rollupTotals: PortfolioRollupTotals = {
+    ...spotRollupTotals,
+    holdingsCurrentValue: spotRollupTotals.holdingsCurrentValue === null || pendingFutures.length
+      ? null : normalizeMoney(decimal(spotRollupTotals.holdingsCurrentValue).plus(futuresEquity)),
+    pnl: combinedPnl === null ? null : normalizeMoney(combinedPnl),
+    pnlPct: combinedPnl === null ? null : combinedInvested.isZero() ? 0
+      : normalizePercentage(combinedPnl.dividedBy(combinedInvested).times(100)),
+    totalCurrentValue: combinedValue === null ? null : normalizeMoney(combinedValue),
+    totalInvested: normalizeMoney(combinedInvested),
+    valuedHoldingsSubtotal: normalizeMoney(decimal(spotRollupTotals.valuedHoldingsSubtotal).plus(futuresEquity)),
+    valuationCoverage: {
+      ...spotRollupTotals.valuationCoverage,
+      status: pendingFutures.length ? "incomplete" : spotRollupTotals.valuationCoverage.status,
+      pendingAssetIds: [...spotRollupTotals.valuationCoverage.pendingAssetIds, ...pendingFutures.map((item) => item.accountId)],
+      pendingHoldings: spotRollupTotals.valuationCoverage.pendingHoldings + pendingFutures.length,
+      totalHoldings: spotRollupTotals.valuationCoverage.totalHoldings + futuresContributions.length,
+      valuedHoldings: spotRollupTotals.valuationCoverage.valuedHoldings + futuresContributions.length - pendingFutures.length,
+    },
+  };
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
       .filter((holding) => holding.asset.assetClass !== "cash")
@@ -338,6 +371,8 @@ export function useDashboard({
     dayChange: calculatePortfolioDayChange(holdings),
     displayMode: snapshot.preferences.displayMode,
     holdings,
+    futuresContributions,
+    futuresEquityInr: pendingFutures.length ? null : normalizeMoney(futuresEquity),
     instrumentAllocation: calculateInstrumentAllocation(holdings),
     isRefreshing,
     maskWealthValues: snapshot.preferences.maskWealthValues,
@@ -350,11 +385,6 @@ export function useDashboard({
     rollupTotals,
     sectorAllocation: calculateSectorAllocation(holdings),
     toggleMaskWealthValues,
-    totalValue: calculatePortfolioTotal(
-      holdings,
-      snapshot.cashEntries,
-      now,
-      ppfSummary.confirmedBalance,
-    ),
+    totalValue: rollupTotals.totalCurrentValue,
   };
 }

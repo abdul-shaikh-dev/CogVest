@@ -205,6 +205,7 @@ export default function RootLayout() {
               <Stack.Screen name="asset" options={{ headerShown: false }} />
               <Stack.Screen name="sell-redeem" options={{ headerShown: false }} />
               <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="futures" options={{ headerShown: false }} />
               <Stack.Screen name="backup" options={{ headerShown: false }} />
               <Stack.Screen
                 name="review-snapshot"

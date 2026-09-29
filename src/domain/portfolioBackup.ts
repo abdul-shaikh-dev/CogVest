@@ -204,10 +204,11 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
 
 function validateGraph(payload: BackupPayload) {
   const { portfolio } = payload;
-  const sections: Array<readonly unknown[]> = [portfolio.assets, portfolio.cashEntries, portfolio.monthlySnapshots, portfolio.openingPositions, portfolio.ppfAccounts, portfolio.ppfLedgerEntries, portfolio.trades];
-  if (sections.some((section) => section.length > portfolioBackupMaxRecords) || sections.reduce((sum, section) => sum + section.length, 0) > portfolioBackupMaxTotalRecords) fail("too many records");
+  const sections: Array<readonly unknown[]> = [portfolio.assets, portfolio.cashEntries, portfolio.futuresAccounts, portfolio.monthlySnapshots, portfolio.openingPositions, portfolio.ppfAccounts, portfolio.ppfLedgerEntries, portfolio.trades];
+  const futuresEvents = portfolio.futuresAccounts.reduce((sum, account) => sum + account.events.length, 0);
+  if (sections.some((section) => section.length > portfolioBackupMaxRecords) || sections.reduce((sum, section) => sum + section.length, futuresEvents) > portfolioBackupMaxTotalRecords) fail("too many records");
   uniqueIds(portfolio.assets, "asset"); uniqueIds(portfolio.cashEntries, "cash entry"); uniqueIds(portfolio.monthlySnapshots, "snapshot");
-  uniqueIds(portfolio.openingPositions, "opening position"); uniqueIds(portfolio.ppfAccounts, "PPF account"); uniqueIds(portfolio.ppfLedgerEntries, "PPF ledger entry"); uniqueIds(portfolio.trades, "trade");
+  uniqueIds(portfolio.futuresAccounts, "futures account"); uniqueIds(portfolio.openingPositions, "opening position"); uniqueIds(portfolio.ppfAccounts, "PPF account"); uniqueIds(portfolio.ppfLedgerEntries, "PPF ledger entry"); uniqueIds(portfolio.trades, "trade");
   const assetIds = new Set(portfolio.assets.map((asset) => asset.id));
   if (portfolio.assets.some((asset) => getV1AssetCurrencyIssue(asset) || hasCanonicalAssetConflict(portfolio.assets, asset))) fail("asset identity or currency is invalid");
   for (const position of portfolio.openingPositions) {
@@ -294,18 +295,20 @@ function parsePayload(raw: unknown): BackupPayload {
   requireExactKeys(raw, ["portfolio", "quoteCache", "historicalQuoteCache", "casFolioSalt"], "payload");
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
-  requireExactKeys(portfolioRaw, ["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
-  if (![9, 10, 11, 12, 13].includes(portfolioRaw.schemaVersion as number) || !isPlainObject(portfolioRaw.preferences) || !["assets", "cashEntries", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].every((key) => Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
+  if (![9, 10, 11, 12, 13, 14].includes(portfolioRaw.schemaVersion as number)) fail("portfolio must be a complete supported snapshot");
+  const isV14 = portfolioRaw.schemaVersion === 14;
+  requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(isV14 ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
+  if (!isPlainObject(portfolioRaw.preferences) || ["assets", "cashEntries", ...(isV14 ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].some((key) => !Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
-  if (!parsed.success || ![9, 10, 11, 12, 13].includes(parsed.data.schemaVersion ?? 0)) fail("portfolio records are invalid");
+  if (!parsed.success) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);
   const quoteCache = parsePersistedQuoteCache(JSON.stringify(raw.quoteCache));
   const historicalQuoteCache = parsePersistedHistoricalQuoteCache(JSON.stringify(raw.historicalQuoteCache));
   if (!quoteCache.success || !historicalQuoteCache.success) fail("quote cache records are invalid");
   assertNoDiscardedFields(raw.quoteCache, quoteCache.data);
   assertNoDiscardedFields(raw.historicalQuoteCache, historicalQuoteCache.data);
-  const portfolio = { ...parsed.data, schemaVersion: 13 } as RawPortfolioSnapshot;
+  const portfolio = { ...parsed.data, futuresAccounts: parsed.data.futuresAccounts ?? [], schemaVersion: 14 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;

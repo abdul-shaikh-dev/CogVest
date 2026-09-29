@@ -243,6 +243,18 @@ export function SettingsScreen({
           />
         </PremiumCard>
 
+        <PremiumCard testID="futures-settings-card">
+          <SectionHeader title="Futures" />
+          <GroupedListRow
+            icon="swap-horizontal-outline"
+            title="Binance USDT futures"
+            meta="Manually record cross-margin, one-way positions and wallet activity."
+            onPress={() => router.push("/futures")}
+            showChevron
+            testID="open-futures-action"
+          />
+        </PremiumCard>
+
         <PremiumCard testID="settings-prices-card">
           <Pressable
             accessibilityLabel="Price information"

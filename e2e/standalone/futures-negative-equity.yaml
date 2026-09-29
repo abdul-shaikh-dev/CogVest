@@ -1,0 +1,210 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: dashboard-screen
+- evalScript: ${output.openingAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
+- evalScript: ${output.executionAt = new Date(Date.now() - 30 * 60 * 1000).toISOString()}
+- evalScript: ${output.valuationAt = new Date(Date.now() - 60 * 1000).toISOString()}
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-screen
+- tapOn:
+    id: futures-opening-at
+- eraseText: 50
+- inputText: ${output.openingAt}
+- hideKeyboard
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-at
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-at
+- inputText: ${output.openingAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-source
+- inputText: "Manual quote"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-account
+    direction: DOWN
+- tapOn:
+    id: futures-save-account
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-event-at
+    direction: DOWN
+- tapOn:
+    id: futures-event-at
+- eraseText: 50
+- inputText: ${output.executionAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-quantity
+    direction: DOWN
+- tapOn:
+    id: futures-quantity
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-price
+    direction: DOWN
+- tapOn:
+    id: futures-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-leverage
+    direction: DOWN
+- tapOn:
+    id: futures-leverage
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element:
+      id: futures-valuation-at
+    direction: DOWN
+- tapOn:
+    id: futures-valuation-at
+- eraseText: 50
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet-at
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet-at
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-wallet-source
+    direction: DOWN
+- tapOn:
+    id: futures-wallet-source
+- inputText: "Binance wallet"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-BTCUSDT
+    direction: DOWN
+- tapOn:
+    id: futures-mark-BTCUSDT
+- inputText: "80"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-source
+    direction: DOWN
+- tapOn:
+    id: futures-mark-source
+- inputText: "Binance mark"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-at
+    direction: DOWN
+- tapOn:
+    id: futures-mark-at
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-at
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-at
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-source
+- inputText: "Manual quote"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-positions-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-positions-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-events-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-events-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-boundary-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-boundary-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-save-valuation
+    direction: DOWN
+- tapOn:
+    id: futures-save-valuation
+- assertNotVisible:
+    id: futures-error
+- openLink: "cogvest:///"
+- assertVisible: "No spot prices needed"
+- assertVisible: "Allocation unavailable"
+- assertVisible: "Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet."
+- assertNotVisible: "No allocation yet"
+- takeScreenshot: .expo/futures-negative-equity
