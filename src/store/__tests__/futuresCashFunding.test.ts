@@ -68,6 +68,24 @@ describe("linked INR Cash and USDT Futures funding", () => {
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
   });
 
+  it("dates the Cash leg by local calendar day across the UTC midnight boundary", () => {
+    const storage = createMemoryJsonStorage();
+    const localNow = () => new Date("2026-09-10T02:00:00+05:30");
+    const store = createPortfolioStore({ storage, now: localNow });
+    store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-10", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().saveFuturesAccount({ ...account, openingAt: "2026-09-09T23:00:00+05:30" });
+    store.getState().saveFuturesCashTransfer({
+      ...funding, at: "2026-09-10T01:30:00+05:30", cashAmountInr: 9000,
+      conversionFeeInr: "0", rateObservedAt: "2026-09-10T01:30:00+05:30",
+    });
+    expect(store.getState().cashEntries.find((entry) => entry.id === funding.cashEntryId)?.date)
+      .toBe("2026-09-10");
+    expect(store.getState().cashEntries.find((entry) => entry.id === funding.cashEntryId)?.date)
+      .not.toBe("2026-09-09");
+    expect(store.getState().futuresAccounts[0].events[0]).toMatchObject({ cashDate: "2026-09-10" });
+    expect(createPortfolioStore({ storage, now: localNow }).getState().cashEntries).toHaveLength(2);
+  });
+
   it("corrects and removes both sides while rejecting one-sided edits", () => {
     const { store } = fundedStore();
     store.getState().saveFuturesCashTransfer(funding);

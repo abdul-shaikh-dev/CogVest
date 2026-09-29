@@ -107,7 +107,11 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹1,000.00"
 - launchApp:
     clearState: false
-- openLink: "cogvest:///futures"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- tapOn: "Review Futures"
 - scrollUntilVisible:
     element:
       text: "100 USDT"

@@ -28,6 +28,7 @@ export type UsdmFuturesWalletEvent = {
   amountUsdt: NativeAmount;
   transferBoundary: "internal" | "external";
   linkedCashEntryId?: string;
+  cashDate?: string;
   conversionFeeInr?: NativeAmount;
 };
 

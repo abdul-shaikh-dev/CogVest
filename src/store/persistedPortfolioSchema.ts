@@ -535,6 +535,7 @@ const futuresEventSchema = z.discriminatedUnion("type", [
   futuresEventBaseSchema.extend({
     type: z.literal("transfer"), transferBoundary: z.enum(["internal", "external"]),
     amountUsdt: nativeFuturesAmountSchema, linkedCashEntryId: nonEmptyStringSchema.optional(),
+    cashDate: calendarDateSchema.optional(),
     conversionFeeInr: nonnegativeFuturesAmountSchema.optional(),
   }).strict(),
 ]);

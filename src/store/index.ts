@@ -2022,7 +2022,7 @@ export function createPortfolioStore({
       const amount = decimal(input.amountUsdt);
       if (amount.isZero()) throw new Error("Enter the nonzero USDT movement.");
       const cashEntry: CashEntry = {
-        id: input.cashEntryId, amount: input.cashAmountInr, date: input.at.slice(0, 10),
+        id: input.cashEntryId, amount: input.cashAmountInr, date: formatLocalCalendarDate(new Date(input.at)),
         label: amount.isPositive() ? "Futures wallet funding" : "Futures wallet withdrawal",
         notes: input.notes?.trim() || undefined, purpose: "futuresTransfer",
         type: amount.isPositive() ? "withdrawal" : "addition",
@@ -2031,7 +2031,8 @@ export function createPortfolioStore({
       const event = {
         type: "transfer" as const, id: input.eventId, at: input.at,
         amountUsdt: input.amountUsdt, transferBoundary: "internal" as const,
-        linkedCashEntryId: input.cashEntryId, conversionFeeInr: input.conversionFeeInr,
+        linkedCashEntryId: input.cashEntryId, cashDate: cashEntry.date,
+        conversionFeeInr: input.conversionFeeInr,
       };
       const nextAccount: UsdmFuturesAccount = {
         ...account, events: [...account.events.filter((item) => item.id !== input.eventId), event],

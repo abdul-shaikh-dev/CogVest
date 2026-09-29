@@ -1,4 +1,5 @@
 import { decimal, isWithinQuantum, moneyQuantum } from "@/src/domain/precision";
+import { getCalendarDatePart } from "@/src/domain/dates";
 import type { CashEntry } from "@/src/types";
 import type { UsdmFuturesAccount } from "./usdmFutures";
 
@@ -17,7 +18,9 @@ export function validateFuturesCashLinks(cashEntries: CashEntry[], accounts: Usd
       seenCash.add(event.linkedCashEntryId);
       const cash = cashById.get(event.linkedCashEntryId);
       if (!cash || cash.linkedFutures?.accountId !== account.id || cash.linkedFutures.eventId !== event.id ||
-          cash.linkedTradeId || cash.purpose !== "futuresTransfer" || cash.date !== event.at.slice(0, 10) ||
+          cash.linkedTradeId || cash.purpose !== "futuresTransfer" ||
+          !event.cashDate || getCalendarDatePart(event.cashDate) !== event.cashDate ||
+          cash.date !== event.cashDate ||
           decimal(cash.amount).decimalPlaces() > 2 ||
           cash.type !== (decimal(event.amountUsdt).isPositive() ? "withdrawal" : "addition")) {
         throw new Error("Futures transfer and Cash movement are not linked consistently.");
