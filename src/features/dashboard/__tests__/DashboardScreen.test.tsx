@@ -94,7 +94,7 @@ describe("DashboardScreen", () => {
       <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
     );
 
-    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText(/1 holding needs a price/u)).toBeTruthy();
     expect(getByText("Price coverage needs attention")).toBeTruthy();
     expect(queryByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
     expect(queryByText("Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.")).toBeNull();
@@ -106,7 +106,7 @@ describe("DashboardScreen", () => {
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
 
     fireEvent.press(getByTestId("dashboard-mask-toggle"));
-    expect(getByText(/1 holding need a price/u)).toBeTruthy();
+    expect(getByText(/1 holding needs a price/u)).toBeTruthy();
     expect(getByText("Valuation pending")).toBeTruthy();
 
     fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));

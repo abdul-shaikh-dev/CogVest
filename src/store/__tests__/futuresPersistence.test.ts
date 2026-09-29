@@ -87,4 +87,37 @@ describe("Futures account persistence", () => {
     );
     expect(destination.getState().futuresAccounts).toEqual([historical]);
   });
+
+  it("round-trips dated FX, wallet and portfolio-boundary evidence", () => {
+    const complete: UsdmFuturesAccount = {
+      ...account,
+      openingRate: { inrPerUsdt: "90", observedAt: account.openingAt, source: "Historical INR quote" },
+      eventRates: account.events.map((event) => ({ eventId: event.id, inrPerUsdt: "91", observedAt: event.at, source: "Historical INR quote" })),
+      valuation: {
+        asOf: "2026-09-10T09:00:00Z", marks: [],
+        inrRate: { inrPerUsdt: "92", observedAt: "2026-09-10T09:00:00Z", source: "Manual INR quote" },
+        reconciliation: { observedWalletUsdt: "1004.99999999", observedAt: "2026-09-10T09:00:00Z", source: "Binance Futures wallet", allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true },
+      },
+    };
+    const storage = createMemoryJsonStorage();
+    const source = createPortfolioStore({ storage, now });
+    source.getState().saveFuturesAccount(complete);
+    expect(createPortfolioStore({ storage, now }).getState().futuresAccounts).toEqual([complete]);
+    const destination = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
+    destination.getState().replaceFromBackup(source.getState().captureBackup().payload, destination.getState().captureBackup().revision);
+    expect(destination.getState().futuresAccounts).toEqual([complete]);
+    const before = source.getState();
+    expect(() => source.getState().saveFuturesAccount({ ...complete, eventRates: [{ ...complete.eventRates![0], eventId: "unknown" }] })).toThrow("unknown event");
+    expect(() => source.getState().saveFuturesAccount({ ...complete, valuation: { ...complete.valuation!, asOf: "2026-09-11T09:00:00Z" } })).toThrow();
+    expect(source.getState()).toBe(before);
+  });
+
+  it("deletes the entire wallet atomically and leaves no pending portfolio contribution", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage, now });
+    store.getState().saveFuturesAccount(account);
+    store.getState().deleteFuturesAccount(account.id);
+    expect(store.getState().futuresAccounts).toEqual([]);
+    expect(createPortfolioStore({ storage, now }).getState().futuresAccounts).toEqual([]);
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -1617,6 +1617,9 @@ export function ProgressScreen({
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
   const progress = useProgress({ historicalPriceFetcher, now, store });
+  const futuresAccountCount = useSyncExternalStore(store.subscribe,
+    () => store.getState().futuresAccounts.length,
+    () => store.getState().futuresAccounts.length);
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
   const isHistoryBuilding =
@@ -1661,6 +1664,10 @@ export function ProgressScreen({
               : getMonthLabel()
           }
         />
+        {futuresAccountCount > 0 ? <PremiumCard testID="progress-futures-scope">
+          <AppText weight="bold">Futures are not in monthly history</AppText>
+          <AppText color="secondary" variant="caption">These stored month-end values exclude manual futures accounts. Current dashboard totals can include a reconciled futures wallet; past snapshots are not reconstructed from today's mark price or INR rate.</AppText>
+        </PremiumCard> : null}
         {selectedSummary ? (
           <>
             <View style={styles.monthlyAnswer} testID="progress-monthly-answer">

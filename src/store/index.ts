@@ -149,6 +149,7 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
+  deleteFuturesAccount: (accountId: string) => void;
   clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
   correctAsset: (asset: Asset) => AssetCorrectionResult;
@@ -1961,7 +1962,8 @@ export function createPortfolioStore({
       const state = get();
       validateUsdmFuturesAccount(account);
       if (Date.parse(account.openingAt) > now().getTime() ||
-          account.events.some((event) => Date.parse(event.at) > now().getTime())) {
+          account.events.some((event) => Date.parse(event.at) > now().getTime()) ||
+          (account.valuation && Date.parse(account.valuation.asOf) > now().getTime())) {
         throw new Error("Futures records cannot be dated in the future.");
       }
       const futuresAccounts = [
@@ -1973,6 +1975,13 @@ export function createPortfolioStore({
       })).success) {
         throw new Error("Futures account records are invalid.");
       }
+      persistPortfolioTransition(storage, state, { futuresAccounts });
+      set({ futuresAccounts });
+    },
+    deleteFuturesAccount: (accountId) => {
+      const state = get();
+      if (!state.futuresAccounts.some((account) => account.id === accountId)) return;
+      const futuresAccounts = state.futuresAccounts.filter((account) => account.id !== accountId);
       persistPortfolioTransition(storage, state, { futuresAccounts });
       set({ futuresAccounts });
     },

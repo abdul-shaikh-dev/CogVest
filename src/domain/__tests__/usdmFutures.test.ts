@@ -1,4 +1,5 @@
 import {
+  calculateUsdmPortfolioContribution,
   replayUsdmFutures,
   type UsdmFuturesAccount,
   type UsdmFuturesExecution,
@@ -90,17 +91,54 @@ describe("USDT cross-margin one-way futures replay", () => {
       openingExecutionId: "old-open", closingExecutionId: "old-close",
       realizedPnlUsdt: "10", feesUsdt: "0.002", beforeWalletCutover: true,
     })]);
+    expect(result.historicalEventRateStatus).toBe("missing");
+    expect(result.historicalRealizedPnlInr).toBeNull();
+    expect(result.eventRateStatus).toBe("complete");
   });
 
-  it("rejects pre-cutover positions that have not fully closed at the boundary", () => {
-    expect(() => replay({ ...base, events: [execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z")] })).toThrow("open at the wallet cutover");
+  it("converts old closed-trade P&L at its event-date rate without affecting current wallet", () => {
+    const events = [
+      execution("old-open", "buy", "1", "100", "2025-12-29T00:00:00Z"),
+      execution("old-close", "sell", "1", "110", "2025-12-30T00:00:00Z"),
+    ];
+    const result = replay({ ...base, events }, { marks: [], eventRates: events.map((event) => ({
+      eventId: event.id, observedAt: event.at, inrPerUsdt: "85", source: "Historical quote",
+    })) });
+    expect(result.historicalEventRateStatus).toBe("complete");
+    expect(result.historicalRealizedPnlInr).toBe("850.00");
+    expect(result.historicalFeesInr).toBe("0.17");
+    expect(result.walletUsdt).toBe("1000");
   });
 
-  it("does not permit a pre-cutover position to close after the boundary", () => {
-    expect(() => replay({ ...base, events: [
+  it("carries pre-cutover open positions into valuation without replaying opening wallet activity", () => {
+    const result = replay({ ...base, events: [execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z")] });
+    expect(result.walletUsdt).toBe("1000");
+    expect(result.positions[0].signedQuantity).toBe("1");
+    expect(result.equityUsdt).toBe("1020");
+  });
+
+  it("includes only post-cutover closing P&L when an old position closes", () => {
+    const result = replay({ ...base, events: [
       execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z"),
       execution("new", "sell", "1", "110", "2026-01-02T00:00:00Z"),
-    ] })).toThrow("open at the wallet cutover");
+    ] }, { marks: [] });
+    expect(result.walletUsdt).toBe("1009.999");
+    expect(result.realizedPnlUsdt).toBe("10");
+    expect(result.historicalWalletActivityUsdt).toBe("-0.001");
+  });
+
+  it("uses event-time INR evidence for realized P&L, fees, funding and external flows", () => {
+    const result = replay({ ...base, events: [
+      { ...execution("open", "buy", "1", "100"), leverage: "10" },
+      execution("close", "sell", "1", "110"),
+      { type: "funding", id: "fund", at: currentAt, contract: "BTCUSDT", amountUsdt: "-1" },
+      { type: "transfer", id: "deposit", at: currentAt, amountUsdt: "50", transferBoundary: "external" },
+    ] }, { marks: [], eventRates: ["open", "close", "fund", "deposit"].map((eventId) => ({ eventId, ...rate })) });
+    expect(result.eventRateStatus).toBe("complete");
+    expect(result.realizedPnlInr).toBe("901.25");
+    expect(result.feesInr).toBe("0.18");
+    expect(result.fundingInr).toBe("-90.13");
+    expect(result.externalTransfersInr).toBe("4506.25");
   });
 
   it("requires an observed matching wallet and full coverage for converted equity", () => {
@@ -115,11 +153,11 @@ describe("USDT cross-margin one-way futures replay", () => {
     expect(replay(base, { marks: [], reconciliation: {
       observedWalletUsdt: "1000", observedAt: openingAt, source: "Binance Futures wallet",
       allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
-    } })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
-    expect(replay(base, { marks: [], reconciliation: {
+    } })).toMatchObject({ valuationStatus: "stale-wallet", equityInr: null });
+    expect(() => replay(base, { marks: [], reconciliation: {
       observedWalletUsdt: "1000", observedAt: asOf, source: " ",
       allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
-    } })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
+    } })).toThrow("Invalid wallet provenance");
   });
 
   it("rejects impossible dates rather than normalizing execution history", () => {
@@ -154,5 +192,43 @@ describe("USDT cross-margin one-way futures replay", () => {
     expect(first.realizedPnlUsdt).toBe("5");
     expect(corrected.realizedPnlUsdt).toBe("10");
     expect(corrected.positions[0].signedQuantity).toBe("1");
+  });
+
+  it("aggregates reconciled wallet equity, not notional, with a dated INR basis", () => {
+    const events = [execution("open", "buy", "2", "100"), execution("close", "sell", "0.5", "110")];
+    const account: UsdmFuturesAccount = {
+      ...base, events,
+      openingRate: { inrPerUsdt: "90", observedAt: openingAt, source: "Historical exchange quote" },
+      eventRates: events.map((event) => ({ eventId: event.id, ...rate })),
+      valuation: {
+        asOf, marks, inrRate: rate,
+        reconciliation: {
+          observedWalletUsdt: "1004.998", observedAt: asOf, source: "Binance Futures wallet",
+          allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true,
+        },
+      },
+    };
+    const contribution = calculateUsdmPortfolioContribution(account, asOf);
+    expect(contribution).toMatchObject({ status: "ready", equityInr: "93279.19", investedInr: "90000.00", pnlInr: "3279.19" });
+    expect(contribution.equityInr).not.toBe("16222.50");
+    expect(calculateUsdmPortfolioContribution({ ...account, valuation: {
+      ...account.valuation!, reconciliation: { ...account.valuation!.reconciliation, portfolioBoundaryConfirmed: false },
+    } }, asOf)).toMatchObject({ status: "pending", equityInr: null });
+    expect(calculateUsdmPortfolioContribution({ ...account, events: [...events, {
+      type: "transfer", id: "spot", at: currentAt, amountUsdt: "10", transferBoundary: "internal",
+    }], valuation: { ...account.valuation!, reconciliation: {
+      ...account.valuation!.reconciliation, observedWalletUsdt: "1014.998",
+    } } }, asOf)).toMatchObject({ status: "pending", equityInr: null });
+    expect(calculateUsdmPortfolioContribution(account, "2026-02-03T00:00:00Z")).toMatchObject({ status: "pending", equityInr: null });
+  });
+
+  it("keeps reported cross-margin allocation out of wallet equity", () => {
+    const account = { ...base, events: [{ ...execution("open", "buy", "1", "100"), leverage: "10" }] };
+    const smallMargin = replay(account, { marks: [{ ...marks[0], reportedMarginUsdt: "10" }] });
+    const largeMargin = replay(account, { marks: [{ ...marks[0], reportedMarginUsdt: "30" }] });
+    expect(smallMargin.positions[0].reportedMarginUsdt).toBe("10");
+    expect(largeMargin.positions[0].reportedMarginUsdt).toBe("30");
+    expect(smallMargin.walletUsdt).toBe(largeMargin.walletUsdt);
+    expect(smallMargin.equityInr).toBe(largeMargin.equityInr);
   });
 });

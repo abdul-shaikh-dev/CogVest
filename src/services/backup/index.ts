@@ -30,6 +30,7 @@ type BackupRuntime = {
 const countCollections = [
   ["assets", "Assets"], ["openingPositions", "Opening positions"],
   ["trades", "Investment records"], ["cashEntries", "Cash entries"],
+  ["futuresAccounts", "Futures accounts"],
   ["monthlySnapshots", "Monthly snapshots"], ["ppfAccounts", "PPF accounts"],
   ["ppfLedgerEntries", "PPF entries"],
 ] as const;

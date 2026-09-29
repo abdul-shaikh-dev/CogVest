@@ -23,6 +23,7 @@ const defaultFlows = [
   "e2e/cas-native-import.yaml",
   "e2e/cas-native-fresh-portfolio.yaml",
   "e2e/zerodha-tradebook-import.yaml",
+  "e2e/futures-manual-wallet.yaml",
   "e2e/holdings.yaml",
   "e2e/holdings-list-first.yaml",
   "e2e/holdings-list-first-layout.yaml",

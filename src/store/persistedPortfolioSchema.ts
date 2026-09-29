@@ -524,6 +524,7 @@ const futuresEventSchema = z.discriminatedUnion("type", [
     type: z.literal("execution"), contract: futuresContractSchema,
     side: z.enum(["buy", "sell"]), quantity: positiveFuturesAmountSchema,
     price: positiveFuturesAmountSchema, feeUsdt: nonnegativeFuturesAmountSchema,
+    leverage: positiveFuturesAmountSchema.optional(),
   }).strict(),
   futuresEventBaseSchema.extend({
     type: z.literal("funding"), contract: futuresContractSchema,
@@ -534,6 +535,18 @@ const futuresEventSchema = z.discriminatedUnion("type", [
     amountUsdt: nativeFuturesAmountSchema,
   }).strict(),
 ]);
+const futuresRateSchema = z.object({
+  inrPerUsdt: positiveFuturesAmountSchema,
+  observedAt: nonEmptyStringSchema,
+  source: nonEmptyStringSchema,
+}).strict();
+const futuresMarkSchema = z.object({
+  contract: futuresContractSchema,
+  priceUsdt: positiveFuturesAmountSchema,
+  reportedMarginUsdt: nonnegativeFuturesAmountSchema.optional(),
+  observedAt: nonEmptyStringSchema,
+  source: nonEmptyStringSchema,
+}).strict();
 const futuresAccountSchema = z.object({
   id: nonEmptyStringSchema,
   settlementAsset: z.literal("USDT"),
@@ -541,7 +554,22 @@ const futuresAccountSchema = z.object({
   positionMode: z.literal("one-way"),
   openingAt: nonEmptyStringSchema,
   openingWalletUsdt: nativeFuturesAmountSchema,
+  openingRate: futuresRateSchema.optional(),
   events: z.array(futuresEventSchema).max(10_000),
+  eventRates: z.array(futuresRateSchema.extend({ eventId: nonEmptyStringSchema }).strict()).max(10_000).optional(),
+  valuation: z.object({
+    asOf: nonEmptyStringSchema,
+    marks: z.array(futuresMarkSchema).max(1_000),
+    inrRate: futuresRateSchema,
+    reconciliation: z.object({
+      observedWalletUsdt: nativeFuturesAmountSchema,
+      observedAt: nonEmptyStringSchema,
+      source: nonEmptyStringSchema,
+      allOpenPositionsConfirmed: z.boolean(),
+      allWalletEventsConfirmed: z.boolean(),
+      portfolioBoundaryConfirmed: z.boolean().optional(),
+    }).strict(),
+  }).strict().optional(),
 }).strict().superRefine((account, context) => {
   try {
     validateUsdmFuturesAccount(account);
