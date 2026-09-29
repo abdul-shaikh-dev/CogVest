@@ -342,11 +342,11 @@ export function CashScreen({
             {entries.map((entry) => (
               <CashEntryRow
                 accessibilityHint={isLinkedCashEntry(entry)
-                  ? "Opens the route to its owning investment transaction"
+                  ? "Opens its linked movement for review"
                   : undefined}
                 correctionHint={
                   isLinkedCashEntry(entry)
-                    ? "Review through its investment transaction"
+                    ? entry.linkedFutures ? "Correct in Futures" : "Review through its investment transaction"
                     : onCorrectEntry ? "Tap to review or correct" : undefined
                 }
                 entry={entry}

@@ -1,0 +1,115 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- tapOn:
+    id: tab-cash
+- tapOn:
+    id: cash-entry-deposit
+- tapOn:
+    id: cash-amount-input
+- inputText: "10000"
+- hideKeyboard
+- tapOn:
+    id: cash-label-input
+- inputText: "Futures source cash"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: save-cash-entry-button
+    direction: DOWN
+- tapOn:
+    id: save-cash-entry-button
+- assertVisible: "Futures source cash"
+- evalScript: ${output.openingAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
+- evalScript: ${output.fundingAt = new Date(Date.now() - 30 * 60 * 1000).toISOString()}
+- openLink: "cogvest:///futures"
+- tapOn:
+    id: futures-opening-at
+- eraseText: 50
+- inputText: ${output.openingAt}
+- hideKeyboard
+- tapOn:
+    id: futures-save-account
+- scrollUntilVisible:
+    element:
+      id: futures-add-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-add-cash-funding
+- scrollUntilVisible:
+    element:
+      id: futures-cash-at
+    direction: DOWN
+- tapOn:
+    id: futures-cash-at
+- eraseText: 50
+- inputText: ${output.fundingAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-usdt
+    direction: DOWN
+- tapOn:
+    id: futures-cash-usdt
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-inr
+    direction: DOWN
+- tapOn:
+    id: futures-cash-inr
+- inputText: "9000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-at
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate-at
+- inputText: ${output.fundingAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate-source
+- inputText: "Conversion receipt"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-save-cash-funding
+- scrollUntilVisible:
+    element:
+      text: "100 USDT"
+    direction: UP
+- assertVisible: "100 USDT"
+- openLink: "cogvest:///cash"
+- assertVisible: "Futures wallet funding"
+- assertVisible: "-₹9,000.00"
+- assertVisible: "₹1,000.00"
+- launchApp:
+    clearState: false
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      text: "100 USDT"
+    direction: UP
+- assertVisible: "100 USDT"

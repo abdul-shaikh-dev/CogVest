@@ -35,6 +35,8 @@ function getCashEntryMovement(entry: CashEntry) {
       return "Funded an investment purchase";
     case "saleProceeds":
       return "Added from asset exit";
+    case "futuresTransfer":
+      return entry.type === "withdrawal" ? "Moved to USDT Futures wallet" : "Returned from USDT Futures wallet";
     case "withdrawal":
       return "Withdrawn from deployable cash";
     case "legacyUncategorized":

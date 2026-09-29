@@ -30,6 +30,8 @@ export type CashEntryFormValues = {
 export function isLinkedCashEntry(entry: CashEntry) {
   return (
     Boolean(entry.linkedTradeId) ||
+    Boolean(entry.linkedFutures) ||
+    entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||
     entry.purpose === "saleProceeds"
   );

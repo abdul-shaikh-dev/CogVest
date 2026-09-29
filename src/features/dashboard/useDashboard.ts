@@ -269,7 +269,7 @@ export function useDashboard({
   );
   const futuresContributions = snapshot.futuresAccounts.map((account) => ({
     accountId: account.id,
-    ...calculateUsdmPortfolioContribution(account, now.toISOString()),
+    ...calculateUsdmPortfolioContribution(account, now.toISOString(), snapshot.cashEntries),
   }));
   const pendingFutures = futuresContributions.filter((item) => item.status === "pending");
   const futuresEquity = sumFinancialValues(futuresContributions.map((item) => item.equityInr ?? 0));

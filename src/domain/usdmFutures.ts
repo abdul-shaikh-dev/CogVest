@@ -1,4 +1,5 @@
 import { decimal, type FinancialDecimalInstance } from "@/src/domain/precision";
+import type { CashEntry } from "@/src/types";
 
 type NativeAmount = string;
 
@@ -26,6 +27,8 @@ export type UsdmFuturesWalletEvent = {
   at: string;
   amountUsdt: NativeAmount;
   transferBoundary: "internal" | "external";
+  linkedCashEntryId?: string;
+  conversionFeeInr?: NativeAmount;
 };
 
 export type UsdmFuturesEvent = UsdmFuturesExecution | UsdmFuturesWalletEvent;
@@ -467,7 +470,7 @@ export function validateUsdmFuturesAccount(account: UsdmFuturesAccount): void {
   }
 }
 
-export function calculateUsdmPortfolioContribution(account: UsdmFuturesAccount, asOf: string): UsdmPortfolioContribution {
+export function calculateUsdmPortfolioContribution(account: UsdmFuturesAccount, asOf: string, cashEntries: CashEntry[] = []): UsdmPortfolioContribution {
   const pending = (reason: string): UsdmPortfolioContribution => ({
     status: "pending", reason, equityInr: null, investedInr: null, pnlInr: null,
     tradingPnlInr: null, fxPnlInr: null,
@@ -489,8 +492,20 @@ export function calculateUsdmPortfolioContribution(account: UsdmFuturesAccount, 
   if (!account.valuation.reconciliation.portfolioBoundaryConfirmed) {
     return pending("Confirm that this wallet is not already counted in Spot, Cash or another holding.");
   }
-  if (replay.internalTransfersUsdt !== "0") {
-    return pending("Internal Spot-to-Futures transfers need a linked Spot outflow before aggregation.");
+  const linkedTransfers = account.events.filter((event): event is Extract<UsdmFuturesEvent, { type: "transfer" }> => event.type === "transfer").filter((event) =>
+    event.transferBoundary === "internal" && Date.parse(event.at) >= Date.parse(account.openingAt));
+  if (linkedTransfers.some((event) => !event.linkedCashEntryId)) {
+    return pending("Internal transfers need a linked Cash outflow or Spot movement before aggregation.");
+  }
+  const linkedCashBasis = linkedTransfers.reduce((total, event) => {
+    const entry = cashEntries.find((item) => item.id === event.linkedCashEntryId &&
+      item.linkedFutures?.accountId === account.id && item.linkedFutures.eventId === event.id);
+    if (!entry) return total;
+    return total.plus(entry.type === "withdrawal" ? entry.amount : -entry.amount);
+  }, decimal(0));
+  if (linkedTransfers.some((event) => !cashEntries.some((item) => item.id === event.linkedCashEntryId &&
+    item.linkedFutures?.accountId === account.id && item.linkedFutures.eventId === event.id))) {
+    return pending("Linked Cash movement is missing or mismatched.");
   }
   if (replay.eventRateStatus !== "complete" || replay.externalTransfersInr === null ||
       replay.realizedPnlInr === null || replay.fundingInr === null || replay.feesInr === null) {
@@ -500,7 +515,7 @@ export function calculateUsdmPortfolioContribution(account: UsdmFuturesAccount, 
     return pending("Starting wallet INR rate is missing.");
   }
   const basis = decimal(account.openingWalletUsdt).times(account.openingRate?.inrPerUsdt ?? "0")
-    .plus(replay.externalTransfersInr);
+    .plus(replay.externalTransfersInr).plus(linkedCashBasis);
   const pnl = decimal(replay.equityInr).minus(basis);
   const unrealized = replay.positions.reduce((sum, position) =>
     sum.plus(position.unrealizedPnlUsdt ?? "0"), decimal(0));

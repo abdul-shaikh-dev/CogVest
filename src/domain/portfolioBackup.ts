@@ -1,4 +1,5 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { projectDemergers } from "@/src/domain/demergers";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { assertCatalogSplits, assertSplitSourceIdentities } from "@/src/domain/stockSplitCatalog";
@@ -249,10 +250,11 @@ function validateGraph(payload: BackupPayload) {
     requireDate(entry.date, "cash entry date");
     if (!entry.linkedTradeId &&
       entry.purpose !== "purchaseFunding" &&
-      entry.purpose !== "saleProceeds" &&
+      entry.purpose !== "saleProceeds" && entry.purpose !== "futuresTransfer" &&
       (entry.type === "withdrawal" ? entry.purpose !== "withdrawal" : !["capitalContribution", "income", "legacyUncategorized"].includes(entry.purpose))) fail("cash entry purpose is invalid");
   }
   validateCashLinks(portfolio.cashEntries, portfolio.trades);
+  validateFuturesCashLinks(portfolio.cashEntries, portfolio.futuresAccounts);
   const months = new Set<string>();
   for (const snapshot of portfolio.monthlySnapshots) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/u.test(snapshot.month) || months.has(snapshot.month)) fail("monthly snapshots must have unique valid months");

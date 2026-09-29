@@ -181,6 +181,7 @@ const cashEntrySchema = z.object({
   institution: nonEmptyStringSchema.optional(),
   label: nonEmptyStringSchema,
   linkedTradeId: nonEmptyStringSchema.optional(),
+  linkedFutures: z.object({ accountId: nonEmptyStringSchema, eventId: nonEmptyStringSchema }).strict().optional(),
   notes: z.string().optional(),
   // V1-V3 entries did not persist a purpose. The current migration supplies it.
   purpose: z
@@ -190,6 +191,7 @@ const cashEntrySchema = z.object({
       "legacyUncategorized",
       "purchaseFunding",
       "saleProceeds",
+      "futuresTransfer",
       "withdrawal",
     ])
     .optional(),
@@ -532,7 +534,8 @@ const futuresEventSchema = z.discriminatedUnion("type", [
   }).strict(),
   futuresEventBaseSchema.extend({
     type: z.literal("transfer"), transferBoundary: z.enum(["internal", "external"]),
-    amountUsdt: nativeFuturesAmountSchema,
+    amountUsdt: nativeFuturesAmountSchema, linkedCashEntryId: nonEmptyStringSchema.optional(),
+    conversionFeeInr: nonnegativeFuturesAmountSchema.optional(),
   }).strict(),
 ]);
 const futuresRateSchema = z.object({

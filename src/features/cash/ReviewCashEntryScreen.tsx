@@ -33,6 +33,7 @@ type ReviewCashEntryScreenProps = {
   onCancel: () => void;
   onComplete: () => void;
   onReviewLinkedTrade?: (tradeId: string) => void;
+  onReviewLinkedFutures?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -74,6 +75,7 @@ export function ReviewCashEntryScreen({
   onCancel,
   onComplete,
   onReviewLinkedTrade,
+  onReviewLinkedFutures,
   store = getPortfolioStore(),
 }: ReviewCashEntryScreenProps) {
   const snapshot = usePortfolioSnapshot(store);
@@ -116,6 +118,20 @@ export function ReviewCashEntryScreen({
   }
 
   if (isLinkedCashEntry(entry)) {
+    if (entry.linkedFutures) {
+      const account = snapshot.futuresAccounts.find((item) => item.id === entry.linkedFutures?.accountId);
+      const transfer = account?.events.find((item) => item.id === entry.linkedFutures?.eventId);
+      return <ScreenContainer testID="review-cash-entry-screen"><View style={styles.content}>
+        <ScreenHeader title="Review Cash Entry" subtitle="Linked Futures movement" />
+        <PremiumCard>
+          <SectionHeader title={entry.label} />
+          <AppText color="secondary">{transfer ? "This Cash movement is managed with its USDT Futures wallet transfer. Correct or remove it in Futures so both records stay in sync." : "The linked Futures transfer is unavailable. Restore a complete backup before changing this Cash movement."}</AppText>
+          <AppText color="secondary" variant="caption">{formatDate(entry.date)}</AppText>
+        </PremiumCard>
+        {transfer && onReviewLinkedFutures ? <AppButton title="Review Futures wallet" onPress={onReviewLinkedFutures} testID="review-linked-cash-futures" /> : null}
+        <AppButton title="Back to Cash Ledger" variant="secondary" onPress={onCancel} />
+      </View></ScreenContainer>;
+    }
     const linkedTradeCandidate = snapshot.trades.find((trade) => trade.id === entry.linkedTradeId);
     const linkedTrade = linkedTradeCandidate && (linkedTradeCandidate.type === "buy" || linkedTradeCandidate.type === "sell")
       ? linkedTradeCandidate
