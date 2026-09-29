@@ -52,6 +52,26 @@ export type UsdmInrRate = {
   source: string;
 };
 
+export type UsdmWalletReconciliation = {
+  observedWalletUsdt: NativeAmount;
+  observedAt: string;
+  source: string;
+  allOpenPositionsConfirmed: boolean;
+  allWalletEventsConfirmed: boolean;
+};
+
+export type UsdmClosedCycle = {
+  contract: string;
+  openingExecutionId: string;
+  closingExecutionId: string;
+  openedAt: string;
+  closedAt: string;
+  side: "long" | "short";
+  realizedPnlUsdt: string;
+  feesUsdt: string;
+  beforeWalletCutover: boolean;
+};
+
 export type UsdmPosition = {
   contract: string;
   signedQuantity: string;
@@ -66,20 +86,28 @@ export type UsdmPosition = {
 export type UsdmReplay = {
   walletUsdt: string;
   realizedPnlUsdt: string;
+  historicalRealizedPnlUsdt: string;
+  historicalWalletActivityUsdt: string;
   feesUsdt: string;
   fundingUsdt: string;
   internalTransfersUsdt: string;
   externalTransfersUsdt: string;
   positions: UsdmPosition[];
+  closedCycles: UsdmClosedCycle[];
   equityUsdt: string | null;
   equityInr: string | null;
-  valuationStatus: "ready" | "missing-mark" | "stale-mark" | "missing-rate" | "stale-rate" | "unreconciled";
+  valuationStatus: "ready" | "missing-mark" | "stale-mark" | "missing-rate" | "stale-rate" | "unreconciled" | "wallet-mismatch";
 };
 
 type RunningPosition = {
   quantity: FinancialDecimalInstance;
   entry: FinancialDecimalInstance;
   realized: FinancialDecimalInstance;
+  cycleOpenedAt: string | null;
+  cycleOpeningId: string | null;
+  cycleSide: "long" | "short" | null;
+  cycleRealized: FinancialDecimalInstance;
+  cycleFees: FinancialDecimalInstance;
 };
 
 function native(value: string, label: string, allowNegative = false) {
@@ -123,7 +151,7 @@ export function replayUsdmFutures(
     asOf: string;
     marks: UsdmMark[];
     inrRate?: UsdmInrRate;
-    walletReconciled: boolean;
+    reconciliation?: UsdmWalletReconciliation;
     maxRateAgeMs?: number;
     maxMarkAgeMs?: number;
   },
@@ -137,27 +165,45 @@ export function replayUsdmFutures(
   if (openingAt > asOf) throw new Error("Opening time cannot follow valuation time.");
   let wallet = native(account.openingWalletUsdt, "Opening wallet", true);
   let realized = decimal(0);
+  let historicalRealized = decimal(0);
+  let historicalWalletActivity = decimal(0);
   let fees = decimal(0);
   let funding = decimal(0);
   let internalTransfers = decimal(0);
   let externalTransfers = decimal(0);
   const positions = new Map<string, RunningPosition>();
+  const closedCycles: UsdmClosedCycle[] = [];
   const ids = new Set<string>();
 
   const events = account.events.map((event, order) => {
     if (!event.id.trim() || ids.has(event.id)) throw new Error("Futures event IDs must be unique and nonempty.");
     ids.add(event.id);
     const at = timestamp(event.at, "Event time");
-    if (at < openingAt || at > asOf) throw new Error("Event falls outside the wallet replay window.");
+    if (at > asOf) throw new Error("Event follows the valuation time.");
     return { event, at, order };
   }).sort((a, b) => a.at - b.at || a.order - b.order);
 
-  for (const { event } of events) {
+  let crossedCutover = false;
+  const assertClosedAtCutover = () => {
+    if ([...positions.values()].some((position) => !position.quantity.isZero())) {
+      throw new Error("Positions open at the wallet cutover need a separate opening-position record.");
+    }
+  };
+  const applyWalletDelta = (amount: FinancialDecimalInstance, beforeCutover: boolean) => {
+    if (beforeCutover) historicalWalletActivity = historicalWalletActivity.plus(amount);
+    else wallet = wallet.plus(amount);
+  };
+  for (const { event, at } of events) {
+    const beforeCutover = at < openingAt;
+    if (!beforeCutover && !crossedCutover) {
+      assertClosedAtCutover();
+      crossedCutover = true;
+    }
     if (event.type === "funding") {
       contract(event.contract);
       const amount = native(event.amountUsdt, "Funding", true);
-      funding = funding.plus(amount);
-      wallet = wallet.plus(amount);
+      if (!beforeCutover) funding = funding.plus(amount);
+      applyWalletDelta(amount, beforeCutover);
       continue;
     }
     if (event.type === "transfer") {
@@ -165,26 +211,36 @@ export function replayUsdmFutures(
         throw new Error("Transfer boundary is required.");
       }
       const amount = native(event.amountUsdt, "Transfer", true);
-      wallet = wallet.plus(amount);
-      if (event.transferBoundary === "internal") internalTransfers = internalTransfers.plus(amount);
-      else externalTransfers = externalTransfers.plus(amount);
+      applyWalletDelta(amount, beforeCutover);
+      if (!beforeCutover && event.transferBoundary === "internal") internalTransfers = internalTransfers.plus(amount);
+      if (!beforeCutover && event.transferBoundary === "external") externalTransfers = externalTransfers.plus(amount);
       continue;
     }
     contract(event.contract);
     const quantity = positive(event.quantity, "Execution quantity");
     const price = positive(event.price, "Execution price");
     const fee = native(event.feeUsdt, "Execution fee");
-    fees = fees.plus(fee);
-    wallet = wallet.minus(fee);
+    if (!beforeCutover) fees = fees.plus(fee);
+    applyWalletDelta(fee.negated(), beforeCutover);
     const signed = event.side === "buy" ? quantity : quantity.negated();
     const position = positions.get(event.contract) ?? {
       quantity: decimal(0), entry: decimal(0), realized: decimal(0),
+      cycleOpenedAt: null, cycleOpeningId: null, cycleSide: null,
+      cycleRealized: decimal(0), cycleFees: decimal(0),
     };
     const previous = position.quantity;
     const next = previous.plus(signed);
     if (!previous.isZero() && next.isZero() === false && previous.isPositive() !== next.isPositive()) {
       throw new Error("Reversal must be entered as a close followed by a new opening execution.");
     }
+    if (previous.isZero()) {
+      position.cycleOpenedAt = event.at;
+      position.cycleOpeningId = event.id;
+      position.cycleSide = signed.isPositive() ? "long" : "short";
+      position.cycleRealized = decimal(0);
+      position.cycleFees = decimal(0);
+    }
+    position.cycleFees = position.cycleFees.plus(fee);
     if (previous.isZero() || previous.isPositive() === signed.isPositive()) {
       position.entry = previous.abs().times(position.entry).plus(quantity.times(price)).dividedBy(next.abs());
     } else {
@@ -193,13 +249,32 @@ export function replayUsdmFutures(
         ? price.minus(position.entry).times(closing)
         : position.entry.minus(price).times(closing);
       position.realized = position.realized.plus(pnl);
-      realized = realized.plus(pnl);
-      wallet = wallet.plus(pnl);
+      position.cycleRealized = position.cycleRealized.plus(pnl);
+      if (beforeCutover) historicalRealized = historicalRealized.plus(pnl);
+      else realized = realized.plus(pnl);
+      applyWalletDelta(pnl, beforeCutover);
       if (next.isZero()) position.entry = decimal(0);
+    }
+    if (next.isZero()) {
+      closedCycles.push({
+        contract: event.contract,
+        openingExecutionId: position.cycleOpeningId!,
+        closingExecutionId: event.id,
+        openedAt: position.cycleOpenedAt!,
+        closedAt: event.at,
+        side: position.cycleSide!,
+        realizedPnlUsdt: canonical(position.cycleRealized),
+        feesUsdt: canonical(position.cycleFees),
+        beforeWalletCutover: beforeCutover,
+      });
+      position.cycleOpenedAt = null;
+      position.cycleOpeningId = null;
+      position.cycleSide = null;
     }
     position.quantity = next;
     positions.set(event.contract, position);
   }
+  if (!crossedCutover) assertClosedAtCutover();
 
   const marks = new Map<string, UsdmMark>();
   for (const mark of options.marks) {
@@ -235,7 +310,10 @@ export function replayUsdmFutures(
   let status: UsdmReplay["valuationStatus"] = "ready";
   if (missingMark) status = "missing-mark";
   else if (staleMark) status = "stale-mark";
-  else if (!options.walletReconciled) status = "unreconciled";
+  else if (!options.reconciliation || !options.reconciliation.allOpenPositionsConfirmed || !options.reconciliation.allWalletEventsConfirmed ||
+           !options.reconciliation.source.trim() ||
+           timestamp(options.reconciliation.observedAt, "Wallet observation time") !== asOf) status = "unreconciled";
+  else if (wallet.minus(native(options.reconciliation.observedWalletUsdt, "Observed wallet", true)).abs().greaterThan("0.00000001")) status = "wallet-mismatch";
   else if (!options.inrRate) status = "missing-rate";
   else {
     const rateAt = timestamp(options.inrRate.observedAt, "INR rate time");
@@ -246,11 +324,14 @@ export function replayUsdmFutures(
   return {
     walletUsdt: canonical(wallet),
     realizedPnlUsdt: canonical(realized),
+    historicalRealizedPnlUsdt: canonical(historicalRealized),
+    historicalWalletActivityUsdt: canonical(historicalWalletActivity),
     feesUsdt: canonical(fees),
     fundingUsdt: canonical(funding),
     internalTransfersUsdt: canonical(internalTransfers),
     externalTransfersUsdt: canonical(externalTransfers),
     positions: results,
+    closedCycles,
     equityUsdt: equity === null ? null : canonical(equity),
     equityInr: status === "ready" && equity !== null && options.inrRate
       ? equity.times(options.inrRate.inrPerUsdt).toDecimalPlaces(2).toFixed(2)
@@ -267,6 +348,5 @@ export function validateUsdmFuturesAccount(account: UsdmFuturesAccount): void {
   replayUsdmFutures(account, {
     asOf: new Date(latest).toISOString(),
     marks: [],
-    walletReconciled: false,
   });
 }

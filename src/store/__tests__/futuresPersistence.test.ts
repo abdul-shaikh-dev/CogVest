@@ -66,4 +66,25 @@ describe("Futures account persistence", () => {
     expect(store.getState().futuresAccounts).toEqual([]);
     expect(store.getState().schemaVersion).toBe(14);
   });
+
+  it("preserves closed trades from before the wallet cutover across restart and restore", () => {
+    const historical: UsdmFuturesAccount = {
+      ...account,
+      events: [
+        { ...account.events[0], id: "old-open", at: "2025-12-29T00:00:00Z" },
+        { ...account.events[1], id: "old-close", at: "2025-12-30T00:00:00Z" },
+      ],
+    };
+    const storage = createMemoryJsonStorage();
+    const source = createPortfolioStore({ storage, now });
+    source.getState().saveFuturesAccount(historical);
+    const restarted = createPortfolioStore({ storage, now });
+    expect(restarted.getState().futuresAccounts).toEqual([historical]);
+    const destination = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
+    destination.getState().replaceFromBackup(
+      restarted.getState().captureBackup().payload,
+      destination.getState().captureBackup().revision,
+    );
+    expect(destination.getState().futuresAccounts).toEqual([historical]);
+  });
 });

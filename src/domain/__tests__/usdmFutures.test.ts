@@ -21,8 +21,17 @@ const execution = (id: string, side: "buy" | "sell", quantity: string, price: st
 });
 const rate = { inrPerUsdt: "90.125", observedAt: currentAt, source: "manual" };
 const marks = [{ contract: "BTCUSDT", priceUsdt: "120", observedAt: currentAt, source: "manual" }];
-const replay = (account: UsdmFuturesAccount, options: Partial<Parameters<typeof replayUsdmFutures>[1]> = {}) =>
-  replayUsdmFutures(account, { asOf, marks, inrRate: rate, walletReconciled: true, ...options });
+const replay = (account: UsdmFuturesAccount, options: Partial<Parameters<typeof replayUsdmFutures>[1]> = {}) => {
+  const first = replayUsdmFutures(account, { asOf, marks: options.marks ?? marks });
+  return replayUsdmFutures(account, {
+    asOf, marks, inrRate: rate,
+    reconciliation: {
+      observedWalletUsdt: first.walletUsdt, observedAt: asOf, source: "Binance Futures wallet",
+      allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
+    },
+    ...options,
+  });
+};
 
 describe("USDT cross-margin one-way futures replay", () => {
   it("derives long partial-close P&L and values equity, never notional, in INR", () => {
@@ -63,13 +72,54 @@ describe("USDT cross-margin one-way futures replay", () => {
     const account = { ...base, events: [execution("a", "buy", "1", "100")] };
     expect(replay(account, { marks: [] })).toMatchObject({ valuationStatus: "missing-mark", equityInr: null });
     expect(replay(account, { marks: [{ ...marks[0], observedAt: openingAt }] })).toMatchObject({ valuationStatus: "stale-mark", equityInr: null });
-    expect(replay(account, { walletReconciled: false })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
+    expect(replay(account, { reconciliation: undefined })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
     expect(replay(account, { inrRate: undefined })).toMatchObject({ valuationStatus: "missing-rate", equityInr: null });
     expect(replay(account, { inrRate: { ...rate, observedAt: openingAt } })).toMatchObject({ valuationStatus: "stale-rate", equityInr: null });
   });
 
-  it("does not count pre-cutover trades again", () => {
-    expect(() => replay({ ...base, events: [execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z")] })).toThrow("outside the wallet replay window");
+  it("retains pre-cutover closed cycles without adding their P&L or fees to the opening wallet", () => {
+    const result = replay({ ...base, events: [
+      execution("old-open", "buy", "1", "100", "2025-12-29T00:00:00Z"),
+      execution("old-close", "sell", "1", "110", "2025-12-30T00:00:00Z"),
+    ] }, { marks: [] });
+    expect(result.walletUsdt).toBe("1000");
+    expect(result.realizedPnlUsdt).toBe("0");
+    expect(result.historicalRealizedPnlUsdt).toBe("10");
+    expect(result.historicalWalletActivityUsdt).toBe("9.998");
+    expect(result.closedCycles).toEqual([expect.objectContaining({
+      openingExecutionId: "old-open", closingExecutionId: "old-close",
+      realizedPnlUsdt: "10", feesUsdt: "0.002", beforeWalletCutover: true,
+    })]);
+  });
+
+  it("rejects pre-cutover positions that have not fully closed at the boundary", () => {
+    expect(() => replay({ ...base, events: [execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z")] })).toThrow("open at the wallet cutover");
+  });
+
+  it("does not permit a pre-cutover position to close after the boundary", () => {
+    expect(() => replay({ ...base, events: [
+      execution("old", "buy", "1", "100", "2025-12-31T00:00:00Z"),
+      execution("new", "sell", "1", "110", "2026-01-02T00:00:00Z"),
+    ] })).toThrow("open at the wallet cutover");
+  });
+
+  it("requires an observed matching wallet and full coverage for converted equity", () => {
+    expect(replay(base, { marks: [], reconciliation: {
+      observedWalletUsdt: "999", observedAt: asOf, source: "Binance Futures wallet",
+      allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
+    } })).toMatchObject({ valuationStatus: "wallet-mismatch", equityInr: null });
+    expect(replay(base, { marks: [], reconciliation: {
+      observedWalletUsdt: "1000", observedAt: asOf, source: "Binance Futures wallet",
+      allOpenPositionsConfirmed: false, allWalletEventsConfirmed: true,
+    } })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
+    expect(replay(base, { marks: [], reconciliation: {
+      observedWalletUsdt: "1000", observedAt: openingAt, source: "Binance Futures wallet",
+      allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
+    } })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
+    expect(replay(base, { marks: [], reconciliation: {
+      observedWalletUsdt: "1000", observedAt: asOf, source: " ",
+      allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true,
+    } })).toMatchObject({ valuationStatus: "unreconciled", equityInr: null });
   });
 
   it("rejects impossible dates rather than normalizing execution history", () => {
