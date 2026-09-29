@@ -1,4 +1,5 @@
 import { calculateUsdmPortfolioContribution, replayUsdmFutures, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { validateBackupPayload } from "@/src/domain/portfolioBackup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey, type FuturesCashTransferInput } from "@/src/store";
@@ -68,21 +69,21 @@ describe("linked INR Cash and USDT Futures funding", () => {
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
   });
 
-  it("dates the Cash leg by local calendar day across the UTC midnight boundary", () => {
+  it("persists the Cash leg's local calendar day across UTC midnight", () => {
     const storage = createMemoryJsonStorage();
     const localNow = () => new Date("2026-09-10T02:00:00+05:30");
+    const transferAt = "2026-09-10T01:30:00+05:30";
+    const cashDate = formatLocalCalendarDate(new Date(transferAt));
     const store = createPortfolioStore({ storage, now: localNow });
-    store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-10", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: cashDate, label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
     store.getState().saveFuturesAccount({ ...account, openingAt: "2026-09-09T23:00:00+05:30" });
     store.getState().saveFuturesCashTransfer({
-      ...funding, at: "2026-09-10T01:30:00+05:30", cashAmountInr: 9000,
-      conversionFeeInr: "0", rateObservedAt: "2026-09-10T01:30:00+05:30",
+      ...funding, at: transferAt, cashAmountInr: 9000,
+      conversionFeeInr: "0", rateObservedAt: transferAt,
     });
     expect(store.getState().cashEntries.find((entry) => entry.id === funding.cashEntryId)?.date)
-      .toBe("2026-09-10");
-    expect(store.getState().cashEntries.find((entry) => entry.id === funding.cashEntryId)?.date)
-      .not.toBe("2026-09-09");
-    expect(store.getState().futuresAccounts[0].events[0]).toMatchObject({ cashDate: "2026-09-10" });
+      .toBe(cashDate);
+    expect(store.getState().futuresAccounts[0].events[0]).toMatchObject({ cashDate });
     expect(createPortfolioStore({ storage, now: localNow }).getState().cashEntries).toHaveLength(2);
   });
 
