@@ -222,6 +222,21 @@ describe("USDT cross-margin one-way futures replay", () => {
     expect(calculateUsdmPortfolioContribution(account, "2026-02-03T00:00:00Z")).toMatchObject({ status: "pending", equityInr: null });
   });
 
+  it("keeps a negative starting wallet out of invested capital", () => {
+    const account: UsdmFuturesAccount = {
+      ...base, openingWalletUsdt: "-10",
+      openingRate: { inrPerUsdt: "90", observedAt: openingAt, source: "Historical quote" },
+      valuation: {
+        asOf, marks: [], inrRate: { inrPerUsdt: "90", observedAt: asOf, source: "Current quote" },
+        reconciliation: {
+          observedWalletUsdt: "-10", observedAt: asOf, source: "Binance Futures wallet",
+          allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true,
+        },
+      },
+    };
+    expect(calculateUsdmPortfolioContribution(account, asOf)).toMatchObject({ status: "pending", investedInr: null, equityInr: null });
+  });
+
   it("keeps reported cross-margin allocation out of wallet equity", () => {
     const account = { ...base, events: [{ ...execution("open", "buy", "1", "100"), leverage: "10" }] };
     const smallMargin = replay(account, { marks: [{ ...marks[0], reportedMarginUsdt: "10" }] });

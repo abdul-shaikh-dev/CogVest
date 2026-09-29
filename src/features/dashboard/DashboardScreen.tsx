@@ -206,12 +206,14 @@ export function DashboardScreen({
   const totalPnL = dashboard.rollupTotals.pnl;
   const totalPnLPct = dashboard.rollupTotals.pnlPct;
   const pendingFuturesCount = dashboard.futuresContributions.filter((item) => item.status === "pending").length;
+  const hasNegativeFuturesEquity = dashboard.futuresEquityInr !== null && dashboard.futuresEquityInr < 0;
   const hasNegativeCash = dashboard.cashBalance < 0;
   const hasCompleteValuation =
     dashboard.rollupTotals.valuationCoverage.status === "complete";
   const hasPositiveNetPortfolio =
     (dashboard.rollupTotals.totalCurrentValue ?? 0) > 0;
   const quoteStatus = getQuoteStatus({
+    hasFutures: dashboard.futuresContributions.length > 0,
     isRefreshing: dashboard.isRefreshing,
     quoteFailed: dashboard.quoteFailed.length,
     quoteFreshness: dashboard.quoteFreshness,
@@ -672,7 +674,9 @@ export function DashboardScreen({
         ) : (
           <EmptyState
             actionLabel={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "Review Futures"
+                : hasCompleteValuation
                 ? onQuickSetup
                   ? quickSetupSavedCount > 0
                     ? "Continue portfolio setup"
@@ -683,14 +687,18 @@ export function DashboardScreen({
                 : pendingFuturesCount > 0 ? "Review Futures" : "Refresh prices"
             }
             actionTestID={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "dashboard-review-negative-futures"
+                : hasCompleteValuation
                 ? onQuickSetup
                   ? "quick-setup-button"
                   : "add-trade-button"
                 : pendingFuturesCount > 0 ? "dashboard-review-pending-futures" : "dashboard-refresh-pending-prices"
             }
             message={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? "Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet."
+                : hasCompleteValuation
                 ? quickSetupSavedCount > 0
                   ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} already saved. Continue when ready.`
                   : onQuickSetup
@@ -701,10 +709,12 @@ export function DashboardScreen({
                   : "Allocation will appear after every holding has a current valuation."
             }
             title={
-              hasCompleteValuation ? "No allocation yet" : "Allocation unavailable"
+              hasCompleteValuation && !hasNegativeFuturesEquity ? "No allocation yet" : "Allocation unavailable"
             }
             onAction={
-              hasCompleteValuation
+              hasNegativeFuturesEquity
+                ? () => router.push("/futures")
+                : hasCompleteValuation
                 ? onQuickSetup ?? onAddTrade
                 : pendingFuturesCount > 0
                   ? () => router.push("/futures")
@@ -757,11 +767,13 @@ export function DashboardScreen({
 }
 
 function getQuoteStatus({
+  hasFutures,
   isRefreshing,
   quoteFailed,
   quoteFreshness,
   quoteTimedOut,
 }: {
+  hasFutures: boolean;
   isRefreshing: boolean;
   quoteFailed: number;
   quoteFreshness: QuoteFreshnessSummary;
@@ -801,9 +813,11 @@ function getQuoteStatus({
 
   if (quoteFreshness.status === "empty") {
     return {
-      detail: "Cash and recorded PPF balances do not need market quotes.",
+      detail: hasFutures
+        ? "Futures mark, wallet and INR evidence are reviewed separately."
+        : "Cash and recorded PPF balances do not need market quotes.",
       prominent: false,
-      title: "No market prices needed",
+      title: hasFutures ? "No spot prices needed" : "No market prices needed",
     };
   }
 

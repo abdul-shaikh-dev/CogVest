@@ -473,6 +473,9 @@ export function calculateUsdmPortfolioContribution(account: UsdmFuturesAccount, 
     tradingPnlInr: null, fxPnlInr: null,
   });
   if (!account.valuation) return pending("Current wallet, mark and INR evidence is missing.");
+  if (decimal(account.openingWalletUsdt).isNegative()) {
+    return pending("A negative starting wallet needs a verified capital basis before portfolio inclusion.");
+  }
   if (timestamp(account.valuation.asOf, "Valuation time") > timestamp(asOf, "Portfolio time")) {
     return pending("Futures valuation is dated after the portfolio time.");
   }
