@@ -14,6 +14,7 @@ export default function CashEntryRoute() {
         pathname: "/trade",
         params: { returnTo: "cash", tradeId },
       })}
+      onReviewLinkedFutures={() => router.push("/futures")}
     />
   );
 }

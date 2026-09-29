@@ -35,6 +35,25 @@ type EventDraft = {
   rateSource: string;
 };
 
+type CashFundingDraft = {
+  eventId: string;
+  cashEntryId: string;
+  direction: "toFutures" | "toCash";
+  at: string;
+  usdt: string;
+  cashInr: string;
+  feeInr: string;
+  rate: string;
+  rateAt: string;
+  rateSource: string;
+  notes: string;
+};
+
+const blankCashFunding = (): CashFundingDraft => ({
+  eventId: "", cashEntryId: "", direction: "toFutures", at: isoNow(), usdt: "",
+  cashInr: "", feeInr: "0", rate: "", rateAt: "", rateSource: "", notes: "",
+});
+
 const ACCOUNT_ID = "binance-usdm-main";
 const isoNow = () => new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 const blankEvent = (): EventDraft => ({
@@ -79,6 +98,8 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const [editingAccount, setEditingAccount] = useState(!account);
   const [draft, setDraft] = useState<EventDraft>(blankEvent);
   const [editingEvent, setEditingEvent] = useState(false);
+  const [cashFunding, setCashFunding] = useState<CashFundingDraft>(blankCashFunding);
+  const [editingCashFunding, setEditingCashFunding] = useState(false);
   const [error, setError] = useState("");
   const [valuationAt, setValuationAt] = useState(account?.valuation?.asOf ?? isoNow());
   const [observedWallet, setObservedWallet] = useState(account?.valuation?.reconciliation.observedWalletUsdt ?? "");
@@ -112,6 +133,19 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
     } catch (cause) { report(cause); }
   };
   const editEvent = (event: UsdmFuturesEvent) => {
+    if (event.type === "transfer" && event.linkedCashEntryId) {
+      const cash = state.cashEntries.find((item) => item.id === event.linkedCashEntryId);
+      const existingRate = account?.eventRates?.find((item) => item.eventId === event.id);
+      if (!cash || !existingRate) return report(new Error("Linked Cash funding is incomplete. Restore a complete backup."));
+      setCashFunding({ eventId: event.id, cashEntryId: cash.id,
+        direction: decimal(event.amountUsdt).isPositive() ? "toFutures" : "toCash",
+        at: event.at, usdt: decimal(event.amountUsdt).abs().toString(), cashInr: String(cash.amount),
+        feeInr: event.conversionFeeInr ?? "0", rate: existingRate.inrPerUsdt,
+        rateAt: existingRate.observedAt, rateSource: existingRate.source, notes: cash.notes ?? "" });
+      setEditingCashFunding(true);
+      setError("");
+      return;
+    }
     const existingRate = account?.eventRates?.find((item) => item.eventId === event.id);
     setDraft({ ...blankEvent(), ...event, inrPerUsdt: existingRate?.inrPerUsdt ?? "", rateObservedAt: existingRate?.observedAt ?? "", rateSource: existingRate?.source ?? "" });
     setEditingEvent(true);
@@ -143,6 +177,13 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const deleteEvent = (id: string) => {
     if (!account) return;
     try {
+      const linked = account.events.find((item) => item.id === id);
+      if (linked?.type === "transfer" && linked.linkedCashEntryId) {
+        store.getState().deleteFuturesCashTransfer(account.id, id);
+        setEditingCashFunding(false);
+        setError("");
+        return;
+      }
       store.getState().saveFuturesAccount({ ...account, events: account.events.filter((item) => item.id !== id), eventRates: account.eventRates?.filter((item) => item.eventId !== id), valuation: undefined });
       setEditingEvent(false);
       setError("");
@@ -156,6 +197,24 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       { text: "Delete activity", style: "destructive", onPress: () => deleteEvent(id) },
     ],
   );
+  const saveCashFunding = () => {
+    if (!account) return;
+    try {
+      store.getState().saveFuturesCashTransfer({
+        accountId: account.id,
+        cashEntryId: cashFunding.cashEntryId || createId("cash"),
+        eventId: cashFunding.eventId || createId("futures-event"),
+        at: cashFunding.at,
+        amountUsdt: cashFunding.direction === "toFutures" ? cashFunding.usdt : `-${cashFunding.usdt}`,
+        cashAmountInr: Number(cashFunding.cashInr), conversionFeeInr: cashFunding.feeInr,
+        inrPerUsdt: cashFunding.rate, rateObservedAt: cashFunding.rateAt,
+        rateSource: cashFunding.rateSource, notes: cashFunding.notes,
+      });
+      setCashFunding(blankCashFunding());
+      setEditingCashFunding(false);
+      setError("");
+    } catch (cause) { report(cause); }
+  };
   const confirmDeleteAccount = () => Alert.alert(
     "Delete Futures wallet?",
     "This permanently removes the wallet, all executions, rates and valuation evidence from this device. Make a backup first if you need the history.",
@@ -191,7 +250,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   let contribution: ReturnType<typeof calculateUsdmPortfolioContribution> | undefined;
   if (account) {
     try {
-      contribution = calculateUsdmPortfolioContribution(account, isoNow());
+      contribution = calculateUsdmPortfolioContribution(account, isoNow(), state.cashEntries);
       replay = replayUsdmFutures(account, {
         asOf: isoNow(), marks: account.valuation?.marks ?? [],
         inrRate: account.valuation?.inrRate, reconciliation: account.valuation?.reconciliation,
@@ -232,10 +291,10 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <AppText color="secondary">{replay ? valuationLabels[replay.valuationStatus] : "Check account records"} · Since-start INR rates: {replay?.eventRateStatus === "complete" ? "ready" : replay?.eventRateStatus ?? "unknown"}</AppText>
             {contribution?.status === "ready" ? <View style={styles.breakdown} testID="futures-inr-breakdown">
               <AppText weight="bold">INR contribution breakdown</AppText>
-              <AppText>Invested basis · opening wallet + external flows</AppText><Money value={`₹${contribution.investedInr}`} masked={masked} />
+              <AppText>Invested basis · opening wallet + external flows + linked Cash</AppText><Money value={`₹${contribution.investedInr}`} masked={masked} />
               <AppText>Net P&L</AppText><Money value={`₹${contribution.pnlInr}`} masked={masked} />
               <AppText>Trading and funding, net of fees</AppText><Money value={`₹${contribution.tradingPnlInr}`} masked={masked} />
-              <AppText>FX revaluation and rounding</AppText><Money value={`₹${contribution.fxPnlInr}`} masked={masked} />
+              <AppText>FX, conversion costs and rounding</AppText><Money value={`₹${contribution.fxPnlInr}`} masked={masked} />
               <AppText color="secondary">Fees {masked ? "••••" : `${replay?.feesUsdt} USDT`} · Funding {masked ? "••••" : `${replay?.fundingUsdt} USDT`} · External flows {masked ? "••••" : `${replay?.externalTransfersUsdt} USDT`}</AppText>
             </View> : <AppText color="secondary">Portfolio inclusion pending: {contribution?.reason ?? "Check account records."}</AppText>}
             {replay && replay.historicalRealizedPnlUsdt !== "0" ? <AppText color="secondary">Older realized P&L: {masked ? "••••" : `${replay.historicalRealizedPnlUsdt} USDT · ${replay.historicalRealizedPnlInr === null ? "INR rate pending" : `₹${replay.historicalRealizedPnlInr}`}`} (already reflected in starting wallet, not added again)</AppText> : null}
@@ -251,9 +310,9 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           </PremiumCard>
           <PremiumCard>
             <SectionHeader title="Activity" />
-            <AppText color="secondary">Add every fill and its fee. Enter funding and transfers separately. Positive transfers enter this wallet; negative transfers leave it.</AppText>
+            <AppText color="secondary">Add every fill and its fee. Enter funding and transfers separately. Use the linked Cash form below for recorded INR Cash; an unlinked Binance Spot movement remains outside portfolio totals.</AppText>
             {account.events.map((event) => <View key={event.id} style={styles.row}>
-              <AppText weight="bold">{event.type === "execution" ? `${event.side.toUpperCase()} ${event.contract}` : event.type === "funding" ? `Funding ${event.contract}` : `${event.transferBoundary} transfer`}</AppText>
+              <AppText weight="bold">{event.type === "execution" ? `${event.side.toUpperCase()} ${event.contract}` : event.type === "funding" ? `Funding ${event.contract}` : event.linkedCashEntryId ? "Linked Cash transfer" : event.transferBoundary === "internal" ? "Unlinked Spot transfer" : "External transfer"}</AppText>
               <AppText color="secondary">{displayTime(event.at)} · {masked ? "••••" : event.type === "execution" ? `${event.quantity} @ ${event.price} USDT` : `${event.amountUsdt} USDT`}</AppText>
               <View style={styles.choices}>
                 <AppButton title="Edit" variant="secondary" onPress={() => editEvent(event)} testID={`edit-futures-${event.id}`} />
@@ -282,12 +341,33 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
                 <FormTextField label="Fee (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={draft.feeUsdt} onChangeText={(value) => setField("feeUsdt", value)} testID="futures-fee" />
                 <FormTextField label="Reported leverage (1–125×)" keyboardType="number-pad" value={draft.leverage} onChangeText={(value) => setField("leverage", value)} testID="futures-leverage" />
               </> : <FormTextField label={draft.type === "funding" ? "Signed funding (USDT)" : "Signed transfer (USDT)"} keyboardType="numbers-and-punctuation" secureTextEntry={masked} value={draft.amountUsdt} onChangeText={(value) => setField("amountUsdt", value)} testID="futures-amount" />}
-              {draft.type === "transfer" ? <View style={styles.choices} accessibilityRole="radiogroup"><Choice label="External" selected={draft.transferBoundary === "external"} onPress={() => setField("transferBoundary", "external")} /><Choice label="Internal" selected={draft.transferBoundary === "internal"} onPress={() => setField("transferBoundary", "internal")} /></View> : null}
+              {draft.type === "transfer" ? <View style={styles.choices} accessibilityRole="radiogroup"><Choice label="External funding" selected={draft.transferBoundary === "external"} onPress={() => setField("transferBoundary", "external")} /><Choice label="Unlinked Binance Spot" selected={draft.transferBoundary === "internal"} onPress={() => setField("transferBoundary", "internal")} /></View> : null}
               <FormTextField label="Historical INR per USDT (optional until verified)" keyboardType="decimal-pad" value={draft.inrPerUsdt} onChangeText={(value) => setField("inrPerUsdt", value)} testID="futures-event-rate" />
               <FormTextField label="Historical INR rate observed at (ISO)" value={draft.rateObservedAt} onChangeText={(value) => setField("rateObservedAt", value)} testID="futures-event-rate-at" />
               <FormTextField label="Historical rate source" value={draft.rateSource} onChangeText={(value) => setField("rateSource", value)} testID="futures-event-rate-source" />
               <AppButton title="Save activity" onPress={saveEvent} testID="futures-save-event" />
               <AppButton title="Cancel" variant="ghost" onPress={() => setEditingEvent(false)} />
+            </>}
+          </PremiumCard>
+          <PremiumCard testID="futures-cash-funding">
+            <SectionHeader title="Move Cash and USDT" />
+            <AppText color="secondary">Record a movement you already made between recorded INR Cash and your Binance USDT Futures wallet. This does not transfer funds or open a trade on Binance. Enter executions separately.</AppText>
+            {!editingCashFunding ? <AppButton title="Record Cash funding or withdrawal" variant="secondary" onPress={() => { setCashFunding(blankCashFunding()); setEditingCashFunding(true); }} testID="futures-add-cash-funding" /> : <>
+              <View style={styles.choices} accessibilityRole="radiogroup">
+                <Choice label="Cash to Futures" selected={cashFunding.direction === "toFutures"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toFutures" }))} />
+                <Choice label="Futures to Cash" selected={cashFunding.direction === "toCash"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toCash" }))} />
+              </View>
+              <FormTextField label="Movement date and time (ISO, timezone required)" value={cashFunding.at} onChangeText={(at) => setCashFunding((current) => ({ ...current, at }))} testID="futures-cash-at" />
+              <FormTextField label="USDT actually credited or withdrawn" keyboardType="decimal-pad" value={cashFunding.usdt} onChangeText={(usdt) => setCashFunding((current) => ({ ...current, usdt }))} testID="futures-cash-usdt" />
+              <FormTextField label="INR actually debited or credited in Cash" keyboardType="decimal-pad" secureTextEntry={masked} value={cashFunding.cashInr} onChangeText={(cashInr) => setCashFunding((current) => ({ ...current, cashInr }))} testID="futures-cash-inr" />
+              <FormTextField label="Conversion fee in INR (0 if included in effective rate)" keyboardType="decimal-pad" value={cashFunding.feeInr} onChangeText={(feeInr) => setCashFunding((current) => ({ ...current, feeInr }))} testID="futures-cash-fee" />
+              <FormTextField label="INR per USDT for this movement" keyboardType="decimal-pad" value={cashFunding.rate} onChangeText={(rate) => setCashFunding((current) => ({ ...current, rate }))} testID="futures-cash-rate" />
+              <FormTextField label="Rate observation time (ISO)" value={cashFunding.rateAt} onChangeText={(rateAt) => setCashFunding((current) => ({ ...current, rateAt }))} testID="futures-cash-rate-at" />
+              <FormTextField label="Rate source" value={cashFunding.rateSource} onChangeText={(rateSource) => setCashFunding((current) => ({ ...current, rateSource }))} testID="futures-cash-rate-source" />
+              <FormTextField label="Reference or notes (optional)" value={cashFunding.notes} onChangeText={(notes) => setCashFunding((current) => ({ ...current, notes }))} />
+              <AppText color="secondary">Cash amount must equal USDT × recorded rate plus the INR fee when funding, or minus the fee when withdrawing. A linked transfer is not an external contribution.</AppText>
+              <AppButton title={cashFunding.eventId ? "Save corrected movement" : "Save linked movement"} onPress={saveCashFunding} testID="futures-save-cash-funding" />
+              <AppButton title="Cancel" variant="ghost" onPress={() => setEditingCashFunding(false)} />
             </>}
           </PremiumCard>
           <PremiumCard>

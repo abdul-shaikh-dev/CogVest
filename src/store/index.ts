@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
+import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { projectDemergers, demergerCatalog } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
@@ -149,6 +150,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
+  saveFuturesCashTransfer: (input: FuturesCashTransferInput) => void;
+  deleteFuturesCashTransfer: (accountId: string, eventId: string) => void;
   deleteFuturesAccount: (accountId: string) => void;
   clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
@@ -214,6 +217,20 @@ export type LinkedTradeCommandInput = {
   cashLabel: string;
   cashNotes?: string;
   trade: BuyTrade | SellTrade;
+};
+
+export type FuturesCashTransferInput = {
+  accountId: string;
+  cashEntryId: string;
+  eventId: string;
+  at: string;
+  amountUsdt: string;
+  cashAmountInr: number;
+  conversionFeeInr: string;
+  inrPerUsdt: string;
+  rateObservedAt: string;
+  rateSource: string;
+  notes?: string;
 };
 
 export type LinkedTradeCommandResult =
@@ -615,6 +632,7 @@ function migratePortfolioSnapshot(
     PersistedPortfolioSnapshot;
   const assets = (stored.assets ?? []).map(normalizeAssetMetadata);
   validateSplitInventory({ assets, openingPositions: stored.openingPositions ?? [], trades: stored.trades ?? [] });
+  validateFuturesCashLinks((stored.cashEntries ?? []).map(normalizeCashEntry), stored.futuresAccounts ?? []);
 
   return {
     assets,
@@ -769,6 +787,7 @@ function persistPortfolioTransition(
   transition: Partial<RawPortfolioSnapshot>,
 ) {
   validateSplitInventory({ ...state, ...transition });
+  validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
     ...transition,
@@ -792,6 +811,8 @@ function cashBalance(cashEntries: CashEntry[]) {
 function isLinkedCashEntry(entry: CashEntry) {
   return (
     Boolean(entry.linkedTradeId) ||
+    Boolean(entry.linkedFutures) ||
+    entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||
     entry.purpose === "saleProceeds"
   );
@@ -1978,9 +1999,84 @@ export function createPortfolioStore({
       persistPortfolioTransition(storage, state, { futuresAccounts });
       set({ futuresAccounts });
     },
+    saveFuturesCashTransfer: (input) => {
+      const state = get();
+      const account = state.futuresAccounts.find((item) => item.id === input.accountId);
+      if (!account) throw new Error("Create the Futures wallet before linking Cash.");
+      if (!Number.isFinite(Date.parse(input.at)) || Date.parse(input.at) > now().getTime() ||
+          Date.parse(input.at) < Date.parse(account.openingAt)) {
+        throw new Error("Funding date must be valid, after the starting wallet and not in the future.");
+      }
+      if (!Number.isFinite(input.cashAmountInr) || input.cashAmountInr <= 0 ||
+          input.cashAmountInr > 1_000_000_000_000_000 || decimal(input.cashAmountInr).decimalPlaces() > 2) {
+        throw new Error("Enter a positive INR Cash amount in paise.");
+      }
+      const existingCash = state.cashEntries.find((item) => item.id === input.cashEntryId);
+      const existingEvent = account.events.find((item) => item.id === input.eventId);
+      if (Boolean(existingCash) !== Boolean(existingEvent) ||
+          (existingCash && (existingCash.linkedFutures?.accountId !== account.id ||
+            existingCash.linkedFutures.eventId !== input.eventId ||
+            existingEvent?.type !== "transfer" || existingEvent.linkedCashEntryId !== input.cashEntryId))) {
+        throw new Error("Funding IDs already belong to another record.");
+      }
+      const amount = decimal(input.amountUsdt);
+      if (amount.isZero()) throw new Error("Enter the nonzero USDT movement.");
+      const cashEntry: CashEntry = {
+        id: input.cashEntryId, amount: input.cashAmountInr, date: formatLocalCalendarDate(new Date(input.at)),
+        label: amount.isPositive() ? "Futures wallet funding" : "Futures wallet withdrawal",
+        notes: input.notes?.trim() || undefined, purpose: "futuresTransfer",
+        type: amount.isPositive() ? "withdrawal" : "addition",
+        linkedFutures: { accountId: account.id, eventId: input.eventId },
+      };
+      const event = {
+        type: "transfer" as const, id: input.eventId, at: input.at,
+        amountUsdt: input.amountUsdt, transferBoundary: "internal" as const,
+        linkedCashEntryId: input.cashEntryId, cashDate: cashEntry.date,
+        conversionFeeInr: input.conversionFeeInr,
+      };
+      const nextAccount: UsdmFuturesAccount = {
+        ...account, events: [...account.events.filter((item) => item.id !== input.eventId), event],
+        eventRates: [...(account.eventRates ?? []).filter((item) => item.eventId !== input.eventId), {
+          eventId: input.eventId, inrPerUsdt: input.inrPerUsdt,
+          observedAt: input.rateObservedAt, source: input.rateSource.trim(),
+        }], valuation: undefined,
+      };
+      validateUsdmFuturesAccount(nextAccount);
+      const cashEntries = [...state.cashEntries.filter((item) => item.id !== input.cashEntryId), cashEntry];
+      if (!hasNonnegativeCashTimeline(cashEntries)) throw new Error("This funding would make recorded Cash negative on its date.");
+      const futuresAccounts = state.futuresAccounts.map((item) => item.id === account.id ? nextAccount : item);
+      validateFuturesCashLinks(cashEntries, futuresAccounts);
+      if (!parsePersistedPortfolio(JSON.stringify({ ...selectRawSnapshot(state), cashEntries, futuresAccounts })).success) {
+        throw new Error("Linked Futures funding cannot be safely persisted.");
+      }
+      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts });
+      set({ cashEntries, futuresAccounts });
+    },
+    deleteFuturesCashTransfer: (accountId, eventId) => {
+      const state = get();
+      const account = state.futuresAccounts.find((item) => item.id === accountId);
+      const event = account?.events.find((item) => item.id === eventId);
+      if (!account || !event || event.type !== "transfer" || !event.linkedCashEntryId) {
+        throw new Error("Linked Futures funding was not found.");
+      }
+      const cashEntries = state.cashEntries.filter((item) => item.id !== event.linkedCashEntryId);
+      if (!hasNonnegativeCashTimeline(cashEntries)) throw new Error("Removing this transfer would make recorded Cash negative.");
+      const nextAccount: UsdmFuturesAccount = {
+        ...account, events: account.events.filter((item) => item.id !== eventId),
+        eventRates: account.eventRates?.filter((item) => item.eventId !== eventId), valuation: undefined,
+      };
+      validateUsdmFuturesAccount(nextAccount);
+      const futuresAccounts = state.futuresAccounts.map((item) => item.id === accountId ? nextAccount : item);
+      validateFuturesCashLinks(cashEntries, futuresAccounts);
+      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts });
+      set({ cashEntries, futuresAccounts });
+    },
     deleteFuturesAccount: (accountId) => {
       const state = get();
       if (!state.futuresAccounts.some((account) => account.id === accountId)) return;
+      if (state.cashEntries.some((entry) => entry.linkedFutures?.accountId === accountId)) {
+        throw new Error("Remove linked Cash movements in Futures before deleting this wallet.");
+      }
       const futuresAccounts = state.futuresAccounts.filter((account) => account.id !== accountId);
       persistPortfolioTransition(storage, state, { futuresAccounts });
       set({ futuresAccounts });

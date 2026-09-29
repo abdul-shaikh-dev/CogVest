@@ -6,6 +6,7 @@ export type CashEntryPurpose =
   | "legacyUncategorized"
   | "purchaseFunding"
   | "saleProceeds"
+  | "futuresTransfer"
   | "withdrawal";
 
 export type CashEntry = {
@@ -15,6 +16,7 @@ export type CashEntry = {
   institution?: string;
   label: string;
   linkedTradeId?: string;
+  linkedFutures?: { accountId: string; eventId: string };
   notes?: string;
   purpose: CashEntryPurpose;
   type: CashEntryType;

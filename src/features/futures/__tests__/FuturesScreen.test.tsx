@@ -5,6 +5,27 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
 describe("manual Futures screen", () => {
+  it("records a linked Cash funding movement without opening a position", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });
+    store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-01", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    fireEvent.changeText(screen.getByTestId("futures-opening-at"), "2026-09-01T00:00:00Z");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
+    fireEvent.changeText(screen.getByTestId("futures-cash-at"), "2026-09-02T00:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-cash-usdt"), "100");
+    fireEvent.changeText(screen.getByTestId("futures-cash-inr"), "9010");
+    fireEvent.changeText(screen.getByTestId("futures-cash-fee"), "10");
+    fireEvent.changeText(screen.getByTestId("futures-cash-rate"), "90");
+    fireEvent.changeText(screen.getByTestId("futures-cash-rate-at"), "2026-09-02T00:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-cash-rate-source"), "Conversion receipt");
+    fireEvent.press(screen.getByTestId("futures-save-cash-funding"));
+    expect(store.getState().cashEntries[1]).toMatchObject({ amount: 9010, purpose: "futuresTransfer", type: "withdrawal" });
+    expect(store.getState().futuresAccounts[0].events).toMatchObject([{ type: "transfer", amountUsdt: "100" }]);
+    expect(screen.getAllByText(/100 USDT/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/BTCUSDT · Long/)).toBeNull();
+  });
+
   it("records and corrects a closed trade with a reconciled USDT wallet", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage, now: () => new Date("2026-09-29T12:00:00Z") });

@@ -73,7 +73,8 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
 
   if (
     (entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
-    (entry.type === "addition" && entry.purpose === "saleProceeds")
+    (entry.type === "addition" && entry.purpose === "saleProceeds") ||
+    entry.purpose === "futuresTransfer"
   ) {
     return null;
   }

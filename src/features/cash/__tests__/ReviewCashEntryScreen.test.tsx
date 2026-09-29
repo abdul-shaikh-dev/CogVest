@@ -219,6 +219,18 @@ describe("ReviewCashEntryScreen", () => {
     expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
   });
 
+  it("routes linked Futures Cash to its owning wallet without editing one side", () => {
+    const { store } = createStore();
+    store.getState().saveFuturesAccount({ id: "futures", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way", openingAt: "2026-07-19T00:00:00Z", openingWalletUsdt: "0", events: [] });
+    store.getState().saveFuturesCashTransfer({ accountId: "futures", cashEntryId: "cash-futures", eventId: "wallet-futures", at: "2026-07-20T12:00:00Z", amountUsdt: "10", cashAmountInr: 900, conversionFeeInr: "0", inrPerUsdt: "90", rateObservedAt: "2026-07-20T12:00:00Z", rateSource: "Receipt" });
+    const onReviewLinkedFutures = jest.fn();
+    const screen = render(<ReviewCashEntryScreen entryId="cash-futures" onCancel={jest.fn()} onComplete={jest.fn()} onReviewLinkedFutures={onReviewLinkedFutures} store={store} />);
+    expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
+    expect(screen.queryByTestId("delete-cash-entry-button")).toBeNull();
+    fireEvent.press(screen.getByTestId("review-linked-cash-futures"));
+    expect(onReviewLinkedFutures).toHaveBeenCalledTimes(1);
+  });
+
   it("does not reveal linked transaction values while wealth masking is active", () => {
     const { store } = createStore({
       ...manualEntry,
