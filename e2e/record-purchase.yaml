@@ -1,0 +1,67 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-add-button
+- assertVisible: Add existing holding
+- tapOn:
+    id: record-purchase-option
+- tapOn:
+    id: existing-asset-visual-qa-asset-hdfc
+- tapOn:
+    id: purchase-quantity
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: purchase-price
+- inputText: "100"
+- hideKeyboard
+- tapOn:
+    id: purchase-fees
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-review-button
+    direction: DOWN
+- tapOn:
+    id: purchase-review-button
+- assertVisible:
+    id: purchase-cash-debit
+    text: "₹205.00"
+- tapOn:
+    id: purchase-confirm
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
+- tapOn:
+    id: tab-cash
+- assertVisible: "₹49,795.00"
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- tapOn:
+    id: tab-cash
+- assertVisible: "₹49,795.00"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Trade count: 1"
+- assertVisible: "Cash entry count: 5"
+- scrollUntilVisible:
+    element: "Values: invested ₹36,455.00.*quantity 27"
+    direction: DOWN
+- assertVisible: "Values: invested ₹36,455.00.*quantity 27"
