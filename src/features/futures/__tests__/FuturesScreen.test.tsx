@@ -14,8 +14,41 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 beforeEach(() => jest.clearAllMocks());
+function setTime(screen: ReturnType<typeof render>, id: string, value: string) {
+  if (!screen.queryByTestId(id)) fireEvent.press(screen.getByTestId(`${id}-exact-toggle`));
+  fireEvent.changeText(screen.getByTestId(id), value);
+}
 
 describe("manual Futures screen", () => {
+  it("rejects invalid dates and incomplete observation evidence without persisting", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    setTime(screen, "futures-opening-at", "2026-02-30T10:00:00Z");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    expect(screen.getByText("Choose a valid date and time with timezone.")).toBeTruthy();
+    expect(store.getState().futuresAccounts).toEqual([]);
+    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    expect(screen.getByText("Enter rate observation time.")).toBeTruthy();
+    expect(screen.getByText("Enter rate source.")).toBeTruthy();
+    expect(store.getState().futuresAccounts).toEqual([]);
+  });
+
+  it("keeps incomplete executions and valuations out of saved records", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const before = JSON.stringify(store.getState().futuresAccounts);
+    fireEvent.press(screen.getByTestId("futures-add-event"));
+    fireEvent.press(screen.getByTestId("futures-save-event"));
+    expect(screen.getByText("Enter quantity.")).toBeTruthy();
+    expect(store.getState().futuresAccounts[0].events).toEqual([]);
+    fireEvent.press(screen.getByTestId("futures-save-valuation"));
+    expect(screen.getByText("Enter observed wallet balance.")).toBeTruthy();
+    expect(JSON.stringify(store.getState().futuresAccounts)).toBe(before);
+  });
+
   it("protects wallet drafts on visible, hardware and route exits without writing data", () => {
     let hardwareBack: (() => boolean) | undefined;
     const listener = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_, callback) => {
@@ -114,15 +147,15 @@ describe("manual Futures screen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });
     store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-01", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.changeText(screen.getByTestId("futures-opening-at"), "2026-09-01T00:00:00Z");
+    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
     fireEvent.press(screen.getByTestId("futures-save-account"));
     fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
-    fireEvent.changeText(screen.getByTestId("futures-cash-at"), "2026-09-02T00:00:00Z");
+    setTime(screen, "futures-cash-at", "2026-09-02T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-cash-usdt"), "100");
     fireEvent.changeText(screen.getByTestId("futures-cash-inr"), "9010");
     fireEvent.changeText(screen.getByTestId("futures-cash-fee"), "10");
     fireEvent.changeText(screen.getByTestId("futures-cash-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-cash-rate-at"), "2026-09-02T00:00:00Z");
+    setTime(screen, "futures-cash-rate-at", "2026-09-02T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-cash-rate-source"), "Conversion receipt");
     fireEvent.press(screen.getByTestId("futures-save-cash-funding"));
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
@@ -136,35 +169,35 @@ describe("manual Futures screen", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage, now: () => new Date("2026-09-29T12:00:00Z") });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.changeText(screen.getByTestId("futures-opening-at"), "2026-09-01T00:00:00Z");
+    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
     fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-opening-rate-at"), "2026-09-01T00:00:00Z");
+    setTime(screen, "futures-opening-rate-at", "2026-09-01T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-opening-rate-source"), "Dated INR quote");
     fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(store.getState().futuresAccounts[0].openingWalletUsdt).toBe("1000");
 
     fireEvent.press(screen.getByTestId("futures-add-event"));
-    fireEvent.changeText(screen.getByTestId("futures-event-at"), "2026-09-02T00:00:00Z");
+    setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
     fireEvent.changeText(screen.getByTestId("futures-price"), "100");
     fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
     fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
     fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate-at"), "2026-09-02T00:00:00Z");
+    setTime(screen, "futures-event-rate-at", "2026-09-02T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
     fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(store.getState().futuresAccounts[0].events).toHaveLength(1);
 
     fireEvent.press(screen.getByTestId("futures-add-event"));
     fireEvent.press(screen.getByTestId("futures-type-execution"));
-    fireEvent.changeText(screen.getByTestId("futures-event-at"), "2026-09-03T00:00:00Z");
+    setTime(screen, "futures-event-at", "2026-09-03T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
     fireEvent.changeText(screen.getByTestId("futures-price"), "110");
     fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
     fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
     fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate-at"), "2026-09-03T00:00:00Z");
+    setTime(screen, "futures-event-rate-at", "2026-09-03T00:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
     fireEvent.press(screen.getByText("Sell"));
     fireEvent.press(screen.getByTestId("futures-save-event"));
@@ -176,12 +209,12 @@ describe("manual Futures screen", () => {
     fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(store.getState().futuresAccounts[0].events.find((event) => event.id === closingId)).toMatchObject({ price: "120" });
 
-    fireEvent.changeText(screen.getByTestId("futures-valuation-at"), "2026-09-29T11:00:00Z");
+    setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1018");
-    fireEvent.changeText(screen.getByTestId("futures-observed-wallet-at"), "2026-09-29T11:00:00Z");
+    setTime(screen, "futures-observed-wallet-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
     fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-current-rate-at"), "2026-09-29T11:00:00Z");
+    setTime(screen, "futures-current-rate-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
     fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
     fireEvent.press(screen.getByTestId("futures-events-confirmed"));

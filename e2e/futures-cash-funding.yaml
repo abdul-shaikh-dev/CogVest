@@ -29,6 +29,8 @@ appId: com.abdulshaikh.cogvest
 - evalScript: ${output.fundingAt = new Date(Date.now() - 30 * 60 * 1000).toISOString()}
 - openLink: "cogvest:///futures"
 - tapOn:
+    id: futures-opening-at-exact-toggle
+- tapOn:
     id: futures-opening-at
 - eraseText: 50
 - inputText: ${output.openingAt}
@@ -43,8 +45,10 @@ appId: com.abdulshaikh.cogvest
     id: futures-add-cash-funding
 - scrollUntilVisible:
     element:
-      id: futures-cash-at
+      id: futures-cash-at-exact-toggle
     direction: DOWN
+- tapOn:
+    id: futures-cash-at-exact-toggle
 - tapOn:
     id: futures-cash-at
 - eraseText: 50
@@ -76,8 +80,10 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - scrollUntilVisible:
     element:
-      id: futures-cash-rate-at
+      id: futures-cash-rate-at-exact-toggle
     direction: DOWN
+- tapOn:
+    id: futures-cash-rate-at-exact-toggle
 - tapOn:
     id: futures-cash-rate-at
 - inputText: ${output.fundingAt}
