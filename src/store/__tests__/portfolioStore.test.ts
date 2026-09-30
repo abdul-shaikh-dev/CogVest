@@ -108,7 +108,7 @@ const monthlySnapshot: MonthlySnapshot = {
   cashValue: 120000,
   cryptoValue: 40000,
   debtValue: 300000,
-  equityValue: 800000,
+  equityValue: 925000,
   id: "snapshot-2026-05",
   investedValue: 1060000,
   month: "2026-05",

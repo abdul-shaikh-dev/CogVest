@@ -1,4 +1,5 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { projectDemergers } from "@/src/domain/demergers";
@@ -261,7 +262,8 @@ function validateGraph(payload: BackupPayload) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/u.test(snapshot.month) || months.has(snapshot.month)) fail("monthly snapshots must have unique valid months");
     months.add(snapshot.month);
     for (const [label, value] of Object.entries({ cashValue: snapshot.cashValue, cryptoValue: snapshot.cryptoValue, debtValue: snapshot.debtValue, equityValue: snapshot.equityValue, investedValue: snapshot.investedValue, monthlyInvestment: snapshot.monthlyInvestment, portfolioValue: snapshot.portfolioValue })) requireFinancialValue(value, `snapshot ${label}`);
-    if (!isWithinQuantum(snapshot.portfolioValue, decimal(snapshot.cashValue).plus(snapshot.cryptoValue).plus(snapshot.debtValue).plus(snapshot.equityValue), moneyQuantum)) fail("snapshot total is inconsistent");
+    const snapshotErrors = validateMonthlySnapshot(snapshot);
+    if (Object.keys(snapshotErrors).length > 0) fail("snapshot values need correction in Progress before backup");
     if (snapshot.generated) requireIsoTimestamp(snapshot.generated.generatedAt, "snapshot generation time");
     snapshot.generated?.priceEvidence?.forEach((evidence) => { if (!assetIds.has(evidence.assetId)) fail("snapshot evidence has a dangling asset"); });
   }

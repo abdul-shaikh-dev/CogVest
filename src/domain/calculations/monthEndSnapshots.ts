@@ -49,6 +49,7 @@ import {
   calculatePortfolioTotal,
 } from "./holdings";
 import { buildMonthlyPerformanceBasis } from "./monthlyPerformance";
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 
 export type GeneratedSnapshotStatus =
@@ -72,6 +73,7 @@ export function refreshFuturesCashSnapshotHistory({
   if (!earliestAffectedMonth) return monthlySnapshots;
   let changed = false;
   const refreshed = monthlySnapshots.map((snapshot) => {
+    if (Object.keys(validateMonthlySnapshot(snapshot)).length > 0) return snapshot;
     // Aggregate-only legacy records may contain corrections without provenance.
     const automatic = snapshot.generated?.source === "auto" &&
       snapshot.generated.priceEvidence !== undefined;

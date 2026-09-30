@@ -194,7 +194,7 @@ function seedMonthlyInvestmentMetrics(
 
 describe("useProgress", () => {
   it("shows isolated market history when PPF blocks full snapshots, with one actionable warning", async () => {
-    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-11T12:00:00Z") });
     store.getState().addAsset(stockAsset);
     store.getState().addOpeningPosition({
       assetId: stockAsset.id, averageCostPrice: 2500, currentPrice: 2600,
@@ -232,7 +232,7 @@ describe("useProgress", () => {
   });
 
   it("identifies PPF-only history that needs an earlier confirmed balance", async () => {
-    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-11T12:00:00Z") });
     store.getState().addPpfAccount({
       balanceAsOf: "2026-09-10",
       confirmedBalance: 720000,

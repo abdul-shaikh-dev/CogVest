@@ -4,6 +4,7 @@ import { LineChart } from "react-native-gifted-charts";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
 
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import {
   AppButton,
   AppText,
@@ -1617,6 +1618,7 @@ export function ProgressScreen({
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
   const progress = useProgress({ historicalPriceFetcher, now, store });
+  const hasInvalidSnapshot = store.getState().monthlySnapshots.some((snapshot) => Object.keys(validateMonthlySnapshot(snapshot)).length > 0);
   const futuresAccountCount = useSyncExternalStore(store.subscribe,
     () => store.getState().futuresAccounts.length,
     () => store.getState().futuresAccounts.length);
@@ -1635,6 +1637,7 @@ export function ProgressScreen({
       return;
     }
 
+    if (hasInvalidSnapshot) return;
     hasRunAutomationRef.current = true;
     void progress.ensureMonthEndSnapshot({ retryProvisional: false });
   }, [progress]);
@@ -1664,6 +1667,11 @@ export function ProgressScreen({
               : getMonthLabel()
           }
         />
+        {hasInvalidSnapshot ? <PremiumCard testID="snapshot-repair-needed">
+          <AppText weight="bold">Snapshot needs correction</AppText>
+          <AppText color="secondary">Review stored balances before backing up. Your values have not been changed.</AppText>
+          <AppButton title="Review snapshot" onPress={reviewSnapshot} testID="snapshot-repair-action" />
+        </PremiumCard> : null}
         {futuresAccountCount > 0 ? <PremiumCard testID="progress-futures-scope">
           <AppText weight="bold">Futures are not in monthly history</AppText>
           <AppText color="secondary" variant="caption">These stored month-end values exclude manual futures accounts. Current dashboard totals can include a reconciled futures wallet; past snapshots are not reconstructed from today's mark price or INR rate.</AppText>
