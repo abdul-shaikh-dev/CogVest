@@ -38,6 +38,9 @@ export default function HoldingsScreen() {
       onAddTrade={() => {
         router.push("/add-holding");
       }}
+      onRecordPurchase={(assetId) => {
+        router.push({ pathname: "/record-purchase", params: assetId ? { assetId } : {} });
+      }}
       onAddPpfAccount={(legacy) => {
         router.push({
           pathname: "/ppf-account",

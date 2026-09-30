@@ -174,6 +174,7 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="add-holding" options={{ headerShown: false }} />
+              <Stack.Screen name="record-purchase" options={{ headerShown: false }} />
               <Stack.Screen
                 name="quick-portfolio-setup"
                 options={{ headerShown: false }}

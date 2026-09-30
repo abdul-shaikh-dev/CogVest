@@ -1457,7 +1457,8 @@ function deriveTrade(input: TradeCorrectionInput): BuyTrade | SellTrade {
 
 function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
   const orderedEntries = [...cashEntries].sort((left, right) => {
-    const dateOrder = left.date.localeCompare(right.date);
+    const dateOrder = (getCalendarDatePart(left.date) ?? left.date)
+      .localeCompare(getCalendarDatePart(right.date) ?? right.date);
     if (dateOrder !== 0) return dateOrder;
     if (left.type !== right.type) return left.type === "addition" ? -1 : 1;
     return left.id.localeCompare(right.id);
@@ -3028,6 +3029,10 @@ export function createPortfolioStore({
           : state.assets;
       const cashEntries = [...state.cashEntries, cashEntry];
       const trades = [...state.trades, commandInput.trade];
+
+      if (!hasNonnegativeCashTimeline(cashEntries)) {
+        return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue };
+      }
 
       persistPortfolioTransition(storage, state, { assets, cashEntries, trades });
       set({ assets, cashEntries, trades });

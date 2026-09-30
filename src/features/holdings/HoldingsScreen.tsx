@@ -74,6 +74,7 @@ type HoldingsScreenProps = {
   onOpenDuration?: () => void;
   now?: Date;
   onAddTrade?: () => void;
+  onRecordPurchase?: (assetId?: string) => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onImportHoldings?: () => void;
   onImportTransactions?: () => void;
@@ -110,6 +111,7 @@ export function HoldingsScreen({
   onOpenDuration,
   now,
   onAddTrade,
+  onRecordPurchase,
   onAddPpfAccount,
   onImportHoldings,
   onImportTransactions,
@@ -341,7 +343,7 @@ export function HoldingsScreen({
                 onPress={toggleMaskWealthValues}
                 testID="holdings-header-mask-toggle"
               />
-              {onAddTrade || onAddPpfAccount ? (
+              {onAddTrade || onAddPpfAccount || onRecordPurchase ? (
                 <IconButton
                   accessibilityLabel={
                     onQuickSetup ? "Add holdings" : "Add Holding"
@@ -771,6 +773,10 @@ export function HoldingsScreen({
                       ? (id) => onSellRedeem(id)
                       : undefined
                   }
+                  onRecordPurchase={onRecordPurchase ? (id) => {
+                    setSelectedAssetId(undefined);
+                    onRecordPurchase(id);
+                  } : undefined}
                 />
               </ScrollView>
             </View>
@@ -832,8 +838,10 @@ export function HoldingsScreen({
                 {activePanel === "add" ? (
                   <>
                     <AppText color="secondary" variant="caption">
-                      Choose a focused single entry, a setup path, or an import.
+                      Record new activity or add investments you already own.
                     </AppText>
+                    {onRecordPurchase ? <AppButton title="Record purchase" testID="record-purchase-option"
+                      onPress={() => { setActivePanel(undefined); onRecordPurchase(); }} /> : null}
                     {onAddTrade ? (
                       <AppButton
                         onPress={() => {
@@ -841,7 +849,7 @@ export function HoldingsScreen({
                           onAddTrade();
                         }}
                         testID="add-one-holding-option"
-                        title="Add one holding"
+                        title="Add existing holding"
                         variant="secondary"
                       />
                     ) : null}
@@ -1283,6 +1291,7 @@ type HoldingDetailsProps = {
   onReviewOpeningPosition?: (id: string) => void;
   onReviewTrades?: (id: string) => void;
   onSellRedeem?: (id: string) => void;
+  onRecordPurchase?: (assetId?: string) => void;
 };
 function HoldingRow({
   allocationAvailable,
@@ -1414,6 +1423,7 @@ function HoldingDetails({
   onReviewOpeningPosition,
   onReviewTrades,
   onSellRedeem,
+  onRecordPurchase,
   onToggleRecords,
   trades,
 }: HoldingDetailsProps) {
@@ -1507,6 +1517,8 @@ function HoldingDetails({
             onPress={onToggleRecords}
           />
         ) : null}
+        {onRecordPurchase ? <GroupedListRow title="Record purchase" meta="Add units funded from Cash" value="›"
+          testID={`holding-record-purchase-${holding.asset.id}`} onPress={() => onRecordPurchase(holding.asset.id)} /> : null}
         {onSellRedeem ? (
           <GroupedListRow
             title="Sell / redeem"

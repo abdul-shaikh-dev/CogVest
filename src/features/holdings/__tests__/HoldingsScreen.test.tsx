@@ -231,6 +231,17 @@ function testIdOrder(node: unknown, ids: string[] = [], seen = new WeakSet<objec
 }
 
 describe("HoldingsScreen", () => {
+  it("distinguishes cash-funded purchases from existing holdings in the Add menu", () => {
+    const onRecordPurchase = jest.fn();
+    const onAddTrade = jest.fn();
+    const ui = render(<HoldingsScreen store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+      onRecordPurchase={onRecordPurchase} onAddTrade={onAddTrade} />);
+    fireEvent.press(ui.getByTestId("holdings-add-button"));
+    expect(ui.getByText("Add existing holding")).toBeTruthy();
+    fireEvent.press(ui.getByTestId("record-purchase-option"));
+    expect(onRecordPurchase).toHaveBeenCalledTimes(1);
+    expect(onAddTrade).not.toHaveBeenCalled();
+  });
   afterEach(() => {
     jest.restoreAllMocks();
   });

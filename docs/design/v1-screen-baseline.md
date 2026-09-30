@@ -45,6 +45,13 @@ V1 primary tabs:
 Add Holding is a secondary flow launched from Dashboard/Holdings, not a main
 bottom tab in the accepted V1 baseline.
 
+Record purchase is a separate secondary flow, reachable from Holdings' Add menu
+and focused holding details. `Add existing holding` records an opening balance;
+`Record purchase` selects an identity, captures execution details and reviews a
+linked Cash debit before atomic save. It does not use execution price as a
+current quote. Back preserves phase values; leaving an unfinished draft requires
+confirmation. Aggregate review amounts respect value masking.
+
 Holdings may also launch the constrained V1 CSV onboarding flow. Its screen must
 use the same calm hierarchy as Quick Setup: select one file, resolve rows in
 place, show currencies and valuation completeness, then expose one atomic import
