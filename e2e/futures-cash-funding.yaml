@@ -96,6 +96,12 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: futures-save-cash-funding
+- runFlow:
+    when:
+      visible:
+        id: dashboard-screen
+    commands:
+      - tapOn: "Review Futures"
 - scrollUntilVisible:
     element:
       text: "100 USDT"

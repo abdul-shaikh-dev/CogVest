@@ -1,65 +1,37 @@
 const mockNavigate = jest.fn();
-const mockSetParams = jest.fn();
+const mockPush = jest.fn();
 let mockParams: Record<string, string | undefined> = {};
 
-jest.mock("@react-navigation/native", () => ({
-  useIsFocused: () => true,
-}));
-
 jest.mock("expo-router", () => ({
-  router: {
-    navigate: mockNavigate,
-    push: jest.fn(),
-    setParams: mockSetParams,
-  },
+  router: { navigate: mockNavigate, push: mockPush },
   useLocalSearchParams: () => mockParams,
 }));
-
 jest.mock("@/src/features/quickSetup", () => ({
   useQuickSetupSession: () => ({ session: null }),
 }));
-
 const CashRoute = require("../../app/(tabs)/cash").default;
 const DashboardRoute = require("../../app/(tabs)/dashboard").default;
 
-describe("current-month recovery routes", () => {
-  beforeEach(() => {
-    mockNavigate.mockClear();
-    mockSetParams.mockClear();
-    mockParams = {};
+describe("investing Cash routes", () => {
+  beforeEach(() => { jest.clearAllMocks(); mockParams = {}; });
+
+  it("does not expose household income capture from Dashboard", () => {
+    expect(DashboardRoute().props.onRecordIncome).toBeUndefined();
   });
 
-  it("opens income entry from Dashboard with a return target", () => {
-    const element = DashboardRoute();
-
-    element.props.onRecordIncome();
-
-    expect(mockNavigate).toHaveBeenCalledWith({
-      pathname: "/(tabs)/cash",
-      params: { openIncomeEntry: "true", returnTo: "dashboard" },
-    });
-  });
-
-  it("returns to Dashboard after income is recorded", () => {
+  it("ignores retired income deep-link parameters without opening a form", () => {
     mockParams = { openIncomeEntry: "true", returnTo: "dashboard" };
     const element = CashRoute();
-
-    expect(element.props.openIncomeEntry).toBe(true);
-    element.props.onIncomeEntryOpened();
-    expect(mockSetParams).toHaveBeenCalledWith({ openIncomeEntry: undefined });
-
-    element.props.onIncomeRecorded();
-    expect(mockSetParams).toHaveBeenCalledWith({ returnTo: undefined });
-    expect(mockNavigate).toHaveBeenCalledWith("/(tabs)/dashboard");
+    expect(element.props.openIncomeEntry).toBeUndefined();
+    expect(element.props.onIncomeRecorded).toBeUndefined();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("clears the return target when income entry is cancelled", () => {
-    mockParams = { returnTo: "dashboard" };
-    const element = CashRoute();
-
-    element.props.onIncomeEntryClosed();
-
-    expect(mockSetParams).toHaveBeenCalledWith({ returnTo: undefined });
-    expect(mockNavigate).not.toHaveBeenCalled();
+  it("keeps Cash correction navigation", () => {
+    CashRoute().props.onCorrectEntry("cash-example");
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/cash-entry", params: { entryId: "cash-example" },
+    });
   });
 });

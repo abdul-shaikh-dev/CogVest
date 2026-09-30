@@ -134,7 +134,7 @@ describe("useCash", () => {
       date: "2026-05-01",
       id: "cash-salary",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -163,10 +163,7 @@ describe("useCash", () => {
     expect(result.current.monthlyMetrics).toEqual({
       added: 100000,
       available: 80000,
-      contributions: 0,
-      income: 100000,
-      incomeStatus: "available",
-      investmentRate: 20,
+      contributions: 100000,
       invested: 20000,
     });
   });
@@ -186,7 +183,7 @@ describe("useCash", () => {
       date: "2026-05-03",
       id: "cash-salary",
       label: "Salary added",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().recordFundedBuy({
@@ -210,7 +207,6 @@ describe("useCash", () => {
     expect(result.current.monthlyMetrics).toMatchObject({
       added: 70000,
       available: 55000,
-      income: 70000,
       invested: 15000,
     });
     expect(result.current.monthlyMovementSummary).toBe(
@@ -218,7 +214,7 @@ describe("useCash", () => {
     );
   });
 
-  it("marks the investment rate unavailable when typed income is missing", () => {
+  it("shows investing activity without household income", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -257,9 +253,6 @@ describe("useCash", () => {
       added: 20000,
       available: 0,
       contributions: 20000,
-      income: 0,
-      incomeStatus: "unavailable",
-      investmentRate: null,
       invested: 20000,
     });
   });

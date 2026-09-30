@@ -56,7 +56,7 @@ function payload(): BackupPayload {
       ppfAccounts: [{ balanceAsOf: "2026-01-01", confirmedBalance: 0, createdAt: "2026-01-01T10:00:00.000Z", id: "ppf-account", legacyAssetId: "asset-ppf", nickname: "Primary", opening: { kind: "financialYear" as const, financialYearStart: 2025 }, provider: "India Post", status: "active" as const }],
       ppfLedgerEntries: [{ accountId: "ppf-account", amount: 500, date: "2026-01-02", id: "ppf-contribution", recordedAt: "2026-01-02T10:00:00.000Z", type: "contribution" as const }],
       preferences: { defaultChartRange: "ALL", displayMode: "standard", hasCompletedOnboarding: true, maskWealthValues: false },
-      schemaVersion: 14,
+      schemaVersion: 15,
       trades: [
         { assetId: "asset-stock", date: "2026-01-02", fees: 2, id: "trade-buy", importProvenance: { fingerprint: "synthetic-fingerprint", importBatchId: "batch-cas", originalRowNumber: 1, sourceFormat: "cams-kfin-cas", sourceVersion: "1" }, pricePerUnit: 100, quantity: 2, totalValue: 202, type: "buy" as const },
         { assetId: "asset-stock", date: "2026-01-03", fees: 2, id: "trade-sell", pricePerUnit: 120, quantity: 1, totalValue: 118, type: "sell" as const },
@@ -121,7 +121,7 @@ describe("portable portfolio backup", () => {
   it("round trips catalog bonus credits in schema14 with additional-share inventory semantics", async () => {
     const original = bonusPayload();
     const text = await createPortfolioBackup(original, { appVersion: "1", createdAt: "2026-09-11T10:00:00.000Z" }, digest);
-    expect(JSON.parse(text).payload.portfolio.schemaVersion).toBe(14);
+    expect(JSON.parse(text).payload.portfolio.schemaVersion).toBe(15);
     expect((await parsePortfolioBackup(text, digest)).payload).toEqual(original);
   });
 
@@ -155,12 +155,12 @@ describe("portable portfolio backup", () => {
     }
     const signed = { ...source, checksum: await digest(canonical(source)) };
     expect((await parsePortfolioBackup(JSON.stringify(signed), digest)).payload).toEqual(payload());
-    expect(validateBackupPayload(source.payload).portfolio.schemaVersion).toBe(14);
+    expect(validateBackupPayload(source.payload).portfolio.schemaVersion).toBe(15);
     signed.payload.portfolio.preferences.maskWealthValues = true;
     await expect(parsePortfolioBackup(JSON.stringify(signed), digest)).rejects.toThrow("checksum");
   });
 
-  it.each([8, 15])("rejects unsupported portfolio schema %s", (schemaVersion) => {
+  it.each([8, 16])("rejects unsupported portfolio schema %s", (schemaVersion) => {
     const current = payload();
     expect(() => validateBackupPayload({ ...current, portfolio: { ...current.portfolio, schemaVersion } })).toThrow("supported snapshot");
   });
@@ -272,7 +272,7 @@ describe("portable portfolio backup", () => {
   it("rejects nested unknown records and oversized input", async () => {
     const invalid = JSON.parse(await backup()) as { payload: { portfolio: { assets: Array<Record<string, unknown>> } } };
     invalid.payload.portfolio.assets[0].unsupported = true;
-    await expect(parsePortfolioBackup(JSON.stringify(invalid), digest)).rejects.toThrow("unsupported field");
+    await expect(parsePortfolioBackup(JSON.stringify(invalid), digest)).rejects.toThrow("checksum");
     await expect(parsePortfolioBackup(" ".repeat(backupMaxBytes + 1), digest)).rejects.toThrow("size");
   });
 

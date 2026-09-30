@@ -637,14 +637,14 @@ describe("portfolio calculations", () => {
     ).toBe(108000);
   });
 
-  it("uses only typed income for the monthly investment rate", () => {
+  it("counts investing contributions without a household-income rate", () => {
     const monthlyEntries: CashEntry[] = [
       {
         amount: 50000,
         date: "2026-05-01T00:00:00.000Z",
         id: "cash-income",
         label: "Salary",
-        purpose: "income",
+        purpose: "capitalContribution",
         type: "addition",
       },
       {
@@ -700,15 +700,12 @@ describe("portfolio calculations", () => {
     ).toEqual({
       added: 75000,
       available: 77000,
-      contributions: 25000,
-      income: 50000,
-      incomeStatus: "available",
-      investmentRate: 20,
+      contributions: 75000,
       invested: 10000,
     });
   });
 
-  it("marks income-based metrics unavailable when legacy additions are unclassified", () => {
+  it("retains ambiguous additions without classifying them as contributions", () => {
     const metrics = calculateCashMonthlyMetrics({
       cashEntries: [
         {
@@ -716,7 +713,7 @@ describe("portfolio calculations", () => {
           date: "2026-05-01T00:00:00.000Z",
           id: "cash-income",
           label: "Salary",
-          purpose: "income",
+          purpose: "capitalContribution",
           type: "addition",
         },
         {
@@ -733,11 +730,8 @@ describe("portfolio calculations", () => {
       trades: [],
     });
 
-    expect(metrics).toMatchObject({
-      income: 50000,
-      incomeStatus: "unavailable",
-      investmentRate: null,
-    });
+    expect(metrics).toMatchObject({ added: 54000, contributions: 50000 });
+    expect(metrics).not.toHaveProperty("income");
   });
 
   it("uses the trade date as the canonical month for linked purchase funding", () => {
@@ -846,7 +840,7 @@ describe("portfolio calculations", () => {
           date: "2026-07-01T00:00:00.000Z",
           id: "cash-income",
           label: "Salary",
-          purpose: "income",
+          purpose: "capitalContribution",
           type: "addition",
         },
       ],
@@ -855,8 +849,8 @@ describe("portfolio calculations", () => {
       trades: [],
     });
 
-    expect(metrics.income).toBe(50000);
-    expect(metrics.incomeStatus).toBe("available");
+    expect(metrics.contributions).toBe(50000);
+    expect(metrics).not.toHaveProperty("income");
   });
 
   it("calculates day change from holding values and quote change", () => {
@@ -1177,11 +1171,9 @@ describe("portfolio calculations", () => {
         id: "snapshot-2026-04",
         investedValue: 1000000,
         month: "2026-04",
-        monthlyExpense: 30000,
         monthlyInvestment: 50000,
         notes: "April close",
         portfolioValue: 1260000,
-        salary: 150000,
       },
       {
         cashValue: 140000,
@@ -1191,7 +1183,6 @@ describe("portfolio calculations", () => {
         id: "snapshot-2026-05",
         investedValue: 1060000,
         month: "2026-05",
-        monthlyExpense: 40000,
         monthlyInvestment: 60000,
         performanceBasis: {
           netExternalFlow: 60000,
@@ -1200,7 +1191,6 @@ describe("portfolio calculations", () => {
           weightedExternalFlow: 60000,
         },
         portfolioValue: 1385000,
-        salary: 160000,
       },
     ];
 
@@ -1212,7 +1202,6 @@ describe("portfolio calculations", () => {
           { assetClass: "cash", percentage: 10.11, value: 140000 },
           { assetClass: "crypto", percentage: 3.25, value: 45000 },
         ],
-        expenseRate: 25,
         performance: {
           denominator: 1320000,
           marketMovement: 65000,
@@ -1222,7 +1211,6 @@ describe("portfolio calculations", () => {
           status: "available",
           totalValueChange: 125000,
         },
-        savingsRate: 37.5,
         snapshot: snapshots[1],
       },
       {
@@ -1232,7 +1220,6 @@ describe("portfolio calculations", () => {
           { assetClass: "cash", percentage: 9.52, value: 120000 },
           { assetClass: "crypto", percentage: 3.17, value: 40000 },
         ],
-        expenseRate: 20,
         performance: {
           denominator: null,
           marketMovement: null,
@@ -1242,13 +1229,12 @@ describe("portfolio calculations", () => {
           status: "unavailable",
           totalValueChange: null,
         },
-        savingsRate: 33.33,
         snapshot: snapshots[0],
       },
     ]);
   });
 
-  it("keeps salary-dependent rates unavailable when snapshot income is unknown", () => {
+  it("omits household rates from monthly summaries", () => {
     const snapshot: MonthlySnapshot = {
       cashValue: 200,
       cryptoValue: 0,
@@ -1257,15 +1243,14 @@ describe("portfolio calculations", () => {
       id: "snapshot-unknown-income",
       investedValue: 800,
       month: "2026-06",
-      monthlyExpense: 300,
       monthlyInvestment: 100,
       portfolioValue: 1000,
     };
 
-    expect(calculateMonthlyProgressSummaries([snapshot])[0]).toMatchObject({
-      expenseRate: null,
-      savingsRate: null,
-    });
+    const summary = calculateMonthlyProgressSummaries([snapshot])[0];
+    expect(summary.snapshot).toEqual(snapshot);
+    expect(summary).not.toHaveProperty("savingsRate");
+    expect(summary).not.toHaveProperty("expenseRate");
   });
 });
 

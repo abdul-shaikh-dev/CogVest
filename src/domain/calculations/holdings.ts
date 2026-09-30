@@ -115,9 +115,7 @@ export type MonthlyAssetSnapshotItem = {
 
 export type MonthlyProgressSummary = {
   assetSnapshot: MonthlyAssetSnapshotItem[];
-  expenseRate: number | null;
   performance: MonthlyPerformanceResult;
-  savingsRate: number | null;
   snapshot: MonthlySnapshot;
 };
 
@@ -125,9 +123,6 @@ export type CashMonthlyMetrics = {
   added: number;
   available: number;
   contributions: number;
-  income: number;
-  incomeStatus: "available" | "unavailable";
-  investmentRate: number | null;
   invested: number;
 };
 
@@ -508,13 +503,6 @@ export function calculateCashMonthlyMetrics({
     (entry) =>
       isEffectiveCalendarDate(entry.date, now) && isSameMonth(entry.date, now),
   );
-  const income = sumFinancialValues(
-    monthlyEntries
-      .filter(
-        (entry) => entry.type === "addition" && entry.purpose === "income",
-      )
-      .map((entry) => entry.amount),
-  );
   const contributions = sumFinancialValues(
     monthlyEntries
       .filter(
@@ -563,21 +551,11 @@ export function calculateCashMonthlyMetrics({
       .map((entry) => entry.amount),
   );
   const invested = investedFromTrades.plus(unmatchedPurchaseFunding);
-  const incomeStatus =
-    income.greaterThan(0) && legacyAdded.isZero()
-      ? "available"
-      : "unavailable";
 
   return {
-    added: normalizeMoney(income.plus(contributions).plus(legacyAdded)),
+    added: normalizeMoney(contributions.plus(legacyAdded)),
     available: calculateCashBalance(cashEntries, now),
     contributions: normalizeMoney(contributions),
-    income: normalizeMoney(income),
-    incomeStatus,
-    investmentRate:
-      incomeStatus === "available"
-        ? round(invested.dividedBy(income).times(100).toNumber())
-        : null,
     invested: normalizeMoney(invested),
   };
 }
@@ -896,25 +874,7 @@ export function calculateMonthlyProgressSummaries(
 
       return {
         assetSnapshot,
-        expenseRate:
-          !snapshot.salary || snapshot.monthlyExpense === undefined
-            ? null
-            : round(
-                decimal(snapshot.monthlyExpense)
-                  .dividedBy(snapshot.salary)
-                  .times(100)
-                  .toNumber(),
-              ),
         performance: calculateMonthlyPerformance(previous, snapshot),
-        savingsRate:
-          !snapshot.salary
-            ? null
-            : round(
-                decimal(snapshot.monthlyInvestment)
-                  .dividedBy(snapshot.salary)
-                  .times(100)
-                  .toNumber(),
-              ),
         snapshot,
       };
     })

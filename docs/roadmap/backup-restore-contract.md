@@ -36,7 +36,7 @@ appropriate. Preserve Android's existing backup and storage-permission policy.
 
 ## Inventory Verified Against Current Code
 
-The current portfolio schema is version 9. A portable backup must be an explicit
+The current portfolio schema is version 15. A portable backup must be an explicit
 versioned format, not a dump of all MMKV keys or a copy of the database file.
 
 | Source | Backup treatment |
@@ -60,10 +60,19 @@ silently generating a different salt is not a valid full-fidelity backup.
 ## File and Validation Boundary
 
 Initial format: JSON envelope `cogvest-portfolio-backup`, format version 1,
-portfolio schema 13, creation timestamp, app version, payload, and SHA-256 checksum.
-Signed schema 9-12 payloads remain readable: verify the original checksum before
+portfolio schema 15, creation timestamp, app version, payload, and SHA-256 checksum.
+Signed schema 9-14 payloads remain readable: verify the original checksum before
 migrating to the current schema. Schema 13 preserves strict demerger links and
 validates both linked holdings and their reconstructed acquisition cost.
+Schema 14 adds Futures accounts and linked Cash transfers. Schema 15 retires
+household income: old Cash `income` additions become `capitalContribution`, and
+snapshot `salary`/`monthlyExpense` fields are removed after legacy validation.
+All other records, links, financial values, quote evidence, array ordering,
+preferences, and CAS salt are preserved. Current-schema backups reject retired
+fields. Older exported files are not modified; free-text notes/labels are retained
+and can still mention salary. New exports omit the retired structured metadata.
+Existing recovery/quarantine copies are retained for recoverability and may
+contain legacy fields; migration is not a promise to scrub every historical file.
 The digest covers UTF-8 JSON of every envelope field except `checksum`. Object
 keys are recursively sorted; array order is preserved. Optional undefined live
 fields are absent from JSON. No other format/schema combination is supported;

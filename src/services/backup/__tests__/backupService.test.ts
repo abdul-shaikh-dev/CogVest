@@ -39,7 +39,7 @@ describe("backup file service", () => {
     const { service, store, file, runtime } = harness();
     const exported = store.getState().captureBackup();
     file.write(await createPortfolioBackup(exported.payload, meta, digest));
-    store.getState().addCashEntry({ id: "extra", type: "addition", purpose: "income", label: "Other", date: "2026-01-02", amount: 200 });
+    store.getState().addCashEntry({ id: "extra", type: "addition", purpose: "capitalContribution", label: "Other", date: "2026-01-02", amount: 200 });
     const prepared = (await service.selectPortfolioBackup())!;
     expect(prepared.review.counts.find((count) => count.label === "Cash entries")).toEqual({ label: "Cash entries", current: 2, backup: 1 });
     expect(prepared.review.counts.find((count) => count.label === "Futures accounts")).toEqual({ label: "Futures accounts", current: 0, backup: 0 });

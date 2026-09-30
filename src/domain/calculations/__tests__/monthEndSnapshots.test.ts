@@ -115,7 +115,6 @@ function monthlySnapshot(
     month: "2026-01",
     monthlyInvestment: 0,
     portfolioValue: 1000,
-    salary: 0,
     ...overrides,
   };
 }
@@ -464,7 +463,6 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       month: "2026-07",
       monthlyInvestment: 500,
       portfolioValue: 5200,
-      salary: 0,
     };
 
     const result = buildGeneratedMonthEndSnapshot(
@@ -1165,16 +1163,16 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       netExternalFlow: 52500,
       status: "complete",
     });
-    expect(result.snapshot?.salary).toBeUndefined();
+    expect(result.snapshot).not.toHaveProperty("salary");
   });
 
-  it("derives snapshot income only from unambiguous typed income", () => {
+  it("generates investing snapshots without household income", () => {
     const typedIncome = buildGeneratedMonthEndSnapshot(
       buildInput({
         assets: [],
         cashEntries: [
-          cashEntry({ amount: 100000, purpose: "income" }),
-          cashEntry({ amount: 25000, id: "cash-income-2", purpose: "income" }),
+          cashEntry({ amount: 100000, purpose: "capitalContribution" }),
+          cashEntry({ amount: 25000, id: "cash-income-2", purpose: "capitalContribution" }),
           cashEntry({
             amount: 50000,
             id: "cash-contribution",
@@ -1188,7 +1186,7 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       buildInput({
         assets: [],
         cashEntries: [
-          cashEntry({ amount: 100000, purpose: "income" }),
+          cashEntry({ amount: 100000, purpose: "capitalContribution" }),
           cashEntry({
             amount: 50000,
             id: "cash-legacy",
@@ -1199,11 +1197,13 @@ describe("buildGeneratedMonthEndSnapshot", () => {
       }),
     );
 
-    expect(typedIncome.snapshot?.salary).toBe(125000);
-    expect(ambiguousIncome.snapshot?.salary).toBeUndefined();
+    expect(typedIncome.snapshot).not.toHaveProperty("salary");
+    expect(typedIncome.snapshot?.cashValue).toBe(175000);
+    expect(ambiguousIncome.snapshot).not.toHaveProperty("salary");
+    expect(ambiguousIncome.snapshot?.performanceBasis?.status).toBe("unavailable");
   });
 
-  it("refreshes automatic snapshot income after typed income is backfilled", () => {
+  it("keeps completed snapshots unchanged without price refresh", () => {
     const existing = monthlySnapshot({
       generated: {
         generatedAt: "2026-08-01T00:00:00.000Z",
@@ -1213,12 +1213,11 @@ describe("buildGeneratedMonthEndSnapshot", () => {
         warnings: [],
       },
       month: "2026-07",
-      salary: undefined,
     });
     const result = buildGeneratedMonthEndSnapshot(
       buildInput({
         assets: [],
-        cashEntries: [cashEntry({ amount: 100000, purpose: "income" })],
+        cashEntries: [cashEntry({ amount: 100000, purpose: "capitalContribution" })],
         existingSnapshots: [existing],
         targetMonth: "2026-07",
       }),
@@ -1226,17 +1225,16 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     const refreshed = buildGeneratedMonthEndSnapshot({
       ...buildInput({
         assets: [],
-        cashEntries: [cashEntry({ amount: 100000, purpose: "income" })],
+        cashEntries: [cashEntry({ amount: 100000, purpose: "capitalContribution" })],
         existingSnapshots: [existing],
         targetMonth: "2026-07",
       }),
-      refreshIncome: true,
     });
 
     expect(result.status).toBe("already-exists");
     expect(refreshed).toMatchObject({
-      snapshot: { salary: 100000 },
-      status: "created",
+      snapshot: existing,
+      status: "already-exists",
     });
   });
 

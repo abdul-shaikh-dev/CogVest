@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppButton, AppText, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
+import { AppButton, AppText, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, SensitiveValueReveal, useSensitiveValueReveal } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
@@ -33,8 +33,6 @@ function setSnapshotFormFields({
   progress.setField("cryptoValue", String(snapshot.cryptoValue));
   progress.setField("cashValue", String(snapshot.cashValue));
   progress.setField("monthlyInvestment", String(snapshot.monthlyInvestment));
-  progress.setField("salary", String(snapshot.salary ?? ""));
-  progress.setField("monthlyExpense", String(snapshot.monthlyExpense ?? ""));
   progress.setField("notes", snapshot.notes ?? "");
 }
 
@@ -45,6 +43,7 @@ export function ReviewSnapshotScreen({
   store = getPortfolioStore(),
 }: ReviewSnapshotScreenProps) {
   const progress = useProgress({ now, store });
+  const { isRevealed, reveal } = useSensitiveValueReveal(progress.preferences.maskWealthValues);
   const hasRunAutomationRef = useRef(false);
   const hasPrefilledFormRef = useRef(false);
 
@@ -77,6 +76,20 @@ export function ReviewSnapshotScreen({
     if (progress.saveSnapshot()) {
       onComplete();
     }
+  }
+
+  if (!isRevealed) {
+    return (
+      <ScreenContainer scroll testID="review-snapshot-screen">
+        <View style={styles.content}>
+          <ScreenHeader title="Review Snapshot" subtitle="Values masked" />
+          <PremiumCard>
+            <SensitiveValueReveal onReveal={reveal} testID="reveal-snapshot" />
+          </PremiumCard>
+          <AppButton title="Back to Progress" variant="secondary" onPress={onCancel} />
+        </View>
+      </ScreenContainer>
+    );
   }
 
   return (
@@ -161,34 +174,14 @@ export function ReviewSnapshotScreen({
               value={progress.formValues.cashValue}
             />
           </View>
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.monthlyInvestment}
-              keyboardType="decimal-pad"
-              label="Monthly investment"
-              onChangeText={(value) => progress.setField("monthlyInvestment", value)}
-              placeholder="60000"
-              testID="snapshot-investment-input"
-              value={progress.formValues.monthlyInvestment}
-            />
-            <FormTextField
-              error={progress.errors.salary}
-              keyboardType="decimal-pad"
-              label="Salary"
-              onChangeText={(value) => progress.setField("salary", value)}
-              placeholder="160000"
-              testID="snapshot-salary-input"
-              value={progress.formValues.salary}
-            />
-          </View>
           <FormTextField
-            error={progress.errors.monthlyExpense}
+            error={progress.errors.monthlyInvestment}
             keyboardType="decimal-pad"
-            label="Monthly expense"
-            onChangeText={(value) => progress.setField("monthlyExpense", value)}
-            placeholder="Optional"
-            testID="snapshot-expense-input"
-            value={progress.formValues.monthlyExpense}
+            label="Monthly investment"
+            onChangeText={(value) => progress.setField("monthlyInvestment", value)}
+            placeholder="60000"
+            testID="snapshot-investment-input"
+            value={progress.formValues.monthlyInvestment}
           />
           <FormTextField
             label="Notes"
@@ -220,6 +213,7 @@ export function ReviewSnapshotScreen({
 const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "flex-end",
   },

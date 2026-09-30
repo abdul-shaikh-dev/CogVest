@@ -138,7 +138,7 @@ export const visualQaCashEntries: CashEntry[] = [
     date: "2026-05-03T00:00:00.000Z",
     id: "visual-qa-cash-salary",
     label: "Salary added",
-    purpose: "income",
+    purpose: "capitalContribution",
     type: "addition",
   },
   {
@@ -176,7 +176,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2025-11",
     investedValue: 1240000,
     month: "2025-11",
-    monthlyExpense: 50000,
     monthlyInvestment: 58000,
     notes: "November warm-up trend seed",
     performanceBasis: {
@@ -186,7 +185,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 29000,
     },
     portfolioValue: 1440000,
-    salary: 165000,
   },
   {
     cashValue: 232000,
@@ -196,7 +194,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2025-12",
     investedValue: 1300000,
     month: "2025-12",
-    monthlyExpense: 52000,
     monthlyInvestment: 62000,
     notes: "December opening trend seed",
     performanceBasis: {
@@ -206,7 +203,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 31000,
     },
     portfolioValue: 1500000,
-    salary: 165000,
   },
   {
     cashValue: 256000,
@@ -216,7 +212,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2026-01",
     investedValue: 1375000,
     month: "2026-01",
-    monthlyExpense: 56000,
     monthlyInvestment: 70000,
     notes: "January steady contribution",
     performanceBasis: {
@@ -226,7 +221,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 35000,
     },
     portfolioValue: 1580000,
-    salary: 170000,
   },
   {
     cashValue: 301000,
@@ -236,7 +230,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2026-02",
     investedValue: 1460000,
     month: "2026-02",
-    monthlyExpense: 58000,
     monthlyInvestment: 76000,
     notes: "February market lift",
     performanceBasis: {
@@ -246,7 +239,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 38000,
     },
     portfolioValue: 1685000,
-    salary: 170000,
   },
   {
     cashValue: 351000,
@@ -256,7 +248,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2026-03",
     investedValue: 1555000,
     month: "2026-03",
-    monthlyExpense: 54000,
     monthlyInvestment: 85000,
     notes: "March baseline",
     performanceBasis: {
@@ -266,7 +257,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 42500,
     },
     portfolioValue: 1790000,
-    salary: 170000,
   },
   {
     cashValue: 311450,
@@ -276,7 +266,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2026-04",
     investedValue: 1676000,
     month: "2026-04",
-    monthlyExpense: 62000,
     monthlyInvestment: 121000,
     notes: "April allocation lift",
     performanceBasis: {
@@ -286,7 +275,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 60500,
     },
     portfolioValue: 1929450,
-    salary: 170000,
   },
   {
     cashValue: 300450,
@@ -296,7 +284,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
     id: "visual-qa-snapshot-2026-05",
     investedValue: 1721000,
     month: "2026-05",
-    monthlyExpense: 68000,
     monthlyInvestment: 45000,
     notes: "May parity seed",
     performanceBasis: {
@@ -306,7 +293,6 @@ export const visualQaMonthlySnapshots: MonthlySnapshot[] = [
       weightedExternalFlow: 22500,
     },
     portfolioValue: 1987450,
-    salary: 205000,
   },
 ];
 

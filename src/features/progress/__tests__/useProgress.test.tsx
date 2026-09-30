@@ -65,7 +65,7 @@ function seedHoldingAndCash(store: ReturnType<typeof createPortfolioStore>) {
     date: "2026-07-01T00:00:00.000Z",
     id: "cash-salary",
     label: "Salary added",
-    purpose: "income",
+    purpose: "capitalContribution",
     type: "addition",
   };
 
@@ -89,7 +89,7 @@ function seedBackfillRecords(store: ReturnType<typeof createPortfolioStore>) {
     date: "2026-01-01T00:00:00.000Z",
     id: "cash-income-january",
     label: "Salary added",
-    purpose: "income",
+    purpose: "capitalContribution",
     type: "addition",
   });
 }
@@ -105,7 +105,6 @@ function existingSnapshot(month: string): MonthlySnapshot {
     month,
     monthlyInvestment: 0,
     portfolioValue: 86000,
-    salary: 0,
   };
 }
 
@@ -143,7 +142,7 @@ function seedMonthlyInvestmentMetrics(
             date: "2026-07-01T00:00:00.000Z",
             id: "cash-income",
             label: "Salary",
-            purpose: "income" as const,
+            purpose: "capitalContribution" as const,
             type: "addition" as const,
           },
         ]
@@ -279,7 +278,7 @@ describe("useProgress", () => {
     ]);
   });
 
-  it("shares typed-income investment metrics with Cash without double-counting a funded buy", () => {
+  it("shares investing activity with Cash without double-counting a funded buy", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-20T00:00:00.000Z");
     seedMonthlyInvestmentMetrics(store);
@@ -287,27 +286,24 @@ describe("useProgress", () => {
     const { result: cash } = renderHook(() => useCash({ now, store }));
     const { result: progress } = renderHook(() => useProgress({ now, store }));
 
-    expect(progress.current.monthlyIncome).toBe(50000);
+    expect(progress.current).not.toHaveProperty("monthlyIncome");
     expect(progress.current.monthlyInvestment).toBe(10000);
-    expect(progress.current.investmentRate).toBe(20);
+    expect(progress.current).not.toHaveProperty("investmentRate");
     expect(progress.current.monthlyInvestment).toBe(
       cash.current.monthlyMetrics.invested,
     );
-    expect(progress.current.investmentRate).toBe(
-      cash.current.monthlyMetrics.investmentRate,
-    );
   });
 
-  it("marks the investment rate unavailable without reliable typed income", () => {
+  it("shows investing activity without an income dependency", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-20T00:00:00.000Z");
     seedMonthlyInvestmentMetrics(store, { includeIncome: false });
 
     const { result } = renderHook(() => useProgress({ now, store }));
 
-    expect(result.current.monthlyIncome).toBeNull();
+    expect(result.current).not.toHaveProperty("monthlyIncome");
     expect(result.current.monthlyInvestment).toBe(10000);
-    expect(result.current.investmentRate).toBeNull();
+    expect(result.current).not.toHaveProperty("investmentRate");
   });
 
   it("excludes linked legacy PPF activity from current-month investment", () => {
@@ -372,10 +368,6 @@ describe("useProgress", () => {
       result.current.setField("cryptoValue", "45000");
       result.current.setField("cashValue", "140000");
       result.current.setField("monthlyInvestment", "60000");
-      result.current.setField("salary", "160000");
-    });
-    act(() => {
-      result.current.setField("monthlyExpense", "40000");
     });
     act(() => {
       result.current.saveSnapshot();
@@ -396,9 +388,6 @@ describe("useProgress", () => {
       result.current.setField("cryptoValue", "50000");
       result.current.setField("cashValue", "140000");
       result.current.setField("monthlyInvestment", "70000");
-    });
-    act(() => {
-      result.current.setField("salary", "160000");
     });
     act(() => {
       result.current.saveSnapshot();
@@ -424,11 +413,13 @@ describe("useProgress", () => {
       result.current.setField("cryptoValue", "0");
       result.current.setField("cashValue", "200");
       result.current.setField("monthlyInvestment", "100");
+    });
+    act(() => {
       result.current.saveSnapshot();
     });
 
-    expect(store.getState().monthlySnapshots[0]?.salary).toBeUndefined();
-    expect(result.current.errors.salary).toBeUndefined();
+    expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("salary");
+    expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("monthlyExpense");
   });
 
   it("auto-generates the previous completed month snapshot once", async () => {
@@ -527,7 +518,7 @@ describe("useProgress", () => {
     });
   });
 
-  it("refreshes automatic income after a completed month is backfilled", async () => {
+  it("does not schedule household-income refreshes for a completed snapshot", async () => {
     const now = new Date("2026-08-02T10:00:00.000Z");
     const store = createPortfolioStore({
       now: () => now,
@@ -546,7 +537,8 @@ describe("useProgress", () => {
     await act(async () => {
       await result.current.ensureMonthEndSnapshot();
     });
-    expect(store.getState().monthlySnapshots[0]?.salary).toBeUndefined();
+    expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("salary");
+    const originalSnapshot = store.getState().monthlySnapshots[0];
 
     act(() => {
       store.getState().addCashEntry({
@@ -554,7 +546,7 @@ describe("useProgress", () => {
         date: "2026-07-06",
         id: "cash-july-income",
         label: "Income",
-        purpose: "income",
+        purpose: "capitalContribution",
         type: "addition",
       });
     });
@@ -562,10 +554,9 @@ describe("useProgress", () => {
       await result.current.ensureMonthEndSnapshot();
     });
 
-    expect(store.getState().monthlySnapshots[0]?.salary).toBe(100000);
-    expect(result.current.snapshotAutomationStatus.message).toBe(
-      "1 snapshot updated with newly recorded income.",
-    );
+    expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("salary");
+    expect(store.getState().monthlySnapshots).toHaveLength(1);
+    expect(store.getState().monthlySnapshots[0]).toEqual(originalSnapshot);
   });
 
   it("backfills every missing completed month oldest-first with month-specific prices", async () => {
@@ -1067,10 +1058,10 @@ describe("useProgress", () => {
 
     expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
     expect(store.getState().monthlySnapshots).toEqual([
-      { ...existing, salary: 70000 },
+      existing,
     ]);
     expect(result.current.snapshotAutomationStatus.message).toBe(
-      "Newly recorded income was added. Some completed months still use estimated values.",
+      "Some completed months still use estimated values.",
     );
   });
 
@@ -1079,7 +1070,6 @@ describe("useProgress", () => {
     seedHoldingAndCash(store);
     store.getState().addMonthlySnapshot({
       ...provisionalSnapshot(),
-      salary: 70000,
     });
     const historicalPriceFetcher = jest.fn().mockResolvedValue({
       error: "Historical price is temporarily unavailable.",
@@ -1415,7 +1405,6 @@ describe("useProgress", () => {
       result.current.setField("cryptoValue", "0");
       result.current.setField("cashValue", "70000");
       result.current.setField("monthlyInvestment", "0");
-      result.current.setField("salary", "0");
     });
     act(() => {
       result.current.saveSnapshot();

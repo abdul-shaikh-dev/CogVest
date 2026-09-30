@@ -1775,14 +1775,6 @@ export function ProgressScreen({
                   masked: progress.preferences.maskWealthValues,
                   value: formatCompactINR(progress.cashBalance),
                 },
-                {
-                  label: "Investment rate",
-                  masked: false,
-                  value:
-                    progress.investmentRate === null
-                      ? "Not enough data"
-                      : `${progress.investmentRate.toFixed(2)}%`,
-                },
               ]}
             />
 
@@ -1805,22 +1797,6 @@ export function ProgressScreen({
                   color="secondary"
                 >
                   Monthly investment: {progress.preferences.maskWealthValues ? MASKED_INR_VALUE : formatINR(progress.monthlyInvestment)}
-                </AppText>
-                <AppText
-                  accessibilityLabel={
-                    progress.preferences.maskWealthValues && progress.monthlyIncome !== null
-                      ? "Typed income: amount hidden"
-                      : undefined
-                  }
-                  color="secondary"
-                >
-                  Typed income:{" "}
-                  {progress.monthlyIncome === null
-                    ? "Not enough data"
-                    : progress.preferences.maskWealthValues ? MASKED_INR_VALUE : formatINR(progress.monthlyIncome)}
-                </AppText>
-                <AppText color="secondary">
-                  Expense rate needs explicit expense tracking and is not shown in V1.
                 </AppText>
               </PremiumCard>
             )}

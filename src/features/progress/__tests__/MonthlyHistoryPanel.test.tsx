@@ -15,22 +15,14 @@ function createSummary(
   month: string,
   {
     cashValue = 10_000,
-    expenseRate = 25,
-    monthlyExpense = 20_000,
     monthlyInvestment = 30_000,
     performance = {},
     portfolioValue = 100_000,
-    salary = 80_000,
-    savingsRate = 37.5,
   }: Partial<{
     cashValue: number;
-    expenseRate: number | null;
-    monthlyExpense: number | undefined;
     monthlyInvestment: number;
     performance: Partial<MonthlyProgressSummary["performance"]>;
     portfolioValue: number;
-    salary: number | undefined;
-    savingsRate: number | null;
   }> = {},
 ): MonthlyProgressSummary {
   const snapshot: MonthlySnapshot = {
@@ -41,11 +33,9 @@ function createSummary(
     id: `snapshot-${month}`,
     investedValue: 75_000,
     month,
-    monthlyExpense,
     monthlyInvestment,
     notes: `Financial note for ${month}: ₹${portfolioValue}`,
     portfolioValue,
-    salary,
   };
 
   return {
@@ -55,7 +45,6 @@ function createSummary(
       { assetClass: "crypto", percentage: 5, value: snapshot.cryptoValue },
       { assetClass: "cash", percentage: 10, value: snapshot.cashValue },
     ],
-    expenseRate,
     performance: {
       denominator: 100_000,
       marketMovement: 4_000,
@@ -66,7 +55,6 @@ function createSummary(
       totalValueChange: 9_000,
       ...performance,
     },
-    savingsRate,
     snapshot,
   };
 }
@@ -378,8 +366,6 @@ describe("MonthlyHistoryPanel", () => {
 
   it("masks financial amounts while retaining percentages and unavailable states", () => {
     const unavailableSummary = createSummary("2026-06", {
-      expenseRate: null,
-      monthlyExpense: undefined,
       performance: {
         marketMovement: null,
         netExternalFlow: null,
@@ -387,8 +373,6 @@ describe("MonthlyHistoryPanel", () => {
         totalValueChange: null,
       },
       portfolioValue: 123_456,
-      salary: undefined,
-      savingsRate: null,
     });
     const { getAllByText, getByTestId, queryByText } = render(
       <MonthlyHistoryPanel
@@ -413,16 +397,12 @@ describe("MonthlyHistoryPanel", () => {
 
   it("labels nullable snapshot and performance values as unavailable when unmasked", () => {
     const unavailableSummary = createSummary("2026-06", {
-      expenseRate: null,
-      monthlyExpense: undefined,
       performance: {
         marketMovement: null,
         netExternalFlow: null,
         status: "unavailable",
         totalValueChange: null,
       },
-      salary: undefined,
-      savingsRate: null,
     });
     const { getAllByText, getByTestId } = render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal summaries={[...summaries, unavailableSummary]} />,
@@ -431,6 +411,6 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(getByTestId("open-monthly-history"));
     fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
-    expect(getAllByText("Unavailable").length).toBeGreaterThanOrEqual(5);
+    expect(getAllByText("Unavailable").length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -1,0 +1,69 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=cash"
+- assertVisible:
+    id: cash-screen
+- assertNotVisible: "Investment rate"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-cash"
+- tapOn:
+    id: cash-entry-deposit
+- assertNotVisible: "Deposit purpose"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-deposit"
+- tapOn:
+    id: close-cash-entry-button
+- scrollUntilVisible:
+    element:
+      text: "Review Salary added"
+    direction: DOWN
+- tapOn: "Review Salary added"
+- assertVisible:
+    id: review-cash-entry-screen
+- assertNotVisible: "Deposit purpose"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-correction"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=dashboard"
+- assertVisible:
+    id: dashboard-screen
+- assertNotVisible: "Record income"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-dashboard"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=progress"
+- assertVisible:
+    id: progress-screen
+- assertNotVisible: "Typed income"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-progress"
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: DOWN
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-05
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-history"
+- tapOn:
+    id: snapshot-month-2026-05
+- scrollUntilVisible:
+    element:
+      text: "Monthly investment"
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: "Salary"
+- assertNotVisible: "Expenses"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-month-detail"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- runFlow:
+    when:
+      visible:
+        id: reveal-snapshot-button
+    commands:
+      - takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-snapshot-masked"
+      - assertNotVisible:
+          id: snapshot-portfolio-input
+      - tapOn:
+          id: reveal-snapshot-button
+- scrollUntilVisible:
+    element:
+      id: snapshot-investment-input
+    direction: DOWN
+- assertNotVisible: "Salary"
+- assertNotVisible: "Monthly expense"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${PREFIX}-snapshot"

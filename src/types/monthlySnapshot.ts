@@ -44,10 +44,8 @@ export type MonthlySnapshot = {
   id: string;
   investedValue: number;
   month: string;
-  monthlyExpense?: number;
   monthlyInvestment: number;
   notes?: string;
   performanceBasis?: MonthlyPerformanceBasis;
   portfolioValue: number;
-  salary?: number;
 };

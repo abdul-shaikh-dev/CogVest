@@ -11,7 +11,6 @@ import {
   calculateHoldings,
   calculateMonthlyProgressSummaries,
   calculatePortfolioTotal,
-  deriveMonthlySnapshotSalary,
   getDefaultMonthlyChartRange,
   getMissingCompletedSnapshotMonths,
   getMonthlySnapshotPriceConfidence,
@@ -63,11 +62,9 @@ export function emptyProgressFormValues() {
     equityValue: "",
     investedValue: "",
     month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
-    monthlyExpense: "",
     monthlyInvestment: "",
     notes: "",
     portfolioValue: "",
-    salary: "",
   };
 }
 
@@ -104,7 +101,6 @@ export type ProgressSnapshotAutomationStatus = SnapshotAutomationStatusState & {
 
 type MonthEndSnapshotAutomationRunResult = {
   createdCount: number;
-  incomeRefreshedCount: number;
   lastCompletedMonth: string;
   pendingMonths: string[];
   provisionalCount: number;
@@ -303,23 +299,6 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
       parseNumberField(values, field, errors),
     ]),
   ) as Record<(typeof requiredNumberFields)[number], number>;
-  const trimmedExpense = values.monthlyExpense.trim();
-  const trimmedSalary = values.salary.trim();
-  const salary = trimmedSalary.length === 0 ? undefined : Number(trimmedSalary);
-  const monthlyExpense =
-    trimmedExpense.length === 0 ? undefined : Number(trimmedExpense);
-
-  if (salary !== undefined && (!Number.isFinite(salary) || salary < 0)) {
-    errors.salary = "Enter a valid amount.";
-  }
-
-  if (
-    monthlyExpense !== undefined &&
-    (!Number.isFinite(monthlyExpense) || monthlyExpense < 0)
-  ) {
-    errors.monthlyExpense = "Enter a valid amount.";
-  }
-
   if (Object.keys(errors).length > 0) {
     return { errors, snapshot: null };
   }
@@ -334,7 +313,6 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
       id: createId("snapshot"),
       investedValue: parsedValues.investedValue,
       month: values.month.trim(),
-      monthlyExpense,
       monthlyInvestment: parsedValues.monthlyInvestment,
       notes: values.notes.trim() || undefined,
       performanceBasis: {
@@ -345,14 +323,12 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
         ],
       },
       portfolioValue: parsedValues.portfolioValue,
-      ...(salary === undefined ? {} : { salary }),
     } satisfies MonthlySnapshot,
   };
 }
 
 function automationMessage({
   createdCount,
-  incomeRefreshedCount,
   pendingMonths,
   provisionalCount,
   refreshedCount,
@@ -360,7 +336,6 @@ function automationMessage({
   warnings = [],
 }: {
   createdCount: number;
-  incomeRefreshedCount: number;
   pendingMonths: string[];
   provisionalCount: number;
   refreshedCount: number;
@@ -374,16 +349,6 @@ function automationMessage({
     return refreshedCount === 1
       ? "1 estimated snapshot updated with better month-end values."
       : `${refreshedCount} estimated snapshots updated with better month-end values.`;
-  }
-
-  if (incomeRefreshedCount > 0) {
-    if (provisionalCount > 0) {
-      return "Newly recorded income was added. Some completed months still use estimated values.";
-    }
-
-    return incomeRefreshedCount === 1
-      ? "1 snapshot updated with newly recorded income."
-      : `${incomeRefreshedCount} snapshots updated with newly recorded income.`;
   }
 
   if (
@@ -501,19 +466,8 @@ function getSnapshotAutomationTargetMonths({
         )
         .map((snapshot) => snapshot.month)
     : [];
-  const incomeRefreshMonths = state.monthlySnapshots
-    .filter(
-      (snapshot) =>
-        snapshot.month <= lastCompletedMonth &&
-        snapshot.generated?.source === "auto" &&
-        snapshot.generated.priceEvidence !== undefined &&
-        snapshot.salary !==
-          deriveMonthlySnapshotSalary(state.cashEntries, snapshot.month),
-    )
-    .map((snapshot) => snapshot.month);
-
   return [
-    ...new Set([...missingMonths, ...provisionalMonths, ...incomeRefreshMonths]),
+    ...new Set([...missingMonths, ...provisionalMonths]),
   ].sort();
 }
 
@@ -720,15 +674,6 @@ export function useProgress({
   const monthlyMetrics = {
     ...baseMonthlyMetrics,
     invested: monthlyInvested,
-    investmentRate:
-      baseMonthlyMetrics.incomeStatus === "available" &&
-      baseMonthlyMetrics.income > 0
-        ? normalizeMoney(
-            decimal(monthlyInvested)
-              .dividedBy(baseMonthlyMetrics.income)
-              .times(100),
-          )
-        : null,
   };
   const allocation = calculateAllocation({
     cashBalance,
@@ -811,14 +756,13 @@ export function useProgress({
     const lastCompletedMonth = getPreviousCompletedMonth(now);
     const restoreEpoch = store.getState().restoreEpoch;
     const cancelledResult: MonthEndSnapshotAutomationRunResult = {
-      createdCount: 0, incomeRefreshedCount: 0, lastCompletedMonth,
+      createdCount: 0, lastCompletedMonth,
       pendingMonths: [],
       provisionalCount: 0, provisionalMonths: [], refreshedCount: 0,
       snapshot: null, status: "insufficient-data", targetMonths: [], warnings: [],
     };
     const warnings: string[] = [];
     const createdSnapshots: MonthlySnapshot[] = [];
-    const incomeRefreshedSnapshots: MonthlySnapshot[] = [];
     const refreshedSnapshots: MonthlySnapshot[] = [];
 
     publishSnapshotAutomationProgress(store, {
@@ -879,7 +823,6 @@ export function useProgress({
         ppfAccounts: refreshedState.ppfAccounts,
         ppfLedgerEntries: refreshedState.ppfLedgerEntries,
         quoteCache: refreshedState.quoteCache,
-        refreshIncome: true,
         refreshProvisional: true,
         targetMonth,
         trades: refreshedState.trades,
@@ -907,21 +850,6 @@ export function useProgress({
           ) {
             store.getState().updateMonthlySnapshot(result.snapshot);
             refreshedSnapshots.push(result.snapshot);
-          } else if (
-            existingSnapshot.generated?.source === "auto" &&
-            existingSnapshot.salary !== result.snapshot.salary
-          ) {
-            const { salary: _existingSalary, ...snapshotWithoutSalary } =
-              existingSnapshot;
-            const updatedSnapshot: MonthlySnapshot =
-              result.snapshot.salary === undefined
-                ? snapshotWithoutSalary
-                : {
-                    ...existingSnapshot,
-                    salary: result.snapshot.salary,
-                  };
-            store.getState().updateMonthlySnapshot(updatedSnapshot);
-            incomeRefreshedSnapshots.push(updatedSnapshot);
           }
         } else {
           store.getState().addMonthlySnapshot(result.snapshot);
@@ -985,7 +913,6 @@ export function useProgress({
 
     return {
       createdCount: createdSnapshots.length,
-      incomeRefreshedCount: incomeRefreshedSnapshots.length,
       lastCompletedMonth,
       pendingMonths: unresolvedTargetMonths,
       provisionalCount,
@@ -1047,7 +974,6 @@ export function useProgress({
           });
           const result: MonthEndSnapshotAutomationRunResult = {
             createdCount: 0,
-            incomeRefreshedCount: 0,
             lastCompletedMonth: requestedLastCompletedMonth,
             pendingMonths: [],
             provisionalCount: provisionalMonths.length,
@@ -1175,12 +1101,7 @@ export function useProgress({
     errors,
     formValues,
     hasData,
-    investmentRate: monthlyMetrics.investmentRate,
     latestSummary,
-    monthlyIncome:
-      monthlyMetrics.incomeStatus === "available"
-        ? monthlyMetrics.income
-        : null,
     monthlyInvestment: monthlyMetrics.invested,
     monthlySummaries,
     portfolioChartData,

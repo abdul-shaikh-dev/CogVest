@@ -58,7 +58,7 @@ V1 answers:
 - How much is in equity, debt, crypto, and cash?
 - What changed this month?
 - How much did I invest this month?
-- What is my savings/investment rate?
+- How much did I add to and invest from my portfolio this month?
 - Can I track cash and holdings locally on Android?
 
 ## V1 Scope
@@ -200,15 +200,20 @@ All domain calculations must be pure functions under `src/domain/`.
 - The sale price is the actual execution price recorded by the user. A cached
   provider or manual quote may be offered once as a clearly qualified suggestion,
   but it is not an execution price and later quote updates never replace user input.
-- Cash additions are typed as income, capital contribution, or legacy
-  uncategorized data. Purchase funding, sale proceeds, and withdrawals are
-  distinct linked movement purposes.
-- Monthly investment rate uses typed income only. Capital contributions, sale
-  proceeds, and migrated legacy additions must not be treated as income.
+- Cash is money allocated to investing, not household income. New manual
+  additions are capital contributions. Purchase funding, sale proceeds,
+  Futures transfers, and withdrawals retain their distinct movement purposes.
+- Salary, household expenses, and income-based investment/savings/expense rates
+  are not collected or displayed. Snapshots retain monthly investment, invested
+  capital, external flows, market change, and all valuation evidence.
 - Persisted pre-contract additions migrate to legacy uncategorized entries so
-  historical cash remains visible without inventing income semantics.
+  historical cash remains visible without guessing external-flow semantics.
+- Schema 15 maps previous `income` additions to `capitalContribution` without
+  changing IDs, amounts, dates, links, labels, or notes. It removes only snapshot
+  `salary` and `monthlyExpense` metadata. Migration is durable and restart-safe;
+  failure preserves the original data and enters blocking recovery.
 - Monthly portfolio performance separates total value change from external cash
-  flow. Typed income and capital contributions are inflows, withdrawals are
+  flow. Capital contributions are inflows, withdrawals are
   outflows, and cash-funded buys or retained sale proceeds are internal transfers.
 - Opening positions are external baseline additions for performance and use
   their recorded cost. Monthly investment remains an activity metric; it is not

@@ -1,0 +1,48 @@
+appId: com.abdulshaikh.cogvest
+---
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Standard mode"
+- tapOn: "Show values"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-monthly-context
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: "Record income"
+- assertNotVisible: "Investment rate"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-standard-activity"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- scrollUntilVisible:
+    element:
+      id: snapshot-investment-input
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: "Salary"
+- assertNotVisible: "Monthly expense"
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-standard-snapshot"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Minimal mode"
+- tapOn: "Mask values"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- assertNotVisible:
+    id: snapshot-portfolio-input
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-minimal-masked-snapshot-masked"
+- tapOn:
+    id: reveal-snapshot-button
+- scrollUntilVisible:
+    element:
+      id: snapshot-investment-input
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-minimal-masked-snapshot"
+- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- tapOn: "Standard mode"
+- tapOn: "Show values"

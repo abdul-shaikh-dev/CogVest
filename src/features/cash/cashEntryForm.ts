@@ -11,7 +11,7 @@ import { normalizeMoney } from "@/src/domain/precision";
 
 export type ManualCashPurpose = Extract<
   CashEntryPurpose,
-  "capitalContribution" | "income" | "legacyUncategorized"
+  "capitalContribution" | "legacyUncategorized"
 >;
 
 export type CashEntryFormErrors = Partial<

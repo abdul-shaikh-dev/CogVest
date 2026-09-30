@@ -36,7 +36,6 @@ function snapshot(
     monthlyInvestment: 0,
     performanceBasis,
     portfolioValue,
-    salary: 0,
   };
 }
 
@@ -47,8 +46,8 @@ describe("buildMonthlyPerformanceBasis", () => {
         cashEntry({ purpose: "capitalContribution", type: "addition" }),
         cashEntry({
           amount: 20000,
-          id: "income",
-          purpose: "income",
+          id: "capitalContribution",
+          purpose: "capitalContribution",
           type: "addition",
         }),
         cashEntry({

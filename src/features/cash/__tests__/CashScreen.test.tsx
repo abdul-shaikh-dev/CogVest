@@ -21,6 +21,14 @@ function selectDate(
 }
 
 describe("CashScreen", () => {
+  it("uses a neutral label when the optional label is blank", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<CashScreen store={store} />);
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    fireEvent.changeText(screen.getByLabelText("Amount"), "1000");
+    fireEvent.press(screen.getByTestId("save-cash-entry-button"));
+    await waitFor(() => expect(store.getState().cashEntries[0]).toMatchObject({ amount: 1000, label: "Cash added", purpose: "capitalContribution" }));
+  });
   it("shows an empty cash state with zero balance", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
@@ -41,7 +49,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label"), "Broker cash");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "Broker cash");
     selectDate(getByTestId, "2026-04-20");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
@@ -62,7 +70,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(getByText("Withdraw"));
     fireEvent.changeText(getByLabelText("Amount"), "250");
-    fireEvent.changeText(getByLabelText("Label"), "Emergency withdrawal");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "Emergency withdrawal");
     selectDate(getByTestId, "2026-04-21");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
@@ -116,16 +124,15 @@ describe("CashScreen", () => {
     expect(queryByText("Deposit cash")).toBeNull();
   });
 
-  it("resumes a same-type draft with its date, purpose, and fields", () => {
+  it("resumes a same-type investing Cash draft with its date and fields", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
       <CashScreen now={new Date(2026, 3, 22, 12)} store={store} />,
     );
 
     fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.press(getByTestId("cash-purpose-income"));
     fireEvent.changeText(getByLabelText("Amount"), "1250");
-    fireEvent.changeText(getByLabelText("Label"), "April salary");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "April salary");
     expect(getByTestId("cash-notes-toggle").props.accessibilityState).toEqual({
       expanded: false,
     });
@@ -142,16 +149,13 @@ describe("CashScreen", () => {
 
     expect(getByTestId("cash-entry-modal")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1250");
-    expect(getByLabelText("Label")).toHaveProp("value", "April salary");
+    expect(getByLabelText("Label (optional)")).toHaveProp("value", "April salary");
     expect(getByLabelText("Note (optional)")).toHaveProp(
       "value",
       "Keep for the next buy",
     );
     expect(getByText("20 Apr 2026")).toBeTruthy();
-    expect(getByTestId("cash-purpose-income")).toHaveProp(
-      "accessibilityState",
-      { selected: true },
-    );
+    expect(queryByTestId("cash-purpose-income")).toBeNull();
   });
 
   it("requires explicit discard before switching a nonempty draft type", () => {
@@ -162,7 +166,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label"), "Do not reinterpret");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "Do not reinterpret");
     fireEvent.press(getByTestId("close-cash-entry-button"));
     fireEvent.press(getByTestId("cash-entry-withdraw"));
 
@@ -177,14 +181,14 @@ describe("CashScreen", () => {
     fireEvent.press(getByTestId("cash-entry-deposit"));
     expect(getByText("Deposit cash")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1000");
-    expect(getByLabelText("Label")).toHaveProp("value", "Do not reinterpret");
+    expect(getByLabelText("Label (optional)")).toHaveProp("value", "Do not reinterpret");
     fireEvent.press(getByTestId("close-cash-entry-button"));
     fireEvent.press(getByTestId("cash-entry-withdraw"));
     fireEvent.press(getByTestId("cash-discard-draft-button"));
 
     expect(getByText("Withdraw cash")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "");
-    expect(getByLabelText("Label")).toHaveProp("value", "");
+    expect(getByLabelText("Label (optional)")).toHaveProp("value", "");
     expect(store.getState().cashEntries).toEqual([]);
   });
 
@@ -194,7 +198,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     fireEvent.changeText(screen.getByLabelText("Amount"), "900");
-    fireEvent.changeText(screen.getByLabelText("Label"), "Back draft");
+    fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Back draft");
 
     act(() => {
       screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
@@ -205,7 +209,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
-    expect(screen.getByLabelText("Label")).toHaveProp("value", "Back draft");
+    expect(screen.getByLabelText("Label (optional)")).toHaveProp("value", "Back draft");
   });
 
   it("dismisses the visible keyboard before closing the modal on Android back", () => {
@@ -222,7 +226,7 @@ describe("CashScreen", () => {
 
       fireEvent.press(screen.getByTestId("cash-entry-deposit"));
       fireEvent.changeText(screen.getByLabelText("Amount"), "900");
-      fireEvent.changeText(screen.getByLabelText("Label"), "Keyboard draft");
+      fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Keyboard draft");
 
       act(() => {
         screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
@@ -232,7 +236,7 @@ describe("CashScreen", () => {
       expect(keyboardDismiss).toHaveBeenCalled();
       expect(screen.getByTestId("cash-entry-modal")).toBeTruthy();
       expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
-      expect(screen.getByLabelText("Label")).toHaveProp(
+      expect(screen.getByLabelText("Label (optional)")).toHaveProp(
         "value",
         "Keyboard draft",
       );
@@ -268,14 +272,13 @@ describe("CashScreen", () => {
     );
   });
 
-  it("records deposit purpose explicitly", async () => {
+  it("records deposits as investing contributions", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
 
     fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.press(getByTestId("cash-purpose-income"));
     fireEvent.changeText(getByLabelText("Amount"), "50000");
-    fireEvent.changeText(getByLabelText("Label"), "Salary");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "Salary");
     selectDate(getByTestId, "2026-05-01");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
@@ -284,7 +287,7 @@ describe("CashScreen", () => {
         expect.objectContaining({
           amount: 50000,
           label: "Salary",
-          purpose: "income",
+          purpose: "capitalContribution",
           type: "addition",
         }),
       ]);
@@ -297,7 +300,7 @@ describe("CashScreen", () => {
 
     fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label"), "One deposit");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "One deposit");
     fireEvent.press(getByTestId("save-cash-entry-button"));
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
@@ -327,7 +330,7 @@ describe("CashScreen", () => {
     };
     fireEvent.press(getByTestId("cash-entry-deposit"));
     fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label"), "Retry deposit");
+    fireEvent.changeText(getByLabelText("Label (optional)"), "Retry deposit");
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
@@ -371,7 +374,7 @@ describe("CashScreen", () => {
       date: "2026-05-01",
       id: "cash-salary",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().recordFundedBuy({
@@ -396,7 +399,7 @@ describe("CashScreen", () => {
 
     expect(getByText("Deployable cash")).toBeTruthy();
     expect(getByText("Invested")).toBeTruthy();
-    expect(getByText("Investment rate")).toBeTruthy();
+    expect(() => getByText("Investment rate")).toThrow();
     expect(getByText("₹20K moved into investments this month")).toBeTruthy();
     expect(getByText("Deposit")).toBeTruthy();
     expect(getByText("Withdraw")).toBeTruthy();
@@ -412,7 +415,7 @@ describe("CashScreen", () => {
       date: "2026-05-01",
       id: "cash-income-minimal",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().updatePreferences({ displayMode: "minimal" });
@@ -435,7 +438,7 @@ describe("CashScreen", () => {
       date: "2026-05-01",
       id: "cash-income-no-investment",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
 
@@ -500,14 +503,14 @@ describe("CashScreen", () => {
     expect(onCorrectEntry).toHaveBeenNthCalledWith(2, "cash-linked");
   });
 
-  it("shows income-based metrics as unavailable for unclassified legacy additions", () => {
+  it("keeps unclassified legacy Cash without household-income prompts", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 50000,
       date: "2026-05-01",
       id: "cash-income",
       label: "Salary",
-      purpose: "income",
+      purpose: "capitalContribution",
       type: "addition",
     });
     store.getState().addCashEntry({
@@ -526,9 +529,9 @@ describe("CashScreen", () => {
       />,
     );
 
-    expect(getByText("Investment rate")).toBeTruthy();
-    expect(getAllByText("Unavailable")).toHaveLength(2);
-    expect(getByTestId("cash-income-explanation")).toBeTruthy();
+    expect(() => getByText("Investment rate")).toThrow();
+    expect(() => getAllByText("Unavailable")).toThrow();
+    expect(() => getByTestId("cash-income-explanation")).toThrow();
     expect(queryByText("Not enough data")).toBeNull();
   });
 
@@ -542,7 +545,7 @@ describe("CashScreen", () => {
     fireEvent.press(getByTestId("save-cash-entry-button"));
 
     expect(getByText("Amount must be a valid number.")).toBeTruthy();
-    expect(getByText("Label is required.")).toBeTruthy();
+    expect(getByText("Label (optional)")).toBeTruthy();
     expect(getByText("22 Jul 2026")).toBeTruthy();
   });
 
@@ -573,8 +576,8 @@ describe("CashScreen", () => {
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(queryByText("Masked preview")).toBeNull();
-    expect(getAllByText("Unavailable")).toHaveLength(2);
-    expect(getByTestId("cash-income-explanation")).toBeTruthy();
+    expect(() => getAllByText("Unavailable")).toThrow();
+    expect(() => getByTestId("cash-income-explanation")).toThrow();
     expect(queryByText("Not enough data")).toBeNull();
     expect(getByText("Broker cash")).toBeTruthy();
     expect(
@@ -584,35 +587,27 @@ describe("CashScreen", () => {
     expect(queryByText("₹300 moved into investments this month")).toBeNull();
   });
 
-  it("opens the income recovery form preselected and reports a saved income entry", async () => {
+  it("adds investing cash without asking for its household source", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const onIncomeEntryOpened = jest.fn();
-    const onIncomeRecorded = jest.fn();
     const screen = render(
       <CashScreen
         now={new Date(2026, 8, 20, 12)}
-        onIncomeEntryOpened={onIncomeEntryOpened}
-        onIncomeRecorded={onIncomeRecorded}
-        openIncomeEntry
         store={store}
       />,
     );
 
-    expect(onIncomeEntryOpened).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("cash-purpose-income")).toHaveProp(
-      "accessibilityState",
-      { selected: true },
-    );
+    expect(screen.queryByTestId("cash-record-income")).toBeNull();
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    expect(screen.queryByTestId("cash-purpose-income")).toBeNull();
     fireEvent.changeText(screen.getByLabelText("Amount"), "50000");
-    fireEvent.changeText(screen.getByLabelText("Label"), "Salary");
+    fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Salary");
     fireEvent.press(screen.getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
-      expect(onIncomeRecorded).toHaveBeenCalledTimes(1);
-      expect(screen.getByText("0.00%")).toBeTruthy();
+      expect(store.getState().cashEntries).toHaveLength(1);
     });
     expect(store.getState().cashEntries[0]).toEqual(
-      expect.objectContaining({ amount: 50000, purpose: "income" }),
+      expect.objectContaining({ amount: 50000, purpose: "capitalContribution" }),
     );
   });
 });

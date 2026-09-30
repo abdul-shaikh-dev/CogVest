@@ -479,7 +479,7 @@ Accepted chart direction:
   not an accordion or stacked modal. Back restores the history year and scroll
   position; Android Back goes detail -> history -> Progress
 - details retain portfolio/invested values, current/previous class values,
-  allocation, cash, contribution-adjusted performance and available income/rates;
+  allocation, cash and contribution-adjusted performance;
   masking and Minimal Mode apply throughout
 - remove duplicate latest-asset badges and the secondary asset breakdown from
   the main chart surface. Charts retain oldest-to-newest plots and independent
@@ -518,10 +518,7 @@ Monthly Progress must preserve Excel parity concepts:
 - crypto value
 - invested value
 - monthly investment
-- salary if tracked
 - cash context
-- savings rate
-- expense rate if tracked
 - selected-month asset-class change and allocation context
 
 ## Cash Ledger
@@ -535,7 +532,7 @@ Baseline structure:
 - title `Cash Ledger`
 - subtitle `Manual ledger - local only`
 - cash balance hero
-- invested, available, and savings context
+- cash added and invested activity
 - Deposit and Withdraw actions immediately below the balance; each opens a
   focused full-screen entry panel rather than an inline form below summaries
 - invested cash is derived only from trustworthy linked investment accounting;
@@ -547,15 +544,15 @@ state should be acceptable and should not imply missing setup.
 
 The #284 entry panel groups amount, full-width calendar date, label and optional
 notes with the correctly named Save action. Notes are collapsed by default and
-retain their draft value when hidden, cancelled, or resumed. Deposit also has
-Contribution/Income purpose; withdrawal never pretends to be an investment
-purchase. Cancel and
+retain their draft value when hidden, cancelled, or resumed. Deposits are
+investing capital contributions with no household-source selector; withdrawal
+never pretends to be an investment purchase. Cancel and
 Android Back return to the ledger without saving and keep the same-type draft
 in memory. Switching entry type requires explicit discard when a draft exists.
 Do not promise durable draft recovery. Save failure retains the form and values;
 successful save closes it and updates the ledger once. Keep actions reachable
-with a docked keyboard and enlarged text. Unavailable income/rate use compact
-markers and one accurate dependency explanation, not repeated missing-data cards.
+with a docked keyboard and enlarged text. Do not collect salary/household expenses
+or add missing-income prompts. Preserve ambiguous legacy deposits until reviewed.
 
 ## Settings
 

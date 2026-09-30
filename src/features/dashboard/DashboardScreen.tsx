@@ -60,7 +60,6 @@ type DashboardScreenProps = {
   onOpenProgress?: () => void;
   onOpenInsight?: (kind: InsightKind) => void;
   onQuickSetup?: () => void;
-  onRecordIncome?: () => void;
   quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
@@ -176,7 +175,6 @@ export function DashboardScreen({
   onOpenProgress,
   onOpenInsight,
   onQuickSetup,
-  onRecordIncome,
   quickSetupSavedCount = 0,
   refreshQuotes,
   store = getPortfolioStore(),
@@ -540,13 +538,6 @@ export function DashboardScreen({
                   value: formatCompactINR(dashboard.monthlyMetrics.investment),
                 },
                 {
-                  label: "Investment rate",
-                  value:
-                    dashboard.monthlyMetrics.investmentRate === null
-                      ? "Unavailable"
-                      : formatPercentage(dashboard.monthlyMetrics.investmentRate),
-                },
-                {
                   exactValue: formatSignedINR(dashboard.monthlyMetrics.cashChange),
                   label: "Cash change",
                   masked: dashboard.maskWealthValues,
@@ -556,21 +547,6 @@ export function DashboardScreen({
                 },
               ]}
             />
-            {dashboard.monthlyMetrics.incomeStatus === "unavailable" ? (
-              <View style={styles.monthlyRecovery}>
-                <AppText color="secondary" style={styles.monthlyRecoveryCopy} variant="caption">
-                  Add this month's income to calculate the investment rate.
-                </AppText>
-                {onRecordIncome ? (
-                  <AppButton
-                    onPress={onRecordIncome}
-                    testID="dashboard-record-income"
-                    title="Record income"
-                    variant="ghost"
-                  />
-                ) : null}
-              </View>
-            ) : null}
           </PremiumCard>
         ) : null}
 
@@ -984,17 +960,6 @@ const styles = StyleSheet.create({
   },
   negativeText: {
     color: colors.loss,
-  },
-  monthlyRecovery: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    justifyContent: "space-between",
-  },
-  monthlyRecoveryCopy: {
-    flex: 1,
-    minWidth: 180,
   },
   positiveText: {
     color: colors.profit,

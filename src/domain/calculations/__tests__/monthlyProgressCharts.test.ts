@@ -24,7 +24,6 @@ function snapshot(
       weightedExternalFlow: 0,
     },
     portfolioValue: 0,
-    salary: 0,
     ...values,
   };
 }
