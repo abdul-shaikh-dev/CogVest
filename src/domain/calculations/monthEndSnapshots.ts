@@ -56,6 +56,58 @@ export type GeneratedSnapshotStatus =
   | "created"
   | "insufficient-data";
 
+export function refreshFuturesCashSnapshotHistory({
+  assets,
+  cashEntries,
+  earliestAffectedMonth = cashEntries
+    .filter((entry) => entry.purpose === "futuresTransfer" && entry.linkedFutures)
+    .map((entry) => entry.date.slice(0, 7)).sort()[0],
+  monthlySnapshots,
+  openingPositions,
+  ppfAccounts = [],
+  ppfLedgerEntries = [],
+}: Pick<BuildGeneratedMonthEndSnapshotInput,
+  "assets" | "cashEntries" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries"
+> & { earliestAffectedMonth?: string; monthlySnapshots: MonthlySnapshot[] }): MonthlySnapshot[] {
+  if (!earliestAffectedMonth) return monthlySnapshots;
+  let changed = false;
+  const refreshed = monthlySnapshots.map((snapshot) => {
+    // Aggregate-only legacy records may contain corrections without provenance.
+    const automatic = snapshot.generated?.source === "auto" &&
+      snapshot.generated.priceEvidence !== undefined;
+    if (snapshot.month < earliestAffectedMonth ||
+        (!automatic && snapshot.performanceBasis?.status !== "complete")) return snapshot;
+    const monthEnd = getMonthEndDate(snapshot.month);
+    const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(ppfAccounts, formatLocalCalendarDate(monthEnd));
+    const supportedAssetIds = new Set(assets
+      .filter((asset) => isV1SupportedAsset(asset) && !linkedLegacyAssetIds.has(asset.id))
+      .map((asset) => asset.id));
+    const performanceBasis = buildMonthlyPerformanceBasis({
+      cashEntries: cashEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
+      openingPositions: openingPositions.filter((position) =>
+        supportedAssetIds.has(position.assetId) &&
+        isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd)),
+      ppfLedgerEntries: ppfLedgerEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
+      targetMonth: snapshot.month,
+    });
+    // Cash can be refreshed without selecting new market prices. Keep every
+    // saved price, confidence label, ID and manual valuation exactly as recorded.
+    const cashValue = automatic ? normalizeMoney(calculateCashBalance(cashEntries, monthEnd)) : snapshot.cashValue;
+    const next = {
+      ...snapshot,
+      cashValue,
+      portfolioValue: automatic
+        ? normalizeMoney(decimal(snapshot.portfolioValue).plus(cashValue).minus(snapshot.cashValue))
+        : snapshot.portfolioValue,
+      performanceBasis,
+    };
+    if (JSON.stringify(next) === JSON.stringify(snapshot)) return snapshot;
+    changed = true;
+    return next;
+  });
+  return changed ? refreshed : monthlySnapshots;
+}
+
 export type GeneratedMonthEndSnapshotResult = {
   snapshot: MonthlySnapshot | null;
   status: GeneratedSnapshotStatus;

@@ -29,6 +29,7 @@ import {
   buildGeneratedMonthEndSnapshot,
   getMissingCompletedSnapshotMonths,
   getMonthlySnapshotPriceConfidence,
+  refreshFuturesCashSnapshotHistory,
 } from "@/src/domain/calculations";
 import {
   formatLocalCalendarDate,
@@ -671,8 +672,10 @@ function readPortfolioSnapshot(
   }
 
   try {
-    const data = migrate(parsed.data);
-    if (parsed.data.schemaVersion !== portfolioSchemaVersion) {
+    const migrated = migrate(parsed.data);
+    const monthlySnapshots = refreshFuturesCashSnapshotHistory(migrated);
+    const data = { ...migrated, monthlySnapshots };
+    if (parsed.data.schemaVersion !== portfolioSchemaVersion || monthlySnapshots !== migrated.monthlySnapshots) {
       // One atomic record replacement; a failed write retains the original for recovery.
       storage.setItem(portfolioStorageKey, data as JsonValue);
     }
@@ -1912,7 +1915,14 @@ export function createPortfolioStore({
       if (revision(state) !== expectedRevision) {
         throw new Error("Your portfolio changed. Select the backup again to review the latest replacement details.");
       }
-      const candidate = validateBackupPayload(payload);
+      const validated = validateBackupPayload(payload);
+      const candidate = {
+        ...validated,
+        portfolio: {
+          ...validated.portfolio,
+          monthlySnapshots: refreshFuturesCashSnapshotHistory(validated.portfolio),
+        },
+      };
       try {
         commitBackupRestore(storage, {
           [portfolioStorageKey]: JSON.stringify(candidate.portfolio),
@@ -2040,8 +2050,12 @@ export function createPortfolioStore({
       if (!parsePersistedPortfolio(JSON.stringify({ ...selectRawSnapshot(state), cashEntries, futuresAccounts })).success) {
         throw new Error("Linked Futures funding cannot be safely persisted.");
       }
-      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts });
-      set({ cashEntries, futuresAccounts });
+      const monthlySnapshots = refreshFuturesCashSnapshotHistory({
+        ...state, cashEntries,
+        earliestAffectedMonth: [cashEntry.date, existingCash?.date].filter((date): date is string => Boolean(date)).sort()[0].slice(0, 7),
+      });
+      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts, monthlySnapshots });
+      set({ cashEntries, futuresAccounts, monthlySnapshots });
     },
     deleteFuturesCashTransfer: (accountId, eventId) => {
       const state = get();
@@ -2050,6 +2064,7 @@ export function createPortfolioStore({
       if (!account || !event || event.type !== "transfer" || !event.linkedCashEntryId) {
         throw new Error("Linked Futures funding was not found.");
       }
+      const removedCash = state.cashEntries.find((item) => item.id === event.linkedCashEntryId)!;
       const cashEntries = state.cashEntries.filter((item) => item.id !== event.linkedCashEntryId);
       if (!hasNonnegativeCashTimeline(cashEntries)) throw new Error("Removing this transfer would make recorded Cash negative.");
       const nextAccount: UsdmFuturesAccount = {
@@ -2059,8 +2074,11 @@ export function createPortfolioStore({
       validateUsdmFuturesAccount(nextAccount);
       const futuresAccounts = state.futuresAccounts.map((item) => item.id === accountId ? nextAccount : item);
       validateFuturesCashLinks(cashEntries, futuresAccounts);
-      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts });
-      set({ cashEntries, futuresAccounts });
+      const monthlySnapshots = refreshFuturesCashSnapshotHistory({
+        ...state, cashEntries, earliestAffectedMonth: removedCash.date.slice(0, 7),
+      });
+      persistPortfolioTransition(storage, state, { cashEntries, futuresAccounts, monthlySnapshots });
+      set({ cashEntries, futuresAccounts, monthlySnapshots });
     },
     deleteFuturesAccount: (accountId) => {
       const state = get();

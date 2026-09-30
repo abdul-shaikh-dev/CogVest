@@ -40,6 +40,40 @@ function snapshot(
 }
 
 describe("buildMonthlyPerformanceBasis", () => {
+  it.each([
+    ["withdrawal", 9010, 20000, 10990, -9010],
+    ["addition", 1795, 10990, 12785, 1795],
+  ] as const)("classifies a linked Futures %s as crossing the historical boundary", (type, amount, before, after, flow) => {
+    const basis = buildMonthlyPerformanceBasis({
+      cashEntries: [cashEntry({
+        amount, type, purpose: "futuresTransfer", date: "2026-05-16",
+        linkedFutures: { accountId: "wallet", eventId: "transfer" },
+      })],
+      openingPositions: [], targetMonth: "2026-05",
+    });
+    expect(basis).toMatchObject({ status: "complete", netExternalFlow: flow });
+    expect(calculateMonthlyPerformance(snapshot("2026-04", before), snapshot("2026-05", after, basis)))
+      .toMatchObject({ marketMovement: 0, marketMovementPct: 0, netExternalFlow: flow, status: "available" });
+  });
+
+  it("does not assume a detached Futures Cash leg has verified flow semantics", () => {
+    expect(buildMonthlyPerformanceBasis({
+      cashEntries: [cashEntry({ purpose: "futuresTransfer", type: "withdrawal" })],
+      openingPositions: [], targetMonth: "2026-05",
+    })).toMatchObject({ reason: "ambiguous-cash-flow", status: "unavailable" });
+  });
+
+  it("uses the persisted Cash calendar month at a Futures UTC-month boundary", () => {
+    const entry = cashEntry({
+      date: "2026-06-01", amount: 9000, purpose: "futuresTransfer", type: "withdrawal",
+      linkedFutures: { accountId: "wallet", eventId: "2026-05-31T20:30:00Z" },
+    });
+    expect(buildMonthlyPerformanceBasis({ cashEntries: [entry], openingPositions: [], targetMonth: "2026-05" }))
+      .toMatchObject({ netExternalFlow: 0 });
+    expect(buildMonthlyPerformanceBasis({ cashEntries: [entry], openingPositions: [], targetMonth: "2026-06" }))
+      .toMatchObject({ netExternalFlow: -9000, weightedExternalFlow: -9000 });
+  });
+
   it("counts typed external inflows and withdrawals but ignores linked trades", () => {
     const basis = buildMonthlyPerformanceBasis({
       cashEntries: [
