@@ -71,10 +71,18 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
     return { amount: decimal(entry.amount).negated(), date: entry.date };
   }
 
+  // Historical Progress excludes Futures, so its Cash leg crosses this report's
+  // boundary even though the paired movement is internal to the whole portfolio.
+  if (entry.purpose === "futuresTransfer" && entry.linkedFutures) {
+    return {
+      amount: entry.type === "addition" ? decimal(entry.amount) : decimal(entry.amount).negated(),
+      date: entry.date,
+    };
+  }
+
   if (
     (entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
-    (entry.type === "addition" && entry.purpose === "saleProceeds") ||
-    entry.purpose === "futuresTransfer"
+    (entry.type === "addition" && entry.purpose === "saleProceeds")
   ) {
     return null;
   }

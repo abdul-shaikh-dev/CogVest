@@ -222,6 +222,15 @@ All domain calculations must be pure functions under `src/domain/`.
   uses the previous portfolio value plus date-weighted external flow as the
   denominator. Missing, legacy, ambiguous, or non-positive-denominator inputs
   must show performance as unavailable rather than zero or a guessed return.
+- Historical Progress excludes Futures. Linked Cash-to-Futures withdrawals and
+  Futures-to-Cash additions cross that report's boundary at their actual INR Cash
+  amounts (including conversion costs). They remain internal movements for
+  whole-portfolio contribution accounting. Editing those movements refreshes
+  affected generated Cash values and flow evidence atomically, without replacing
+  historical prices or manual valuation overrides. Existing affected snapshots
+    are repaired durably on hydration and backup restore without provider refetch.
+    Aggregate-only legacy snapshots retain their values because correction
+    provenance is unavailable; only previously complete flow evidence is refreshed.
 
 ### V1 Currency And Quote Contract
 
