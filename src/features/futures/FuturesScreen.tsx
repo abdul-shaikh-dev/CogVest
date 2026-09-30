@@ -1,8 +1,10 @@
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppButton, AppText, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
+import { AppButton, AppText, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
+import { useDraftExit } from "./useDraftExit";
 import { FormTextField } from "@/src/components/forms";
 import { decimal } from "@/src/domain/precision";
 import {
@@ -62,8 +64,11 @@ const blankEvent = (): EventDraft => ({
   transferBoundary: "external", inrPerUsdt: "", rateObservedAt: "", rateSource: "",
 });
 
-function Choice({ label, selected, onPress, testID }: { label: string; selected: boolean; onPress: () => void; testID?: string }) {
-  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.choice, selected && styles.selected]} testID={testID}><AppText weight={selected ? "bold" : "regular"}>{label}</AppText></Pressable>;
+function Choice({ label, selected, onPress, testID, checkbox = false }: { label: string; selected: boolean; onPress: () => void; testID?: string; checkbox?: boolean }) {
+  return <Pressable accessibilityRole={checkbox ? "checkbox" : "radio"} accessibilityLabel={label} accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.choice, checkbox && styles.checkbox, selected && styles.selected]} testID={testID}>
+    {checkbox ? <Ionicons name={selected ? "checkbox" : "square-outline"} size={22} color={selected ? colors.primary : colors.text.secondary} accessible={false} /> : null}
+    <AppText weight={selected ? "bold" : "regular"} style={checkbox ? styles.choiceLabel : undefined}>{label}</AppText>
+  </Pressable>;
 }
 
 function Money({ value, masked }: { value: string; masked: boolean }) {
@@ -116,6 +121,19 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const [eventsConfirmed, setEventsConfirmed] = useState(account?.valuation?.reconciliation.allWalletEventsConfirmed ?? false);
   const [boundaryConfirmed, setBoundaryConfirmed] = useState(account?.valuation?.reconciliation.portfolioBoundaryConfirmed ?? false);
 
+  const walletSnapshot = JSON.stringify([openingAt, openingWallet, openingRate, openingRateAt, openingRateSource]);
+  const valuationSnapshot = JSON.stringify([valuationAt, observedWallet, observedWalletAt, walletSource, rate, rateAt, rateSource, markPrices, markMargins, markSource, markAt, positionsConfirmed, eventsConfirmed, boundaryConfirmed]);
+  const walletBaseline = useRef(walletSnapshot);
+  const valuationBaseline = useRef(valuationSnapshot);
+  const eventBaseline = useRef(JSON.stringify(draft));
+  const cashBaseline = useRef(JSON.stringify(cashFunding));
+  const eventDirty = editingEvent && JSON.stringify(draft) !== eventBaseline.current;
+  const cashDirty = editingCashFunding && JSON.stringify(cashFunding) !== cashBaseline.current;
+  const dirty = (editingAccount && walletSnapshot !== walletBaseline.current) || eventDirty || cashDirty || (Boolean(account) && valuationSnapshot !== valuationBaseline.current);
+  const exit = useDraftExit(dirty, onBack);
+  const startEvent = (next: EventDraft) => { eventBaseline.current = JSON.stringify(next); setDraft(next); setEditingEvent(true); };
+  const startCash = (next: CashFundingDraft) => { cashBaseline.current = JSON.stringify(next); setCashFunding(next); setEditingCashFunding(true); };
+
   const setField = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
   const report = (cause: unknown) => {
     setError(cause instanceof Error ? cause.message : "Could not save the futures record.");
@@ -137,7 +155,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       const cash = state.cashEntries.find((item) => item.id === event.linkedCashEntryId);
       const existingRate = account?.eventRates?.find((item) => item.eventId === event.id);
       if (!cash || !existingRate) return report(new Error("Linked Cash funding is incomplete. Restore a complete backup."));
-      setCashFunding({ eventId: event.id, cashEntryId: cash.id,
+      startCash({ eventId: event.id, cashEntryId: cash.id,
         direction: decimal(event.amountUsdt).isPositive() ? "toFutures" : "toCash",
         at: event.at, usdt: decimal(event.amountUsdt).abs().toString(), cashInr: String(cash.amount),
         feeInr: event.conversionFeeInr ?? "0", rate: existingRate.inrPerUsdt,
@@ -147,7 +165,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       return;
     }
     const existingRate = account?.eventRates?.find((item) => item.eventId === event.id);
-    setDraft({ ...blankEvent(), ...event, inrPerUsdt: existingRate?.inrPerUsdt ?? "", rateObservedAt: existingRate?.observedAt ?? "", rateSource: existingRate?.source ?? "" });
+    startEvent({ ...blankEvent(), ...event, inrPerUsdt: existingRate?.inrPerUsdt ?? "", rateObservedAt: existingRate?.observedAt ?? "", rateSource: existingRate?.source ?? "" });
     setEditingEvent(true);
     setError("");
   };
@@ -180,12 +198,12 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       const linked = account.events.find((item) => item.id === id);
       if (linked?.type === "transfer" && linked.linkedCashEntryId) {
         store.getState().deleteFuturesCashTransfer(account.id, id);
-        setEditingCashFunding(false);
+        if (cashFunding.eventId === id) setEditingCashFunding(false);
         setError("");
         return;
       }
       store.getState().saveFuturesAccount({ ...account, events: account.events.filter((item) => item.id !== id), eventRates: account.eventRates?.filter((item) => item.eventId !== id), valuation: undefined });
-      setEditingEvent(false);
+      if (draft.id === id) setEditingEvent(false);
       setError("");
     } catch (cause) { report(cause); }
   };
@@ -223,7 +241,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       { text: "Delete wallet", style: "destructive", onPress: () => {
         try {
           store.getState().deleteFuturesAccount(ACCOUNT_ID);
-          onBack();
+          exit.request(onBack, true, false);
         } catch (cause) { report(cause); }
       } },
     ],
@@ -242,6 +260,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           allOpenPositionsConfirmed: positionsConfirmed, allWalletEventsConfirmed: eventsConfirmed,
           portfolioBoundaryConfirmed: boundaryConfirmed },
       } });
+      valuationBaseline.current = valuationSnapshot;
       setError("");
     } catch (cause) { report(cause); }
   };
@@ -263,8 +282,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   return <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.fill}>
     <ScreenContainer scroll scrollRef={scrollRef} testID="futures-screen">
       <View style={styles.content}>
-        <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" />
-        <Pressable accessibilityRole="button" onPress={onBack} style={styles.back}><AppText color="secondary">‹ Settings</AppText></Pressable>
+        <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />
         {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="futures-error">{error}</AppText> : null}
         <PremiumCard>
           <SectionHeader title="Futures wallet" />
@@ -272,7 +290,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           {account && !editingAccount ? <>
             <AppText>Starting wallet · {displayTime(account.openingAt)}</AppText>
             <Money value={`${account.openingWalletUsdt} USDT`} masked={masked} />
-            <AppButton title="Correct starting wallet" variant="secondary" onPress={() => setEditingAccount(true)} />
+            <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { walletBaseline.current = walletSnapshot; setEditingAccount(true); }} />
           </> : <>
             <FormTextField label="Starting wallet date and time (ISO, timezone required)" value={openingAt} onChangeText={setOpeningAt} testID="futures-opening-at" />
             <FormTextField label="Observed starting wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={openingWallet} onChangeText={setOpeningWallet} testID="futures-opening-wallet" />
@@ -315,7 +333,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <AppText weight="bold">{event.type === "execution" ? `${event.side.toUpperCase()} ${event.contract}` : event.type === "funding" ? `Funding ${event.contract}` : event.linkedCashEntryId ? "Linked Cash transfer" : event.transferBoundary === "internal" ? "Unlinked Spot transfer" : "External transfer"}</AppText>
               <AppText color="secondary">{displayTime(event.at)} · {masked ? "••••" : event.type === "execution" ? `${event.quantity} @ ${event.price} USDT` : `${event.amountUsdt} USDT`}</AppText>
               <View style={styles.choices}>
-                <AppButton title="Edit" variant="secondary" onPress={() => editEvent(event)} testID={`edit-futures-${event.id}`} />
+                <AppButton title="Edit" variant="secondary" onPress={() => exit.request(() => editEvent(event), false, event.type === "transfer" && event.linkedCashEntryId ? cashDirty : eventDirty)} testID={`edit-futures-${event.id}`} />
                 <Pressable accessibilityRole="button" onPress={() => confirmDeleteEvent(event.id)} style={styles.eventDelete} testID={`delete-futures-${event.id}`}><AppText style={styles.error}>Delete</AppText></Pressable>
               </View>
             </View>)}
@@ -328,7 +346,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
                 {cycle.beforeWalletCutover ? <AppText color="secondary">Before starting wallet; not added again.</AppText> : null}
               </View>)}
             </> : null}
-            {!editingEvent ? <AppButton title="Add activity" onPress={() => { setDraft(blankEvent()); setEditingEvent(true); }} testID="futures-add-event" /> : <>
+            {!editingEvent ? <AppButton title="Add activity" onPress={() => startEvent(blankEvent())} testID="futures-add-event" /> : <>
               <View style={styles.choices} accessibilityRole="radiogroup">
                 {(["execution", "funding", "transfer"] as const).map((type) => <Choice key={type} label={type} selected={draft.type === type} onPress={() => setField("type", type)} testID={`futures-type-${type}`} />)}
               </View>
@@ -346,13 +364,13 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <FormTextField label="Historical INR rate observed at (ISO)" value={draft.rateObservedAt} onChangeText={(value) => setField("rateObservedAt", value)} testID="futures-event-rate-at" />
               <FormTextField label="Historical rate source" value={draft.rateSource} onChangeText={(value) => setField("rateSource", value)} testID="futures-event-rate-source" />
               <AppButton title="Save activity" onPress={saveEvent} testID="futures-save-event" />
-              <AppButton title="Cancel" variant="ghost" onPress={() => setEditingEvent(false)} />
+              <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingEvent(false), false, eventDirty)} testID="futures-cancel-event" />
             </>}
           </PremiumCard>
           <PremiumCard testID="futures-cash-funding">
             <SectionHeader title="Move Cash and USDT" />
             <AppText color="secondary">Record a movement you already made between recorded INR Cash and your Binance USDT Futures wallet. This does not transfer funds or open a trade on Binance. Enter executions separately.</AppText>
-            {!editingCashFunding ? <AppButton title="Record Cash funding or withdrawal" variant="secondary" onPress={() => { setCashFunding(blankCashFunding()); setEditingCashFunding(true); }} testID="futures-add-cash-funding" /> : <>
+            {!editingCashFunding ? <AppButton title="Record Cash funding or withdrawal" variant="secondary" onPress={() => startCash(blankCashFunding())} testID="futures-add-cash-funding" /> : <>
               <View style={styles.choices} accessibilityRole="radiogroup">
                 <Choice label="Cash to Futures" selected={cashFunding.direction === "toFutures"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toFutures" }))} />
                 <Choice label="Futures to Cash" selected={cashFunding.direction === "toCash"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toCash" }))} />
@@ -367,7 +385,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <FormTextField label="Reference or notes (optional)" value={cashFunding.notes} onChangeText={(notes) => setCashFunding((current) => ({ ...current, notes }))} />
               <AppText color="secondary">Cash amount must equal USDT × recorded rate plus the INR fee when funding, or minus the fee when withdrawing. A linked transfer is not an external contribution.</AppText>
               <AppButton title={cashFunding.eventId ? "Save corrected movement" : "Save linked movement"} onPress={saveCashFunding} testID="futures-save-cash-funding" />
-              <AppButton title="Cancel" variant="ghost" onPress={() => setEditingCashFunding(false)} />
+              <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingCashFunding(false), false, cashDirty)} testID="futures-cancel-cash" />
             </>}
           </PremiumCard>
           <PremiumCard>
@@ -384,28 +402,38 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <FormTextField label="INR per USDT" keyboardType="decimal-pad" value={rate} onChangeText={setRate} testID="futures-current-rate" />
             <FormTextField label="INR rate observed at (ISO)" value={rateAt} onChangeText={setRateAt} testID="futures-current-rate-at" />
             <FormTextField label="INR rate source" value={rateSource} onChangeText={setRateSource} testID="futures-current-rate-source" />
-            <Choice label="All open positions checked against Binance" selected={positionsConfirmed} onPress={() => setPositionsConfirmed((value) => !value)} testID="futures-positions-confirmed" />
-            <Choice label="All wallet events since starting balance entered" selected={eventsConfirmed} onPress={() => setEventsConfirmed((value) => !value)} testID="futures-events-confirmed" />
-            <Choice label="Wallet is not already counted in Spot, Cash or another holding" selected={boundaryConfirmed} onPress={() => setBoundaryConfirmed((value) => !value)} testID="futures-boundary-confirmed" />
+            <Choice checkbox label="All open positions checked against Binance" selected={positionsConfirmed} onPress={() => setPositionsConfirmed((value) => !value)} testID="futures-positions-confirmed" />
+            <Choice checkbox label="All wallet events since starting balance entered" selected={eventsConfirmed} onPress={() => setEventsConfirmed((value) => !value)} testID="futures-events-confirmed" />
+            <Choice checkbox label="Wallet is not already counted in Spot, Cash or another holding" selected={boundaryConfirmed} onPress={() => setBoundaryConfirmed((value) => !value)} testID="futures-boundary-confirmed" />
             <AppButton title="Save valuation evidence" onPress={saveValuation} testID="futures-save-valuation" />
           </PremiumCard>
           <Pressable accessibilityRole="button" onPress={confirmDeleteAccount} style={styles.deleteAction} testID="futures-delete-account"><AppText style={styles.error}>Delete Futures wallet</AppText></Pressable>
         </> : null}
       </View>
     </ScreenContainer>
+    <Modal visible={exit.prompt} transparent onRequestClose={exit.keepEditing}>
+      <View style={styles.modal} accessibilityViewIsModal><PremiumCard>
+        <SectionHeader title="Discard unsaved changes?" />
+        <AppText color="secondary">These draft edits have not been saved. Existing wallet and activity records will not be deleted.</AppText>
+        <AppButton title="Keep editing" onPress={exit.keepEditing} testID="futures-keep-editing" />
+        <AppButton title="Discard changes" variant="secondary" onPress={exit.discard} testID="futures-discard" />
+      </PremiumCard></View>
+    </Modal>
   </KeyboardAvoidingView>;
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  back: { alignSelf: "flex-start", paddingVertical: spacing.xs },
+  modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
   breakdown: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },
   deleteAction: { alignSelf: "center", minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
   eventDelete: { minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
   content: { gap: spacing.cardGap, paddingTop: spacing.md, paddingBottom: spacing.xl },
   row: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  choice: { borderColor: colors.border.strong, borderWidth: 1, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  choice: { minHeight: 48, justifyContent: "center", borderColor: colors.border.strong, borderWidth: 1, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   selected: { borderColor: colors.primary, backgroundColor: colors.surface.elevated },
+  checkbox: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  choiceLabel: { flex: 1 },
   error: { color: colors.loss },
 });
