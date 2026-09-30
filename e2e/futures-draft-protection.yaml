@@ -1,0 +1,139 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-screen
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: futures-back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-keep-editing
+- assertVisible: "1000"
+- back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-discard
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-save-account
+- tapOn:
+    id: futures-save-account
+- assertVisible: "0 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-quantity
+    direction: DOWN
+- tapOn:
+    id: futures-quantity
+- inputText: "123"
+- hideKeyboard
+- back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-keep-editing
+- assertVisible: "123"
+- scrollUntilVisible:
+    element:
+      id: futures-back
+    direction: UP
+- tapOn:
+    id: futures-back
+- tapOn:
+    id: futures-discard
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-add-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-add-cash-funding
+- scrollUntilVisible:
+    element:
+      id: futures-cash-usdt
+    direction: DOWN
+- tapOn:
+    id: futures-cash-usdt
+- inputText: "123"
+- hideKeyboard
+- back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-keep-editing
+- assertVisible: "123"
+- scrollUntilVisible:
+    element:
+      id: futures-back
+    direction: UP
+- tapOn:
+    id: futures-back
+- tapOn:
+    id: futures-discard
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet
+- inputText: "123"
+- hideKeyboard
+- back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-keep-editing
+- assertVisible: "123"
+- scrollUntilVisible:
+    element:
+      id: futures-positions-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-positions-confirmed
+- tapOn:
+    id: futures-events-confirmed
+- takeScreenshot: node_modules/.cache/futures-independent-confirmations
+- scrollUntilVisible:
+    element:
+      id: futures-back
+    direction: UP
+- tapOn:
+    id: futures-back
+- tapOn:
+    id: futures-discard
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "0 USDT"
+- assertNotVisible: "BUY BTCUSDT"
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet
+    direction: DOWN
+- assertNotVisible: "123"
+- scrollUntilVisible:
+    element:
+      id: futures-back
+    direction: UP
+- tapOn:
+    id: futures-back
+- assertNotVisible: "Discard unsaved changes?"
