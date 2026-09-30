@@ -25,6 +25,7 @@ const defaultFlows = [
   "e2e/zerodha-tradebook-import.yaml",
   "e2e/futures-manual-wallet.yaml",
   "e2e/futures-draft-protection.yaml",
+  "e2e/futures-timestamp-evidence.yaml",
   "e2e/futures-cash-funding.yaml",
   "e2e/investing-cash-migration.yaml",
   "e2e/holdings.yaml",

@@ -181,6 +181,10 @@ function contract(value: string) {
   }
 }
 
+export function parseUsdmTimestamp(value: string): number {
+  return timestamp(value, "Date and time");
+}
+
 function canonical(value: FinancialDecimalInstance) {
   return value.toFixed();
 }

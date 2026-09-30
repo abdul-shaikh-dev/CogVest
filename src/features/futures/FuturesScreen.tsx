@@ -1,11 +1,12 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useRef, useState, useSyncExternalStore, type ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { AppButton, AppText, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
 import { useDraftExit } from "./useDraftExit";
-import { FormTextField } from "@/src/components/forms";
+import { DateTimeField, FormTextField } from "@/src/components/forms";
+import { futuresEntryErrors, type FuturesEntryField } from "@/src/domain/futuresEntry";
 import { decimal } from "@/src/domain/precision";
 import {
   calculateUsdmPortfolioContribution,
@@ -20,6 +21,24 @@ import { colors, spacing } from "@/src/theme";
 import { createId } from "@/src/utils";
 
 type EventKind = "execution" | "funding" | "transfer";
+type EntryTarget = { layout: View | null; input?: TextInput | null };
+const EntryErrors = createContext<{ errors: Record<string, string>; refs: Record<string, EntryTarget>; clear: (id: string) => void }>({ errors: {}, refs: {}, clear: () => {} });
+function EntryField(props: ComponentProps<typeof FormTextField>) {
+  const { errors, refs, clear } = useContext(EntryErrors);
+  const target = useRef<EntryTarget>({ layout: null, input: null });
+  return <View collapsable={false} ref={(node) => {
+    target.current.layout = node;
+    if (props.testID) refs[props.testID] = target.current;
+  }}><FormTextField {...props} error={props.testID ? errors[props.testID] : undefined}
+    inputRef={(node) => { target.current.input = node; }}
+    onChangeText={(value) => { if (props.testID) clear(props.testID); props.onChangeText(value); }} /></View>;
+}
+function TimeField(props: ComponentProps<typeof DateTimeField>) {
+  const { errors, refs, clear } = useContext(EntryErrors);
+  return <DateTimeField {...props} error={errors[props.testID]}
+    fieldRef={(node) => { refs[props.testID] = { layout: node }; }}
+    onChange={(value) => { clear(props.testID); props.onChange(value); }} />;
+}
 type EventDraft = {
   id: string;
   type: EventKind;
@@ -94,6 +113,8 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const account = state.futuresAccounts.find((item) => item.id === ACCOUNT_ID);
   const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const fieldRefs = useRef<Record<string, EntryTarget>>({});
   const masked = state.preferences.maskWealthValues;
   const [openingAt, setOpeningAt] = useState(account?.openingAt ?? isoNow());
   const [openingWallet, setOpeningWallet] = useState(account?.openingWalletUsdt ?? "0");
@@ -106,6 +127,11 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const [cashFunding, setCashFunding] = useState<CashFundingDraft>(blankCashFunding);
   const [editingCashFunding, setEditingCashFunding] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const clearFieldError = (id: string) => setFieldErrors((current) => {
+    if (!(id in current)) return current;
+    const next = { ...current }; delete next[id]; return next;
+  });
   const [valuationAt, setValuationAt] = useState(account?.valuation?.asOf ?? isoNow());
   const [observedWallet, setObservedWallet] = useState(account?.valuation?.reconciliation.observedWalletUsdt ?? "");
   const [observedWalletAt, setObservedWalletAt] = useState(account?.valuation?.reconciliation.observedAt ?? "");
@@ -139,7 +165,34 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
     setError(cause instanceof Error ? cause.message : "Could not save the futures record.");
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
+  const checkFields = (fields: Record<string, FuturesEntryField>) => {
+    const errors = futuresEntryErrors(fields);
+    setFieldErrors(errors);
+    const first = Object.keys(errors)[0];
+    if (first) {
+      setError("Check the highlighted fields.");
+      Keyboard.dismiss();
+      requestAnimationFrame(() => {
+        const node = fieldRefs.current[first];
+        const content = contentRef.current;
+        if (node?.layout && content) node.layout.measureLayout(content, (_x, y) => {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.md), animated: true });
+          node.input?.focus();
+        }, () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
+      });
+      return false;
+    }
+    return true;
+  };
   const saveAccount = () => {
+    if (!checkFields({
+      "futures-opening-at": { value: openingAt, label: "Starting wallet time", timestamp: true },
+      "futures-opening-wallet": { value: openingWallet, label: "Starting wallet balance" },
+      ...(openingRate ? {
+        "futures-opening-rate-at": { value: openingRateAt, label: "Rate observation time", timestamp: true },
+        "futures-opening-rate-source": { value: openingRateSource, label: "Rate source" },
+      } : {}),
+    })) return;
     try {
       const next: UsdmFuturesAccount = account
         ? { ...account, openingAt, openingWalletUsdt: openingWallet, valuation: undefined }
@@ -171,6 +224,18 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   };
   const saveEvent = () => {
     if (!account) return;
+    if (!checkFields({
+      "futures-event-at": { value: draft.at, label: "Activity time", timestamp: true },
+      ...(draft.type === "execution" ? {
+        "futures-quantity": { value: draft.quantity, label: "Quantity" },
+        "futures-price": { value: draft.price, label: "Execution price" },
+        "futures-leverage": { value: draft.leverage, label: "Reported leverage" },
+      } : { "futures-amount": { value: draft.amountUsdt, label: "Signed amount" } }),
+      ...(draft.inrPerUsdt ? {
+        "futures-event-rate-at": { value: draft.rateObservedAt, label: "Rate observation time", timestamp: true },
+        "futures-event-rate-source": { value: draft.rateSource, label: "Rate source" },
+      } : {}),
+    })) return;
     try {
       const id = draft.id || createId("futures-event");
       let event: UsdmFuturesEvent;
@@ -217,6 +282,14 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   );
   const saveCashFunding = () => {
     if (!account) return;
+    if (!checkFields({
+      "futures-cash-at": { value: cashFunding.at, label: "Movement time", timestamp: true },
+      "futures-cash-usdt": { value: cashFunding.usdt, label: "USDT amount" },
+      "futures-cash-inr": { value: cashFunding.cashInr, label: "Cash amount" },
+      "futures-cash-rate": { value: cashFunding.rate, label: "INR per USDT" },
+      "futures-cash-rate-at": { value: cashFunding.rateAt, label: "Rate observation time", timestamp: true },
+      "futures-cash-rate-source": { value: cashFunding.rateSource, label: "Rate source" },
+    })) return;
     try {
       store.getState().saveFuturesCashTransfer({
         accountId: account.id,
@@ -248,6 +321,22 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   );
   const saveValuation = () => {
     if (!account) return;
+    if (!checkFields({
+      "futures-valuation-at": { value: valuationAt, label: "Valuation time", timestamp: true },
+      "futures-observed-wallet": { value: observedWallet, label: "Observed wallet balance" },
+      "futures-observed-wallet-at": { value: observedWalletAt, label: "Wallet observation time", timestamp: true },
+      "futures-wallet-source": { value: walletSource, label: "Wallet source" },
+      "futures-current-rate": { value: rate, label: "INR per USDT" },
+      "futures-current-rate-at": { value: rateAt, label: "Rate observation time", timestamp: true },
+      "futures-current-rate-source": { value: rateSource, label: "Rate source" },
+      ...(openPositions.length ? {
+        ...Object.fromEntries(openPositions.map((position) => [`futures-mark-${position.contract}`, {
+          value: markPrices[position.contract] ?? "", label: `${position.contract} mark price`,
+        }])),
+        "futures-mark-at": { value: markAt, label: "Mark observation time", timestamp: true },
+        "futures-mark-source": { value: markSource, label: "Mark source" },
+      } : {}),
+    })) return;
     try {
       const replay = replayUsdmFutures(account, { asOf: valuationAt, marks: [], eventRates: account.eventRates });
       const marks: UsdmMark[] = replay.positions.filter((position) => position.signedQuantity !== "0").map((position) => ({
@@ -279,9 +368,9 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   }
   const openPositions = replay?.positions.filter((position) => position.signedQuantity !== "0") ?? [];
 
-  return <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.fill}>
+  return <EntryErrors.Provider value={{ errors: fieldErrors, refs: fieldRefs.current, clear: clearFieldError }}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.fill}>
     <ScreenContainer scroll scrollRef={scrollRef} testID="futures-screen">
-      <View style={styles.content}>
+      <View ref={contentRef} collapsable={false} style={styles.content}>
         <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />
         {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="futures-error">{error}</AppText> : null}
         <PremiumCard>
@@ -292,11 +381,11 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <Money value={`${account.openingWalletUsdt} USDT`} masked={masked} />
             <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { walletBaseline.current = walletSnapshot; setEditingAccount(true); }} />
           </> : <>
-            <FormTextField label="Starting wallet date and time (ISO, timezone required)" value={openingAt} onChangeText={setOpeningAt} testID="futures-opening-at" />
-            <FormTextField label="Observed starting wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={openingWallet} onChangeText={setOpeningWallet} testID="futures-opening-wallet" />
-            <FormTextField label="INR per USDT at starting wallet date" keyboardType="decimal-pad" value={openingRate} onChangeText={setOpeningRate} testID="futures-opening-rate" />
-            <FormTextField label="Starting INR rate observed at (ISO)" value={openingRateAt} onChangeText={setOpeningRateAt} testID="futures-opening-rate-at" />
-            <FormTextField label="Starting rate source" value={openingRateSource} onChangeText={setOpeningRateSource} testID="futures-opening-rate-source" />
+            <TimeField label="Starting wallet time" value={openingAt} onChange={setOpeningAt} error={fieldErrors["futures-opening-at"]} testID="futures-opening-at" />
+            <EntryField label="Observed starting wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={openingWallet} onChangeText={setOpeningWallet} testID="futures-opening-wallet" />
+            <EntryField label="INR per USDT at starting wallet date" keyboardType="decimal-pad" value={openingRate} onChangeText={setOpeningRate} testID="futures-opening-rate" />
+            {openingRate ? <TimeField label="Rate observed at" value={openingRateAt} onChange={setOpeningRateAt} suggestedAt={openingAt} suggestedLabel="Observed at wallet time" error={fieldErrors["futures-opening-rate-at"]} testID="futures-opening-rate-at" /> : null}
+            {openingRate ? <EntryField label="Starting rate source" value={openingRateSource} onChangeText={setOpeningRateSource} testID="futures-opening-rate-source" /> : null}
             <AppButton title={account ? "Save corrected wallet" : "Create futures wallet"} onPress={saveAccount} testID="futures-save-account" />
           </>}
         </PremiumCard>
@@ -350,19 +439,19 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <View style={styles.choices} accessibilityRole="radiogroup">
                 {(["execution", "funding", "transfer"] as const).map((type) => <Choice key={type} label={type} selected={draft.type === type} onPress={() => setField("type", type)} testID={`futures-type-${type}`} />)}
               </View>
-              <FormTextField label="Date and time (ISO, timezone required)" value={draft.at} onChangeText={(value) => setField("at", value)} testID="futures-event-at" />
-              {draft.type !== "transfer" ? <FormTextField label="USDT perpetual contract (e.g. BTCUSDT)" value={draft.contract} onChangeText={(value) => setField("contract", value)} testID="futures-contract" /> : null}
+              <TimeField label="Activity time" value={draft.at} onChange={(value) => setField("at", value)} error={fieldErrors["futures-event-at"]} testID="futures-event-at" />
+              {draft.type !== "transfer" ? <EntryField label="USDT perpetual contract (e.g. BTCUSDT)" value={draft.contract} onChangeText={(value) => setField("contract", value)} testID="futures-contract" /> : null}
               {draft.type === "execution" ? <>
                 <View style={styles.choices} accessibilityRole="radiogroup"><Choice label="Buy" selected={draft.side === "buy"} onPress={() => setField("side", "buy")} /><Choice label="Sell" selected={draft.side === "sell"} onPress={() => setField("side", "sell")} /></View>
-                <FormTextField label="Base-asset quantity" keyboardType="decimal-pad" value={draft.quantity} onChangeText={(value) => setField("quantity", value)} testID="futures-quantity" />
-                <FormTextField label="Execution price (USDT per unit)" keyboardType="decimal-pad" value={draft.price} onChangeText={(value) => setField("price", value)} testID="futures-price" />
-                <FormTextField label="Fee (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={draft.feeUsdt} onChangeText={(value) => setField("feeUsdt", value)} testID="futures-fee" />
-                <FormTextField label="Reported leverage (1–125×)" keyboardType="number-pad" value={draft.leverage} onChangeText={(value) => setField("leverage", value)} testID="futures-leverage" />
-              </> : <FormTextField label={draft.type === "funding" ? "Signed funding (USDT)" : "Signed transfer (USDT)"} keyboardType="numbers-and-punctuation" secureTextEntry={masked} value={draft.amountUsdt} onChangeText={(value) => setField("amountUsdt", value)} testID="futures-amount" />}
+                <EntryField label="Base-asset quantity" keyboardType="decimal-pad" value={draft.quantity} onChangeText={(value) => setField("quantity", value)} testID="futures-quantity" />
+                <EntryField label="Execution price (USDT per unit)" keyboardType="decimal-pad" value={draft.price} onChangeText={(value) => setField("price", value)} testID="futures-price" />
+                <EntryField label="Fee (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={draft.feeUsdt} onChangeText={(value) => setField("feeUsdt", value)} testID="futures-fee" />
+                <EntryField label="Reported leverage (1–125×)" keyboardType="number-pad" value={draft.leverage} onChangeText={(value) => setField("leverage", value)} testID="futures-leverage" />
+              </> : <EntryField label={draft.type === "funding" ? "Signed funding (USDT)" : "Signed transfer (USDT)"} keyboardType="numbers-and-punctuation" secureTextEntry={masked} value={draft.amountUsdt} onChangeText={(value) => setField("amountUsdt", value)} testID="futures-amount" />}
               {draft.type === "transfer" ? <View style={styles.choices} accessibilityRole="radiogroup"><Choice label="External funding" selected={draft.transferBoundary === "external"} onPress={() => setField("transferBoundary", "external")} /><Choice label="Unlinked Binance Spot" selected={draft.transferBoundary === "internal"} onPress={() => setField("transferBoundary", "internal")} /></View> : null}
-              <FormTextField label="Historical INR per USDT (optional until verified)" keyboardType="decimal-pad" value={draft.inrPerUsdt} onChangeText={(value) => setField("inrPerUsdt", value)} testID="futures-event-rate" />
-              <FormTextField label="Historical INR rate observed at (ISO)" value={draft.rateObservedAt} onChangeText={(value) => setField("rateObservedAt", value)} testID="futures-event-rate-at" />
-              <FormTextField label="Historical rate source" value={draft.rateSource} onChangeText={(value) => setField("rateSource", value)} testID="futures-event-rate-source" />
+              <EntryField label="Historical INR per USDT (optional until verified)" keyboardType="decimal-pad" value={draft.inrPerUsdt} onChangeText={(value) => setField("inrPerUsdt", value)} testID="futures-event-rate" />
+              {draft.inrPerUsdt ? <TimeField label="Rate observed at" value={draft.rateObservedAt} onChange={(value) => setField("rateObservedAt", value)} suggestedAt={draft.at} suggestedLabel="Observed at activity time" error={fieldErrors["futures-event-rate-at"]} testID="futures-event-rate-at" /> : null}
+              {draft.inrPerUsdt ? <EntryField label="Historical rate source" value={draft.rateSource} onChangeText={(value) => setField("rateSource", value)} testID="futures-event-rate-source" /> : null}
               <AppButton title="Save activity" onPress={saveEvent} testID="futures-save-event" />
               <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingEvent(false), false, eventDirty)} testID="futures-cancel-event" />
             </>}
@@ -375,14 +464,14 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
                 <Choice label="Cash to Futures" selected={cashFunding.direction === "toFutures"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toFutures" }))} />
                 <Choice label="Futures to Cash" selected={cashFunding.direction === "toCash"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toCash" }))} />
               </View>
-              <FormTextField label="Movement date and time (ISO, timezone required)" value={cashFunding.at} onChangeText={(at) => setCashFunding((current) => ({ ...current, at }))} testID="futures-cash-at" />
-              <FormTextField label="USDT actually credited or withdrawn" keyboardType="decimal-pad" value={cashFunding.usdt} onChangeText={(usdt) => setCashFunding((current) => ({ ...current, usdt }))} testID="futures-cash-usdt" />
-              <FormTextField label="INR actually debited or credited in Cash" keyboardType="decimal-pad" secureTextEntry={masked} value={cashFunding.cashInr} onChangeText={(cashInr) => setCashFunding((current) => ({ ...current, cashInr }))} testID="futures-cash-inr" />
-              <FormTextField label="Conversion fee in INR (0 if included in effective rate)" keyboardType="decimal-pad" value={cashFunding.feeInr} onChangeText={(feeInr) => setCashFunding((current) => ({ ...current, feeInr }))} testID="futures-cash-fee" />
-              <FormTextField label="INR per USDT for this movement" keyboardType="decimal-pad" value={cashFunding.rate} onChangeText={(rate) => setCashFunding((current) => ({ ...current, rate }))} testID="futures-cash-rate" />
-              <FormTextField label="Rate observation time (ISO)" value={cashFunding.rateAt} onChangeText={(rateAt) => setCashFunding((current) => ({ ...current, rateAt }))} testID="futures-cash-rate-at" />
-              <FormTextField label="Rate source" value={cashFunding.rateSource} onChangeText={(rateSource) => setCashFunding((current) => ({ ...current, rateSource }))} testID="futures-cash-rate-source" />
-              <FormTextField label="Reference or notes (optional)" value={cashFunding.notes} onChangeText={(notes) => setCashFunding((current) => ({ ...current, notes }))} />
+              <TimeField label="Movement time" value={cashFunding.at} onChange={(at) => setCashFunding((current) => ({ ...current, at }))} error={fieldErrors["futures-cash-at"]} testID="futures-cash-at" />
+              <EntryField label="USDT actually credited or withdrawn" keyboardType="decimal-pad" value={cashFunding.usdt} onChangeText={(usdt) => setCashFunding((current) => ({ ...current, usdt }))} testID="futures-cash-usdt" />
+              <EntryField label="INR actually debited or credited in Cash" keyboardType="decimal-pad" secureTextEntry={masked} value={cashFunding.cashInr} onChangeText={(cashInr) => setCashFunding((current) => ({ ...current, cashInr }))} testID="futures-cash-inr" />
+              <EntryField label="Conversion fee in INR (0 if included in effective rate)" keyboardType="decimal-pad" value={cashFunding.feeInr} onChangeText={(feeInr) => setCashFunding((current) => ({ ...current, feeInr }))} testID="futures-cash-fee" />
+              <EntryField label="INR per USDT for this movement" keyboardType="decimal-pad" value={cashFunding.rate} onChangeText={(rate) => setCashFunding((current) => ({ ...current, rate }))} testID="futures-cash-rate" />
+              <TimeField label="Rate observed at" value={cashFunding.rateAt} onChange={(rateAt) => setCashFunding((current) => ({ ...current, rateAt }))} suggestedAt={cashFunding.at} suggestedLabel="Observed at movement time" error={fieldErrors["futures-cash-rate-at"]} testID="futures-cash-rate-at" />
+              <EntryField label="Rate source" value={cashFunding.rateSource} onChangeText={(rateSource) => setCashFunding((current) => ({ ...current, rateSource }))} testID="futures-cash-rate-source" />
+              <EntryField label="Reference or notes (optional)" value={cashFunding.notes} onChangeText={(notes) => setCashFunding((current) => ({ ...current, notes }))} />
               <AppText color="secondary">Cash amount must equal USDT × recorded rate plus the INR fee when funding, or minus the fee when withdrawing. A linked transfer is not an external contribution.</AppText>
               <AppButton title={cashFunding.eventId ? "Save corrected movement" : "Save linked movement"} onPress={saveCashFunding} testID="futures-save-cash-funding" />
               <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingCashFunding(false), false, cashDirty)} testID="futures-cancel-cash" />
@@ -391,17 +480,17 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           <PremiumCard>
             <SectionHeader title="Verify current value" />
             <AppText color="secondary">Use the Futures wallet balance (not total equity), current mark prices, and an observed USDT/INR rate. Their sources and times stay with the record. Re-enter after changing activity.</AppText>
-            <FormTextField label="Observation time (ISO, timezone required)" value={valuationAt} onChangeText={setValuationAt} testID="futures-valuation-at" />
-            <FormTextField label="Observed Futures wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={observedWallet} onChangeText={setObservedWallet} testID="futures-observed-wallet" />
-            <FormTextField label="Wallet balance observed at (ISO)" value={observedWalletAt} onChangeText={setObservedWalletAt} testID="futures-observed-wallet-at" />
-            <FormTextField label="Wallet balance source" value={walletSource} onChangeText={setWalletSource} testID="futures-wallet-source" />
-            {openPositions.map((position) => <FormTextField key={position.contract} label={`${position.contract} mark price (USDT)`} keyboardType="decimal-pad" value={markPrices[position.contract] ?? ""} onChangeText={(value) => setMarkPrices((current) => ({ ...current, [position.contract]: value }))} testID={`futures-mark-${position.contract}`} />)}
-            {openPositions.map((position) => <FormTextField key={`margin-${position.contract}`} label={`${position.contract} Binance-reported position margin (USDT, optional)`} keyboardType="decimal-pad" secureTextEntry={masked} value={markMargins[position.contract] ?? ""} onChangeText={(value) => setMarkMargins((current) => ({ ...current, [position.contract]: value }))} testID={`futures-margin-${position.contract}`} />)}
-            {openPositions.length ? <FormTextField label="Mark price source" value={markSource} onChangeText={setMarkSource} testID="futures-mark-source" /> : null}
-            {openPositions.length ? <FormTextField label="Mark prices observed at (ISO)" value={markAt} onChangeText={setMarkAt} testID="futures-mark-at" /> : null}
-            <FormTextField label="INR per USDT" keyboardType="decimal-pad" value={rate} onChangeText={setRate} testID="futures-current-rate" />
-            <FormTextField label="INR rate observed at (ISO)" value={rateAt} onChangeText={setRateAt} testID="futures-current-rate-at" />
-            <FormTextField label="INR rate source" value={rateSource} onChangeText={setRateSource} testID="futures-current-rate-source" />
+            <TimeField label="Valuation time" value={valuationAt} onChange={setValuationAt} error={fieldErrors["futures-valuation-at"]} testID="futures-valuation-at" />
+            <EntryField label="Observed Futures wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={observedWallet} onChangeText={setObservedWallet} testID="futures-observed-wallet" />
+            <TimeField label="Wallet observed at" value={observedWalletAt} onChange={setObservedWalletAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-observed-wallet-at"]} testID="futures-observed-wallet-at" />
+            <EntryField label="Wallet balance source" value={walletSource} onChangeText={setWalletSource} testID="futures-wallet-source" />
+            {openPositions.map((position) => <EntryField key={position.contract} label={`${position.contract} mark price (USDT)`} keyboardType="decimal-pad" value={markPrices[position.contract] ?? ""} onChangeText={(value) => setMarkPrices((current) => ({ ...current, [position.contract]: value }))} testID={`futures-mark-${position.contract}`} />)}
+            {openPositions.map((position) => <EntryField key={`margin-${position.contract}`} label={`${position.contract} Binance-reported position margin (USDT, optional)`} keyboardType="decimal-pad" secureTextEntry={masked} value={markMargins[position.contract] ?? ""} onChangeText={(value) => setMarkMargins((current) => ({ ...current, [position.contract]: value }))} testID={`futures-margin-${position.contract}`} />)}
+            {openPositions.length ? <EntryField label="Mark price source" value={markSource} onChangeText={setMarkSource} testID="futures-mark-source" /> : null}
+            {openPositions.length ? <TimeField label="Marks observed at" value={markAt} onChange={setMarkAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-mark-at"]} testID="futures-mark-at" /> : null}
+            <EntryField label="INR per USDT" keyboardType="decimal-pad" value={rate} onChangeText={setRate} testID="futures-current-rate" />
+            <TimeField label="Rate observed at" value={rateAt} onChange={setRateAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-current-rate-at"]} testID="futures-current-rate-at" />
+            <EntryField label="INR rate source" value={rateSource} onChangeText={setRateSource} testID="futures-current-rate-source" />
             <Choice checkbox label="All open positions checked against Binance" selected={positionsConfirmed} onPress={() => setPositionsConfirmed((value) => !value)} testID="futures-positions-confirmed" />
             <Choice checkbox label="All wallet events since starting balance entered" selected={eventsConfirmed} onPress={() => setEventsConfirmed((value) => !value)} testID="futures-events-confirmed" />
             <Choice checkbox label="Wallet is not already counted in Spot, Cash or another holding" selected={boundaryConfirmed} onPress={() => setBoundaryConfirmed((value) => !value)} testID="futures-boundary-confirmed" />
@@ -419,7 +508,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
         <AppButton title="Discard changes" variant="secondary" onPress={exit.discard} testID="futures-discard" />
       </PremiumCard></View>
     </Modal>
-  </KeyboardAvoidingView>;
+  </KeyboardAvoidingView></EntryErrors.Provider>;
 }
 
 const styles = StyleSheet.create({

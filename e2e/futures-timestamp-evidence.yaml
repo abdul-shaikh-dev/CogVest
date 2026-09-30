@@ -1,0 +1,252 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- tapOn:
+    id: futures-opening-at-date
+- takeScreenshot: node_modules/.cache/futures-calendar
+- back
+- tapOn:
+    id: futures-opening-at-exact-toggle
+- tapOn:
+    id: futures-opening-at
+- eraseText: 50
+- inputText: "2026-09-01T00:00:00Z"
+- hideKeyboard
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "1000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-at-use-time
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-at-use-time
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-source
+- inputText: "Historical INR quote"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-account
+    direction: DOWN
+- tapOn:
+    id: futures-save-account
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- hideKeyboard
+- assertVisible: "Enter quantity."
+- takeScreenshot: node_modules/.cache/futures-time-execution-error
+- assertNotVisible: "BUY BTCUSDT"
+- tapOn:
+    id: futures-quantity
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-event-at-exact-toggle
+    direction: UP
+- tapOn:
+    id: futures-event-at-exact-toggle
+- tapOn:
+    id: futures-event-at
+- eraseText: 50
+- inputText: "2026-09-02T00:00:00Z"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-price
+    direction: DOWN
+- tapOn:
+    id: futures-price
+- inputText: "100"
+- hideKeyboard
+- tapOn:
+    id: futures-fee
+- eraseText: 10
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-leverage
+    direction: DOWN
+- tapOn:
+    id: futures-leverage
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-event-rate
+    direction: DOWN
+- tapOn:
+    id: futures-event-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-event-rate-at-use-time
+    direction: DOWN
+- tapOn:
+    id: futures-event-rate-at-use-time
+- scrollUntilVisible:
+    element:
+      id: futures-event-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-event-rate-source
+- inputText: "Historical INR quote"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element:
+      text: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-save-valuation
+    direction: DOWN
+- tapOn:
+    id: futures-save-valuation
+- hideKeyboard
+- assertVisible: "Enter observed wallet balance."
+- takeScreenshot: node_modules/.cache/futures-time-valuation-error
+- tapOn:
+    id: futures-observed-wallet
+- inputText: "999"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet-at-use-time
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet-at-use-time
+- scrollUntilVisible:
+    element:
+      id: futures-wallet-source
+    direction: DOWN
+- tapOn:
+    id: futures-wallet-source
+- inputText: "Binance wallet"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-BTCUSDT
+    direction: DOWN
+- tapOn:
+    id: futures-mark-BTCUSDT
+- inputText: "110"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-source
+    direction: DOWN
+- tapOn:
+    id: futures-mark-source
+- inputText: "Binance mark"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-mark-at-use-time
+    direction: DOWN
+- tapOn:
+    id: futures-mark-at-use-time
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-at-use-time
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-at-use-time
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-source
+- inputText: "Observed INR quote"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-positions-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-positions-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-events-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-events-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-boundary-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-boundary-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-save-valuation
+    direction: DOWN
+- tapOn:
+    id: futures-save-valuation
+- scrollUntilVisible:
+    element:
+      text: "₹90810(?:\\.00)?"
+    direction: UP
+- assertVisible: "₹90810(?:\\.00)?"
+- assertVisible: "₹90000(?:\\.00)?"
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      text: "₹90810(?:\\.00)?"
+    direction: DOWN
+- assertVisible: "₹90810(?:\\.00)?"
+- assertVisible: "999 USDT"
