@@ -488,11 +488,11 @@ describe("CashScreen", () => {
       type: "withdrawal",
     });
 
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText, queryByText } = render(
       <CashScreen onCorrectEntry={onCorrectEntry} store={store} />,
     );
 
-    expect(getByText("Tap to review or correct")).toBeTruthy();
+    expect(queryByText("Tap to review or correct")).toBeNull();
     expect(
       getByText("Review through its investment transaction"),
     ).toBeTruthy();

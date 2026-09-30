@@ -287,7 +287,9 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(getByTestId("snapshot-month-2026-01"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByText("January 2026")).toBeTruthy();
-    expect(getByText("+10.00% vs December 2025 portfolio value change")).toBeTruthy();
+    expect(getByText("+10.00% portfolio value change")).toBeTruthy();
+    expect(getByText("Dec 2025")).toBeTruthy();
+    expect(getByText("Jan 2026")).toBeTruthy();
 
     fireEvent.press(getByTestId("history-back"));
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
@@ -386,7 +388,7 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(1);
-    expect(getAllByText("+717.28% vs May 2026 portfolio value change")).toHaveLength(1);
+    expect(getAllByText("+717.28% portfolio value change")).toHaveLength(1);
     expect(getAllByText("60.00% allocation")).toHaveLength(1);
     expect(queryByText("Hidden")).toBeNull();
     expect(queryByText("Financial note for 2026-06: ₹123456")).toBeNull();

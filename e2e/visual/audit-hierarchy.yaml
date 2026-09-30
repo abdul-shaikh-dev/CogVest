@@ -1,0 +1,73 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic emulator. SHOT identifies the display configuration.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- assertVisible: "Your portfolio starts here"
+- assertVisible:
+    id: quick-setup-button
+- assertNotVisible:
+    id: dashboard-portfolio-hero
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/first-run
+- tapOn:
+    id: quick-setup-button
+- assertVisible: "Add holdings"
+- assertVisible: "Import transaction history"
+- tapOn: "Close"
+- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace local developer data?"
+    timeout: 15000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 15000
+- openLink: "cogvest:///dashboard"
+- assertVisible:
+    id: dashboard-portfolio-hero
+- assertNotVisible: "Your portfolio starts here"
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-card
+    direction: DOWN
+- assertNotVisible: "Futures equity"
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/populated-dashboard
+- openLink: "cogvest:///cash"
+- assertVisible:
+    id: cash-screen
+- scrollUntilVisible:
+    element: "Salary added"
+    direction: DOWN
+- assertNotVisible: "Tap to review or correct"
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/cash
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- tapOn:
+    id: snapshot-month-2026-05
+- assertVisible:
+    id: snapshot-comparison-heading
+- assertVisible: "Apr 2026"
+- assertVisible: "May 2026"
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/month-detail
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: value-mask-toggle
+- openLink: "cogvest:///cash"
+- assertVisible: "₹••••"
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/masked-cash
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- tapOn:
+    id: snapshot-month-2026-05
+- assertVisible: "₹••••"
+- assertVisible: "Apr 2026"
+- assertVisible: "May 2026"
+- takeScreenshot: .expo/audit-hierarchy/${SHOT}/masked-month-detail
