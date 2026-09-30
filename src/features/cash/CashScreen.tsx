@@ -262,7 +262,7 @@ export function CashScreen({
                 correctionHint={
                   isLinkedCashEntry(entry)
                     ? entry.linkedFutures ? "Correct in Futures" : "Review through its investment transaction"
-                    : onCorrectEntry ? "Tap to review or correct" : undefined
+                    : undefined
                 }
                 entry={entry}
                 key={entry.id}

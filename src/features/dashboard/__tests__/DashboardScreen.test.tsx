@@ -117,7 +117,7 @@ describe("DashboardScreen", () => {
     });
   });
 
-  it("shows the empty dashboard with a zero total and Add Holding action", () => {
+  it("prioritizes entry on a truly empty dashboard instead of zero summaries", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
@@ -127,19 +127,62 @@ describe("DashboardScreen", () => {
 
     expect(getByTestId("dashboard-screen")).toBeTruthy();
     expect(getByTestId("add-trade-button")).toBeTruthy();
-    expect(getByText("No market prices needed")).toBeTruthy();
+    expect(queryByText("No market prices needed")).toBeNull();
     expect(queryByText("Cash and recorded PPF balances do not need market quotes.")).toBeNull();
-    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
-    expect(getByText("Cash and recorded PPF balances do not need market quotes.")).toBeTruthy();
-    expect(getAllByText("₹0").length).toBeGreaterThan(0);
-    expect(getByText("No allocation yet")).toBeTruthy();
+    expect(queryByText("₹0")).toBeNull();
+    expect(queryByText("No allocation yet")).toBeNull();
+    expect(getByText("Your portfolio starts here")).toBeTruthy();
     expect(
-      getByText("Add your first portfolio entry to build holdings automatically."),
+      getByText("Add holdings manually or import your statements. Your records stay on this device."),
     ).toBeTruthy();
 
     fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains summaries for a zero-net ledger and hides unused Futures allocation", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({ id: "deposit", date: "2026-09-01", amount: 100,
+      label: "Contribution", purpose: "capitalContribution", type: "addition" });
+    store.getState().addCashEntry({ id: "withdrawal", date: "2026-09-02", amount: 100,
+      label: "Withdrawal", purpose: "withdrawal", type: "withdrawal" });
+    const screen = render(<DashboardScreen store={store} now={new Date("2026-09-29T12:00:00Z")} />);
+    expect(screen.queryByText("Your portfolio starts here")).toBeNull();
+    expect(screen.getByTestId("dashboard-portfolio-hero")).toBeTruthy();
+    expect(screen.queryByText("Futures equity")).toBeNull();
+  });
+
+  it("hides unused Futures allocation without hiding a real zero-wallet account", () => {
+    const now = new Date("2026-09-29T12:00:00Z");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+    store.getState().addCashEntry({ id: "cash", date: "2026-09-01", amount: 100,
+      label: "Contribution", purpose: "capitalContribution", type: "addition" });
+    const screen = render(<DashboardScreen store={store} now={now} />);
+    expect(screen.getByTestId("dashboard-allocation-card")).toBeTruthy();
+    expect(screen.queryByText("Futures equity")).toBeNull();
+    act(() => store.getState().saveFuturesAccount({ id: "zero-wallet", settlementAsset: "USDT",
+      marginMode: "cross", positionMode: "one-way", openingAt: "2026-09-01T00:00:00Z",
+      openingWalletUsdt: "0", events: [] }));
+    expect(screen.getByTestId("dashboard-futures-status")).toBeTruthy();
+    expect(screen.queryByText("Your portfolio starts here")).toBeNull();
+    act(() => store.getState().saveFuturesAccount({ ...store.getState().futuresAccounts[0],
+      openingRate: { inrPerUsdt: "90", observedAt: "2026-09-01T00:00:00Z", source: "Recorded rate" },
+      valuation: { asOf: "2026-09-29T12:00:00Z", marks: [],
+        inrRate: { inrPerUsdt: "90", observedAt: "2026-09-29T12:00:00Z", source: "Observed rate" },
+        reconciliation: { observedWalletUsdt: "0", observedAt: "2026-09-29T12:00:00Z",
+          source: "Observed wallet", allOpenPositionsConfirmed: true,
+          allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true } },
+    }));
+    expect(screen.getByText("Futures equity")).toBeTruthy();
+  });
+
+  it("does not hide unsupported-currency warnings behind first-run setup", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.setState({ assets: [unsupportedForeignAsset] });
+    const screen = render(<DashboardScreen store={store} />);
+    expect(screen.getByTestId("dashboard-currency-warning")).toBeTruthy();
+    expect(screen.queryByText("Your portfolio starts here")).toBeNull();
   });
 
   it("does not present a negative Futures wallet as an empty allocation", () => {
@@ -587,6 +630,8 @@ describe("DashboardScreen", () => {
 
   it("shows investing activity without household income capture", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({ id: "activity", date: "2026-09-01", amount: 100,
+      label: "Investment cash", purpose: "capitalContribution", type: "addition" });
     const screen = render(
       <DashboardScreen
         now={new Date(2026, 8, 20, 12)}

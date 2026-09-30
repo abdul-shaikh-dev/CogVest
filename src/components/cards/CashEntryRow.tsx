@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import {
   AppText,
@@ -6,6 +7,7 @@ import {
   PremiumCard,
   androidRipple,
   getPressedStateStyle,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { colors, spacing } from "@/src/theme";
@@ -51,10 +53,12 @@ export function CashEntryRow({
   masked = false,
   onPress,
 }: CashEntryRowProps) {
+  const { fontScale } = useWindowDimensions();
+  const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const isAddition = entry.type === "addition";
   const content = (
-    <PremiumCard style={styles.row} testID={`cash-entry-row-${entry.id}`}>
-      <View style={styles.details}>
+    <PremiumCard style={[styles.row, stacked && styles.stackedRow]} testID={`cash-entry-row-${entry.id}`}>
+      <View style={[styles.details, stacked && styles.stackedDetails]}>
         <AppText weight="bold">{entry.label}</AppText>
         <AppText color="secondary" variant="caption">
           {getCashEntryMovement(entry)}
@@ -73,12 +77,13 @@ export function CashEntryRow({
           </AppText>
         ) : null}
       </View>
-      <MaskedValue
+      <View style={[styles.trailing, stacked && styles.stackedTrailing]}><MaskedValue
         masked={masked}
         style={isAddition ? styles.addition : styles.withdrawal}
         value={formatCashAmount(entry)}
         weight="bold"
       />
+      {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} accessible={false} /> : null}</View>
     </PremiumCard>
   );
 
@@ -101,6 +106,10 @@ export function CashEntryRow({
 }
 
 const styles = StyleSheet.create({
+  trailing: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  stackedTrailing: { alignSelf: "flex-end" },
+  stackedRow: { flexDirection: "column", alignItems: "stretch" },
+  stackedDetails: { flexGrow: 0, flexShrink: 0, flexBasis: "auto" },
   addition: {
     color: colors.profit,
   },

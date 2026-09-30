@@ -189,7 +189,7 @@ export function DashboardScreen({
     dashboard.holdings,
     dashboard.cashBalance,
     dashboard.futuresEquityInr,
-  );
+  ).filter((item) => item.assetClass !== "futures" || dashboard.futuresContributions.length > 0);
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
   const positiveAllocationTotal = normalizeMoney(
     sumFinancialValues(positiveAllocation.map((item) => item.value)),
@@ -217,6 +217,20 @@ export function DashboardScreen({
     quoteFreshness: dashboard.quoteFreshness,
     quoteTimedOut: dashboard.quoteTimedOut.length,
   });
+
+  if (!dashboard.hasPortfolioRecords && quickSetupSavedCount === 0 && dashboard.currencyIssues.length === 0) {
+    return <ScreenContainer scroll testID="dashboard-screen"><View style={styles.content}>
+      <ScreenHeader title="Dashboard" subtitle="Your local portfolio" />
+      <EmptyState title="Your portfolio starts here"
+        message="Add holdings manually or import your statements. Your records stay on this device."
+        actionLabel={onQuickSetup ? "Set up your portfolio" : "Add Holding"}
+        actionTestID={onQuickSetup ? "quick-setup-button" : "add-trade-button"}
+        onAction={onQuickSetup ?? onAddTrade}
+        secondaryActionLabel={onQuickSetup && onAddTrade ? "Add one holding" : undefined}
+        secondaryActionTestID="add-trade-button"
+        onSecondaryAction={onQuickSetup ? onAddTrade : undefined} />
+    </View></ScreenContainer>;
+  }
 
   return (
     <ScreenContainer scroll testID="dashboard-screen">

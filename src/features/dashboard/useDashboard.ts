@@ -81,6 +81,7 @@ export type DashboardState = {
   dayChange: PortfolioDayChange;
   displayMode: DisplayMode;
   holdings: Holding[];
+  hasPortfolioRecords: boolean;
   futuresContributions: (UsdmPortfolioContribution & { accountId: string })[];
   futuresEquityInr: number | null;
   instrumentAllocation: MetadataAllocationItem[];
@@ -355,6 +356,9 @@ export function useDashboard({
     displayMode: snapshot.preferences.displayMode,
     holdings,
     futuresContributions,
+    hasPortfolioRecords: [snapshot.cashEntries, snapshot.trades, snapshot.openingPositions,
+      snapshot.ppfAccounts, snapshot.ppfLedgerEntries, snapshot.futuresAccounts, snapshot.monthlySnapshots]
+      .some((records) => records.length > 0),
     futuresEquityInr: pendingFutures.length ? null : normalizeMoney(futuresEquity),
     instrumentAllocation: calculateInstrumentAllocation(holdings),
     isRefreshing,

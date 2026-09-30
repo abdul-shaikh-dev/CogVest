@@ -493,7 +493,9 @@ function MonthDetail({
         variant="caption"
         weight="bold"
       >
-        {formatComparison(portfolioChange, previousSummary?.snapshot.month)} portfolio value change
+        {portfolioChange === null
+          ? previousSummary ? "Percentage unavailable · prior value was zero" : "Previous month unavailable"
+          : formatPercentage(portfolioChange)} portfolio value change
       </AppText>
       {estimated ? (
         <AppText color="secondary" variant="caption">
@@ -505,6 +507,14 @@ function MonthDetail({
       </AppText>
 
       <DetailSection title="What changed">
+        <View style={styles.comparisonColumns} testID="snapshot-comparison-heading">
+          <AppText color="secondary" variant="caption" style={styles.comparisonColumn}>
+            {previousSummary ? `${formatShortMonth(previousSummary.snapshot.month)} ${previousSummary.snapshot.month.slice(0, 4)}` : "Previous month unavailable"}
+          </AppText>
+          <AppText color="secondary" variant="caption" style={[styles.comparisonColumn, styles.currentColumn]}>
+            {`${formatShortMonth(snapshot.month)} ${snapshot.month.slice(0, 4)}`}
+          </AppText>
+        </View>
         {assetMetrics.map((metric) => {
           const change = calculatePercentageChange(metric.current, metric.previous);
           const allocation = getAssetAllocation(summary, metric.assetClass);
@@ -513,32 +523,34 @@ function MonthDetail({
             : `${formatPercentage(allocation).replace("+", "")} allocation`;
 
           return (
-            <View key={metric.assetClass} style={styles.detailRow}>
+            <View key={metric.assetClass} style={styles.comparisonRow}>
+              <View style={styles.comparisonIdentity}>
               <View style={styles.assetLabel}>
                 <CategoryIcon assetClass={metric.assetClass} size={18} />
-                <View>
+                <View style={styles.detailRowLabel}>
                   <AppText weight="bold">{assetClassLabel(metric.assetClass)}</AppText>
                   <AppText color="secondary" variant="caption">{detail}</AppText>
                 </View>
               </View>
-              <View style={styles.valueColumn}>
-                <MaskedValue
-                  exactValue={formatINR(metric.current)}
-                  masked={maskWealthValues}
-                  value={formatINR(metric.current)}
-                  weight="bold"
-                />
                 <AppText
                   color="secondary"
                   style={change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined}
                   variant="caption"
                 >
-                  {`${formatComparison(change, previousSummary?.snapshot.month)}${
-                    previousSummary && !maskWealthValues
-                      ? ` · previous ${formatINR(metric.previous ?? 0)}`
-                      : ""
-                  }`}
+                  {change === null ? "—" : formatPercentage(change)}
                 </AppText>
+              </View>
+              <View style={styles.comparisonColumns}>
+                <View style={styles.comparisonColumn}>
+                  <MaskedValue masked={maskWealthValues && metric.previous !== undefined}
+                    accessibilityLabel={metric.previous === undefined ? "Previous value unavailable" : undefined}
+                    value={metric.previous === undefined ? "—" : formatINR(metric.previous)}
+                    exactValue={metric.previous === undefined ? undefined : formatINR(metric.previous)} />
+                </View>
+                <View style={[styles.comparisonColumn, styles.currentColumn]}>
+                  <MaskedValue exactValue={formatINR(metric.current)} masked={maskWealthValues}
+                    value={formatINR(metric.current)} weight="bold" align="right" />
+                </View>
               </View>
             </View>
           );
@@ -609,6 +621,11 @@ function DetailRow({
 }
 
 const styles = StyleSheet.create({
+  comparisonColumns: { flexDirection: "row", gap: spacing.md },
+  comparisonColumn: { flex: 1, minWidth: 0 },
+  currentColumn: { textAlign: "right", alignItems: "flex-end" },
+  comparisonIdentity: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  comparisonRow: { gap: spacing.sm, paddingVertical: spacing.sm, borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   assetLabel: { alignItems: "center", flexDirection: "row", flex: 1, gap: spacing.sm, minWidth: 0 },
   chevron: { fontSize: 22, lineHeight: 22 },
   detail: { gap: spacing.sm },
