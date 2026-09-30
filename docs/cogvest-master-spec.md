@@ -228,9 +228,14 @@ All domain calculations must be pure functions under `src/domain/`.
   whole-portfolio contribution accounting. Editing those movements refreshes
   affected generated Cash values and flow evidence atomically, without replacing
   historical prices or manual valuation overrides. Existing affected snapshots
-    are repaired durably on hydration and backup restore without provider refetch.
-    Aggregate-only legacy snapshots retain their values because correction
-    provenance is unavailable; only previously complete flow evidence is refreshed.
+  are repaired durably on hydration and backup restore without provider refetch.
+  Aggregate-only legacy snapshots retain their values because correction
+  provenance is unavailable; only previously complete flow evidence is refreshed.
+- Snapshot writes and backup validation share real calendar-month, financial
+  bounds, paise precision and class-total checks. Corrections/deletions persist
+  before publishing. Existing inconsistent values stay intact for explicit
+  correction in Progress; backup remains blocked until they are consistent.
+  Month correction keeps the record ID but invalidates old-month flow evidence.
 
 ### V1 Currency And Quote Contract
 

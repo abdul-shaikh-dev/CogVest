@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import { buildPpfExcludedChartHistory } from "@/src/domain/calculations/ppfExcludedChartHistory";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -279,7 +280,7 @@ function parseNumberField(
   const value = values[field].trim();
   const parsedValue = value.length > 0 ? Number(value) : Number.NaN;
 
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+  if (!Number.isFinite(parsedValue)) {
     errors[field] = "Enter a valid amount.";
   }
 
@@ -303,28 +304,27 @@ export function validateProgressSnapshotForm(values: ProgressFormValues) {
     return { errors, snapshot: null };
   }
 
-  return {
-    errors,
-    snapshot: {
-      cashValue: parsedValues.cashValue,
-      cryptoValue: parsedValues.cryptoValue,
-      debtValue: parsedValues.debtValue,
-      equityValue: parsedValues.equityValue,
-      id: createId("snapshot"),
-      investedValue: parsedValues.investedValue,
-      month: values.month.trim(),
-      monthlyInvestment: parsedValues.monthlyInvestment,
-      notes: values.notes.trim() || undefined,
-      performanceBasis: {
-        reason: "manual-snapshot",
-        status: "unavailable",
-        warnings: [
-          "Monthly performance is unavailable because this snapshot has no classified external-flow basis.",
-        ],
-      },
-      portfolioValue: parsedValues.portfolioValue,
-    } satisfies MonthlySnapshot,
-  };
+  const candidate = {
+    cashValue: parsedValues.cashValue,
+    cryptoValue: parsedValues.cryptoValue,
+    debtValue: parsedValues.debtValue,
+    equityValue: parsedValues.equityValue,
+    id: createId("snapshot"),
+    investedValue: parsedValues.investedValue,
+    month: values.month.trim(),
+    monthlyInvestment: parsedValues.monthlyInvestment,
+    notes: values.notes.trim() || undefined,
+    performanceBasis: {
+      reason: "manual-snapshot",
+      status: "unavailable",
+      warnings: [
+        "Monthly performance is unavailable because this snapshot has no classified external-flow basis.",
+      ],
+    },
+    portfolioValue: parsedValues.portfolioValue,
+  } satisfies MonthlySnapshot;
+  const domainErrors = validateMonthlySnapshot(candidate);
+  return { errors: domainErrors, snapshot: Object.keys(domainErrors).length ? null : candidate };
 }
 
 function automationMessage({
@@ -710,39 +710,51 @@ export function useProgress({
     }));
   }
 
-  function saveSnapshot() {
+  function saveSnapshot(snapshotId?: string) {
     const result = validateProgressSnapshotForm(formValues);
 
     if (!result.snapshot) {
       setErrors(result.errors);
       return false;
     }
+    const candidate = result.snapshot;
 
     const existingSnapshot = snapshot.monthlySnapshots.find(
-      (monthlySnapshot) => monthlySnapshot.month === result.snapshot.month,
+      (monthlySnapshot) => snapshotId ? monthlySnapshot.id === snapshotId : monthlySnapshot.month === candidate.month,
     );
+    if (snapshotId && !existingSnapshot) {
+      setErrors({ portfolioValue: "Snapshot changed. Reopen the review before saving." });
+      return false;
+    }
+    if (snapshot.monthlySnapshots.some((item) => item.month === candidate.month && item.id !== existingSnapshot?.id)) {
+      setErrors({ month: "This month already has a snapshot. Choose another month." });
+      return false;
+    }
 
-    if (existingSnapshot) {
-      store.getState().updateMonthlySnapshot({
-        ...result.snapshot,
-        generated: existingSnapshot.generated
-          ? {
-              ...existingSnapshot.generated,
-              source: "manual",
-            }
-          : undefined,
-        id: existingSnapshot.id,
-        performanceBasis:
-          existingSnapshot.performanceBasis ?? {
-            reason: "legacy-snapshot",
-            status: "unavailable",
-            warnings: [
-              "Monthly performance is unavailable for snapshots recorded before contribution tracking.",
-            ],
-          },
-      });
-    } else {
-      store.getState().addMonthlySnapshot(result.snapshot);
+    try {
+      if (existingSnapshot) {
+        store.getState().updateMonthlySnapshot({
+          ...candidate,
+          generated: existingSnapshot.generated
+            ? { ...existingSnapshot.generated, source: "manual" }
+            : undefined,
+          id: existingSnapshot.id,
+          performanceBasis: existingSnapshot.month !== candidate.month
+            ? candidate.performanceBasis
+            : existingSnapshot.performanceBasis ?? {
+              reason: "legacy-snapshot",
+              status: "unavailable",
+              warnings: [
+                "Monthly performance is unavailable for snapshots recorded before contribution tracking.",
+              ],
+            },
+        });
+      } else {
+        store.getState().addMonthlySnapshot(candidate);
+      }
+    } catch {
+      setErrors({ portfolioValue: "Snapshot could not be saved. Your stored values are unchanged. Free device storage and try again." });
+      return false;
     }
 
     setFormValues(emptyProgressFormValues());

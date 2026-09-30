@@ -552,7 +552,7 @@ describe("DashboardScreen", () => {
     });
 
     const screen = render(
-      <DashboardScreen store={store} />,
+      <DashboardScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />,
     );
 
     expect(screen.getByText("₹330")).toBeTruthy();

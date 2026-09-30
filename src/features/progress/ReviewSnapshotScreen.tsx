@@ -10,6 +10,7 @@ import { spacing } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
 
 import { useProgress } from "./useProgress";
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 
 type ReviewSnapshotScreenProps = {
   now?: Date;
@@ -46,9 +47,11 @@ export function ReviewSnapshotScreen({
   const { isRevealed, reveal } = useSensitiveValueReveal(progress.preferences.maskWealthValues);
   const hasRunAutomationRef = useRef(false);
   const hasPrefilledFormRef = useRef(false);
+  const reviewedSnapshotId = useRef<string | undefined>(undefined);
+  const invalidSnapshot = store.getState().monthlySnapshots.find((snapshot) => Object.keys(validateMonthlySnapshot(snapshot)).length > 0);
 
   useEffect(() => {
-    if (hasRunAutomationRef.current || isVisualQaSessionActive()) {
+    if (hasRunAutomationRef.current || isVisualQaSessionActive() || invalidSnapshot) {
       return;
     }
 
@@ -62,18 +65,19 @@ export function ReviewSnapshotScreen({
     }
 
     const snapshot =
-      progress.snapshotAutomationStatus.snapshot ?? progress.latestSummary?.snapshot;
+      invalidSnapshot ?? progress.snapshotAutomationStatus.snapshot ?? progress.latestSummary?.snapshot;
 
     if (!snapshot) {
       return;
     }
 
     setSnapshotFormFields({ progress, snapshot });
+    reviewedSnapshotId.current = snapshot.id;
     hasPrefilledFormRef.current = true;
   }, [progress]);
 
   function saveSnapshotChanges() {
-    if (progress.saveSnapshot()) {
+    if (progress.saveSnapshot(reviewedSnapshotId.current)) {
       onComplete();
     }
   }
@@ -102,6 +106,7 @@ export function ReviewSnapshotScreen({
 
         <PremiumCard>
           <SectionHeader title="Snapshot details" />
+          {invalidSnapshot ? <AppText testID="snapshot-repair-guidance">A stored snapshot needs correction before backup. Review its month, total and asset-class balances. Values remain unchanged until you save.</AppText> : null}
           <AppText color="secondary" variant="caption">
             These values are prefilled from your local portfolio records. Saving changes updates this month only.
           </AppText>

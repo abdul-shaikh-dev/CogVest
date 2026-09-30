@@ -76,7 +76,7 @@ const stockAsset: Asset = {
 };
 
 it("labels PPF-excluded history and masks its values without presenting it as full snapshots", async () => {
-  const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+  const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-11T12:00:00Z") });
   const onOpenHoldings = jest.fn();
   store.getState().addAsset(stockAsset);
   store.getState().addOpeningPosition({
@@ -217,6 +217,7 @@ function chartSnapshot(
 ): MonthlySnapshot {
   return {
     ...aprilSnapshot,
+    cashValue: portfolioValue - cryptoValue - debtValue - equityValue,
     cryptoValue,
     debtValue,
     equityValue,
@@ -851,10 +852,11 @@ describe("ProgressScreen", () => {
 
   it("announces negative changes and distinguishes zero baselines from the first month", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0 });
+    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0, cashValue: 160000 });
     store.getState().addMonthlySnapshot({
       ...maySnapshot,
       equityValue: 720000,
+      cashValue: -185000,
       portfolioValue: 900000,
     });
     const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
@@ -1385,8 +1387,8 @@ describe("ProgressScreen", () => {
 
   it("hides only series that stay zero across the selected range", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0 });
-    store.getState().addMonthlySnapshot({ ...maySnapshot, cryptoValue: 0, debtValue: 0 });
+    store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0, cashValue: 160000 });
+    store.getState().addMonthlySnapshot({ ...maySnapshot, cryptoValue: 0, debtValue: 0, cashValue: 505000 });
     const screen = render(<ProgressScreen store={store} />);
     expect(screen.queryByTestId("asset-trend-Crypto")).toBeNull();
     expect(screen.getByTestId("asset-trend-Debt")).toBeTruthy();

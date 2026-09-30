@@ -11,6 +11,7 @@ import { backupRestoreJournalKey, casFolioSaltStorageKey, quickSetupStorageKey }
 import { BackupRecoveryRequiredError, captureBackupStorage, commitBackupRestore, recoverBackupRestore } from "./backupPersistence";
 
 import { planPpfCsvImport, type PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
+import { assertValidMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import {
   findCanonicalAsset,
   hasCanonicalAssetConflict,
@@ -2111,6 +2112,7 @@ export function createPortfolioStore({
     },
     addMonthlySnapshot: (monthlySnapshot) => {
       const state = get();
+      const normalizedSnapshot = normalizeSnapshotRecord(monthlySnapshot);
 
       if (
         state.monthlySnapshots.some(
@@ -2119,10 +2121,15 @@ export function createPortfolioStore({
       ) {
         return;
       }
+      assertValidMonthlySnapshot(monthlySnapshot);
+
+      if (state.monthlySnapshots.some((snapshot) => snapshot.month === monthlySnapshot.month)) {
+        throw new Error("This month already has a snapshot. Correct the existing snapshot instead.");
+      }
 
       const monthlySnapshots = [
         ...state.monthlySnapshots,
-        normalizeSnapshotRecord(monthlySnapshot),
+        normalizedSnapshot,
       ];
 
       persistPortfolioTransition(storage, state, { monthlySnapshots });
@@ -2917,12 +2924,13 @@ export function createPortfolioStore({
       set({ cashEntries });
     },
     removeMonthlySnapshot: (monthlySnapshotId) => {
-      set((state) => ({
-        monthlySnapshots: state.monthlySnapshots.filter(
-          (monthlySnapshot) => monthlySnapshot.id !== monthlySnapshotId,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+      const monthlySnapshots = state.monthlySnapshots.filter(
+        (monthlySnapshot) => monthlySnapshot.id !== monthlySnapshotId,
+      );
+      if (monthlySnapshots.length === state.monthlySnapshots.length) return;
+      persistPortfolioTransition(storage, state, { monthlySnapshots });
+      set({ monthlySnapshots });
     },
     removeOpeningPosition: (openingPositionId) => {
       get().deleteOpeningPosition(openingPositionId);
@@ -4018,15 +4026,35 @@ export function createPortfolioStore({
       set({ cashEntries });
     },
     updateMonthlySnapshot: (monthlySnapshot) => {
-      const normalizedSnapshot = normalizeSnapshotRecord(monthlySnapshot);
-      set((state) => ({
-        monthlySnapshots: state.monthlySnapshots.map((currentSnapshot) =>
-          currentSnapshot.id === normalizedSnapshot.id
-            ? normalizedSnapshot
-            : currentSnapshot,
-        ),
-      }));
-      persistPortfolio(storage, get());
+      const state = get();
+      assertValidMonthlySnapshot(monthlySnapshot);
+      const existing = state.monthlySnapshots.find((item) => item.id === monthlySnapshot.id);
+      if (!existing) return;
+      if (state.monthlySnapshots.some((item) => item.id !== monthlySnapshot.id && item.month === monthlySnapshot.month)) {
+        throw new Error("This month already has a snapshot. Correct the existing snapshot instead.");
+      }
+      const normalizedSnapshot = normalizeSnapshotRecord(
+        existing.month === monthlySnapshot.month
+          ? monthlySnapshot
+          : {
+              ...monthlySnapshot,
+              performanceBasis: {
+                reason: "manual-snapshot",
+                status: "unavailable",
+                warnings: ["Monthly performance is unavailable after changing the snapshot month. Review that month's contribution evidence."],
+              },
+              generated: monthlySnapshot.generated
+                ? { ...monthlySnapshot.generated, source: "manual" }
+                : undefined,
+            },
+      );
+      const monthlySnapshots = state.monthlySnapshots.map((currentSnapshot) =>
+        currentSnapshot.id === normalizedSnapshot.id
+          ? normalizedSnapshot
+          : currentSnapshot,
+      );
+      persistPortfolioTransition(storage, state, { monthlySnapshots });
+      set({ monthlySnapshots });
     },
     updateOpeningPosition: (openingPosition) => {
       get().correctOpeningPosition(openingPosition);
