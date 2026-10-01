@@ -1,0 +1,17 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///scale-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: scale-qa-screen
+    timeout: 120000
+- tapOn:
+    id: scale-qa-seed
+- tapOn: "Replace with scale fixture"
+- extendedWaitUntil:
+    visible: "Portfolio restored"
+    timeout: 30000
+- tapOn:
+    id: backup-restore-done
+- assertVisible:
+    id: dashboard-screen

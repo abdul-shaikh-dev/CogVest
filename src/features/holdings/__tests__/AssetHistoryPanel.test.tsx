@@ -85,6 +85,22 @@ describe("AssetHistoryPanel", () => {
     mockHistory();
   });
 
+  it("formats only visible endpoint labels for a ten-year series", () => {
+    const points = Array.from({ length: 3653 }, (_, index) => ({
+      date: new Date(Date.UTC(2016, 0, 1 + index)).toISOString().slice(0, 10),
+      close: 100 + index,
+    }));
+    mockHistory({ entry: entry(points) });
+    const format = jest.spyOn(Date.prototype, "toLocaleDateString");
+    try {
+      const screen = renderPanel();
+      expect(screen.getByTestId("asset-history-chart", { includeHiddenElements: true })).toBeTruthy();
+      expect(format).toHaveBeenCalledTimes(2);
+      fireEvent.press(screen.getByTestId("asset-history-previous"));
+      expect(format).toHaveBeenCalledTimes(4);
+    } finally { format.mockRestore(); }
+  });
+
   it("switches between price and holding-value history using real transformed values", () => {
     const screen = renderPanel();
 

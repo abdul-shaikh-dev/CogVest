@@ -618,75 +618,81 @@ export function useProgress({
     );
   }, [chartSnapshots]);
   const asOf = formatLocalCalendarDate(now);
-  const ppfSummary = calculatePpfPortfolioSummary({
-    accounts: snapshot.ppfAccounts,
-    asOf,
-    entries: snapshot.ppfLedgerEntries,
-  });
-  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
-  const holdings = calculateHoldings({
-    assets: snapshot.assets,
-    openingPositions: snapshot.openingPositions,
-    quoteCache: snapshot.quoteCache,
-    trades: snapshot.trades,
-    now,
-  }).filter((holding) => !linkedLegacyAssetIds.has(holding.asset.id));
-  const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
-  const portfolioValue = calculatePortfolioTotal(
-    holdings,
-    snapshot.cashEntries,
-    now,
-    ppfSummary.confirmedBalance,
-  );
-  const totalInvested = normalizeMoney(
-    sumFinancialValues(
-      holdings.map(
-        (holding) =>
-          holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+  // Range selection must not replay the entire portfolio. These calculations
+  // use calendar-day cutovers; financial records, quotes or a new day invalidate.
+  const { allocation, cashBalance, hasData, monthlyMetrics, portfolioValue, totalInvested } = useMemo(() => {
+    const ppfSummary = calculatePpfPortfolioSummary({
+      accounts: snapshot.ppfAccounts,
+      asOf,
+      entries: snapshot.ppfLedgerEntries,
+    });
+    const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
+    const holdings = calculateHoldings({
+      assets: snapshot.assets,
+      openingPositions: snapshot.openingPositions,
+      quoteCache: snapshot.quoteCache,
+      trades: snapshot.trades,
+      now,
+    }).filter((holding) => !linkedLegacyAssetIds.has(holding.asset.id));
+    const cashBalance = calculateCashBalance(snapshot.cashEntries, now);
+    const portfolioValue = calculatePortfolioTotal(
+      holdings,
+      snapshot.cashEntries,
+      now,
+      ppfSummary.confirmedBalance,
+    );
+    const totalInvested = normalizeMoney(
+      sumFinancialValues(
+        holdings.map(
+          (holding) =>
+            holding.calculationBasis?.totalInvested ?? holding.totalInvested,
+        ),
+      ).plus(ppfSummary.investedBasis),
+    );
+    const baseMonthlyMetrics = calculateCashMonthlyMetrics({
+      cashEntries: snapshot.cashEntries,
+      now,
+      openingPositions: snapshot.openingPositions.filter(
+        (position) => !linkedLegacyAssetIds.has(position.assetId),
       ),
-    ).plus(ppfSummary.investedBasis),
-  );
-  const baseMonthlyMetrics = calculateCashMonthlyMetrics({
-    cashEntries: snapshot.cashEntries,
-    now,
-    openingPositions: snapshot.openingPositions.filter(
-      (position) => !linkedLegacyAssetIds.has(position.assetId),
-    ),
-    trades: snapshot.trades.filter(
-      (trade) => !linkedLegacyAssetIds.has(trade.assetId),
-    ),
-  });
-  const currentMonth = formatLocalCalendarDate(now).slice(0, 7);
-  const ppfMonthlyInvestment = normalizeMoney(
-    sumFinancialValues(
-      snapshot.ppfLedgerEntries
-        .filter(
-          (entry) =>
-            entry.type === "contribution" &&
-            entry.date.slice(0, 7) === currentMonth,
-        )
-        .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
-    ),
-  );
-  const monthlyInvested = normalizeMoney(
-    decimal(baseMonthlyMetrics.invested).plus(ppfMonthlyInvestment),
-  );
-  const monthlyMetrics = {
-    ...baseMonthlyMetrics,
-    invested: monthlyInvested,
-  };
-  const allocation = calculateAllocation({
-    cashBalance,
-    holdings,
-    ppfConfirmedBalance: ppfSummary.confirmedBalance,
-  });
-  const hasData =
-    holdings.length > 0 ||
-    snapshot.cashEntries.length > 0 ||
-    ppfSummary.accounts.length > 0;
-  const monthlySummaries = calculateMonthlyProgressSummaries(
+      trades: snapshot.trades.filter(
+        (trade) => !linkedLegacyAssetIds.has(trade.assetId),
+      ),
+    });
+    const currentMonth = formatLocalCalendarDate(now).slice(0, 7);
+    const ppfMonthlyInvestment = normalizeMoney(
+      sumFinancialValues(
+        snapshot.ppfLedgerEntries
+          .filter(
+            (entry) =>
+              entry.type === "contribution" &&
+              entry.date.slice(0, 7) === currentMonth,
+          )
+          .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
+      ),
+    );
+    const monthlyInvested = normalizeMoney(
+      decimal(baseMonthlyMetrics.invested).plus(ppfMonthlyInvestment),
+    );
+    const monthlyMetrics = {
+      ...baseMonthlyMetrics,
+      invested: monthlyInvested,
+    };
+    const allocation = calculateAllocation({
+      cashBalance,
+      holdings,
+      ppfConfirmedBalance: ppfSummary.confirmedBalance,
+    });
+    const hasData =
+      holdings.length > 0 ||
+      snapshot.cashEntries.length > 0 ||
+      ppfSummary.accounts.length > 0;
+    return { allocation, cashBalance, hasData, monthlyMetrics, portfolioValue, totalInvested };
+  }, [snapshot.assets, snapshot.openingPositions, snapshot.trades, snapshot.quoteCache,
+    snapshot.cashEntries, snapshot.ppfAccounts, snapshot.ppfLedgerEntries, asOf]);
+  const monthlySummaries = useMemo(() => calculateMonthlyProgressSummaries(
     snapshot.monthlySnapshots,
-  );
+  ), [snapshot.monthlySnapshots]);
   const latestSummary = monthlySummaries[0];
   const portfolioChartData = buildMonthlyProgressChartData(
     chartSnapshots,
