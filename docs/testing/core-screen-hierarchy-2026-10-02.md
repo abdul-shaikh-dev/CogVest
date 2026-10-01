@@ -1,5 +1,9 @@
 # Core screen hierarchy: 2 October 2026
 
+Follow-up: the Futures draft blocker recorded below was resolved in the
+[standalone verification](futures-post-export-verification-2026-10-02.md).
+This document retains the original debug-run results and limitations.
+
 ## Scope
 
 Incremental presentation pass following the Holdings direction: open routine
