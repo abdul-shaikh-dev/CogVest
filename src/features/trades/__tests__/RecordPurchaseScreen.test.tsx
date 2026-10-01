@@ -50,6 +50,10 @@ describe("Record purchase", () => {
   it("reviews and atomically records units, cost including fees and linked Cash without fabricating a quote", async () => {
     const { ui, store, storage, onSaved } = setup();
     details(ui);
+    expect(ui.getByTestId("purchase-review-quantity")).toHaveTextContent("2");
+    expect(ui.getByTestId("purchase-review-price")).toHaveTextContent("₹100.00");
+    expect(ui.getByTestId("purchase-review-fees")).toHaveTextContent("₹5.00");
+    expect(ui.getByTestId("purchase-review-date")).toHaveTextContent("2026-09-20");
     expect(ui.getByTestId("purchase-cash-debit")).toHaveTextContent("₹205.00");
     expect(store.getState().trades).toHaveLength(0);
     fireEvent.press(ui.getByTestId("purchase-confirm"));
@@ -75,6 +79,8 @@ describe("Record purchase", () => {
     details(ui);
     expect(ui.getByTestId("purchase-cash-debit")).toHaveTextContent("₹••••");
     expect(ui.getByTestId("purchase-available-cash")).toHaveTextContent("₹••••");
+    expect(ui.getByTestId("purchase-cash-debit")).toHaveProp("accessibilityLabel", "Amount hidden");
+    expect(ui.getByTestId("purchase-available-cash")).toHaveProp("accessibilityLabel", "Amount hidden");
     fireEvent.press(ui.getByTestId("purchase-back"));
     expect(ui.getByTestId("purchase-quantity")).toHaveProp("value", "2");
     fireEvent.press(ui.getByTestId("purchase-cancel"));

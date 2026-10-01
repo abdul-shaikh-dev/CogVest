@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Keyboard, KeyboardAvoidingView, Modal, StyleSheet, View } from "react-native";
+import { BackHandler, Keyboard, KeyboardAvoidingView, Modal, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useFocusEffect, usePreventRemove } from "@react-navigation/native";
 import type { StoreApi } from "zustand/vanilla";
-import { AppButton, AppText, IconButton, MaskedValue, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
+import { AppButton, AppText, IconButton, MaskedValue, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, getAdaptiveLayoutMode } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { calculateCashBalance } from "@/src/domain/calculations";
 import { formatINR } from "@/src/domain/formatters";
@@ -23,6 +23,8 @@ type Props = {
 export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCancel, onSaved,
   store = getPortfolioStore(), searchAssets = searchAssetLookupResults }: Props) {
   const flow = useRecordPurchase({ initialAssetId, now, store });
+  const { fontScale } = useWindowDimensions();
+  const stackCash = getAdaptiveLayoutMode(fontScale) !== "standard";
   const [query, setQuery] = useState("");
   const [lookup, setLookup] = useState<AssetLookupSearchResult>();
   const [searching, setSearching] = useState(false);
@@ -75,7 +77,7 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
   return <KeyboardAvoidingView style={styles.flex} behavior="height">
     <ScreenContainer scroll testID="record-purchase-screen">
       <View style={styles.content}>
-        <ScreenHeader title={flow.phase === "review" ? "Review purchase" : "Record purchase"} subtitle="From Cash to investment"
+        <ScreenHeader title={flow.phase === "review" ? "Review purchase" : "Record purchase"} subtitle={flow.phase === "review" ? undefined : "From Cash to investment"}
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={back} testID="purchase-back" />} />
         {flow.phase === "asset" ? <>
           <FormTextField label="Find an investment" value={query} testID="purchase-search" onChangeText={(value) => {
@@ -115,13 +117,23 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
             <DatePickerField label="Purchase date" maximumDate={now} value={flow.values.date} error={flow.errors.date} onChange={(value) => flow.update("date", value)} testID="purchase-date" />
             <FormTextField label="Note (optional)" value={flow.values.notes} onChangeText={(value) => flow.update("notes", value)} multiline testID="purchase-note" />
           </PremiumCard> : <PremiumCard testID="purchase-review">
-            <SectionHeader title="Cash-funded purchase" />
-            <AppText>{flow.review?.quantity} units × {formatINR(flow.review?.pricePerUnit ?? 0)}</AppText>
-            <AppText color="secondary">{flow.review?.date} · Fees {formatINR(flow.review?.fees ?? 0)}</AppText>
-            <AppText color="secondary">Cash debit</AppText>
-            <MaskedValue value={formatINR(flow.review?.totalValue ?? 0)} masked={masked} weight="bold" testID="purchase-cash-debit" />
-            <AppText color="secondary">Available Cash</AppText>
-            <MaskedValue value={formatINR(calculateCashBalance(flow.snapshot.cashEntries, now))} masked={masked} testID="purchase-available-cash" />
+            <SectionHeader title="Purchase details" />
+            <View style={styles.reviewGrid}>
+              <ReviewValue label="Quantity" value={`${flow.review?.quantity ?? 0}`} testID="purchase-review-quantity" />
+              <ReviewValue label="Price per unit" value={formatINR(flow.review?.pricePerUnit ?? 0)} testID="purchase-review-price" />
+              <ReviewValue label="Fees" value={formatINR(flow.review?.fees ?? 0)} testID="purchase-review-fees" />
+              <ReviewValue label="Purchase date" value={flow.review?.date ?? ""} testID="purchase-review-date" />
+            </View>
+            <View style={[styles.cashImpact, stackCash && styles.cashImpactStacked]}>
+              <View style={styles.cashValue}>
+                <AppText color="secondary" variant="caption">Cash debit</AppText>
+                <MaskedValue value={formatINR(flow.review?.totalValue ?? 0)} masked={masked} variant="title" weight="bold" testID="purchase-cash-debit" />
+              </View>
+              <View style={styles.cashValue}>
+                <AppText color="secondary" variant="caption">Available Cash</AppText>
+                <MaskedValue value={formatINR(calculateCashBalance(flow.snapshot.cashEntries, now))} masked={masked} weight="bold" testID="purchase-available-cash" />
+              </View>
+            </View>
             <AppText color="secondary" variant="caption">Saves the purchase and linked Cash withdrawal together.</AppText>
             {flow.errors.save ? <AppText style={styles.error} accessibilityRole="alert" testID="purchase-save-error">{flow.errors.save}</AppText> : null}
           </PremiumCard>}
@@ -143,8 +155,21 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
   </KeyboardAvoidingView>;
 }
 
+function ReviewValue({ label, value, testID }: { label: string; value: string; testID: string }) {
+  return <View style={styles.reviewValue}>
+    <AppText color="secondary" variant="caption">{label}</AppText>
+    <AppText style={styles.number} weight="bold" testID={testID}>{value}</AppText>
+  </View>;
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 }, content: { gap: spacing.lg }, asset: { gap: spacing.xs },
   error: { color: colors.loss },
+  reviewGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  reviewValue: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },
+  number: { fontVariant: ["tabular-nums"] },
+  cashImpact: { flexDirection: "row", gap: spacing.md, borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md },
+  cashImpactStacked: { flexDirection: "column" },
+  cashValue: { flex: 1, gap: spacing.xs },
   modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
 });

@@ -51,6 +51,11 @@ and focused holding details. `Add existing holding` records an opening balance;
 linked Cash debit before atomic save. It does not use execution price as a
 current quote. Back preserves phase values; leaving an unfinished draft requires
 confirmation. Aggregate review amounts respect value masking.
+Purchase review separates quantity, per-unit price, fees and date into labeled
+values. Group cash debit and available Cash below a divider, with the debit
+emphasized and cash values stacked at enlarged text sizes. Keep the linked
+withdrawal explanation and explicit confirmation; do not imply the purchase
+price is a current quote or change the established masking scope.
 
 Holdings may also launch the constrained V1 CSV onboarding flow. Its screen must
 use the same calm hierarchy as Quick Setup: select one file, resolve rows in
