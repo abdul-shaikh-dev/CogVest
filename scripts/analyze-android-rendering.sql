@@ -1,5 +1,6 @@
 -- Run locally with Perfetto trace_processor query -f against the retained trace.
--- Restrict results to CogVest; system traces can contain unrelated process data.
+-- Restrict CPU detail to CogVest; the final query adds known rendering controls.
+-- System traces can contain unrelated process data; do not publish raw traces.
 SELECT t.name, ROUND(SUM(s.dur) / 1e6, 1) AS cpu_ms
 FROM sched s
 JOIN thread t USING (utid)
@@ -32,3 +33,15 @@ WHERE p.name = 'com.abdulshaikh.cogvest' AND ts.dur > 0
   AND t.name IN ('RenderThread', 'mqt_v_js')
 GROUP BY t.name, ts.state
 ORDER BY t.name, ms DESC;
+
+-- FrameTimeline separates app deadlines from compositor/presentation misses.
+-- App rows count surface slices; compositor rows count display slices. Do not
+-- add these together. Empty output is missing evidence, not proof of no jank.
+SELECT p.name AS process, a.jank_type, a.present_type, COUNT(*) AS timeline_slices
+FROM actual_frame_timeline_slice a
+JOIN process p USING (upid)
+WHERE a.dur > 0 AND p.name IN (
+  'com.abdulshaikh.cogvest', 'com.android.settings', '/system/bin/surfaceflinger'
+)
+GROUP BY p.name, a.jank_type, a.present_type
+ORDER BY p.name, timeline_slices DESC;
