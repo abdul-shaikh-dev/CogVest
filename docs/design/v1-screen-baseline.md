@@ -540,7 +540,6 @@ Cash should feel like deployable capital and cash movement, not a placeholder.
 Baseline structure:
 
 - title `Cash Ledger`
-- subtitle `Manual ledger - local only`
 - cash balance hero
 - cash added and invested activity
 - Deposit and Withdraw actions immediately below the balance; each opens a
@@ -548,6 +547,15 @@ Baseline structure:
 - invested cash is derived only from trustworthy linked investment accounting;
   do not expose a generic manual `Investment transfer` action
 - recent ledger rows or a useful empty state
+
+Group the balance and its Deposit/Withdraw actions together. Keep monthly
+activity in one compact section without repeating its invested figure in a
+separate sentence. History groups entries by calendar month, newest first,
+with a day/direction column, concise movement type and signed INR amount.
+Retain the original user label and notes. Full dates remain in accessibility
+labels and review screens. Linked investments and Futures transfers keep their
+review hints and original owner routes. Enlarged text stacks amounts beneath
+entry details instead of squeezing them beside long labels.
 
 Linked investment funding should reduce available cash exactly once. Empty cash
 state should be acceptable and should not imply missing setup.
