@@ -744,7 +744,7 @@ describe("TransactionImportScreen", () => {
     expect(store.getState().trades).toHaveLength(1);
   });
 
-  it("blocks supplemental import until the opening baseline cutover is confirmed", async () => {
+  it("shows the local opening date after selecting a provider ID and blocks until it is confirmed", async () => {
     const store = createPortfolioStore({
       now: () => new Date("2026-08-23T00:00:00.000Z"),
       storage: createMemoryJsonStorage(),
@@ -765,20 +765,22 @@ describe("TransactionImportScreen", () => {
       id: "opening-hdfc",
       quantity: 2,
     });
-    const text = `${header}\n1,buy,2025-04-01,,NSE,HDFCBANK,INR,1,120,,,order-1,broker,0,0,HDFC purchase,`;
+    const text = `${header}\n1,buy,2025-04-01,INE040A01034,NSE,HDFCBANK,INR,1,120,,,order-1,broker,0,0,HDFC purchase,`;
     const { getByTestId } = render(
       <TransactionImportScreen
         now={() => new Date("2026-08-23T00:00:00.000Z")}
         onCancel={jest.fn()}
         onImported={jest.fn()}
         pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })}
-        searchAssetLookupResults={jest.fn()}
+        searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })}
         store={store}
       />,
     );
 
     fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
     fireEvent.press(getByTestId("select-transaction-csv"));
+    await waitFor(() => expect(getByTestId("transaction-import-asset-isin:INE040A01034-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
+    fireEvent.press(getByTestId("transaction-import-asset-isin:INE040A01034-candidate-yahoo:HDFCBANK.NS"));
     await waitFor(() =>
       expect(getByTestId("transaction-import-shared-cutover")).toBeTruthy(),
     );

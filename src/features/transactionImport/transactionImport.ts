@@ -198,7 +198,7 @@ function selectedAssetMatchesRow(asset: Asset, row: TransactionCsvCandidate) {
   );
 }
 
-function assetForResolution(
+export function assetForResolution(
   resolution: TransactionCsvResolution,
   state: PortfolioStoreState,
 ) {

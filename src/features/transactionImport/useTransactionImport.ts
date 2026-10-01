@@ -33,6 +33,7 @@ import type { Asset } from "@/src/types";
 import { createId } from "@/src/utils";
 
 import {
+  assetForResolution,
   buildTransactionImportPlan,
   type TransactionCsvResolution,
   type TransactionImportMode,
@@ -671,19 +672,19 @@ export function useTransactionImport({
   const cutoverHoldings = [
     ...new Map(
       resolutions
-        .filter(
-          (resolution) => resolution.status === "ready" && resolution.asset,
-        )
-        .flatMap((resolution) =>
-          snapshot.openingPositions
+        .flatMap((resolution) => {
+          // The plan may map a provider listing to an existing local holding.
+          const asset = assetForResolution(resolution, snapshot);
+          if (!asset) return [];
+          return snapshot.openingPositions
             .filter(
-              (position) => position.assetId === resolution.asset!.id,
+              (position) => position.assetId === asset.id,
             )
             .map(
               (position) =>
-                [position.id, { asset: resolution.asset!, position }] as const,
-            ),
-        ),
+                [position.id, { asset, position }] as const,
+            );
+        }),
     ).values(),
   ];
   const needsSharedCutover = cutoverHoldings.some(
