@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic text only; no file is read or portfolio record changed.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- assertVisible:
+    id: transaction-import-source-zerodhaTradebookEqV1
+    checked: true
+- waitForAnimationToEnd
+- takeScreenshot: .expo/import-layout/${SHOT}/sources
+- scrollUntilVisible:
+    element:
+      id: transaction-import-toggle-source-guide
+    direction: DOWN
+- tapOn:
+    id: transaction-import-toggle-source-guide
+- scrollUntilVisible:
+    element:
+      text: "Get your Tradebook CSV"
+    direction: DOWN
+- assertVisible: "Get your Tradebook CSV"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-toggle-source-guide
+    direction: UP
+- tapOn:
+    id: transaction-import-toggle-source-guide
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-cogvestCsvV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-cogvestCsvV1
+- scrollUntilVisible:
+    element:
+      id: save-transaction-csv-template
+    direction: DOWN
+- assertVisible: "Save CSV template"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-camsKfinCasPdfV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- assertVisible:
+    id: transaction-import-source-camsKfinCasPdfV1
+    checked: true
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: "synthetic-test-only"
+- assertVisible: 'PDF password \(if required\)'
+- assertVisible:
+    id: cas-statement-password
+- waitForAnimationToEnd
+- takeScreenshot: .expo/import-layout/${SHOT}/password-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-ppf
+    direction: UP
+- tapOn:
+    id: transaction-import-source-ppf
+- assertVisible: "Add PPF account"

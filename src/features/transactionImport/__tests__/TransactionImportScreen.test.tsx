@@ -29,6 +29,25 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it("distinguishes source selection from the PPF destination", () => {
+    const onAddPpfAccount = jest.fn();
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<TransactionImportScreen onAddPpfAccount={onAddPpfAccount} onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
+    expect(screen.getByTestId("transaction-import-sources").props.accessibilityRole).toBe("radiogroup");
+    expect(screen.getByTestId("transaction-import-sources").props.accessibilityLabel).toBe("Import source");
+    const zerodha = screen.getByRole("radio", { name: "Zerodha Tradebook" });
+    const cas = screen.getByRole("radio", { name: "CAMS + KFintech CAS" });
+    expect(zerodha.props.accessibilityState.checked).toBe(true);
+    fireEvent.press(cas);
+    expect(cas.props.accessibilityState.checked).toBe(true);
+    expect(zerodha.props.accessibilityState.checked).toBe(false);
+    expect(screen.getByTestId("select-cas-statement")).toHaveTextContent("Choose CAS PDF");
+    expect(screen.getByTestId("transaction-import-source-ppf").props.accessibilityRole).toBe("button");
+    fireEvent.press(screen.getByTestId("transaction-import-source-ppf"));
+    expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
+    expect(store.getState().trades).toEqual([]);
+  });
+
   it("keeps repeat file selection immediate while retaining expandable acquisition guidance", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const openExternalUrl = jest.fn().mockRejectedValue(new Error("offline"));
