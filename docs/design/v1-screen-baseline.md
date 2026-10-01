@@ -326,6 +326,11 @@ The form owns keyboard avoidance; do not apply a global screen change merely
 for this flow. Date uses the full available width, and phase labels grow/wrap
 at enlarged text instead of overflowing a fixed-height step row.
 
+Classification and position entry use open sections. Position entry keeps the
+selected asset name and identifiers above the fields. Review pairs invested and
+current values, then groups the signed P&L amount and percentage under one label.
+Retain unavailable valuation states, the no-cash-movement explanation and edits.
+
 Required concepts:
 
 - asset name
