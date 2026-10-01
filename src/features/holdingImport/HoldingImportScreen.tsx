@@ -85,7 +85,7 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
         title="Import holdings"
       />
 
-      <PremiumCard style={styles.introCard}>
+      <PremiumCard section style={styles.introCard}>
         <SectionHeader title="Start with the CogVest template" />
         <AppText color="secondary">
           Import aggregate opening positions, not transaction history. Review every

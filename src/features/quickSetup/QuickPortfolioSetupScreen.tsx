@@ -177,7 +177,7 @@ export function QuickPortfolioSetupScreen({
 
         <View style={styles.list} testID="quick-setup-confirmed-items">
           <SectionHeader title="Confirmed in this setup" />
-          <PremiumCard>
+          <PremiumCard section>
             {session.items.map((item) => {
               const exists = itemExists(item.kind, item.recordId);
 

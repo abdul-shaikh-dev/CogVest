@@ -1,0 +1,52 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after final-primary-tabs with synthetic data; SHOT names the display configuration.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- assertVisible:
+    id: dashboard-portfolio-hero
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/dashboard
+- openLink: "cogvest:///cash"
+- assertVisible: "Deposit"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/cash
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: value-mask-toggle
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/settings
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-Portfolio
+    direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/progress
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: trade-history-screen
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/holding-records
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible:
+    id: insight-detail-screen
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/insight
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/${SHOT}/import

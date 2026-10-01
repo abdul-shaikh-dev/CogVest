@@ -373,7 +373,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       <View ref={contentRef} collapsable={false} style={styles.content}>
         <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />
         {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="futures-error">{error}</AppText> : null}
-        <PremiumCard>
+        <PremiumCard section>
           <SectionHeader title="Futures wallet" />
           <AppText color="secondary">Base-asset quantity · USDT settlement · manual entry</AppText>
           {account && !editingAccount ? <>
@@ -390,7 +390,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           </>}
         </PremiumCard>
         {account ? <>
-          <PremiumCard testID="futures-position-summary">
+          <PremiumCard section testID="futures-position-summary">
             <SectionHeader title="Position & wallet status" />
             <AppText>Replayed wallet</AppText><Money value={`${replay?.walletUsdt ?? "Unavailable"} USDT`} masked={masked} />
             <AppText>Realized P&L since starting wallet</AppText><Money value={`${replay?.realizedPnlUsdt ?? "Unavailable"} USDT`} masked={masked} />
@@ -415,7 +415,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             </View>)}
             <AppText color="secondary">Indicative margin is not Binance maintenance margin or liquidation risk. It is already part of wallet funds, never added to equity.</AppText>
           </PremiumCard>
-          <PremiumCard>
+          <PremiumCard section>
             <SectionHeader title="Activity" />
             <AppText color="secondary">Add every fill and its fee. Enter funding and transfers separately. Use the linked Cash form below for recorded INR Cash; an unlinked Binance Spot movement remains outside portfolio totals.</AppText>
             {account.events.map((event) => <View key={event.id} style={styles.row}>

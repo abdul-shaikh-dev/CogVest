@@ -2,8 +2,10 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 30000
 - openLink: "cogvest:///futures"
 - assertVisible:
     id: "futures-screen"
@@ -93,6 +95,11 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "This backup contains sensitive financial information and is not encrypted."
 - tapOn:
     id: choose-backup-location
+- runFlow:
+    when:
+      visible: "Can.t use this folder"
+    commands:
+      - tapOn: "Documents"
 - tapOn: USE THIS FOLDER
 - tapOn: ALLOW
 - extendedWaitUntil:
@@ -105,8 +112,30 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-delete-account
     direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 5000
+# A disconnected Metro warning can intercept this bottom-of-screen action.
+# Use a standalone APK for the release gate; never dismiss warnings to pass it.
+- assertNotVisible: ".*Open debugger to view warnings.*"
 - tapOn:
     id: futures-delete-account
+- assertVisible: "Delete Futures wallet?"
+- takeScreenshot: .expo/futures-post-export-confirmation
+- tapOn: "Cancel"
+- scrollUntilVisible:
+    element: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible: ".*Open debugger to view warnings.*"
+- tapOn:
+    id: futures-delete-account
+- assertVisible: "Delete Futures wallet?"
 - tapOn: "Delete wallet"
 - openLink: "cogvest:///futures"
 - assertVisible:
@@ -152,7 +181,9 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
 - launchApp:
     clearState: false
-- assertVisible: "Review Futures"
+- extendedWaitUntil:
+    visible: "Review Futures"
+    timeout: 30000
 - tapOn: "Review Futures"
 - assertVisible:
     id: "futures-screen"
@@ -166,3 +197,6 @@ appId: com.abdulshaikh.cogvest
       text: "Qty 1.*Entry 120 USDT.*"
     direction: DOWN
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/futures-roundtrip-restored

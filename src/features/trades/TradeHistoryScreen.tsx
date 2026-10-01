@@ -132,7 +132,7 @@ export function TradeHistoryScreen({
             title="No transactions yet"
           />
         ) : (
-          <PremiumCard style={styles.historyCard}>
+          <PremiumCard section style={styles.historyCard}>
             <View accessibilityLiveRegion={isSelecting ? "polite" : "none"} testID={isSelecting ? "transaction-selection-count" : undefined}>
               <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : "Transaction history"} />
             </View>

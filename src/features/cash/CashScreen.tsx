@@ -192,7 +192,7 @@ export function CashScreen({
     <>
     <ScreenContainer scroll testID="cash-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Cash Ledger" subtitle="Deployable capital • local only" />
+        <ScreenHeader title="Cash Ledger" />
 
         <HeroMetric
           label="Deployable cash"

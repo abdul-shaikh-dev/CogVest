@@ -128,7 +128,7 @@ export function ManageAssetsScreen({
               ? `${snapshot.assets.length} ${snapshot.assets.length === 1 ? "asset" : "assets"}`
               : `${visibleAssets.length} of ${snapshot.assets.length} assets`}
           </AppText>
-          <PremiumCard style={styles.list}>
+          <PremiumCard section style={styles.list}>
             {visibleAssets.map((asset, index) => {
               const units = remainingUnits(
                 snapshot,

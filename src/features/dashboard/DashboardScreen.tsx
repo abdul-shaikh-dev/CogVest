@@ -237,7 +237,6 @@ export function DashboardScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Dashboard"
-          subtitle="Local portfolio • current valuation"
           action={
             <>
               <IconButton
@@ -279,7 +278,7 @@ export function DashboardScreen({
           </PremiumCard>
         ) : null}
 
-        <PremiumCard elevated style={styles.heroCard} testID="dashboard-portfolio-hero">
+        <PremiumCard section style={styles.heroCard} testID="dashboard-portfolio-hero">
           <AppText color="secondary" variant="caption" weight="bold">
             Portfolio value
           </AppText>
@@ -541,7 +540,7 @@ export function DashboardScreen({
         ) : null}
 
         {!isMinimalMode ? (
-          <PremiumCard testID="dashboard-monthly-context">
+          <PremiumCard section testID="dashboard-monthly-context">
             <SectionHeader title={`${formatMonthYear(currentDate)} activity`} />
             <MetricGroup
               metrics={[
@@ -565,7 +564,7 @@ export function DashboardScreen({
         ) : null}
 
         {hasAllocation ? (
-          <PremiumCard testID="dashboard-allocation-card">
+          <PremiumCard section testID="dashboard-allocation-card">
             <View
               style={[
                 styles.allocationHeader,

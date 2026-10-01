@@ -107,7 +107,7 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
             <AppText color="secondary">{flow.asset?.symbol} · {flow.asset?.exchange ?? "Saved investment"} · {flow.asset?.currency}</AppText>
             {pricePending ? <AppText color="secondary" variant="caption">Current price unavailable. Purchase price only records your cost.</AppText> : null}
           </View>
-          {flow.phase === "details" ? <PremiumCard>
+          {flow.phase === "details" ? <PremiumCard section>
             <SectionHeader title="Purchase details" />
             <FormTextField label="Quantity" keyboardType="decimal-pad" value={flow.values.quantity} error={flow.errors.quantity} onChangeText={(value) => flow.update("quantity", value)} testID="purchase-quantity" />
             <FormTextField label="Price per unit (INR)" keyboardType="decimal-pad" value={flow.values.pricePerUnit} error={flow.errors.pricePerUnit} onChangeText={(value) => flow.update("pricePerUnit", value)} testID="purchase-price" />

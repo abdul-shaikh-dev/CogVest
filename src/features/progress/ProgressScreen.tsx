@@ -1358,7 +1358,7 @@ function ProgressTrendCards({
           ) : null}
         </PremiumCard>
       ) : null}
-      <PremiumCard>
+      <PremiumCard section>
         <ChartCardHeader
           subtitle={ppfExcludedHistory ? "Stored market holdings + cash · PPF excluded · compared with invested capital" : "Stored portfolio value compared with invested capital · not investment return"}
           title={ppfExcludedHistory ? "Tracked Growth" : "Portfolio Growth"}
@@ -1396,7 +1396,7 @@ function ProgressTrendCards({
           </View>
         )}
       </PremiumCard>
-      <PremiumCard>
+      <PremiumCard section>
         <ChartCardHeader
           subtitle={ppfExcludedHistory ? "Cash and PPF excluded · includes money added or withdrawn" : "Cash excluded · includes money added or withdrawn"}
           title="Value by asset class"
@@ -2139,7 +2139,7 @@ const styles = StyleSheet.create({
   },
   chartSurface: {
     flex: 1,
-    backgroundColor: colors.surface.card,
+    backgroundColor: "transparent",
     overflow: "hidden",
     paddingBottom: spacing.xs,
     paddingLeft: spacing.xs,

@@ -1,0 +1,19 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run after futures-manual-wallet; reuse its asserted synthetic account.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-screen
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/core-screen-hierarchy/normal/futures-wallet
+- scrollUntilVisible:
+    element: "Qty 1.*Entry 120 USDT.*"
+    direction: DOWN
+- assertVisible: "Qty 1.*Entry 120 USDT.*"

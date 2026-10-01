@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { StyleSheet } from "react-native";
 
 import { AppText } from "./AppText";
 
@@ -20,6 +21,7 @@ export function MaskedValue({
   masked = false,
   value,
   valueType = "wealth",
+  style,
   ...textProps
 }: MaskedValueProps) {
   const shouldMask = masked && valueType === "wealth";
@@ -27,6 +29,7 @@ export function MaskedValue({
   return (
     <AppText
       {...textProps}
+      style={[styles.numeric, style]}
       accessibilityLabel={
         shouldMask
           ? MASKED_VALUE_ACCESSIBILITY_LABEL
@@ -37,3 +40,7 @@ export function MaskedValue({
     </AppText>
   );
 }
+
+const styles = StyleSheet.create({
+  numeric: { fontVariant: ["tabular-nums"] },
+});
