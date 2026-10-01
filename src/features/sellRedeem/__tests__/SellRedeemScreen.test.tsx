@@ -86,7 +86,8 @@ describe("SellRedeemScreen", () => {
     expect(getByText("Available units")).toBeTruthy();
     expect(getByText("25")).toBeTruthy();
     expect(getByPlaceholderText("Max 25")).toBeTruthy();
-    expect(getByText("Cash proceeds")).toBeTruthy();
+    expect(getByText("Proceeds preview")).toBeTruthy();
+    expect(queryByTestId("sell-redeem-cash-link-summary")).toBeNull();
     expect(getByText("Saved quote")).toBeTruthy();
     expect(getByTestId("sell-redeem-quote-context")).toHaveTextContent(
       /Stale · Yahoo Finance · as of/,
@@ -116,8 +117,11 @@ describe("SellRedeemScreen", () => {
     selectDate(getByTestId, "2026-05-20");
 
     await waitFor(() => {
-      expect(getByText("Net proceeds")).toBeTruthy();
-      expect(getAllByText("₹8,400.00")).toHaveLength(2);
+      expect(getByText("Net proceeds to Cash")).toBeTruthy();
+      expect(getAllByText("₹8,400.00")).toHaveLength(1);
+      expect(getByTestId("sell-redeem-net-proceeds")).toHaveTextContent("₹8,400.00");
+      expect(getByTestId("sell-redeem-remaining-units")).toHaveTextContent("20");
+      expect(getByTestId("sell-redeem-remaining-value")).toHaveTextContent("₹34,000.00");
     });
 
     fireEvent.press(getByTestId("sell-redeem-save-button"));
@@ -146,8 +150,8 @@ describe("SellRedeemScreen", () => {
     fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
     selectDate(getByTestId, "2026-05-20");
 
-    expect(getByText("Net proceeds added to Cash Ledger")).toBeTruthy();
-    expect(getAllByText("₹1,700.00")).toHaveLength(3);
+    expect(getByText("Net proceeds to Cash")).toBeTruthy();
+    expect(getAllByText("₹1,700.00")).toHaveLength(2);
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
     expect(queryByTestId("sell-redeem-link-cash-toggle")).toBeNull();
   });
@@ -163,6 +167,7 @@ describe("SellRedeemScreen", () => {
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
+    expect(queryByTestId("sell-redeem-cash-link-summary")).toBeNull();
     expect(getByTestId("sell-redeem-save-button")).toBeDisabled();
   });
 
@@ -212,11 +217,13 @@ describe("SellRedeemScreen", () => {
     fireEvent.changeText(screen.getByLabelText("Fees"), "100");
     selectDate(screen.getByTestId, "2026-05-20");
     expect(screen.queryByText("₹8,400.00")).toBeNull();
+    expect(screen.getByTestId("sell-redeem-net-proceeds")).toHaveProp("accessibilityLabel", "Amount hidden");
+    expect(screen.getByTestId("sell-redeem-remaining-value")).toHaveProp("accessibilityLabel", "Amount hidden");
     expect(screen.getByText("Remaining units")).toBeTruthy();
     expect(screen.getByText("20")).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("reveal-sell-redeem-button"));
-    expect(screen.getAllByText("₹8,400.00")).toHaveLength(2);
+    expect(screen.getAllByText("₹8,400.00")).toHaveLength(1);
 
     act(() => store.getState().updatePreferences({ maskWealthValues: false }));
     act(() => store.getState().updatePreferences({ maskWealthValues: true }));

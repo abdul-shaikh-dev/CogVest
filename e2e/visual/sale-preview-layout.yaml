@@ -1,0 +1,57 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio only. Never save this sale.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///sell-redeem?assetId=visual-qa-asset-hdfc"
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-quantity-input
+    direction: DOWN
+- tapOn:
+    id: sell-redeem-quantity-input
+- inputText: "2"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-price-input
+    direction: DOWN
+- tapOn:
+    id: sell-redeem-price-input
+- eraseText: 20
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-fees-input
+    direction: DOWN
+- tapOn:
+    id: sell-redeem-fees-input
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-save-button
+    direction: DOWN
+- assertVisible: "₹195.00"
+- assertVisible:
+    id: sell-redeem-net-proceeds
+    text: "₹195.00"
+- assertVisible:
+    id: sell-redeem-remaining-units
+    text: "23"
+- takeScreenshot: .expo/sale-preview/${SHOT}/preview
+- scrollUntilVisible:
+    element:
+      id: sell-redeem-quantity-input
+    direction: UP
+- assertVisible:
+    id: sell-redeem-quantity-input
+    text: "2"
+- takeScreenshot: .expo/sale-preview/${SHOT}/fields
+- back
+- stopApp

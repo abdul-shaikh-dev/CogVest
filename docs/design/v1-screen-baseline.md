@@ -153,6 +153,11 @@ Sell / redeem labels the editable amount as the actual execution price. A saved
 quote may seed that field once, but nearby copy identifies its source, age, and
 freshness and tells the user to confirm it against the broker record. A quote
 refresh must never overwrite an execution price the user has entered or cleared.
+The proceeds preview is separate from entry fields. Net proceeds to Cash leads
+once, followed by gross proceeds and fees, then remaining units and value under
+After this sale. Keep the automatic cash-credit and separate-withdrawal guidance.
+Entry field pairs stack at larger text sizes. Aggregate preview amounts retain
+the existing masking and temporary-reveal behavior.
 
 V3 issue #22 extends this same panel with Price history / Your holding value,
 not a competing detail route. Its behavior and limits are defined in
