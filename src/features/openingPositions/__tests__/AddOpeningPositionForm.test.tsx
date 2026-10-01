@@ -82,6 +82,21 @@ function toggleReviewDetails(
 }
 
 describe("AddOpeningPositionForm", () => {
+  it("keeps asset context on position entry and groups review gains", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<AddOpeningPositionForm initialVisualQaState="review" store={store} />);
+    expect(within(screen.getByTestId("review-pnl-summary")).getByText("Percentage unavailable")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("review-edit-position"));
+    expect(within(screen.getByTestId("position-asset-context")).getByText("HDFC Bank")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("quantity-input"), "2");
+    fireEvent.changeText(screen.getByTestId("average-cost-input"), "100");
+    fireEvent.changeText(screen.getByTestId("price-input"), "125");
+    fireEvent.press(screen.getByTestId("review-holding-button"));
+    const summary = within(screen.getByTestId("review-pnl-summary"));
+    expect(summary.getByTestId("derived-preview-pnl")).toHaveTextContent(/50\.00/);
+    expect(summary.getByTestId("derived-preview-pnl-percent")).toHaveTextContent("+25.00%");
+    expect(store.getState().openingPositions).toEqual([]);
+  });
   it("keeps cross-provider relevance order instead of moving weaker matches into provider groups", async () => {
     jest.useFakeTimers();
     const results = [assetSearchQaProviderCandidates[0], assetSearchQaProviderCandidates[4], assetSearchQaProviderCandidates[1]];

@@ -789,7 +789,7 @@ export function AddOpeningPositionForm({
       ) : null}
 
       {currentPhase === "class" ? (
-      <PremiumCard testID="add-holding-phase-class">
+      <PremiumCard section testID="add-holding-phase-class">
         <SectionHeader title="Confirm details" />
         <AppText
           color="secondary"
@@ -911,8 +911,15 @@ export function AddOpeningPositionForm({
       ) : null}
 
       {currentPhase === "position" ? (
-      <PremiumCard testID="add-holding-phase-position">
+      <PremiumCard section testID="add-holding-phase-position">
         <SectionHeader title="Position Details" />
+        <View style={styles.positionIdentity} testID="position-asset-context">
+          <CategoryIcon assetClass={assetClass} size={20} />
+          <View style={styles.summaryCopy}>
+            <AppText weight="bold">{assetName}</AppText>
+            <AppText color="secondary" variant="caption">{symbol}{ticker !== symbol ? ` • ${ticker}` : ""}</AppText>
+          </View>
+        </View>
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField
@@ -1116,7 +1123,7 @@ export function AddOpeningPositionForm({
               <AppText color="secondary" variant="caption">
                 Invested
               </AppText>
-              <AppText weight="bold">
+              <AppText style={styles.financialValue} variant="title" weight="bold">
                 {formatINR(previewHolding.totalInvested)}
               </AppText>
             </View>
@@ -1124,38 +1131,37 @@ export function AddOpeningPositionForm({
               <AppText color="secondary" variant="caption">
                 Current
               </AppText>
-              <AppText weight="bold">
+              <AppText style={styles.financialValue} variant="title" weight="bold">
                 {previewHolding.currentValue === null
                   ? "Unavailable"
                   : formatINR(previewHolding.currentValue)}
               </AppText>
             </View>
-            <View style={styles.previewCell}>
-              <AppText color="secondary" variant="caption">
-                P&L
-              </AppText>
+          </View>
+          <View style={styles.reviewPnl} testID="review-pnl-summary">
+            <AppText color="secondary" variant="caption">
+              P&L
+            </AppText>
+            <View style={styles.reviewPnlValues}>
               {previewHolding.unrealisedPnL === null ? (
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
                 <AppText
-                  style={
+                  style={[
+                    styles.financialValue,
                     previewHolding.unrealisedPnL >= 0
                       ? styles.positiveText
-                      : styles.negativeText
-                  }
+                      : styles.negativeText,
+                  ]}
                   testID="derived-preview-pnl"
+                  variant="title"
                   weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatSignedINR(previewHolding.unrealisedPnL)}
                 </AppText>
               )}
-            </View>
-            <View style={styles.previewCell}>
-              <AppText color="secondary" variant="caption">
-                P&L %
-              </AppText>
               {previewHolding.unrealisedPnLPct === null ? (
-                <AppText color="secondary" weight="bold">Unavailable</AppText>
+                <AppText color="secondary" variant="caption">Percentage unavailable</AppText>
               ) : (
                 <AppText
                   style={
@@ -1164,6 +1170,7 @@ export function AddOpeningPositionForm({
                       : styles.negativeText
                   }
                   testID="derived-preview-pnl-percent"
+                  accessibilityLabel={`P&L percentage ${formatPercentage(previewHolding.unrealisedPnLPct)}`}
                   weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatPercentage(previewHolding.unrealisedPnLPct)}
@@ -1483,6 +1490,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     width: "48%",
   },
+  financialValue: { fontVariant: ["tabular-nums"] },
+  positionIdentity: { alignItems: "center", flexDirection: "row", gap: spacing.sm, borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.md },
+  reviewPnl: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingVertical: spacing.sm },
+  reviewPnlValues: { alignItems: "baseline", flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md, rowGap: spacing.xs },
   previewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

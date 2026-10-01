@@ -1,0 +1,92 @@
+appId: com.abdulshaikh.cogvest
+---
+# Unsaved synthetic draft. Does not clear or change existing portfolio records.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: toggle-manual-asset-entry
+- tapOn:
+    id: asset-input
+- waitForAnimationToEnd
+- inputText: "Layout Review Holding"
+- assertVisible: "Layout Review Holding"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: symbol-input
+    direction: DOWN
+- tapOn:
+    id: symbol-input
+- waitForAnimationToEnd
+- inputText: "LAYOUT"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ticker-input
+    direction: DOWN
+- tapOn:
+    id: ticker-input
+- waitForAnimationToEnd
+- inputText: "LAYOUT"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: continue-class-button
+    direction: DOWN
+- tapOn:
+    id: continue-class-button
+- waitForAnimationToEnd
+- takeScreenshot: .expo/entry-layout/${SHOT}/classification
+- scrollUntilVisible:
+    element:
+      id: continue-position-button
+    direction: DOWN
+- tapOn:
+    id: continue-position-button
+- assertVisible: "Layout Review Holding"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/entry-layout/${SHOT}/position
+- tapOn:
+    id: quantity-input
+- inputText: "2"
+- tapOn:
+    id: average-cost-input
+- inputText: "100"
+- scrollUntilVisible:
+    element:
+      id: price-input
+    direction: DOWN
+- tapOn:
+    id: price-input
+- inputText: "125"
+- scrollUntilVisible:
+    element:
+      id: review-holding-button
+    direction: DOWN
+- tapOn:
+    id: review-holding-button
+- assertVisible: "Review holding"
+- assertVisible: "₹200.00"
+- assertVisible: "₹250.00"
+- assertVisible: "+₹50.00"
+- assertVisible: "+25.00%"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/entry-layout/${SHOT}/review
+- scrollUntilVisible:
+    element:
+      id: review-edit-position
+    direction: DOWN
+- tapOn:
+    id: review-edit-position
+- assertVisible:
+    id: quantity-input
+    text: "2"
+- assertVisible:
+    id: average-cost-input
+    text: "100"
+- stopApp
