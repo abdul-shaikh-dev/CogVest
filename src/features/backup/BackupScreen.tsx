@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useFocusEffect, usePreventRemove } from "@react-navigation/native";
 
 import {
@@ -10,6 +10,7 @@ import {
   ScreenContainer,
   ScreenHeader,
   SectionHeader,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { colors, spacing } from "@/src/theme";
 
@@ -61,6 +62,8 @@ export function BackupScreen({
   restorePortfolioBackup,
   selectPortfolioBackup,
 }: BackupScreenProps) {
+  const { fontScale, width } = useWindowDimensions();
+  const stackedCounts = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const [isBusy, setIsBusy] = useState(false);
   const [prepared, setPrepared] = useState<PreparedRestore>();
   const [restoreStep, setRestoreStep] = useState<RestoreStep>("warning");
@@ -242,10 +245,26 @@ export function BackupScreen({
           <AppText color="secondary" variant="caption">Created {formatBackupCreatedAt(prepared.review.createdAt)}</AppText>
           <AppText color="secondary" variant="caption">CogVest version {prepared.review.appVersion}</AppText>
           <View style={styles.counts}>
+            {!stackedCounts ? <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.countRow} testID="backup-count-headings">
+              <AppText color="secondary" style={styles.countName} variant="caption">Records</AppText>
+              <View style={styles.countValues}>
+                <AppText color="secondary" style={styles.countValue} variant="caption">This device</AppText>
+                <AppText color="secondary" style={styles.countValue} variant="caption">Backup</AppText>
+              </View>
+            </View> : null}
             {prepared.review.counts.map((count) => (
-              <View key={count.label} style={styles.countRow}>
-                <AppText weight="bold">{count.label}</AppText>
-                <AppText color="secondary" variant="caption">This device: {count.current} • Backup: {count.backup}</AppText>
+              <View accessible accessibilityLabel={`${count.label}. This device: ${count.current}. Backup: ${count.backup}.`} key={count.label} style={[styles.countRow, styles.countRecord, stackedCounts && styles.countRowStacked]} testID={`backup-count-${count.label}`}>
+                <AppText style={!stackedCounts && styles.countName} weight="medium">{count.label}</AppText>
+                <View style={[styles.countValues, stackedCounts && styles.countValuesStacked]}>
+                  <View style={styles.countCell}>
+                    {stackedCounts ? <AppText color="secondary" variant="caption">This device</AppText> : null}
+                    <AppText color="secondary" style={[styles.countNumber, !stackedCounts && styles.countRight]} testID={`backup-count-current-${count.label}`}>{count.current}</AppText>
+                  </View>
+                  <View style={styles.countCell}>
+                    {stackedCounts ? <AppText color="secondary" variant="caption">Backup</AppText> : null}
+                    <AppText style={[styles.countNumber, !stackedCounts && styles.countRight]} testID={`backup-count-file-${count.label}`} weight="bold">{count.backup}</AppText>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -275,6 +294,15 @@ export function BackupScreen({
 const styles = StyleSheet.create({
   card: { gap: spacing.md },
   content: { gap: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.md },
-  countRow: { gap: spacing.xs, paddingVertical: spacing.xs },
-  counts: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingTop: spacing.sm },
+  countRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
+  countRecord: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth },
+  countRowStacked: { alignItems: "stretch", flexDirection: "column", gap: spacing.sm },
+  countName: { flex: 1 },
+  countValues: { flex: 1, flexDirection: "row", gap: spacing.sm },
+  countValuesStacked: { flex: 0 },
+  countCell: { flex: 1, gap: spacing.xs },
+  countValue: { flex: 1, textAlign: "right" },
+  countNumber: { fontVariant: ["tabular-nums"] },
+  countRight: { textAlign: "right" },
+  counts: { gap: spacing.xs },
 });
