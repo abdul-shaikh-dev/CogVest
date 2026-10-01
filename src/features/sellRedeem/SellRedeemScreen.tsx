@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -15,6 +15,7 @@ import {
   SensitiveValueReveal,
   SectionHeader,
   assetClassLabel,
+  getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
@@ -48,6 +49,8 @@ export function SellRedeemScreen({
   store = getPortfolioStore(),
 }: SellRedeemScreenProps) {
   const flow = useSellRedeemHolding({ assetId, now, store });
+  const { fontScale } = useWindowDimensions();
+  const stackFields = getAdaptiveLayoutMode(fontScale) !== "standard";
   const { isRevealed, reveal } = useSensitiveValueReveal(
     flow.maskWealthValues,
   );
@@ -150,10 +153,7 @@ export function SellRedeemScreen({
 
         <PremiumCard>
           <SectionHeader title="Exit details" />
-          <AppText color="secondary" variant="caption">
-            This reduces the holding and can add proceeds to deployable cash.
-          </AppText>
-          <View style={styles.formRow}>
+          <View style={[styles.formRow, stackFields && styles.stacked]}>
             <View style={styles.formField}>
               <FormTextField
                 error={flow.errors.quantity}
@@ -186,7 +186,7 @@ export function SellRedeemScreen({
               ? "Enter the executed price from your broker record. No saved quote is available."
               : `Suggested from the ${flow.quoteContext?.freshness ?? "saved"} saved quote. Confirm or replace it with the executed price; quote updates will not overwrite your entry.`}
           </AppText>
-          <View style={styles.formRow}>
+          <View style={[styles.formRow, stackFields && styles.stacked]}>
             <View style={styles.formField}>
               <FormTextField
                 error={flow.errors.fees}
@@ -216,10 +216,24 @@ export function SellRedeemScreen({
             placeholder="Optional note"
             value={flow.notes}
           />
+        </PremiumCard>
 
-          <View style={styles.previewPanel}>
-            <SectionHeader title="Proceeds preview" />
-            {flow.preview ? (
+        <PremiumCard>
+          <SectionHeader title="Proceeds preview" />
+          {flow.preview ? (
+            <>
+              <View style={styles.cashSummary} testID="sell-redeem-cash-link-summary">
+                <AppText color="secondary" variant="caption">
+                  Net proceeds to Cash
+                </AppText>
+                <MaskedValue
+                  masked={maskAggregateValues}
+                  testID="sell-redeem-net-proceeds"
+                  value={formatINR(flow.preview.netProceeds)}
+                  variant="title"
+                  weight="bold"
+                />
+              </View>
               <View style={styles.previewGrid}>
                 <PreviewValue
                   label="Gross proceeds"
@@ -231,52 +245,37 @@ export function SellRedeemScreen({
                   masked={maskAggregateValues}
                   value={formatINR(flow.preview.fees)}
                 />
-                <PreviewValue
-                  emphasized
-                  label="Net proceeds"
-                  masked={maskAggregateValues}
-                  value={formatINR(flow.preview.netProceeds)}
-                />
-                <PreviewValue
-                  label="Remaining units"
-                  value={formatUnits(flow.preview.remainingUnits)}
-                />
-                <PreviewValue
-                  label="Remaining value"
-                  masked={maskAggregateValues}
-                  value={
-                    flow.preview.remainingValue === null
-                      ? "Unavailable"
-                      : formatINR(flow.preview.remainingValue)
-                  }
-                />
               </View>
-            ) : (
-              <AppText color="secondary" variant="caption">
-                Enter a valid quantity and sell price to preview proceeds.
-              </AppText>
-            )}
-          </View>
-        </PremiumCard>
-
-        <PremiumCard>
-          <SectionHeader title="Cash proceeds" />
+              <View style={styles.remainingHolding}>
+                <SectionHeader title="After this sale" />
+                <View style={styles.previewGrid}>
+                  <PreviewValue
+                    label="Remaining units"
+                    testID="sell-redeem-remaining-units"
+                    value={formatUnits(flow.preview.remainingUnits)}
+                  />
+                  <PreviewValue
+                    label="Remaining value"
+                    masked={maskAggregateValues}
+                    testID="sell-redeem-remaining-value"
+                    value={
+                      flow.preview.remainingValue === null
+                        ? "Unavailable"
+                        : formatINR(flow.preview.remainingValue)
+                    }
+                  />
+                </View>
+              </View>
+            </>
+          ) : (
+            <AppText color="secondary" variant="caption">
+              Enter a valid quantity and sell price to preview proceeds.
+            </AppText>
+          )}
           <AppText color="secondary" variant="caption">
             Net proceeds are added to deployable cash automatically. Record a
             withdrawal separately if the money leaves the portfolio.
           </AppText>
-          {flow.preview ? (
-            <View testID="sell-redeem-cash-link-summary">
-              <AppText color="secondary" variant="caption">
-                Net proceeds added to Cash Ledger
-              </AppText>
-              <MaskedValue
-                masked={maskAggregateValues}
-                value={formatINR(flow.preview.netProceeds)}
-                weight="bold"
-              />
-            </View>
-          ) : null}
         </PremiumCard>
 
         {flow.errors.save ? (
@@ -304,14 +303,14 @@ export function SellRedeemScreen({
 }
 
 function PreviewValue({
-  emphasized,
   label,
   masked = false,
+  testID,
   value,
 }: {
-  emphasized?: boolean;
   label: string;
   masked?: boolean;
+  testID?: string;
   value: string;
 }) {
   return (
@@ -321,8 +320,9 @@ function PreviewValue({
       </AppText>
       <MaskedValue
         masked={masked}
+        testID={testID}
         value={value}
-        variant={emphasized ? "title" : "body"}
+        variant="body"
         weight="bold"
       />
     </View>
@@ -357,16 +357,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
+  stacked: {
+    flexDirection: "column",
+  },
+  cashSummary: {
+    gap: spacing.xs,
+  },
   previewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.md,
   },
-  previewPanel: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.card,
+  remainingHolding: {
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.sm,
-    padding: spacing.cardInner,
+    paddingTop: spacing.md,
   },
   previewValue: {
     flexBasis: "45%",
