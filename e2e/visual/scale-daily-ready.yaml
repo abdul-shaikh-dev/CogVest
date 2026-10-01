@@ -1,0 +1,36 @@
+appId: com.abdulshaikh.cogvest
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: holdings-search-input
+    direction: UP
+- tapOn:
+    id: holdings-search-input
+- eraseText
+- inputText: "V3 Scale Asset 001"
+- hideKeyboard
+- tapOn:
+    id: holding-row-v3-asset-001
+- scrollUntilVisible:
+    element:
+      id: asset-history-range-10Y
+    direction: DOWN
+- tapOn:
+    id: asset-history-range-10Y
+- scrollUntilVisible:
+    element:
+      id: asset-history-chart
+    direction: DOWN
+- assertVisible:
+    id: asset-history-selected-value

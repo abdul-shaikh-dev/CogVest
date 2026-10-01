@@ -142,11 +142,15 @@ export function AssetHistoryPanel({
       pointIndex < available.length - 1
         ? ((Date.parse(available[pointIndex + 1].date) - Date.parse(point.date)) / span) * drawableWidth
         : 0;
-    const label = new Date(`${point.date}T12:00:00Z`).toLocaleDateString("en-GB", {
-      month: "short",
-      year: "2-digit",
-      timeZone: "UTC",
-    });
+    const isEndpoint = pointIndex === 0 || pointIndex === available.length - 1;
+    // Only endpoints have axis labels; avoid hundreds of unused Intl calls.
+    const label = isEndpoint
+      ? new Date(`${point.date}T12:00:00Z`).toLocaleDateString("en-GB", {
+          month: "short",
+          year: "2-digit",
+          timeZone: "UTC",
+        })
+      : "";
 
     return {
       value: point.value,
@@ -154,7 +158,7 @@ export function AssetHistoryPanel({
       dataPointRadius: pointIndex === index ? 6 : 0,
       dataPointColor: colors.text.primary,
       spacing: pointSpacing,
-      ...(pointIndex === 0 || pointIndex === available.length - 1
+      ...(isEndpoint
         ? {
             labelComponent: () => (
               <AppText

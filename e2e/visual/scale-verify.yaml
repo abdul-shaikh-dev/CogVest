@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///scale-qa?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: scale-qa-blocked
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- assertVisible: "250 market positions"
+- tapOn:
+    id: holdings-search-input
+- inputText: "V3 Scale Asset 001"
+- hideKeyboard
+- tapOn:
+    id: holding-row-v3-asset-001
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-v3-asset-001
+    direction: DOWN
+- assertVisible: "15"
+- scrollUntilVisible:
+    element:
+      id: asset-history-range-10Y
+    direction: DOWN
+- tapOn:
+    id: asset-history-range-10Y
+- scrollUntilVisible:
+    element:
+      id: asset-history-chart
+    direction: DOWN
+- assertVisible:
+    id: asset-history-selected-value
+- assertNotVisible:
+    id: asset-history-empty
+- takeScreenshot: .expo/performance/scale-daily-chart
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-All
+- assertVisible:
+    id: portfolio-trend-selected-panel
+- extendedWaitUntil:
+    visible: "Jan 2019 to Sept 2026"
+    timeout: 10000
+- takeScreenshot: .expo/performance/scale-monthly-chart
