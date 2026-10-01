@@ -147,6 +147,9 @@ export function MonthlyHistoryPanel({
   const overviewSummaries = summaries
     .filter((summary) => summary.snapshot.month.startsWith(`${selectedYear}-`))
     .sort((left, right) => right.snapshot.month.localeCompare(left.snapshot.month));
+  const largestYearValue = Math.max(0, ...overviewSummaries.map((summary) => summary.snapshot.portfolioValue));
+  const showValueBars = !maskWealthValues && largestYearValue > 0 &&
+    overviewSummaries.every((summary) => summary.snapshot.portfolioValue >= 0);
   const firstStoredMonth = summaries.reduce(
     (first, summary) =>
       !first || summary.snapshot.month < first ? summary.snapshot.month : first,
@@ -383,33 +386,43 @@ export function MonthlyHistoryPanel({
                         style={({ pressed }) => [styles.historyRow, getPressedStateStyle({ pressed })]}
                         testID={`snapshot-month-${month}`}
                       >
-                        <View style={styles.historyMonthColumn}>
-                          <AppText weight="bold">{formatShortMonth(month)}</AppText>
-                          {estimated ? (
-                            <AppText color="secondary" variant="caption">Estimated</AppText>
-                          ) : null}
+                        <View style={styles.historyNumbers}>
+                          <View style={styles.historyMonthColumn}>
+                            <AppText weight="bold">{formatShortMonth(month)}</AppText>
+                            {estimated ? (
+                              <AppText color="secondary" variant="caption">Estimated</AppText>
+                            ) : null}
+                          </View>
+                          <MaskedValue
+                            align="right"
+                            exactValue={formatINR(summary.snapshot.portfolioValue)}
+                            masked={maskWealthValues}
+                            style={styles.historyValueColumn}
+                            value={formatCompactINR(summary.snapshot.portfolioValue)}
+                            weight="bold"
+                          />
+                          <AppText
+                            align="right"
+                            color={change === null ? "secondary" : "primary"}
+                            numberOfLines={1}
+                            style={[
+                              styles.historyChangeColumn,
+                              change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
+                            ]}
+                            weight="bold"
+                          >
+                            {change === null ? "—" : formatPercentage(change)}
+                          </AppText>
+                          <AppText color="secondary" style={[styles.chevron, styles.historyChevronColumn]} weight="bold">›</AppText>
                         </View>
-                        <MaskedValue
-                          align="right"
-                          exactValue={formatINR(summary.snapshot.portfolioValue)}
-                          masked={maskWealthValues}
-                          style={styles.historyValueColumn}
-                          value={formatCompactINR(summary.snapshot.portfolioValue)}
-                          weight="bold"
-                        />
-                        <AppText
-                          align="right"
-                          color={change === null ? "secondary" : "primary"}
-                          numberOfLines={1}
-                          style={[
-                            styles.historyChangeColumn,
-                            change !== null ? change < 0 ? styles.lossText : styles.gainText : undefined,
-                          ]}
-                          weight="bold"
-                        >
-                          {change === null ? "—" : formatPercentage(change)}
-                        </AppText>
-                        <AppText color="secondary" style={[styles.chevron, styles.historyChevronColumn]} weight="bold">›</AppText>
+                        {showValueBars ? (
+                          <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.historyTrack}>
+                            <View testID={`snapshot-value-bar-${month}`} style={[
+                              styles.historyBar,
+                              { width: `${summary.snapshot.portfolioValue / largestYearValue * 100}%` },
+                            ]} />
+                          </View>
+                        ) : null}
                       </Pressable>
                     );
                   })}
@@ -648,14 +661,15 @@ const styles = StyleSheet.create({
   historyChevronColumn: { flexBasis: 16, flexGrow: 0, flexShrink: 0 },
   historyMonthColumn: { flexBasis: 84, flexGrow: 0, flexShrink: 0 },
   historyRow: {
-    alignItems: "center",
     borderTopColor: colors.border.subtle,
     borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
     gap: spacing.sm,
     minHeight: 58,
     paddingVertical: spacing.sm,
   },
+  historyNumbers: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
+  historyTrack: { backgroundColor: colors.surface.elevated, borderRadius: radii.pill, height: 3, overflow: "hidden" },
+  historyBar: { backgroundColor: colors.text.secondary, height: "100%" },
   historyChangeColumn: { flexBasis: 0, flexGrow: 1.2, flexShrink: 1, minWidth: 0 },
   historyValueColumn: { flexBasis: 0, flexGrow: 1, flexShrink: 1, minWidth: 0 },
   lossText: { color: colors.loss },

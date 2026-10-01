@@ -60,6 +60,35 @@ function createSummary(
 }
 
 describe("MonthlyHistoryPanel", () => {
+  it("scales value bars within the selected year without changing monthly comparisons", () => {
+    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
+      createSummary("2025-12", { portfolioValue: 400_000 }),
+      createSummary("2026-01", { portfolioValue: 100_000 }),
+      createSummary("2026-02", { portfolioValue: 200_000 }),
+      createSummary("2026-03", { portfolioValue: 0 }),
+    ]} />);
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    expect(screen.getByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toHaveStyle({ width: "50%" });
+    expect(screen.getByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
+    expect(screen.getByTestId("snapshot-value-bar-2026-03", { includeHiddenElements: true })).toHaveStyle({ width: "0%" });
+    expect(screen.getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain("-75.00%");
+    fireEvent.press(screen.getByText("2025"));
+    expect(screen.getByTestId("snapshot-value-bar-2025-12", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
+  });
+
+  it.each([
+    { masked: true, values: [100_000, 200_000] },
+    { masked: false, values: [-100, 200_000] },
+    { masked: false, values: [0, 0] },
+  ])("omits value bars for masked, signed or zero-only histories: %j", ({ masked, values }) => {
+    const screen = render(<MonthlyHistoryPanel maskWealthValues={masked} minimal={false} summaries={
+      values.map((portfolioValue, index) => createSummary(`2026-0${index + 1}`, { portfolioValue }))
+    } />);
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    expect(screen.queryByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toBeNull();
+  });
+
   const summaries = [
     createSummary("2025-12", { portfolioValue: 100_000 }),
     createSummary("2026-01", { portfolioValue: 110_000 }),
