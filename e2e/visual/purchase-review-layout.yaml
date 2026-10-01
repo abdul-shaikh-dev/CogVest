@@ -1,0 +1,73 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio only. Discard the draft; never confirm purchase.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///record-purchase?assetId=visual-qa-asset-hdfc"
+- tapOn:
+    id: purchase-quantity
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: purchase-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-fees
+    direction: DOWN
+- tapOn:
+    id: purchase-fees
+- eraseText: 20
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-review-button
+    direction: DOWN
+- tapOn:
+    id: purchase-review-button
+- scrollUntilVisible:
+    element:
+      id: purchase-review-quantity
+    direction: UP
+- assertVisible:
+    id: purchase-review-quantity
+    text: "2"
+- assertVisible:
+    id: purchase-review-price
+    text: "₹100.00"
+- assertVisible:
+    id: purchase-review-fees
+    text: "₹5.00"
+- takeScreenshot: .expo/purchase-review/${SHOT}/details
+- scrollUntilVisible:
+    element:
+      id: purchase-cash-debit
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: purchase-cash-debit
+    text: "₹205.00"
+- takeScreenshot: .expo/purchase-review/${SHOT}/review
+- back
+- scrollUntilVisible:
+    element:
+      id: purchase-quantity
+    direction: UP
+- assertVisible:
+    id: purchase-quantity
+    text: "2"
+- scrollUntilVisible:
+    element:
+      id: purchase-cancel
+    direction: DOWN
+- tapOn:
+    id: purchase-cancel
+- tapOn:
+    id: purchase-discard
+- stopApp
