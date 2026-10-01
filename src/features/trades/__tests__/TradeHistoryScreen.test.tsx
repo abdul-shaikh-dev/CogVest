@@ -105,7 +105,7 @@ describe("TradeHistoryScreen", () => {
       />,
     );
 
-    expect(getByText("1 record · local only")).toBeTruthy();
+    expect(getByText("1 record")).toBeTruthy();
     expect(getByText("Purchase · HDFC Bank")).toBeTruthy();
   });
 

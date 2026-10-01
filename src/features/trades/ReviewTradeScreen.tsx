@@ -251,7 +251,7 @@ export function ReviewTradeScreen({
   return (
     <ScreenContainer scroll testID="review-trade-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Review Transaction" subtitle={`${asset.name} · local record`} />
+        <ScreenHeader title="Review Transaction" subtitle={asset.name} />
         <PremiumCard section>
           <SectionHeader title="Transaction identity" />
           <View style={styles.identityRow}>

@@ -80,7 +80,7 @@ describe("PpfAccountScreen", () => {
     fireEvent.press(getByTestId("review-ppf-account"));
 
     expect(getByText("Review PPF account")).toBeTruthy();
-    expect(getByText("This balance becomes CogVest's confirmed baseline. Earlier contributions and interest are not reconstructed.")).toBeTruthy();
+    expect(getByText("CogVest starts tracking from this balance. It does not rebuild earlier contributions or interest.")).toBeTruthy();
     expect(queryByText("Quantity")).toBeNull();
     expect(queryByText("Current price")).toBeNull();
 

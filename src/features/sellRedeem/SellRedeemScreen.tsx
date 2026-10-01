@@ -68,7 +68,6 @@ export function SellRedeemScreen({
           <ScreenHeader
             leading={backAction}
             title="Sell / redeem"
-            subtitle="Record exit • local only"
           />
           <EmptyState
             message="Open Holdings and choose an active position to sell or redeem."
@@ -95,7 +94,6 @@ export function SellRedeemScreen({
         <ScreenHeader
           leading={backAction}
           title="Sell / redeem"
-          subtitle="Record exit • local only"
         />
 
         <PremiumCard style={styles.summaryCard}>

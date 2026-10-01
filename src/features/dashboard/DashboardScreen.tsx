@@ -803,7 +803,7 @@ function getQuoteStatus({
   if (quoteFreshness.status === "empty") {
     return {
       detail: hasFutures
-        ? "Futures mark, wallet and INR evidence are reviewed separately."
+        ? "Review Futures mark prices, wallet balance and INR rates separately."
         : "Cash and recorded PPF balances do not need market quotes.",
       prominent: false,
       title: hasFutures ? "No spot prices needed" : "No market prices needed",

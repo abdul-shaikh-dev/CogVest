@@ -281,7 +281,7 @@ export function ReviewOpeningPositionScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Review Opening Position"
-          subtitle={`${positionAsset.name} · local record`}
+          subtitle={positionAsset.name}
         />
 
         <PremiumCard>

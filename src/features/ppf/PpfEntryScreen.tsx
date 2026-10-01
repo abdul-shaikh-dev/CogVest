@@ -221,7 +221,6 @@ export function PpfEntryScreen({
           <ScreenHeader
             leading={<IconButton accessibilityLabel="Back to entry editor" icon="arrow-back" onPress={() => setReviewEntry(undefined)} />}
             title="Review PPF entry"
-            subtitle="Confirm before saving • local only"
           />
           <PremiumCard>
             <SectionHeader title={entryLabel(reviewEntry.type)} />
@@ -264,7 +263,7 @@ export function PpfEntryScreen({
         <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back to PPF account" icon="arrow-back" onPress={requestBack} />}
-          subtitle={`${account.nickname} • confirmed ledger`}
+          subtitle={account.nickname}
           title={existing ? "Review PPF entry" : "Add PPF entry"}
         />
         <PremiumCard>

@@ -97,7 +97,7 @@ describe("Contextual guidance", () => {
     const view = render(
       <ContextualNudge kind="metadata" store={store} hasConviction />,
     );
-    expect(view.queryByText(/Conviction records/)).toBeNull();
+    expect(view.queryByText(/Conviction is your confidence/)).toBeNull();
     expect(view.getByText(/A holding plan records/)).toBeTruthy();
     view.rerender(
       <ContextualNudge kind="metadata" store={store} hasConviction hasPlan />,

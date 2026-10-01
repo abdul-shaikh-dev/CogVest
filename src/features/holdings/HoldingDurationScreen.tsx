@@ -45,7 +45,6 @@ export function HoldingDurationScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Holding duration"
-          subtitle="Informational reference"
           leading={
             <IconButton
               icon="arrow-back"

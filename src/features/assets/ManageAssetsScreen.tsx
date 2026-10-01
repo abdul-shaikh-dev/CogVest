@@ -90,7 +90,7 @@ export function ManageAssetsScreen({
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back to Holdings" icon="chevron-back" onPress={onBack} testID="manage-assets-back" />}
           title="Manage Assets"
-          subtitle="Identity and classification"
+          subtitle="Asset details and categories"
         />
         {snapshot.assets.length > 0 ? <View style={styles.searchField}>
           <Ionicons accessible={false} name="search-outline" size={20} color={colors.text.secondary} />

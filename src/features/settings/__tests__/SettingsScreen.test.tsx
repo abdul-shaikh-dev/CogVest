@@ -116,7 +116,7 @@ describe("SettingsScreen", () => {
     ).toBeTruthy();
     expect(
       getByText(
-        "Protected by Android app-private storage and device security. Separate app encryption is not included in V1.",
+        "Protected by Android app-private storage and device security. CogVest does not add its own encryption.",
       ),
     ).toBeTruthy();
     expect(getByText("Account")).toBeTruthy();
@@ -304,7 +304,7 @@ describe("SettingsScreen", () => {
     const { getByText, queryByRole } = render(<SettingsScreen store={store} />);
 
     expect(getByText("Base currency")).toBeTruthy();
-    expect(getByText("INR-first summaries across CogVest.")).toBeTruthy();
+    expect(getByText("Portfolio totals are reported in INR.")).toBeTruthy();
     expect(getByText("INR")).toBeTruthy();
     expect(getByText("Version")).toBeTruthy();
     expect(getByText("CogVest for Android.")).toBeTruthy();
@@ -333,7 +333,7 @@ describe("SettingsScreen", () => {
       checked: true,
     });
     expect(queryByTestId("nudge-minimal")).toBeNull();
-    expect(queryByText("A quieter view")).toBeNull();
+    expect(queryByText("Minimal Mode")).toBeNull();
 
     fireEvent.press(getByTestId("display-mode-minimal"));
 

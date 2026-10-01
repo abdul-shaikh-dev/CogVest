@@ -35,7 +35,6 @@ export function InsightDetailScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Insight details"
-          subtitle="Private, local observations"
           leading={
             <IconButton
               accessibilityLabel="Back"
@@ -77,8 +76,7 @@ export function InsightDetailScreen({
               <SectionHeader title={detail.title} />
               {masked ? (
                 <AppText color="secondary">
-                  Values and supporting records are hidden. Use Show values when
-                  you are ready.
+                  Values and supporting records are hidden. Tap Show values to view them.
                 </AppText>
               ) : (
                 <>
@@ -137,7 +135,7 @@ export function InsightDetailScreen({
                     {detail.kind === "frequency" &&
                     detail.availability === "available"
                       ? "No buys or sells were recorded in this window."
-                      : "No contributing records yet. You can continue using CogVest without adding optional details."}
+                      : "No supporting records yet. Extra details are optional."}
                   </AppText>
                 ) : null}
               </PremiumCard>

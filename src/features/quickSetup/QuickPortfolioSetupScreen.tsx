@@ -119,7 +119,7 @@ export function QuickPortfolioSetupScreen({
               testID="quick-setup-review-back"
             />
           }
-          subtitle={`${savedCount} ${savedCount === 1 ? "holding" : "holdings"} confirmed locally`}
+          subtitle={`${savedCount} ${savedCount === 1 ? "holding" : "holdings"} saved`}
           title="Review portfolio"
         />
 
@@ -233,7 +233,7 @@ export function QuickPortfolioSetupScreen({
       <ScreenContainer scroll testID="quick-setup-source-choice">
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Exit portfolio setup" icon="close" onPress={onExit} />}
-          subtitle="Choose the quickest accurate starting point"
+          subtitle="Import a statement or add holdings manually"
           title="Set up portfolio"
         />
         <PremiumCard elevated style={styles.choiceCard}>

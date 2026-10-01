@@ -58,7 +58,7 @@ function failureMessage(reason?: string) {
   if (reason === "linkedDemerger") {
     return "This holding is linked to a demerger. Its parent and successor history must be corrected together.";
   }
-  return "These asset details are not valid for CogVest V1.";
+  return "Check the asset details before saving.";
 }
 
 function ChoiceGroup<T extends string>({
@@ -311,7 +311,7 @@ export function ReviewAssetScreen({
   return (
     <ScreenContainer scroll testID="review-asset-screen">
       <View style={styles.content}>
-        <ScreenHeader title="Review Asset" subtitle={`${stableAsset.name} · stable local identity`} />
+        <ScreenHeader title="Review Asset" subtitle={stableAsset.name} />
 
         <PremiumCard style={styles.section}>
           <SectionHeader title="Identity" />
