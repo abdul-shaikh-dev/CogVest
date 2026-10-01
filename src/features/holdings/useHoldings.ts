@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -94,36 +94,51 @@ export function useHoldings({
   const [timedOut, setTimedOut] = useState<QuoteRefreshTimeout[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const asOf = formatLocalCalendarDate(now);
-  const ppfSummary = calculatePpfPortfolioSummary({
-    accounts: snapshot.ppfAccounts,
+  // Tab focus and local UI updates do not change the financial replay inputs.
+  // Calendar-based accounting rolls over daily; quote freshness below stays live.
+  const { holdings, ppfSummary, rollupRows, rollupTotals } = useMemo(() => {
+    const accountingDate = new Date(`${asOf}T12:00:00`);
+    const ppfSummary = calculatePpfPortfolioSummary({
+      accounts: snapshot.ppfAccounts,
+      asOf,
+      entries: snapshot.ppfLedgerEntries,
+    });
+    const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
+    const holdings = withQuoteMetadata(
+      calculateHoldings({
+        assets: snapshot.assets,
+        openingPositions: snapshot.openingPositions,
+        quoteCache: snapshot.quoteCache,
+        trades: snapshot.trades,
+        now: accountingDate,
+      }),
+      snapshot.quoteCache,
+    ).filter(
+      (holding) => !linkedLegacyAssetIds.has(holding.asset.id),
+    );
+    const rollupRows = calculateConsolidatedHoldingRows(holdings);
+    const rollupTotals = calculatePortfolioRollupTotals(
+      rollupRows,
+      0,
+      holdings,
+      ppfSummary,
+    );
+    return { holdings, ppfSummary, rollupRows, rollupTotals };
+  }, [
     asOf,
-    entries: snapshot.ppfLedgerEntries,
-  });
-  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf);
-  const holdings = withQuoteMetadata(
-    calculateHoldings({
-      assets: snapshot.assets,
-      openingPositions: snapshot.openingPositions,
-      quoteCache: snapshot.quoteCache,
-      trades: snapshot.trades,
-    }),
+    snapshot.assets,
+    snapshot.openingPositions,
     snapshot.quoteCache,
-  ).filter(
-    (holding) => !linkedLegacyAssetIds.has(holding.asset.id),
-  );
+    snapshot.trades,
+    snapshot.ppfAccounts,
+    snapshot.ppfLedgerEntries,
+  ]);
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
       .filter((holding) => holding.asset.assetClass !== "cash")
       .map((holding) => holding.asset.id),
     snapshot.quoteCache,
     now,
-  );
-  const rollupRows = calculateConsolidatedHoldingRows(holdings);
-  const rollupTotals = calculatePortfolioRollupTotals(
-    rollupRows,
-    0,
-    holdings,
-    ppfSummary,
   );
 
   async function refresh() {
