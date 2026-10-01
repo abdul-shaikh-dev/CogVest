@@ -1,0 +1,70 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic visual-QA portfolio, restored through the backup UI.
+# SHOT identifies the display configuration. This flow does not modify records.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///dashboard"
+- assertVisible:
+    id: dashboard-top-metrics
+- assertVisible: "Holdings P&L"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/dashboard
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-cash
+    direction: DOWN
+- assertVisible: "Allocation"
+- takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/allocation
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- assertVisible: "Monthly History"
+- assertVisible:
+    id: snapshot-month-2026-04
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/history
+- tapOn:
+    id: snapshot-month-2026-04
+- assertVisible: "April 2026"
+- assertVisible: "₹19,29,450.00"
+- assertVisible: '\+7.79% portfolio value change'
+- takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/month-detail
+- tapOn:
+    id: history-back
+- assertVisible:
+    id: snapshot-month-2026-04
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-mask-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-04
+- assertNotVisible: ".*₹[0-9].*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/history-masked
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-mask-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-mask-toggle

@@ -98,12 +98,12 @@ Dashboard refinement:
 - Portfolio rollups belong near the top-level answer, not buried below every
   secondary card.
 - Allocation must be visual and compact rather than row-heavy.
-- Keep a proportional stacked bar with subtle segment boundaries. Lead with a
-  neutral largest-class percentage, then show Equity, Debt, Crypto and Cash with
-  shared category icons, emphasized percentages and separate aligned secondary
-  INR values. Preserve value masking and signed-exposure explanations; do not
-  show the largest-class summary for negative-cash exposure. At enlarged text
-  sizes, stack row labels above values rather than compressing financial text.
+- Put a proportional track directly below each asset-class row, with shared
+  category icons, emphasized percentages and aligned INR values. Group the
+  hero's P&L amount and percentage under one label. Preserve value masking and
+  signed-exposure explanations; omit allocation tracks for negative cash.
+  At enlarged text sizes, stack row labels above values rather than compressing
+  financial text.
 - Vague actions such as `Open` are not allowed. Dashboard actions must be wired
   to a real destination or removed.
 - `Open Holdings` opens Holdings. `Open Progress` opens Progress.
@@ -482,6 +482,9 @@ Accepted chart direction:
   calendar month, including cross-year January comparisons; gaps/zero baselines
   must not produce fabricated percentages. Estimated prices are disclosed.
   Monthly change includes contributions and is not labelled investment return
+- Monthly History includes neutral value bars on a shared selected-year scale.
+  These represent portfolio value, not performance. Omit bars when masked,
+  when any value in that year is negative, or when the whole year is zero.
 - tapping a month opens its dedicated detail view at the top of the same panel,
   not an accordion or stacked modal. Back restores the history year and scroll
   position; Android Back goes detail -> history -> Progress

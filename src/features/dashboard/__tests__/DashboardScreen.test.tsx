@@ -604,7 +604,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Equity")).toBeTruthy();
     expect(screen.getByText("Open Holdings")).toBeTruthy();
     expect(screen.getByText("Cash")).toBeTruthy();
-    expect(screen.getByText("Equity makes up 90.9%")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-allocation-bar-equity", { includeHiddenElements: true })).toHaveStyle({ width: "90.9090909090909%" });
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     expect(screen.queryByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
@@ -847,7 +847,8 @@ describe("DashboardScreen", () => {
     expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
     expect(allocationCard.getAllByText("Equity")).toHaveLength(1);
     expect(allocationCard.getAllByText("100.00%")).toHaveLength(1);
-    expect(allocationCard.getByText("Equity makes up 100.0%")).toBeTruthy();
+    expect(getByTestId("dashboard-allocation-bar-equity", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
+    expect(getByTestId("dashboard-allocation-bar-cash", { includeHiddenElements: true })).toHaveStyle({ width: "0%" });
     for (const label of ["Debt", "Crypto", "Cash"]) {
       expect(allocationCard.getByText(label)).toBeTruthy();
     }

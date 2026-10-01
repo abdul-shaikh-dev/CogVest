@@ -195,10 +195,6 @@ export function DashboardScreen({
     sumFinancialValues(positiveAllocation.map((item) => item.value)),
   );
   const hasAllocation = displayAllocation.some((item) => item.value !== 0);
-  const largestAllocation = positiveAllocation.reduce<DisplayAllocationItem | undefined>(
-    (largest, item) => !largest || item.value > largest.value ? item : largest,
-    undefined,
-  );
   const dayChangeAmount = formatSignedINR(dashboard.dayChange.absolute);
   const totalInvested = dashboard.rollupTotals.totalInvested;
   const totalPnL = dashboard.rollupTotals.pnl;
@@ -360,22 +356,10 @@ export function DashboardScreen({
                   weight={isMinimalMode ? "medium" : "bold"}
                 />
               )}
-            </View>
-            <View
-              style={[
-                styles.heroMetricCell,
-                adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
-                adaptiveLayoutMode === "accessibility" &&
-                  styles.heroMetricCellFull,
-              ]}
-            >
-              <AppText color="secondary" variant="caption">
-                {dashboard.futuresContributions.length ? "Portfolio P&L %" : "Holdings P&L %"}
-              </AppText>
-              {totalPnLPct === null ? (
-                <AppText color="secondary" weight="bold">Unavailable</AppText>
-              ) : (
+              {totalPnLPct !== null ? (
                 <AppText
+                  accessibilityLabel={`${dashboard.futuresContributions.length ? "Portfolio" : "Holdings"} P&L ${formatPercentage(totalPnLPct)}`}
+                  variant="caption"
                   style={
                     totalPnLPct >= 0
                       ? styles.positiveText
@@ -385,7 +369,7 @@ export function DashboardScreen({
                 >
                   {formatPercentage(totalPnLPct)}
                 </AppText>
-              )}
+              ) : null}
             </View>
           </View>
           <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
@@ -599,63 +583,44 @@ export function DashboardScreen({
                   ? "Percentages show signed exposure against net portfolio value."
                   : "Allocation percentages are unavailable while net portfolio value is zero or negative."}
               </AppText>
-            ) : (
-              <View style={styles.allocationSummary}>
-                {largestAllocation && largestAllocation.percentage !== null ? (
-                  <AppText variant="body" weight="medium">
-                    {getDisplayAllocationLabel(largestAllocation.assetClass)} makes up {largestAllocation.percentage.toFixed(1)}%
-                  </AppText>
-                ) : null}
-                <View
-                  style={styles.allocationVisual}
-                  testID="dashboard-allocation-visual"
-                >
-                  {positiveAllocation.map((item, index) => (
-                    <View
-                      key={item.assetClass}
-                      style={[
-                        styles.allocationSegment,
-                        index > 0 && styles.allocationSegmentSeparator,
-                        {
-                          backgroundColor: getAllocationColor(item.assetClass),
-                          width: getAllocationWidth(
-                            item.value,
-                            positiveAllocationTotal,
-                          ),
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-            <View style={styles.allocationLegend}>
+            ) : null}
+            <View style={styles.allocationLegend} testID={hasNegativeCash ? undefined : "dashboard-allocation-visual"}>
               {displayAllocation.map((item) => (
-                <View key={item.assetClass} testID={`dashboard-allocation-${item.assetClass}`} style={[
-                  styles.allocationLegendRow,
-                  adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked,
-                ]}>
-                  <View style={styles.allocationLegendLabel}>
-                    <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass === "futures" ? "crypto" : item.assetClass} size={20} />
-                    <AppText variant="body">
-                      {getDisplayAllocationLabel(item.assetClass)}
-                    </AppText>
-                  </View>
-                  <View style={styles.allocationLegendValue}>
-                    {item.percentage !== null ? (
-                      <AppText style={styles.allocationPercentage} weight="bold" variant="body">
-                        {formatUnsignedPercentage(item.percentage)}
+                <View key={item.assetClass} testID={`dashboard-allocation-${item.assetClass}`} style={styles.allocationItem}>
+                  <View style={[
+                    styles.allocationLegendRow,
+                    adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked,
+                  ]}>
+                    <View style={styles.allocationLegendLabel}>
+                      <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass === "futures" ? "crypto" : item.assetClass} size={20} />
+                      <AppText variant="body">
+                        {getDisplayAllocationLabel(item.assetClass)}
                       </AppText>
-                    ) : null}
-                    <MaskedValue
-                      color="secondary"
-                      exactValue={formatINR(item.value)}
-                      masked={dashboard.maskWealthValues}
-                      style={styles.allocationAmount}
-                      value={formatCompactINR(item.value)}
-                      variant="caption"
-                    />
+                    </View>
+                    <View style={styles.allocationLegendValue}>
+                      {item.percentage !== null ? (
+                        <AppText style={styles.allocationPercentage} weight="bold" variant="body">
+                          {formatUnsignedPercentage(item.percentage)}
+                        </AppText>
+                      ) : null}
+                      <MaskedValue
+                        exactValue={formatINR(item.value)}
+                        masked={dashboard.maskWealthValues}
+                        style={styles.allocationAmount}
+                        value={formatCompactINR(item.value)}
+                        weight="bold"
+                      />
+                    </View>
                   </View>
+                  {!hasNegativeCash ? (
+                    <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.allocationTrack}>
+                      <View testID={`dashboard-allocation-bar-${item.assetClass}`} style={{
+                        backgroundColor: getAllocationColor(item.assetClass),
+                        height: "100%",
+                        width: getAllocationWidth(item.value, positiveAllocationTotal),
+                      }} />
+                    </View>
+                  ) : null}
                 </View>
               ))}
             </View>
@@ -857,7 +822,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   allocationLegend: {
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  allocationItem: {
+    gap: spacing.xs,
   },
   allocationLegendLabel: {
     alignItems: "center",
@@ -887,21 +855,10 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontVariant: ["tabular-nums"],
   },
-  allocationSegment: {
-    minWidth: 0,
-  },
-  allocationSegmentSeparator: {
-    borderLeftWidth: 1,
-    borderLeftColor: colors.surface.card,
-  },
-  allocationSummary: {
-    gap: spacing.sm,
-  },
-  allocationVisual: {
+  allocationTrack: {
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
-    flexDirection: "row",
-    height: 14,
+    height: 4,
     overflow: "hidden",
   },
   brandText: {
