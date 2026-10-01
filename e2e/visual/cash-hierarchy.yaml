@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic visual-QA portfolio with INR 50,000 cash. Does not save records.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- assertVisible: "Deployable cash"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/cash-hierarchy/${SHOT}/overview
+- scrollUntilVisible:
+    element:
+      id: cash-entry-row-visual-qa-cash-emergency
+    direction: DOWN
+- assertVisible: "May 2026"
+- assertVisible: "Investment purchase"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/cash-hierarchy/${SHOT}/history
+- tapOn: "Emergency fund top-up"
+- assertVisible:
+    id: review-cash-entry-screen
+- assertVisible: "10000"
+- back
+- openLink: "cogvest:///cash"
+- scrollUntilVisible:
+    element:
+      id: cash-entry-deposit
+    direction: UP
+- tapOn:
+    id: cash-entry-deposit
+- tapOn:
+    id: cash-amount-input
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: close-cash-entry-button
+- assertVisible: "₹50,000.00"
+- tapOn:
+    id: cash-entry-deposit
+- assertVisible: "1000"
+- takeScreenshot: .expo/cash-hierarchy/${SHOT}/deposit-draft
+- tapOn:
+    id: close-cash-entry-button
+- tapOn:
+    id: cash-entry-withdraw
+- tapOn:
+    id: cash-discard-draft-button
+- assertVisible: "Withdraw cash"
+- tapOn:
+    id: close-cash-entry-button
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-mask-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///cash"
+- assertNotVisible: ".*₹[0-9].*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/cash-hierarchy/${SHOT}/masked
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle

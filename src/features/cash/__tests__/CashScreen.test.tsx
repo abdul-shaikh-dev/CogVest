@@ -21,6 +21,28 @@ function selectDate(
 }
 
 describe("CashScreen", () => {
+  it("groups history by calendar month while preserving dates, signed amounts and review targets", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onCorrectEntry = jest.fn();
+    for (const [id, date, type] of [
+      ["dec", "2025-12-31", "addition"],
+      ["jan-early", "2026-01-02", "addition"],
+      ["jan-late", "2026-01-08", "withdrawal"],
+    ] as const) {
+      store.getState().addCashEntry({ id, date, type, label: id, amount: 100,
+        purpose: type === "addition" ? "capitalContribution" : "withdrawal" });
+    }
+    const screen = render(<CashScreen now={new Date(2026, 0, 10)} store={store} onCorrectEntry={onCorrectEntry} />);
+    expect(screen.getAllByTestId(/^cash-month-/).map((node) => node.props.testID)).toEqual([
+      "cash-month-2026-01", "cash-month-2025-12",
+    ]);
+    expect(screen.getByText("January 2026")).toBeTruthy();
+    expect(screen.getByText("December 2025")).toBeTruthy();
+    expect(screen.getByLabelText("08 Jan 2026")).toBeTruthy();
+    expect(screen.getByText("-₹100.00")).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal."));
+    expect(onCorrectEntry).toHaveBeenCalledWith("jan-late");
+  });
   it("uses a neutral label when the optional label is blank", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<CashScreen store={store} />);
@@ -56,7 +78,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
       expect(getByText("Broker cash")).toBeTruthy();
-      expect(getByText("Capital added to deployable cash")).toBeTruthy();
+      expect(getByText("Cash deposit")).toBeTruthy();
       expect(getByText("+₹1,000.00")).toBeTruthy();
       expect(store.getState().cashEntries).toEqual([
         expect.objectContaining({
@@ -77,7 +99,7 @@ describe("CashScreen", () => {
     await waitFor(() => {
       expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
       expect(getByText("Emergency withdrawal")).toBeTruthy();
-      expect(getByText("Withdrawn from deployable cash")).toBeTruthy();
+      expect(getByText("Cash withdrawal")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
       expect(store.getState().cashEntries).toEqual([
         expect.objectContaining({
@@ -400,7 +422,8 @@ describe("CashScreen", () => {
     expect(getByText("Deployable cash")).toBeTruthy();
     expect(getByText("Invested")).toBeTruthy();
     expect(() => getByText("Investment rate")).toThrow();
-    expect(getByText("₹20K moved into investments this month")).toBeTruthy();
+    expect(getByText("₹20K")).toBeTruthy();
+    expect(queryByText("₹20K moved into investments this month")).toBeNull();
     expect(getByText("Deposit")).toBeTruthy();
     expect(getByText("Withdraw")).toBeTruthy();
     expect(queryByText("Invest")).toBeNull();
@@ -463,7 +486,7 @@ describe("CashScreen", () => {
     const { getByText } = render(<CashScreen store={store} />);
 
     expect(getByText("HDFC Bank redemption proceeds")).toBeTruthy();
-    expect(getByText("Added from asset exit")).toBeTruthy();
+    expect(getByText("Sale proceeds")).toBeTruthy();
     expect(getByText("+₹8,400.00")).toBeTruthy();
   });
 
@@ -494,10 +517,10 @@ describe("CashScreen", () => {
 
     expect(queryByText("Tap to review or correct")).toBeNull();
     expect(
-      getByText("Review through its investment transaction"),
+      getByText("Linked investment"),
     ).toBeTruthy();
-    fireEvent.press(getByLabelText("Review Broker cash"));
-    fireEvent.press(getByLabelText("Review Investment purchase"));
+    fireEvent.press(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit."));
+    fireEvent.press(getByLabelText("Review Investment purchase. 02 May 2026. Investment purchase."));
 
     expect(onCorrectEntry).toHaveBeenNthCalledWith(1, "cash-manual");
     expect(onCorrectEntry).toHaveBeenNthCalledWith(2, "cash-linked");
@@ -580,9 +603,7 @@ describe("CashScreen", () => {
     expect(() => getByTestId("cash-income-explanation")).toThrow();
     expect(queryByText("Not enough data")).toBeNull();
     expect(getByText("Broker cash")).toBeTruthy();
-    expect(
-      getByText(`${MASKED_INR_VALUE} moved into investments this month`),
-    ).toBeTruthy();
+    expect(queryByText(`${MASKED_INR_VALUE} moved into investments this month`)).toBeNull();
     expect(queryByText("₹1,000.00")).toBeNull();
     expect(queryByText("₹300 moved into investments this month")).toBeNull();
   });

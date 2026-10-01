@@ -30,15 +30,15 @@ function formatCashAmount(entry: CashEntry) {
 function getCashEntryMovement(entry: CashEntry) {
   switch (entry.purpose) {
     case "capitalContribution":
-      return "Capital added to deployable cash";
+      return "Cash deposit";
     case "purchaseFunding":
-      return "Funded an investment purchase";
+      return "Investment purchase";
     case "saleProceeds":
-      return "Added from asset exit";
+      return "Sale proceeds";
     case "futuresTransfer":
-      return entry.type === "withdrawal" ? "Moved to USDT Futures wallet" : "Returned from USDT Futures wallet";
+      return entry.type === "withdrawal" ? "To USDT Futures" : "From USDT Futures";
     case "withdrawal":
-      return "Withdrawn from deployable cash";
+      return "Cash withdrawal";
     case "legacyUncategorized":
       return entry.type === "addition"
         ? "Legacy cash addition"
@@ -57,33 +57,38 @@ export function CashEntryRow({
   const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const isAddition = entry.type === "addition";
   const content = (
-    <PremiumCard section style={[styles.row, stacked && styles.stackedRow]} testID={`cash-entry-row-${entry.id}`}>
-      <View style={[styles.details, stacked && styles.stackedDetails]}>
-        <AppText weight="bold">{entry.label}</AppText>
-        <AppText color="secondary" variant="caption">
-          {getCashEntryMovement(entry)}
+    <PremiumCard section style={styles.row} testID={`cash-entry-row-${entry.id}`}>
+      <View style={styles.dateRail}>
+        <AppText accessibilityLabel={formatDate(entry.date)} color="secondary" variant="caption" weight="bold">
+          {entry.date.slice(8, 10)}
         </AppText>
-        <AppText color="secondary" variant="caption">
-          {formatDate(entry.date)}
-        </AppText>
-        {entry.notes ? (
-          <AppText color="secondary" variant="caption">
-            {entry.notes}
-          </AppText>
-        ) : null}
-        {correctionHint ? (
-          <AppText color="secondary" variant="caption" weight="medium">
-            {correctionHint}
-          </AppText>
-        ) : null}
+        <Ionicons name={isAddition ? "arrow-down-outline" : "arrow-up-outline"} size={18} color={colors.text.secondary} accessible={false} />
       </View>
-      <View style={[styles.trailing, stacked && styles.stackedTrailing]}><MaskedValue
-        masked={masked}
-        style={isAddition ? styles.addition : styles.withdrawal}
-        value={formatCashAmount(entry)}
-        weight="bold"
-      />
-      {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} accessible={false} /> : null}</View>
+      <View style={[styles.entryBody, stacked && styles.stackedRow]}>
+        <View style={[styles.details, stacked && styles.stackedDetails]}>
+          <AppText weight="bold">{entry.label}</AppText>
+          <AppText color="secondary" variant="caption">
+            {getCashEntryMovement(entry)}
+          </AppText>
+          {entry.notes ? (
+            <AppText color="secondary" variant="caption">
+              {entry.notes}
+            </AppText>
+          ) : null}
+          {correctionHint ? (
+            <AppText color="secondary" variant="caption" weight="medium">
+              {correctionHint}
+            </AppText>
+          ) : null}
+        </View>
+        <View style={[styles.trailing, stacked && styles.stackedTrailing]}><MaskedValue
+          masked={masked}
+          style={isAddition ? styles.addition : styles.withdrawal}
+          value={formatCashAmount(entry)}
+          weight="bold"
+        />
+        {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} accessible={false} /> : null}</View>
+      </View>
     </PremiumCard>
   );
 
@@ -94,7 +99,7 @@ export function CashEntryRow({
   return (
     <Pressable
       accessibilityHint={accessibilityHint}
-      accessibilityLabel={`Review ${entry.label}`}
+      accessibilityLabel={`Review ${entry.label}. ${formatDate(entry.date)}. ${getCashEntryMovement(entry)}.`}
       accessibilityRole="button"
       android_ripple={androidRipple()}
       onPress={onPress}
@@ -106,6 +111,8 @@ export function CashEntryRow({
 }
 
 const styles = StyleSheet.create({
+  dateRail: { alignItems: "center", width: 28, gap: spacing.xs },
+  entryBody: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.sm },
   trailing: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   stackedTrailing: { alignSelf: "flex-end" },
   stackedRow: { flexDirection: "column", alignItems: "stretch" },
@@ -120,7 +127,7 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.cardInner,
+    gap: spacing.sm,
     justifyContent: "space-between",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,

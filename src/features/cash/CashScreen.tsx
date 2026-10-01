@@ -8,7 +8,6 @@ import {
   AppText,
   EmptyState,
   HeroMetric,
-  MASKED_INR_VALUE,
   MetricGroup,
   PremiumCard,
   ScreenContainer,
@@ -69,12 +68,10 @@ export function CashScreen({
   const {
     addEntry,
     balance,
-    displayMode,
     entries,
     manualEntryModes,
     maskWealthValues,
     monthlyMetrics,
-    monthlyMovementSummary,
   } = useCash({ now, store });
   const [mode, setMode] = useState<CashEntryMode | null>(null);
   const [isEntryVisible, setIsEntryVisible] = useState(false);
@@ -194,57 +191,47 @@ export function CashScreen({
       <View style={styles.content}>
         <ScreenHeader title="Cash Ledger" />
 
-        <HeroMetric
-          label="Deployable cash"
-          masked={maskWealthValues}
-          value={formatINR(balance)}
-          subValue="Included in portfolio"
-          subValueTone="secondary"
-        />
+        <View style={styles.balanceSection}>
+          <HeroMetric
+            label="Deployable cash"
+            masked={maskWealthValues}
+            value={formatINR(balance)}
+            subValue="Included in portfolio"
+            subValueTone="secondary"
+          />
 
-        <View style={styles.entryActions}>
-          {manualEntryModes.map((entryMode) => (
-            <AppButton
-              accessibilityHint={`Opens the ${getCashEntryModeLabel(entryMode).toLowerCase()} form`}
-              key={entryMode}
-              onPress={() => openEntry(entryMode)}
-              style={styles.entryAction}
-              testID={`cash-entry-${entryMode === "addition" ? "deposit" : "withdraw"}`}
-              title={getCashEntryModeLabel(entryMode)}
-              variant="secondary"
-            />
-          ))}
+          <View style={styles.entryActions}>
+            {manualEntryModes.map((entryMode) => (
+              <AppButton
+                accessibilityHint={`Opens the ${getCashEntryModeLabel(entryMode).toLowerCase()} form`}
+                key={entryMode}
+                onPress={() => openEntry(entryMode)}
+                style={styles.entryAction}
+                testID={`cash-entry-${entryMode === "addition" ? "deposit" : "withdraw"}`}
+                title={getCashEntryModeLabel(entryMode)}
+                variant="secondary"
+              />
+            ))}
+          </View>
         </View>
 
-        <SectionHeader title={`${formatMonthYear(now)} activity`} />
-        <MetricGroup
-          metrics={[
-            {
-              label: "Cash added",
-              masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.added),
-            },
-            {
-              label: "Invested",
-              masked: maskWealthValues,
-              value: formatCompactINR(monthlyMetrics.invested),
-            },
-          ]}
-        />
-
-        {displayMode === "standard" && monthlyMetrics.invested > 0 ? (
-          <View style={styles.monthlyInsight}>
-            <AppText weight="bold">This month</AppText>
-            <AppText color="secondary" style={styles.monthlyInsightText}>
-              {maskWealthValues
-                ? `${MASKED_INR_VALUE} moved into investments this month`
-                : monthlyMovementSummary ===
-                  "No investment cash movement this month"
-                ? "No movement yet"
-                : monthlyMovementSummary}
-            </AppText>
-          </View>
-        ) : null}
+        <View style={styles.activitySection}>
+          <SectionHeader title={`${formatMonthYear(now)} activity`} />
+          <MetricGroup
+            metrics={[
+              {
+                label: "Cash added",
+                masked: maskWealthValues,
+                value: formatCompactINR(monthlyMetrics.added),
+              },
+              {
+                label: "Invested",
+                masked: maskWealthValues,
+                value: formatCompactINR(monthlyMetrics.invested),
+              },
+            ]}
+          />
+        </View>
 
         {entries.length === 0 ? (
           <EmptyState
@@ -254,21 +241,27 @@ export function CashScreen({
         ) : (
           <View style={styles.history}>
             <SectionHeader title="Recent cash ledger" />
-            {entries.map((entry) => (
-              <CashEntryRow
-                accessibilityHint={isLinkedCashEntry(entry)
-                  ? "Opens its linked movement for review"
-                  : undefined}
-                correctionHint={
-                  isLinkedCashEntry(entry)
-                    ? entry.linkedFutures ? "Correct in Futures" : "Review through its investment transaction"
-                    : undefined
-                }
-                entry={entry}
-                key={entry.id}
-                masked={maskWealthValues}
-                onPress={onCorrectEntry ? () => onCorrectEntry(entry.id) : undefined}
-              />
+            {entries.map((entry, index) => (
+              <View key={entry.id}>
+                {index === 0 || entries[index - 1].date.slice(0, 7) !== entry.date.slice(0, 7) ? (
+                  <AppText color="secondary" variant="caption" weight="bold" style={styles.monthHeading} testID={`cash-month-${entry.date.slice(0, 7)}`}>
+                    {formatMonthYear(new Date(`${entry.date.slice(0, 7)}-01T12:00:00`))}
+                  </AppText>
+                ) : null}
+                <CashEntryRow
+                  accessibilityHint={isLinkedCashEntry(entry)
+                    ? "Opens its linked movement for review"
+                    : undefined}
+                  correctionHint={
+                    isLinkedCashEntry(entry)
+                      ? entry.linkedFutures ? "Correct in Futures" : "Linked investment"
+                      : undefined
+                  }
+                  entry={entry}
+                  masked={maskWealthValues}
+                  onPress={onCorrectEntry ? () => onCorrectEntry(entry.id) : undefined}
+                />
+              </View>
             ))}
           </View>
         )}
@@ -452,23 +445,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   history: {
-    gap: spacing.cardGap,
+    gap: 0,
   },
-  monthlyInsight: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
-    flexDirection: "row",
-    gap: spacing.sm,
-    justifyContent: "space-between",
-    minHeight: 48,
-    paddingHorizontal: spacing.cardInner,
-    paddingVertical: spacing.xs,
-  },
-  monthlyInsightText: {
-    flex: 1,
-    textAlign: "right",
-  },
+  balanceSection: { gap: spacing.sm },
+  activitySection: { gap: spacing.xs },
+  monthHeading: { paddingTop: spacing.lg, paddingBottom: spacing.xs },
   optionalToggle: {
     alignItems: "center",
     justifyContent: "center",
