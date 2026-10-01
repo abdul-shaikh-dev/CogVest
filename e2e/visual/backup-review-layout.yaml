@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio and cogvest-synthetic-design.json in Downloads.
+# Review only: never press the destructive replacement button.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///backup?mode=restore"
+- tapOn:
+    id: choose-backup-file
+- runFlow: ../standalone/helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "cogvest-synthetic-design.json"
+    direction: DOWN
+- tapOn: "cogvest-synthetic-design.json"
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 30000
+- assertVisible:
+    id: backup-count-current-Assets
+    text: "6"
+- assertVisible:
+    id: backup-count-file-Assets
+    text: "6"
+- takeScreenshot: .expo/backup-review/${SHOT}/counts
+- scrollUntilVisible:
+    element:
+      id: backup-count-file-Monthly snapshots
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: backup-count-file-Monthly snapshots
+    text: "29"
+- assertVisible:
+    id: backup-count-current-Monthly snapshots
+    text: "30"
+- takeScreenshot: .expo/backup-review/${SHOT}/snapshot-counts
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: .expo/backup-review/${SHOT}/warnings
+- tapOn:
+    id: continue-restore-confirmation
+- assertVisible:
+    id: backup-restore-confirmation
+- takeScreenshot: .expo/backup-review/${SHOT}/confirmation
+- back
+- assertVisible:
+    id: backup-restore-preview
+- back
+- assertVisible:
+    id: backup-restore-warning
+- stopApp

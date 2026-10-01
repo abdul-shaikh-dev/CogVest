@@ -640,6 +640,11 @@ first trust.
 
 ## Backup Navigation And Feedback
 
+- Review compares record counts in aligned This device / Backup columns,
+  with the backup counts emphasized. At larger text sizes or narrow widths,
+  show labeled value pairs below each record name instead of squeezing columns.
+  Keep zero counts visible and each record's accessible label self-contained.
+  Counts are not gains or losses; do not color differences as performance.
 - Header, Android and gesture Back share the same stage behavior: confirmation
   returns to the populated review, review returns to file selection, and file
   selection/export exits the route. Errors keep the current stage's Back behavior;

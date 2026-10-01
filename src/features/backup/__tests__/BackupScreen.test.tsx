@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import * as ReactNative from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { usePreventRemove } from "@react-navigation/native";
 
@@ -39,6 +40,27 @@ function renderScreen(overrides: Partial<ComponentProps<typeof BackupScreen>> = 
 }
 
 describe("BackupScreen", () => {
+  it("labels both counts at larger text sizes, including zeros and long record names", async () => {
+    const dimensions = jest.spyOn(ReactNative, "useWindowDimensions").mockReturnValue({ fontScale: 1.3, height: 800, scale: 3, width: 360 });
+    try {
+      const view = renderScreen({ selectPortfolioBackup: async () => ({ review: {
+        ...prepared.review,
+        counts: [{ label: "Long synthetic record category", current: 0, backup: 123456 }],
+      } }) });
+      fireEvent.press(view.getByTestId("choose-backup-file"));
+      await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
+      expect(view.queryByTestId("backup-count-headings")).toBeNull();
+      expect(view.getByText("This device")).toBeTruthy();
+      expect(view.getByText("Backup")).toBeTruthy();
+      expect(view.getByTestId("backup-count-current-Long synthetic record category")).toHaveTextContent("0");
+      expect(view.getByTestId("backup-count-file-Long synthetic record category")).toHaveTextContent("123456");
+      expect(view.getByLabelText("Long synthetic record category. This device: 0. Backup: 123456.")).toBeTruthy();
+      view.unmount();
+    } finally {
+      dimensions.mockRestore();
+    }
+  });
+
   it("returns header and intercepted navigation Back to the populated review", async () => {
     const onBack = jest.fn();
     const view = renderScreen({ onBack });
@@ -46,7 +68,7 @@ describe("BackupScreen", () => {
     await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
     fireEvent.press(view.getByTestId("continue-restore-confirmation"));
     fireEvent.press(view.getByTestId("backup-back"));
-    expect(view.getByText("This device: 1 • Backup: 3")).toBeTruthy();
+    expect(view.getByLabelText("Holdings. This device: 1. Backup: 3.")).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
     fireEvent.press(view.getByTestId("continue-restore-confirmation"));
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
@@ -125,7 +147,10 @@ describe("BackupScreen", () => {
     expect(getByText("Display mode and value masking preferences in this backup replace the settings on this device.")).toBeTruthy();
     expect(getByText("Saved prices keep their source details. Prices may be out of date.")).toBeTruthy();
     expect(getByText("CogVest version 1.0.1")).toBeTruthy();
-    expect(getByText("This device: 1 • Backup: 3")).toBeTruthy();
+    expect(getByTestId("backup-count-current-Holdings")).toHaveTextContent("1");
+    expect(getByTestId("backup-count-file-Holdings")).toHaveTextContent("3");
+    expect(getByTestId("backup-count-current-Transactions")).toHaveTextContent("4");
+    expect(getByTestId("backup-count-file-Transactions")).toHaveTextContent("7");
     expect(getByText("This replaces the portfolio on this device. It does not merge portfolios.")).toBeTruthy();
     expect(restorePortfolioBackup).not.toHaveBeenCalled();
   });
