@@ -37,3 +37,18 @@ export function assertValidMonthlySnapshot(snapshot: MonthlySnapshot) {
   const message = Object.values(validateMonthlySnapshot(snapshot))[0];
   if (message) throw new Error(message);
 }
+
+// Suggest only; callers must obtain confirmation before saving. A small gap
+// is compatible with independent rounding, but is not proof of its cause.
+export function suggestGeneratedSnapshotTotal(snapshot: MonthlySnapshot): number | null {
+  const errors = validateMonthlySnapshot(snapshot);
+  if (snapshot.generated?.source !== "auto" ||
+      snapshot.generated.priceEvidence === undefined ||
+      Object.keys(errors).length !== 1 || !errors.portfolioValue) return null;
+  const total = decimal(snapshot.equityValue).plus(snapshot.debtValue)
+    .plus(snapshot.cryptoValue).plus(snapshot.cashValue);
+  const gap = total.minus(snapshot.portfolioValue).abs();
+  if (gap.greaterThan(0.02)) return null;
+  const candidate = { ...snapshot, portfolioValue: total.toNumber() };
+  return Object.keys(validateMonthlySnapshot(candidate)).length === 0 ? candidate.portfolioValue : null;
+}

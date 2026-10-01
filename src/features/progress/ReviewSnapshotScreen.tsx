@@ -10,7 +10,7 @@ import { spacing } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
 
 import { useProgress } from "./useProgress";
-import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
+import { suggestGeneratedSnapshotTotal, validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 
 type ReviewSnapshotScreenProps = {
   now?: Date;
@@ -27,7 +27,7 @@ function setSnapshotFormFields({
   snapshot: MonthlySnapshot;
 }) {
   progress.setField("month", snapshot.month);
-  progress.setField("portfolioValue", String(snapshot.portfolioValue));
+  progress.setField("portfolioValue", String(suggestGeneratedSnapshotTotal(snapshot) ?? snapshot.portfolioValue));
   progress.setField("investedValue", String(snapshot.investedValue));
   progress.setField("equityValue", String(snapshot.equityValue));
   progress.setField("debtValue", String(snapshot.debtValue));
@@ -49,6 +49,7 @@ export function ReviewSnapshotScreen({
   const hasPrefilledFormRef = useRef(false);
   const reviewedSnapshotId = useRef<string | undefined>(undefined);
   const invalidSnapshot = store.getState().monthlySnapshots.find((snapshot) => Object.keys(validateMonthlySnapshot(snapshot)).length > 0);
+  const hasSuggestedTotal = invalidSnapshot !== undefined && suggestGeneratedSnapshotTotal(invalidSnapshot) !== null;
 
   useEffect(() => {
     if (hasRunAutomationRef.current || isVisualQaSessionActive() || invalidSnapshot) {
@@ -107,6 +108,7 @@ export function ReviewSnapshotScreen({
         <PremiumCard>
           <SectionHeader title="Snapshot details" />
           {invalidSnapshot ? <AppText testID="snapshot-repair-guidance">A stored snapshot needs correction before backup. Review its month, total and asset-class balances. Values remain unchanged until you save.</AppText> : null}
+          {hasSuggestedTotal ? <AppText testID="snapshot-rounding-guidance">The saved total differs from its balances by at most two paise. The total below now adds up to those balances. Review and save to confirm; your saved record has not changed.</AppText> : null}
           <AppText color="secondary" variant="caption">
             These values are prefilled from your local portfolio records. Saving changes updates this month only.
           </AppText>
