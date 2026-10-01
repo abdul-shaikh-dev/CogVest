@@ -1625,6 +1625,7 @@ export function ProgressScreen({
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
   const isHistoryBuilding =
+    !hasInvalidSnapshot &&
     !isVisualQaSessionActive() &&
     (progress.snapshotAutomationStatus.kind === "checking" ||
       progress.snapshotAutomationStatus.kind === "generating");
@@ -1669,7 +1670,7 @@ export function ProgressScreen({
         />
         {hasInvalidSnapshot ? <PremiumCard testID="snapshot-repair-needed">
           <AppText weight="bold">Snapshot needs correction</AppText>
-          <AppText color="secondary">Review stored balances before backing up. Your values have not been changed.</AppText>
+          <AppText color="secondary">History updates are paused. Review stored balances before backing up. Your values have not been changed.</AppText>
           <AppButton title="Review snapshot" onPress={reviewSnapshot} testID="snapshot-repair-action" />
         </PremiumCard> : null}
         {futuresAccountCount > 0 ? <PremiumCard testID="progress-futures-scope">
@@ -1725,14 +1726,14 @@ export function ProgressScreen({
               </View>
             </View>
 
-            <SnapshotStatusCard
+            {hasInvalidSnapshot ? null : <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
               onRetry={retrySnapshotAutomation}
               status={progress.snapshotAutomationStatus}
-            />
+            />}
 
-            <ProgressTrendCards
+            {hasInvalidSnapshot ? null : <ProgressTrendCards
               ppfExcludedHistory={progress.ppfExcludedHistory}
               assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
@@ -1750,7 +1751,7 @@ export function ProgressScreen({
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
               minimal={isMinimalMode}
-            />
+            />}
 
           </>
         ) : progress.hasData ? (
@@ -1786,12 +1787,12 @@ export function ProgressScreen({
               ]}
             />
 
-            <SnapshotStatusCard
+            {hasInvalidSnapshot ? null : <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
               onRetry={retrySnapshotAutomation}
               status={progress.snapshotAutomationStatus}
-            />
+            />}
 
             {isMinimalMode ? null : (
               <PremiumCard>
@@ -1809,7 +1810,7 @@ export function ProgressScreen({
               </PremiumCard>
             )}
 
-            <ProgressTrendCards
+            {hasInvalidSnapshot ? null : <ProgressTrendCards
               ppfExcludedHistory={progress.ppfExcludedHistory}
               assetChartCustomRange={progress.assetChartCustomRange}
               assetChartData={progress.assetChartData}
@@ -1827,7 +1828,7 @@ export function ProgressScreen({
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
               minimal={isMinimalMode}
-            />
+            />}
 
             <PremiumCard>
               <SectionHeader

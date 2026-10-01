@@ -46,7 +46,6 @@ import {
 import {
   calculateCashBalance,
   calculateHoldings,
-  calculatePortfolioTotal,
 } from "./holdings";
 import { buildMonthlyPerformanceBasis } from "./monthlyPerformance";
 import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
@@ -917,20 +916,11 @@ export function buildGeneratedMonthEndSnapshot({
     ? "confirmed"
     : "provisional";
   const warnings = buildWarnings(priceBases);
-  const portfolioValue = calculatePortfolioTotal(
-    holdings,
-    monthCashEntries,
-    monthEnd,
-    ppfSummary.confirmedBalance,
+  // Persist the sum of the persisted class balances, not a separately rounded
+  // raw holdings total. Pending valuations were rejected above.
+  const portfolioValue = normalizeMoney(
+    sumFinancialValues([equityValue, debtValue, cryptoValue, cashValue]),
   );
-
-  if (portfolioValue === null) {
-    return {
-      snapshot: null,
-      status: "insufficient-data",
-      warnings: ["Portfolio valuation is incomplete for this month."],
-    };
-  }
 
   const snapshot: MonthlySnapshot = {
     cashValue,

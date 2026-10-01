@@ -16,6 +16,27 @@ function setup() {
   return { storage, store };
 }
 describe("snapshot validation and recovery UI", () => {
+  it("suggests the rounded generated total without saving until confirmation", () => {
+    const { store } = setup();
+    const legacy = { ...snapshot, portfolioValue: 60891.74, equityValue: 1611.27,
+      debtValue: 59280.46, cashValue: 0,
+      generated: { source: "auto" as const, generatedAt: now.toISOString(), priceBasis: "manual-fallback" as const, priceEvidence: [], warnings: [] } };
+    store.setState({ monthlySnapshots: [legacy] });
+    const progress = render(<ProgressScreen store={store} now={now} />);
+    expect(progress.queryByText("Checking monthly history")).toBeNull();
+    expect(progress.queryByText("Trend history is still building")).toBeNull();
+    progress.unmount();
+    const onComplete = jest.fn();
+    const view = render(<ReviewSnapshotScreen store={store} now={now} onCancel={jest.fn()} onComplete={onComplete} />);
+    expect(view.getByTestId("snapshot-rounding-guidance")).toBeTruthy();
+    expect(view.getByTestId("snapshot-portfolio-input").props.value).toBe("60891.73");
+    expect(store.getState().monthlySnapshots).toEqual([legacy]);
+    fireEvent.press(view.getByTestId("save-monthly-snapshot-button"));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(store.getState().captureBackup().payload.portfolio.monthlySnapshots[0]).toMatchObject({
+      id: snapshot.id, portfolioValue: 60891.73, equityValue: 1611.27, debtValue: 59280.46,
+    });
+  });
   it("does not carry classified flows from the old month into a corrected month", () => {
     const { store } = setup();
     store.getState().updateMonthlySnapshot({ ...snapshot, performanceBasis: { status: "complete", netExternalFlow: 100, weightedExternalFlow: 50, warnings: [] } });

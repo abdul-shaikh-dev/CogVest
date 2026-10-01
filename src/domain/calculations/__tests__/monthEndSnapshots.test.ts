@@ -8,6 +8,7 @@ import {
 } from "@/src/domain/calculations";
 import { historicalQuoteCacheKey } from "@/src/types";
 import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
+import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import type {
   Asset,
   CashEntry,
@@ -148,6 +149,17 @@ function buildInput(overrides: {
 }
 
 describe("demerger month-end snapshots", () => {
+  it("sums rounded class balances instead of independently rounding the total", () => {
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      assets: [stockAsset, cryptoAsset],
+      openingPositions: [
+        openingPosition({ quantity: 1, currentPrice: 1611.274 }),
+        openingPosition({ assetId: cryptoAsset.id, quantity: 1, currentPrice: 59280.464 }),
+      ],
+    }));
+    expect(result.snapshot).toMatchObject({ equityValue: 1611.27, cryptoValue: 59280.46, portfolioValue: 60891.73 });
+    expect(validateMonthlySnapshot(result.snapshot!)).toEqual({});
+  });
   it("includes a derived child and never fills a missing child quote with zero", () => {
     const parent: Asset = { ...stockAsset, isin: "INE002A01018", demerger: { eventId: "RELIANCE-JIOFIN-2023-v1", childAssetId: "jio" } };
     const child: Asset = { ...stockAsset, id: "jio", name: "Jio Financial", symbol: "JIOFIN", ticker: "JIOFIN.NS", isin: "INE758E01017" };
