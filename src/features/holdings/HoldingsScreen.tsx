@@ -1321,13 +1321,14 @@ function HoldingRow({
       onPress={onPress}
       style={({ pressed }) => [
         styles.holdingCard,
+        pressed && styles.holdingCardPressed,
         getPressedStateStyle({ pressed }),
       ]}
       testID={`holding-row-${holding.asset.id}`}
     >
       <View style={styles.compactRow}>
         <View style={styles.assetCopy}>
-          <AppText weight="bold">{holding.asset.name}</AppText>
+          <AppText weight="medium">{holding.asset.name}</AppText>
           <AppText color="secondary" variant="caption">
             {identity}
             {holding.quoteSource === "manual" ? " · Manual" : ""}
@@ -1335,6 +1336,8 @@ function HoldingRow({
         </View>
         <View style={styles.valueColumn}>
           <MaskedValue
+            style={styles.holdingNumber}
+            variant={pending ? "body" : "section"}
             exactValue={
               pending ? undefined : formatINR(holding.currentValue!)
             }
@@ -1360,11 +1363,12 @@ function HoldingRow({
             exactValue={formatINR(holding.totalInvested)}
             masked={masked}
             value={formatCompactINR(holding.totalInvested)}
-            weight="bold"
+            style={styles.holdingNumber}
+            weight="medium"
           />
         </View>
         <View
-          style={styles.holdingMetric}
+          style={[styles.holdingMetric, styles.holdingPnlMetric]}
           testID={`holding-pnl-${holding.asset.id}`}
         >
           <AppText color="secondary" variant="caption">
@@ -1376,16 +1380,20 @@ function HoldingRow({
                 exactValue={formatINR(holding.unrealisedPnL!)}
                 masked={masked}
                 value={formatSignedCompactINR(holding.unrealisedPnL!)}
+                style={[
+                  styles.holdingNumber,
+                  holding.unrealisedPnL! >= 0 ? styles.positiveText : styles.negativeText,
+                ]}
                 weight="bold"
               />
               <AppText
                 variant="caption"
-                style={
+                style={[
+                  styles.holdingNumber,
                   holding.unrealisedPnL! >= 0
                     ? styles.positiveText
-                    : styles.negativeText
-                }
-                weight="bold"
+                    : styles.negativeText,
+                ]}
               >
                 {formatPercentage(holding.unrealisedPnLPct ?? 0)}
               </AppText>
@@ -1397,17 +1405,32 @@ function HoldingRow({
           )}
         </View>
         <View
-          style={styles.holdingMetric}
+          style={[styles.holdingMetric, styles.holdingWeightMetric]}
           testID={`holding-weight-${holding.asset.id}`}
         >
           <AppText color="secondary" variant="caption">
             Weight
           </AppText>
-          <AppText color={weightAvailable ? "primary" : "secondary"} weight="bold">
+          <AppText color={weightAvailable ? "primary" : "secondary"} style={styles.holdingNumber} weight="medium">
             {weightAvailable ? formatHoldingWeight(item.allocationPct) : "—"}
           </AppText>
         </View>
       </View>
+      {weightAvailable ? (
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.holdingWeightTrack}
+          testID={`holding-weight-track-${holding.asset.id}`}
+        >
+          <View
+            style={[
+              styles.holdingWeightFill,
+              { width: `${Math.max(0, Math.min(100, item.allocationPct))}%` },
+            ]}
+          />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -1913,17 +1936,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   holdingCard: {
-    backgroundColor: colors.surface.card,
+    backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border.subtle,
-    gap: spacing.sm,
+    gap: spacing.md,
     overflow: "hidden",
-    padding: spacing.cardInner,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   holdingMetric: {
     flex: 1,
     gap: 2,
     minWidth: 84,
+  },
+  holdingCardPressed: {
+    backgroundColor: colors.surface.card,
   },
   holdingMetrics: {
     columnGap: spacing.sm,
@@ -1931,10 +1958,29 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     rowGap: spacing.xs,
   },
-  holdingsList: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
+  holdingNumber: {
+    fontVariant: ["tabular-nums"],
+  },
+  holdingPnlMetric: {
+    flexGrow: 1.5,
+  },
+  holdingWeightMetric: {
+    alignItems: "flex-end",
+  },
+  holdingWeightTrack: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    height: 3,
+    marginTop: spacing.xs,
     overflow: "hidden",
+    width: "100%",
+  },
+  holdingWeightFill: {
+    backgroundColor: colors.primary,
+    height: "100%",
+  },
+  holdingsList: {
+    backgroundColor: colors.background,
   },
   insightCard: {
     flex: 1,

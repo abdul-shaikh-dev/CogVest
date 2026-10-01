@@ -607,6 +607,10 @@ describe("HoldingsScreen", () => {
       <HoldingsScreen store={store} />,
     );
     expect(getByText("Valuation pending")).toBeTruthy();
+    expect(within(getByTestId(`holding-row-${asset.id}`)).queryByTestId(
+      `holding-weight-track-${asset.id}`,
+      { includeHiddenElements: true },
+    )).toBeNull();
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(
       getAllByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL).length,
@@ -758,8 +762,14 @@ describe("HoldingsScreen", () => {
     expect(row.getByText("₹200")).toBeTruthy();
     expect(row.getByText("P&L")).toBeTruthy();
     expect(row.getByText("+₹50")).toBeTruthy();
+    expect(row.getByText("+₹50")).toHaveStyle({
+      color: colors.profit,
+      fontVariant: ["tabular-nums"],
+    });
     expect(row.getByText("Weight")).toBeTruthy();
     expect(row.getByText("100.0%")).toBeTruthy();
+    expect(getByTestId(`holding-weight-track-${asset.id}`, { includeHiddenElements: true })
+      .props.children.props.style).toEqual(expect.arrayContaining([{ width: "100%" }]));
     expect(queryByText("Live price")).toBeNull();
     expect(queryByText("Manual price")).toBeNull();
     expect(queryByText(/fallback/i)).toBeNull();
@@ -823,6 +833,12 @@ describe("HoldingsScreen", () => {
     expect(spokenSummary).toContain("Invested ₹1.00");
     expect(spokenSummary).toContain("Unrealised P and L ₹0.00, 0.00%");
     expect(spokenSummary).toContain("Weight <0.1%");
+    const track = screen.getByTestId(`holding-weight-track-${fund.id}`, {
+      includeHiddenElements: true,
+    });
+    const width = track.props.children.props.style[1].width as string;
+    expect(parseFloat(width)).toBeGreaterThan(0);
+    expect(parseFloat(width)).toBeLessThan(0.1);
   });
 
   it("keeps spoken wealth amounts private while preserving signed return context", () => {
