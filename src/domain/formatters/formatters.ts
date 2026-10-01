@@ -6,25 +6,36 @@ import {
 } from "@/src/domain/precision";
 import type { Currency } from "@/src/types";
 
+// Fixed locales/options allow reuse without caching any portfolio values.
+const currencyFormatters = new Map<Currency, Intl.NumberFormat>();
+let inrFormatter: Intl.NumberFormat | undefined;
+let dateFormatter: Intl.DateTimeFormat | undefined;
+
 export function formatCurrency(value: number, currency: Currency) {
   const normalizedValue = normalizeMoney(value);
-  return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
-    currency,
-    currencyDisplay: "symbol",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(normalizedValue);
+  let formatter = currencyFormatters.get(currency);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+      currency,
+      currencyDisplay: "symbol",
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+      style: "currency",
+    });
+    currencyFormatters.set(currency, formatter);
+  }
+  return formatter.format(normalizedValue);
 }
 
 export function formatINR(value: number) {
   const normalizedValue = normalizeMoney(value);
   const sign = normalizedValue < 0 ? "-" : "";
   const absoluteValue = Math.abs(normalizedValue);
-  const formatted = new Intl.NumberFormat("en-IN", {
+  inrFormatter ??= new Intl.NumberFormat("en-IN", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
-  }).format(absoluteValue);
+  });
+  const formatted = inrFormatter.format(absoluteValue);
 
   return `${sign}₹${formatted}`;
 }
@@ -61,10 +72,11 @@ export function formatPercentage(value: number) {
 }
 
 export function formatDate(isoDate: string) {
-  return new Intl.DateTimeFormat("en-IN", {
+  dateFormatter ??= new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     timeZone: "UTC",
     year: "numeric",
-  }).format(new Date(isoDate));
+  });
+  return dateFormatter.format(new Date(isoDate));
 }
