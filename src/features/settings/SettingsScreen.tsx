@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -14,6 +14,7 @@ import {
   ScreenContainer,
   ScreenHeader,
   SectionHeader,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
@@ -24,9 +25,24 @@ type SettingsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
+const displayOptions = [
+  {
+    description: "Monthly activity, portfolio insights and optional guidance.",
+    label: "Standard",
+    value: "standard" as const,
+  },
+  {
+    description: "Hides monthly activity, insights and guidance. Keeps core values and actions.",
+    label: "Minimal",
+    value: "minimal" as const,
+  },
+];
+
 export function SettingsScreen({
   store = getPortfolioStore(),
 }: SettingsScreenProps) {
+  const { fontScale } = useWindowDimensions();
+  const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const [isPrivacyDetailsExpanded, setIsPrivacyDetailsExpanded] =
     useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
@@ -79,7 +95,6 @@ export function SettingsScreen({
             void handleToggleMasking();
           }}
           style={({ pressed }) => [
-            styles.card,
             styles.toggleRow,
             pressed && styles.pressed,
           ]}
@@ -108,19 +123,8 @@ export function SettingsScreen({
 
         <PremiumCard section testID="display-mode-settings">
           <SectionHeader title="Display" />
-          <View testID="display-mode-options" accessibilityLabel="Display mode" accessibilityRole="radiogroup" style={styles.modeOptions}>
-            {([
-              {
-                description: "Monthly activity, portfolio insights and optional guidance.",
-                label: "Standard",
-                value: "standard" as const,
-              },
-              {
-                description: "Hides monthly activity, insights and guidance. Keeps core values and actions.",
-                label: "Minimal",
-                value: "minimal" as const,
-              },
-            ]).map((option) => {
+          <View testID="display-mode-options" accessibilityLabel="Display mode" accessibilityRole="radiogroup" style={[styles.modeOptions, stacked && styles.modeOptionsStacked]}>
+            {displayOptions.map((option) => {
               const selected = displayMode === option.value;
 
               return (
@@ -148,78 +152,14 @@ export function SettingsScreen({
                     color={selected ? colors.primary : colors.text.secondary}
                     style={styles.controlIcon}
                   />
-                  <View style={styles.toggleCopy}>
-                    <AppText weight="bold">{option.label}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {option.description}
-                    </AppText>
-                  </View>
+                  <AppText style={styles.modeLabel} weight="bold">{option.label}</AppText>
                 </Pressable>
               );
             })}
           </View>
-        </PremiumCard>
-
-        <PremiumCard section testID="privacy-storage-card">
-          <Pressable
-            accessibilityLabel="Privacy and storage details"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: isPrivacyDetailsExpanded }}
-            onPress={() => setIsPrivacyDetailsExpanded((expanded) => !expanded)}
-            style={({ pressed }) => [
-              styles.disclosureRow,
-              pressed && styles.pressed,
-            ]}
-            testID="privacy-details-toggle"
-          >
-            <View style={styles.disclosureCopy}>
-              <AppText weight="medium">Privacy & storage</AppText>
-              <AppText color="secondary" variant="caption">
-                No account • No cloud sync • No analytics
-              </AppText>
-            </View>
-            <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
-              name={isPrivacyDetailsExpanded ? "chevron-up" : "chevron-down"}
-              size={20} color={colors.text.secondary} style={styles.controlIcon} />
-          </Pressable>
-          {isPrivacyDetailsExpanded ? (
-            <View style={styles.privacyDetails} testID="privacy-storage-details">
-              <AppText color="secondary" variant="caption">
-                Records stay in CogVest's app-private Android storage.
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                Protected by Android app-private storage and device security.
-                CogVest does not add its own encryption.
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.
-              </AppText>
-              <GroupedListRow
-                icon="cloud-offline-outline"
-                title="Android backup"
-                meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
-                value="Excluded"
-              />
-              <GroupedListRow
-                icon="person-circle-outline"
-                title="Account"
-                meta="No sign-in or online profile required."
-                value="Not required"
-              />
-              <GroupedListRow
-                icon="cloud-offline-outline"
-                title="Cloud sync"
-                meta="No portfolio data is sent to a backend."
-                value="Off"
-              />
-              <GroupedListRow
-                icon="analytics-outline"
-                title="Analytics"
-                meta="CogVest does not collect usage analytics."
-                value="Off"
-              />
-            </View>
-          ) : null}
+          <AppText color="secondary" variant="caption" accessibilityLiveRegion="polite" testID="display-mode-description">
+            {displayOptions.find((option) => option.value === displayMode)?.description}
+          </AppText>
         </PremiumCard>
 
         <PremiumCard section testID="backup-settings-card">
@@ -243,7 +183,6 @@ export function SettingsScreen({
         </PremiumCard>
 
         <PremiumCard section testID="futures-settings-card">
-          <SectionHeader title="Futures" />
           <GroupedListRow
             icon="swap-horizontal-outline"
             title="Binance USDT futures"
@@ -254,72 +193,137 @@ export function SettingsScreen({
           />
         </PremiumCard>
 
-        <PremiumCard section testID="settings-prices-card">
-          <Pressable
-            accessibilityLabel="Price information"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: isPriceDetailsExpanded }}
-            onPress={() => setIsPriceDetailsExpanded((expanded) => !expanded)}
-            style={({ pressed }) => [styles.disclosureRow, pressed && styles.pressed]}
-            testID="settings-price-details-toggle"
-          >
-            <View style={styles.disclosureCopy}>
-              <AppText weight="medium">Price information</AppText>
-              <AppText color="secondary" variant="caption">
-                Sources and dates of price updates
-              </AppText>
-            </View>
-            <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
-              name={isPriceDetailsExpanded ? "chevron-up" : "chevron-down"}
-              size={20} color={colors.text.secondary} style={styles.controlIcon} />
-          </Pressable>
-          {isPriceDetailsExpanded ? (
-            <View style={styles.privacyDetails} testID="settings-price-details">
-              <AppText color="secondary" variant="caption">
-                These are separate price updates. Prices entered with initial holdings may also be in use; check Dashboard for valuation coverage.
-              </AppText>
-              <View style={styles.priceDate}>
-                <AppText weight="bold">Newest price update date</AppText>
-                <AppText color="secondary">{quoteStatus.latestQuoteLabel}</AppText>
+        <View style={styles.informationGroup}>
+          <SectionHeader title="App information" />
+          <PremiumCard section testID="privacy-storage-card">
+            <Pressable
+              accessibilityLabel="Privacy and storage details"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: isPrivacyDetailsExpanded }}
+              onPress={() => setIsPrivacyDetailsExpanded((expanded) => !expanded)}
+              style={({ pressed }) => [
+                styles.disclosureRow,
+                pressed && styles.pressed,
+              ]}
+              testID="privacy-details-toggle"
+            >
+              <View style={styles.disclosureCopy}>
+                <AppText weight="medium">Privacy & storage</AppText>
                 <AppText color="secondary" variant="caption">
-                  {`${quoteStatus.quoteCount} price update${
-                    quoteStatus.quoteCount === 1 ? "" : "s"
-                  }. Other prices may be older. This is not a refresh time.`}
+                  No account • No cloud sync • No analytics
                 </AppText>
               </View>
-              <GroupedListRow
-                icon="pulse-outline"
-                title="Price sources"
-                meta={quoteSourceMeta}
-                value={priceSourceLabel}
-              />
-              <GroupedListRow
-                icon="cloud-offline-outline"
-                title="Manual price updates"
-                meta="You can enter a price when automatic pricing is unavailable."
-                value={`${quoteStatus.manualFallbackCount} price update${
-                  quoteStatus.manualFallbackCount === 1 ? "" : "s"
-                }`}
-              />
-            </View>
-          ) : null}
-        </PremiumCard>
+              <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
+                name={isPrivacyDetailsExpanded ? "chevron-up" : "chevron-down"}
+                size={20} color={colors.text.secondary} style={styles.controlIcon} />
+            </Pressable>
+            {isPrivacyDetailsExpanded ? (
+              <View style={styles.privacyDetails} testID="privacy-storage-details">
+                <AppText color="secondary" variant="caption">
+                  Records stay in CogVest's app-private Android storage.
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  Protected by Android app-private storage and device security.
+                  CogVest does not add its own encryption.
+                </AppText>
+                <AppText color="secondary" variant="caption">
+                  Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.
+                </AppText>
+                <GroupedListRow
+                  icon="cloud-offline-outline"
+                  title="Android backup"
+                  meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
+                  value="Excluded"
+                />
+                <GroupedListRow
+                  icon="person-circle-outline"
+                  title="Account"
+                  meta="No sign-in or online profile required."
+                  value="Not required"
+                />
+                <GroupedListRow
+                  icon="cloud-offline-outline"
+                  title="Cloud sync"
+                  meta="No portfolio data is sent to a backend."
+                  value="Off"
+                />
+                <GroupedListRow
+                  icon="analytics-outline"
+                  title="Analytics"
+                  meta="CogVest does not collect usage analytics."
+                  value="Off"
+                />
+              </View>
+            ) : null}
+          </PremiumCard>
 
-        <PremiumCard>
-          <SectionHeader title="About" />
-          <GroupedListRow
-            icon="cash-outline"
-            title="Base currency"
-            meta="Portfolio totals are reported in INR."
-            value="INR"
-          />
-          <GroupedListRow
-            icon="phone-portrait-outline"
-            title="Version"
-            meta="CogVest for Android."
-            value={Constants.expoConfig?.version ?? "Not available"}
-          />
-        </PremiumCard>
+          <PremiumCard section testID="settings-prices-card">
+            <Pressable
+              accessibilityLabel="Price information"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: isPriceDetailsExpanded }}
+              onPress={() => setIsPriceDetailsExpanded((expanded) => !expanded)}
+              style={({ pressed }) => [styles.disclosureRow, pressed && styles.pressed]}
+              testID="settings-price-details-toggle"
+            >
+              <View style={styles.disclosureCopy}>
+                <AppText weight="medium">Price information</AppText>
+                <AppText color="secondary" variant="caption">
+                  Sources and dates of price updates
+                </AppText>
+              </View>
+              <Ionicons accessible={false} importantForAccessibility="no-hide-descendants"
+                name={isPriceDetailsExpanded ? "chevron-up" : "chevron-down"}
+                size={20} color={colors.text.secondary} style={styles.controlIcon} />
+            </Pressable>
+            {isPriceDetailsExpanded ? (
+              <View style={styles.privacyDetails} testID="settings-price-details">
+                <AppText color="secondary" variant="caption">
+                  These are separate price updates. Prices entered with initial holdings may also be in use; check Dashboard for valuation coverage.
+                </AppText>
+                <View style={styles.priceDate}>
+                  <AppText weight="bold">Newest price update date</AppText>
+                  <AppText color="secondary">{quoteStatus.latestQuoteLabel}</AppText>
+                  <AppText color="secondary" variant="caption">
+                    {`${quoteStatus.quoteCount} price update${
+                      quoteStatus.quoteCount === 1 ? "" : "s"
+                    }. Other prices may be older. This is not a refresh time.`}
+                  </AppText>
+                </View>
+                <GroupedListRow
+                  icon="pulse-outline"
+                  title="Price sources"
+                  meta={quoteSourceMeta}
+                  value={priceSourceLabel}
+                />
+                <GroupedListRow
+                  icon="cloud-offline-outline"
+                  title="Manual price updates"
+                  meta="You can enter a price when automatic pricing is unavailable."
+                  value={`${quoteStatus.manualFallbackCount} price update${
+                    quoteStatus.manualFallbackCount === 1 ? "" : "s"
+                  }`}
+                />
+              </View>
+            ) : null}
+          </PremiumCard>
+
+          <PremiumCard section>
+            <SectionHeader title="About" />
+            <GroupedListRow
+              icon="cash-outline"
+              title="Base currency"
+              meta="Portfolio totals are reported in INR."
+              value="INR"
+            />
+            <GroupedListRow
+              icon="phone-portrait-outline"
+              title="Version"
+              meta="CogVest for Android."
+              value={Constants.expoConfig?.version ?? "Not available"}
+            />
+          </PremiumCard>
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -333,13 +337,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
-  card: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
-    gap: spacing.sm,
-    paddingHorizontal: spacing.cardInner,
-    paddingVertical: spacing.sm,
-  },
+  informationGroup: { gap: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border.subtle, paddingTop: spacing.md },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
@@ -357,11 +355,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   modeOption: {
+    flex: 1,
     alignItems: "center",
     borderRadius: radii.button,
     flexDirection: "row",
     gap: spacing.md,
-    justifyContent: "space-between",
+    justifyContent: "center",
     minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -370,8 +369,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.elevated,
   },
   modeOptions: {
+    flexDirection: "row",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.button,
+    padding: spacing.xs,
     gap: spacing.xs,
   },
+  modeOptionsStacked: { flexDirection: "column" },
+  modeLabel: { flexShrink: 1 },
   pressed: {
     opacity: interaction.pressedOpacity,
   },
@@ -392,6 +397,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   switchTrack: {
+    flexShrink: 0,
     backgroundColor: colors.surface.elevated,
     borderRadius: radii.pill,
     justifyContent: "center",
@@ -403,6 +409,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   toggleRow: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.md,
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.sm,

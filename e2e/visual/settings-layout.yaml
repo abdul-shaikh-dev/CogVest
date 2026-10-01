@@ -1,0 +1,88 @@
+appId: com.abdulshaikh.cogvest
+---
+# Disposable synthetic portfolio; restores Minimal mode and unmasked amounts.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-standard
+- assertVisible:
+    id: display-mode-standard
+    checked: true
+- assertVisible: "Monthly activity, portfolio insights and optional guidance."
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/settings-layout/${SHOT}/standard
+- tapOn:
+    id: display-mode-minimal
+- assertVisible:
+    id: display-mode-minimal
+    checked: true
+- tapOn:
+    id: value-mask-toggle
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- assertNotVisible: ".*₹[0-9].*"
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: display-mode-minimal
+    checked: true
+- assertVisible:
+    id: value-mask-toggle
+    checked: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: .expo/settings-layout/${SHOT}/persisted-preferences
+- tapOn:
+    id: value-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: backup-portfolio-action
+    direction: DOWN
+- tapOn:
+    id: backup-portfolio-action
+- assertVisible:
+    id: choose-backup-location
+- back
+- scrollUntilVisible:
+    element:
+      id: restore-backup-action
+    direction: DOWN
+- tapOn:
+    id: restore-backup-action
+- assertVisible:
+    id: choose-backup-file
+- back
+- scrollUntilVisible:
+    element:
+      id: privacy-details-toggle
+    direction: DOWN
+- tapOn:
+    id: privacy-details-toggle
+- scrollUntilVisible:
+    element:
+      text: ".*CogVest does not add its own encryption.*"
+    direction: DOWN
+- assertVisible: ".*CogVest does not add its own encryption.*"
+- takeScreenshot: .expo/settings-layout/${SHOT}/privacy
+- scrollUntilVisible:
+    element:
+      id: settings-price-details-toggle
+    direction: DOWN
+- tapOn:
+    id: settings-price-details-toggle
+- scrollUntilVisible:
+    element:
+      text: "Newest price update date"
+    direction: DOWN
+- assertVisible: "Newest price update date"
+- takeScreenshot: .expo/settings-layout/${SHOT}/prices

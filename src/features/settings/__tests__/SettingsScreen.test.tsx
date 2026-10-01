@@ -35,9 +35,13 @@ describe("SettingsScreen", () => {
     const minimal = view.getByRole("radio", { name: "Minimal display mode" });
     expect(minimal.props.accessibilityHint).toContain("Keeps core values and actions");
     expect(standard.props.accessibilityState.checked).toBe(true);
+    expect(view.getByTestId("display-mode-description")).toHaveTextContent("Monthly activity, portfolio insights and optional guidance.");
+    expect(view.queryByText("Hides monthly activity, insights and guidance. Keeps core values and actions.")).toBeNull();
     fireEvent.press(minimal);
     expect(standard.props.accessibilityState.checked).toBe(false);
     expect(minimal.props.accessibilityState.checked).toBe(true);
+    expect(view.getByTestId("display-mode-description")).toHaveTextContent("Hides monthly activity, insights and guidance. Keeps core values and actions.");
+    expect(view.queryByText("Monthly activity, portfolio insights and optional guidance.")).toBeNull();
     fireEvent.press(minimal);
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
     fireEvent.press(standard);
@@ -68,6 +72,8 @@ describe("SettingsScreen", () => {
     fireEvent.press(getByTestId("restore-backup-action"));
     expect(mockPush).toHaveBeenNthCalledWith(1, "/backup?mode=export");
     expect(mockPush).toHaveBeenNthCalledWith(2, "/backup?mode=restore");
+    fireEvent.press(getByTestId("open-futures-action"));
+    expect(mockPush).toHaveBeenNthCalledWith(3, "/futures");
 
     fireEvent.press(getByTestId("privacy-details-toggle"));
     expect(getByText("Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.")).toBeTruthy();

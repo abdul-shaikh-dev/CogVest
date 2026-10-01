@@ -578,11 +578,19 @@ Settings should build trust.
 
 Baseline groups:
 
-- Retain the local-first subtitle, without a duplicate Local only header badge.
+- Keep the header free of repeated local-only claims; privacy details remain
+  available under App information.
 - Working preferences first: value masking with honest amount-only scope and
   Standard/Minimal display choices. Checked states must be accessible.
 - Display modes form one named radio group with concrete descriptions of what
   appears or is hidden. Use radio indicators, not redundant Choose/Selected text.
+- Present Standard/Minimal as a compact two-choice selector with the selected
+  description below it. Both choices retain their full accessibility hints.
+  Stack the choices at enlarged text sizes. Keep masking as an open switch row
+  with its amount-only scope visible, not a separate oversized card.
+- Put backup/restore and Futures destinations ahead of the App information
+  group. Keep the unencrypted-backup and replacement warnings on their rows.
+  Privacy, price disclosures and noninteractive About values follow together.
 - Disclosures use up/down chevrons with expanded/collapsed accessibility state;
   backup destinations use forward chevrons. Passive information has neither a
   navigation indicator nor a button role. Decorative icons are not focus stops.
