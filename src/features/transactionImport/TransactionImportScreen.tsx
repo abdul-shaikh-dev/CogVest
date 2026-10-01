@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Keyboard, KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -163,16 +164,15 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     <ScreenContainer scroll scrollRef={scrollRef} testID="transaction-import-screen">
       <ScreenHeader
         leading={<IconButton accessibilityLabel="Go back" icon="chevron-back" onPress={props.onCancel} testID="transaction-import-back" />}
-        title="Import transaction history"
+        title="Import history"
       />
 
       <View onLayout={(event) => { sourceCardYRef.current = event.nativeEvent.layout.y; }} testID="transaction-import-source-card">
       <PremiumCard section style={styles.card}>
         <SectionHeader title="Choose a source" />
-        <AppText color="secondary">Files stay on this device. Select the export format before adding history.</AppText>
-        <View style={styles.modeRow}>
+        <View accessibilityRole="radiogroup" accessibilityLabel="Import source" testID="transaction-import-sources" style={styles.sourceList}>
           {transactionImportSources.map((source) => (
-            <ModeButton
+            <SourceChoice
               active={controller.sourceId === source.id}
               description={source.description}
               key={source.id}
@@ -181,24 +181,28 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
               title={source.label}
             />
           ))}
-          {props.onAddPpfAccount ? (
-            <SourceAction
-              description="Import PPF history with the account's CSV template."
-              onPress={props.onAddPpfAccount}
-              testID="transaction-import-source-ppf"
-              title="PPF CSV"
-            />
-          ) : null}
         </View>
+        {props.onAddPpfAccount ? (
+          <SourceAction
+            description="Import PPF history with the account's CSV template."
+            onPress={props.onAddPpfAccount}
+            testID="transaction-import-source-ppf"
+            title="PPF CSV"
+          />
+        ) : null}
+        <AppText color="secondary" variant="caption">Files stay on this device.</AppText>
         {!hasSelectedInput ? <AppButton disabled={controller.isResolving || controller.isSaving} onPress={selectFile} testID={controller.sourceId === "camsKfinCasPdfV1" ? "select-cas-statement" : "select-transaction-csv"} title={controller.sourceId === "camsKfinCasPdfV1" ? "Choose CAS PDF" : controller.sourceId === "zerodhaTradebookEqV1" ? "Choose Tradebook CSV" : "Choose CSV"} /> : null}
         {sourceGuidance ? <View style={styles.guide} testID="transaction-import-source-guide">
-          <AppButton
+          <Pressable
+            accessibilityRole="button"
             accessibilityState={{ expanded: showSourceHelp }}
             onPress={() => setShowSourceHelp(!showSourceHelp)}
             testID="transaction-import-toggle-source-guide"
-            title={showSourceHelp ? `Hide ${sourceGuidance.fileLabel} instructions` : `How to get a ${sourceGuidance.fileLabel}`}
-            variant="secondary"
-          />
+            style={({ pressed }) => [styles.helpRow, pressed && styles.pressed]}
+          >
+            <AppText style={styles.sourceCopy} weight="medium">{`How to get a ${sourceGuidance.fileLabel}`}</AppText>
+            <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name={showSourceHelp ? "chevron-up" : "chevron-down"} size={20} color={colors.text.secondary} />
+          </Pressable>
           {showSourceHelp ? <View style={styles.guide} testID="transaction-import-source-guide-details">
             <View style={styles.divider} />
             <SectionHeader title={`Get your ${sourceGuidance.fileLabel}`} />
@@ -466,7 +470,17 @@ function ModeButton({ active, description, onPress, testID, title }: { active: b
 }
 
 function SourceAction({ description, onPress, testID, title }: { description: string; onPress: () => void; testID: string; title: string }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={styles.modeButton} testID={testID}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></Pressable>;
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.sourceRow, pressed && styles.pressed]} testID={testID}>
+    <View style={styles.sourceCopy}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></View>
+    <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name="chevron-forward" size={20} color={colors.text.secondary} />
+  </Pressable>;
+}
+
+function SourceChoice({ active, description, onPress, testID, title }: { active: boolean; description: string; onPress: () => void; testID: string; title: string }) {
+  return <Pressable accessibilityRole="radio" accessibilityLabel={title} accessibilityHint={description} accessibilityState={{ checked: active }} onPress={onPress} style={({ pressed }) => [styles.sourceRow, pressed && styles.pressed]} testID={testID}>
+    <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name={active ? "radio-button-on" : "radio-button-off"} size={24} color={active ? colors.primary : colors.text.secondary} />
+    <View style={styles.sourceCopy}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></View>
+  </Pressable>;
 }
 
 function Summary({
@@ -517,6 +531,10 @@ const styles = StyleSheet.create({
   modeButton: { backgroundColor: colors.surface.elevated, borderRadius: radii.card, flexBasis: "100%", flexGrow: 1, gap: spacing.xs, minHeight: 64, padding: spacing.md },
   modeButtonActive: { borderColor: colors.primary, borderWidth: 1 },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  sourceList: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
+  sourceRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, minHeight: 56, paddingVertical: spacing.sm },
+  sourceCopy: { flex: 1, gap: spacing.xs },
+  helpRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 48, paddingVertical: spacing.xs },
   pressed: { opacity: 0.78 },
   section: { gap: spacing.cardGap },
   summary: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },

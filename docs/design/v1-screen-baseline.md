@@ -348,6 +348,12 @@ the user clear refresh and manual-price recovery actions later.
 
 ### Quick Portfolio Setup
 
+Transaction history import presents formats as compact, named radio rows with
+their descriptions visible. PPF is a separate navigation row with a forward
+chevron, not a fourth selectable format. Keep the file picker as the primary
+action and file-acquisition instructions as a text disclosure. Preserve local
+file handling, format limits, password visibility and all review safeguards.
+
 Use Quick Portfolio Setup when the user is entering several existing holdings.
 
 Dashboard and Holdings `Set up portfolio` open the same entry chooser as
