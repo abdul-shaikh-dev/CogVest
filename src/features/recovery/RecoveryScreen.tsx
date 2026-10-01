@@ -30,8 +30,8 @@ export function RecoveryScreen({
             Local data needs recovery
           </AppText>
           <AppText color="secondary">
-            CogVest could not safely read some stored data. It has not been
-            treated as a new empty portfolio.
+            CogVest could not read some saved data. It has not replaced it
+            with an empty portfolio.
           </AppText>
         </View>
 
@@ -43,7 +43,7 @@ export function RecoveryScreen({
           </AppText>
           <AppText color="secondary" variant="caption">
             {recoveryCopiesPreserved
-              ? "A recovery copy remains on this device. CogVest will not open the portfolio or run monthly automation until you decide how to continue."
+              ? "A recovery copy remains on this device. Your portfolio and monthly snapshot updates are paused until you decide how to continue."
               : "CogVest could not create a recovery copy. Do not reset the affected data; restart the app or seek support before continuing."}
           </AppText>
           <View style={styles.affectedAreas}>
@@ -62,9 +62,8 @@ export function RecoveryScreen({
           <PremiumCard elevated>
             <AppText weight="bold">Reset affected local data?</AppText>
             <AppText color="secondary" variant="caption">
-              CogVest will remove only the unreadable active data and continue
-              with a safe state. The preserved recovery copy will remain on
-              this device.
+              CogVest will remove the unreadable data from your active portfolio.
+              The recovery copy will remain on this device.
             </AppText>
             <View style={styles.actions}>
               <AppButton

@@ -34,7 +34,7 @@ export const transactionImportSources: TransactionImportSourceDefinition[] = [
     multipleFiles: false,
   },
   {
-    description: "CogVest's versioned broker-neutral transaction template.",
+    description: "Enter transactions using CogVest's CSV template.",
     id: "cogvestCsvV1",
     label: "CogVest CSV",
     multipleFiles: false,

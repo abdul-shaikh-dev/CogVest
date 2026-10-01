@@ -94,7 +94,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "quick-setup-review-screen"
     timeout: 10000
-- assertVisible: "2 holdings confirmed locally"
+- assertVisible: "2 holdings saved"
 - tapOn:
     id: "quick-setup-complete"
 - extendedWaitUntil:

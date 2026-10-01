@@ -189,7 +189,7 @@ export function SettingsScreen({
               </AppText>
               <AppText color="secondary" variant="caption">
                 Protected by Android app-private storage and device security.
-                Separate app encryption is not included in V1.
+                CogVest does not add its own encryption.
               </AppText>
               <AppText color="secondary" variant="caption">
                 Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.
@@ -203,7 +203,7 @@ export function SettingsScreen({
               <GroupedListRow
                 icon="person-circle-outline"
                 title="Account"
-                meta="No sign-in or remote profile is required in V1."
+                meta="No sign-in or online profile required."
                 value="Not required"
               />
               <GroupedListRow
@@ -215,7 +215,7 @@ export function SettingsScreen({
               <GroupedListRow
                 icon="analytics-outline"
                 title="Analytics"
-                meta="No product telemetry is enabled in V1."
+                meta="CogVest does not collect usage analytics."
                 value="Off"
               />
             </View>
@@ -310,7 +310,7 @@ export function SettingsScreen({
           <GroupedListRow
             icon="cash-outline"
             title="Base currency"
-            meta="INR-first summaries across CogVest."
+            meta="Portfolio totals are reported in INR."
             value="INR"
           />
           <GroupedListRow

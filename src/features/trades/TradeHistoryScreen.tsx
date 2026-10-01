@@ -119,7 +119,7 @@ export function TradeHistoryScreen({
           title="Transactions"
           subtitle={asset
             ? `${asset.name} · local records`
-            : `${trades.length} ${trades.length === 1 ? "record" : "records"} · local only`}
+            : `${trades.length} ${trades.length === 1 ? "record" : "records"}`}
         />
         {deletionMessage ? (
           <AppText accessibilityLiveRegion="polite" color={deletionMessage.includes("removed") ? "secondary" : undefined} style={deletionMessage.includes("removed") ? undefined : styles.errorText} testID="transaction-deletion-message">
@@ -278,7 +278,7 @@ export function TradeHistoryScreen({
                 </AppText>
                 {deletionPreview.impact.importedTransactions > 0 ? (
                   <AppText color="secondary" variant="caption">
-                    Import provenance for {deletionPreview.impact.importedTransactions} selected transaction{deletionPreview.impact.importedTransactions === 1 ? "" : "s"} will be removed. Importing the source file again can add those rows again.
+                    Import details for {deletionPreview.impact.importedTransactions} selected transaction{deletionPreview.impact.importedTransactions === 1 ? "" : "s"} will be removed. Importing the source file again can add those rows again.
                   </AppText>
                 ) : null}
                 {deletionPreview.impact.detachedDemergers > 0 ? (

@@ -392,7 +392,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
         {account ? <>
           <PremiumCard section testID="futures-position-summary">
             <SectionHeader title="Position & wallet status" />
-            <AppText>Replayed wallet</AppText><Money value={`${replay?.walletUsdt ?? "Unavailable"} USDT`} masked={masked} />
+            <AppText>Wallet from recorded activity</AppText><Money value={`${replay?.walletUsdt ?? "Unavailable"} USDT`} masked={masked} />
             <AppText>Realized P&L since starting wallet</AppText><Money value={`${replay?.realizedPnlUsdt ?? "Unavailable"} USDT`} masked={masked} />
             <AppText>Account equity {account.valuation ? `· ${displayTime(account.valuation.asOf)}` : ""}</AppText><Money value={replay?.equityInr ? `₹${replay.equityInr}` : "Not verified in INR"} masked={masked} />
             <AppText color="secondary">{replay ? valuationLabels[replay.valuationStatus] : "Check account records"} · Since-start INR rates: {replay?.eventRateStatus === "complete" ? "ready" : replay?.eventRateStatus ?? "unknown"}</AppText>
@@ -494,7 +494,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <Choice checkbox label="All open positions checked against Binance" selected={positionsConfirmed} onPress={() => setPositionsConfirmed((value) => !value)} testID="futures-positions-confirmed" />
             <Choice checkbox label="All wallet events since starting balance entered" selected={eventsConfirmed} onPress={() => setEventsConfirmed((value) => !value)} testID="futures-events-confirmed" />
             <Choice checkbox label="Wallet is not already counted in Spot, Cash or another holding" selected={boundaryConfirmed} onPress={() => setBoundaryConfirmed((value) => !value)} testID="futures-boundary-confirmed" />
-            <AppButton title="Save valuation evidence" onPress={saveValuation} testID="futures-save-valuation" />
+            <AppButton title="Save valuation" onPress={saveValuation} testID="futures-save-valuation" />
           </PremiumCard>
           <Pressable accessibilityRole="button" onPress={confirmDeleteAccount} style={styles.deleteAction} testID="futures-delete-account"><AppText style={styles.error}>Delete Futures wallet</AppText></Pressable>
         </> : null}

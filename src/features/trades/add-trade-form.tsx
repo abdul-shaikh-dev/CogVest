@@ -33,7 +33,6 @@ export function AddTradeForm({
       <View testID="add-holding-screen">
         <ScreenHeader
           title="Add Holding"
-          subtitle="Portfolio entry • local only"
         />
       </View>
 

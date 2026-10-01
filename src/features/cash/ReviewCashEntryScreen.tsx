@@ -149,15 +149,15 @@ export function ReviewCashEntryScreen({
             <SectionHeader title={linkedTrade ? entry.label : "Linked transaction unavailable"} />
             {linkedTrade ? <>
               <AppText color="secondary">
-                This movement is managed with its investment transaction. Review
-                the owning {linkedTrade.type === "buy" ? "purchase" : "sale"} so the asset and cash records stay in sync.
+                Review the linked {linkedTrade.type === "buy" ? "purchase" : "sale"} to
+                update the investment and Cash records together.
               </AppText>
               <AppText color="secondary" variant="caption" testID="linked-cash-owner-summary">
                 {linkedAsset?.name ?? "Unknown holding"} · {linkedTrade.type === "buy" ? "Purchase" : "Sale"} · {formatDate(linkedTrade.date)}
               </AppText>
             </> : <>
               <AppText color="secondary" testID="linked-cash-owner-missing">
-                This cash movement points to a transaction that is no longer available. It remains read-only so Cash and investment history cannot diverge.
+                The linked transaction is missing. You cannot edit this cash movement separately from its investment record.
               </AppText>
               <AppText color="secondary" variant="caption">
                 Return to the Cash Ledger. Restore a backup or reimport the complete source history if this link should exist.
@@ -295,7 +295,7 @@ export function ReviewCashEntryScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Review Cash Entry"
-          subtitle="Correct a manual ledger record"
+          subtitle="Correct a cash entry"
         />
 
         <PremiumCard>

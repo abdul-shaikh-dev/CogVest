@@ -14,7 +14,7 @@ it("renders the token-gated missing linked Cash QA state", () => {
 
   expect(screen.getByTestId("review-cash-entry-screen")).toBeTruthy();
   expect(screen.getByTestId("linked-cash-owner-missing")).toHaveTextContent(
-    /no longer available/u,
+    /The linked transaction is missing/u,
   );
   expect(screen.queryByTestId("review-linked-cash-transaction")).toBeNull();
 });

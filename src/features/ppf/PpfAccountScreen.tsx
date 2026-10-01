@@ -628,7 +628,6 @@ function PpfAccountForm({
           <ScreenHeader
             leading={<IconButton accessibilityLabel="Back to account editor" icon="arrow-back" onPress={() => setReviewAccount(undefined)} />}
             title="Review PPF account"
-            subtitle="Confirm before saving • local only"
           />
           <PremiumCard>
             <SectionHeader title={candidate.nickname} />
@@ -646,7 +645,7 @@ function PpfAccountForm({
             />
           </PremiumCard>
           <AppText color="secondary" variant="caption">
-            This balance becomes CogVest's confirmed baseline. Earlier contributions and interest are not reconstructed.
+            CogVest starts tracking from this balance. It does not rebuild earlier contributions or interest.
           </AppText>
           {error ? <AppText style={styles.error}>{error}</AppText> : null}
           <View style={styles.actions}>
@@ -677,7 +676,7 @@ function PpfAccountForm({
         <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={requestBack} />}
-          subtitle="Confirmed balance • local only"
+          subtitle="Start with a confirmed balance"
           title={account ? "Edit PPF account" : "Add PPF account"}
         />
         {legacyName ? (
@@ -839,7 +838,7 @@ function PpfAccountForm({
             }}
           >
             <PremiumCard>
-              <SectionHeader title="Confirmed baseline" />
+              <SectionHeader title="Starting balance" />
               <View onLayout={(event) => recordFieldLayout("balance", "baseline", event.nativeEvent.layout.y)}>
                 <FormTextField
                   error={fieldErrors.balance}

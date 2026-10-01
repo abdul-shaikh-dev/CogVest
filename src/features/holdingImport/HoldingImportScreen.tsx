@@ -81,15 +81,14 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
             testID="holding-import-back"
           />
         }
-        subtitle="Versioned template • local only"
         title="Import holdings"
       />
 
       <PremiumCard section style={styles.introCard}>
         <SectionHeader title="Start with the CogVest template" />
         <AppText color="secondary">
-          Import aggregate opening positions, not transaction history. Review every
-          resolved row before one atomic save.
+          Import starting quantities and average costs, not transaction history.
+          Review each holding before saving them together.
         </AppText>
         <AppText color="secondary" variant="caption">
           Required: version, asset name or ticker, quantity, and average cost. Up to {controller.maxRows} rows.

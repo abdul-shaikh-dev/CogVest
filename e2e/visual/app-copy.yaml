@@ -1,0 +1,46 @@
+appId: com.abdulshaikh.cogvest
+---
+# Copy review on a fresh APK. Does not create or remove portfolio records.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///quick-portfolio-setup"
+- assertVisible: "Import a statement or add holdings manually"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/setup
+- openLink: "cogvest:///import-holdings"
+- assertVisible: ".*Import starting quantities and average costs.*"
+- assertVisible: ".*not transaction history.*"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/holdings-import
+- openLink: "cogvest:///import-transactions"
+- assertVisible:
+    id: transaction-import-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/transaction-import
+- openLink: "cogvest:///backup?mode=export"
+- assertVisible: ".*sensitive financial information and is not encrypted.*"
+- assertVisible: ".*document provider may sync the file.*"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/backup
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: privacy-details-toggle
+    direction: DOWN
+- tapOn:
+    id: privacy-details-toggle
+- scrollUntilVisible:
+    element: ".*CogVest does not add its own encryption.*"
+    direction: DOWN
+- assertVisible: ".*CogVest does not add its own encryption.*"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/privacy
+- openLink: "cogvest:///ppf-account"
+- assertVisible: "Start with a confirmed balance"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/app-copy/${SHOT}/ppf
+- openLink: "cogvest:///dashboard"

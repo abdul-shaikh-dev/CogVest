@@ -513,8 +513,8 @@ export function AddOpeningPositionForm({
         title={quickSetup ? "Set up portfolio" : "Add Holding"}
         subtitle={
           quickSetup
-            ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding" : "holdings"} saved locally`
-            : "Opening position • local only"
+            ? `${quickSetupSavedCount} ${quickSetupSavedCount === 1 ? "holding" : "holdings"} saved`
+            : "Record an existing investment"
         }
       />
       {renderStepper()}

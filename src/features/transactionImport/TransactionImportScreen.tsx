@@ -163,7 +163,6 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
     <ScreenContainer scroll scrollRef={scrollRef} testID="transaction-import-screen">
       <ScreenHeader
         leading={<IconButton accessibilityLabel="Go back" icon="chevron-back" onPress={props.onCancel} testID="transaction-import-back" />}
-        subtitle="Import your files • local only"
         title="Import transaction history"
       />
 
@@ -184,7 +183,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           ))}
           {props.onAddPpfAccount ? (
             <SourceAction
-              description="Use the dedicated account ledger and CSV template."
+              description="Import PPF history with the account's CSV template."
               onPress={props.onAddPpfAccount}
               testID="transaction-import-source-ppf"
               title="PPF CSV"
@@ -279,7 +278,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary">Existing investment records were found. Keeping opening balances is the safer default unless this file contains complete history for the affected holdings.</AppText>
           <View style={styles.modeRow}>
             <ModeButton active={controller.mode === "supplemental"} description="Recommended: keep opening balances and add only later activity." onPress={() => controller.setMode("supplemental")} testID="transaction-import-mode-supplemental" title="Add later activity" />
-            <ModeButton active={controller.mode === "fullHistory"} description="Replace matching opening balances only after exact reconciliation and confirmation." onPress={() => controller.setMode("fullHistory")} testID="transaction-import-mode-full-history" title="Rebuild from history" />
+            <ModeButton active={controller.mode === "fullHistory"} description="Replace opening balances only when the history matches them exactly and you confirm." onPress={() => controller.setMode("fullHistory")} testID="transaction-import-mode-full-history" title="Rebuild from history" />
           </View>
         </>}
       </PremiumCard> : null}
@@ -386,7 +385,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           {controller.unsupportedEvents.map((event) => <AppText key={`${event.rowNumber}-${event.transactionType}`} color="secondary" variant="caption">Row {event.rowNumber}: {event.transactionType}{event.reason ? ` • ${event.reason}` : ""}</AppText>)}
         </View> : null}
         {controller.groups.length === 0 && controller.unsupportedEvents.length > 0 ? <AppText color="secondary" variant="caption">This file has no supported transaction rows to import.</AppText> : null}
-        <AppText color="secondary" variant="caption">Cash Ledger is unchanged. Fees and taxes stay with imported transaction metadata; V1 does not calculate tax lots.</AppText>
+        <AppText color="secondary" variant="caption">Cash is unchanged. Imported records keep their fees and taxes. CogVest does not calculate tax lots.</AppText>
         {replacementHoldings.length > 0 ? <View style={styles.holdingPreview} testID="transaction-import-replacement-summary">
           <AppText weight="bold">Opening balance consequences</AppText>
           <AppText color="secondary" variant="caption">{exactReplacements} of {replacementHoldings.length} opening {replacementHoldings.length === 1 ? "balance" : "balances"} will be replaced after confirmation.{replacementHoldings.length > exactReplacements ? ` ${replacementHoldings.length - exactReplacements} will stay unchanged unless the imported history reconciles exactly.` : ""}</AppText>

@@ -68,18 +68,18 @@ export function ContextualNudge({
     kind === "metadata"
       ? "Optional context"
       : kind === "minimal"
-        ? "A quieter view"
+        ? "Minimal Mode"
         : "About patterns";
   const copy =
     kind === "metadata"
       ? [
           explainConviction
-            ? "Conviction records your confidence, from 1 (low) to 5 (high)."
+            ? "Conviction is your confidence, from 1 for low to 5 for high."
             : "",
           explainPlan
-            ? "A holding plan records how many days you originally intended to hold."
+            ? "A holding plan records how many days you intend to hold an investment."
             : "",
-          "Both can be left blank; neither affects your portfolio values.",
+          "Both are optional and do not affect portfolio values.",
         ]
           .filter(Boolean)
           .join(" ")

@@ -112,7 +112,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "quick-setup-save-add-next"
     retryTapIfNoChange: true
-- assertVisible: "2 holdings saved locally"
+- assertVisible: "2 holdings saved"
 
 # Exit and relaunch to prove only the confirmed holding resumes.
 - tapOn:
@@ -131,7 +131,7 @@ appId: com.abdulshaikh.cogvest
     id: "dashboard-continue-setup-button"
 - tapOn:
     id: "add-multiple-holdings-option"
-- assertVisible: "2 holdings saved locally"
+- assertVisible: "2 holdings saved"
 - takeScreenshot:
     path: quick-setup-resumed
 
@@ -237,7 +237,7 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "quick-setup-review-screen"
-- assertVisible: "4 holdings confirmed locally"
+- assertVisible: "4 holdings saved"
 - assertVisible: "HDFC Bank"
 - assertVisible: "Nifty 50 ETF"
 - assertVisible: "My PPF"

@@ -189,7 +189,7 @@ export function BackupScreen({
       <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back" disabled={isBusy} icon="chevron-back" onPress={handleBack} testID="backup-back" />}
-          subtitle={isRestore ? "Review before replacing local data" : "Manual file • local control"}
+          subtitle={isRestore ? "Review before replacing this device's portfolio" : undefined}
           title={title}
         />
 
@@ -251,9 +251,9 @@ export function BackupScreen({
           </View>
           <AppText color="secondary">This replaces the portfolio on this device. It does not merge portfolios.</AppText>
           <AppText color="secondary" variant="caption">Display mode and value masking preferences in this backup replace the settings on this device.</AppText>
-          <AppText color="secondary" variant="caption">Saved price source provenance is retained. Prices may not be current.</AppText>
+          <AppText color="secondary" variant="caption">Saved prices keep their source details. Prices may be out of date.</AppText>
           <AppButton disabled={isBusy} onPress={() => void backUpPortfolio()} testID="backup-current-data" title={isBusy ? "Saving backup..." : "Back up current data first"} variant="secondary" />
-          <AppButton disabled={isBusy} onPress={() => setRestoreStep("confirmation")} testID="continue-restore-confirmation" title="Continue to replacement confirmation" />
+          <AppButton disabled={isBusy} onPress={() => setRestoreStep("confirmation")} testID="continue-restore-confirmation" title="Review replacement" />
           <AppButton disabled={isBusy} onPress={() => { setPrepared(undefined); setRestoreStep("warning"); }} title="Choose another backup" variant="ghost" />
         </PremiumCard>
         ) : null}

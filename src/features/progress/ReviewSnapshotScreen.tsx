@@ -102,7 +102,7 @@ export function ReviewSnapshotScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Review Snapshot"
-          subtitle="Generated automatically - edit only if something needs correction"
+          subtitle="Edit only what needs correction"
         />
 
         <PremiumCard>
@@ -110,7 +110,7 @@ export function ReviewSnapshotScreen({
           {invalidSnapshot ? <AppText testID="snapshot-repair-guidance">A stored snapshot needs correction before backup. Review its month, total and asset-class balances. Values remain unchanged until you save.</AppText> : null}
           {hasSuggestedTotal ? <AppText testID="snapshot-rounding-guidance">The saved total differs from its balances by at most two paise. The total below now adds up to those balances. Review and save to confirm; your saved record has not changed.</AppText> : null}
           <AppText color="secondary" variant="caption">
-            These values are prefilled from your local portfolio records. Saving changes updates this month only.
+            Values come from your saved portfolio records. Changes apply to this month only.
           </AppText>
         </PremiumCard>
 

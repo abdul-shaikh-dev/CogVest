@@ -337,7 +337,7 @@ export function PpfImportScreen({
       <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back to PPF account" icon="arrow-back" onPress={onCancel} testID="ppf-import-back" />}
-          subtitle="CSV ledger import • local only"
+          subtitle={account.nickname}
           title="Import PPF history"
         />
         <PremiumCard>

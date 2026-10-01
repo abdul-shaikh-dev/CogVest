@@ -213,7 +213,7 @@ describe("ReviewCashEntryScreen", () => {
     );
 
     expect(screen.getByText("Linked transaction unavailable")).toBeTruthy();
-    expect(screen.getByTestId("linked-cash-owner-missing")).toHaveTextContent(/no longer available/u);
+    expect(screen.getByTestId("linked-cash-owner-missing")).toHaveTextContent(/The linked transaction is missing/u);
     expect(screen.getByText(/Restore a backup or reimport the complete source history/u)).toBeTruthy();
     expect(screen.queryByTestId("review-linked-cash-transaction")).toBeNull();
     expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
