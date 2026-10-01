@@ -252,7 +252,7 @@ export function ReviewTradeScreen({
     <ScreenContainer scroll testID="review-trade-screen">
       <View style={styles.content}>
         <ScreenHeader title="Review Transaction" subtitle={`${asset.name} · local record`} />
-        <PremiumCard>
+        <PremiumCard section>
           <SectionHeader title="Transaction identity" />
           <View style={styles.identityRow}>
             <View><AppText color="secondary" variant="caption">Holding</AppText><AppText weight="bold">{asset.name}</AppText></View>
@@ -260,7 +260,7 @@ export function ReviewTradeScreen({
           </View>
           <AppText color="secondary" variant="caption">Holding and transaction type stay fixed so linked records remain trustworthy.</AppText>
         </PremiumCard>
-        <PremiumCard>
+        <PremiumCard section>
           <SectionHeader title="Transaction details" />
           <View style={styles.row}>
             <View style={styles.flex}><FormTextField error={errors.quantity} keyboardType="decimal-pad" label="Quantity" onChangeText={setQuantity} testID="trade-correction-quantity-input" value={quantity} /></View>
@@ -275,7 +275,7 @@ export function ReviewTradeScreen({
           <AppText variant="title" weight="bold">{previewTotal === null ? "Not available" : formatINR(previewTotal)}</AppText>
           <AppText color="secondary" variant="caption">Calculated from quantity, price, and fees.</AppText>
         </PremiumCard>
-        <PremiumCard>
+        <PremiumCard section>
           <SectionHeader title="Investment context (optional)" />
           <View style={styles.convictionRow}>
             {convictionScores.map((score) => {

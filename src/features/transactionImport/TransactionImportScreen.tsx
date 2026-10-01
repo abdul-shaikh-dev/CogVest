@@ -168,7 +168,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       />
 
       <View onLayout={(event) => { sourceCardYRef.current = event.nativeEvent.layout.y; }} testID="transaction-import-source-card">
-      <PremiumCard style={styles.card}>
+      <PremiumCard section style={styles.card}>
         <SectionHeader title="Choose a source" />
         <AppText color="secondary">Files stay on this device. Select the export format before adding history.</AppText>
         <View style={styles.modeRow}>

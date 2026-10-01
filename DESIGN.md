@@ -37,6 +37,20 @@ independently reposition parts of the mark.
 
 ## 1. Visual Theme & Atmosphere
 
+### Everyday Screen Hierarchy
+
+Use familiar navigation and useful visual cues rather than new visual metaphors.
+Routine overview, chart, ledger and settings groups should use the open `section`
+appearance of `PremiumCard`; reserve contained cards for decisions, warnings,
+confirmations and distinct tasks. Do not flatten dialogs or error states.
+Use spacing and alignment to group content without nested decorative containers.
+Keep critical financial scope, quote provenance and recovery information visible.
+Remove redundant subtitles only when the remaining labels establish the meaning.
+Financial values use tabular numerals; prioritize the main value over supporting
+labels. A visual quantity cue must preserve its real scale and its numeric label.
+Keep original asset names and existing routes; presentation changes must not
+alter records, matching, calculations or transaction behavior.
+
 CogVest should feel like a private portfolio room, not a trading floor.
 
 The visual atmosphere is:

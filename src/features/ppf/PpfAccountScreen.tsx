@@ -222,7 +222,7 @@ export function PpfAccountScreen({
           title={account.nickname}
         />
 
-        <PremiumCard style={styles.balanceCard} testID="ppf-confirmed-balance-card">
+        <PremiumCard section style={styles.balanceCard} testID="ppf-confirmed-balance-card">
           <View style={styles.balanceHeading}>
             <CategoryIcon assetClass="debt" size={22} />
             <AppText color="secondary">Confirmed balance</AppText>
@@ -281,7 +281,7 @@ export function PpfAccountScreen({
             </AppText>
           </PremiumCard>
         ) : (
-          <PremiumCard testID="ppf-ledger-list">
+          <PremiumCard section testID="ppf-ledger-list">
             {[...entries]
               .sort((left, right) => comparePpfLedgerEntries(right, left))
               .map((entry, index) => (
@@ -316,7 +316,7 @@ export function PpfAccountScreen({
           </PremiumCard>
         )}
 
-        <PremiumCard testID="ppf-interest-card">
+        <PremiumCard section testID="ppf-interest-card">
           <SectionHeader title="Interest" />
           <View style={styles.detailRow}>
             <AppText color="secondary">Officially credited</AppText>
@@ -356,7 +356,7 @@ export function PpfAccountScreen({
           </AppText>
         </PremiumCard>
 
-        <PremiumCard>
+        <PremiumCard section>
           <SectionHeader title="Account timeline" />
           <Detail label="Status" value={statusLabel(account.status)} />
           <Detail label="Maturity" value={formatDate(summary.maturityDate)} />

@@ -57,7 +57,7 @@ export function CashEntryRow({
   const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const isAddition = entry.type === "addition";
   const content = (
-    <PremiumCard style={[styles.row, stacked && styles.stackedRow]} testID={`cash-entry-row-${entry.id}`}>
+    <PremiumCard section style={[styles.row, stacked && styles.stackedRow]} testID={`cash-entry-row-${entry.id}`}>
       <View style={[styles.details, stacked && styles.stackedDetails]}>
         <AppText weight="bold">{entry.label}</AppText>
         <AppText color="secondary" variant="caption">
@@ -122,7 +122,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.cardInner,
     justifyContent: "space-between",
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.subtle,
   },
   withdrawal: {
     color: colors.loss,

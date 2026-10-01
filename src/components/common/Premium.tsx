@@ -25,6 +25,8 @@ import {
 type PremiumCardProps = {
   children: ReactNode;
   elevated?: boolean;
+  /** Open layout for routine content; cards remain the default for decisions and alerts. */
+  section?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -32,7 +34,7 @@ type PremiumCardProps = {
 type ScreenHeaderProps = {
   action?: ReactNode;
   leading?: ReactNode;
-  subtitle: string;
+  subtitle?: string;
   title: string;
 };
 
@@ -97,12 +99,13 @@ const assetClassConfig: Record<
 export function PremiumCard({
   children,
   elevated = false,
+  section = false,
   style,
   testID,
 }: PremiumCardProps) {
   return (
     <View
-      style={[styles.card, elevated && styles.elevatedCard, style]}
+      style={[styles.card, elevated && styles.elevatedCard, section && styles.openSection, style]}
       testID={testID}
     >
       {children}
@@ -127,7 +130,7 @@ export function ScreenHeader({
           <AppText accessibilityRole="header" variant="largeTitle" weight="bold">
             {title}
           </AppText>
-          <AppText color="secondary">{subtitle}</AppText>
+          {subtitle ? <AppText color="secondary">{subtitle}</AppText> : null}
         </View>
       </View>
       {action ? (
@@ -204,11 +207,11 @@ export function HeroMetric({
         : styles.secondaryText;
 
   return (
-    <PremiumCard elevated style={styles.heroCard}>
+    <PremiumCard section style={styles.heroCard}>
       <AppText color="secondary">{label}</AppText>
       <MaskedValue masked={masked} value={value} variant="hero" weight="bold" />
       {subValue ? (
-        <View style={styles.metricPill}>
+        <View>
           <AppText style={toneStyle} variant="caption" weight="bold">
             {subValue}
           </AppText>
@@ -229,7 +232,7 @@ export function MetricGroup({ metrics, testID }: MetricGroupProps) {
         : undefined;
 
   return (
-    <PremiumCard
+    <PremiumCard section
       style={[styles.metricGroup, columns < 4 && styles.metricGroupWrapped]}
       testID={testID}
     >
@@ -243,6 +246,7 @@ export function MetricGroup({ metrics, testID }: MetricGroupProps) {
             exactValue={metric.exactValue}
             masked={metric.masked}
             value={metric.value}
+            variant="section"
             weight="bold"
           />
           {columns === 4 && index < metrics.length - 1 ? (
@@ -389,6 +393,13 @@ const styles = StyleSheet.create({
   elevatedCard: {
     backgroundColor: colors.surface.elevated,
   },
+  openSection: {
+    backgroundColor: "transparent",
+    borderRadius: 0,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
   groupedCopy: {
     flex: 1,
     gap: 2,
@@ -474,13 +485,6 @@ const styles = StyleSheet.create({
   },
   metricGroupWrapped: {
     flexWrap: "wrap",
-  },
-  metricPill: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(52,199,89,0.12)",
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
   },
   negativeText: {
     color: colors.loss,

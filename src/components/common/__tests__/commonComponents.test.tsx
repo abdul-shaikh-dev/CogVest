@@ -9,6 +9,7 @@ import {
   MASKED_INR_VALUE,
   MASKED_VALUE_ACCESSIBILITY_LABEL,
   MaskedValue,
+  PremiumCard,
   ScreenHeader,
   SectionHeader,
   androidRipple,
@@ -22,6 +23,18 @@ import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
+  it("keeps routine sections open while preserving default decision cards", () => {
+    const screen = render(<>
+      <PremiumCard section testID="routine"><AppText>Activity</AppText></PremiumCard>
+      <PremiumCard testID="decision"><AppText>Confirm deletion</AppText></PremiumCard>
+      <MaskedValue value="123.45" testID="numeric" />
+      <ScreenHeader title="Cash" />
+    </>);
+    expect(screen.getByTestId("routine")).toHaveStyle({ backgroundColor: "transparent", borderRadius: 0 });
+    expect(screen.getByTestId("decision")).toHaveStyle({ backgroundColor: colors.surface.card });
+    expect(screen.getByTestId("numeric")).toHaveStyle({ fontVariant: ["tabular-nums"] });
+    expect(screen.getByRole("header", { name: "Cash" })).toBeTruthy();
+  });
   it("separates screen and section heading roles without reducing contrast", () => {
     const { getByRole } = render(
       <>

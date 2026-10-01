@@ -73,7 +73,7 @@ export function InsightDetailScreen({
           />
         ) : (
           <>
-            <PremiumCard style={styles.group} testID="insight-observation">
+            <PremiumCard section style={styles.group} testID="insight-observation">
               <SectionHeader title={detail.title} />
               {masked ? (
                 <AppText color="secondary">
@@ -94,7 +94,7 @@ export function InsightDetailScreen({
             </PremiumCard>
             <ContextualNudge kind="insights" store={store} />
             {!masked ? (
-              <PremiumCard style={styles.group} testID="insight-evidence">
+              <PremiumCard section style={styles.group} testID="insight-evidence">
                 <SectionHeader title="What contributed" />
                 {detail.facts.map((fact) => (
                   <View key={fact.label} style={styles.fact}>

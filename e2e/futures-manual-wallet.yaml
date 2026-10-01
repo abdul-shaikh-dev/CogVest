@@ -93,6 +93,11 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "This backup contains sensitive financial information and is not encrypted."
 - tapOn:
     id: choose-backup-location
+- runFlow:
+    when:
+      visible: "Can.t use this folder"
+    commands:
+      - tapOn: "Documents"
 - tapOn: USE THIS FOLDER
 - tapOn: ALLOW
 - extendedWaitUntil:
@@ -105,6 +110,8 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-delete-account
     direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 5000
 - tapOn:
     id: futures-delete-account
 - tapOn: "Delete wallet"

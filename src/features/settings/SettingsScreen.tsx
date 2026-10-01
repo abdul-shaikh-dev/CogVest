@@ -68,7 +68,6 @@ export function SettingsScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Settings"
-          subtitle="Local-first controls"
         />
 
         <Pressable
@@ -107,7 +106,7 @@ export function SettingsScreen({
           </View>
         </Pressable>
 
-        <PremiumCard testID="display-mode-settings">
+        <PremiumCard section testID="display-mode-settings">
           <SectionHeader title="Display" />
           <View testID="display-mode-options" accessibilityLabel="Display mode" accessibilityRole="radiogroup" style={styles.modeOptions}>
             {([
@@ -161,7 +160,7 @@ export function SettingsScreen({
           </View>
         </PremiumCard>
 
-        <PremiumCard testID="privacy-storage-card">
+        <PremiumCard section testID="privacy-storage-card">
           <Pressable
             accessibilityLabel="Privacy and storage details"
             accessibilityRole="button"
@@ -223,7 +222,7 @@ export function SettingsScreen({
           ) : null}
         </PremiumCard>
 
-        <PremiumCard testID="backup-settings-card">
+        <PremiumCard section testID="backup-settings-card">
           <SectionHeader title="Portfolio backup" />
           <GroupedListRow
             icon="save-outline"
@@ -243,7 +242,7 @@ export function SettingsScreen({
           />
         </PremiumCard>
 
-        <PremiumCard testID="futures-settings-card">
+        <PremiumCard section testID="futures-settings-card">
           <SectionHeader title="Futures" />
           <GroupedListRow
             icon="swap-horizontal-outline"
@@ -255,7 +254,7 @@ export function SettingsScreen({
           />
         </PremiumCard>
 
-        <PremiumCard testID="settings-prices-card">
+        <PremiumCard section testID="settings-prices-card">
           <Pressable
             accessibilityLabel="Price information"
             accessibilityRole="button"
