@@ -59,8 +59,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-yahoo:EASEMYTRIP.NS
     direction: DOWN
+- assertVisible: "2 transactions"
 - assertVisible:
-    text: "2 transactions.*174 units.*9.77"
+    id: transaction-import-units-yahoo:EASEMYTRIP.NS
+    text: "174"
+- assertVisible:
+    id: transaction-import-cost-yahoo:EASEMYTRIP.NS
+    text: "₹9.77"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import

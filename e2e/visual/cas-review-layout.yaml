@@ -1,0 +1,71 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic repository PDF only; preview without saving transactions.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- tapOn:
+    id: cas-statement-password
+- inputText: synthetic-cas-test
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: select-cas-statement
+    direction: UP
+- tapOn:
+    id: select-cas-statement
+- runFlow: ../standalone/helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element:
+      text: cas-native-synthetic.pdf
+    direction: DOWN
+- tapOn: cas-native-synthetic.pdf
+- scrollUntilVisible:
+    element:
+      id: cas-toggle-scheme-details
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: cas-toggle-scheme-details
+- scrollUntilVisible:
+    element:
+      id: cas-closing-Folio 1-INF209K01YY7
+    direction: DOWN
+- assertVisible:
+    id: cas-opening-Folio 1-INF209K01YY7
+    text: "0"
+- assertVisible:
+    id: cas-closing-Folio 1-INF209K01YY7
+    text: "12"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/import-review/${SHOT}/cas-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-show-balances
+    direction: DOWN
+- tapOn:
+    id: transaction-import-show-balances
+- scrollUntilVisible:
+    element:
+      id: transaction-import-cost-.*
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: transaction-import-units-.*
+    text: "12"
+- assertVisible:
+    id: transaction-import-cost-.*
+    text: "₹100.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/import-review/${SHOT}/resulting-balances
+- stopApp

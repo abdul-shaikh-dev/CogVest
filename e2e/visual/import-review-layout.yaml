@@ -1,0 +1,62 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic QA portfolio and transactions-import-v1.csv in Downloads.
+# Preview only. Do not confirm the import or clear portfolio data.
+# Records the blocked cross-ID baseline case in #475, not a successful import.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- tapOn:
+    id: transaction-import-source-cogvestCsvV1
+- scrollUntilVisible:
+    element:
+      id: select-transaction-csv
+    direction: DOWN
+- tapOn:
+    id: select-transaction-csv
+- runFlow: ../standalone/helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element:
+      text: "transactions-import-v1.csv"
+    direction: DOWN
+- tapOn: "transactions-import-v1.csv"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-mode-full-history
+    direction: DOWN
+- tapOn:
+    id: transaction-import-mode-full-history
+- scrollUntilVisible:
+    element:
+      id: transaction-import-asset-isin:INF204KB14I2-candidate-yahoo:NIFTYBEES.NS
+    direction: DOWN
+- tapOn:
+    id: transaction-import-asset-isin:INF204KB14I2-candidate-yahoo:NIFTYBEES.NS
+- scrollUntilVisible:
+    element:
+      id: transaction-import-summary-additions
+    direction: DOWN
+- assertVisible:
+    id: transaction-import-summary-additions
+    text: "3"
+- scrollUntilVisible:
+    element:
+      id: transaction-import-summary-unsupported
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: .expo/import-review/${SHOT}/counts
+- scrollUntilVisible:
+    element:
+      id: confirm-transaction-import
+    direction: DOWN
+- assertVisible: "Nifty 50 ETF: Confirm when this holding baseline was measured before importing history."
+- assertVisible:
+    id: confirm-transaction-import
+    enabled: false
+- takeScreenshot: .expo/import-review/${SHOT}/blocked
+- stopApp

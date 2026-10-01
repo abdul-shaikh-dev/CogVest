@@ -83,14 +83,24 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-yahoo:JIOFIN.NS
     direction: DOWN
+- assertVisible: "0 transactions"
 - assertVisible:
-    text: "0 transactions.*10 units.*4.68"
+    id: transaction-import-units-yahoo:JIOFIN.NS
+    text: "10"
+- assertVisible:
+    id: transaction-import-cost-yahoo:JIOFIN.NS
+    text: "₹4.68"
 - scrollUntilVisible:
     element:
       id: transaction-import-holding-summary-yahoo:TMCV.NS
     direction: DOWN
+- assertVisible: "0 transactions"
 - assertVisible:
-    text: "0 transactions.*10 units.*31.15"
+    id: transaction-import-units-yahoo:TMCV.NS
+    text: "10"
+- assertVisible:
+    id: transaction-import-cost-yahoo:TMCV.NS
+    text: "₹31.15"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import

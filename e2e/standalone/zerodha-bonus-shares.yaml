@@ -52,8 +52,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-yahoo:BERGEPAINT.NS
     direction: DOWN
+- assertVisible: "1 transactions"
 - assertVisible:
-    text: "1 transactions.*120 units.*83.33"
+    id: transaction-import-units-yahoo:BERGEPAINT.NS
+    text: "120"
+- assertVisible:
+    id: transaction-import-cost-yahoo:BERGEPAINT.NS
+    text: "₹83.33"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import
