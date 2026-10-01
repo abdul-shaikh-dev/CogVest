@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic cash entry. Never save or confirm deletion.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- assertVisible:
+    id: cash-correction-amount-input
+    text: "10000"
+- takeScreenshot: .expo/cash-correction/${SHOT}/details
+- scrollUntilVisible:
+    element:
+      id: cash-correction-note-toggle
+    direction: DOWN
+- tapOn:
+    id: cash-correction-note-toggle
+- scrollUntilVisible:
+    element:
+      id: cash-correction-notes-input
+    direction: DOWN
+- tapOn:
+    id: cash-correction-notes-input
+- inputText: "Draft note"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: cash-correction-note-toggle
+    direction: UP
+- tapOn:
+    id: cash-correction-note-toggle
+- assertNotVisible:
+    id: cash-correction-notes-input
+- tapOn:
+    id: cash-correction-note-toggle
+- assertVisible:
+    id: cash-correction-notes-input
+    text: "Draft note"
+- tapOn:
+    id: cash-correction-note-toggle
+- scrollUntilVisible:
+    element:
+      id: delete-cash-entry-button
+    direction: DOWN
+- tapOn:
+    id: delete-cash-entry-button
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-cash-entry-button
+    direction: DOWN
+- assertVisible: "This cannot be undone."
+- takeScreenshot: .expo/cash-correction/${SHOT}/delete
+- tapOn: "Keep entry"
+- assertNotVisible:
+    id: confirm-delete-cash-entry-button
+- back
+- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- assertVisible:
+    id: cash-correction-amount-input
+    text: "10000"
+- assertNotVisible:
+    id: cash-correction-notes-input
+- scrollUntilVisible:
+    element:
+      id: cash-correction-note-toggle
+    direction: DOWN
+- assertVisible: "Add note"
+- back
+- stopApp

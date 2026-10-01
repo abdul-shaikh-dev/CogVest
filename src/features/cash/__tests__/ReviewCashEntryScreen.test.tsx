@@ -43,6 +43,44 @@ function createStore(entry: CashEntry = manualEntry) {
 }
 
 describe("ReviewCashEntryScreen", () => {
+  it("keeps existing notes visible and saves them when the editor is collapsed", async () => {
+    const { store } = createStore();
+    const onComplete = jest.fn();
+    const screen = render(
+      <ReviewCashEntryScreen entryId={manualEntry.id} onCancel={jest.fn()}
+        onComplete={onComplete} store={store} />,
+    );
+
+    expect(screen.getByTestId("cash-correction-notes-input")).toHaveProp("value", "Initial note");
+    fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Corrected note");
+    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    expect(screen.queryByTestId("cash-correction-notes-input")).toBeNull();
+    expect(screen.getByTestId("cash-correction-note-toggle")).toHaveAccessibilityState({ expanded: false });
+    fireEvent.press(screen.getByTestId("save-cash-correction-button"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(store.getState().cashEntries[0].notes).toBe("Corrected note");
+  });
+
+  it("keeps a new note through disclosure changes without saving on Cancel", () => {
+    const { store } = createStore({ ...manualEntry, notes: undefined });
+    const onCancel = jest.fn();
+    const screen = render(
+      <ReviewCashEntryScreen entryId={manualEntry.id} onCancel={onCancel}
+        onComplete={jest.fn()} store={store} />,
+    );
+
+    expect(screen.queryByTestId("cash-correction-notes-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Draft note");
+    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    expect(screen.getByText("Show note")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    expect(screen.getByTestId("cash-correction-notes-input")).toHaveProp("value", "Draft note");
+    fireEvent.press(screen.getByText("Cancel"));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().cashEntries[0].notes).toBeUndefined();
+  });
+
   it("edits a manual entry once after rapid repeated save presses", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();

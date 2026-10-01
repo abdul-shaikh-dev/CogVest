@@ -599,6 +599,13 @@ successful save closes it and updates the ledger once. Keep actions reachable
 with a docked keyboard and enlarged text. Do not collect salary/household expenses
 or add missing-income prompts. Preserve ambiguous legacy deposits until reviewed.
 
+Manual Cash entry correction uses the saved label as context. Existing notes
+start expanded; empty notes use Add note and retain edits when hidden. Save and
+Cancel are full-width actions. Keep deletion separate from editing, and show its
+balance/monthly-metric impact and irreversible warning in a contained confirmation
+with Keep entry and Delete entry. Linked records and masked-entry reveal gates
+retain their existing owner routes and restrictions.
+
 ## Settings
 
 Settings should build trust.
