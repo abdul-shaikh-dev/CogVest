@@ -61,7 +61,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-visual-qa-asset-sample-fund
     direction: DOWN
-- assertVisible: "2 transactions.*12 units.*100.00"
+- assertVisible: "2 transactions"
+- assertVisible:
+    id: transaction-import-units-visual-qa-asset-sample-fund
+    text: "12"
+- assertVisible:
+    id: transaction-import-cost-visual-qa-asset-sample-fund
+    text: "₹100.00"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import

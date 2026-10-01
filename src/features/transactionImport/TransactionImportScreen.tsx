@@ -308,7 +308,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">The statement lists a cancellation without financial values. Only the recorded transactions will be imported; no purchase or reversal is created from this notice. All printed unit balances must still reconcile.</AppText>
           {controller.casReview.normalization.preservedNotices?.map((notice) => <AppText key={`${notice.folioLabel}-${notice.rowNumber}`} color="secondary" variant="caption">{notice.folioLabel} · {notice.date} · Cancelled</AppText>)}
         </View> : null}
-        {casSchemes.length > 0 ? <AppButton accessibilityState={{ expanded: showCasStatementDetails }} onPress={() => setShowCasStatementDetails(!showCasStatementDetails)} testID="cas-toggle-scheme-details" title={showCasStatementDetails ? "Hide scheme balances" : `Review ${casSchemes.length} scheme ${casSchemes.length === 1 ? "balance" : "balances"}`} variant="secondary" /> : null}
+        {casSchemes.length > 0 ? <ReviewDisclosure expanded={showCasStatementDetails} onPress={() => setShowCasStatementDetails(!showCasStatementDetails)} testID="cas-toggle-scheme-details" title={`Review ${casSchemes.length} scheme ${casSchemes.length === 1 ? "balance" : "balances"}`} /> : null}
         {showCasStatementDetails ? <View style={styles.schemeList} testID="cas-scheme-details">{casSchemes.map((scheme) => <View key={`${scheme.folioLabel}-${scheme.isin}`} style={styles.holdingPreview}>
             <View style={styles.reviewHeading}>
               <View style={styles.fileDetails}>
@@ -317,7 +317,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
               </View>
               <AppText weight="bold">{scheme.importableTransactions} ready</AppText>
             </View>
-            <AppText color="secondary" variant="caption">Opening {scheme.openingUnits} units • Closing {scheme.closingUnits} units</AppText>
+            <View style={styles.summaryGrid}>
+              <Summary label="Opening units" value={scheme.openingUnits} testID={`cas-opening-${scheme.folioLabel}-${scheme.isin}`} />
+              <Summary label="Closing units" value={scheme.closingUnits} testID={`cas-closing-${scheme.folioLabel}-${scheme.isin}`} />
+            </View>
           </View>)}</View> : null}
         {controller.casReview.normalization.preservedCharges.length > 0 ? <AppText color="secondary" variant="caption" testID="cas-preserved-charges">{controller.casReview.normalization.preservedCharges.length} stamp-duty {controller.casReview.normalization.preservedCharges.length === 1 ? "entry is" : "entries are"} preserved as review evidence and not imported as a trade.</AppText> : null}
         </PremiumCard>
@@ -345,9 +348,9 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText color="secondary" variant="caption">All {suggested.length} suggestions match the file's symbol, exchange and currency. You can inspect each match before accepting them together; no transactions are saved yet.</AppText>
           <AppButton disabled={controller.isResolving} onPress={controller.acceptSuggestedMatches} testID="transaction-import-accept-matches" title={`Accept ${suggested.length} matching ${suggested.length === 1 ? "holding" : "holdings"}`} />
         </> : null}
-        {matched.length > 0 ? <AppButton onPress={() => setShowMatched(!showMatched)} testID="transaction-import-show-matched" title={controller.sourceId === "camsKfinCasPdfV1"
-          ? showMatched ? "Hide identified funds" : `Review ${matched.length} identified ${matched.length === 1 ? "fund" : "funds"}`
-          : showMatched ? "Hide matched holdings" : `View ${matched.length} matched holdings`} variant="secondary" /> : null}
+        {matched.length > 0 ? <ReviewDisclosure expanded={showMatched} onPress={() => setShowMatched(!showMatched)} testID="transaction-import-show-matched" title={controller.sourceId === "camsKfinCasPdfV1"
+          ? `Review ${matched.length} identified ${matched.length === 1 ? "fund" : "funds"}`
+          : `View ${matched.length} matched holdings`} /> : null}
         {showMatched ? matched.map((group) => <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />) : null}
       </PremiumCard> : null}
 
@@ -378,10 +381,10 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
       {identityConflicts.length === 0 && unresolved.length === 0 && !controller.isResolving && (controller.groups.length > 0 || controller.unsupportedEvents.length > 0 || controller.casReview) ? <PremiumCard elevated style={styles.card} testID="transaction-import-dry-run">
         <SectionHeader title="Review before importing" />
         <View style={styles.summaryGrid}>
-          <Summary label="New transactions" testID="transaction-import-summary-additions" value={`${controller.plan.summary.additions}`} />
-          <Summary label="Duplicate rows" testID="transaction-import-summary-duplicates" value={`${controller.plan.duplicates}`} />
-          <Summary label="Conflicts" testID="transaction-import-summary-conflicts" value={`${controller.plan.conflicts}`} />
-          <Summary label="Unsupported" testID="transaction-import-summary-unsupported" value={`${controller.unsupportedCount}`} />
+          <Summary prominent label="New transactions" testID="transaction-import-summary-additions" value={`${controller.plan.summary.additions}`} />
+          <Summary prominent label="Duplicate rows" testID="transaction-import-summary-duplicates" value={`${controller.plan.duplicates}`} />
+          <Summary prominent attention={controller.plan.conflicts > 0} label="Conflicts" testID="transaction-import-summary-conflicts" value={`${controller.plan.conflicts}`} />
+          <Summary prominent attention={controller.unsupportedCount > 0} label="Unsupported" testID="transaction-import-summary-unsupported" value={`${controller.unsupportedCount}`} />
         </View>
         {controller.unsupportedEvents.length > 0 ? <View style={styles.unsupported}>
           <AppText color="secondary" variant="caption" weight="bold">{controller.sourceId === "camsKfinCasPdfV1" ? "Unsupported events need attention" : "Skipped unsupported events"}</AppText>
@@ -394,7 +397,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
           <AppText weight="bold">Opening balance consequences</AppText>
           <AppText color="secondary" variant="caption">{exactReplacements} of {replacementHoldings.length} opening {replacementHoldings.length === 1 ? "balance" : "balances"} will be replaced after confirmation.{replacementHoldings.length > exactReplacements ? ` ${replacementHoldings.length - exactReplacements} will stay unchanged unless the imported history reconciles exactly.` : ""}</AppText>
         </View> : null}
-        {controller.plan.holdings.length > 0 ? <AppButton onPress={() => setShowHoldings(!showHoldings)} testID="transaction-import-show-balances" title={showHoldings ? "Hide resulting balances" : `Review ${controller.plan.holdings.length} resulting balances`} variant="secondary" /> : null}
+        {controller.plan.holdings.length > 0 ? <ReviewDisclosure expanded={showHoldings} onPress={() => setShowHoldings(!showHoldings)} testID="transaction-import-show-balances" title={`Review ${controller.plan.holdings.length} resulting balances`} /> : null}
         {controller.plan.holdings.some((holding) => holding.asset.stockSplits?.length) ? <View testID="transaction-import-split-summary" style={styles.holdingPreview}>
           <AppText weight="bold">{controller.plan.holdings.some((holding) => holding.asset.stockSplits?.some((event) => event.kind === "bonus")) ? "Share adjustments included" : "Stock splits included"}</AppText>
           {controller.plan.holdings.flatMap((holding) => (holding.asset.stockSplits ?? []).map((event) =>
@@ -420,7 +423,13 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
         </View> : null}
         {showHoldings ? controller.plan.holdings.map((holding) => <View key={holding.asset.id} style={styles.holdingPreview}>
           <AppText weight="bold">{holding.asset.name}</AppText>
-          <AppText color="secondary" testID={`transaction-import-holding-summary-${holding.asset.id}`} variant="caption">{holding.importedTransactions} transactions • {holding.reconciliation.quantity} units • average cost {formatCurrency(holding.reconciliation.averageCostPrice, holding.asset.currency)}</AppText>
+          <View style={styles.balanceDetails} testID={`transaction-import-holding-summary-${holding.asset.id}`}>
+            <AppText color="secondary" variant="caption">{holding.importedTransactions} transactions</AppText>
+            <View style={styles.summaryGrid}>
+              <Summary label="Units" value={`${holding.reconciliation.quantity}`} testID={`transaction-import-units-${holding.asset.id}`} />
+              <Summary label="Average cost" value={formatCurrency(holding.reconciliation.averageCostPrice, holding.asset.currency)} testID={`transaction-import-cost-${holding.asset.id}`} />
+            </View>
+          </View>
           {holding.cutover ? <AppText color="secondary" variant="caption">Holdings measured as of {holding.cutover}</AppText> : null}
           {controller.mode === "fullHistory" && holding.baseline ? <AppText color={holding.replacementExact ? "primary" : "secondary"} testID={`transaction-import-replacement-${holding.asset.id}`} variant="caption">{holding.replacementExact ? "Opening balance will be replaced after confirmation." : "Opening balance is kept until history reconciles exactly."}</AppText> : null}
         </View>) : null}
@@ -484,10 +493,14 @@ function SourceChoice({ active, description, onPress, testID, title }: { active:
 }
 
 function Summary({
+  attention = false,
+  prominent = false,
   label,
   testID,
   value,
 }: {
+  attention?: boolean;
+  prominent?: boolean;
   label: string;
   testID: string;
   value: string;
@@ -497,11 +510,18 @@ function Summary({
       <AppText color="secondary" variant="caption">
         {label}
       </AppText>
-      <AppText testID={testID} weight="bold">
+      <AppText style={[styles.summaryValue, attention && styles.error]} variant={prominent ? "title" : "body"} testID={testID} weight="bold">
         {value}
       </AppText>
     </View>
   );
+}
+
+function ReviewDisclosure({ expanded, onPress, testID, title }: { expanded: boolean; onPress: () => void; testID: string; title: string }) {
+  return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={({ pressed }) => [styles.helpRow, pressed && styles.pressed]} testID={testID}>
+    <AppText style={styles.sourceCopy} weight="bold">{title}</AppText>
+    <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.text.secondary} />
+  </Pressable>;
 }
 
 function ErrorCard({ message, testID }: { message: string; testID?: string }) {
@@ -538,6 +558,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.78 },
   section: { gap: spacing.cardGap },
   summary: { flexBasis: "42%", flexGrow: 1, gap: spacing.xs },
+  summaryValue: { fontVariant: ["tabular-nums"] },
+  balanceDetails: { gap: spacing.sm },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   reviewHeading: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
   schemeList: { gap: spacing.sm },

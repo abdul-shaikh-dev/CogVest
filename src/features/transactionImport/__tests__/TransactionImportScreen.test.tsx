@@ -355,6 +355,9 @@ describe("TransactionImportScreen", () => {
     expect(getByTestId("cas-statement-summary")).toHaveTextContent(/1 scheme • 1 transaction ready/u);
     expect(queryByText("Folio 1 • CAMS • INF000000001")).toBeNull();
     fireEvent.press(getByTestId("cas-toggle-scheme-details"));
+    expect(getByTestId("cas-toggle-scheme-details").props.accessibilityState.expanded).toBe(true);
+    expect(getByTestId("cas-opening-Folio 1-INF000000001")).toHaveTextContent("0");
+    expect(getByTestId("cas-closing-Folio 1-INF000000001")).toHaveTextContent("8");
     expect(getByText("Folio 1 • CAMS • INF000000001")).toBeTruthy();
     expect(getByText("Cancellation notice retained in this review")).toBeTruthy();
     expect(getByText("Folio 1 · 2024-02-01 · Cancelled")).toBeTruthy();
@@ -371,6 +374,11 @@ describe("TransactionImportScreen", () => {
       source: { size: 4096, uri: "content://private-statement.pdf" },
     });
     expect(getByTestId("cas-statement-password")).toHaveProp("value", "");
+
+    fireEvent.press(getByTestId("transaction-import-show-balances"));
+    expect(getByTestId("transaction-import-show-balances").props.accessibilityState.expanded).toBe(true);
+    expect(getByTestId("transaction-import-units-asset-sample-fund")).toHaveTextContent("8");
+    expect(getByTestId("transaction-import-cost-asset-sample-fund")).toHaveTextContent(/125\.00/);
 
     fireEvent.press(getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));

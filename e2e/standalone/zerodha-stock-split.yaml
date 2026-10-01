@@ -52,8 +52,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-yahoo:IRCTC.NS
     direction: DOWN
+- assertVisible: "2 transactions"
 - assertVisible:
-    text: "2 transactions.*45 units.*20.00"
+    id: transaction-import-units-yahoo:IRCTC.NS
+    text: "45"
+- assertVisible:
+    id: transaction-import-cost-yahoo:IRCTC.NS
+    text: "₹20.00"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import

@@ -78,8 +78,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-holding-summary-yahoo:HDFCBANK.NS
     direction: DOWN
+- assertVisible: "3 transactions"
 - assertVisible:
-    text: "3 transactions.*20 units.*1,450.00"
+    id: transaction-import-units-yahoo:HDFCBANK.NS
+    text: "20"
+- assertVisible:
+    id: transaction-import-cost-yahoo:HDFCBANK.NS
+    text: "₹1,450.00"
 - takeScreenshot: zerodha-batch-preview
 - scrollUntilVisible:
     element:

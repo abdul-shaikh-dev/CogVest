@@ -358,6 +358,12 @@ their descriptions visible. PPF is a separate navigation row with a forward
 chevron, not a fourth selectable format. Keep the file picker as the primary
 action and file-acquisition instructions as a text disclosure. Preserve local
 file handling, format limits, password visibility and all review safeguards.
+Review uses prominent transaction counts, with nonzero conflicts/unsupported
+counts distinguished without hiding their labels or zero states. Resulting
+holdings and CAS scheme balances use labeled value columns rather than a prose
+line. Matched holdings, scheme balances and resulting balances use disclosure
+rows with expanded state. Blocking errors and replacement/corporate-action
+consequences remain visible outside those disclosures.
 
 Use Quick Portfolio Setup when the user is entering several existing holdings.
 
