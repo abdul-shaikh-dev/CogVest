@@ -82,6 +82,11 @@
     {
       "versionCode": 16,
       "versionName": "1.0.15",
+      "status": "previous"
+    },
+    {
+      "versionCode": 17,
+      "versionName": "1.0.16",
       "status": "current"
     }
   ]
