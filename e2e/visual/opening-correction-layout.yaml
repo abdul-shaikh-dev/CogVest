@@ -1,0 +1,74 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic opening position. Never save or remove it.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- runFlow:
+    when:
+      visible:
+        id: reveal-opening-position-button
+    commands:
+      - tapOn:
+          id: reveal-opening-position-button
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- takeScreenshot: .expo/opening-correction/${SHOT}/details
+- scrollUntilVisible:
+    element:
+      id: opening-correction-notes-input
+    direction: DOWN
+- assertVisible:
+    id: opening-correction-notes-input
+    text: "Core banking allocation"
+- takeScreenshot: .expo/opening-correction/${SHOT}/context
+- scrollUntilVisible:
+    element:
+      id: opening-correction-context-toggle
+    direction: UP
+- tapOn:
+    id: opening-correction-context-toggle
+- assertNotVisible:
+    id: opening-correction-notes-input
+- tapOn:
+    id: opening-correction-context-toggle
+- scrollUntilVisible:
+    element:
+      id: opening-correction-notes-input
+    direction: DOWN
+- assertVisible:
+    id: opening-correction-notes-input
+    text: "Core banking allocation"
+- scrollUntilVisible:
+    element:
+      id: delete-opening-position-button
+    direction: DOWN
+- tapOn:
+    id: delete-opening-position-button
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-opening-position-button
+    direction: DOWN
+- takeScreenshot: .expo/opening-correction/${SHOT}/delete
+- tapOn: "Keep position"
+- assertNotVisible:
+    id: confirm-delete-opening-position-button
+- back
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- runFlow:
+    when:
+      visible:
+        id: reveal-opening-position-button
+    commands:
+      - tapOn:
+          id: reveal-opening-position-button
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- back
+- stopApp

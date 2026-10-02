@@ -99,6 +99,9 @@ export function ReviewOpeningPositionScreen({
   const [intendedHoldDays, setIntendedHoldDays] = useState(
     () => initialPosition?.intendedHoldDays?.toString() ?? "",
   );
+  const [isContextExpanded, setIsContextExpanded] = useState(() => Boolean(
+    initialPosition?.notes || initialPosition?.conviction || initialPosition?.intendedHoldDays,
+  ));
   const [errors, setErrors] = useState<CorrectionErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -169,6 +172,7 @@ export function ReviewOpeningPositionScreen({
 
     if (!result.isValid) {
       setErrors(result.errors);
+      if (result.errors.conviction || result.errors.intendedHoldDays) setIsContextExpanded(true);
       return null;
     }
 
@@ -352,6 +356,23 @@ export function ReviewOpeningPositionScreen({
               I don't know
             </AppText>
           </Pressable>
+        </PremiumCard>
+
+        <PremiumCard section>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isContextExpanded }}
+            onPress={() => setIsContextExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [styles.contextToggle, pressed && styles.pressed]}
+            testID="opening-correction-context-toggle"
+          >
+            <View style={styles.contextCopy}>
+              <AppText weight="bold">Investment context</AppText>
+              <AppText color="secondary" variant="caption">Optional notes, holding period and conviction</AppText>
+            </View>
+            <AppText color="secondary">{isContextExpanded ? "Hide" : "Show"}</AppText>
+          </Pressable>
+          {isContextExpanded ? <>
           <FormTextField
             error={errors.intendedHoldDays}
             keyboardType="number-pad"
@@ -368,9 +389,6 @@ export function ReviewOpeningPositionScreen({
             testID="opening-correction-notes-input"
             value={notes}
           />
-        </PremiumCard>
-
-        <PremiumCard>
           <SectionHeader title="Conviction (optional)" />
           <View style={styles.convictionRow}>
             {convictionScores.map((score) => {
@@ -412,6 +430,7 @@ export function ReviewOpeningPositionScreen({
               {errors.conviction}
             </AppText>
           ) : null}
+          </> : null}
         </PremiumCard>
 
         {errors.save ? (
@@ -427,29 +446,28 @@ export function ReviewOpeningPositionScreen({
 
         <View style={styles.actions}>
           <AppButton
-            disabled={isSaving}
-            title="Cancel"
-            variant="secondary"
-            onPress={onCancel}
-          />
-          <AppButton
             accessibilityState={{ busy: isSaving, disabled: isSaving }}
             disabled={isSaving}
             title={isSaving ? "Saving..." : "Save changes"}
             testID="save-opening-correction-button"
             onPress={save}
           />
+          <AppButton
+            disabled={isSaving}
+            title="Cancel"
+            variant="secondary"
+            onPress={onCancel}
+          />
         </View>
 
-        <PremiumCard>
-          <SectionHeader title="Remove opening position" />
-          <AppText color="secondary" variant="caption">
-            This removes the original position record. Later buy and sell
-            records for this holding stay unchanged.
-          </AppText>
+        <View style={styles.removalSection}>
           {isConfirmingDelete ? (
-            <View style={styles.deleteConfirmation}>
-              <AppText weight="bold">Remove this opening position?</AppText>
+            <PremiumCard>
+              <SectionHeader title="Remove this opening position?" />
+              <AppText color="secondary" variant="caption">
+                This removes the original position record. Later buy and sell
+                records for this holding stay unchanged.
+              </AppText>
               <AppText color="secondary" variant="caption">
                 Portfolio totals and automatic history will be recalculated.
                 This cannot be undone.
@@ -470,7 +488,7 @@ export function ReviewOpeningPositionScreen({
                   onPress={deletePosition}
                 />
               </View>
-            </View>
+            </PremiumCard>
           ) : (
             <AppButton
               title="Remove opening position"
@@ -479,7 +497,7 @@ export function ReviewOpeningPositionScreen({
               onPress={() => setIsConfirmingDelete(true)}
             />
           )}
-        </PremiumCard>
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -487,13 +505,12 @@ export function ReviewOpeningPositionScreen({
 
 const styles = StyleSheet.create({
   actions: {
-    flexDirection: "row",
     gap: spacing.sm,
-    justifyContent: "flex-end",
   },
   content: {
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
+    gap: spacing.cardGap,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   convictionChip: {
     alignItems: "center",
@@ -510,11 +527,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
-  deleteConfirmation: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.button,
-    gap: spacing.sm,
-    padding: spacing.md,
+  contextToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    minHeight: interaction.minimumTouchTarget,
+  },
+  contextCopy: { flex: 1, gap: spacing.xs },
+  removalSection: {
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: spacing.md,
   },
   errorText: {
     color: colors.loss,
