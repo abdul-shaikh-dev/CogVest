@@ -323,6 +323,11 @@ export function MonthlyHistoryPanel({
                       })}
                     </View>
                   </ScrollView>
+                  {showValueBars ? (
+                    <AppText color="secondary" variant="caption" testID="history-bar-scale">
+                      Bars: portfolio value relative to {selectedYear}'s highest month
+                    </AppText>
+                  ) : null}
                   <View style={styles.historyColumns}>
                     <AppText color="secondary" style={styles.historyMonthColumn} variant="caption">Month</AppText>
                     <AppText align="right" color="secondary" style={styles.historyValueColumn} variant="caption">Portfolio</AppText>

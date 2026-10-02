@@ -1,0 +1,56 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic audit portfolio; no financial writes.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///progress"
+- assertVisible: "Monthly Progress"
+- takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}
+- tapOn:
+    id: open-monthly-history
+- assertVisible: "Vs invested excludes cash"
+- takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}-history
+- tapOn:
+    id: close-monthly-history
+- runFlow:
+    when:
+      true: ${PHASE == 'after'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: portfolio-monthly-chart-range-3M
+          direction: DOWN
+      - tapOn:
+          id: portfolio-monthly-chart-range-3M
+      - scrollUntilVisible:
+          element:
+            id: portfolio-trend-previous-month
+          direction: DOWN
+      - tapOn:
+          id: portfolio-trend-previous-month
+      - assertVisible: "Aug 2026"
+      - takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}-selection
+      - tapOn:
+          id: portfolio-trend-next-month
+      - assertVisible: "Sept 2026"
+      - scrollUntilVisible:
+          element:
+            id: portfolio-monthly-chart-range-6M
+          direction: UP
+      - tapOn:
+          id: portfolio-monthly-chart-range-6M
+      - scrollUntilVisible:
+          element:
+            id: progress-mask-toggle
+          direction: UP
+      - tapOn:
+          id: progress-mask-toggle
+      - assertNotVisible: "₹82.03L"
+      - tapOn:
+          id: progress-mask-toggle
+      - assertVisible: "₹82.03L"

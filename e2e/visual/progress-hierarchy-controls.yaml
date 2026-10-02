@@ -1,0 +1,38 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: progress-summary-month
+- tapOn:
+    id: progress-summary-month-2026-08
+- assertVisible: "₹76.55L"
+- tapOn:
+    id: month-end-snapshot-status-card
+- assertVisible: "Close snapshot status"
+- takeScreenshot: .expo/progress-hierarchy/controls/status
+- tapOn: "Close snapshot status"
+- tapOn:
+    id: progress-summary-month
+- tapOn:
+    id: progress-summary-month-2026-09
+- assertVisible: "₹82.03L"
+- tapOn:
+    id: open-monthly-history
+- tapOn: "2025"
+- assertVisible: "Bars: portfolio value relative to 2025's highest month"
+- tapOn: "2026"
+- tapOn:
+    id: snapshot-month-2026-05
+- assertVisible: "May 2026"
+- assertVisible: "₹19,87,450.00"
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-percentage
+    direction: DOWN
+- assertVisible: "-1.98%"
+- takeScreenshot: .expo/progress-hierarchy/controls/history-detail
+- tapOn:
+    id: history-back
+- tapOn:
+    id: close-monthly-history
+- assertVisible: "₹82.03L"

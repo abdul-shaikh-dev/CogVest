@@ -725,11 +725,16 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText, toJSON } = render(
       <ProgressScreen store={store} />,
     );
 
     const monthlyAnswer = getByTestId("progress-monthly-answer");
+    expect(within(monthlyAnswer).getByText("Stored month-end value")).toBeTruthy();
+    expect(queryByText("Stored month-end values")).toBeNull();
+    const layout = JSON.stringify(toJSON());
+    expect(layout.indexOf('"testID":"portfolio-trend-month-navigation"')).toBeGreaterThan(-1);
+    expect(layout.indexOf('"testID":"portfolio-trend-month-navigation"')).toBeLessThan(layout.indexOf('"testID":"portfolio-trend-plot-region"'));
     expect(within(getByTestId("progress-difference-amount")).getByText("Difference")).toBeTruthy();
     expect(within(getByTestId("progress-difference-percent")).getByText("Difference %")).toBeTruthy();
     expect(within(getByTestId("progress-difference-amount")).queryByText("Difference %")).toBeNull();
