@@ -1,0 +1,63 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic portfolio only. Paired with transaction-correction-cleanup.yaml.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+# Require visible values rather than changing the user's preference.
+- assertVisible: "Mask values"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible: "No transactions yet"
+- openLink: "cogvest:///record-purchase?assetId=visual-qa-asset-hdfc"
+- tapOn:
+    id: purchase-quantity
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: purchase-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-fees
+    direction: DOWN
+- tapOn:
+    id: purchase-fees
+- eraseText: 20
+- inputText: "5"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-review-button
+    direction: DOWN
+- tapOn:
+    id: purchase-review-button
+- scrollUntilVisible:
+    element:
+      id: purchase-cash-debit
+    direction: DOWN
+- assertVisible:
+    id: purchase-cash-debit
+    text: "₹205.00"
+- scrollUntilVisible:
+    element:
+      id: purchase-confirm
+    direction: DOWN
+- tapOn:
+    id: purchase-confirm
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- tapOn:
+    id: "review-trade-.*"
+- assertVisible:
+    id: trade-correction-quantity-input
+    text: "2"
+- takeScreenshot: .expo/transaction-correction/before
