@@ -44,6 +44,7 @@ describe("Holding duration screen", () => {
       }),
     );
     expect(screen.getByText("Within the 12-month reference")).toBeTruthy();
+    expect(screen.getByText("38 days recorded")).toBeTruthy();
     act(() => store.setState({ openingPositions: [] }));
     expect(screen.getByText("No stock or ETF holdings")).toBeTruthy();
     expect(screen.queryByText("Example stock")).toBeNull();
@@ -80,6 +81,7 @@ describe("Holding duration screen", () => {
     );
     expect(screen.getByText("Comparison unavailable")).toBeTruthy();
     expect(screen.queryByText("More than 12 months recorded")).toBeNull();
+    expect(screen.queryByText(/days recorded/)).toBeNull();
   });
   it("handles unavailable external guidance without crashing", async () => {
     const open = jest

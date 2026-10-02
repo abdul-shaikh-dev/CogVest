@@ -1,0 +1,41 @@
+appId: com.abdulshaikh.cogvest
+---
+# Debug APK only. This fixture never imports the store or resets storage.
+- openLink: "cogvest:///recovery-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: storage-recovery-screen
+    timeout: 30000
+- assertVisible: "Your original data was preserved"
+- takeScreenshot: .expo/secondary-screens/recovery-${SIZE}
+- scrollUntilVisible:
+    element:
+      id: start-storage-reset
+    direction: DOWN
+- tapOn:
+    id: start-storage-reset
+- scrollUntilVisible:
+    element:
+      id: confirm-storage-reset
+    direction: DOWN
+- takeScreenshot: .expo/secondary-screens/recovery-confirm-${SIZE}
+- tapOn:
+    id: cancel-storage-reset
+- assertVisible: "Synthetic fixture only. Reset callbacks: 0"
+- tapOn:
+    id: start-storage-reset
+- scrollUntilVisible:
+    element:
+      id: confirm-storage-reset
+    direction: DOWN
+- tapOn:
+    id: confirm-storage-reset
+- assertVisible: "Synthetic fixture only. Reset callbacks: 1"
+- openLink: "cogvest:///recovery-qa?token=cogvest-local-visual-qa&preserved=no"
+- assertVisible: "CogVest stopped before overwriting your data"
+- assertNotVisible:
+    id: start-storage-reset
+- assertNotVisible:
+    id: confirm-storage-reset
+- takeScreenshot: .expo/secondary-screens/recovery-no-copy-${SIZE}
+- openLink: "cogvest:///"

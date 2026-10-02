@@ -1,0 +1,122 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio, Standard Mode, unmasked. No financial writes.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holding-duration"
+- assertVisible: "HDFC Bank"
+- assertVisible: "900 days recorded"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/duration-${SIZE}
+- scrollUntilVisible:
+    element:
+      text: "Comparison unavailable"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/duration-unavailable-${SIZE}
+- scrollUntilVisible:
+    element:
+      text: "Read official guidance"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/duration-reference-${SIZE}
+- scrollUntilVisible:
+    element:
+      id: duration-mask
+    direction: UP
+- tapOn:
+    id: duration-mask
+- assertNotVisible: "HDFC Bank"
+- assertVisible: "Holdings and acquisition dates are hidden while values are masked."
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/duration-masked-${SIZE}
+- tapOn:
+    id: duration-mask
+- tapOn:
+    id: duration-back
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Conviction pattern"
+- assertVisible: "Not enough data yet"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/insight-${SIZE}
+- scrollUntilVisible:
+    element:
+      id: insight-show-records
+    direction: DOWN
+- tapOn:
+    id: insight-show-records
+- scrollUntilVisible:
+    element:
+      text: "Opening position.*conviction 4/5"
+    direction: DOWN
+- assertVisible: "HDFC Bank"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/insight-records-${SIZE}
+- scrollUntilVisible:
+    element:
+      id: insight-mask-toggle
+    direction: UP
+- tapOn:
+    id: insight-mask-toggle
+- assertNotVisible: "HDFC Bank"
+- assertNotVisible:
+    id: insight-evidence
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/insight-masked-${SIZE}
+- tapOn:
+    id: insight-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: insight-done
+    direction: DOWN
+- tapOn:
+    id: insight-done
+- openLink: "cogvest:///insight?kind=missing"
+- assertVisible: "Insight unavailable"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/insight-unavailable-${SIZE}
+- tapOn: "Back to Dashboard"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-minimal
+- openLink: "cogvest:///insight?kind=conviction"
+- assertVisible: "Insights are paused"
+- assertNotVisible:
+    id: insight-evidence
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/insight-minimal-${SIZE}
+- openLink: "cogvest:///holding-duration"
+- assertVisible: "Optional analysis is paused"
+- assertNotVisible: "HDFC Bank"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/duration-minimal-${SIZE}
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-search-input
+- inputText: "HDFC"
+- hideKeyboard
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible: "25"
+- assertVisible: "₹1,450.00"
+- scrollUntilVisible:
+    element:
+      text: "15 Apr 2024"
+    direction: DOWN
+- assertVisible: "15 Apr 2024"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/secondary-screens/retained-record-${SIZE}
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///recovery-qa?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: recovery-qa-blocked
+- openLink: "cogvest:///"
+- stopApp

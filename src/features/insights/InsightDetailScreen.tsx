@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 import {
   AppButton,
@@ -10,9 +10,10 @@ import {
   ScreenContainer,
   ScreenHeader,
   SectionHeader,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { spacing } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 import { useBehaviorInsights } from "./useBehaviorInsights";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
@@ -30,11 +31,13 @@ export function InsightDetailScreen({
   const { details, masked, minimal } = useBehaviorInsights(store, now);
   const detail = details.find((item) => item.kind === kind);
   const [recordsShown, setRecordsShown] = useState(0);
+  const { fontScale, width } = useWindowDimensions();
+  const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   return (
     <ScreenContainer scroll testID="insight-detail-screen">
       <View style={styles.content}>
         <ScreenHeader
-          title="Insight details"
+          title={detail && !minimal ? detail.title : "Insight details"}
           leading={
             <IconButton
               accessibilityLabel="Back"
@@ -73,7 +76,6 @@ export function InsightDetailScreen({
         ) : (
           <>
             <PremiumCard section style={styles.group} testID="insight-observation">
-              <SectionHeader title={detail.title} />
               {masked ? (
                 <AppText color="secondary">
                   Values and supporting records are hidden. Tap Show values to view them.
@@ -86,7 +88,7 @@ export function InsightDetailScreen({
                   {detail.availability === "insufficientData" ? (
                     <AppText weight="bold">Not enough data yet</AppText>
                   ) : null}
-                  <AppText>{detail.summary}</AppText>
+                  <AppText weight="medium">{detail.summary}</AppText>
                 </>
               )}
             </PremiumCard>
@@ -95,11 +97,11 @@ export function InsightDetailScreen({
               <PremiumCard section style={styles.group} testID="insight-evidence">
                 <SectionHeader title="What contributed" />
                 {detail.facts.map((fact) => (
-                  <View key={fact.label} style={styles.fact}>
-                    <AppText color="secondary" style={styles.label}>
+                  <View key={fact.label} style={[styles.fact, stacked && styles.stacked]} testID={`insight-fact-${fact.label}`}>
+                    <AppText color="secondary" style={[styles.label, stacked && styles.intrinsic]}>
                       {fact.label}
                     </AppText>
-                    <AppText weight="bold">{fact.value}</AppText>
+                    <AppText style={[styles.value, stacked && styles.stackedValue]} weight="bold">{fact.value}</AppText>
                   </View>
                 ))}
                 {detail.records.slice(0, recordsShown).map((record) => (
@@ -169,8 +171,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.subtle,
   },
   label: { flex: 1 },
+  value: { flex: 1, textAlign: "right" },
+  stacked: { flexDirection: "column" },
+  intrinsic: { flex: 0 },
+  stackedValue: { flex: 0, textAlign: "left" },
   record: { gap: spacing.xs, paddingVertical: spacing.sm },
 });

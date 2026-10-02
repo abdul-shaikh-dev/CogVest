@@ -23,7 +23,7 @@ export function RecoveryScreen({
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   return (
-    <ScreenContainer testID="storage-recovery-screen">
+    <ScreenContainer scroll testID="storage-recovery-screen">
       <View style={styles.content}>
         <View style={styles.heading}>
           <AppText variant="title" weight="bold">
@@ -50,7 +50,7 @@ export function RecoveryScreen({
             {affectedAreas.map((area) => (
               <View key={area} style={styles.areaRow}>
                 <View style={styles.areaDot} />
-                <AppText color="secondary" variant="caption">
+                <AppText color="secondary" style={styles.areaLabel} variant="caption">
                   {area}
                 </AppText>
               </View>
@@ -67,15 +67,15 @@ export function RecoveryScreen({
             </AppText>
             <View style={styles.actions}>
               <AppButton
-                onPress={onReset}
-                testID="confirm-storage-reset"
-                title="Reset and continue"
-              />
-              <AppButton
                 onPress={() => setIsConfirmingReset(false)}
                 testID="cancel-storage-reset"
                 title="Keep data"
-                variant="secondary"
+              />
+              <AppButton
+                onPress={onReset}
+                testID="confirm-storage-reset"
+                title="Reset and continue"
+                variant="destructive"
               />
             </View>
           </PremiumCard>
@@ -84,6 +84,7 @@ export function RecoveryScreen({
             onPress={() => setIsConfirmingReset(true)}
             testID="start-storage-reset"
             title="Review reset"
+            variant="secondary"
           />
         )}
       </View>
@@ -111,10 +112,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
-  content: {
+  areaLabel: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     gap: spacing.lg,
     justifyContent: "center",
+    paddingVertical: spacing.lg,
   },
   heading: {
     gap: spacing.sm,

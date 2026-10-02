@@ -1,8 +1,21 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { ScrollView } from "react-native";
+import { AppButton } from "@/src/components/common";
 
 import { RecoveryScreen } from "../RecoveryScreen";
 
 describe("RecoveryScreen", () => {
+  it("keeps long recovery content scrollable and puts the safe action first", () => {
+    const screen = render(
+      <RecoveryScreen affectedAreas={["Monthly snapshots and historical valuation evidence"]} onReset={jest.fn()} recoveryCopiesPreserved />,
+    );
+    expect(screen.UNSAFE_getByType(ScrollView)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("start-storage-reset"));
+    const buttons = screen.UNSAFE_getAllByType(AppButton);
+    expect(buttons.map((button) => button.props.title)).toEqual(["Keep data", "Reset and continue"]);
+    expect(buttons[0].props.variant).toBeUndefined();
+    expect(buttons[1].props.variant).toBe("destructive");
+  });
   it("requires confirmation before resetting affected data", () => {
     const onReset = jest.fn();
     const { getByTestId, getByText, queryByTestId } = render(
