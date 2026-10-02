@@ -86,6 +86,7 @@ export function CashScreen({
   const isSavingRef = useRef(false);
   const entryIdRef = useRef(createId("cash"));
   const modeCopy = mode ? getCashEntryModeCopy(mode) : null;
+  const compactActivity = !maskWealthValues && monthlyMetrics.added === 0 && monthlyMetrics.invested === 0;
 
   function closeEntry() {
     if (isSavingRef.current) return;
@@ -188,8 +189,8 @@ export function CashScreen({
   return (
     <>
     <ScreenContainer scroll testID="cash-screen">
-      <View style={styles.content}>
-        <ScreenHeader title="Cash Ledger" />
+      <View style={[styles.content, styles.overview]}>
+        <ScreenHeader compact title="Cash Ledger" />
 
         <View style={styles.balanceSection}>
           <HeroMetric
@@ -216,6 +217,15 @@ export function CashScreen({
         </View>
 
         <View style={styles.activitySection}>
+          {compactActivity ? (
+            <>
+              <AppText color="secondary" variant="caption" weight="medium">{`${formatMonthYear(now)} activity`}</AppText>
+              <View style={styles.quietMetrics} testID="cash-zero-activity">
+                <AppText color="secondary" variant="caption">Cash added {formatCompactINR(0)}</AppText>
+                <AppText color="secondary" variant="caption">Invested {formatCompactINR(0)}</AppText>
+              </View>
+            </>
+          ) : <>
           <SectionHeader title={`${formatMonthYear(now)} activity`} />
           <MetricGroup
             metrics={[
@@ -231,6 +241,7 @@ export function CashScreen({
               },
             ]}
           />
+          </>}
         </View>
 
         {entries.length === 0 ? (
@@ -244,7 +255,7 @@ export function CashScreen({
             {entries.map((entry, index) => (
               <View key={entry.id}>
                 {index === 0 || entries[index - 1].date.slice(0, 7) !== entry.date.slice(0, 7) ? (
-                  <AppText color="secondary" variant="caption" weight="bold" style={styles.monthHeading} testID={`cash-month-${entry.date.slice(0, 7)}`}>
+                  <AppText color="secondary" variant="caption" weight="bold" style={[styles.monthHeading, index === 0 && styles.firstMonthHeading]} testID={`cash-month-${entry.date.slice(0, 7)}`}>
                     {formatMonthYear(new Date(`${entry.date.slice(0, 7)}-01T12:00:00`))}
                   </AppText>
                 ) : null}
@@ -448,8 +459,11 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   balanceSection: { gap: spacing.sm },
+  overview: { paddingTop: spacing.sm },
+  quietMetrics: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md, rowGap: spacing.xs },
   activitySection: { gap: spacing.xs },
   monthHeading: { paddingTop: spacing.lg, paddingBottom: spacing.xs },
+  firstMonthHeading: { paddingTop: spacing.cardGap },
   optionalToggle: {
     alignItems: "center",
     justifyContent: "center",

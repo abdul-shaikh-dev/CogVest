@@ -1,0 +1,41 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic audit portfolio; no financial writes.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- assertVisible: "Recent cash ledger"
+- takeScreenshot: .expo/cash-spacing/${PHASE}/${SIZE}/${MODE}
+- runFlow:
+    when:
+      true: ${PHASE == 'after'}
+    commands:
+      - assertVisible:
+          id: cash-zero-activity
+      - tapOn:
+          id: cash-entry-deposit
+      - assertVisible: "Deposit cash"
+      - scrollUntilVisible:
+          element:
+            id: save-cash-entry-button
+          direction: DOWN
+      - tapOn:
+          id: save-cash-entry-button
+      - scrollUntilVisible:
+          element: "Amount must be a valid number."
+          direction: UP
+      - assertVisible: "Amount must be a valid number."
+      - tapOn:
+          id: close-cash-entry-button
+      - tapOn:
+          id: cash-entry-withdraw
+      - assertVisible: "Withdraw cash"
+      - tapOn:
+          id: close-cash-entry-button
+      - assertVisible: "₹50,000.00"
