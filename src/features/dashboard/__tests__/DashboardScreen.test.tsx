@@ -614,7 +614,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.getByText("Open Progress")).toBeTruthy();
     expect(screen.getByText("September 2026 activity")).toBeTruthy();
-    expect(screen.getByText("Cash change")).toBeTruthy();
+    expect(screen.getByText("No net investment or cash change")).toBeTruthy();
     expect(screen.queryByText("Investment rate")).toBeNull();
     expect(screen.queryByText("Cash balance")).toBeNull();
     expect(screen.queryByText("Holdings")).toBeNull();

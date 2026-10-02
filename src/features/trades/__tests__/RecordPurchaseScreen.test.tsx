@@ -32,6 +32,22 @@ function details(ui: ReturnType<typeof render>, quantity = "2") {
 }
 
 describe("Record purchase", () => {
+  it("shares asset discovery labels and shows progress without changing saved identity", () => {
+    const { ui, store } = setup();
+    expect(ui.getByText("Search asset")).toBeTruthy();
+    expect(ui.getByText("Saved assets")).toBeTruthy();
+    expect(ui.getByPlaceholderText("Name, symbol, or ticker")).toBeTruthy();
+    expect(ui.getByLabelText("Record purchase progress")).toHaveProp("accessibilityValue", {
+      min: 1, max: 3, now: 1, text: "Step 1 of 3: Choose asset",
+    });
+    fireEvent.press(ui.getByTestId("existing-asset-asset"));
+    expect(ui.getByLabelText("Record purchase progress")).toHaveProp("accessibilityValue", {
+      min: 1, max: 3, now: 2, text: "Step 2 of 3",
+    });
+    fireEvent.press(ui.getByTestId("purchase-back"));
+    expect(ui.getByText("Search asset")).toBeTruthy();
+    expect(store.getState().trades).toEqual([]);
+  });
   it("persists a searched listing's asset identity without provider-only metadata", async () => {
     const { ui, store, onSaved, onCancel } = setup();
     ui.rerender(<RecordPurchaseScreen store={store} now={now} onSaved={onSaved} onCancel={onCancel}

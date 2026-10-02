@@ -1,0 +1,115 @@
+appId: com.abdulshaikh.cogvest
+---
+# Preserves the existing synthetic portfolio and all stored months.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- takeScreenshot: .expo/ux504/${SIZE}/dashboard
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- takeScreenshot: .expo/ux504/${SIZE}/holding-detail
+- scrollUntilVisible:
+    element:
+      id: holding-record-purchase-visual-qa-asset-bitcoin
+    direction: DOWN
+- tapOn:
+    id: holding-record-purchase-visual-qa-asset-bitcoin
+- assertVisible: "Record purchase"
+- scrollUntilVisible:
+    element:
+      id: purchase-cancel
+    direction: DOWN
+- tapOn:
+    id: purchase-cancel
+- tapOn:
+    id: purchase-discard
+- assertVisible: "Holding details"
+- scrollUntilVisible:
+    element:
+      id: holding-sell-redeem-visual-qa-asset-bitcoin
+    direction: DOWN
+- tapOn:
+    id: holding-sell-redeem-visual-qa-asset-bitcoin
+- tapOn:
+    id: sell-redeem-back
+- assertVisible: "Holding details"
+- back
+- tapOn:
+    id: holdings-add-button
+- scrollUntilVisible:
+    element:
+      id: holdings-open-futures
+    direction: DOWN
+- takeScreenshot: .expo/ux504/${SIZE}/holdings-add
+- tapOn:
+    id: holdings-open-futures
+- assertVisible: "Create futures wallet"
+- back
+- openLink: "cogvest:///add-holding"
+- assertVisible: "Search asset"
+- takeScreenshot: .expo/ux504/${SIZE}/add-holding
+- tapOn:
+    id: asset-lookup-input
+- assertVisible:
+    id: asset-lookup-input
+- takeScreenshot: .expo/ux504/${SIZE}/add-keyboard
+- hideKeyboard
+- back
+- openLink: "cogvest:///record-purchase"
+- assertVisible: "Search asset"
+- assertVisible: "Saved assets"
+- takeScreenshot: .expo/ux504/${SIZE}/purchase
+- tapOn:
+    id: purchase-search
+- assertVisible:
+    id: purchase-search
+- takeScreenshot: .expo/ux504/${SIZE}/purchase-keyboard
+- hideKeyboard
+- back
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-summary-month
+- takeScreenshot: .expo/ux504/${SIZE}/progress
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-All
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-plot-region
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: .expo/ux504/${SIZE}/chart
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible: ".*versus invested.*"
+- takeScreenshot: .expo/ux504/${SIZE}/comparison
+- repeat:
+    times: 5
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: portfolio-trend-previous-month
+          direction: UP
+      - tapOn:
+          id: portfolio-trend-previous-month
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+- assertVisible: "Apr 2026.*-3.46% versus invested.*"
+- takeScreenshot: .expo/ux504/${SIZE}/april-comparison
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b950,000.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "No transactions yet"
+- stopApp

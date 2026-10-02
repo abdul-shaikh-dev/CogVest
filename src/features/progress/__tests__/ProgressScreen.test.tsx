@@ -842,7 +842,7 @@ describe("ProgressScreen", () => {
       store.getState().addMonthlySnapshot(maySnapshot);
       const { getByTestId } = render(<ProgressScreen store={store} />);
       expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
-        .toContain("+30.66% versus invested");
+        .toContain("+17.45% versus invested");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
         .toContain("+12.50% versus Apr 2026");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -861,7 +861,7 @@ describe("ProgressScreen", () => {
     });
     const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
-      .toContain("-15.09% versus invested");
+      .toContain("+2.36% versus invested");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("-10.00% versus Apr 2026");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -903,15 +903,20 @@ describe("ProgressScreen", () => {
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(
-      getByText("Stored portfolio value compared with invested capital · not investment return"),
+      getByText("Portfolio and invested capital · not investment return"),
     ).toBeTruthy();
     expect(getByText("Value by asset class")).toBeTruthy();
     expect(getByText("Cash excluded · includes money added or withdrawn")).toBeTruthy();
     expect(queryByText("Apr 2026")).toBeNull();
-    expect(getByText("+30.66%")).toBeTruthy();
+    expect(getByText("+17.45%")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(getByTestId("portfolio-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("asset-trend-selected-panel")).toBeTruthy();
+    const orderedIds = getByTestId("progress-screen").findAll((node: { type: unknown; props: { testID?: string } }) =>
+      typeof node.type === "string" && Boolean(node.props.testID),
+    ).map((node: { props: { testID?: string } }) => node.props.testID);
+    expect(orderedIds.indexOf("portfolio-trend-plot-region")).toBeGreaterThan(-1);
+    expect(orderedIds.indexOf("portfolio-trend-plot-region")).toBeLessThan(orderedIds.indexOf("portfolio-trend-selected-panel"));
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
@@ -956,7 +961,7 @@ describe("ProgressScreen", () => {
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(getByText("Value by asset class")).toBeTruthy();
-    expect(getByText("+30.66%")).toHaveStyle({ color: colors.profit });
+    expect(getByText("+17.45%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("monthly-history-panel")).toBeTruthy();
     expect(getByTestId("month-end-snapshot-status-card")).toBeTruthy();
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
@@ -1105,7 +1110,7 @@ describe("ProgressScreen", () => {
     fireEvent.press(getByTestId("open-monthly-history"));
     fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
-    expect(getAllByText("+30.66%").length).toBeGreaterThan(0);
+    expect(getAllByText("+17.45%").length).toBeGreaterThan(0);
     expect(queryByText("37.50%")).toBeNull();
     expect(queryByText("Hidden")).toBeNull();
     expect(portfolioChart.props.formatYLabel("2000000")).toBe(MASKED_INR_VALUE);

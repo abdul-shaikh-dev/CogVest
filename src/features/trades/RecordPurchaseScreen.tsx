@@ -8,6 +8,8 @@ import { calculateCashBalance } from "@/src/domain/calculations";
 import { formatINR } from "@/src/domain/formatters";
 import { searchSavedAssets } from "@/src/features/openingPositions/assetDiscovery";
 import { DiscoveryResults } from "@/src/features/openingPositions/DiscoveryResults";
+import { AssetSearchField } from "@/src/features/openingPositions/AssetSearchField";
+import { EntryProgress } from "@/src/components/common/EntryProgress";
 import { searchAssetLookupResults, type AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, spacing } from "@/src/theme";
@@ -79,17 +81,18 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
       <View style={styles.content}>
         <ScreenHeader title={flow.phase === "review" ? "Review purchase" : "Record purchase"} subtitle={flow.phase === "review" ? undefined : "From Cash to investment"}
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={back} testID="purchase-back" />} />
-        {flow.phase === "asset" ? <>
-          <FormTextField label="Find an investment" value={query} testID="purchase-search" onChangeText={(value) => {
+        <EntryProgress label="Record purchase progress" step={flow.phase === "asset" ? 1 : flow.phase === "details" ? 2 : 3} total={3} />
+        {flow.phase === "asset" ? <PremiumCard testID="purchase-phase-asset">
+          <AssetSearchField value={query} testID="purchase-search" onChangeText={(value) => {
             operation.current?.abort(); setSearching(false); setQuery(value); setLookup(undefined);
           }} onSubmitEditing={search} returnKeyType="search" />
           <AppButton title={searching ? "Searching…" : "Search listings"} disabled={searching || !query.trim()} onPress={search} testID="purchase-search-button" variant="secondary" />
           {flow.errors.asset ? <AppText style={styles.error}>{flow.errors.asset}</AppText> : null}
-          <SectionHeader title="Saved investments" />
-          <DiscoveryResults kind="saved" items={savedAssets.slice(0, page * 20)} onSelect={flow.selectAsset} />
+          {savedAssets.length ? <AppText color="secondary" variant="caption" weight="medium">Saved assets</AppText> : null}
+          <DiscoveryResults kind="saved" items={savedAssets.slice(0, page * 20)} onSelect={(asset) => { Keyboard.dismiss(); flow.selectAsset(asset); }} />
           {savedAssets.length > page * 20 ? <AppButton title="More saved investments" variant="ghost" onPress={() => setPage(page + 1)} /> : null}
           {lookup ? <>
-            <SectionHeader title="Listings" />
+            {lookup.results.length ? <AppText color="secondary" variant="caption" weight="medium">Listings</AppText> : null}
             <DiscoveryResults kind="provider" items={lookup.results.slice(0, page * 20)} onSelect={(result) => {
               flow.selectAsset({
                 id: createId("asset"), assetClass: result.assetClass, currency: result.currency,
@@ -103,7 +106,7 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
             {lookup.failures.length ? <AppText color="secondary">Some listings are unavailable. Retry search or use a saved investment.</AppText> : null}
             {!lookup.failures.length && !lookup.results.length ? <AppText color="secondary">No matching listings. Try the name or symbol.</AppText> : null}
           </> : null}
-        </> : <>
+        </PremiumCard> : <>
           <View style={styles.asset}>
             <AppText weight="bold">{flow.asset?.name}</AppText>
             <AppText color="secondary">{flow.asset?.symbol} · {flow.asset?.exchange ?? "Saved investment"} · {flow.asset?.currency}</AppText>

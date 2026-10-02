@@ -29,6 +29,23 @@ function snapshot(
 }
 
 describe("buildMonthlyProgressChartData", () => {
+  it.each([0, 50000, 900000])("uses investment-only comparisons with cash %s without changing the plotted total", (cashValue) => {
+    const records = [snapshot("2026-01", { equityValue: 120000, cashValue, portfolioValue: 120000 + cashValue, investedValue: 100000 }),
+      snapshot("2026-03", { equityValue: 80000, cashValue, portfolioValue: 80000 + cashValue, investedValue: 100000,
+        generated: { source: "auto", confidence: "provisional", priceBasis: "manual-fallback", generatedAt: "2026-04-01T00:00:00Z", warnings: [] } })];
+    const data = buildMonthlyProgressChartData(records, "All");
+    expect(data.investedComparisons.map(item => item?.percentage)).toEqual([20, -20]);
+    expect(data.investedComparisons.map(item => item?.difference)).toEqual([20000, -20000]);
+    expect(data.portfolioSeries[0].values).toEqual([120000 + cashValue, 80000 + cashValue]);
+    expect(data.estimatedIndices).toEqual([1]);
+    expect(data.gapAfterIndices).toEqual([0]);
+    expect(buildMonthlyProgressChartData(records, "Custom", { startMonth: "2026-02", endMonth: "2026-03" }).investedComparisons[0]?.percentage).toBe(-20);
+  });
+
+  it("does not manufacture a comparison when invested capital is zero", () => {
+    expect(buildMonthlyProgressChartData([snapshot("2026-01", { cashValue: 100, portfolioValue: 100 })]).investedComparisons).toEqual([null]);
+  });
+
   it("preserves values while identifying calendar gaps and estimated points", () => {
     const snapshots = [
       snapshot("2025-12", { portfolioValue: 100 }),

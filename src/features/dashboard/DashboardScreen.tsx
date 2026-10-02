@@ -524,9 +524,11 @@ export function DashboardScreen({
         ) : null}
 
         {!isMinimalMode ? (
-          <PremiumCard section testID="dashboard-monthly-context">
+          <PremiumCard section style={styles.compactSection} testID="dashboard-monthly-context">
             <SectionHeader title={`${formatMonthYear(currentDate)} activity`} />
-            <MetricGroup
+            {!dashboard.maskWealthValues && dashboard.monthlyMetrics.investment === 0 && dashboard.monthlyMetrics.cashChange === 0 ? (
+              <AppText color="secondary" variant="caption">No net investment or cash change</AppText>
+            ) : <MetricGroup
               metrics={[
                 {
                   exactValue: formatINR(dashboard.monthlyMetrics.investment),
@@ -543,12 +545,12 @@ export function DashboardScreen({
                   ),
                 },
               ]}
-            />
+            />}
           </PremiumCard>
         ) : null}
 
         {hasAllocation ? (
-          <PremiumCard section testID="dashboard-allocation-card">
+          <PremiumCard section style={styles.compactSection} testID="dashboard-allocation-card">
             <View
               style={[
                 styles.allocationHeader,
@@ -869,6 +871,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.md,
   },
+  compactSection: { paddingVertical: spacing.sm },
   heroCard: {
     gap: spacing.sm,
   },

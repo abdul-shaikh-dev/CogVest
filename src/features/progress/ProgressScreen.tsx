@@ -337,6 +337,7 @@ function SelectedMonthPanel({
   portfolioLabel = "Portfolio",
   partialHistory = false,
   hasPreviousCalendarMonth = true,
+  investedComparison,
 }: {
   maskWealthValues: boolean;
   minimal: boolean;
@@ -348,6 +349,7 @@ function SelectedMonthPanel({
   portfolioLabel?: string;
   partialHistory?: boolean;
   hasPreviousCalendarMonth?: boolean;
+  investedComparison?: MonthlyProgressChartData["investedComparisons"][number];
 }) {
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const { fontScale } = useWindowDimensions();
@@ -376,15 +378,12 @@ function SelectedMonthPanel({
   if (isPortfolioChart) {
     const portfolioValue = getSeriesValue(series, "Portfolio", selectedIndex);
     const investedValue = getSeriesValue(series, "Invested", selectedIndex);
-    const preciseDifference = decimal(portfolioValue).minus(investedValue);
-    const difference = normalizeMoney(preciseDifference);
-    const differencePercentage =
-      investedValue === 0
-        ? null
-        : normalizePercentage(
-            preciseDifference.dividedBy(investedValue).times(100),
-          );
-    const direction = difference >= 0 ? "ahead of invested" : "behind invested";
+    const difference = investedComparison?.difference ?? null;
+    const differencePercentage = investedComparison?.percentage ?? null;
+    const unavailableReason = investedValue === 0
+      ? "Percentage unavailable: invested value is zero"
+      : "Comparison unavailable";
+    const direction = (difference ?? 0) >= 0 ? "ahead of invested" : "behind invested";
 
     return (
       <View
@@ -392,16 +391,16 @@ function SelectedMonthPanel({
           maskWealthValues
             ? `${monthLabel}. ${portfolioLabel} amounts hidden. ${
                 differencePercentage === null
-                  ? "Percentage unavailable: invested value is zero"
+                  ? unavailableReason
                   : `${formatPercentage(differencePercentage)} versus invested`
               }.`
             : `${monthLabel}. ${portfolioLabel} ${formatCompactINR(
                 portfolioValue,
               )}. Invested ${formatCompactINR(
                 investedValue,
-              )}. ${formatSignedCompactINR(difference)} ${direction}. ${
+              )}. ${difference === null ? "Comparison unavailable" : `${formatSignedCompactINR(difference)} ${direction}, excluding cash`}. ${
                 differencePercentage === null
-                  ? "Percentage unavailable: invested value is zero"
+                  ? unavailableReason
                   : `${formatPercentage(differencePercentage)} versus invested`
               }.`
         }
@@ -417,7 +416,7 @@ function SelectedMonthPanel({
             <View style={styles.gapOutcome}>
               <AppText
                 style={
-                  difference >= 0
+                  difference === null ? styles.neutralText : difference >= 0
                     ? styles.gainText
                     : styles.lossText
                 }
@@ -429,14 +428,14 @@ function SelectedMonthPanel({
                   : formatPercentage(differencePercentage)}
               </AppText>
               <AppText color="secondary" variant="caption">
-                Gap vs invested
+                Vs invested · excludes cash
               </AppText>
               <View style={styles.gapValueRow}>
                 <MaskedValue
                   color="secondary"
-                  exactValue={formatINR(difference)}
-                  masked={maskWealthValues}
-                  value={formatSignedCompactINR(difference)}
+                  exactValue={difference === null ? undefined : formatINR(difference)}
+                  masked={maskWealthValues && difference !== null}
+                  value={difference === null ? "—" : formatSignedCompactINR(difference)}
                   variant="caption"
                 />
               </View>
@@ -544,6 +543,7 @@ function TrendChart({
   partialHistory = false,
   estimatedIndices,
   gapAfterIndices,
+  investedComparisons,
 }: {
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
@@ -555,6 +555,7 @@ function TrendChart({
   partialHistory?: boolean;
   estimatedIndices: number[];
   gapAfterIndices: number[];
+  investedComparisons?: MonthlyProgressChartData["investedComparisons"];
 }) {
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
@@ -603,46 +604,6 @@ function TrendChart({
 
   return (
     <View style={styles.chartBlock}>
-      <View style={styles.monthNavigation}>
-        <AppButton
-          accessibilityLabel={`${chartName}: previous stored month`}
-          disabled={safeSelectedIndex === 0}
-          onPress={() => setSelectedIndex(safeSelectedIndex - 1)}
-          testID={`${testIDPrefix}-previous-month`}
-          title="‹" variant="secondary"
-        />
-        <View style={styles.monthNavigationLabel}>
-          <AppText align="center" variant="caption" weight="bold">
-            {monthLabels[safeSelectedIndex] ?? ""}
-          </AppText>
-          {estimatedIndices.includes(safeSelectedIndex) ? (
-            <AppText align="center" color="secondary" variant="caption">Estimated</AppText>
-          ) : null}
-        </View>
-        <AppButton
-          accessibilityLabel={`${chartName}: next stored month`}
-          disabled={safeSelectedIndex >= pointCount - 1}
-          onPress={() => setSelectedIndex(safeSelectedIndex + 1)}
-          testID={`${testIDPrefix}-next-month`}
-          title="›" variant="secondary"
-        />
-      </View>
-      <SelectedMonthPanel
-        partialHistory={partialHistory}
-        portfolioLabel={portfolioLabel}
-        maskWealthValues={maskWealthValues}
-        minimal={minimal}
-        monthLabel={monthLabels[safeSelectedIndex] ?? ""}
-        previousMonthLabel={
-          safeSelectedIndex > 0
-            ? monthLabels[safeSelectedIndex - 1]
-            : undefined
-        }
-        selectedIndex={safeSelectedIndex}
-        series={visibleSeries}
-        hasPreviousCalendarMonth={!gapAfterIndices.includes(safeSelectedIndex - 1)}
-        testIDPrefix={testIDPrefix}
-      />
       {!isPortfolioChart && focusedSeries ? (
         <AppText color="secondary" testID={`${testIDPrefix}-focused-scale`} variant="caption">
           {focusedSeries} scale · Other asset lines hidden
@@ -736,6 +697,47 @@ function TrendChart({
           )}
         </View>
       </View>}
+      <View style={styles.monthNavigation}>
+        <AppButton
+          accessibilityLabel={`${chartName}: previous stored month`}
+          disabled={safeSelectedIndex === 0}
+          onPress={() => setSelectedIndex(safeSelectedIndex - 1)}
+          testID={`${testIDPrefix}-previous-month`}
+          title="‹" variant="secondary"
+        />
+        <View style={styles.monthNavigationLabel}>
+          <AppText align="center" variant="caption" weight="bold">
+            {monthLabels[safeSelectedIndex] ?? ""}
+          </AppText>
+          {estimatedIndices.includes(safeSelectedIndex) ? (
+            <AppText align="center" color="secondary" variant="caption">Estimated</AppText>
+          ) : null}
+        </View>
+        <AppButton
+          accessibilityLabel={`${chartName}: next stored month`}
+          disabled={safeSelectedIndex >= pointCount - 1}
+          onPress={() => setSelectedIndex(safeSelectedIndex + 1)}
+          testID={`${testIDPrefix}-next-month`}
+          title="›" variant="secondary"
+        />
+      </View>
+      <SelectedMonthPanel
+        investedComparison={investedComparisons?.[safeSelectedIndex]}
+        partialHistory={partialHistory}
+        portfolioLabel={portfolioLabel}
+        maskWealthValues={maskWealthValues}
+        minimal={minimal}
+        monthLabel={monthLabels[safeSelectedIndex] ?? ""}
+        previousMonthLabel={
+          safeSelectedIndex > 0
+            ? monthLabels[safeSelectedIndex - 1]
+            : undefined
+        }
+        selectedIndex={safeSelectedIndex}
+        series={visibleSeries}
+        hasPreviousCalendarMonth={!gapAfterIndices.includes(safeSelectedIndex - 1)}
+        testIDPrefix={testIDPrefix}
+      />
       <TrendLegend
         portfolioLabel={portfolioLabel}
         focusedSeries={focusedSeries}
@@ -1360,7 +1362,7 @@ function ProgressTrendCards({
       ) : null}
       <PremiumCard section>
         <ChartCardHeader
-          subtitle={ppfExcludedHistory ? "Stored market holdings + cash · PPF excluded · compared with invested capital" : "Stored portfolio value compared with invested capital · not investment return"}
+          subtitle={ppfExcludedHistory ? "Market holdings + cash · PPF excluded" : "Portfolio and invested capital · not investment return"}
           title={ppfExcludedHistory ? "Tracked Growth" : "Portfolio Growth"}
         />
         <ChartRangeSelector
@@ -1386,6 +1388,7 @@ function ProgressTrendCards({
             estimatedIndices={portfolioChartData.estimatedIndices}
             gapAfterIndices={portfolioChartData.gapAfterIndices}
             series={ppfExcludedHistory ? portfolioChartData.portfolioSeries.filter(item => item.label !== "Invested") : portfolioChartData.portfolioSeries}
+            investedComparisons={portfolioChartData.investedComparisons}
             testIDPrefix="portfolio-trend"
           />
         ) : (
