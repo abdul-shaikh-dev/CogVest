@@ -43,7 +43,7 @@ appId: com.abdulshaikh.cogvest
       text: "Cancel selection"
     direction: UP
 - tapOn: "Cancel selection"
-- assertVisible: ".*Purchase.*Accounting QA.*"
+- assertVisible: ".*Accounting QA.*Purchase.*"
 - tapOn:
     id: start-transaction-selection
 - tapOn:

@@ -26,6 +26,47 @@ const trade: Trade = {
 };
 
 describe("TradeHistoryScreen", () => {
+  it("keeps select-all scoped to this holding and retains other holdings and cash", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addAsset({ ...asset, id: "other", name: "Other holding", symbol: "OTHER", ticker: "OTHER.NS" });
+    store.getState().addCashEntry({ amount: 1000, date: "2026-04-01", id: "cash", label: "Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade });
+    const other = { ...trade, id: "other-trade", assetId: "other" };
+    store.getState().recordFundedBuy({ cashLabel: "Other purchase", trade: other });
+    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    expect(screen.getByText("Select all 1 shown")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("clear-transaction-selection"));
+    expect(screen.getByTestId("review-selected-transaction-deletion")).toBeDisabled();
+    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    fireEvent.press(screen.getByText("Keep transactions"));
+    expect(store.getState().trades).toHaveLength(2);
+    expect(store.getState().cashEntries).toHaveLength(3);
+    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
+    await waitFor(() => expect(store.getState().trades).toEqual([other]));
+    expect(store.getState().cashEntries).toHaveLength(2);
+    expect(store.getState().cashEntries).toContainEqual(expect.objectContaining({ linkedTradeId: other.id, amount: 200 }));
+  });
+
+  it("keeps long mixed histories selectable without treating transfers as cash", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset({ ...asset, name: "A long mutual fund name with Direct Growth and Non Demat details" });
+    store.setState({ trades: Array.from({ length: 60 }, (_, index) => index % 2 === 0
+      ? { ...trade, id: `trade-${index}` }
+      : { assetId: asset.id, id: `trade-${index}`, type: "transferOut" as const, quantity: 1, date: "2026-04-10" }) });
+    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    expect(screen.getByTestId("transaction-value-trade-1")).toHaveTextContent("1 units");
+    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("60 selected");
+    expect(screen.getByTestId("review-trade-trade-59")).toHaveProp("accessibilityState", { checked: true });
+    expect(store.getState().trades).toHaveLength(60);
+  });
+
   it("shows realized gain separately from net proceeds even after a full exit", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
@@ -54,7 +95,7 @@ describe("TradeHistoryScreen", () => {
       />,
     );
 
-    expect(getByText("Transaction history")).toBeTruthy();
+    expect(getByText("1 record")).toBeTruthy();
     expect(getByText("Purchase")).toBeTruthy();
     fireEvent.press(getByTestId(`review-trade-${trade.id}`));
     expect(onReviewTrade).toHaveBeenCalledWith(trade.id);
@@ -106,7 +147,8 @@ describe("TradeHistoryScreen", () => {
     );
 
     expect(getByText("1 record")).toBeTruthy();
-    expect(getByText("Purchase · HDFC Bank")).toBeTruthy();
+    expect(getByText("HDFC Bank")).toBeTruthy();
+    expect(getByText(/Purchase ·/)).toBeTruthy();
   });
 
   it("renders imported transfers without inventing a price or total", () => {
@@ -131,7 +173,8 @@ describe("TradeHistoryScreen", () => {
     );
 
     expect(getByText("Transfer in")).toBeTruthy();
-    expect(getByText(/acquisition basis 150 per unit/)).toBeTruthy();
+    expect(getByText("Acquisition basis ₹150.00 per unit")).toBeTruthy();
+    expect(getByText("3 units")).toBeTruthy();
     expect(queryByText("₹450.00")).toBeNull();
   });
 
@@ -173,7 +216,7 @@ describe("TradeHistoryScreen", () => {
     fireEvent.press(screen.getByTestId("select-all-transactions"));
     expect(screen.getByText("2 selected")).toBeTruthy();
     fireEvent.press(screen.getByText("Cancel selection"));
-    expect(screen.getByText("Transaction history")).toBeTruthy();
+    expect(screen.getByText("2 records")).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
     expect(store.getState().trades).toHaveLength(2);
   });
