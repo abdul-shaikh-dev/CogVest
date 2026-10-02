@@ -877,10 +877,15 @@ describe("HoldingsScreen", () => {
 
     expect(queryByTestId("holdings-insights-button")).toBeNull();
     expect(getAllByText("Reliance Industries").length).toBeGreaterThan(0);
-    expect(
-      within(getByTestId(`holding-row-${asset.id}`)).getByText("₹200"),
-    ).toBeTruthy();
-    expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
+    expect(queryByTestId(`holding-invested-${asset.id}`)).toBeNull();
+    expect(queryByTestId(`holding-pnl-${asset.id}`)).toBeNull();
+    expect(getByTestId(`holding-row-${asset.id}`).props.accessibilityLabel).not.toContain("Invested");
+    expect(getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
+    expect(queryByText("+25.00%")).toBeNull();
+    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    expect(getByText("+25.00% unrealized")).toHaveStyle({ color: colors.profit });
+    expect(getByText("Invested in remaining units")).toBeTruthy();
+    expect(within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText("₹200.00").length).toBeGreaterThan(0);
     expect(queryByText("Dominant position")).toBeNull();
     expect(queryByText("Best return")).toBeNull();
   });

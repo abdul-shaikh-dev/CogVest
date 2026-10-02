@@ -648,9 +648,13 @@ Baseline groups:
   visible under the established amount-only scope.
 - Standard/Minimal option descriptions are the complete explanation; do not add
   a separate Minimal-mode nudge that repeats the same guidance.
-- Minimal is an emphasis and optional-insight reduction mode, not a separate
-  dense layout. Preserve essential records, actions and minimum touch targets;
-  do not compress them merely to shorten the screen.
+- Minimal uses the same screens with a distinct default hierarchy (#507): value
+  and allocation on Dashboard; identity, value and weight bars in Holdings; one
+  portfolio trend in Progress. Invested/returns and comparisons/breakdowns have
+  labelled disclosures; holding details retain performance. Keep warnings,
+  history, essential actions, masking and minimum touch targets. Optional
+  insights and guidance remain suppressed. Do not change calculations or
+  compress text/touch targets to shorten the screen.
 - Compact Privacy & storage disclosure: no account/cloud sync/analytics summary;
   app-private storage, separate-encryption limitation and disabled Android backup/
   transfer remain available in details, not implied to be encryption or recovery.

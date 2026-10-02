@@ -32,7 +32,7 @@ const displayOptions = [
     value: "standard" as const,
   },
   {
-    description: "Hides monthly activity, insights and guidance. Keeps core values and actions.",
+    description: "Value, allocation and one portfolio trend. Returns and breakdowns on demand; warnings and actions stay available.",
     label: "Minimal",
     value: "minimal" as const,
   },

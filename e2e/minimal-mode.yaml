@@ -19,6 +19,9 @@ appId: com.abdulshaikh.cogvest
     id: "display-mode-minimal"
 - openLink: "cogvest:///dashboard"
 - assertVisible: "Portfolio value"
+- assertNotVisible: "Holdings P&L"
+- tapOn:
+    id: dashboard-performance-toggle
 - assertVisible: "Holdings P&L"
 - assertNotVisible: "This Month"
 - assertNotVisible: "Investment patterns"
@@ -27,16 +30,40 @@ appId: com.abdulshaikh.cogvest
     id: "holdings-search-input"
 - assertNotVisible:
     id: "holdings-insights-button"
-- assertVisible: "Invested"
+- assertNotVisible: "Invested"
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- scrollUntilVisible:
+    element: "Invested in remaining units"
+    direction: DOWN
+- assertVisible: "Invested in remaining units"
+- back
 - assertNotVisible: "Dominant position"
 - assertNotVisible: "Best return"
 - openLink: "cogvest:///cash"
-- assertVisible: "Recent cash ledger"
+- assertVisible: "Cash Ledger"
 - assertVisible: "Deposit"
 - assertVisible: "Withdraw"
 - assertNotVisible: "This month"
 - openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element: "Portfolio Growth"
+    direction: DOWN
 - assertVisible: "Portfolio Growth"
+- scrollUntilVisible:
+    element:
+      id: progress-details-toggle
+    direction: UP
+- tapOn:
+    id: progress-details-toggle
+- scrollUntilVisible:
+    element: "Value by asset class"
+    direction: DOWN
+- assertVisible: "Value by asset class"
+- scrollUntilVisible:
+    element:
+      id: month-end-snapshot-status-card
+    direction: UP
 - assertVisible:
     id: "month-end-snapshot-status-card"
 - assertNotVisible: "What changed this month?"
@@ -46,14 +73,16 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///dashboard"
 - scrollUntilVisible:
     element:
-      text: "This Month"
+      id: dashboard-monthly-context
     direction: DOWN
-- assertVisible: "This Month"
+- assertVisible:
+    id: dashboard-monthly-context
 - scrollUntilVisible:
     element:
-      text: "Investment patterns"
+      id: dashboard-insights
     direction: DOWN
-- assertVisible: "Investment patterns"
+- assertVisible:
+    id: dashboard-insights
 - openLink: "cogvest:///settings"
 - tapOn:
     id: "display-mode-minimal"

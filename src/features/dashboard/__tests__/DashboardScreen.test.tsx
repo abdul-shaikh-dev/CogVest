@@ -67,8 +67,9 @@ const etfBuyTrade: Trade = {
 };
 
 describe("DashboardScreen", () => {
-  it("shows incomplete valuation honestly and resolves it after quote refresh", async () => {
+  it.each(["standard", "minimal"] as const)("shows incomplete valuation honestly in %s and resolves it after quote refresh", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition({
       assetId: asset.id,
@@ -103,6 +104,10 @@ describe("DashboardScreen", () => {
     expect(getByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeTruthy();
     expect(queryByText(/at saved quotes/u)).toBeNull();
     expect(getByText("Allocation unavailable")).toBeTruthy();
+    if (displayMode === "minimal") {
+      expect(queryByText("Holdings P&L")).toBeNull();
+      fireEvent.press(getByTestId("dashboard-performance-toggle"));
+    }
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
 
     fireEvent.press(getByTestId("dashboard-mask-toggle"));
@@ -663,6 +668,10 @@ describe("DashboardScreen", () => {
     );
 
     expect(screen.getByText("Portfolio value")).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-top-metrics")).toBeNull();
+    expect(screen.queryByText("Holdings P&L")).toBeNull();
+    expect(screen.getByText("Using older saved prices")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
     expect(screen.getByText("Holdings P&L")).toBeTruthy();
     expect(screen.getByText("+50.00%")).toHaveStyle({ color: colors.profit });
     expect(screen.getByText("Allocation")).toBeTruthy();
@@ -689,6 +698,13 @@ describe("DashboardScreen", () => {
     store.getState().updatePreferences({ displayMode, maskWealthValues: true });
 
     const screen = render(<DashboardScreen store={store} />);
+
+    if (displayMode === "minimal") {
+      fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
+      expect(screen.getByTestId("dashboard-performance-toggle")).toHaveProp("accessibilityState", { expanded: true });
+      expect(within(screen.getByTestId("dashboard-top-metrics")).queryByText(/₹\d/)).toBeNull();
+      expect(within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)).toHaveLength(2);
+    }
 
     expect(screen.queryByText("+10.00% at saved quotes")).toBeNull();
     expandPriceDetails(screen);

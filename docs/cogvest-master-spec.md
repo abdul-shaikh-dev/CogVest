@@ -29,9 +29,13 @@ starting with full-portfolio backup/restore #24. Settings provides manual,
 unencrypted backup export and replacement-only restore, with validation, a
 count preview, and explicit confirmation. Its compatibility and recovery contract is in
 `docs/roadmap/backup-restore-contract.md`.
-Minimal Mode is implemented as an emphasis and optional-insight reduction mode,
-not a separate compact layout. It preserves every essential record, action, and
-minimum touch target. The descriptive behavior engine (#18) powers
+Minimal Mode uses the same screens with a quieter default hierarchy (#507).
+Dashboard leads with value and allocation; invested amounts and returns expand
+on demand. Holdings rows keep identity, value and weight, with invested and P&L
+in holding details. Progress shows one portfolio trend; comparisons and asset
+breakdowns expand on demand. History, warnings, essential records/actions,
+masking and minimum touch targets remain available. Calculations and stored
+records are identical in both modes. The descriptive behavior engine (#18) powers
 Dashboard investment-pattern entries and read-only insight details (#19).
 Holding duration (#20) is an on-demand informational reference for unambiguous
 Indian listed-stock records, not tax eligibility or a tax calculator. ETF
