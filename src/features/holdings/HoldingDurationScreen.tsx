@@ -18,7 +18,7 @@ import {
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { spacing } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 
 export function HoldingDurationScreen({
   onClose,
@@ -94,8 +94,9 @@ export function HoldingDurationScreen({
             });
             return (
               <PremiumCard
+                section
                 key={asset.id}
-                style={styles.group}
+                style={[styles.group, styles.holding]}
                 testID={`duration-${asset.id}`}
               >
                 <AppText weight="bold">{asset.name}</AppText>
@@ -106,14 +107,14 @@ export function HoldingDurationScreen({
                   </>
                 ) : (
                   <>
+                    <AppText variant="title" weight="bold">{duration.elapsedDays} days recorded</AppText>
                     <AppText weight="bold">
                       {duration.beyondReference
                         ? `More than ${INDIA_HOLDING_DURATION_RULE.months} months recorded`
                         : `Within the ${INDIA_HOLDING_DURATION_RULE.months}-month reference`}
                     </AppText>
                     <AppText color="secondary">
-                      Acquired {formatDate(duration.acquiredOn)} ·{" "}
-                      {duration.elapsedDays} elapsed days
+                      Acquired {formatDate(duration.acquiredOn)}
                     </AppText>
                     <AppText color="secondary">
                       {INDIA_HOLDING_DURATION_RULE.months}-month anniversary:{" "}
@@ -129,7 +130,7 @@ export function HoldingDurationScreen({
             );
           })
         )}
-        <PremiumCard style={styles.group}>
+        <PremiumCard section style={styles.group}>
           <AppText weight="bold">About this reference</AppText>
           <AppText color="secondary">
             {INDIA_HOLDING_DURATION_RULE.jurisdiction} · rules reviewed{" "}
@@ -171,4 +172,5 @@ export function HoldingDurationScreen({
 const styles = StyleSheet.create({
   content: { gap: spacing.cardGap, paddingTop: spacing.md },
   group: { gap: spacing.sm },
+  holding: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle, paddingBottom: spacing.lg },
 });

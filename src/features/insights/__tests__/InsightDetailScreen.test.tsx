@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
+import * as ReactNative from "react-native";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { InsightDetailScreen } from "../InsightDetailScreen";
@@ -32,6 +33,18 @@ function fixture() {
 }
 
 describe("Insight details", () => {
+  it("stacks evidence labels and values at larger text sizes", () => {
+    const dimensions = jest.spyOn(ReactNative, "useWindowDimensions").mockReturnValue({ width: 360, height: 800, scale: 3, fontScale: 1.3 });
+    try {
+      const screen = render(<InsightDetailScreen kind="conviction" store={fixture()} now={now} onClose={jest.fn()} />);
+      const facts = screen.getAllByTestId(/^insight-fact-/);
+      expect(facts.length).toBeGreaterThan(0);
+      for (const fact of facts) expect(fact).toHaveStyle({ flexDirection: "column" });
+      expect(screen.getAllByText("Conviction pattern")).toHaveLength(1);
+    } finally {
+      dimensions.mockRestore();
+    }
+  });
   it.each([
     ["conviction", "Conviction pattern"],
     ["patience", "Planned holding periods"],
