@@ -105,10 +105,6 @@ export function ManageAssetsScreen({
           />
         </View> : null}
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always" testID="manage-assets-list-scroll">
-        <AppText color="secondary" variant="caption">
-          Correct asset details here. Positions and transactions keep their stable links.
-        </AppText>
-
         {snapshot.assets.length === 0 ? (
           <EmptyState
             actionLabel="Back to Holdings"
@@ -164,14 +160,16 @@ export function ManageAssetsScreen({
                     <AppText color="secondary" variant="caption">
                       {identity || "No market identifier"}
                     </AppText>
-                    <AppText color="secondary" variant="caption">
-                      {instrumentTypeLabel(asset.instrumentType ?? "other")} · {assetClassLabel(asset.assetClass)}
-                    </AppText>
-                  </View>
-                  <View style={[styles.status, isActive ? styles.active : styles.closed]}>
-                    <AppText color={isActive ? "primary" : "secondary"} variant="caption" weight="bold">
-                      {units === null ? "Unavailable" : isActive ? "Active" : "Closed"}
-                    </AppText>
+                    <View style={styles.classification}>
+                      <AppText color="secondary" variant="caption" style={styles.classificationCopy}>
+                        {[...new Set([instrumentTypeLabel(asset.instrumentType ?? "other"), assetClassLabel(asset.assetClass)])].join(" · ")}
+                      </AppText>
+                      <View style={[styles.status, isActive ? styles.active : styles.closed]}>
+                        <AppText color={isActive ? "primary" : "secondary"} variant="caption" weight="bold">
+                          {units === null ? "Unavailable" : isActive ? "Active" : "Closed"}
+                        </AppText>
+                      </View>
+                    </View>
                   </View>
                   <AppText color="secondary">›</AppText>
                 </Pressable>
@@ -190,10 +188,12 @@ const styles = StyleSheet.create({
   active: { backgroundColor: "rgba(52,199,89,0.12)" },
   closed: { backgroundColor: colors.surface.elevated },
   content: { gap: spacing.cardGap, paddingBottom: spacing.xl },
-  copy: { flex: 1, gap: spacing.xs },
+  copy: { flex: 1, minWidth: 0, gap: spacing.xs },
+  classification: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
+  classificationCopy: { flexShrink: 1 },
   divider: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   icon: { alignItems: "center", justifyContent: "center", width: 32 },
-  list: { paddingHorizontal: spacing.md, paddingVertical: 0 },
+  list: { paddingHorizontal: 0, paddingVertical: 0 },
   row: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 72, paddingVertical: spacing.sm },
   screen: { flex: 1, gap: spacing.md },
   searchField: { alignItems: "center", backgroundColor: colors.surface.card, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md },

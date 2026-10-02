@@ -16,6 +16,35 @@ function setup() {
   return { storage, store };
 }
 describe("snapshot validation and recovery UI", () => {
+  it("groups values and preserves unrelated months when saving populated notes", () => {
+    const { store } = setup();
+    const older = { ...snapshot, id: "older", month: "2026-07", notes: "Original" };
+    store.getState().addMonthlySnapshot(older);
+    store.getState().updateMonthlySnapshot({ ...snapshot, notes: "Existing note" });
+    const screen = render(<ReviewSnapshotScreen store={store} now={now} onCancel={jest.fn()} onComplete={jest.fn()} />);
+    expect(screen.getByText("Month-end totals")).toBeTruthy();
+    expect(screen.getByText("Asset balances")).toBeTruthy();
+    expect(screen.getByTestId("snapshot-notes-input")).toHaveProp("value", "Existing note");
+    fireEvent.changeText(screen.getByTestId("snapshot-notes-input"), "Checked");
+    fireEvent.press(screen.getByTestId("save-monthly-snapshot-button"));
+    expect(store.getState().monthlySnapshots.find((item) => item.id === older.id)).toEqual(older);
+    expect(store.getState().monthlySnapshots.find((item) => item.id === snapshot.id)).toEqual({
+      ...snapshot, notes: "Checked", generated: undefined,
+      performanceBasis: { reason: "legacy-snapshot", status: "unavailable", warnings: ["Monthly performance is unavailable for snapshots recorded before contribution tracking."] },
+    });
+  });
+
+  it("rejects saving when the reviewed snapshot disappears", () => {
+    const { store } = setup();
+    const onComplete = jest.fn();
+    const screen = render(<ReviewSnapshotScreen store={store} now={now} onCancel={jest.fn()} onComplete={onComplete} />);
+    act(() => store.setState({ monthlySnapshots: [] }));
+    fireEvent.press(screen.getByTestId("save-monthly-snapshot-button"));
+    expect(screen.getByText("Snapshot changed. Reopen the review before saving.")).toBeTruthy();
+    expect(store.getState().monthlySnapshots).toEqual([]);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
   it("suggests the rounded generated total without saving until confirmation", () => {
     const { store } = setup();
     const legacy = { ...snapshot, portfolioValue: 60891.74, equityValue: 1611.27,

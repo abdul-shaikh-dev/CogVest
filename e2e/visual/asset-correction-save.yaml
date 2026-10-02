@@ -1,0 +1,122 @@
+appId: com.abdulshaikh.cogvest
+---
+# Add and remove one current-date synthetic holding; preserve the original portfolio.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///add-trade"
+- scrollUntilVisible:
+    element:
+      id: asset-input
+    direction: DOWN
+- tapOn:
+    id: asset-input
+- inputText: "Correction QA Temporary"
+- hideKeyboard
+- tapOn:
+    id: symbol-input
+- inputText: "CORRECTIONQA"
+- tapOn:
+    id: ticker-input
+- inputText: "CORRECTIONQA.NS"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: quantity-input
+    direction: DOWN
+- tapOn:
+    id: quantity-input
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: price-input
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-trade-button
+    direction: DOWN
+- tapOn:
+    id: review-trade-button
+- scrollUntilVisible:
+    element:
+      id: save-trade-button
+    direction: DOWN
+- tapOn:
+    id: save-trade-button
+- assertVisible: "Holding saved."
+- openLink: "cogvest:///cash"
+- assertVisible: "₹49,800.00"
+- openLink: "cogvest:///manage-assets"
+- tapOn:
+    id: manage-assets-search-input
+- inputText: "CORRECTIONQA"
+- hideKeyboard
+- assertVisible: "1 of 6 assets"
+- tapOn: "Review Correction QA Temporary,.*"
+- tapOn:
+    id: asset-name-input
+- eraseText: 60
+- inputText: "Correction QA Saved"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: save-asset-correction-button
+    direction: DOWN
+- tapOn:
+    id: save-asset-correction-button
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///manage-assets"
+- tapOn:
+    id: manage-assets-search-input
+- inputText: "CORRECTIONQA"
+- hideKeyboard
+- assertVisible: "Review Correction QA Saved,.*"
+- tapOn: "Review Correction QA Saved,.*"
+- assertVisible:
+    id: asset-name-input
+    text: "Correction QA Saved"
+- assertVisible:
+    id: asset-symbol-input
+    text: "CORRECTIONQA"
+- scrollUntilVisible:
+    element:
+      id: asset-ticker-input
+    direction: DOWN
+- assertVisible:
+    id: asset-ticker-input
+    text: "CORRECTIONQA.NS"
+- scrollUntilVisible:
+    element:
+      id: delete-asset-button
+    direction: DOWN
+- tapOn:
+    id: delete-asset-button
+- assertVisible: ".*1 transaction, 1 linked cash movement.*"
+- tapOn:
+    id: keep-asset-button
+- tapOn:
+    id: delete-asset-button
+- tapOn:
+    id: confirm-delete-asset-button
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- assertNotVisible: ".*Correction QA Saved.*"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp

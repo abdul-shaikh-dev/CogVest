@@ -1,0 +1,134 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic QA portfolio only. Does not save, delete or reseed records.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- assertVisible: "Mask values"
+- openLink: "cogvest:///review-snapshot"
+- assertVisible:
+    id: snapshot-portfolio-input
+    text: "8203323.12"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/snapshot
+- scrollUntilVisible:
+    element:
+      id: snapshot-cash-input
+    direction: DOWN
+- assertVisible:
+    id: snapshot-cash-input
+    text: "50000"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/balances
+- scrollUntilVisible:
+    element:
+      id: snapshot-portfolio-input
+    direction: UP
+- tapOn:
+    id: snapshot-portfolio-input
+- eraseText: 30
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: save-monthly-snapshot-button
+    direction: DOWN
+- tapOn:
+    id: save-monthly-snapshot-button
+- scrollUntilVisible:
+    element:
+      text: "Portfolio value must equal Equity + Debt + Crypto + Cash."
+    direction: UP
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/invalid-total
+- scrollUntilVisible:
+    element:
+      id: cancel-snapshot-review-button
+    direction: DOWN
+- tapOn:
+    id: cancel-snapshot-review-button
+- openLink: "cogvest:///review-snapshot"
+- assertVisible:
+    id: snapshot-portfolio-input
+    text: "8203323.12"
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/assets
+- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: asset-name-input
+    text: "HDFC Bank"
+- assertVisible: "INR"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/asset
+- tapOn:
+    id: asset-name-input
+- eraseText: 30
+- inputText: "HDFC Bank Long Term Portfolio Identity Review"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/asset-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: asset-sector-picker
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/classification
+- scrollUntilVisible:
+    element:
+      id: delete-asset-button
+    direction: DOWN
+- tapOn:
+    id: delete-asset-button
+- assertVisible: "Delete HDFC Bank?"
+- assertVisible:
+    id: keep-asset-button
+- waitForAnimationToEnd
+- takeScreenshot: .expo/correction-screens/${SHOT}/deletion
+- tapOn:
+    id: keep-asset-button
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: cancel-asset-correction-button
+    direction: UP
+- tapOn:
+    id: cancel-asset-correction-button
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: asset-name-input
+    text: "HDFC Bank"
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///review-snapshot"
+- assertNotVisible:
+    id: snapshot-portfolio-input
+- tapOn:
+    id: reveal-snapshot-button
+- assertVisible:
+    id: snapshot-portfolio-input
+    text: "8203323.12"
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Show values"
+- tapOn:
+    id: dashboard-mask-toggle
+- assertVisible: "Mask values"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp

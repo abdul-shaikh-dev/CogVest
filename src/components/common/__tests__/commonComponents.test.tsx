@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { fireEvent, render } from "@testing-library/react-native";
+import * as ReactNative from "react-native";
 
 import {
   AppButton,
@@ -23,6 +24,19 @@ import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
+  it("preserves intrinsic header height when large text stacks its identity", () => {
+    const dimensions = jest.spyOn(ReactNative, "useWindowDimensions")
+      .mockReturnValue({ fontScale: 1.3, height: 800, scale: 3, width: 360 });
+    try {
+      const screen = render(<ScreenHeader title="Manage Assets" subtitle="Identity and classification" />);
+      expect(screen.UNSAFE_getAllByType(ReactNative.View).some((view) => {
+        const style = ReactNative.StyleSheet.flatten(view.props.style);
+        return style?.flex === 0 && style.flexBasis === "auto" && style.flexGrow === 0 && style.flexShrink === 0;
+      })).toBe(true);
+    } finally {
+      dimensions.mockRestore();
+    }
+  });
   it("keeps routine sections open while preserving default decision cards", () => {
     const screen = render(<>
       <PremiumCard section testID="routine"><AppText>Activity</AppText></PremiumCard>
