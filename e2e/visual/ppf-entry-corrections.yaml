@@ -1,0 +1,97 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing temporary UX PPF Review account: baseline INR 100000 on 2026-10-01.
+# Does not clear or seed the portfolio. Leaves the account empty after entry checks.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertVisible: "₹1,00,000.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/normal/account
+- tapOn:
+    id: add-ppf-entry
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/normal/entry
+- tapOn:
+    id: ppf-entry-amount
+- inputText: "0"
+- hideKeyboard
+- tapOn:
+    id: review-ppf-entry
+- assertVisible: "Entry amount must be greater than zero."
+- takeScreenshot: .expo/ppf-screens/normal/invalid-entry
+- tapOn:
+    id: ppf-entry-amount
+- eraseText: 10
+- inputText: "500"
+- hideKeyboard
+- tapOn:
+    id: ppf-entry-note-toggle
+- tapOn:
+    id: ppf-entry-notes
+- inputText: "Official statement contribution retained during review"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/normal/entry-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-entry
+    direction: DOWN
+- tapOn:
+    id: review-ppf-entry
+- tapOn:
+    id: save-ppf-entry
+- assertVisible: "₹1,00,500.00"
+- tapOn: "Contribution"
+- assertVisible: "Official statement contribution retained during review"
+- tapOn:
+    id: ppf-entry-amount
+- eraseText: 10
+- inputText: "1000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-entry
+    direction: DOWN
+- tapOn:
+    id: review-ppf-entry
+- tapOn:
+    id: save-ppf-entry
+- assertVisible: "₹1,01,000.00"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertVisible: "₹1,01,000.00"
+- takeScreenshot: .expo/ppf-screens/normal/populated-account
+- tapOn: "Contribution"
+- assertVisible:
+    id: ppf-entry-amount
+    text: "1000"
+- scrollUntilVisible:
+    element: "Delete entry"
+    direction: DOWN
+- tapOn: "Delete entry"
+- tapOn: "Keep entry"
+- tapOn: "Delete entry"
+- tapOn:
+    id: confirm-delete-ppf-entry
+- assertVisible: "₹1,00,000.00"
+- assertVisible: "No ledger entries yet"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- stopApp

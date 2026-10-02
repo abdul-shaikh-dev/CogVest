@@ -1,0 +1,107 @@
+appId: com.abdulshaikh.cogvest
+---
+# Begin in the native CSV picker for UX PPF Review, with the staged synthetic CSVs.
+- tapOn: "ppf-invalid.csv"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-baseline-contribution
+    direction: DOWN
+- tapOn:
+    id: ppf-import-baseline-contribution
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-complete-through-today
+    direction: DOWN
+- tapOn:
+    id: ppf-import-complete-through-today
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- assertVisible: "Import blocked. Correct the issues below; no rows will be saved."
+- takeScreenshot: .expo/ppf-screens/normal/import-unsupported
+- tapOn:
+    id: ppf-import-preview-back
+- scrollUntilVisible:
+    element:
+      id: ppf-import-choose-csv
+    direction: UP
+- tapOn:
+    id: ppf-import-choose-csv
+- tapOn: "ppf-valid.csv"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-expected-closing
+    direction: DOWN
+- tapOn:
+    id: ppf-import-expected-closing
+- inputText: "100999"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- assertVisible: "Import blocked. Correct the issues below; no rows will be saved."
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview-error
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/normal/import-conflict
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview-back
+    direction: UP
+- tapOn:
+    id: ppf-import-preview-back
+- scrollUntilVisible:
+    element:
+      id: ppf-import-expected-closing
+    direction: DOWN
+- tapOn:
+    id: ppf-import-expected-closing
+- eraseText: 20
+- inputText: "100450"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- assertVisible:
+    id: ppf-import-closing-balance
+    text: "₹1,00,450.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/normal/import-result
+- scrollUntilVisible:
+    element:
+      id: ppf-import-save
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/normal/import-rows
+- tapOn:
+    id: ppf-import-save
+- assertVisible: "₹1,00,450.00"
+- assertVisible: "Contribution"
+- assertVisible: "Official interest"
+- assertVisible: "Withdrawal"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertVisible: "₹1,00,450.00"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- stopApp

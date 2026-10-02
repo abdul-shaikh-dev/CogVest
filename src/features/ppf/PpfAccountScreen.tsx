@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
@@ -25,6 +26,7 @@ import {
   SensitiveValueReveal,
   SectionHeader,
   getPressedStateStyle,
+  getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import {
@@ -116,6 +118,8 @@ export function PpfAccountScreen({
   store = getPortfolioStore(),
 }: PpfAccountScreenProps) {
   const snapshot = usePortfolioSnapshot(store);
+  const { fontScale, width } = useWindowDimensions();
+  const stackRows = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const [savedAccountId, setSavedAccountId] = useState<string>();
   const resolvedAccountId = accountId ?? savedAccountId;
   const existing = snapshot.ppfAccounts.find(
@@ -238,7 +242,7 @@ export function PpfAccountScreen({
           </AppText>
         </PremiumCard>
 
-        <View style={styles.metricRow}>
+        <View style={[styles.metricRow, stackRows && styles.stacked]}>
           <Metric
             label={`Contributed FY ${summary.contributionContext.financialYearStart}-${String(summary.contributionContext.financialYearStart + 1).slice(-2)}`}
             masked={masked}
@@ -291,12 +295,13 @@ export function PpfAccountScreen({
                   onPress={() => onEntry(account.id, entry.id)}
                   style={({ pressed }) => [
                     styles.ledgerRow,
+                    stackRows && styles.stacked,
                     index < entries.length - 1 && styles.separator,
                     getPressedStateStyle({ pressed }),
                   ]}
                   testID={`ppf-ledger-entry-${entry.id}`}
                 >
-                  <View style={styles.flex}>
+                  <View style={[styles.flex, stackRows && styles.intrinsic]}>
                     <AppText weight="bold">{entryLabel(entry.type)}</AppText>
                     <AppText color="secondary" variant="caption">
                       {formatDate(entry.date)}
@@ -318,13 +323,13 @@ export function PpfAccountScreen({
 
         <PremiumCard section testID="ppf-interest-card">
           <SectionHeader title="Interest" />
-          <View style={styles.detailRow}>
+          <View style={[styles.detailRow, stackRows && styles.stacked]}>
             <AppText color="secondary">Officially credited</AppText>
             <MaskedValue masked={masked} value={formatINR(summary.officialInterestEarned)} weight="bold" />
           </View>
           <View style={styles.separator} />
-          <View style={styles.detailRow}>
-            <View style={styles.flex}>
+          <View style={[styles.detailRow, stackRows && styles.stacked]}>
+            <View style={[styles.flex, stackRows && styles.intrinsic]}>
               <AppText color="secondary">Estimated, not credited</AppText>
               <AppText color="secondary" variant="caption">
                 {summary.estimatedInterest.status === "available"
@@ -693,7 +698,7 @@ function PpfAccountForm({
             }}
             testID="ppf-account-section"
           >
-            <PremiumCard>
+            <PremiumCard section>
               <SectionHeader title="Account" />
               <View
                 onLayout={(event) =>
@@ -763,7 +768,7 @@ function PpfAccountForm({
               sectionY.current.opening = event.nativeEvent.layout.y;
             }}
           >
-            <PremiumCard>
+            <PremiumCard section>
           <SectionHeader title="Opening and status" />
           <SelectionField
             label="Opening information"
@@ -837,7 +842,7 @@ function PpfAccountForm({
               sectionY.current.baseline = event.nativeEvent.layout.y;
             }}
           >
-            <PremiumCard>
+            <PremiumCard section>
               <SectionHeader title="Starting balance" />
               <View onLayout={(event) => recordFieldLayout("balance", "baseline", event.nativeEvent.layout.y)}>
                 <FormTextField
@@ -912,7 +917,7 @@ function PpfAccountForm({
 
 function Metric({ label, masked, value }: { label: string; masked: boolean; value: string }) {
   return (
-    <PremiumCard style={styles.metric}>
+    <PremiumCard section style={styles.metric}>
       <AppText color="secondary" variant="caption">{label}</AppText>
       <MaskedValue masked={masked} value={value} weight="bold" />
     </PremiumCard>
@@ -920,10 +925,12 @@ function Metric({ label, masked, value }: { label: string; masked: boolean; valu
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
+  const { fontScale, width } = useWindowDimensions();
+  const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   return (
-    <View style={styles.detailRow}>
+    <View style={[styles.detailRow, stacked && styles.stacked]}>
       <AppText color="secondary">{label}</AppText>
-      <AppText style={styles.detailValue} weight="bold">{value}</AppText>
+      <AppText style={[styles.detailValue, stacked && styles.stackedValue]} weight="bold">{value}</AppText>
     </View>
   );
 }
@@ -950,8 +957,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
-  metric: { flex: 1 },
-  metricRow: { flexDirection: "row", gap: spacing.cardGap },
+  metric: { flexGrow: 1, flexBasis: "auto", minWidth: 0 },
+  metricRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  stacked: { flexDirection: "column", alignItems: "stretch" },
+  stackedValue: { flex: 0, textAlign: "left" },
+  intrinsic: { flex: 0 },
   sectionHeading: {
     alignItems: "center",
     flexDirection: "row",

@@ -2,6 +2,9 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { PpfImportScreen } from "../PpfImportScreen";
+import { createMemoryJsonStorage } from "@/src/services/storage";
+import { createPortfolioStore } from "@/src/store";
+import { calculatePpfConfirmedBalance } from "@/src/domain/ppf";
 import type { PortfolioStoreState } from "@/src/store";
 import type { PpfAccount, PpfLedgerEntry } from "@/src/types";
 
@@ -60,6 +63,47 @@ async function preview(screen: ReturnType<typeof render>) {
 }
 
 describe("PpfImportScreen", () => {
+  it("shows repeated rows and resulting balance without pretending duplicates were skipped", async () => {
+    const repeated = `${csv}2026-08-01,contribution,5000,August contribution\n`;
+    const screen = renderScreen({ pickCsvFile: jest.fn(async () => ({ name: "ppf.csv", size: repeated.length, text: repeated })) });
+    await preview(screen);
+    expect(screen.getByTestId("ppf-import-counts")).toHaveTextContent("Parsed entries2Repeated rows1Issues to resolve0");
+    expect(screen.getByTestId("ppf-import-closing-balance")).toHaveTextContent("₹1,10,000.00");
+    expect(screen.getByTestId("ppf-import-confirm-duplicates")).toBeTruthy();
+    expect(screen.mocked.importPpfCsv).not.toHaveBeenCalled();
+  });
+
+  it("keeps unsupported rows visible as blocking errors, not zero-value additions", async () => {
+    const invalid = "date,type,amount,note\n2026-08-01,loan,5000,Unsupported\n";
+    const screen = renderScreen({ pickCsvFile: jest.fn(async () => ({ name: "ppf.csv", size: invalid.length, text: invalid })) });
+    await preview(screen);
+    expect(screen.getByTestId("ppf-import-counts")).toHaveTextContent(/Issues to resolve1/);
+    expect(screen.getByText("Import blocked. Correct the issues below; no rows will be saved.")).toBeTruthy();
+    expect(screen.queryByTestId("ppf-import-closing-balance")).toBeNull();
+    fireEvent.press(screen.getByTestId("ppf-import-save"));
+    expect(screen.mocked.importPpfCsv).not.toHaveBeenCalled();
+  });
+
+  it("preserves unrelated accounts and saves only the reviewed ledger after returning from preview", async () => {
+    const store = createPortfolioStore({ now: () => today, storage: createMemoryJsonStorage() });
+    const other = { ...account, id: "unrelated", nickname: "Other PPF" };
+    store.getState().addPpfAccount(account);
+    store.getState().addPpfAccount(other);
+    const before = store.getState().ppfAccounts;
+    const screen = renderScreen({ store });
+    await preview(screen);
+    fireEvent.press(screen.getByTestId("ppf-import-preview-back"));
+    expect(store.getState().ppfAccounts).toEqual(before);
+    expect(store.getState().ppfLedgerEntries).toEqual([]);
+    fireEvent.press(screen.getByTestId("ppf-import-preview"));
+    fireEvent.press(screen.getByTestId("ppf-import-save"));
+    await waitFor(() => expect(screen.props.onImported).toHaveBeenCalledWith(account.id));
+    const saved = store.getState();
+    expect(saved.ppfAccounts.find((item) => item.id === other.id)).toEqual(other);
+    expect(saved.ppfLedgerEntries).toEqual([expect.objectContaining({ accountId: account.id, date: "2026-08-01", amount: 5000, type: "contribution", notes: "August contribution" })]);
+    expect(calculatePpfConfirmedBalance(saved.ppfAccounts[0], saved.ppfLedgerEntries, "2026-09-10").confirmedBalance).toBe(105000);
+  });
+
   it("explains that the opening balance must not be repeated in CSV activity", () => {
     const screen = renderScreen();
 

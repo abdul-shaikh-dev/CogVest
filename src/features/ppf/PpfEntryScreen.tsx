@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
@@ -22,6 +23,7 @@ import {
   ScreenHeader,
   SensitiveValueReveal,
   SectionHeader,
+  getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
@@ -266,8 +268,7 @@ export function PpfEntryScreen({
           subtitle={account.nickname}
           title={existing ? "Review PPF entry" : "Add PPF entry"}
         />
-        <PremiumCard>
-          <SectionHeader title="Entry details" />
+        <PremiumCard section>
           <SelectionField
             label="Entry type"
             onChange={(value) => {
@@ -396,10 +397,12 @@ function entryLabel(type: EntryType) {
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
+  const { fontScale, width } = useWindowDimensions();
+  const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   return (
-    <View style={styles.reviewRow}>
+    <View style={[styles.reviewRow, stacked && styles.stacked]}>
       <AppText color="secondary">{label}</AppText>
-      <AppText style={styles.reviewValue} weight="bold">{value}</AppText>
+      <AppText style={[styles.reviewValue, stacked && styles.stackedValue]} weight="bold">{value}</AppText>
     </View>
   );
 }
@@ -410,13 +413,15 @@ const styles = StyleSheet.create({
   error: { color: colors.loss },
   flex: { flex: 1 },
   optionalToggle: {
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
     minHeight: interaction.minimumTouchTarget,
   },
   pressed: { opacity: interaction.pressedOpacity },
   reviewRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between", minHeight: 48 },
   reviewValue: { flex: 1, textAlign: "right" },
+  stacked: { flexDirection: "column", alignItems: "stretch" },
+  stackedValue: { flex: 0, textAlign: "left" },
   rulesCopy: { flex: 1, gap: spacing.xs },
   rulesDisclosure: { gap: spacing.xs },
   rulesToggle: {
