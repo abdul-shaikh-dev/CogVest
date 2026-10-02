@@ -124,7 +124,7 @@ export function ScreenHeader({
 
   return (
     <View style={[styles.header, shouldStack && styles.headerStacked]}>
-      <View style={styles.headerIdentity}>
+      <View style={[styles.headerIdentity, shouldStack && styles.headerIdentityStacked]}>
         {leading ? <View style={styles.headerLeading}>{leading}</View> : null}
         <View style={styles.headerCopy}>
           <AppText accessibilityRole="header" variant="largeTitle" weight="bold">
@@ -440,6 +440,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     minWidth: 0,
+  },
+  headerIdentityStacked: {
+    flex: 0,
+    flexBasis: "auto",
+    flexGrow: 0,
+    flexShrink: 0,
   },
   headerLeading: {
     alignSelf: "flex-start",

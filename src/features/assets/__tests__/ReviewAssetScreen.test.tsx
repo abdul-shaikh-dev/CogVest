@@ -28,6 +28,54 @@ function createStore() {
 }
 
 describe("ReviewAssetScreen", () => {
+  it("preserves unsupported native currency rather than silently converting it to INR", async () => {
+    const store = createStore();
+    const foreign = { ...asset, currency: "USD" as const };
+    store.setState({ assets: [foreign] });
+    const onComplete = jest.fn();
+    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    expect(screen.getByTestId("asset-native-currency")).toHaveTextContent("USD");
+    expect(screen.getByText(/CogVest V1 supports INR holdings only/)).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("asset-name-input"), "Renamed");
+    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await waitFor(() => expect(screen.getByText("Check the asset details before saving.")).toBeTruthy());
+    expect(store.getState().assets).toEqual([foreign]);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("retains the edited form and all records after a persistence failure, then retries", async () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().addAsset(asset);
+    const other = { ...asset, id: "other", name: "Other", symbol: "OTHER", ticker: "OTHER.NS", quoteSourceId: "OTHER.NS" };
+    store.getState().addAsset(other);
+    const onComplete = jest.fn();
+    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    fireEvent.changeText(screen.getByTestId("asset-name-input"), "Corrected name");
+    const write = storage.setItem;
+    storage.setItem = () => { throw new Error("Storage full"); };
+    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await waitFor(() => expect(screen.getByText(/could not be saved safely/)).toBeTruthy());
+    expect(store.getState().assets).toEqual([asset, other]);
+    expect(screen.getByTestId("asset-name-input")).toHaveProp("value", "Corrected name");
+    expect(onComplete).not.toHaveBeenCalled();
+    storage.setItem = write;
+    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    expect(store.getState().assets).toEqual([{ ...asset, name: "Corrected name", isTaxEligible: false }, other]);
+  });
+
+  it("cancels identity edits without changing provider matches or classification", () => {
+    const store = createStore();
+    const before = store.getState().assets;
+    const onCancel = jest.fn();
+    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={onCancel} onComplete={jest.fn()} store={store} />);
+    fireEvent.changeText(screen.getByTestId("asset-provider-id-input"), "OTHER.NS");
+    fireEvent.press(screen.getByTestId("cancel-asset-correction-button"));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(store.getState().assets).toEqual(before);
+  });
+
   it("keeps deletion actions reachable and cancels safely", async () => {
     const longName =
       "HDFC Bank Limited Long-Term Employee Retirement Portfolio Holding";
@@ -97,6 +145,7 @@ describe("ReviewAssetScreen", () => {
     fireEvent.press(getByTestId("confirm-delete-asset-button"));
 
     expect(getByText("This holding is linked to a demerger. Its parent and successor history must be corrected together.")).toBeTruthy();
+    expect(within(getByTestId("asset-deletion-content")).getByTestId("asset-deletion-error")).toBeTruthy();
   });
 
   it("corrects metadata once after repeated save presses", async () => {

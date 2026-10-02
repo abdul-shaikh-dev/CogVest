@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppButton, AppText, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, SensitiveValueReveal, useSensitiveValueReveal } from "@/src/components/common";
+import { AppButton, AppText, getAdaptiveLayoutMode, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, SensitiveValueReveal, useSensitiveValueReveal } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
@@ -44,6 +44,8 @@ export function ReviewSnapshotScreen({
   store = getPortfolioStore(),
 }: ReviewSnapshotScreenProps) {
   const progress = useProgress({ now, store });
+  const { fontScale, width } = useWindowDimensions();
+  const stackFields = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const { isRevealed, reveal } = useSensitiveValueReveal(progress.preferences.maskWealthValues);
   const hasRunAutomationRef = useRef(false);
   const hasPrefilledFormRef = useRef(false);
@@ -102,19 +104,17 @@ export function ReviewSnapshotScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Review Snapshot"
-          subtitle="Edit only what needs correction"
+          subtitle="Month-end values · INR"
         />
 
-        <PremiumCard>
-          <SectionHeader title="Snapshot details" />
-          {invalidSnapshot ? <AppText testID="snapshot-repair-guidance">A stored snapshot needs correction before backup. Review its month, total and asset-class balances. Values remain unchanged until you save.</AppText> : null}
+        {invalidSnapshot ? <PremiumCard>
+          <SectionHeader title="Snapshot needs correction" />
+          <AppText testID="snapshot-repair-guidance">A stored snapshot needs correction before backup. Review its month, total and asset-class balances. Values remain unchanged until you save.</AppText>
           {hasSuggestedTotal ? <AppText testID="snapshot-rounding-guidance">The saved total differs from its balances by at most two paise. The total below now adds up to those balances. Review and save to confirm; your saved record has not changed.</AppText> : null}
-          <AppText color="secondary" variant="caption">
-            Values come from your saved portfolio records. Changes apply to this month only.
-          </AppText>
-        </PremiumCard>
+        </PremiumCard> : null}
 
-        <PremiumCard>
+        <PremiumCard section style={styles.section}>
+          <SectionHeader title="Month-end totals" />
           <FormTextField
             error={progress.errors.month}
             label="Month"
@@ -141,46 +141,6 @@ export function ReviewSnapshotScreen({
             testID="snapshot-invested-input"
             value={progress.formValues.investedValue}
           />
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.equityValue}
-              keyboardType="decimal-pad"
-              label="Equity"
-              onChangeText={(value) => progress.setField("equityValue", value)}
-              placeholder="880000"
-              testID="snapshot-equity-input"
-              value={progress.formValues.equityValue}
-            />
-            <FormTextField
-              error={progress.errors.debtValue}
-              keyboardType="decimal-pad"
-              label="Debt"
-              onChangeText={(value) => progress.setField("debtValue", value)}
-              placeholder="320000"
-              testID="snapshot-debt-input"
-              value={progress.formValues.debtValue}
-            />
-          </View>
-          <View style={styles.fieldGrid}>
-            <FormTextField
-              error={progress.errors.cryptoValue}
-              keyboardType="decimal-pad"
-              label="Crypto"
-              onChangeText={(value) => progress.setField("cryptoValue", value)}
-              placeholder="45000"
-              testID="snapshot-crypto-input"
-              value={progress.formValues.cryptoValue}
-            />
-            <FormTextField
-              error={progress.errors.cashValue}
-              keyboardType="decimal-pad"
-              label="Cash"
-              onChangeText={(value) => progress.setField("cashValue", value)}
-              placeholder="140000"
-              testID="snapshot-cash-input"
-              value={progress.formValues.cashValue}
-            />
-          </View>
           <FormTextField
             error={progress.errors.monthlyInvestment}
             keyboardType="decimal-pad"
@@ -190,15 +150,71 @@ export function ReviewSnapshotScreen({
             testID="snapshot-investment-input"
             value={progress.formValues.monthlyInvestment}
           />
+        </PremiumCard>
+        <PremiumCard section style={styles.section}>
+          <SectionHeader title="Asset balances" />
+          <AppText color="secondary" variant="caption">These balances must add up to the portfolio value.</AppText>
+          <View style={[styles.fieldGrid, stackFields && styles.stacked]}>
+            <View style={styles.field}>
+            <FormTextField
+              error={progress.errors.equityValue}
+              keyboardType="decimal-pad"
+              label="Equity"
+              onChangeText={(value) => progress.setField("equityValue", value)}
+              placeholder="880000"
+              testID="snapshot-equity-input"
+              value={progress.formValues.equityValue}
+            />
+            </View>
+            <View style={styles.field}>
+            <FormTextField
+              error={progress.errors.debtValue}
+              keyboardType="decimal-pad"
+              label="Debt"
+              onChangeText={(value) => progress.setField("debtValue", value)}
+              placeholder="320000"
+              testID="snapshot-debt-input"
+              value={progress.formValues.debtValue}
+            />
+            </View>
+          </View>
+          <View style={[styles.fieldGrid, stackFields && styles.stacked]}>
+            <View style={styles.field}>
+            <FormTextField
+              error={progress.errors.cryptoValue}
+              keyboardType="decimal-pad"
+              label="Crypto"
+              onChangeText={(value) => progress.setField("cryptoValue", value)}
+              placeholder="45000"
+              testID="snapshot-crypto-input"
+              value={progress.formValues.cryptoValue}
+            />
+            </View>
+            <View style={styles.field}>
+            <FormTextField
+              error={progress.errors.cashValue}
+              keyboardType="decimal-pad"
+              label="Cash"
+              onChangeText={(value) => progress.setField("cashValue", value)}
+              placeholder="140000"
+              testID="snapshot-cash-input"
+              value={progress.formValues.cashValue}
+            />
+            </View>
+          </View>
+        </PremiumCard>
+        <PremiumCard section style={styles.section}>
           <FormTextField
-            label="Notes"
+            label="Notes (optional)"
             multiline
             onChangeText={(value) => progress.setField("notes", value)}
             placeholder="Optional month-end note"
             testID="snapshot-notes-input"
             value={progress.formValues.notes}
           />
-          <View style={styles.actions}>
+        </PremiumCard>
+          <AppText color="secondary" variant="caption">Changes apply to this month only.</AppText>
+          <View style={[styles.actions, stackFields && styles.stacked]}>
             <AppButton
               onPress={onCancel}
               testID="cancel-snapshot-review-button"
@@ -211,7 +227,6 @@ export function ReviewSnapshotScreen({
               title="Save snapshot changes"
             />
           </View>
-        </PremiumCard>
       </View>
     </ScreenContainer>
   );
@@ -225,9 +240,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   content: {
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
+    gap: spacing.cardGap,
+    paddingVertical: spacing.md,
   },
+  section: { gap: spacing.md },
+  field: { flex: 1, minWidth: 0 },
+  stacked: { flexDirection: "column" },
   fieldGrid: {
     flexDirection: "row",
     gap: spacing.md,

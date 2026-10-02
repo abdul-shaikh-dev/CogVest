@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,7 @@ import {
   ScreenHeader,
   SectionHeader,
   assetClassLabel,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { FormTextField } from "@/src/components/forms";
 import {
@@ -28,6 +30,7 @@ import {
   sectorTypeOptions,
 } from "@/src/domain/assets";
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { colors, interaction, radii, spacing } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
@@ -153,6 +156,8 @@ export function ReviewAssetScreen({
   store = getPortfolioStore(),
 }: ReviewAssetScreenProps) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const { fontScale, width } = useWindowDimensions();
+  const stackActions = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const currentAsset = snapshot.assets.find((asset) => asset.id === assetId);
   const initialAssetRef = useRef(currentAsset);
   const initialAsset = initialAssetRef.current;
@@ -240,7 +245,7 @@ export function ReviewAssetScreen({
     return {
       ...stableAsset,
       assetClass,
-      currency: "INR",
+      currency: stableAsset.currency,
       exchange,
       instrumentType,
       isTaxEligible,
@@ -313,22 +318,30 @@ export function ReviewAssetScreen({
       <View style={styles.content}>
         <ScreenHeader title="Review Asset" subtitle={stableAsset.name} />
 
-        <PremiumCard style={styles.section}>
+        <PremiumCard section style={styles.section}>
           <SectionHeader title="Identity" />
-          <AppText color="secondary" variant="caption">Asset ID stays fixed so positions and transactions remain linked.</AppText>
           <FormTextField label="Name" onChangeText={setName} testID="asset-name-input" value={name} />
           <FormTextField label="Symbol" onChangeText={setSymbol} testID="asset-symbol-input" value={symbol} />
+          <View style={[styles.fixedRow, stackActions && styles.stacked]}>
+            <AppText color="secondary">Native currency</AppText>
+            <AppText weight="bold" testID="asset-native-currency">{stableAsset.currency}</AppText>
+          </View>
+          {getV1AssetCurrencyIssue(stableAsset) ? <AppText color="secondary" variant="caption">{getV1AssetCurrencyIssue(stableAsset)}</AppText> : null}
+          {stableAsset.isin ? <View style={[styles.fixedRow, stackActions && styles.stacked]}>
+            <AppText color="secondary">ISIN</AppText>
+            <AppText testID="asset-fixed-isin">{stableAsset.isin}</AppText>
+          </View> : null}
+        </PremiumCard>
+
+        <PremiumCard section style={styles.section}>
+          <SectionHeader title="Price matching" />
           <FormTextField label="Ticker" onChangeText={setTicker} testID="asset-ticker-input" value={ticker} />
           <ChoiceGroup label="Exchange" onChange={setExchange} options={exchanges} testIDPrefix="asset-exchange" value={exchange} />
           <FormTextField label="Price lookup symbol" onChangeText={setQuoteSourceId} testID="asset-provider-id-input" value={quoteSourceId} />
           <AppText color="secondary" variant="caption">Used to refresh this asset's market price. Change it only when the current quote belongs to the wrong instrument.</AppText>
-          <View style={styles.fixedRow}>
-            <AppText color="secondary">Reporting currency</AppText>
-            <AppText weight="bold">INR</AppText>
-          </View>
         </PremiumCard>
 
-        <PremiumCard style={styles.section}>
+        <PremiumCard section style={styles.section}>
           <SectionHeader title="Classification" />
           <ChoiceGroup label="Asset class" onChange={setAssetClass} options={assetClasses} testIDPrefix="asset-class" value={assetClass} />
           <ChoiceGroup label="Instrument" onChange={setInstrumentType} options={instrumentTypeOptions} testIDPrefix="asset-instrument" value={instrumentType} />
@@ -336,10 +349,10 @@ export function ReviewAssetScreen({
           <ChoiceGroup label="Tax eligibility" onChange={(value) => setIsTaxEligible(value === "eligible")} options={["eligible", "notEligible"] as const} testIDPrefix="asset-tax" value={isTaxEligible ? "eligible" : "notEligible"} />
         </PremiumCard>
 
-        {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} variant="caption">{error}</AppText> : null}
+        {error && !isConfirmingDelete ? <AppText accessibilityLiveRegion="polite" style={styles.error} variant="caption">{error}</AppText> : null}
 
-        <View style={styles.actions}>
-          <AppButton disabled={isSaving} onPress={onCancel} title="Cancel" variant="secondary" />
+        <View style={[styles.actions, stackActions && styles.stacked]}>
+          <AppButton disabled={isSaving} onPress={onCancel} testID="cancel-asset-correction-button" title="Cancel" variant="secondary" />
           <AppButton disabled={isSaving} onPress={save} testID="save-asset-correction-button" title={isSaving ? "Saving…" : "Save asset"} />
         </View>
 
@@ -354,7 +367,7 @@ export function ReviewAssetScreen({
           <AppButton
             buttonRef={deleteReviewButtonRef}
             disabled={isSaving}
-            onPress={() => setIsConfirmingDelete(true)}
+            onPress={() => { setError(undefined); setIsConfirmingDelete(true); }}
             testID="delete-asset-button"
             title="Review deletion"
             variant="ghost"
@@ -389,6 +402,7 @@ export function ReviewAssetScreen({
                 </AppText>
                 <AppText color="secondary">{deletionImpact}</AppText>
                 <AppText color="secondary">{snapshotImpact}</AppText>
+                {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="asset-deletion-error">{error}</AppText> : null}
               </ScrollView>
               <View style={styles.confirmationActions}>
                 <AppButton
@@ -410,7 +424,8 @@ export function ReviewAssetScreen({
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: "row", gap: spacing.sm },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  stacked: { flexDirection: "column" },
   confirmationActions: { gap: spacing.sm },
   confirmationBackdrop: { backgroundColor: "rgba(0,0,0,0.78)", flex: 1, justifyContent: "center", padding: spacing.md },
   confirmationContent: { gap: spacing.md, paddingBottom: spacing.sm },
@@ -419,7 +434,7 @@ const styles = StyleSheet.create({
   content: { gap: spacing.cardGap },
   dangerCard: { gap: spacing.md },
   error: { color: colors.loss },
-  fixedRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: spacing.sm },
+  fixedRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "space-between", paddingVertical: spacing.sm },
   modalBackdrop: { backgroundColor: "rgba(0,0,0,0.72)", flex: 1, justifyContent: "flex-end", padding: spacing.md },
   optionDivider: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   optionRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 52, paddingVertical: spacing.sm },
