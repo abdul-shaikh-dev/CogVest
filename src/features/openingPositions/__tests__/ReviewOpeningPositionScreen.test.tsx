@@ -48,6 +48,35 @@ function createStore() {
 }
 
 describe("ReviewOpeningPositionScreen", () => {
+  it("retains optional context while collapsed and saves the hidden values", async () => {
+    const { store } = createStore();
+    const screen = render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
+      onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    fireEvent.changeText(screen.getByTestId("opening-correction-notes-input"), "Updated context");
+    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    expect(screen.queryByTestId("opening-correction-notes-input")).toBeNull();
+    expect(screen.getByTestId("opening-correction-context-toggle")).toHaveAccessibilityState({ expanded: false });
+    fireEvent.press(screen.getByTestId("save-opening-correction-button"));
+    await waitFor(() => expect(store.getState().openingPositions[0]).toMatchObject({
+      notes: "Updated context", conviction: 4,
+    }));
+  });
+
+  it("starts empty context collapsed and reopens it for a validation error", () => {
+    const { store } = createStore();
+    store.setState({ openingPositions: [{ ...openingPosition, notes: undefined, conviction: undefined }] });
+    const screen = render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
+      onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    expect(screen.queryByTestId("opening-correction-notes-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    fireEvent.changeText(screen.getByTestId("opening-correction-intended-hold-days-input"), "-1");
+    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    fireEvent.press(screen.getByTestId("save-opening-correction-button"));
+    expect(screen.getByTestId("opening-correction-context-toggle")).toHaveAccessibilityState({ expanded: true });
+    expect(screen.getByTestId("opening-correction-intended-hold-days-input")).toHaveProp("value", "-1");
+    expect(store.getState().openingPositions[0].intendedHoldDays).toBeUndefined();
+  });
+
   it("requires reveal before exposing saved aggregate values", async () => {
     const { store } = createStore();
     act(() => store.getState().updatePreferences({ maskWealthValues: true }));

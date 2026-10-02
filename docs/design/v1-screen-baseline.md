@@ -149,6 +149,14 @@ successful correction returns to the same context with recalculated values. If
 the holding no longer exists after a mutation, return safely to the preserved
 list instead of reopening stale details.
 
+Opening-position correction separates balance fields from optional investment
+context. Notes, planned holding period and conviction share one disclosure;
+existing context starts expanded, empty context starts collapsed, and hiding it
+retains edits. Context validation errors reopen the disclosure. Save and Cancel
+use full-width actions. Removal remains separate, with its effect on the opening
+record, later transactions and history stated in the confirmation. Manual fallback
+price guidance, unknown-date handling and masked-value reveal remain unchanged.
+
 Sell / redeem labels the editable amount as the actual execution price. A saved
 quote may seed that field once, but nearby copy identifies its source, age, and
 freshness and tells the user to confirm it against the broker record. A quote
