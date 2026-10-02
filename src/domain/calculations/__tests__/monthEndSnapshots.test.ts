@@ -9,6 +9,7 @@ import {
 import { historicalQuoteCacheKey } from "@/src/types";
 import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
 import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
+import { calculateSnapshotInvestedComparison } from "../snapshotInvestedComparison";
 import type {
   Asset,
   CashEntry,
@@ -149,6 +150,54 @@ function buildInput(overrides: {
 }
 
 describe("demerger month-end snapshots", () => {
+  it.each([4, 10])("compares remaining basis after selling %s units without counting proceeds as growth", (sold) => {
+    const sale = trade({ id: "sale", type: "sell", quantity: sold, pricePerUnit: 110, totalValue: sold * 110 });
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      openingPositions: [openingPosition({ currentPrice: 100 })],
+      trades: [sale],
+      cashEntries: [
+        cashEntry({ amount: 1000 }),
+        cashEntry({ id: "withdraw", amount: 500, type: "withdrawal", purpose: "withdrawal" }),
+        cashEntry({ id: "sale-cash", amount: sold * 110, purpose: "saleProceeds", linkedTradeId: sale.id }),
+      ],
+    }));
+    expect(result.snapshot).toMatchObject({ investedValue: (10 - sold) * 100, cashValue: 500 + sold * 110 });
+    const comparison = calculateSnapshotInvestedComparison(result.snapshot!);
+    if (sold === 10) expect(comparison).toBeNull();
+    else expect(comparison).toMatchObject({ investmentValue: 600, difference: 0, percentage: 0 });
+  });
+
+  it("preserves purchase basis when a deposit is used to fund a buy", () => {
+    const purchase = trade({ id: "purchase" });
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      trades: [purchase],
+      historicalQuotes: {
+        [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: { assetId: stockAsset.id, asOfMonth: "2026-07", basis: "historical-close", currency: "INR", fetchedAt: "2026-08-01T00:00:00Z", price: 110, source: "yahoo" },
+      },
+      cashEntries: [cashEntry({ amount: 1000 }), cashEntry({ id: "fund", amount: 220, type: "withdrawal", purpose: "purchaseFunding", linkedTradeId: purchase.id })],
+    }));
+    expect(result.snapshot).toMatchObject({ investedValue: 220, cashValue: 780 });
+    expect(calculateSnapshotInvestedComparison(result.snapshot!)).toMatchObject({ investmentValue: 220, percentage: 0 });
+  });
+
+  it("compares PPF against its checkpoint basis plus subsequent contributions less withdrawals", () => {
+    const account: PpfAccount = {
+      id: "ppf", nickname: "Test PPF", provider: "India Post", status: "active",
+      opening: { financialYearStart: 2020, kind: "financialYear" },
+      balanceAsOf: "2026-07-01", confirmedBalance: 10000, createdAt: "2026-07-01T10:00:00Z",
+    };
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      assets: [], ppfAccounts: [account], targetMonth: "2026-07",
+      ppfLedgerEntries: [
+        { id: "contribution", accountId: "ppf", date: "2026-07-05", recordedAt: "2026-07-05T10:00:00Z", type: "contribution", amount: 1000 },
+        { id: "interest", accountId: "ppf", date: "2026-07-06", recordedAt: "2026-07-06T10:00:00Z", type: "interestCredit", amount: 100, financialYearStart: 2026 },
+        { id: "withdrawal", accountId: "ppf", date: "2026-07-07", recordedAt: "2026-07-07T10:00:00Z", type: "withdrawal", amount: 500 },
+      ],
+    }));
+    expect(calculateSnapshotInvestedComparison(result.snapshot!)).toEqual({
+      investmentValue: 10600, investedValue: 10500, difference: 100, percentage: 0.95,
+    });
+  });
   it("sums rounded class balances instead of independently rounding the total", () => {
     const result = buildGeneratedMonthEndSnapshot(buildInput({
       assets: [stockAsset, cryptoAsset],
@@ -175,6 +224,7 @@ describe("demerger month-end snapshots", () => {
     } });
     expect(result.status).toBe("created");
     expect(result.snapshot).toMatchObject({ portfolioValue: 14000, investedValue: 10000, monthlyInvestment: 0 });
+    expect(calculateSnapshotInvestedComparison(result.snapshot!)).toMatchObject({ difference: 4000, percentage: 40 });
   });
 
   it("uses verified allocated cost provisionally before the successor can trade", () => {

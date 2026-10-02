@@ -15,11 +15,13 @@ function createSummary(
   month: string,
   {
     cashValue = 10_000,
+    investedValue = 75_000,
     monthlyInvestment = 30_000,
     performance = {},
     portfolioValue = 100_000,
   }: Partial<{
     cashValue: number;
+    investedValue: number;
     monthlyInvestment: number;
     performance: Partial<MonthlyProgressSummary["performance"]>;
     portfolioValue: number;
@@ -31,7 +33,7 @@ function createSummary(
     debtValue: 25_000,
     equityValue: portfolioValue - cashValue - 30_000,
     id: `snapshot-${month}`,
-    investedValue: 75_000,
+    investedValue,
     month,
     monthlyInvestment,
     notes: `Financial note for ${month}: ₹${portfolioValue}`,
@@ -60,7 +62,42 @@ function createSummary(
 }
 
 describe("MonthlyHistoryPanel", () => {
-  it("scales value bars within the selected year without changing monthly comparisons", () => {
+  it("uses the selected month's remaining basis and shows exact non-cash detail", () => {
+    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
+      createSummary("2026-01", { portfolioValue: 170000, cashValue: 50000, investedValue: 100000 }),
+      createSummary("2026-02", { portfolioValue: 400000, cashValue: 200000, investedValue: 300000 }),
+    ]} />);
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-01")).toHaveTextContent("+20.00%");
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("-33.33%");
+    fireEvent.press(screen.getByTestId("snapshot-month-2026-01"));
+    expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("+20.00%");
+    expect(screen.getByText("₹1,20,000.00")).toBeTruthy();
+    expect(screen.getByText("₹1,00,000.00")).toBeTruthy();
+    expect(screen.getByText("+₹20,000.00")).toBeTruthy();
+  });
+
+  it("uses neutral zero and unavailable states, and hides comparison signs/colors when masked", () => {
+    const summaries = [
+      createSummary("2026-01", { portfolioValue: 100000, cashValue: 25000 }),
+      createSummary("2026-02", { investedValue: 0 }),
+      createSummary("2026-03", { investedValue: 200000 }),
+    ];
+    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />);
+    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    const zero = screen.getByTestId("snapshot-invested-comparison-2026-01");
+    expect(zero).toHaveTextContent("0.00%");
+    expect(zero).not.toHaveStyle({ color: colors.profit });
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("—");
+    screen.rerender(<MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />);
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).not.toHaveStyle({ color: colors.loss });
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveTextContent("••••");
+    fireEvent.press(screen.getByTestId("snapshot-month-2026-03"));
+    expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("••••");
+    expect(screen.queryByText("-55.00%")).toBeNull();
+  });
+
+  it("scales portfolio value bars within the selected year independently of the invested comparison", () => {
     const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
       createSummary("2025-12", { portfolioValue: 400_000 }),
       createSummary("2026-01", { portfolioValue: 100_000 }),
@@ -71,7 +108,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(screen.getByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toHaveStyle({ width: "50%" });
     expect(screen.getByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
     expect(screen.getByTestId("snapshot-value-bar-2026-03", { includeHiddenElements: true })).toHaveStyle({ width: "0%" });
-    expect(screen.getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain("-75.00%");
+    expect(screen.getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain("+20.00%");
     fireEvent.press(screen.getByText("2025"));
     expect(screen.getByTestId("snapshot-value-bar-2025-12", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
   });
@@ -97,7 +134,7 @@ describe("MonthlyHistoryPanel", () => {
     createSummary("2026-05", { portfolioValue: -20_000 }),
   ];
 
-  it("keeps signed monthly changes semantic in Minimal mode", () => {
+  it("keeps signed invested comparisons semantic in Minimal mode", () => {
     const { getByTestId, getByText } = render(
       <MonthlyHistoryPanel
         maskWealthValues={false}
@@ -108,9 +145,9 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByText("+10.00%")).toHaveStyle({ color: colors.profit });
+    expect(getByText("+33.33%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain(
-      "Monthly change +10.00% compared with December 2025",
+      "+33.33% versus this month's recorded invested basis, excluding cash",
     );
   });
 
@@ -188,8 +225,8 @@ describe("MonthlyHistoryPanel", () => {
     expect(getByText("May")).toBeTruthy();
     expect(getByText("Apr")).toBeTruthy();
     expect(getByText("Mar")).toBeTruthy();
-    expect(getByText("Monthly change")).toBeTruthy();
-    expect(getByText("Includes deposits and withdrawals")).toBeTruthy();
+    expect(getByText("Vs invested")).toBeTruthy();
+    expect(getByText("Vs invested excludes cash")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-02")).toThrow();
 
     fireEvent.press(getByTestId("history-year-2025"));
@@ -244,7 +281,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(screen.getByTestId("snapshot-month-2016-01")).toBeTruthy();
   });
 
-  it("shows only actual monthly changes and explains gaps, first months, and zero baselines", () => {
+  it("compares each month's own basis independently of prior months or gaps", () => {
     const screen = render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
@@ -252,19 +289,16 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(screen.getByTestId("open-monthly-history"));
 
     const january = screen.getByTestId("snapshot-month-2026-01");
-    expect(within(january).getByText("+10.00%")).toBeTruthy();
+    expect(within(january).getByText("+33.33%")).toBeTruthy();
     expect(within(january).queryByText(/vs December/u)).toBeNull();
     const march = screen.getByTestId("snapshot-month-2026-03");
-    expect(within(march).getByText("—")).toBeTruthy();
-    expect(march.props.accessibilityLabel).toContain("No snapshot for February 2026");
+    expect(march.props.accessibilityLabel).toContain("versus this month's recorded invested basis, excluding cash");
     const may = screen.getByTestId("snapshot-month-2026-05");
     expect(within(may).getByText("—")).toBeTruthy();
-    expect(may.props.accessibilityLabel).toContain("April 2026 portfolio value was zero");
 
     fireEvent.press(screen.getByTestId("history-year-2025"));
     const first = screen.getByTestId("snapshot-month-2025-12");
-    expect(within(first).getByText("—")).toBeTruthy();
-    expect(first.props.accessibilityLabel).toContain("First stored month; monthly change unavailable");
+    expect(within(first).getByText("+20.00%")).toBeTruthy();
   });
 
   it("marks estimated comparisons and keeps full context in details", () => {
@@ -283,14 +317,14 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(screen.getByTestId("open-monthly-history"));
     const mayRow = screen.getByTestId("snapshot-month-2026-05");
-    expect(within(mayRow).getByText("Estimated")).toBeTruthy();
-    expect(mayRow.props.accessibilityLabel).toContain("Comparison uses estimated prices");
+    expect(within(mayRow).queryByText("Estimated")).toBeNull();
+    expect(within(screen.getByTestId("snapshot-month-2026-04")).getByText("Estimated")).toBeTruthy();
     fireEvent.press(mayRow);
     expect(screen.getByText("This comparison uses estimated prices.")).toBeTruthy();
     expect(screen.getByText("Portfolio change includes deposits and withdrawals; it is not investment return.")).toBeTruthy();
   });
 
-  it("masks the portfolio amount in the row label while keeping signed change context", () => {
+  it("masks the invested percentage and its accessibility label along with the portfolio", () => {
     const screen = render(
       <MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />,
     );
@@ -298,7 +332,9 @@ describe("MonthlyHistoryPanel", () => {
     fireEvent.press(screen.getByTestId("open-monthly-history"));
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText(MASKED_INR_VALUE)).toBeTruthy();
-    expect(within(january).getByText("+10.00%")).toBeTruthy();
+    expect(within(january).getByText("••••")).toBeTruthy();
+    expect(january.props.accessibilityLabel).toContain("Comparison hidden");
+    expect(january.props.accessibilityLabel).not.toContain("33.33");
     expect(january.props.accessibilityLabel).toContain("Portfolio hidden");
     expect(january.props.accessibilityLabel).not.toContain("₹1,10,000.00");
   });
@@ -310,9 +346,9 @@ describe("MonthlyHistoryPanel", () => {
 
     fireEvent.press(getByTestId("open-monthly-history"));
 
-    expect(getByTestId("snapshot-month-2026-03").props.accessibilityLabel).toContain(
-      "No snapshot for February 2026",
-    );
+    fireEvent.press(getByTestId("snapshot-month-2026-03"));
+    expect(getByText("Previous month unavailable portfolio value change")).toBeTruthy();
+    fireEvent.press(getByTestId("history-back"));
     fireEvent.press(getByTestId("snapshot-month-2026-01"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByText("January 2026")).toBeTruthy();
