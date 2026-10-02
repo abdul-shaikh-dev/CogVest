@@ -75,8 +75,9 @@ const stockAsset: Asset = {
   ticker: "HDFCBANK.NS",
 };
 
-it("labels PPF-excluded history and masks its values without presenting it as full snapshots", async () => {
+it.each(["standard", "minimal"] as const)("labels PPF-excluded history and masks its values in %s without presenting it as full snapshots", async (displayMode) => {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-11T12:00:00Z") });
+  store.getState().updatePreferences({ displayMode });
   const onOpenHoldings = jest.fn();
   store.getState().addAsset(stockAsset);
   store.getState().addOpeningPosition({
@@ -841,6 +842,7 @@ describe("ProgressScreen", () => {
       store.getState().addMonthlySnapshot(aprilSnapshot);
       store.getState().addMonthlySnapshot(maySnapshot);
       const { getByTestId } = render(<ProgressScreen store={store} />);
+      if (displayMode === "minimal") fireEvent.press(getByTestId("progress-details-toggle"));
       expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
         .toContain("+17.45% versus invested");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -960,6 +962,11 @@ describe("ProgressScreen", () => {
     );
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
+    expect(queryByText("Value by asset class")).toBeNull();
+    expect(queryByText("+17.45%")).toBeNull();
+    expect(queryByText("Market change")).toBeNull();
+    expect(queryByTestId("portfolio-trend-Invested")).toBeNull();
+    fireEvent.press(getByTestId("progress-details-toggle"));
     expect(getByText("Value by asset class")).toBeTruthy();
     expect(getByText("+17.45%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("monthly-history-panel")).toBeTruthy();
@@ -967,6 +974,44 @@ describe("ProgressScreen", () => {
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(queryByText(/share/u)).toBeNull();
+    fireEvent.press(getByTestId("progress-details-toggle"));
+    expect(queryByText("Value by asset class")).toBeNull();
+    expect(queryByText("+17.45%")).toBeNull();
+  });
+
+  it("keeps Minimal month selection, masks and stored records intact through disclosure and mode changes", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().updatePreferences({ displayMode: "minimal", maskWealthValues: true });
+    const saved = store.getState().monthlySnapshots;
+    const view = render(<ProgressScreen store={store} />);
+
+    expect(view.queryByTestId("asset-trend-chart")).toBeNull();
+    expect(within(view.getByTestId("portfolio-trend-selected-panel")).getByText(MASKED_INR_VALUE)).toBeTruthy();
+    expect(view.queryByText("₹13.85L")).toBeNull();
+    fireEvent.press(view.getByTestId("portfolio-trend-previous-month"));
+    fireEvent.press(view.getByTestId("progress-details-toggle"));
+    expect(view.getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel).toContain("Apr 2026");
+    expect(view.getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel).toContain("amounts hidden");
+    expect(view.getByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeTruthy();
+    fireEvent.press(view.getByTestId("progress-details-toggle"));
+    expect(view.queryByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeNull();
+    act(() => store.getState().updatePreferences({ displayMode: "standard" }));
+    expect(view.getByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeTruthy();
+    expect(view.queryByTestId("progress-details-toggle")).toBeNull();
+    expect(store.getState().monthlySnapshots).toEqual(saved);
+  });
+
+  it("retains a missing-month warning and navigable history in collapsed Minimal", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addMonthlySnapshot(marchSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+    store.getState().updatePreferences({ displayMode: "minimal" });
+    const view = render(<ProgressScreen store={store} />);
+    expect(view.getByTestId("portfolio-chart-context")).toHaveTextContent(/missing|gap/i);
+    expect(view.getByTestId("monthly-history-panel")).toBeTruthy();
+    expect(view.queryByText("Value by asset class")).toBeNull();
   });
 
   it("keeps deterministic visual QA charts visible while automation is skipped", () => {

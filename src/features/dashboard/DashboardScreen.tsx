@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { router } from "expo-router";
 import {
   Pressable,
@@ -181,10 +181,12 @@ export function DashboardScreen({
 }: DashboardScreenProps) {
   const currentDate = now ?? new Date();
   const [showPriceDetails, setShowPriceDetails] = useState(false);
+  const [showPerformance, setShowPerformance] = useState(false);
   const { fontScale } = useWindowDimensions();
   const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now: currentDate, refreshQuotes, store });
   const isMinimalMode = dashboard.displayMode === "minimal";
+  useEffect(() => { setShowPerformance(false); }, [isMinimalMode]);
   const displayAllocation = toDisplayAllocation(
     dashboard.holdings,
     dashboard.cashBalance,
@@ -305,7 +307,16 @@ export function DashboardScreen({
               </AppText>
             ) : null}
           </View>
-          <View
+          {isMinimalMode ? (
+            <AppButton
+              accessibilityState={{ expanded: showPerformance }}
+              onPress={() => setShowPerformance((visible) => !visible)}
+              testID="dashboard-performance-toggle"
+              title={showPerformance ? "Hide invested & returns" : "Invested & returns"}
+              variant="ghost"
+            />
+          ) : null}
+          {!isMinimalMode || showPerformance ? <View
             style={[
               styles.heroMetrics,
               adaptiveLayoutMode !== "standard" && styles.heroMetricsWrapped,
@@ -371,7 +382,7 @@ export function DashboardScreen({
                 </AppText>
               ) : null}
             </View>
-          </View>
+          </View> : null}
           <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
             <Pressable
               accessibilityRole="button"

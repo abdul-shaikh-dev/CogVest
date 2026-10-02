@@ -338,6 +338,7 @@ function SelectedMonthPanel({
   partialHistory = false,
   hasPreviousCalendarMonth = true,
   investedComparison,
+  summaryOnly = false,
 }: {
   maskWealthValues: boolean;
   minimal: boolean;
@@ -350,11 +351,12 @@ function SelectedMonthPanel({
   partialHistory?: boolean;
   hasPreviousCalendarMonth?: boolean;
   investedComparison?: MonthlyProgressChartData["investedComparisons"][number];
+  summaryOnly?: boolean;
 }) {
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const { fontScale } = useWindowDimensions();
 
-  if (partialHistory) {
+  if (partialHistory || summaryOnly) {
     return (
       <View style={styles.selectedPanel} testID={`${testIDPrefix}-selected-panel`}>
         {series.map((item) => (
@@ -544,6 +546,7 @@ function TrendChart({
   estimatedIndices,
   gapAfterIndices,
   investedComparisons,
+  summaryOnly = false,
 }: {
   isReducedMotionEnabled: boolean;
   maskWealthValues: boolean;
@@ -556,12 +559,16 @@ function TrendChart({
   estimatedIndices: number[];
   gapAfterIndices: number[];
   investedComparisons?: MonthlyProgressChartData["investedComparisons"];
+  summaryOnly?: boolean;
 }) {
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
+  useEffect(() => { setFocusedSeries(null); }, [summaryOnly]);
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
-  const visibleSeries = isPortfolioChart ? series : series.filter(item => item.values.some(value => value !== 0));
+  const visibleSeries = isPortfolioChart
+    ? summaryOnly ? series.filter(item => item.label !== "Invested") : series
+    : series.filter(item => item.values.some(value => value !== 0));
   const displayedSeries = !isPortfolioChart && focusedSeries
     ? visibleSeries.filter((item) => item.label === focusedSeries)
     : visibleSeries;
@@ -638,7 +645,7 @@ function TrendChart({
             )}
             curved
             data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
-            data2={partialHistory ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
+            data2={partialHistory || summaryOnly ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
             dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
             disableScroll
@@ -646,7 +653,7 @@ function TrendChart({
             endOpacity={0}
             endSpacing={chartEndSpacing}
             initialSpacing={chartInitialSpacing}
-            intersectionAreaConfig={partialHistory || gapSegments.length > 0 ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
+            intersectionAreaConfig={partialHistory || summaryOnly || gapSegments.length > 0 ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
             isAnimated={!isReducedMotionEnabled}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
@@ -724,6 +731,7 @@ function TrendChart({
       <SelectedMonthPanel
         investedComparison={investedComparisons?.[safeSelectedIndex]}
         partialHistory={partialHistory}
+        summaryOnly={summaryOnly}
         portfolioLabel={portfolioLabel}
         maskWealthValues={maskWealthValues}
         minimal={minimal}
@@ -1289,6 +1297,7 @@ function ProgressTrendCards({
   portfolioChartRange,
   minimal,
   ppfExcludedHistory,
+  showDetails = true,
 }: {
   assetChartCustomRange: MonthlyChartCustomRange;
   assetChartData: MonthlyProgressChartData;
@@ -1305,6 +1314,7 @@ function ProgressTrendCards({
   portfolioChartRange: MonthlyChartRange;
   minimal: boolean;
   ppfExcludedHistory: { estimatedMonths: string[]; missingMonths: string[] } | null;
+  showDetails?: boolean;
 }) {
   const [customRangeTarget, setCustomRangeTarget] = useState<"asset" | "portfolio" | null>(null);
 
@@ -1362,7 +1372,7 @@ function ProgressTrendCards({
       ) : null}
       <PremiumCard section>
         <ChartCardHeader
-          subtitle={ppfExcludedHistory ? "Market holdings + cash · PPF excluded" : "Portfolio and invested capital · not investment return"}
+          subtitle={ppfExcludedHistory ? "Market holdings + cash · PPF excluded" : showDetails ? "Portfolio and invested capital · not investment return" : "Month-end portfolio value · includes cash"}
           title={ppfExcludedHistory ? "Tracked Growth" : "Portfolio Growth"}
         />
         <ChartRangeSelector
@@ -1384,6 +1394,7 @@ function ProgressTrendCards({
             isReducedMotionEnabled={isReducedMotionEnabled}
             maskWealthValues={maskWealthValues}
             minimal={minimal}
+            summaryOnly={!showDetails}
             monthLabels={portfolioChartData.monthLabels}
             estimatedIndices={portfolioChartData.estimatedIndices}
             gapAfterIndices={portfolioChartData.gapAfterIndices}
@@ -1399,7 +1410,7 @@ function ProgressTrendCards({
           </View>
         )}
       </PremiumCard>
-      <PremiumCard section>
+      {showDetails ? <PremiumCard section>
         <ChartCardHeader
           subtitle={ppfExcludedHistory ? "Cash and PPF excluded · includes money added or withdrawn" : "Cash excluded · includes money added or withdrawn"}
           title="Value by asset class"
@@ -1437,7 +1448,7 @@ function ProgressTrendCards({
             </AppText>
           </View>
         )}
-      </PremiumCard>
+      </PremiumCard> : null}
       {customRangeTarget === "portfolio" ? (
         <CustomMonthRangeControls
           appliedRange={portfolioChartCustomRange}
@@ -1634,6 +1645,9 @@ export function ProgressScreen({
       progress.snapshotAutomationStatus.kind === "generating");
   const hasRunAutomationRef = useRef(false);
   const [summaryMonth, setSummaryMonth] = useState("");
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  useEffect(() => { setDetailsExpanded(false); }, [isMinimalMode]);
+  const showDetails = !isMinimalMode || detailsExpanded;
   const selectedSummary = progress.monthlySummaries.find(item => item.snapshot.month === summaryMonth) ?? progress.latestSummary;
 
   useEffect(() => {
@@ -1703,7 +1717,16 @@ export function ProgressScreen({
               {getMonthlySnapshotPriceConfidence(selectedSummary.snapshot) === "provisional" ? (
                 <AppText color="secondary" variant="caption">Estimated month-end value</AppText>
               ) : null}
-              <View style={styles.answerMetrics}>
+              {isMinimalMode ? (
+                <AppButton
+                  accessibilityState={{ expanded: detailsExpanded }}
+                  onPress={() => setDetailsExpanded((visible) => !visible)}
+                  testID="progress-details-toggle"
+                  title={detailsExpanded ? "Hide comparisons & breakdowns" : "Comparisons & breakdowns"}
+                  variant="ghost"
+                />
+              ) : null}
+              {showDetails ? <View style={styles.answerMetrics}>
                 <View style={styles.answerMetric}>
                   <AppText color="secondary" variant="caption">Market change</AppText>
                   <MaskedValue
@@ -1726,7 +1749,7 @@ export function ProgressScreen({
                     weight="bold"
                   />
                 </View>
-              </View>
+              </View> : null}
             </View>
 
             {hasInvalidSnapshot ? null : <SnapshotStatusCard
@@ -1754,6 +1777,7 @@ export function ProgressScreen({
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
               minimal={isMinimalMode}
+              showDetails={showDetails}
             />}
 
           </>
@@ -1787,8 +1811,18 @@ export function ProgressScreen({
                   masked: progress.preferences.maskWealthValues,
                   value: formatCompactINR(progress.cashBalance),
                 },
-              ]}
+              ].filter((metric) => showDetails || metric.label === "Portfolio")}
             />
+
+            {isMinimalMode ? (
+              <AppButton
+                accessibilityState={{ expanded: detailsExpanded }}
+                onPress={() => setDetailsExpanded((visible) => !visible)}
+                testID="progress-details-toggle"
+                title={detailsExpanded ? "Hide comparisons & breakdowns" : "Comparisons & breakdowns"}
+                variant="ghost"
+              />
+            ) : null}
 
             {hasInvalidSnapshot ? null : <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
@@ -1831,9 +1865,10 @@ export function ProgressScreen({
               portfolioChartData={progress.portfolioChartData}
               portfolioChartRange={progress.portfolioChartRange}
               minimal={isMinimalMode}
+              showDetails={showDetails}
             />}
 
-            <PremiumCard>
+            {showDetails ? <PremiumCard>
               <SectionHeader
                 title={
                   progress.allocation.some((item) => item.percentage === null)
@@ -1866,7 +1901,7 @@ export function ProgressScreen({
                   </View>
                 </View>
               ))}
-            </PremiumCard>
+            </PremiumCard> : null}
           </>
         ) : (
           <EmptyState

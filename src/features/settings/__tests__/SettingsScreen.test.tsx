@@ -33,14 +33,14 @@ describe("SettingsScreen", () => {
     expect(view.getByTestId("display-mode-options").props.accessibilityRole).toBe("radiogroup");
     const standard = view.getByRole("radio", { name: "Standard display mode" });
     const minimal = view.getByRole("radio", { name: "Minimal display mode" });
-    expect(minimal.props.accessibilityHint).toContain("Keeps core values and actions");
+    expect(minimal.props.accessibilityHint).toContain("warnings and actions stay available");
     expect(standard.props.accessibilityState.checked).toBe(true);
     expect(view.getByTestId("display-mode-description")).toHaveTextContent("Monthly activity, portfolio insights and optional guidance.");
     expect(view.queryByText("Hides monthly activity, insights and guidance. Keeps core values and actions.")).toBeNull();
     fireEvent.press(minimal);
     expect(standard.props.accessibilityState.checked).toBe(false);
     expect(minimal.props.accessibilityState.checked).toBe(true);
-    expect(view.getByTestId("display-mode-description")).toHaveTextContent("Hides monthly activity, insights and guidance. Keeps core values and actions.");
+    expect(view.getByTestId("display-mode-description")).toHaveTextContent(/Returns and breakdowns on demand; warnings and actions stay available\./);
     expect(view.queryByText("Monthly activity, portfolio insights and optional guidance.")).toBeNull();
     fireEvent.press(minimal);
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);

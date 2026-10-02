@@ -305,6 +305,7 @@ export function HoldingsScreen({
         item={item}
         key={item.holding.asset.id}
         masked={maskWealthValues}
+        minimal={isMinimalMode}
         onPress={() => {
           Keyboard.dismiss();
           detailScrollOffset.current = 0;
@@ -1305,10 +1306,11 @@ function HoldingRow({
   allocationAvailable,
   item,
   masked,
+  minimal,
   onPress,
 }: Pick<
   HoldingDetailsProps,
-  "allocationAvailable" | "item" | "masked"
+  "allocationAvailable" | "item" | "masked" | "minimal"
 > & { onPress: () => void }) {
   const { holding } = item;
   const pending = holding.currentValue === null;
@@ -1322,6 +1324,7 @@ function HoldingRow({
         identity,
         item,
         masked,
+        minimal,
         weightAvailable,
       })}
       accessibilityHint="Opens a separate holding detail panel"
@@ -1360,7 +1363,7 @@ function HoldingRow({
         </View>
       </View>
       <View style={styles.holdingMetrics}>
-        <View
+        {!minimal ? <><View
           style={styles.holdingMetric}
           testID={`holding-invested-${holding.asset.id}`}
         >
@@ -1412,8 +1415,9 @@ function HoldingRow({
             </AppText>
           )}
         </View>
+        </> : null}
         <View
-          style={[styles.holdingMetric, styles.holdingWeightMetric]}
+          style={[styles.holdingMetric, styles.holdingWeightMetric, minimal && styles.minimalWeightMetric]}
           testID={`holding-weight-${holding.asset.id}`}
         >
           <AppText color="secondary" variant="caption">
@@ -1765,11 +1769,13 @@ function getHoldingRowAccessibilityLabel({
   identity,
   item,
   masked,
+  minimal,
   weightAvailable,
 }: {
   identity: string;
   item: HoldingReviewItem;
   masked: boolean;
+  minimal: boolean;
   weightAvailable: boolean;
 }) {
   const { holding } = item;
@@ -1796,8 +1802,7 @@ function getHoldingRowAccessibilityLabel({
     `Open ${holding.asset.name} details`,
     identity,
     currentValue,
-    invested,
-    pnl,
+    ...(minimal ? [] : [invested, pnl]),
     weight,
   ].join(". ");
 }
@@ -1974,6 +1979,11 @@ const styles = StyleSheet.create({
   },
   holdingWeightMetric: {
     alignItems: "flex-end",
+  },
+  minimalWeightMetric: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
   },
   holdingWeightTrack: {
     backgroundColor: colors.surface.elevated,

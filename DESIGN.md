@@ -53,6 +53,18 @@ alter records, matching, calculations or transaction behavior.
 
 CogVest should feel like a private portfolio room, not a trading floor.
 
+### Minimal Mode
+
+Use the existing layouts with fewer default metrics, not a second navigation
+system. Dashboard shows value and allocation with an `Invested & returns`
+disclosure. Holdings shows identity, current value and the scaled weight bar;
+invested and performance remain in holding details. Progress keeps one portfolio
+trend with `Comparisons & breakdowns` on demand. Keep month history, estimate and
+coverage warnings, financial scope, masking and essential actions available.
+Expanded performance keeps signed gain/loss colors; collapsed summaries are
+neutral. Do not change financial calculations or hide problems to make the view
+quieter. Standard retains its information-rich hierarchy.
+
 The visual atmosphere is:
 
 - Calm: surfaces are dark, stable, and low-contrast enough to reduce fatigue.

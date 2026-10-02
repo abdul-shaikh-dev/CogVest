@@ -1,0 +1,125 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic visual-QA portfolio; never clears or seeds local data.
+# Run with MODE=standard|minimal and SIZE=normal|large.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Portfolio value"
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/dashboard
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - assertNotVisible: "Holdings P&L"
+      - tapOn:
+          id: dashboard-performance-toggle
+      - assertVisible: "Holdings P&L"
+      - takeScreenshot: .expo/ux507/${SIZE}/${MODE}/dashboard-expanded
+      - tapOn:
+          id: dashboard-mask-toggle
+      - assertNotVisible: ".*₹[0-9].*"
+      - takeScreenshot: .expo/ux507/${SIZE}/${MODE}/dashboard-masked
+      - tapOn:
+          id: dashboard-mask-toggle
+      - tapOn:
+          id: dashboard-performance-toggle
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holdings-search-input
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/holdings
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - assertNotVisible: "Invested"
+      - assertNotVisible: "P&L"
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible: "Holding details"
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/holding-detail
+- scrollUntilVisible:
+    element: "Invested in remaining units"
+    direction: DOWN
+- assertVisible: ".*unrealized"
+- back
+- openLink: "cogvest:///progress"
+- assertVisible:
+    id: progress-summary-month
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/progress
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-plot-region
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/chart
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/selected-month
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - assertNotVisible: "Vs invested.*"
+      - scrollUntilVisible:
+          element:
+            id: progress-details-toggle
+          direction: UP
+      - tapOn:
+          id: progress-details-toggle
+      - scrollUntilVisible:
+          element:
+            id: portfolio-trend-selected-panel
+          direction: DOWN
+      - assertVisible: ".*versus invested.*"
+      - takeScreenshot: .expo/ux507/${SIZE}/${MODE}/comparison
+      - scrollUntilVisible:
+          element: "Value by asset class"
+          direction: DOWN
+      - takeScreenshot: .expo/ux507/${SIZE}/${MODE}/breakdown
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: UP
+- tapOn:
+    id: open-monthly-history
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-comparison-2026-04
+    direction: DOWN
+- assertVisible:
+    id: snapshot-invested-comparison-2026-04
+    text: "-3.46%"
+- takeScreenshot: .expo/ux507/${SIZE}/${MODE}/history
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "No transactions yet"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - assertVisible:
+          id: dashboard-performance-toggle
+      - assertNotVisible: "Holdings P&L"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- stopApp
