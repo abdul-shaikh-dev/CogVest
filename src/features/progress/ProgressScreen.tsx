@@ -416,30 +416,33 @@ function SelectedMonthPanel({
           fontScale > 1.15 ? { flexDirection: "column", alignItems: "stretch" } : null,
         ]}>
             <View style={styles.gapOutcome}>
+              <AppText color="secondary" variant="caption">Vs invested · excludes cash</AppText>
+              <View style={styles.comparisonMetricPair}>
+              <View style={styles.comparisonMetric} testID="progress-difference-amount">
+                <AppText color="secondary" variant="caption">Difference</AppText>
+                <MaskedValue
+                  exactValue={difference === null ? undefined : formatINR(difference)}
+                  masked={maskWealthValues && difference !== null}
+                  value={difference === null ? "—" : formatSignedCompactINR(difference)}
+                  style={difference === null ? styles.neutralText : difference >= 0 ? styles.gainText : styles.lossText}
+                  weight={minimal ? "medium" : "bold"}
+                />
+              </View>
+              <View style={styles.comparisonMetric} testID="progress-difference-percent">
+              <AppText color="secondary" variant="caption">Difference %</AppText>
               <AppText
                 style={
                   difference === null ? styles.neutralText : difference >= 0
                     ? styles.gainText
                     : styles.lossText
                 }
-                variant="title"
                 weight={minimal ? "medium" : "bold"}
               >
                 {differencePercentage === null
                   ? "Unavailable"
                   : formatPercentage(differencePercentage)}
               </AppText>
-              <AppText color="secondary" variant="caption">
-                Vs invested · excludes cash
-              </AppText>
-              <View style={styles.gapValueRow}>
-                <MaskedValue
-                  color="secondary"
-                  exactValue={difference === null ? undefined : formatINR(difference)}
-                  masked={maskWealthValues && difference !== null}
-                  value={difference === null ? "—" : formatSignedCompactINR(difference)}
-                  variant="caption"
-                />
+              </View>
               </View>
             </View>
             <View style={styles.gapValues}>
@@ -2000,8 +2003,17 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   gapOutcome: {
+    flex: 2,
+    gap: spacing.xs,
+  },
+  comparisonMetricPair: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  comparisonMetric: {
     flex: 1,
     gap: spacing.xs,
+    minWidth: 0,
   },
   gapValueRow: {
     alignItems: "center",

@@ -11,6 +11,7 @@ import {
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
@@ -1315,6 +1316,8 @@ function HoldingRow({
   const { holding } = item;
   const pending = holding.currentValue === null;
   const pnlAvailable = holding.unrealisedPnL !== null;
+  const { width, fontScale } = useWindowDimensions();
+  const metricStyle = [styles.holdingMetric, (width < 400 || fontScale > 1.15) && styles.holdingMetricHalf];
   const weightAvailable = allocationAvailable && !pending;
   const identity = getHoldingRowIdentity(holding.asset);
   return (
@@ -1363,30 +1366,15 @@ function HoldingRow({
         </View>
       </View>
       <View style={styles.holdingMetrics}>
-        {!minimal ? <><View
-          style={styles.holdingMetric}
-          testID={`holding-invested-${holding.asset.id}`}
-        >
-          <AppText color="secondary" variant="caption">
-            Invested
-          </AppText>
-          <MaskedValue
-            exactValue={formatINR(holding.totalInvested)}
-            masked={masked}
-            value={formatCompactINR(holding.totalInvested)}
-            style={styles.holdingNumber}
-            weight="medium"
-          />
-        </View>
+        {!minimal ? <>
         <View
-          style={[styles.holdingMetric, styles.holdingPnlMetric]}
+          style={metricStyle}
           testID={`holding-pnl-${holding.asset.id}`}
         >
           <AppText color="secondary" variant="caption">
-            P&amp;L
+            Holding P&amp;L
           </AppText>
           {pnlAvailable ? (
-            <View style={styles.pnlMetricValue}>
               <MaskedValue
                 exactValue={formatINR(holding.unrealisedPnL!)}
                 masked={masked}
@@ -1397,27 +1385,38 @@ function HoldingRow({
                 ]}
                 weight="bold"
               />
+          ) : (
+            <AppText color="secondary" weight="bold">—</AppText>
+          )}
+        </View>
+        <View style={metricStyle} testID={`holding-pnl-percent-${holding.asset.id}`}>
+          <AppText color="secondary" variant="caption">Holding P&amp;L %</AppText>
+          {holding.unrealisedPnLPct !== null ? (
               <AppText
-                variant="caption"
+                weight="bold"
                 style={[
                   styles.holdingNumber,
-                  holding.unrealisedPnL! >= 0
+                  holding.unrealisedPnLPct >= 0
                     ? styles.positiveText
                     : styles.negativeText,
                 ]}
               >
-                {formatPercentage(holding.unrealisedPnLPct ?? 0)}
+                {formatPercentage(holding.unrealisedPnLPct)}
               </AppText>
-            </View>
           ) : (
             <AppText color="secondary" weight="bold">
               —
             </AppText>
           )}
         </View>
+        <View style={metricStyle} testID={`holding-invested-${holding.asset.id}`}>
+          <AppText color="secondary" variant="caption">Invested</AppText>
+          <MaskedValue exactValue={formatINR(holding.totalInvested)} masked={masked}
+            value={formatCompactINR(holding.totalInvested)} style={styles.holdingNumber} weight="medium" />
+        </View>
         </> : null}
         <View
-          style={[styles.holdingMetric, styles.holdingWeightMetric, minimal && styles.minimalWeightMetric]}
+          style={[minimal ? styles.holdingMetric : metricStyle, styles.holdingWeightMetric, minimal && styles.minimalWeightMetric]}
           testID={`holding-weight-${holding.asset.id}`}
         >
           <AppText color="secondary" variant="caption">
@@ -1508,6 +1507,8 @@ function HoldingDetails({
           </AppText>
         </View>
         <View style={styles.performanceLine}>
+          <View style={styles.holdingMetric} testID="holding-detail-pnl">
+          <AppText color="secondary" variant="caption">Holding P&amp;L</AppText>
           <MaskedValue
             masked={masked && holding.unrealisedPnL !== null}
             value={
@@ -1523,15 +1524,19 @@ function HoldingDetails({
                   : styles.negativeText
             }
           />
+          </View>
+          <View style={styles.holdingMetric} testID="holding-detail-pnl-percent">
+          <AppText color="secondary" variant="caption">Holding P&amp;L %</AppText>
           {holding.unrealisedPnLPct !== null ? (
             <AppText
               style={positive ? styles.positiveText : styles.negativeText}
-              variant="caption"
             >
-              {formatPercentage(holding.unrealisedPnLPct)} unrealized
+              {formatPercentage(holding.unrealisedPnLPct)}
             </AppText>
-          ) : null}
+          ) : <AppText color="secondary">Unavailable</AppText>}
+          </View>
         </View>
+        <AppText color="secondary" variant="caption">Unrealized on remaining units</AppText>
         <AppText color="secondary" variant="caption">
           Invested in remaining units
         </AppText>
@@ -1962,6 +1967,9 @@ const styles = StyleSheet.create({
     gap: 2,
     minWidth: 84,
   },
+  holdingMetricHalf: {
+    flexBasis: "45%",
+  },
   holdingCardPressed: {
     backgroundColor: colors.surface.card,
   },
@@ -1973,9 +1981,6 @@ const styles = StyleSheet.create({
   },
   holdingNumber: {
     fontVariant: ["tabular-nums"],
-  },
-  holdingPnlMetric: {
-    flexGrow: 1.5,
   },
   holdingWeightMetric: {
     alignItems: "flex-end",
@@ -2051,12 +2056,6 @@ const styles = StyleSheet.create({
   },
   positiveText: {
     color: colors.profit,
-  },
-  pnlMetricValue: {
-    alignItems: "baseline",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
   },
   ppfAccountCard: {
     alignItems: "center",

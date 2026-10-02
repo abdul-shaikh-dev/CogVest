@@ -136,6 +136,14 @@ without reducing font sizes or truncating financial values. The 3dp weight bar
 uses that shared gap rather than extra top spacing. Large text and long names
 may grow the row naturally; do not impose a fixed height.
 
+Amounts and percentages each need their own label and value. Holdings uses
+adjacent `Holding P&L` and `Holding P&L %` cells, followed by Invested and Weight.
+On narrow or enlarged-text layouts, keep the P&L pair together above Invested
+and Weight. Dashboard and Add Holding review use the same separate-metric
+pattern. Progress labels its pair Difference and Difference %, not P&L, because
+the stored investment comparison is not lifetime profit. Minimal Mode keeps
+its existing disclosures; this pattern applies when metrics are shown.
+
 A row opens a separate full-height detail panel, not an inline expansion.
 Explicit Back and Android Back return to the same list/search/filter/scroll
 state. The panel leads with current value and its compact Fresh, Stale, Manual,

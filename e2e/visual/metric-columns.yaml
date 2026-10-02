@@ -1,0 +1,65 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio; no reset or saved edits. SIZE=normal|large.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-minimal
+- openLink: "cogvest:///dashboard"
+- assertNotVisible: "Holdings P&L %"
+- tapOn:
+    id: dashboard-performance-toggle
+- assertVisible: "Holdings P&L"
+- assertVisible: "Holdings P&L %"
+- takeScreenshot: .expo/metric-columns/${SIZE}/dashboard-minimal-expanded
+- tapOn:
+    id: dashboard-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- takeScreenshot: .expo/metric-columns/${SIZE}/dashboard-masked
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///holdings"
+- assertNotVisible: "Holding P&L %"
+- takeScreenshot: .expo/metric-columns/${SIZE}/holdings-minimal
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Holdings P&L %"
+- takeScreenshot: .expo/metric-columns/${SIZE}/dashboard
+- openLink: "cogvest:///holdings"
+- assertVisible: "Holding P&L"
+- assertVisible: "Holding P&L %"
+- takeScreenshot: .expo/metric-columns/${SIZE}/holdings
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible: "Holding details"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "Invested in remaining units"
+    direction: DOWN
+- assertVisible: "Holding P&L %"
+- assertVisible: "₹11,00,000.00"
+- takeScreenshot: .expo/metric-columns/${SIZE}/holding-detail
+- back
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: progress-difference-amount
+- assertVisible:
+    id: progress-difference-percent
+- takeScreenshot: .expo/metric-columns/${SIZE}/progress
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "No transactions yet"
+- stopApp

@@ -730,6 +730,9 @@ describe("ProgressScreen", () => {
     );
 
     const monthlyAnswer = getByTestId("progress-monthly-answer");
+    expect(within(getByTestId("progress-difference-amount")).getByText("Difference")).toBeTruthy();
+    expect(within(getByTestId("progress-difference-percent")).getByText("Difference %")).toBeTruthy();
+    expect(within(getByTestId("progress-difference-amount")).queryByText("Difference %")).toBeNull();
     expect(within(monthlyAnswer).getByText("₹13.85L")).toBeTruthy();
     expect(within(monthlyAnswer).getByText("+₹65K")).toBeTruthy();
     expect(within(monthlyAnswer).getByText("₹60K")).toBeTruthy();

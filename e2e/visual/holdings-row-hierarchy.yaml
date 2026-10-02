@@ -49,6 +49,6 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - assertVisible: "Long Horizon Quality Compounders Portfolio Holding 24"
 - assertVisible: "Invested"
-- assertVisible: "P&L"
+- assertVisible: "Holding P&L"
 - assertVisible: "Weight"
 - takeScreenshot: .expo/issue398-long-name-holdings

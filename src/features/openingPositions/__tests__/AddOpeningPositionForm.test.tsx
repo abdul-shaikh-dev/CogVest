@@ -95,6 +95,12 @@ describe("AddOpeningPositionForm", () => {
     const summary = within(screen.getByTestId("review-pnl-summary"));
     expect(summary.getByTestId("derived-preview-pnl")).toHaveTextContent(/50\.00/);
     expect(summary.getByTestId("derived-preview-pnl-percent")).toHaveTextContent("+25.00%");
+    const amount = within(screen.getByTestId("review-pnl-amount-cell"));
+    const percentage = within(screen.getByTestId("review-pnl-percent-cell"));
+    expect(amount.getByText("Holding P&L")).toBeTruthy();
+    expect(amount.queryByTestId("derived-preview-pnl-percent")).toBeNull();
+    expect(percentage.getByText("Holding P&L %")).toBeTruthy();
+    expect(percentage.queryByTestId("derived-preview-pnl")).toBeNull();
     expect(store.getState().openingPositions).toEqual([]);
   });
   it("keeps cross-provider relevance order instead of moving weaker matches into provider groups", async () => {

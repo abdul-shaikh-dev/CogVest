@@ -673,6 +673,10 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
     expect(screen.getByText("Holdings P&L")).toBeTruthy();
+    const percentage = within(screen.getByTestId("dashboard-pnl-percent"));
+    expect(percentage.getByText("Holdings P&L %")).toBeTruthy();
+    expect(percentage.getByText("+50.00%")).toBeTruthy();
+    expect(percentage.queryByText("Holdings P&L")).toBeNull();
     expect(screen.getByText("+50.00%")).toHaveStyle({ color: colors.profit });
     expect(screen.getByText("Allocation")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
