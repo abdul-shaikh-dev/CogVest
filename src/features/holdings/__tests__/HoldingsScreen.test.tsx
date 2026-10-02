@@ -890,6 +890,19 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Best return")).toBeNull();
   });
 
+  it.each(["standard", "minimal"] as const)("keeps %s rows compact without removing their weight or detail access", (displayMode) => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ displayMode });
+    const view = render(<HoldingsScreen store={store} />);
+    const row = view.getByTestId(`holding-row-${asset.id}`);
+    expect(row).toHaveStyle({ paddingVertical: 12, gap: 8 });
+    expect(view.getByTestId(`holding-weight-track-${asset.id}`, { includeHiddenElements: true })).toHaveStyle({ height: 3 });
+    expect(view.getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
+    fireEvent.press(row);
+    expect(view.getByText("Invested in remaining units")).toBeTruthy();
+    expect(view.getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
+  });
+
   it("opens separate details and preserves search and filter on both back actions", () => {
     const screen = render(<HoldingsScreen store={seedMixedHoldings()} />);
     fireEvent.changeText(
