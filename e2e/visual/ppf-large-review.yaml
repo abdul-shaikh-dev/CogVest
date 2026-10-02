@@ -1,0 +1,136 @@
+appId: com.abdulshaikh.cogvest
+---
+# UX PPF Review after ppf-import-review.yaml; large-text display configured externally.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertVisible: "₹1,00,450.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/large/account
+- scrollUntilVisible:
+    element: "Contribution"
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/large/activity
+- tapOn: "Contribution"
+- assertVisible:
+    id: ppf-entry-amount
+    text: "500"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/large/entry
+- scrollUntilVisible:
+    element:
+      id: ppf-entry-notes
+    direction: DOWN
+- assertVisible: "Contribution from official statement"
+- scrollUntilVisible:
+    element:
+      id: review-ppf-entry
+    direction: DOWN
+- tapOn:
+    id: review-ppf-entry
+- takeScreenshot: .expo/ppf-screens/large/entry-review
+- tapOn:
+    id: edit-ppf-entry
+- pressKey: BACK
+- scrollUntilVisible:
+    element: "₹1,00,450.00"
+    direction: UP
+- assertVisible: "₹1,00,450.00"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/large/import-form
+- tapOn:
+    id: ppf-import-choose-csv
+- tapOn: "ppf-valid.csv"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-complete-through-today
+    direction: DOWN
+- tapOn:
+    id: ppf-import-complete-through-today
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- assertVisible: "Already imported. No new entries."
+- takeScreenshot: .expo/ppf-screens/large/import-result
+- scrollUntilVisible:
+    element:
+      id: ppf-import-row-2
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/large/import-rows
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview-back
+    direction: UP
+- tapOn:
+    id: ppf-import-preview-back
+- scrollUntilVisible:
+    element:
+      id: ppf-import-opening-balance
+    direction: DOWN
+- tapOn:
+    id: ppf-import-opening-balance
+- eraseText: 20
+- inputText: "100100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-import-preview
+- scrollUntilVisible:
+    element:
+      id: ppf-import-confirm-replacement
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/large/replacement
+- scrollUntilVisible:
+    element:
+      id: ppf-import-preview-back
+    direction: UP
+- tapOn:
+    id: ppf-import-preview-back
+- tapOn:
+    id: ppf-import-back
+- scrollUntilVisible:
+    element: "₹1,00,450.00"
+    direction: UP
+- assertVisible: "₹1,00,450.00"
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertNotVisible: "₹1,00,450.00"
+- takeScreenshot: .expo/ppf-screens/large/masked-account
+- tapOn:
+    id: edit-ppf-account
+- assertNotVisible:
+    id: ppf-balance-input
+- tapOn:
+    id: reveal-ppf-account-button
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/large/account-form
+- pressKey: BACK
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Show values"
+- tapOn:
+    id: dashboard-mask-toggle
+- stopApp

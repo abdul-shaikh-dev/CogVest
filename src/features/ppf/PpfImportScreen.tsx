@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { BackHandler, Pressable, StyleSheet, View } from "react-native";
+import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -12,6 +12,7 @@ import {
   ScreenContainer,
   ScreenHeader,
   SectionHeader,
+  getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
@@ -24,7 +25,7 @@ import {
 } from "@/src/domain/ppfCsvImport";
 import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
@@ -51,6 +52,8 @@ export function PpfImportScreen({
   now = () => new Date(),
 }: PpfImportScreenProps) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const { fontScale, width } = useWindowDimensions();
+  const stackRows = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const account = snapshot.ppfAccounts.find((item) => item.id === accountId);
   const today = formatLocalCalendarDate(now());
   const [csv, setCsv] = useState<string>();
@@ -240,12 +243,21 @@ export function PpfImportScreen({
             subtitle={`${account.nickname} • no changes saved yet`}
             title="Review PPF history"
           />
-          <PremiumCard elevated>
-            <SectionHeader title="Balance summary" />
+          <PremiumCard section>
+            <SectionHeader title="Import result" />
+            <View style={styles.summaryGrid} testID="ppf-import-counts">
+              <Summary label="Parsed entries" value={String(preview.entries.length)} />
+              <Summary label="Repeated rows" value={String(preview.duplicateRows)} />
+              <Summary label="Issues to resolve" value={String(preview.errors.length)} />
+            </View>
+            {preview.alreadyApplied ? <AppText weight="bold">Already imported. No new entries.</AppText> : null}
+            {preview.errors.length > 0 ? <AppText style={styles.error}>Import blocked. Correct the issues below; no rows will be saved.</AppText> : null}
             {preview.summary && hasFiniteSummary(preview.summary) ? (
+              <View style={styles.result}>
+                <AppText color="secondary">Imported closing balance</AppText>
+                <MaskedValue masked={masked} value={formatINR(preview.summary.closing)} variant="title" weight="bold" testID="ppf-import-closing-balance" />
               <View style={styles.summaryGrid}>
                 <Summary label="Existing balance" masked={masked} value={preview.summary.previousClosing} />
-                <Summary label="Imported closing balance" masked={masked} value={preview.summary.closing} />
                 <Summary label="Opening balance" masked={masked} value={preview.summary.opening} />
                 <Summary label="Prior ledger entries" value={String(preview.summary.previousEntries)} />
                 <Summary label="Contributions" masked={masked} value={preview.summary.contributions} />
@@ -256,6 +268,7 @@ export function PpfImportScreen({
                   masked={masked}
                   value={previewInput.baselineFyContribution}
                 />
+              </View>
               </View>
             ) : null}
             <View style={styles.checkpointDates}>
@@ -302,10 +315,10 @@ export function PpfImportScreen({
             </PremiumCard>
           ) : null}
 
-          <PremiumCard>
+          <PremiumCard section>
             <SectionHeader title={`CSV rows (${preview.entries.length})`} />
             {preview.entries.slice(0, visibleRows).map((entry, index) => (
-              <View key={entry.id} style={styles.row} testID={`ppf-import-row-${index}`}>
+              <View key={entry.id} style={[styles.row, stackRows && styles.stacked]} testID={`ppf-import-row-${index}`}>
                 <View style={styles.rowDetails}>
                   <AppText>{entry.date} · {friendlyEntryType(entry.type)}</AppText>
                   {entry.notes ? <AppText color="secondary" style={styles.notes} variant="caption">{entry.notes}</AppText> : null}
@@ -340,28 +353,26 @@ export function PpfImportScreen({
           subtitle={account.nickname}
           title="Import PPF history"
         />
-        <PremiumCard>
-          <SectionHeader title={account.nickname} />
-          <AppText color="secondary" variant="caption">The CSV will apply only to this PPF account.</AppText>
+        <PremiumCard section>
+          <AppButton disabled={busy} onPress={chooseCsv} testID="ppf-import-choose-csv" title={isPicking ? "Choosing CSV..." : fileName ? "Choose another CSV" : "Choose CSV"} />
+          <AppButton disabled={busy} onPress={saveTemplate} testID="ppf-import-save-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
+          {fileName ? <AppText color="secondary" variant="caption">Selected: {fileName}</AppText> : null}
+          {fileError ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="ppf-import-file-error">{fileError}</AppText> : null}
+          {templateStatus ? <AppText color="secondary" testID="ppf-import-template-status" variant="caption">{templateStatus}</AppText> : null}
           <AppText color="secondary" variant="caption">
             Columns: date, type, amount, note. Use contribution, interest or withdrawal,
             positive INR amounts without commas, and YYYY-MM-DD dates. Up to 1,000 rows.
           </AppText>
+        </PremiumCard>
+
+        <PremiumCard section>
+          <SectionHeader title="Opening checkpoint" />
           <View style={styles.example} testID="ppf-import-baseline-example">
             <AppText weight="bold">Opening balance stays separate</AppText>
             <AppText color="secondary" variant="caption">
               Example: enter an official INR 100,000 balance dated 2025-03-31 below, then start the CSV with later contributions, interest or withdrawals. Do not add that INR 100,000 again as a contribution row.
             </AppText>
           </View>
-          <AppButton disabled={busy} onPress={chooseCsv} testID="ppf-import-choose-csv" title={isPicking ? "Choosing CSV..." : fileName ? "Choose another CSV" : "Choose CSV"} />
-          <AppButton disabled={busy} onPress={saveTemplate} testID="ppf-import-save-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
-          {fileName ? <AppText color="secondary" variant="caption">Selected: {fileName}</AppText> : null}
-          {fileError ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="ppf-import-file-error">{fileError}</AppText> : null}
-          {templateStatus ? <AppText color="secondary" testID="ppf-import-template-status" variant="caption">{templateStatus}</AppText> : null}
-        </PremiumCard>
-
-        <PremiumCard>
-          <SectionHeader title="Opening checkpoint" />
           <FormTextField keyboardType="decimal-pad" label="Opening balance (INR)" onChangeText={setOpeningBalance} testID="ppf-import-opening-balance" value={openingBalance} />
           <DatePickerField label="Opening balance as of" maximumDate={now()} onChange={changeBalanceAsOf} testID="ppf-import-balance-as-of" value={balanceAsOf} />
           <FormTextField
@@ -411,9 +422,11 @@ function Checkbox({ checked, label, onPress, testID }: { checked: boolean; label
 }
 
 function Summary({ label, masked = false, value }: { label: string; masked?: boolean; value: number | string }) {
+  const { fontScale, width } = useWindowDimensions();
+  const fullWidth = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const display = typeof value === "number" ? formatINR(value) : value;
   return (
-    <View style={styles.summaryItem}>
+    <View style={[styles.summaryItem, fullWidth && styles.fullWidth]}>
       <AppText color="secondary" variant="caption">{label}</AppText>
       <MaskedValue masked={masked} value={display} weight="bold" />
     </View>
@@ -438,11 +451,14 @@ const styles = StyleSheet.create({
   checkboxText: { flex: 1 },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
-  example: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, gap: spacing.xs, padding: spacing.md },
+  example: { gap: spacing.xs },
   checkpointDates: { gap: spacing.xs },
   notes: { flexShrink: 1 },
-  row: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between", minHeight: 36 },
-  rowDetails: { flex: 1, gap: spacing.xs },
+  row: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between", minHeight: 48, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle },
+  rowDetails: { flexGrow: 1, flexBasis: "auto", flexShrink: 1, minWidth: 0, gap: spacing.xs },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  summaryItem: { minWidth: "42%" },
+  summaryItem: { flexGrow: 1, flexBasis: "42%", minWidth: 0, gap: spacing.xs },
+  fullWidth: { flexBasis: "100%" },
+  result: { gap: spacing.md },
+  stacked: { flexDirection: "column", alignItems: "stretch" },
 });

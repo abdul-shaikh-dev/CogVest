@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+# Remove only the temporary UX PPF Review account after the review flows.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-ppf-tab
+- tapOn: "UX PPF Review"
+- assertVisible: "₹1,00,450.00"
+- tapOn:
+    id: edit-ppf-account
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ppf-screens/normal/account-form
+- tapOn:
+    id: ppf-nickname-input
+- eraseText: 40
+- inputText: "Long term retirement savings account identity review"
+- hideKeyboard
+- pressKey: BACK
+- assertVisible: "Discard account changes?"
+- tapOn: "Keep editing"
+- assertVisible: "Long term retirement savings account identity review"
+- pressKey: BACK
+- tapOn: "Discard changes"
+- assertVisible: "UX PPF Review"
+- scrollUntilVisible:
+    element:
+      id: delete-ppf-account
+    direction: DOWN
+- tapOn:
+    id: delete-ppf-account
+- scrollUntilVisible:
+    element: "Keep account"
+    direction: DOWN
+- takeScreenshot: .expo/ppf-screens/normal/delete-account
+- tapOn: "Keep account"
+- tapOn:
+    id: delete-ppf-account
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-ppf-account
+    direction: DOWN
+- tapOn:
+    id: confirm-delete-ppf-account
+- assertNotVisible: "UX PPF Review"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp
