@@ -541,6 +541,18 @@ describe("HoldingsScreen", () => {
     expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
   });
 
+  it("opens the existing Futures screen without creating an account", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const before = store.getState().futuresAccounts;
+    const onOpenFutures = jest.fn();
+    const screen = render(<HoldingsScreen onOpenFutures={onOpenFutures} store={store} />);
+    fireEvent.press(screen.getByTestId("holdings-add-button"));
+    fireEvent.press(screen.getByTestId("holdings-open-futures"));
+    expect(onOpenFutures).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("holdings-panel-close")).toBeNull();
+    expect(store.getState().futuresAccounts).toEqual(before);
+  });
+
   it("excludes legacy PPF and cash from allocation without hiding their records", () => {
     const store = seedMixedHoldings();
     const cash = {
@@ -932,12 +944,28 @@ describe("HoldingsScreen", () => {
       (child) => child.props.children === "Your position",
     );
     expect(actionsIndex).toBeGreaterThan(-1);
-    expect(positionIndex).toBeGreaterThan(actionsIndex);
+    expect(positionIndex).toBeLessThan(actionsIndex);
     fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
 
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
     expect(screen.getByTestId("holding-detail-modal").props.visible).toBe(true);
     expect(store.getState().trades).toHaveLength(1);
+  });
+
+  it("retains the selected holding when returning from purchase", () => {
+    const store = seedMixedHoldings();
+    const onRecordPurchase = jest.fn();
+    const ui = (isActive: boolean) => <SafeAreaProvider initialMetrics={testSafeAreaMetrics}>
+      <HoldingsScreen store={store} onRecordPurchase={onRecordPurchase} isActive={isActive} />
+    </SafeAreaProvider>;
+    const screen = renderNative(ui(true));
+    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    fireEvent.press(screen.getByTestId(`holding-record-purchase-${asset.id}`));
+    expect(onRecordPurchase).toHaveBeenCalledWith(asset.id);
+    screen.rerender(ui(false));
+    expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
+    screen.rerender(ui(true));
+    expect(screen.getByTestId(`holding-expanded-${asset.id}`)).toBeTruthy();
   });
 
   it("hides child-route details while inactive and restores their scroll context", () => {

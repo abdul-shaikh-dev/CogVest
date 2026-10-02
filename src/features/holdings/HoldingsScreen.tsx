@@ -76,6 +76,7 @@ type HoldingsScreenProps = {
   onAddTrade?: () => void;
   onRecordPurchase?: (assetId?: string) => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
+  onOpenFutures?: () => void;
   onImportHoldings?: () => void;
   onImportTransactions?: () => void;
   onManageAssets?: () => void;
@@ -113,6 +114,7 @@ export function HoldingsScreen({
   onAddTrade,
   onRecordPurchase,
   onAddPpfAccount,
+  onOpenFutures,
   onImportHoldings,
   onImportTransactions,
   onManageAssets,
@@ -343,7 +345,7 @@ export function HoldingsScreen({
                 onPress={toggleMaskWealthValues}
                 testID="holdings-header-mask-toggle"
               />
-              {onAddTrade || onAddPpfAccount || onRecordPurchase ? (
+              {onAddTrade || onAddPpfAccount || onRecordPurchase || onOpenFutures ? (
                 <IconButton
                   accessibilityLabel={
                     onQuickSetup ? "Add holdings" : "Add Holding"
@@ -773,10 +775,7 @@ export function HoldingsScreen({
                       ? (id) => onSellRedeem(id)
                       : undefined
                   }
-                  onRecordPurchase={onRecordPurchase ? (id) => {
-                    setSelectedAssetId(undefined);
-                    onRecordPurchase(id);
-                  } : undefined}
+                  onRecordPurchase={onRecordPurchase}
                 />
               </ScrollView>
             </View>
@@ -887,6 +886,15 @@ export function HoldingsScreen({
                         testID="import-holdings-csv-option"
                         title="Import holdings CSV"
                         variant="secondary"
+                      />
+                    ) : null}
+                    {onOpenFutures ? (
+                      <GroupedListRow
+                        title="Futures wallet"
+                        meta="Manual USDT positions · separate from holdings"
+                        value="›"
+                        testID="holdings-open-futures"
+                        onPress={() => { setActivePanel(undefined); onOpenFutures(); }}
                       />
                     ) : null}
                     {onImportTransactions ? (
@@ -1529,6 +1537,37 @@ function HoldingDetails({
           weight="bold"
         />
       </PremiumCard>
+      <AppText variant="section" weight="bold">
+        Your position
+      </AppText>
+      <View style={styles.detailGrid}>
+        <Detail
+          label="Quantity"
+          testID={`holding-quantity-${holding.asset.id}`}
+          value={formatQuantity(holding.totalUnits)}
+        />
+        <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
+        <Detail
+          label="Current price"
+          value={
+            holding.currentPrice === null
+              ? "Unavailable"
+              : formatINR(holding.currentPrice)
+          }
+        />
+        <Detail
+          label="Market holdings share"
+          value={
+            allocationAvailable && !isPending
+              ? `${item.allocationPct.toFixed(1)}%`
+              : "Unavailable"
+          }
+        />
+        <Detail
+          label="First recorded purchase"
+          value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
+        />
+      </View>
       <View style={styles.detailActions} testID="holding-primary-actions">
         {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
         (onReviewTrades && assetTrades.length > 0) ? (
@@ -1589,37 +1628,6 @@ function HoldingDetails({
           onPress={() => onReviewTrades(holding.asset.id)}
         />
       ) : null}
-      <AppText variant="section" weight="bold">
-        Your position
-      </AppText>
-      <View style={styles.detailGrid}>
-        <Detail
-          label="Quantity"
-          testID={`holding-quantity-${holding.asset.id}`}
-          value={formatQuantity(holding.totalUnits)}
-        />
-        <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
-        <Detail
-          label="Current price"
-          value={
-            holding.currentPrice === null
-              ? "Unavailable"
-              : formatINR(holding.currentPrice)
-          }
-        />
-        <Detail
-          label="Market holdings share"
-          value={
-            allocationAvailable && !isPending
-              ? `${item.allocationPct.toFixed(1)}%`
-              : "Unavailable"
-          }
-        />
-        <Detail
-          label="First recorded purchase"
-          value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
-        />
-      </View>
 
       <AssetHistoryPanel asset={holding.asset} assets={assets} openingPositions={openingPositions} trades={trades} masked={masked} minimal={minimal} />
 

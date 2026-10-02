@@ -1,0 +1,63 @@
+appId: com.abdulshaikh.cogvest
+---
+# Requires synthetic portfolio with no wallet. Only the temporary wallet is removed.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-add-button
+    timeout: 15000
+- tapOn:
+    id: holdings-add-button
+- scrollUntilVisible:
+    element:
+      id: holdings-open-futures
+    direction: DOWN
+- tapOn:
+    id: holdings-open-futures
+- assertVisible: "Create futures wallet"
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "1000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-account
+    direction: DOWN
+- tapOn:
+    id: futures-save-account
+- assertVisible: "1000 USDT"
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-add-button
+    timeout: 15000
+- tapOn:
+    id: holdings-add-button
+- scrollUntilVisible:
+    element:
+      id: holdings-open-futures
+    direction: DOWN
+- tapOn:
+    id: holdings-open-futures
+- assertVisible: "1000 USDT"
+- assertNotVisible: "Create futures wallet"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn:
+    id: futures-confirm-delete
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b950,000.00"
+- stopApp

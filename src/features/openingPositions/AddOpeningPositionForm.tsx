@@ -46,6 +46,8 @@ import type { OpeningPositionCommandResult } from "@/src/store";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 import { discoveryFilters } from "./assetDiscovery";
 import { DiscoveryResults } from "./DiscoveryResults";
+import { AssetSearchField } from "./AssetSearchField";
+import { EntryProgress } from "@/src/components/common/EntryProgress";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 import {
@@ -432,16 +434,7 @@ export function AddOpeningPositionForm({
   function renderStepper() {
     if (currentPhase === "asset") {
       return (
-        <View accessible accessibilityRole="progressbar" accessibilityLabel="Add Holding progress"
-          accessibilityValue={{ min: 1, max: displayPhases.length, now: 1, text: `Step 1 of ${displayPhases.length}: Choose asset` }}
-          style={styles.discoveryProgress} testID="add-holding-step-asset">
-          <AppText color="secondary" variant="caption">1 of {displayPhases.length}</AppText>
-          <View style={styles.progressTrack}>
-            {displayPhases.map((phase, index) => (
-              <View key={phase.key} style={[styles.progressSegment, index === 0 && styles.progressSegmentActive]} />
-            ))}
-          </View>
-        </View>
+        <EntryProgress label="Add Holding progress" step={1} total={displayPhases.length} testID="add-holding-step-asset" />
       );
     }
 
@@ -548,8 +541,7 @@ export function AddOpeningPositionForm({
           </View>
         ) : !isManualEntryExpanded ? (
           <>
-            <FormTextField
-              label="Search asset"
+            <AssetSearchField
               onChangeText={(value) => {
                 onDiscoveryAction?.("query");
                 setLookupQuery(value);
@@ -629,7 +621,7 @@ export function AddOpeningPositionForm({
                 testID="existing-asset-results"
               >
                 <AppText color="secondary" variant="caption" weight="medium">
-                  Your assets
+                  Saved assets
                 </AppText>
                 <DiscoveryResults kind="saved" items={matchingExistingAssets} onSelect={selectSavedResult}
                   onSettled={savedResultsSettled}
@@ -656,6 +648,7 @@ export function AddOpeningPositionForm({
             ) : null}
             {lookupResults.length > 0 ? (
               <View style={styles.lookupResults} testID="asset-lookup-results">
+                <AppText color="secondary" variant="caption" weight="medium">Listings</AppText>
                 <DiscoveryResults kind="provider" items={lookupResults} onSelect={selectDiscoveryResult}
                   onSettled={providerResultsSettled}
                   footer={hasMoreLookupResults ? <AppButton title="Load more" variant="secondary" onPress={() => {
