@@ -40,7 +40,7 @@ appId: com.abdulshaikh.cogvest
       true: ${MODE == 'minimal'}
     commands:
       - assertNotVisible: "Invested"
-      - assertNotVisible: "P&L"
+      - assertNotVisible: "Holding P&L"
 - tapOn:
     id: holding-row-visual-qa-asset-bitcoin
 - assertVisible: "Holding details"
@@ -48,7 +48,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element: "Invested in remaining units"
     direction: DOWN
-- assertVisible: ".*unrealized"
+- assertVisible: "Unrealized on remaining units"
 - back
 - openLink: "cogvest:///progress"
 - assertVisible:

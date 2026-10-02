@@ -1132,10 +1132,9 @@ export function AddOpeningPositionForm({
             </View>
           </View>
           <View style={styles.reviewPnl} testID="review-pnl-summary">
-            <AppText color="secondary" variant="caption">
-              P&L
-            </AppText>
             <View style={styles.reviewPnlValues}>
+              <View style={styles.reviewPnlCell} testID="review-pnl-amount-cell">
+              <AppText color="secondary" variant="caption">Holding P&amp;L</AppText>
               {previewHolding.unrealisedPnL === null ? (
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
               ) : (
@@ -1153,6 +1152,9 @@ export function AddOpeningPositionForm({
                   {formatSignedINR(previewHolding.unrealisedPnL)}
                 </AppText>
               )}
+              </View>
+              <View style={styles.reviewPnlCell} testID="review-pnl-percent-cell">
+              <AppText color="secondary" variant="caption">Holding P&amp;L %</AppText>
               {previewHolding.unrealisedPnLPct === null ? (
                 <AppText color="secondary" variant="caption">Percentage unavailable</AppText>
               ) : (
@@ -1163,12 +1165,14 @@ export function AddOpeningPositionForm({
                       : styles.negativeText
                   }
                   testID="derived-preview-pnl-percent"
+                  variant="title"
                   accessibilityLabel={`P&L percentage ${formatPercentage(previewHolding.unrealisedPnLPct)}`}
                   weight={isMinimalMode ? "medium" : "bold"}
                 >
                   {formatPercentage(previewHolding.unrealisedPnLPct)}
                 </AppText>
               )}
+              </View>
             </View>
           </View>
           <View testID="review-position">
@@ -1486,7 +1490,8 @@ const styles = StyleSheet.create({
   financialValue: { fontVariant: ["tabular-nums"] },
   positionIdentity: { alignItems: "center", flexDirection: "row", gap: spacing.sm, borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.md },
   reviewPnl: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingVertical: spacing.sm },
-  reviewPnlValues: { alignItems: "baseline", flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md, rowGap: spacing.xs },
+  reviewPnlCell: { flex: 1, minWidth: 0, gap: spacing.xs },
+  reviewPnlValues: { flexDirection: "row", columnGap: spacing.md },
   previewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

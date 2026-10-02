@@ -326,8 +326,7 @@ export function DashboardScreen({
             <View
               style={[
                 styles.heroMetricCell,
-                adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
-                adaptiveLayoutMode === "accessibility" &&
+                adaptiveLayoutMode !== "standard" &&
                   styles.heroMetricCellFull,
               ]}
             >
@@ -367,10 +366,18 @@ export function DashboardScreen({
                   weight={isMinimalMode ? "medium" : "bold"}
                 />
               )}
+            </View>
+            <View style={[
+              styles.heroMetricCell,
+              adaptiveLayoutMode === "large" && styles.heroMetricCellHalf,
+              adaptiveLayoutMode === "accessibility" && styles.heroMetricCellFull,
+            ]} testID="dashboard-pnl-percent">
+              <AppText color="secondary" variant="caption">
+                {dashboard.futuresContributions.length ? "Portfolio P&L %" : "Holdings P&L %"}
+              </AppText>
               {totalPnLPct !== null ? (
                 <AppText
-                  accessibilityLabel={`${dashboard.futuresContributions.length ? "Portfolio" : "Holdings"} P&L ${formatPercentage(totalPnLPct)}`}
-                  variant="caption"
+                  accessibilityLabel={`${dashboard.futuresContributions.length ? "Portfolio" : "Holdings"} P&L percentage ${formatPercentage(totalPnLPct)}`}
                   style={
                     totalPnLPct >= 0
                       ? styles.positiveText
@@ -380,7 +387,7 @@ export function DashboardScreen({
                 >
                   {formatPercentage(totalPnLPct)}
                 </AppText>
-              ) : null}
+              ) : <AppText color="secondary" weight="bold">Unavailable</AppText>}
             </View>
           </View> : null}
           <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">

@@ -632,7 +632,7 @@ describe("HoldingsScreen", () => {
       within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText(
         "Unavailable",
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("keeps per-unit prices and percentages visible in masked expanded holdings", () => {
@@ -772,7 +772,14 @@ describe("HoldingsScreen", () => {
     const row = within(getByTestId(`holding-row-${asset.id}`));
     expect(row.getByText("Invested")).toBeTruthy();
     expect(row.getByText("₹200")).toBeTruthy();
-    expect(row.getByText("P&L")).toBeTruthy();
+    expect(row.getByText("Holding P&L")).toBeTruthy();
+    expect(row.getByText("Holding P&L %")).toBeTruthy();
+    const amount = within(getByTestId(`holding-pnl-${asset.id}`));
+    const percentage = within(getByTestId(`holding-pnl-percent-${asset.id}`));
+    expect(amount.getByText("+₹50")).toBeTruthy();
+    expect(amount.queryByText("+25.00%")).toBeNull();
+    expect(percentage.getByText("+25.00%")).toBeTruthy();
+    expect(percentage.queryByText("+₹50")).toBeNull();
     expect(row.getByText("+₹50")).toBeTruthy();
     expect(row.getByText("+₹50")).toHaveStyle({
       color: colors.profit,
@@ -883,7 +890,7 @@ describe("HoldingsScreen", () => {
     expect(getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
     expect(queryByText("+25.00%")).toBeNull();
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-    expect(getByText("+25.00% unrealized")).toHaveStyle({ color: colors.profit });
+    expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
     expect(getByText("Invested in remaining units")).toBeTruthy();
     expect(within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText("₹200.00").length).toBeGreaterThan(0);
     expect(queryByText("Dominant position")).toBeNull();
