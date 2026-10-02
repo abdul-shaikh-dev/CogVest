@@ -1,0 +1,92 @@
+appId: com.abdulshaikh.cogvest
+---
+# Task-owned wallet after cash flow. Run at 1080x2400, font scale 1.3.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "1106 USDT"
+- takeScreenshot: .expo/futures-screens/large/wallet
+- scrollUntilVisible:
+    element: "Linked Cash transfer"
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+      below: "Linked Cash transfer"
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+    below: "Linked Cash transfer"
+- takeScreenshot: .expo/futures-screens/large/delete-confirmation
+- tapOn: "Cancel"
+- tapOn:
+    id: "delete-futures-.*"
+    below: "Linked Cash transfer"
+- tapOn: "Delete activity"
+- scrollUntilVisible:
+    element: "1006 USDT"
+    direction: UP
+- assertVisible: "1006 USDT"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element: "SELL BTCUSDT"
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+      below: "SELL BTCUSDT"
+      index: 0
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+    below: "SELL BTCUSDT"
+    index: 0
+- tapOn: "Delete activity"
+- scrollUntilVisible:
+    element: "997 USDT"
+    direction: UP
+- assertVisible: "997 USDT"
+- scrollUntilVisible:
+    element: "BTCUSDT.*Long"
+    direction: DOWN
+- takeScreenshot: .expo/futures-screens/large/open-position
+- scrollUntilVisible:
+    element: "Indicative margin is not Binance.*"
+    direction: DOWN
+- takeScreenshot: .expo/futures-screens/large/position-risk
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///futures"
+- assertNotVisible: "997 USDT"
+- takeScreenshot: .expo/futures-screens/large/masked
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element: "Correct starting wallet"
+    direction: DOWN
+- tapOn: "Correct starting wallet"
+- takeScreenshot: .expo/futures-screens/large/wallet-form
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn: "Delete wallet"
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- takeScreenshot: .expo/futures-screens/large/no-wallet
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- stopApp

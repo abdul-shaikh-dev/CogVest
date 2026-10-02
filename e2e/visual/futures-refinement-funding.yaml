@@ -1,0 +1,44 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "1008 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-type-funding
+    direction: DOWN
+- tapOn:
+    id: futures-type-funding
+- scrollUntilVisible:
+    element:
+      id: futures-amount
+    direction: DOWN
+- tapOn:
+    id: futures-amount
+- inputText: "-2"
+- assertVisible:
+    id: futures-amount
+    text: "-2"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element: "1006 USDT"
+    direction: UP
+- assertVisible: "1006 USDT"
+- stopApp

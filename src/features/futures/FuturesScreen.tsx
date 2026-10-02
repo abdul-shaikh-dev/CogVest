@@ -90,8 +90,8 @@ function Choice({ label, selected, onPress, testID, checkbox = false }: { label:
   </Pressable>;
 }
 
-function Money({ value, masked }: { value: string; masked: boolean }) {
-  return <AppText weight="bold">{masked ? "••••" : value}</AppText>;
+function Money({ value, masked, prominent = false }: { value: string; masked: boolean; prominent?: boolean }) {
+  return <AppText variant={prominent ? "title" : "body"} weight="bold">{masked ? "••••" : value}</AppText>;
 }
 
 function displayTime(value: string) {
@@ -368,16 +368,11 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   }
   const openPositions = replay?.positions.filter((position) => position.signedQuantity !== "0") ?? [];
 
-  return <EntryErrors.Provider value={{ errors: fieldErrors, refs: fieldRefs.current, clear: clearFieldError }}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.fill}>
-    <ScreenContainer scroll scrollRef={scrollRef} testID="futures-screen">
-      <View ref={contentRef} collapsable={false} style={styles.content}>
-        <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />
-        {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="futures-error">{error}</AppText> : null}
+  const walletEditor = (
         <PremiumCard section>
-          <SectionHeader title="Futures wallet" />
-          <AppText color="secondary">Base-asset quantity · USDT settlement · manual entry</AppText>
+          <SectionHeader title={account ? "Starting wallet" : "Create Futures wallet"} />
           {account && !editingAccount ? <>
-            <AppText>Starting wallet · {displayTime(account.openingAt)}</AppText>
+            <AppText color="secondary">{displayTime(account.openingAt)}</AppText>
             <Money value={`${account.openingWalletUsdt} USDT`} masked={masked} />
             <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { walletBaseline.current = walletSnapshot; setEditingAccount(true); }} />
           </> : <>
@@ -389,12 +384,24 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <AppButton title={account ? "Save corrected wallet" : "Create futures wallet"} onPress={saveAccount} testID="futures-save-account" />
           </>}
         </PremiumCard>
+  );
+
+  return <EntryErrors.Provider value={{ errors: fieldErrors, refs: fieldRefs.current, clear: clearFieldError }}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.fill}>
+    <ScreenContainer scroll scrollRef={scrollRef} testID="futures-screen">
+      <View ref={contentRef} collapsable={false} style={styles.content}>
+        <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />
+        {error ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="futures-error">{error}</AppText> : null}
+        {!account ? walletEditor : null}
         {account ? <>
           <PremiumCard section testID="futures-position-summary">
-            <SectionHeader title="Position & wallet status" />
-            <AppText>Wallet from recorded activity</AppText><Money value={`${replay?.walletUsdt ?? "Unavailable"} USDT`} masked={masked} />
-            <AppText>Realized P&L since starting wallet</AppText><Money value={`${replay?.realizedPnlUsdt ?? "Unavailable"} USDT`} masked={masked} />
-            <AppText>Account equity {account.valuation ? `· ${displayTime(account.valuation.asOf)}` : ""}</AppText><Money value={replay?.equityInr ? `₹${replay.equityInr}` : "Not verified in INR"} masked={masked} />
+            <AppText color="secondary">Wallet from recorded activity</AppText>
+            <Money prominent value={`${replay?.walletUsdt ?? "Unavailable"} USDT`} masked={masked} />
+            <View style={styles.metric}>
+              <AppText color="secondary">Realized P&L since starting wallet</AppText><Money value={`${replay?.realizedPnlUsdt ?? "Unavailable"} USDT`} masked={masked} />
+            </View>
+            <View style={styles.metric}>
+              <AppText color="secondary">Account equity {account.valuation ? `· ${displayTime(account.valuation.asOf)}` : ""}</AppText><Money value={replay?.equityInr ? `₹${replay.equityInr}` : "Not verified in INR"} masked={masked} />
+            </View>
             <AppText color="secondary">{replay ? valuationLabels[replay.valuationStatus] : "Check account records"} · Since-start INR rates: {replay?.eventRateStatus === "complete" ? "ready" : replay?.eventRateStatus ?? "unknown"}</AppText>
             {contribution?.status === "ready" ? <View style={styles.breakdown} testID="futures-inr-breakdown">
               <AppText weight="bold">INR contribution breakdown</AppText>
@@ -406,10 +413,15 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             </View> : <AppText color="secondary">Portfolio inclusion pending: {contribution?.reason ?? "Check account records."}</AppText>}
             {replay && replay.historicalRealizedPnlUsdt !== "0" ? <AppText color="secondary">Older realized P&L: {masked ? "••••" : `${replay.historicalRealizedPnlUsdt} USDT · ${replay.historicalRealizedPnlInr === null ? "INR rate pending" : `₹${replay.historicalRealizedPnlInr}`}`} (already reflected in starting wallet, not added again)</AppText> : null}
             <AppText color="secondary">Only verified wallet equity enters portfolio totals. Notional and margin are never added.</AppText>
+          </PremiumCard>
+          <PremiumCard section testID="futures-open-positions">
+            <SectionHeader title="Open positions" />
+            {!openPositions.length ? <AppText color="secondary">No open positions in recorded activity.</AppText> : null}
             {openPositions.map((position) => <View key={position.contract} style={styles.row}>
               <AppText weight="bold">{position.contract} · {position.signedQuantity.startsWith("-") ? "Short" : "Long"}</AppText>
               <AppText>Qty {masked ? "••••" : position.signedQuantity} · Entry {masked ? "••••" : position.entryPriceUsdt} USDT · {position.leverage ?? "?"}× reported</AppText>
-              <AppText>Notional: {masked ? "••••" : `${position.notionalUsdt ?? "mark needed"} USDT`} · Indicative margin at mark: {masked ? "••••" : position.notionalUsdt && position.leverage ? `${decimal(position.notionalUsdt).dividedBy(position.leverage).toFixed(2)} USDT` : "leverage and mark needed"}</AppText>
+              <View style={styles.metric}><AppText color="secondary">Notional exposure</AppText><Money masked={masked} value={position.notionalUsdt === null ? "Mark price needed" : `${position.notionalUsdt} USDT`} /></View>
+              <View style={styles.metric}><AppText color="secondary">Indicative margin at mark</AppText><Money masked={masked} value={position.notionalUsdt && position.leverage ? `${decimal(position.notionalUsdt).dividedBy(position.leverage).toFixed(2)} USDT` : "Leverage and mark needed"} /></View>
               {position.reportedMarginUsdt !== null ? <AppText>Binance-reported position margin: {masked ? "••••" : `${position.reportedMarginUsdt} USDT`}</AppText> : null}
               <AppText>Unrealized: {masked ? "••••" : `${position.unrealizedPnlUsdt ?? "mark needed"} USDT`}</AppText>
             </View>)}
@@ -456,7 +468,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingEvent(false), false, eventDirty)} testID="futures-cancel-event" />
             </>}
           </PremiumCard>
-          <PremiumCard testID="futures-cash-funding">
+          <PremiumCard section testID="futures-cash-funding">
             <SectionHeader title="Move Cash and USDT" />
             <AppText color="secondary">Record a movement you already made between recorded INR Cash and your Binance USDT Futures wallet. This does not transfer funds or open a trade on Binance. Enter executions separately.</AppText>
             {!editingCashFunding ? <AppButton title="Record Cash funding or withdrawal" variant="secondary" onPress={() => startCash(blankCashFunding())} testID="futures-add-cash-funding" /> : <>
@@ -477,6 +489,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <AppButton title="Cancel" variant="ghost" onPress={() => exit.request(() => setEditingCashFunding(false), false, cashDirty)} testID="futures-cancel-cash" />
             </>}
           </PremiumCard>
+          {walletEditor}
           <PremiumCard>
             <SectionHeader title="Verify current value" />
             <AppText color="secondary">Use the Futures wallet balance (not total equity), current mark prices, and an observed USDT/INR rate. Their sources and times stay with the record. Re-enter after changing activity.</AppText>
@@ -515,6 +528,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
   breakdown: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },
+  metric: { gap: spacing.xs, paddingVertical: spacing.xs },
   deleteAction: { alignSelf: "center", minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
   eventDelete: { minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
   content: { gap: spacing.cardGap, paddingTop: spacing.md, paddingBottom: spacing.xl },

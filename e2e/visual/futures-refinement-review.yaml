@@ -1,0 +1,115 @@
+appId: com.abdulshaikh.cogvest
+---
+# Requires the task-owned setup wallet: 1000 opening, one buy at 100 with fee 1.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "999 USDT"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/futures-screens/normal/wallet
+- scrollUntilVisible:
+    element: "BTCUSDT.*Long"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: .expo/futures-screens/normal/position
+- scrollUntilVisible:
+    element: "Correct starting wallet"
+    direction: DOWN
+- tapOn: "Correct starting wallet"
+- scrollUntilVisible:
+    element:
+      id: futures-opening-wallet
+    direction: DOWN
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "9999"
+- hideKeyboard
+- pressKey: BACK
+- assertVisible: "Discard unsaved changes?"
+- takeScreenshot: .expo/futures-screens/normal/discard
+- tapOn:
+    id: futures-keep-editing
+- assertVisible:
+    id: futures-opening-wallet
+    text: "9999"
+- pressKey: BACK
+- tapOn:
+    id: futures-discard
+- openLink: "cogvest:///futures"
+- assertVisible: "999 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- assertVisible: "Enter quantity."
+- takeScreenshot: .expo/futures-screens/normal/invalid
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Sell"
+    direction: UP
+- tapOn: "Sell"
+- scrollUntilVisible:
+    element:
+      id: futures-quantity
+    direction: DOWN
+- tapOn:
+    id: futures-quantity
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-price
+    direction: DOWN
+- tapOn:
+    id: futures-price
+- inputText: "110"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-fee
+    direction: DOWN
+- tapOn:
+    id: futures-fee
+- eraseText: 10
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-leverage
+    direction: DOWN
+- tapOn:
+    id: futures-leverage
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element: "1008 USDT"
+    direction: UP
+- assertVisible: "1008 USDT"
+- scrollUntilVisible:
+    element: "No open positions in recorded activity."
+    direction: DOWN
+- assertVisible: "No open positions in recorded activity."
+- scrollUntilVisible:
+    element: "Gross realized: 10 USDT.*Fees: 2 USDT"
+    direction: DOWN
+- takeScreenshot: .expo/futures-screens/normal/closed
+- runFlow: futures-refinement-funding.yaml
