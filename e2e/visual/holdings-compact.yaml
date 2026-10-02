@@ -1,0 +1,48 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio. MODE=standard|minimal, SIZE=normal|large.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- takeScreenshot: .expo/holdings-compact/${SIZE}/${MODE}
+- runFlow:
+    when:
+      true: ${MODE == 'standard'}
+    commands:
+      - assertVisible: "Invested"
+      - assertVisible: "P&L"
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - assertNotVisible: "Invested"
+      - assertNotVisible: "P&L"
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible: "Holding details"
+- scrollUntilVisible:
+    element: "Invested in remaining units"
+    direction: DOWN
+- assertVisible: "₹11,00,000.00"
+- assertVisible: ".*unrealized"
+- back
+- tapOn:
+    id: holdings-header-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- takeScreenshot: .expo/holdings-compact/${SIZE}/${MODE}-masked
+- tapOn:
+    id: holdings-header-mask-toggle
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "No transactions yet"
+- stopApp

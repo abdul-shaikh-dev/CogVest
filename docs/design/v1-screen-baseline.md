@@ -131,6 +131,11 @@ imply whole-portfolio allocation. Raw identifiers such as an ISIN belong in
 holding details rather than the list. Incomplete allocation is explained once
 rather than repeated on every row.
 
+Keep list rows compact using 12dp vertical padding and 8dp gaps between groups,
+without reducing font sizes or truncating financial values. The 3dp weight bar
+uses that shared gap rather than extra top spacing. Large text and long names
+may grow the row naturally; do not impose a fixed height.
+
 A row opens a separate full-height detail panel, not an inline expansion.
 Explicit Back and Android Back return to the same list/search/filter/scroll
 state. The panel leads with current value and its compact Fresh, Stale, Manual,
