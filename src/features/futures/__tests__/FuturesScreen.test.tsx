@@ -1,8 +1,9 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
-import { Alert, BackHandler } from "react-native";
+import { BackHandler } from "react-native";
 import { usePreventRemove } from "@react-navigation/native";
 
 import { FuturesScreen } from "@/src/features/futures/FuturesScreen";
+import { AppButton } from "@/src/components/common";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
@@ -20,6 +21,46 @@ function setTime(screen: ReturnType<typeof render>, id: string, value: string) {
 }
 
 describe("manual Futures screen", () => {
+  it("cancels wallet deletion through buttons and Android dismissal, then deletes only once", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const onBack = jest.fn();
+    const screen = render(<FuturesScreen onBack={onBack} store={store} />);
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const before = store.getState().captureBackup().payload;
+    fireEvent.press(screen.getByTestId("futures-delete-account"));
+    fireEvent.press(screen.getByTestId("futures-cancel-delete"));
+    expect(store.getState().captureBackup().payload).toEqual(before);
+    fireEvent.press(screen.getByTestId("futures-delete-account"));
+    fireEvent(screen.getByTestId("futures-delete-modal"), "requestClose");
+    expect(store.getState().captureBackup().payload).toEqual(before);
+    expect(onBack).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("futures-delete-account"));
+    const confirm = screen.UNSAFE_getAllByType(AppButton).find((button) => button.props.testID === "futures-confirm-delete")!.props.onPress;
+    act(() => { confirm(); confirm(); });
+    expect(store.getState().futuresAccounts).toEqual([]);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves linked Cash on cancel, enforces wallet deletion guards and removes both transfer legs", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-01", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().saveFuturesAccount({ id: "binance-usdm-main", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way", openingAt: "2026-09-01T00:00:00Z", openingWalletUsdt: "0", events: [] });
+    store.getState().saveFuturesCashTransfer({ accountId: "binance-usdm-main", cashEntryId: "cash-funding", eventId: "funding", at: "2026-09-02T00:00:00Z", amountUsdt: "100", cashAmountInr: 9000, conversionFeeInr: "0", inrPerUsdt: "90", rateObservedAt: "2026-09-02T00:00:00Z", rateSource: "Receipt" });
+    const screen = render(<FuturesScreen onBack={jest.fn()} store={store} />);
+    const before = store.getState().captureBackup().payload;
+    fireEvent.press(screen.getByTestId("delete-futures-funding"));
+    fireEvent.press(screen.getByTestId("futures-cancel-delete"));
+    expect(store.getState().captureBackup().payload).toEqual(before);
+    fireEvent.press(screen.getByTestId("futures-delete-account"));
+    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
+    expect(store.getState().captureBackup().payload).toEqual(before);
+    fireEvent.press(screen.getByTestId("delete-futures-funding"));
+    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
+    expect(store.getState().futuresAccounts[0].events).toEqual([]);
+    expect(store.getState().cashEntries).toHaveLength(1);
+    expect(store.getState().cashEntries[0]).toMatchObject({ id: "cash-opening", amount: 10000 });
+  });
+
   it("separates wallet equity, empty positions and correction without fabricating INR values", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
@@ -146,16 +187,14 @@ describe("manual Futures screen", () => {
   it("keeps a new execution draft when another persisted activity is deleted", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().saveFuturesAccount({ id: "binance-usdm-main", marginMode: "cross", positionMode: "one-way", settlementAsset: "USDT", openingAt: "2026-09-01T00:00:00Z", openingWalletUsdt: "1000", events: [{ id: "existing", type: "execution", at: "2026-09-02T00:00:00Z", contract: "BTCUSDT", side: "buy", quantity: "1", price: "100", feeUsdt: "0", leverage: "10" }] });
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
     fireEvent.press(screen.getByTestId("futures-add-event"));
     fireEvent.changeText(screen.getByTestId("futures-quantity"), "2");
     fireEvent.press(screen.getByTestId("delete-futures-existing"));
-    act(() => { alert.mock.calls.at(-1)?.[2]?.find((button) => button.text === "Delete activity")?.onPress?.(); });
+    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
     expect(screen.getByTestId("futures-quantity").props.value).toBe("2");
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(true);
-    alert.mockRestore();
   });
   it("records a linked Cash funding movement without opening a position", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });

@@ -1,6 +1,6 @@
 import { createContext, useContext, useRef, useState, useSyncExternalStore, type ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { AppButton, AppText, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
@@ -127,6 +127,9 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const [cashFunding, setCashFunding] = useState<CashFundingDraft>(blankCashFunding);
   const [editingCashFunding, setEditingCashFunding] = useState(false);
   const [error, setError] = useState("");
+  const [deletion, setDeletion] = useState<{ kind: "wallet" } | { kind: "event"; id: string } | null>(null);
+  const deletionPending = useRef(false);
+  const cancelDeletion = () => { deletionPending.current = false; setDeletion(null); };
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const clearFieldError = (id: string) => setFieldErrors((current) => {
     if (!(id in current)) return current;
@@ -272,14 +275,11 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       setError("");
     } catch (cause) { report(cause); }
   };
-  const confirmDeleteEvent = (id: string) => Alert.alert(
-    "Delete this activity?",
-    "Balances and P&L will be recalculated from the remaining records. This cannot be undone without a backup.",
-    [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete activity", style: "destructive", onPress: () => deleteEvent(id) },
-    ],
-  );
+  const confirmDeleteEvent = (id: string) => {
+    Keyboard.dismiss();
+    deletionPending.current = true;
+    setDeletion({ kind: "event", id });
+  };
   const saveCashFunding = () => {
     if (!account) return;
     if (!checkFields({
@@ -306,19 +306,24 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
       setError("");
     } catch (cause) { report(cause); }
   };
-  const confirmDeleteAccount = () => Alert.alert(
-    "Delete Futures wallet?",
-    "This permanently removes the wallet, all executions, rates and valuation evidence from this device. Make a backup first if you need the history.",
-    [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete wallet", style: "destructive", onPress: () => {
-        try {
-          store.getState().deleteFuturesAccount(ACCOUNT_ID);
-          exit.request(onBack, true, false);
-        } catch (cause) { report(cause); }
-      } },
-    ],
-  );
+  const confirmDeleteAccount = () => {
+    Keyboard.dismiss();
+    deletionPending.current = true;
+    setDeletion({ kind: "wallet" });
+  };
+  const applyDeletion = () => {
+    if (!deletion || !deletionPending.current) return;
+    deletionPending.current = false;
+    setDeletion(null);
+    if (deletion.kind === "event") {
+      deleteEvent(deletion.id);
+      return;
+    }
+    try {
+      store.getState().deleteFuturesAccount(ACCOUNT_ID);
+      exit.request(onBack, true, false);
+    } catch (cause) { report(cause); }
+  };
   const saveValuation = () => {
     if (!account) return;
     if (!checkFields({
@@ -513,6 +518,18 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
         </> : null}
       </View>
     </ScreenContainer>
+    <Modal visible={deletion !== null} transparent onRequestClose={cancelDeletion} testID="futures-delete-modal">
+      <ScreenContainer scroll testID="futures-delete-confirmation">
+        <View accessibilityViewIsModal><PremiumCard>
+          <SectionHeader title={deletion?.kind === "wallet" ? "Delete Futures wallet?" : "Delete this activity?"} />
+          <AppText color="secondary">{deletion?.kind === "wallet"
+            ? "This permanently removes the wallet, all executions, rates and valuation evidence from this device. Make a backup first if you need the history."
+            : "Balances and P&L will be recalculated from the remaining records. Linked Cash movements are removed together. This cannot be undone without a backup."}</AppText>
+          <AppButton title="Cancel" variant="secondary" onPress={cancelDeletion} testID="futures-cancel-delete" />
+          <AppButton title={deletion?.kind === "wallet" ? "Delete wallet" : "Delete activity"} variant="destructive" onPress={applyDeletion} testID="futures-confirm-delete" />
+        </PremiumCard></View>
+      </ScreenContainer>
+    </Modal>
     <Modal visible={exit.prompt} transparent onRequestClose={exit.keepEditing}>
       <View style={styles.modal} accessibilityViewIsModal><PremiumCard>
         <SectionHeader title="Discard unsaved changes?" />

@@ -1,0 +1,128 @@
+appId: com.abdulshaikh.cogvest
+---
+# Use the existing visual QA portfolio, no Futures wallet, INR 50,000 cash.
+# Run on a freshly installed APK at normal and large font sizes.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///add-trade?type=sell&assetId=unknown"
+- extendedWaitUntil:
+    visible:
+      id: legacy-entry-screen
+    timeout: 10000
+- assertNotVisible: "Quote source ID"
+- takeScreenshot: .expo/audit-fixes/${SIZE}/legacy-choice
+- tapOn:
+    id: legacy-cancel
+- assertVisible:
+    id: holdings-screen
+- stopApp
+- openLink: "cogvest:///add-trade?type=sell&quantity=100"
+- extendedWaitUntil:
+    visible:
+      id: legacy-entry-screen
+    timeout: 30000
+- tapOn:
+    id: legacy-record-purchase
+- assertVisible: "Record purchase"
+- back
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b950,000.00"
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: futures-save-account
+- assertVisible: "1000 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- tapOn:
+    id: futures-type-funding
+- scrollUntilVisible:
+    element:
+      id: futures-amount
+    direction: DOWN
+- tapOn:
+    id: futures-amount
+- inputText: "2"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element: "1002 USDT"
+    direction: UP
+- assertVisible: "1002 USDT"
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+- assertVisible:
+    id: futures-confirm-delete
+- takeScreenshot: .expo/audit-fixes/${SIZE}/delete-activity
+- back
+- assertNotVisible:
+    id: futures-confirm-delete
+- tapOn:
+    id: "delete-futures-.*"
+- tapOn:
+    id: futures-cancel-delete
+- scrollUntilVisible:
+    element: "1002 USDT"
+    direction: UP
+- assertVisible: "1002 USDT"
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+- tapOn:
+    id: futures-confirm-delete
+- scrollUntilVisible:
+    element: "1000 USDT"
+    direction: UP
+- assertVisible: "1000 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- assertVisible:
+    id: futures-confirm-delete
+- takeScreenshot: .expo/audit-fixes/${SIZE}/delete-wallet
+- tapOn:
+    id: futures-cancel-delete
+- tapOn:
+    id: futures-delete-account
+- back
+- assertVisible:
+    id: futures-delete-account
+- tapOn:
+    id: futures-delete-account
+- tapOn:
+    id: futures-confirm-delete
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b950,000.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "No transactions yet"
+- openLink: "cogvest:///"

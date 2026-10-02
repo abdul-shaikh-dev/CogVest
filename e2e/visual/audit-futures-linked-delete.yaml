@@ -1,0 +1,104 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing visual QA portfolio: INR 50,000 cash and no Futures wallet.
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- tapOn:
+    id: futures-save-account
+- scrollUntilVisible:
+    element:
+      id: futures-add-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-add-cash-funding
+- scrollUntilVisible:
+    element:
+      id: futures-cash-usdt
+    direction: DOWN
+- tapOn:
+    id: futures-cash-usdt
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-inr
+    direction: DOWN
+- tapOn:
+    id: futures-cash-inr
+- inputText: "9000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Observed at movement time"
+    direction: DOWN
+- tapOn: "Observed at movement time"
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate-source
+- inputText: "Synthetic audit receipt"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-save-cash-funding
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b941,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn:
+    id: futures-confirm-delete
+- assertVisible:
+    id: futures-error
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b941,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+- tapOn:
+    id: futures-cancel-delete
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b941,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: "delete-futures-.*"
+    direction: DOWN
+- tapOn:
+    id: "delete-futures-.*"
+- tapOn:
+    id: futures-confirm-delete
+- openLink: "cogvest:///cash"
+- assertVisible: "\u20b950,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn:
+    id: futures-confirm-delete
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- openLink: "cogvest:///"
