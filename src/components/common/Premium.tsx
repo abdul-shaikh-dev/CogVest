@@ -32,6 +32,7 @@ type PremiumCardProps = {
 };
 
 type ScreenHeaderProps = {
+  compact?: boolean;
   action?: ReactNode;
   leading?: ReactNode;
   subtitle?: string;
@@ -114,6 +115,7 @@ export function PremiumCard({
 }
 
 export function ScreenHeader({
+  compact = false,
   action,
   leading,
   subtitle,
@@ -123,14 +125,14 @@ export function ScreenHeader({
   const shouldStack = getAdaptiveLayoutMode(fontScale) !== "standard";
 
   return (
-    <View style={[styles.header, shouldStack && styles.headerStacked]}>
+    <View style={[styles.header, compact && styles.headerCompact, shouldStack && styles.headerStacked]}>
       <View style={[styles.headerIdentity, shouldStack && styles.headerIdentityStacked]}>
         {leading ? <View style={styles.headerLeading}>{leading}</View> : null}
         <View style={styles.headerCopy}>
-          <AppText accessibilityRole="header" variant="largeTitle" weight="bold">
+          <AppText accessibilityRole="header" variant="largeTitle" style={compact && styles.compactTitle} weight="bold">
             {title}
           </AppText>
-          {subtitle ? <AppText color="secondary">{subtitle}</AppText> : null}
+          {subtitle ? <AppText color="secondary" variant={compact ? "caption" : "body"}>{subtitle}</AppText> : null}
         </View>
       </View>
       {action ? (
@@ -148,12 +150,14 @@ export function ScreenHeader({
 }
 
 export function IconButton({
+  plain = false,
   accessibilityLabel,
   disabled = false,
   icon,
   onPress,
   testID,
 }: {
+  plain?: boolean;
   accessibilityLabel: string;
   disabled?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
@@ -166,10 +170,11 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
-      android_ripple={androidRipple()}
+      android_ripple={androidRipple(plain ? "rgba(255,255,255,0.12)" : undefined)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
+        plain && styles.iconButtonPlain,
         disabled && { opacity: 0.4 },
         minimumTouchTargetStyle,
         getPressedStateStyle({ pressed }),
@@ -426,6 +431,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
+  headerCompact: { gap: spacing.sm },
+  compactTitle: { fontSize: 24, lineHeight: 30 },
+  iconButtonPlain: { backgroundColor: "transparent" },
   headerActionStacked: {
     alignSelf: "flex-end",
   },

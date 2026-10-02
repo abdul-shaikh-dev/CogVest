@@ -620,6 +620,8 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Open Progress")).toBeTruthy();
     expect(screen.getByText("September 2026 activity")).toBeTruthy();
     expect(screen.getByText("No net investment or cash change")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-monthly-context")).toHaveStyle({ gap: 4 });
+    expect(screen.getByText("September 2026 activity")).toHaveStyle({ fontSize: 12 });
     expect(screen.queryByText("Investment rate")).toBeNull();
     expect(screen.queryByText("Cash balance")).toBeNull();
     expect(screen.queryByText("Holdings")).toBeNull();
