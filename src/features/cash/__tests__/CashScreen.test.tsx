@@ -21,6 +21,27 @@ function selectDate(
 }
 
 describe("CashScreen", () => {
+  it.each(["standard", "minimal"] as const)("compacts zero metrics without implying no withdrawals in %s mode", (displayMode) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    store.getState().addCashEntry({ id: "prior", date: "2026-08-01", amount: 1000,
+      label: "Prior deposit", purpose: "capitalContribution", type: "addition" });
+    store.getState().addCashEntry({ id: "out", date: "2026-09-01", amount: 100,
+      label: "Withdrawal", purpose: "withdrawal", type: "withdrawal" });
+    const screen = render(<CashScreen store={store} now={new Date(2026, 8, 2, 12)} />);
+    expect(screen.getByTestId("cash-zero-activity")).toHaveStyle({ flexWrap: "wrap" });
+    expect(screen.getByText("Cash added ₹0")).toBeTruthy();
+    expect(screen.getByText("Invested ₹0")).toBeTruthy();
+    expect(screen.getByText("-₹100.00")).toBeTruthy();
+    expect(screen.getByText("₹900.00")).toBeTruthy();
+    expect(screen.queryByText(/No cash movement/)).toBeNull();
+    expect(screen.getByTestId("cash-month-2026-09")).toHaveStyle({ paddingTop: 12 });
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    expect(screen.queryByTestId("cash-zero-activity")).toBeNull();
+    expect(screen.queryByText("Cash added ₹0")).toBeNull();
+    expect(screen.getByText("Cash added")).toBeTruthy();
+    expect(screen.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
+  });
   it("groups history by calendar month while preserving dates, signed amounts and review targets", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCorrectEntry = jest.fn();
