@@ -1,0 +1,49 @@
+appId: com.abdulshaikh.cogvest
+---
+# Remove only the synthetic purchase created by the paired setup flow.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash"
+- assertVisible: "₹49,795.00"
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- tapOn:
+    id: "review-trade-.*"
+- assertVisible:
+    id: trade-correction-quantity-input
+    text: "2"
+- scrollUntilVisible:
+    element:
+      id: trade-correction-total
+    direction: DOWN
+- assertVisible:
+    id: trade-correction-total
+    text: "₹205.00"
+- scrollUntilVisible:
+    element:
+      id: delete-trade-button
+    direction: DOWN
+- tapOn:
+    id: delete-trade-button
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-trade-button
+    direction: DOWN
+- tapOn:
+    id: confirm-delete-trade-button
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible: "No transactions yet"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp

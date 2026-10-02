@@ -49,6 +49,49 @@ function createStore() {
 }
 
 describe("ReviewTradeScreen", () => {
+  it("preserves optional drafts when context is collapsed before saving", async () => {
+    const { store } = createStore();
+    const onComplete = jest.fn();
+    const screen = render(
+      <ReviewTradeScreen onCancel={jest.fn()} onComplete={onComplete} store={store} tradeId={trade.id} />,
+    );
+    fireEvent.changeText(screen.getByTestId("trade-correction-notes-input"), "Updated plan");
+    fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "365");
+    fireEvent.changeText(screen.getByLabelText("Why this investment?"), "Long-term allocation");
+    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    expect(screen.queryByTestId("trade-correction-notes-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(store.getState().trades[0]).toMatchObject({
+      conviction: 4,
+      intendedHoldDays: 365,
+      notes: "Updated plan",
+      whyThisTrade: "Long-term allocation",
+      totalValue: 210,
+    });
+    expect(store.getState().cashEntries).toContainEqual(
+      expect.objectContaining({ linkedTradeId: trade.id, amount: 210 }),
+    );
+  });
+
+  it("starts empty context collapsed and reveals hidden validation errors", () => {
+    const { store } = createStore();
+    store.setState({ trades: [{ ...trade, notes: undefined, conviction: undefined }] });
+    const onComplete = jest.fn();
+    const screen = render(
+      <ReviewTradeScreen onCancel={jest.fn()} onComplete={onComplete} store={store} tradeId={trade.id} />,
+    );
+    expect(screen.queryByTestId("trade-correction-notes-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "-1");
+    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+    expect(screen.getByText("Holding period must be a whole number of days.")).toBeTruthy();
+    expect(screen.getByTestId("trade-correction-context-toggle")).toHaveProp("accessibilityState", { expanded: true });
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(store.getState().trades[0].intendedHoldDays).toBeUndefined();
+  });
+
   it("corrects a transaction and linked cash once after rapid save presses", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();

@@ -1,5 +1,5 @@
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -11,6 +11,7 @@ import {
   ScreenHeader,
   SensitiveValueReveal,
   SectionHeader,
+  getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
@@ -69,6 +70,11 @@ export function ReviewTradeScreen({
   const [conviction, setConviction] = useState(() => trade?.conviction?.toString() ?? "");
   const [holdDays, setHoldDays] = useState(() => trade?.intendedHoldDays?.toString() ?? "");
   const [rationale, setRationale] = useState(() => trade?.whyThisTrade ?? "");
+  const [isContextExpanded, setIsContextExpanded] = useState(() => Boolean(
+    trade?.notes || trade?.conviction || trade?.intendedHoldDays || trade?.whyThisTrade,
+  ));
+  const { fontScale } = useWindowDimensions();
+  const stackFields = getAdaptiveLayoutMode(fontScale) !== "standard";
   const [errors, setErrors] = useState<Errors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -177,6 +183,7 @@ export function ReviewTradeScreen({
     }
     if (previewTotal !== null && previewTotal <= 0) nextErrors.fees = "Fees must be lower than sale proceeds.";
     setErrors(nextErrors);
+    if (nextErrors.conviction || nextErrors.holdDays) setIsContextExpanded(true);
     if (Object.keys(nextErrors).length > 0 || !parsedQuantity || !parsedPrice) return null;
     return { parsedConviction, parsedFees, parsedHoldDays };
   }
@@ -253,30 +260,40 @@ export function ReviewTradeScreen({
       <View style={styles.content}>
         <ScreenHeader title="Review Transaction" subtitle={asset.name} />
         <PremiumCard section>
-          <SectionHeader title="Transaction identity" />
-          <View style={styles.identityRow}>
-            <View><AppText color="secondary" variant="caption">Holding</AppText><AppText weight="bold">{asset.name}</AppText></View>
-            <View><AppText color="secondary" variant="caption">Type</AppText><AppText weight="bold">{trade.type === "buy" ? "Purchase" : "Sale"}</AppText></View>
-          </View>
-          <AppText color="secondary" variant="caption">Holding and transaction type stay fixed so linked records remain trustworthy.</AppText>
-        </PremiumCard>
-        <PremiumCard section>
-          <SectionHeader title="Transaction details" />
-          <View style={styles.row}>
+          <SectionHeader title={trade.type === "buy" ? "Purchase" : "Sale"} />
+          <View style={[styles.row, stackFields && styles.stacked]}>
             <View style={styles.flex}><FormTextField error={errors.quantity} keyboardType="decimal-pad" label="Quantity" onChangeText={setQuantity} testID="trade-correction-quantity-input" value={quantity} /></View>
             <View style={styles.flex}><FormTextField error={errors.price} keyboardType="decimal-pad" label="Price per unit" onChangeText={setPrice} testID="trade-correction-price-input" value={price} /></View>
           </View>
           <FormTextField error={errors.fees} keyboardType="decimal-pad" label="Fees" onChangeText={setFees} testID="trade-correction-fees-input" value={fees} />
           <DatePickerField error={errors.date} label="Transaction date" maximumDate={now} onChange={setDate} testID="trade-correction-date-input" value={date} />
-          <FormTextField label="Notes" multiline onChangeText={setNotes} testID="trade-correction-notes-input" value={notes} />
         </PremiumCard>
         <PremiumCard elevated>
-          <AppText color="secondary" variant="caption">Corrected total</AppText>
-          <AppText variant="title" weight="bold">{previewTotal === null ? "Not available" : formatINR(previewTotal)}</AppText>
-          <AppText color="secondary" variant="caption">Calculated from quantity, price, and fees.</AppText>
+          <AppText color="secondary" variant="caption">{stableTrade.type === "buy" ? "Corrected purchase total" : "Corrected net proceeds"}</AppText>
+          <AppText testID="trade-correction-total" variant="title" weight="bold">{previewTotal === null ? "Not available" : formatINR(previewTotal)}</AppText>
+          <AppText color="secondary" variant="caption">
+            {linkedCashEntry
+              ? "The linked cash movement updates with this transaction."
+              : "No cash movement is linked to this legacy transaction."}
+          </AppText>
         </PremiumCard>
         <PremiumCard section>
-          <SectionHeader title="Investment context (optional)" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isContextExpanded }}
+            onPress={() => setIsContextExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [styles.contextToggle, pressed && styles.pressed]}
+            testID="trade-correction-context-toggle"
+          >
+            <View style={styles.flex}>
+              <AppText weight="bold">Investment context</AppText>
+              <AppText color="secondary" variant="caption">Optional notes and investment plan</AppText>
+            </View>
+            <AppText color="secondary">{isContextExpanded ? "Hide" : "Show"}</AppText>
+          </Pressable>
+          {isContextExpanded ? <>
+          <FormTextField label="Notes" multiline onChangeText={setNotes} testID="trade-correction-notes-input" value={notes} />
+          <SectionHeader title="Conviction (optional)" />
           <View style={styles.convictionRow}>
             {convictionScores.map((score) => {
               const selected = conviction === String(score);
@@ -288,45 +305,47 @@ export function ReviewTradeScreen({
             <FormTextField error={errors.holdDays} keyboardType="number-pad" label="Planned holding period (days)" onChangeText={setHoldDays} value={holdDays} />
           ) : null}
           <FormTextField label="Why this investment?" multiline onChangeText={setRationale} value={rationale} />
+          </> : null}
         </PremiumCard>
         {errors.save ? <AppText accessibilityLiveRegion="polite" selectable style={styles.errorText} variant="caption">{errors.save}</AppText> : null}
         <View style={styles.actions}>
-          <AppButton disabled={isSaving} title="Cancel" variant="secondary" onPress={onCancel} />
           <AppButton accessibilityState={{ busy: isSaving, disabled: isSaving }} disabled={isSaving} title={isSaving ? "Saving..." : "Save changes"} testID="save-trade-correction-button" onPress={save} />
+          <AppButton disabled={isSaving} title="Cancel" variant="secondary" onPress={onCancel} />
         </View>
-        <PremiumCard>
-          <SectionHeader title="Remove transaction" />
-          <AppText color="secondary" variant="caption">
-            {linkedCashEntry
-              ? "Its linked cash funding or sale proceeds will be removed at the same time."
-              : "No cash movement is linked to this legacy transaction."}
-          </AppText>
+        <View style={styles.removalSection}>
           {isConfirmingDelete ? (
-            <View style={styles.deleteConfirmation}>
-              <AppText weight="bold">Remove this transaction?</AppText>
+            <PremiumCard>
+              <SectionHeader title="Remove this transaction?" />
+              <AppText color="secondary" variant="caption">
+                {linkedCashEntry
+                  ? "Its linked cash funding or sale proceeds will be removed at the same time."
+                  : "No cash movement is linked to this legacy transaction."}
+              </AppText>
               <AppText color="secondary" variant="caption">Portfolio totals and automatic history will be recalculated. This cannot be undone.</AppText>
               <View style={styles.actions}>
                 <AppButton disabled={isSaving} title="Keep transaction" variant="secondary" onPress={() => setIsConfirmingDelete(false)} />
                 <AppButton disabled={isSaving} title={isSaving ? "Removing..." : "Remove transaction"} variant="destructive" testID="confirm-delete-trade-button" onPress={deleteTransaction} />
               </View>
-            </View>
+            </PremiumCard>
           ) : <AppButton title="Remove transaction" variant="ghost" testID="delete-trade-button" onPress={() => setIsConfirmingDelete(true)} />}
-        </PremiumCard>
+        </View>
       </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: "row", gap: spacing.sm, justifyContent: "flex-end" },
-  content: { gap: spacing.lg, paddingVertical: spacing.lg },
+  actions: { gap: spacing.sm },
+  content: { gap: spacing.cardGap, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  contextToggle: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: interaction.minimumTouchTarget },
   convictionChip: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flex: 1, justifyContent: "center", minHeight: interaction.minimumTouchTarget },
   convictionChipActive: { backgroundColor: colors.primary },
   convictionRow: { flexDirection: "row", gap: spacing.sm },
-  deleteConfirmation: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, gap: spacing.sm, padding: spacing.md },
+  removalSection: { borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md },
   errorText: { color: colors.loss },
   flex: { flex: 1 },
   identityRow: { flexDirection: "row", gap: spacing.xl, justifyContent: "space-between" },
   pressed: { opacity: interaction.pressedOpacity },
   row: { flexDirection: "row", gap: spacing.sm },
+  stacked: { flexDirection: "column" },
 });
