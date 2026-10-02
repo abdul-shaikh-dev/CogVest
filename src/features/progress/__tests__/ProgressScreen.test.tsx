@@ -1424,6 +1424,45 @@ describe("ProgressScreen", () => {
     }
   });
 
+  describe.each(["standard", "minimal"] as const)("%s monthly line geometry", (displayMode) => {
+    it.each([
+      { label: "rising", values: [1929000, 1987000, 5722000] },
+      { label: "falling", values: [5722000, 1987000, 1929000] },
+      { label: "flat", values: [1929000, 1929000, 1929000] },
+      { label: "two-point", values: [1929000, 1987000] },
+    ])("uses straight segments and unchanged points for $label history", ({ values }) => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      store.getState().updatePreferences({ displayMode });
+      values.forEach((value, index) => {
+        store.getState().addMonthlySnapshot(chartSnapshot(`2026-0${index + 1}`, {
+          cryptoValue: 0,
+          debtValue: 0,
+          equityValue: value,
+          investedValue: 1900000,
+          portfolioValue: value,
+        }));
+      });
+      const saved = store.getState().monthlySnapshots;
+      const view = render(<ProgressScreen store={store} />);
+      const assertPortfolio = () => {
+        const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
+        expect(chart.props.curved).toBe(false);
+        expect(chart.props.data.map((point: { value: number }) => point.value)).toEqual(values);
+        return chart;
+      };
+      assertPortfolio();
+      if (displayMode === "minimal") fireEvent.press(view.getByTestId("progress-details-toggle"));
+      expect(assertPortfolio().props.data2.map((point: { value: number }) => point.value))
+        .toEqual(values.map(() => 1900000));
+      const asset = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1];
+      expect(asset.props.curved).toBe(false);
+      expect(asset.props.dataSet[0].data.map((point: { value: number }) => point.value)).toEqual(values);
+      fireEvent.press(view.getByTestId("progress-mask-toggle"));
+      expect(assertPortfolio().props.formatYLabel("1929000")).toBe(MASKED_INR_VALUE);
+      expect(store.getState().monthlySnapshots).toEqual(saved);
+    });
+  });
+
   it("breaks lines at missing months and withholds their monthly percentage", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -1431,6 +1470,9 @@ describe("ProgressScreen", () => {
     const screen = render(<ProgressScreen store={store} />);
     const [portfolio, asset] = screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true });
     expect(portfolio.props.areaChart).toBe(false);
+    expect(portfolio.props.curved).toBe(false);
+    expect(asset.props.curved).toBe(false);
+    expect(portfolio.props.lineSegments2).toEqual(portfolio.props.lineSegments);
     expect(portfolio.props.lineSegments).toEqual([{ startIndex: 0, endIndex: 1, color: "transparent" }]);
     expect(asset.props.dataSet[0].lineSegments).toEqual(portfolio.props.lineSegments);
     expect(screen.getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
