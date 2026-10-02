@@ -1,0 +1,155 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio. No financial records are saved or deleted.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/dashboard
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///holdings"
+- assertNotVisible: ".*₹[0-9].*"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/holdings-masked
+- openLink: "cogvest:///progress"
+- assertNotVisible: ".*₹[0-9].*"
+- openLink: "cogvest:///cash"
+- assertNotVisible: "₹50,000.00"
+- openLink: "cogvest:///settings"
+- tapOn:
+    id: value-mask-toggle
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/settings
+- openLink: "cogvest:///holdings"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/holdings
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- assertVisible: "Search assets"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/manage-assets
+- tapOn:
+    id: manage-assets-search-input
+- inputText: "HDFCBANK"
+- assertVisible: "1 of 5 assets"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/search-keyboard
+- hideKeyboard
+- tapOn:
+    id: manage-asset-visual-qa-asset-hdfc
+- assertVisible:
+    id: asset-name-input
+    text: "HDFC Bank"
+- assertVisible: "INR"
+- scrollUntilVisible:
+    element:
+      id: cancel-asset-correction-button
+    direction: DOWN
+- tapOn:
+    id: cancel-asset-correction-button
+- assertVisible: "1 of 5 assets"
+- tapOn:
+    id: manage-assets-search-input
+- eraseText: 30
+- hideKeyboard
+- assertVisible: "5 assets"
+- tapOn:
+    id: manage-assets-back
+- assertVisible:
+    id: holdings-screen
+- openLink: "cogvest:///holding-transactions"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/transactions
+- back
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/cash
+- tapOn:
+    id: cash-entry-deposit
+- tapOn:
+    id: cash-amount-input
+- inputText: "123"
+- hideKeyboard
+- tapOn:
+    id: cash-notes-toggle
+- scrollUntilVisible:
+    element:
+      id: cash-notes-input
+    direction: DOWN
+- tapOn:
+    id: cash-notes-input
+- inputText: "UX consistency draft"
+- assertVisible:
+    id: cash-notes-input
+    text: "UX consistency draft"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/cash-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: close-cash-entry-button
+    direction: UP
+- tapOn:
+    id: close-cash-entry-button
+- assertVisible: "₹50,000.00"
+- tapOn:
+    id: cash-entry-deposit
+- assertVisible:
+    id: cash-amount-input
+    text: "123"
+- tapOn:
+    id: close-cash-entry-button
+- tapOn:
+    id: cash-entry-withdraw
+- assertVisible: "Discard this draft?"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/cash-draft-warning
+- tapOn:
+    id: cash-keep-draft-button
+- tapOn:
+    id: cash-entry-deposit
+- assertVisible:
+    id: cash-amount-input
+    text: "123"
+- tapOn:
+    id: close-cash-entry-button
+- tapOn:
+    id: cash-entry-withdraw
+- tapOn:
+    id: cash-discard-draft-button
+- tapOn:
+    id: close-cash-entry-button
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      text: "Create Futures wallet"
+    direction: DOWN
+- assertVisible: "Create Futures wallet"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/futures-empty
+- back
+- openLink: "cogvest:///progress"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/ux-final/${SIZE}/progress
+- openLink: "cogvest:///manage-assets"
+- assertVisible: "5 assets"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp

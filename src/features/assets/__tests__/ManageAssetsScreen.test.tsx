@@ -65,6 +65,9 @@ describe("ManageAssetsScreen", () => {
     store.getState().addAsset(closedAsset);
     const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
     const input = screen.getByTestId("manage-assets-search-input");
+    expect(input).toHaveProp("placeholder", "Search assets");
+    expect(input).toHaveProp("accessibilityLabel", "Search assets");
+    const originalAssets = store.getState().assets;
 
     for (const query of ["hdfc bank", "HDFCBANK", "hdfcbank.ns", "INE040A01034"]) {
       fireEvent.changeText(input, query);
@@ -73,6 +76,14 @@ describe("ManageAssetsScreen", () => {
       expect(screen.queryByText("Closed Fund")).toBeNull();
       expect(input).toHaveProp("value", query);
     }
+    fireEvent.changeText(input, "nse");
+    expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("2 assets");
+    fireEvent.changeText(input, "not-a-saved-asset");
+    expect(screen.getByText("No matching assets")).toBeTruthy();
+    expect(screen.getByText(/Try a name, symbol, ticker, or ISIN/)).toBeTruthy();
+    fireEvent.changeText(input, "");
+    expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("2 assets");
+    expect(store.getState().assets).toBe(originalAssets);
   });
 
   it("preserves search context while a reviewed asset changes", () => {

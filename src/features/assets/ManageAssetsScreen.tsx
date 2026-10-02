@@ -97,7 +97,7 @@ export function ManageAssetsScreen({
           <TextInput
             accessibilityLabel="Search assets"
             onChangeText={setSearchQuery}
-            placeholder="Search name, symbol, ticker, or ISIN"
+            placeholder="Search assets"
             placeholderTextColor={colors.text.secondary}
             style={styles.searchInput}
             testID="manage-assets-search-input"
