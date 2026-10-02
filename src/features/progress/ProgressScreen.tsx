@@ -615,6 +615,30 @@ function TrendChart({
 
   return (
     <View style={styles.chartBlock}>
+      <View style={styles.monthNavigation} testID={`${testIDPrefix}-month-navigation`}>
+        <AppButton
+          accessibilityLabel={`${chartName}: previous stored month`}
+          disabled={safeSelectedIndex === 0}
+          onPress={() => setSelectedIndex(safeSelectedIndex - 1)}
+          testID={`${testIDPrefix}-previous-month`}
+          title="‹" variant="ghost"
+        />
+        <View style={styles.monthNavigationLabel}>
+          <AppText align="center" variant="caption" weight="bold">
+            {monthLabels[safeSelectedIndex] ?? ""}
+          </AppText>
+          {estimatedIndices.includes(safeSelectedIndex) ? (
+            <AppText align="center" color="secondary" variant="caption">Estimated</AppText>
+          ) : null}
+        </View>
+        <AppButton
+          accessibilityLabel={`${chartName}: next stored month`}
+          disabled={safeSelectedIndex >= pointCount - 1}
+          onPress={() => setSelectedIndex(safeSelectedIndex + 1)}
+          testID={`${testIDPrefix}-next-month`}
+          title="›" variant="ghost"
+        />
+      </View>
       {!isPortfolioChart && focusedSeries ? (
         <AppText color="secondary" testID={`${testIDPrefix}-focused-scale`} variant="caption">
           {focusedSeries} scale · Other asset lines hidden
@@ -708,30 +732,6 @@ function TrendChart({
           )}
         </View>
       </View>}
-      <View style={styles.monthNavigation}>
-        <AppButton
-          accessibilityLabel={`${chartName}: previous stored month`}
-          disabled={safeSelectedIndex === 0}
-          onPress={() => setSelectedIndex(safeSelectedIndex - 1)}
-          testID={`${testIDPrefix}-previous-month`}
-          title="‹" variant="secondary"
-        />
-        <View style={styles.monthNavigationLabel}>
-          <AppText align="center" variant="caption" weight="bold">
-            {monthLabels[safeSelectedIndex] ?? ""}
-          </AppText>
-          {estimatedIndices.includes(safeSelectedIndex) ? (
-            <AppText align="center" color="secondary" variant="caption">Estimated</AppText>
-          ) : null}
-        </View>
-        <AppButton
-          accessibilityLabel={`${chartName}: next stored month`}
-          disabled={safeSelectedIndex >= pointCount - 1}
-          onPress={() => setSelectedIndex(safeSelectedIndex + 1)}
-          testID={`${testIDPrefix}-next-month`}
-          title="›" variant="secondary"
-        />
-      </View>
       <SelectedMonthPanel
         investedComparison={investedComparisons?.[safeSelectedIndex]}
         partialHistory={partialHistory}
@@ -1223,7 +1223,7 @@ function ChartRangeContext({
 function ChartCardHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View style={styles.chartCardHeader}>
-      <AppText variant="title" weight="bold">{title}</AppText>
+      <SectionHeader title={title} />
       <AppText color="secondary" variant="caption">{subtitle}</AppText>
     </View>
   );
@@ -1676,8 +1676,10 @@ export function ProgressScreen({
     <ScreenContainer scroll testID="progress-screen">
       <View style={styles.content}>
         <ScreenHeader
+          compact
           title="Monthly Progress"
           action={<IconButton
+            plain
             accessibilityLabel={progress.preferences.maskWealthValues ? "Show values" : "Mask values"}
             icon={progress.preferences.maskWealthValues ? "eye-off-outline" : "eye-outline"}
             onPress={() => store.getState().updatePreferences({ maskWealthValues: !progress.preferences.maskWealthValues })}
@@ -1685,7 +1687,7 @@ export function ProgressScreen({
           />}
           subtitle={
             progress.latestSummary
-              ? "Stored month-end values"
+              ? undefined
               : getMonthLabel()
           }
         />
@@ -1702,7 +1704,7 @@ export function ProgressScreen({
           <>
             <View style={styles.monthlyAnswer} testID="progress-monthly-answer">
               <View style={styles.summaryActions}>
-              <MonthPickerField label="Month-end value"
+              <MonthPickerField label="Stored month-end value"
                 months={progress.monthlySummaries.map(item => item.snapshot.month)}
                 value={selectedSummary.snapshot.month} onChange={setSummaryMonth} testID="progress-summary-month" />
               <MonthlyHistoryPanel
@@ -1719,7 +1721,7 @@ export function ProgressScreen({
                 weight="bold"
               />
               {getMonthlySnapshotPriceConfidence(selectedSummary.snapshot) === "provisional" ? (
-                <AppText color="secondary" variant="caption">Estimated month-end value</AppText>
+                <AppText color="secondary" variant="caption">Estimated prices</AppText>
               ) : null}
               {isMinimalMode ? (
                 <DisclosureButton
@@ -1753,14 +1755,13 @@ export function ProgressScreen({
                   />
                 </View>
               </View> : null}
-            </View>
-
             {hasInvalidSnapshot ? null : <SnapshotStatusCard
               onOpenHoldings={() => onOpenHoldings?.()}
               onReview={reviewSnapshot}
               onRetry={retrySnapshotAutomation}
               status={progress.snapshotAutomationStatus}
             />}
+            </View>
 
             {hasInvalidSnapshot ? null : <ProgressTrendCards
               ppfExcludedHistory={progress.ppfExcludedHistory}
@@ -1968,7 +1969,7 @@ const styles = StyleSheet.create({
   },
   chartCardHeader: {
     alignItems: "flex-start",
-    gap: spacing.sm,
+    gap: spacing.xs,
     justifyContent: "space-between",
   },
   chartLegend: {
@@ -1979,7 +1980,7 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   customRangeFields: {
     flexDirection: "column",

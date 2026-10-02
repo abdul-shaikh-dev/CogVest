@@ -106,10 +106,12 @@ describe("MonthlyHistoryPanel", () => {
     ]} />);
     fireEvent.press(screen.getByTestId("open-monthly-history"));
     expect(screen.getByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toHaveStyle({ width: "50%" });
+    expect(screen.getByTestId("history-bar-scale")).toHaveTextContent("Bars: portfolio value relative to 2026's highest month");
     expect(screen.getByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
     expect(screen.getByTestId("snapshot-value-bar-2026-03", { includeHiddenElements: true })).toHaveStyle({ width: "0%" });
     expect(screen.getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain("+20.00%");
     fireEvent.press(screen.getByText("2025"));
+    expect(screen.getByTestId("history-bar-scale")).toHaveTextContent("Bars: portfolio value relative to 2025's highest month");
     expect(screen.getByTestId("snapshot-value-bar-2025-12", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
   });
 
@@ -123,6 +125,7 @@ describe("MonthlyHistoryPanel", () => {
     } />);
     fireEvent.press(screen.getByTestId("open-monthly-history"));
     expect(screen.queryByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId("history-bar-scale")).toBeNull();
     expect(screen.queryByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toBeNull();
   });
 
