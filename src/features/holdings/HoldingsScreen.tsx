@@ -335,11 +335,13 @@ export function HoldingsScreen({
     >
       <View style={styles.content}>
         <ScreenHeader
+          compact
           title="Holdings"
           subtitle={subtitle}
           action={
             <>
               <IconButton
+                plain
                 accessibilityLabel={
                   maskWealthValues ? "Show values" : "Hide values"
                 }
@@ -349,6 +351,7 @@ export function HoldingsScreen({
               />
               {onAddTrade || onAddPpfAccount || onRecordPurchase || onOpenFutures ? (
                 <IconButton
+                  plain
                   accessibilityLabel={
                     onQuickSetup ? "Add holdings" : "Add Holding"
                   }
@@ -358,6 +361,7 @@ export function HoldingsScreen({
                 />
               ) : null}
               <IconButton
+                plain
                 accessibilityLabel="More holdings options"
                 icon="ellipsis-horizontal"
                 onPress={() => setActivePanel("more")}
@@ -1884,9 +1888,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   content: {
-    gap: spacing.cardGap,
+    gap: spacing.sm,
     paddingBottom: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   destinationTab: {
     alignItems: "center",

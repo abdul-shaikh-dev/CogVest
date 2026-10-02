@@ -25,6 +25,19 @@ import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
+  it("offers compact page controls without shrinking their touch targets or disabling scaling", () => {
+    const view = render(<ScreenHeader compact title="Holdings" subtitle="4 market positions"
+      action={<IconButton plain icon="add-outline" accessibilityLabel="Add Holding" />} />);
+    expect(view.getByRole("header", { name: "Holdings" })).toHaveStyle({ fontSize: 24, lineHeight: 30 });
+    expect(view.getByText("4 market positions")).toHaveStyle({ fontSize: 12 });
+    expect(view.getByRole("header", { name: "Holdings" }).props.allowFontScaling).not.toBe(false);
+    expect(view.getByRole("button", { name: "Add Holding" })).toHaveStyle({
+      minHeight: 48, minWidth: 48, backgroundColor: "transparent",
+    });
+    const rippleNodes = view.UNSAFE_root.findAll((node: { props: { android_ripple?: unknown } }) => node.props.android_ripple !== undefined);
+    expect(rippleNodes).toHaveLength(1);
+    expect(rippleNodes[0].props.android_ripple.color).toBe("rgba(255,255,255,0.12)");
+  });
   it("pairs disclosure state with a visible directional indicator and a stable label", () => {
     const onPress = jest.fn();
     const view = render(<DisclosureButton expanded={false} title="Invested & returns" onPress={onPress} testID="disclosure" />);

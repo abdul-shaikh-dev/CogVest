@@ -1,0 +1,51 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-header-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- tapOn:
+    id: holdings-header-mask-toggle
+- tapOn:
+    id: holdings-filter-toggle
+- tapOn:
+    id: holdings-filter-losers
+- assertNotVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- tapOn:
+    id: holdings-filter-all
+- tapOn:
+    id: holdings-filter-toggle
+- tapOn:
+    id: holdings-search-input
+- inputText: Bitcoin
+- hideKeyboard
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertNotVisible: "Sovereign Gold Bond"
+- tapOn:
+    id: holdings-search-input
+- eraseText
+- hideKeyboard
+- tapOn:
+    id: holdings-add-button
+- assertVisible:
+    id: add-multiple-holdings-option
+- tapOn:
+    id: holdings-panel-close
+- tapOn:
+    id: holdings-more-button
+- assertVisible:
+    id: holdings-valuation-details-button
+- tapOn:
+    id: holdings-panel-close
+- tapOn:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertVisible: "Holding details"
+- scrollUntilVisible:
+    element: "Invested in remaining units"
+    direction: DOWN
+- assertVisible: "₹11,00,000.00"
+- back
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"

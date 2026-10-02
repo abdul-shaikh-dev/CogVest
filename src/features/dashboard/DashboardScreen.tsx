@@ -236,10 +236,12 @@ export function DashboardScreen({
     <ScreenContainer scroll testID="dashboard-screen">
       <View style={styles.content}>
         <ScreenHeader
+          compact
           title="Dashboard"
           action={
             <>
               <IconButton
+                plain
                 accessibilityLabel={
                   dashboard.maskWealthValues ? "Show values" : "Mask values"
                 }
@@ -248,6 +250,7 @@ export function DashboardScreen({
                 testID="dashboard-mask-toggle"
               />
               <IconButton
+                plain
                 accessibilityLabel="Refresh quotes"
                 icon="refresh-outline"
                 onPress={() => {
@@ -543,11 +546,14 @@ export function DashboardScreen({
         ) : null}
 
         {!isMinimalMode ? (
-          <PremiumCard section style={styles.compactSection} testID="dashboard-monthly-context">
-            <SectionHeader title={`${formatMonthYear(currentDate)} activity`} />
-            {!dashboard.maskWealthValues && dashboard.monthlyMetrics.investment === 0 && dashboard.monthlyMetrics.cashChange === 0 ? (
+          !dashboard.maskWealthValues && dashboard.monthlyMetrics.investment === 0 && dashboard.monthlyMetrics.cashChange === 0 ? (
+            <View style={styles.quietActivity} testID="dashboard-monthly-context">
+              <AppText color="secondary" variant="caption" weight="medium">{`${formatMonthYear(currentDate)} activity`}</AppText>
               <AppText color="secondary" variant="caption">No net investment or cash change</AppText>
-            ) : <MetricGroup
+            </View>
+          ) : <PremiumCard section style={styles.compactSection} testID="dashboard-monthly-context">
+            <SectionHeader title={`${formatMonthYear(currentDate)} activity`} />
+            <MetricGroup
               metrics={[
                 {
                   exactValue: formatINR(dashboard.monthlyMetrics.investment),
@@ -564,7 +570,7 @@ export function DashboardScreen({
                   ),
                 },
               ]}
-            />}
+            />
           </PremiumCard>
         ) : null}
 
@@ -897,8 +903,9 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
+  quietActivity: { gap: spacing.xs, paddingHorizontal: spacing.xs },
   compactSection: { paddingVertical: spacing.sm },
   heroCard: {
     gap: spacing.sm,

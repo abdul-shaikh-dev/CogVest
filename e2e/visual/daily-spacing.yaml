@@ -1,0 +1,19 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio; does not create or change financial records.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- takeScreenshot: .expo/daily-spacing/${PHASE}/${SIZE}/${MODE}-holdings
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Portfolio value"
+- takeScreenshot: .expo/daily-spacing/${PHASE}/${SIZE}/${MODE}-dashboard
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
