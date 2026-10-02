@@ -5,6 +5,7 @@ import * as ReactNative from "react-native";
 import {
   AppButton,
   AppText,
+  DisclosureButton,
   EmptyState,
   IconButton,
   MASKED_INR_VALUE,
@@ -24,6 +25,21 @@ import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 
 describe("common UI primitives", () => {
+  it("pairs disclosure state with a visible directional indicator and a stable label", () => {
+    const onPress = jest.fn();
+    const view = render(<DisclosureButton expanded={false} title="Invested & returns" onPress={onPress} testID="disclosure" />);
+    const button = view.getByRole("button", { name: "Invested & returns" });
+    expect(button).toHaveProp("accessibilityState", { expanded: false });
+    expect(button).toHaveStyle({ minHeight: interaction.minimumTouchTarget });
+    expect(view.UNSAFE_getByType(Ionicons).props.name).toBe("chevron-down");
+    expect(view.UNSAFE_getByType(Ionicons).props.accessible).toBe(false);
+    fireEvent.press(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    view.rerender(<DisclosureButton expanded title="Invested & returns" onPress={onPress} testID="disclosure" />);
+    expect(view.getByRole("button", { name: "Invested & returns" })).toHaveProp("accessibilityState", { expanded: true });
+    expect(view.UNSAFE_getByType(Ionicons).props.name).toBe("chevron-up");
+    expect(view.getByText("Invested & returns")).toHaveStyle({ flex: 1, flexShrink: 1 });
+  });
   it("preserves intrinsic header height when large text stacks its identity", () => {
     const dimensions = jest.spyOn(ReactNative, "useWindowDimensions")
       .mockReturnValue({ fontScale: 1.3, height: 800, scale: 3, width: 360 });

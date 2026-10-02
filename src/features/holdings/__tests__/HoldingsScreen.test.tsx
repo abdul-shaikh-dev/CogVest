@@ -889,6 +889,7 @@ describe("HoldingsScreen", () => {
     expect(getByTestId(`holding-row-${asset.id}`).props.accessibilityLabel).not.toContain("Invested");
     expect(getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
     expect(queryByText("+25.00%")).toBeNull();
+    expect(queryByText("Returns are since investment, not today.")).toBeNull();
     fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
     expect(getByText("Invested in remaining units")).toBeTruthy();
@@ -902,6 +903,7 @@ describe("HoldingsScreen", () => {
     store.getState().updatePreferences({ displayMode });
     const view = render(<HoldingsScreen store={store} />);
     const row = view.getByTestId(`holding-row-${asset.id}`);
+    expect(Boolean(view.queryByText("Returns are since investment, not today."))).toBe(displayMode === "standard");
     expect(row).toHaveStyle({ paddingVertical: 12, gap: 8 });
     expect(view.getByTestId(`holding-weight-track-${asset.id}`, { includeHiddenElements: true })).toHaveStyle({ height: 3 });
     expect(view.getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();

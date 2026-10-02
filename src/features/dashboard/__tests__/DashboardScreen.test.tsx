@@ -669,6 +669,7 @@ describe("DashboardScreen", () => {
 
     expect(screen.getByText("Portfolio value")).toBeTruthy();
     expect(screen.queryByTestId("dashboard-top-metrics")).toBeNull();
+    expect(screen.getByTestId("dashboard-performance-toggle")).toHaveProp("accessibilityState", { expanded: false });
     expect(screen.queryByText("Holdings P&L")).toBeNull();
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
@@ -681,6 +682,8 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Allocation")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.queryByText("This Month")).toBeNull();
+    expect(screen.getByText("Stored values, not current prices")).toBeTruthy();
+    expect(screen.queryByText("Progress shows stored month-end values. They can differ from current holdings and prices here.")).toBeNull();
     expect(screen.queryByTestId("dashboard-insights")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
     expandPriceDetails(screen);

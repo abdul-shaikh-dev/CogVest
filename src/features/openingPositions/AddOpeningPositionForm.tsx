@@ -582,20 +582,13 @@ export function AddOpeningPositionForm({
                   </AppText>
                 </Pressable>
               ) : null}
-              <Pressable
-                accessibilityRole="button"
+              <AppButton
                 accessibilityState={{ expanded: false }}
                 onPress={() => setIsManualEntryExpanded(true)}
-                style={({ pressed }) => [
-                  styles.discoveryAction,
-                  pressed && styles.pressed,
-                ]}
+                variant="secondary"
                 testID="toggle-manual-asset-entry"
-              >
-                <AppText color="secondary" variant="caption" weight="bold">
-                  Enter details manually
-                </AppText>
-              </Pressable>
+                title="Enter details manually"
+              />
             </View>
             {lookupQuery.trim().length === 0 &&
             recentSearches.length > 0 &&

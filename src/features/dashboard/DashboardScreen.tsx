@@ -12,6 +12,8 @@ import type { StoreApi } from "zustand/vanilla";
 import {
   AppButton,
   AppText,
+  DisclosureButton,
+  GroupedListRow,
   EmptyState,
   IconButton,
   MetricGroup,
@@ -308,12 +310,11 @@ export function DashboardScreen({
             ) : null}
           </View>
           {isMinimalMode ? (
-            <AppButton
-              accessibilityState={{ expanded: showPerformance }}
+            <DisclosureButton
+              expanded={showPerformance}
               onPress={() => setShowPerformance((visible) => !visible)}
               testID="dashboard-performance-toggle"
-              title={showPerformance ? "Hide invested & returns" : "Invested & returns"}
-              variant="ghost"
+              title="Invested & returns"
             />
           ) : null}
           {!isMinimalMode || showPerformance ? <View
@@ -704,7 +705,16 @@ export function DashboardScreen({
           />
         )}
 
-        <PremiumCard style={styles.supportCard} testID="dashboard-support-card">
+        {isMinimalMode ? (
+          <GroupedListRow
+            title="Month-end snapshot"
+            meta="Stored values, not current prices"
+            accessibilityLabel="Open Progress. Stored month-end values, not current prices."
+            onPress={onOpenProgress}
+            showChevron
+            testID="dashboard-open-progress"
+          />
+        ) : <PremiumCard style={styles.supportCard} testID="dashboard-support-card">
           <View
             style={[
               styles.supportRow,
@@ -732,7 +742,7 @@ export function DashboardScreen({
               </AppText>
             </Pressable>
           </View>
-        </PremiumCard>
+        </PremiumCard>}
 
         <InsightCards store={store} now={now} onOpen={onOpenInsight} />
       </View>

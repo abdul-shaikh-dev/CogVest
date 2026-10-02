@@ -1,6 +1,7 @@
 export {};
 export { AppButton } from "./AppButton";
 export { AppText } from "./AppText";
+export { DisclosureButton } from "./DisclosureButton";
 export { EmptyState } from "./EmptyState";
 export {
   MASKED_INR_VALUE,

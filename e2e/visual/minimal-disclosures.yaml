@@ -1,0 +1,76 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic audit portfolio. No data reset or record writes.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: UP
+- tapOn:
+    id: display-mode-minimal
+- openLink: "cogvest:///dashboard"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-performance-toggle
+    timeout: 30000
+- assertNotVisible: "Holdings P&L %"
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/dashboard-collapsed
+- tapOn:
+    id: dashboard-performance-toggle
+- assertVisible: "Holdings P&L %"
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/dashboard-expanded
+- tapOn:
+    id: dashboard-performance-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-open-progress
+    direction: DOWN
+- assertVisible: "Stored values, not current prices"
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/progress-link
+- tapOn:
+    id: dashboard-open-progress
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- assertVisible: "₹82.03L"
+- assertNotVisible: "Market change"
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/progress-collapsed
+- tapOn:
+    id: progress-details-toggle
+- assertVisible: "Market change"
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/progress-expanded
+- tapOn:
+    id: progress-details-toggle
+- tapOn:
+    id: progress-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- tapOn:
+    id: progress-mask-toggle
+- openLink: "cogvest:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holding-row-visual-qa-asset-bitcoin
+    timeout: 15000
+- assertNotVisible: "Holding P&L %"
+- assertNotVisible: "Returns are since investment, not today."
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/holdings
+- openLink: "cogvest:///add-holding"
+- extendedWaitUntil:
+    visible:
+      id: toggle-manual-asset-entry
+    timeout: 15000
+- takeScreenshot: .expo/minimal-disclosures/${SIZE}/add-holding
+- tapOn:
+    id: toggle-manual-asset-entry
+- assertVisible: "Asset name"
+- back
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: UP
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"

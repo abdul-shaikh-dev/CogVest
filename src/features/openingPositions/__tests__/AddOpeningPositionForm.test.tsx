@@ -424,7 +424,7 @@ describe("AddOpeningPositionForm", () => {
       results: [],
     });
     const {
-      getAllByText,
+      getAllByRole,
       getByLabelText,
       getByTestId,
       queryByTestId,
@@ -435,7 +435,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    await waitFor(() => expect(getAllByText("Use")).toHaveLength(6));
+    await waitFor(() => expect(getAllByRole("button", { name: /^Use Saved Asset/u })).toHaveLength(6));
 
     fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
     await act(async () => {

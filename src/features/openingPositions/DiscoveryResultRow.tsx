@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { AppText, assetClassLabel } from "@/src/components/common";
 import {
@@ -51,7 +52,8 @@ export const DiscoveryResultRow = memo(function DiscoveryResultRow({ result, onS
       <AppText color="secondary" variant="caption">{[...new Set([result.symbol, result.ticker]), result.currency].join(" • ")}</AppText>
       <AppText color="secondary" variant="caption">{result.sourceLabel}</AppText>
     </View>
-    <AppText color="secondary" variant="caption" weight="bold">Select</AppText>
+    <Ionicons name="chevron-forward" size={20} color={colors.text.primary}
+      accessible={false} importantForAccessibility="no-hide-descendants" />
   </TouchableOpacity>;
 });
 
@@ -74,7 +76,8 @@ export const SavedAssetRow = memo(function SavedAssetRow({ asset, onSelect }: {
       </AppText>
       <AppText color="secondary" variant="caption">{[...new Set([asset.symbol, asset.ticker ?? assetClassLabel(asset.assetClass)]), asset.currency].join(" • ")}</AppText>
     </View>
-    <AppText color="secondary" variant="caption" weight="bold">Use</AppText>
+    <Ionicons name="chevron-forward" size={20} color={colors.text.primary}
+      accessible={false} importantForAccessibility="no-hide-descendants" />
   </TouchableOpacity>;
 });
 

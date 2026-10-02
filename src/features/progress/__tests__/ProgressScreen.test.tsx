@@ -969,7 +969,9 @@ describe("ProgressScreen", () => {
     expect(queryByText("+17.45%")).toBeNull();
     expect(queryByText("Market change")).toBeNull();
     expect(queryByTestId("portfolio-trend-Invested")).toBeNull();
+    expect(getByTestId("progress-details-toggle")).toHaveProp("accessibilityState", { expanded: false });
     fireEvent.press(getByTestId("progress-details-toggle"));
+    expect(getByTestId("progress-details-toggle")).toHaveProp("accessibilityState", { expanded: true });
     expect(getByText("Value by asset class")).toBeTruthy();
     expect(getByText("+17.45%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("monthly-history-panel")).toBeTruthy();
