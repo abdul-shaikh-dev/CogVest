@@ -20,6 +20,20 @@ function setTime(screen: ReturnType<typeof render>, id: string, value: string) {
 }
 
 describe("manual Futures screen", () => {
+  it("separates wallet equity, empty positions and correction without fabricating INR values", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    expect(screen.getByTestId("futures-position-summary")).toHaveTextContent(/1000 USDT/);
+    expect(screen.getByTestId("futures-position-summary")).toHaveTextContent(/Not verified in INR/);
+    expect(screen.getByTestId("futures-open-positions")).toHaveTextContent(/No open positions in recorded activity\./);
+    expect(screen.getByText("Starting wallet")).toBeTruthy();
+    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    expect(screen.queryByText("1000 USDT")).toBeNull();
+    expect(store.getState().futuresAccounts[0].openingWalletUsdt).toBe("1000");
+  });
+
   it("rejects invalid dates and incomplete observation evidence without persisting", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);

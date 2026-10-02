@@ -1,0 +1,75 @@
+appId: com.abdulshaikh.cogvest
+---
+# Only run when this synthetic portfolio has no Futures wallet. No state clearing.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: futures-save-account
+- assertVisible: "1000 USDT"
+- takeScreenshot: .expo/futures-screens/before-funded
+- scrollUntilVisible:
+    element:
+      id: futures-add-event
+    direction: DOWN
+- tapOn:
+    id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-quantity
+    direction: DOWN
+- tapOn:
+    id: futures-quantity
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-price
+    direction: DOWN
+- tapOn:
+    id: futures-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-fee
+    direction: DOWN
+- tapOn:
+    id: futures-fee
+- eraseText: 10
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-leverage
+    direction: DOWN
+- tapOn:
+    id: futures-leverage
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-event
+    direction: DOWN
+- tapOn:
+    id: futures-save-event
+- scrollUntilVisible:
+    element: "999 USDT"
+    direction: UP
+- assertVisible: "999 USDT"
+- takeScreenshot: .expo/futures-screens/before-summary
+- scrollUntilVisible:
+    element: "Qty 1.*Entry 100 USDT.*"
+    direction: DOWN
+- takeScreenshot: .expo/futures-screens/before-position
+- stopApp

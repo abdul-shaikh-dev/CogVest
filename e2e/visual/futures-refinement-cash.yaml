@@ -1,0 +1,89 @@
+appId: com.abdulshaikh.cogvest
+---
+# Task-owned wallet after review; existing Cash is INR 50000.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "1006 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-add-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-add-cash-funding
+- scrollUntilVisible:
+    element:
+      id: futures-cash-usdt
+    direction: DOWN
+- tapOn:
+    id: futures-cash-usdt
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-inr
+    direction: DOWN
+- tapOn:
+    id: futures-cash-inr
+- inputText: "9000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Observed at movement time"
+    direction: DOWN
+- tapOn: "Observed at movement time"
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-cash-rate-source
+- inputText: "Synthetic conversion receipt"
+- hideKeyboard
+- takeScreenshot: .expo/futures-screens/normal/cash-form
+- scrollUntilVisible:
+    element:
+      id: futures-save-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-save-cash-funding
+- scrollUntilVisible:
+    element: "1106 USDT"
+    direction: UP
+- assertVisible: "1106 USDT"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹41,000.00"
+- assertVisible: "-₹9,000.00"
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn: "Delete wallet"
+- assertVisible:
+    id: futures-error
+- assertVisible: "Remove linked Cash movements in Futures before deleting this wallet."
+- takeScreenshot: .expo/futures-screens/normal/delete-restricted
+- assertVisible: "1106 USDT"
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///futures"
+- assertVisible: "1106 USDT"
+- stopApp
