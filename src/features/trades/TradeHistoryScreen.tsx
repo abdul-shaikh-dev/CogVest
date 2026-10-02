@@ -1,12 +1,15 @@
 import { useState, useSyncExternalStore } from "react";
-import { Modal, ScrollView, StyleSheet, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
   AppButton,
   AppText,
   EmptyState,
-  GroupedListRow,
+  androidRipple,
+  getAdaptiveLayoutMode,
+  getPressedStateStyle,
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
@@ -16,7 +19,7 @@ import { formatCurrency, formatDate } from "@/src/domain/formatters";
 import { calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { colors, interaction, radii, spacing } from "@/src/theme";
 
 type TradeHistoryScreenProps = {
   assetId: string;
@@ -34,6 +37,8 @@ export function TradeHistoryScreen({
   now = new Date(),
 }: TradeHistoryScreenProps) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const { fontScale } = useWindowDimensions();
+  const stackValues = getAdaptiveLayoutMode(fontScale) !== "standard";
   const asset = snapshot.assets.find((item) => item.id === assetId);
   const trades = snapshot.trades
     .filter((trade) => !assetId || trade.assetId === assetId)
@@ -118,8 +123,8 @@ export function TradeHistoryScreen({
         <ScreenHeader
           title="Transactions"
           subtitle={asset
-            ? `${asset.name} · local records`
-            : `${trades.length} ${trades.length === 1 ? "record" : "records"}`}
+            ? asset.name
+            : "All holdings"}
         />
         {deletionMessage ? (
           <AppText accessibilityLiveRegion="polite" color={deletionMessage.includes("removed") ? "secondary" : undefined} style={deletionMessage.includes("removed") ? undefined : styles.errorText} testID="transaction-deletion-message">
@@ -134,7 +139,7 @@ export function TradeHistoryScreen({
         ) : (
           <PremiumCard section style={styles.historyCard}>
             <View accessibilityLiveRegion={isSelecting ? "polite" : "none"} testID={isSelecting ? "transaction-selection-count" : undefined}>
-              <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : "Transaction history"} />
+              <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : `${trades.length} ${trades.length === 1 ? "record" : "records"}`} />
             </View>
             {isSelecting ? (
               <View style={styles.selectionActions}>
@@ -151,6 +156,13 @@ export function TradeHistoryScreen({
                   testID="clear-transaction-selection"
                   title="Clear selection"
                   variant="ghost"
+                />
+                <AppButton
+                  disabled={selectedIds.length === 0}
+                  onPress={reviewDeletion}
+                  testID="review-selected-transaction-deletion"
+                  title={`Review deletion${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`}
+                  variant="destructive"
                 />
               </View>
             ) : (
@@ -173,12 +185,12 @@ export function TradeHistoryScreen({
                   ? trade.type === "buy" ? "Purchase" : "Sale"
                   : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
                 let description = snapshot.preferences.maskWealthValues
-                  ? `${formatDate(trade.date)} · values masked`
+                  ? "values masked"
                   : isManual
-                    ? `${formatDate(trade.date)} · ${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}`
-                    : `${formatDate(trade.date)} · ${trade.quantity} units · ${
+                    ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}`
+                    : `${
                         trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
-                          ? `acquisition basis ${trade.acquisitionCostPerUnit} per unit`
+                          ? `Acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
                           : "no execution price"
                       }`;
                 if (trade.type === "sell" && !snapshot.preferences.maskWealthValues) {
@@ -193,50 +205,42 @@ export function TradeHistoryScreen({
                     ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}, total ${currency ? formatCurrency(trade.totalValue, currency) : "unavailable"}`
                     : `${trade.quantity} units, ${
                         trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
-                          ? `acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : `${trade.acquisitionCostPerUnit} per unit`}`
+                          ? `acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
                           : "no execution price"
                       }`;
 
                 return (
-                  <GroupedListRow
+                  <Pressable
                     accessibilityLabel={isSelecting
                       ? `${selectedTradeIds.has(trade.id) ? "Selected" : "Not selected"}, ${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}, transaction ${index + 1} of ${trades.length}`
-                      : undefined}
+                      : `${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}${trade.type === "sell" ? `, ${description}` : ""}`}
                     accessibilityRole={isSelecting ? "checkbox" : "button"}
                     accessibilityState={isSelecting ? { checked: selectedTradeIds.has(trade.id) } : undefined}
-                    icon={
-                      isSelecting
-                        ? selectedTradeIds.has(trade.id) ? "checkmark-circle" : "ellipse-outline"
-                        : isManual
-                        ? trade.type === "buy"
-                          ? "arrow-down-circle-outline"
-                          : "arrow-up-circle-outline"
-                          : "swap-horizontal-outline"
-                    }
                     key={trade.id}
-                    meta={description}
-                    selected={isSelecting && selectedTradeIds.has(trade.id)}
-                    title={`${title}${asset ? "" : ` · ${tradeAsset?.name ?? "Unknown holding"}`}`}
-                    value={
-                      snapshot.preferences.maskWealthValues || !isManual || !currency
-                        ? undefined
-                        : `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}`
-                    }
+                    android_ripple={androidRipple()}
+                    style={({ pressed }) => [styles.transactionRow, isSelecting && selectedTradeIds.has(trade.id) && styles.selectedRow, getPressedStateStyle({ pressed })]}
                     testID={`review-trade-${trade.id}`}
                     onPress={() => isSelecting ? toggleSelection(trade.id) : onReviewTrade(trade.id)}
-                  />
+                  >
+                    {isSelecting ? <Ionicons accessible={false} name={selectedTradeIds.has(trade.id) ? "checkbox" : "square-outline"} size={22} color={selectedTradeIds.has(trade.id) ? colors.primary : colors.text.secondary} /> : null}
+                    <View style={styles.rowContent}>
+                      <View style={[styles.rowHeading, stackValues && styles.stacked]}>
+                        <View style={styles.rowIdentity}>
+                          <AppText weight="bold">{asset ? title : tradeAsset?.name ?? "Unknown holding"}</AppText>
+                          <AppText color="secondary" variant="caption">{asset ? "" : `${title} · `}{formatDate(trade.date)}</AppText>
+                        </View>
+                        <AppText style={styles.rowValue} testID={`transaction-value-${trade.id}`} weight="bold">
+                          {snapshot.preferences.maskWealthValues ? "••••" : isManual
+                            ? currency ? `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}` : "Currency unavailable"
+                            : `${trade.quantity} units`}
+                        </AppText>
+                      </View>
+                      <AppText color="secondary" variant="caption">{description}</AppText>
+                    </View>
+                  </Pressable>
                 );
               })()
             ))}
-            {isSelecting ? (
-              <AppButton
-                disabled={selectedIds.length === 0}
-                onPress={reviewDeletion}
-                testID="review-selected-transaction-deletion"
-                title={`Review deletion${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`}
-                variant="destructive"
-              />
-            ) : null}
           </PremiumCard>
         )}
         <AppText color="secondary" variant="caption">
@@ -333,9 +337,17 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   content: {
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
+    gap: spacing.cardGap,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
+  transactionRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xs, minHeight: interaction.minimumTouchTarget, borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth },
+  selectedRow: { backgroundColor: colors.surface.elevated, borderRadius: radii.button },
+  rowContent: { flex: 1, minWidth: 0, gap: spacing.sm },
+  rowHeading: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  rowIdentity: { flex: 1, minWidth: 0, gap: spacing.xs },
+  rowValue: { flexShrink: 1, fontVariant: ["tabular-nums"] },
+  stacked: { flexDirection: "column" },
   errorText: { color: colors.loss },
   historyCard: { gap: spacing.md },
   impactRow: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingBottom: spacing.sm },

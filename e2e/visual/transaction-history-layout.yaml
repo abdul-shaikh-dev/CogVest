@@ -1,0 +1,62 @@
+appId: com.abdulshaikh.cogvest
+---
+# Paired with transaction-correction-setup; do not clear or reseed data.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- assertVisible: "Mask values"
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible: "1 record"
+- assertVisible: "Purchase"
+- assertVisible: "₹205.00"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/transaction-history/${SHOT}/holding
+- tapOn:
+    id: start-transaction-selection
+- assertVisible: "0 selected"
+- tapOn:
+    id: select-all-transactions
+- assertVisible: "1 selected"
+- assertVisible:
+    id: review-selected-transaction-deletion
+- waitForAnimationToEnd
+- takeScreenshot: .expo/transaction-history/${SHOT}/selection
+- tapOn:
+    id: clear-transaction-selection
+- assertVisible: "0 selected"
+- tapOn:
+    id: "review-trade-.*"
+- tapOn:
+    id: review-selected-transaction-deletion
+- assertVisible:
+    id: transaction-deletion-preview
+- assertVisible: ".*1 linked cash movement will be removed.*"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/transaction-history/${SHOT}/preview
+- tapOn: "Keep transactions"
+- assertVisible: "1 selected"
+- tapOn: "Cancel selection"
+- assertVisible: "1 record"
+- assertVisible: "₹205.00"
+- openLink: "cogvest:///holding-transactions"
+- assertVisible: "All holdings"
+- assertVisible: "HDFC Bank"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/transaction-history/${SHOT}/all
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertNotVisible: ".*₹[0-9].*"
+- assertNotVisible: ".*2 units.*"
+- assertVisible: "values masked"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/transaction-history/${SHOT}/masked
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- assertVisible: "Mask values"
+- stopApp

@@ -1,0 +1,31 @@
+appId: com.abdulshaikh.cogvest
+---
+# Delete only the synthetic purchase from transaction-correction-setup.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///cash"
+- assertVisible: "₹49,795.00"
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- assertVisible: "1 record"
+- assertVisible: "₹205.00"
+- tapOn:
+    id: start-transaction-selection
+- tapOn:
+    id: select-all-transactions
+- tapOn:
+    id: review-selected-transaction-deletion
+- assertVisible: ".*1 linked cash movement will be removed.*"
+- tapOn:
+    id: confirm-delete-selected-transactions
+- assertVisible: "No transactions yet"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- stopApp
