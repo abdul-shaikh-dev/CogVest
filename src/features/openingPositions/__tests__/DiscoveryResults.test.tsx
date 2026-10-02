@@ -45,7 +45,7 @@ describe("DiscoveryResults", () => {
 
   it("initially mounts five provider rows then settles the first 20", () => {
     const onSettled = jest.fn();
-    const { getAllByText } = render(
+    const { getAllByRole } = render(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 20 }, (_, index) => providerResult(index))}
@@ -54,11 +54,11 @@ describe("DiscoveryResults", () => {
       />,
     );
 
-    expect(getAllByText("Select")).toHaveLength(5);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(5);
 
     act(() => jest.runAllTimers());
 
-    expect(getAllByText("Select")).toHaveLength(20);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
     expect(onSettled).toHaveBeenLastCalledWith(20);
   });
 
@@ -121,7 +121,7 @@ describe("DiscoveryResults", () => {
   });
 
   it("eventually renders every requested provider row", () => {
-    const { getAllByText } = render(
+    const { getAllByRole } = render(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 37 }, (_, index) => providerResult(index))}
@@ -131,7 +131,7 @@ describe("DiscoveryResults", () => {
 
     act(() => jest.runAllTimers());
 
-    expect(getAllByText("Select")).toHaveLength(37);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(37);
   });
 
   it("shows the footer only after the current items have fully rendered", () => {
@@ -151,7 +151,7 @@ describe("DiscoveryResults", () => {
 
   it("retains mounted rows and appends five rows per commit", () => {
     const initial = Array.from({ length: 20 }, (_, index) => providerResult(index));
-    const { getAllByText, getByTestId, rerender } = render(
+    const { getAllByRole, getByTestId, rerender } = render(
       <DiscoveryResults kind="provider" items={initial} onSelect={jest.fn()} />,
     );
     act(() => jest.runAllTimers());
@@ -165,14 +165,14 @@ describe("DiscoveryResults", () => {
     );
 
     expect(getByTestId("asset-lookup-result-provider-0")).toBeTruthy();
-    expect(getAllByText("Select")).toHaveLength(20);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
     act(() => jest.advanceTimersByTime(16));
-    expect(getAllByText("Select")).toHaveLength(25);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(25);
   });
 
   it("retains every mounted row when a new array has the same item IDs", () => {
     const initial = Array.from({ length: 20 }, (_, index) => providerResult(index));
-    const { getAllByText, rerender } = render(
+    const { getAllByRole, rerender } = render(
       <DiscoveryResults kind="provider" items={initial} onSelect={jest.fn()} />,
     );
     act(() => jest.runAllTimers());
@@ -185,11 +185,11 @@ describe("DiscoveryResults", () => {
       />,
     );
 
-    expect(getAllByText("Select")).toHaveLength(20);
+    expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
   });
 
   it("replaces a changed query with its new five-row prefix immediately", () => {
-    const { getAllByText, queryByTestId, rerender } = render(
+    const { getAllByRole, queryByTestId, rerender } = render(
       <DiscoveryResults
         kind="saved"
         items={Array.from({ length: 20 }, (_, index) => savedAsset(index))}
@@ -210,7 +210,7 @@ describe("DiscoveryResults", () => {
     );
 
     expect(queryByTestId("existing-asset-saved-0")).toBeNull();
-    expect(getAllByText("Use")).toHaveLength(5);
+    expect(getAllByRole("button", { name: /^Use Saved/u })).toHaveLength(5);
   });
 
   it("cancels pending batches on unmount", () => {

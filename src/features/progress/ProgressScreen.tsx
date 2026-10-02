@@ -9,6 +9,7 @@ import {
   AppButton,
   AppText,
   CategoryIcon,
+  DisclosureButton,
   EmptyState,
   IconButton,
   MASKED_INR_VALUE,
@@ -1721,12 +1722,11 @@ export function ProgressScreen({
                 <AppText color="secondary" variant="caption">Estimated month-end value</AppText>
               ) : null}
               {isMinimalMode ? (
-                <AppButton
-                  accessibilityState={{ expanded: detailsExpanded }}
+                <DisclosureButton
+                  expanded={detailsExpanded}
                   onPress={() => setDetailsExpanded((visible) => !visible)}
                   testID="progress-details-toggle"
-                  title={detailsExpanded ? "Hide comparisons & breakdowns" : "Comparisons & breakdowns"}
-                  variant="ghost"
+                  title="Comparisons & breakdowns"
                 />
               ) : null}
               {showDetails ? <View style={styles.answerMetrics}>
@@ -1818,12 +1818,11 @@ export function ProgressScreen({
             />
 
             {isMinimalMode ? (
-              <AppButton
-                accessibilityState={{ expanded: detailsExpanded }}
+              <DisclosureButton
+                expanded={detailsExpanded}
                 onPress={() => setDetailsExpanded((visible) => !visible)}
                 testID="progress-details-toggle"
-                title={detailsExpanded ? "Hide comparisons & breakdowns" : "Comparisons & breakdowns"}
-                variant="ghost"
+                title="Comparisons & breakdowns"
               />
             ) : null}
 

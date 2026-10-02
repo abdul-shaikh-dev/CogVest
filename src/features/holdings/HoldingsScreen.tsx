@@ -677,9 +677,9 @@ export function HoldingsScreen({
                 {visibleItems.map(renderHoldingRow)}
               </View>
             )}
-            <AppText color="secondary" variant="caption">
+            {!isMinimalMode ? <AppText color="secondary" variant="caption">
               Returns are since investment, not today.
-            </AppText>
+            </AppText> : null}
           </>
         ) : null}
 
