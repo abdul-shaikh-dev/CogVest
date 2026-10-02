@@ -646,7 +646,7 @@ function TrendChart({
               series[1]?.label ?? "",
               focusedSeries,
             )}
-            curved
+            curved={false}
             data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
             data2={partialHistory || summaryOnly ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
             dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
@@ -680,7 +680,7 @@ function TrendChart({
             key={`assets:${rendererKey}`}
             {...axisProps}
             adjustToWidth
-            curved
+            curved={false}
             dataSet={displayedSeries.map((item, index) => ({
               color: getDisplayedSeriesColor(item.label, focusedSeries),
               data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),

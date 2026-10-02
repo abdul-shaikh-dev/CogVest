@@ -1,0 +1,81 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic audit portfolio; no reset, seed or portfolio writes.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: UP
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-6M
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-6M
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible: "₹82.03L"
+- takeScreenshot: .expo/monthly-straight-lines/${SIZE}/standard-portfolio
+- tapOn:
+    id: portfolio-trend-previous-month
+- assertVisible: "₹76.55L"
+- tapOn:
+    id: portfolio-trend-next-month
+- assertVisible: "₹82.03L"
+- scrollUntilVisible:
+    element:
+      id: asset-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: .expo/monthly-straight-lines/${SIZE}/standard-assets
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: UP
+- tapOn:
+    id: display-mode-minimal
+- openLink: "cogvest:///progress"
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible: "₹82.03L"
+- takeScreenshot: .expo/monthly-straight-lines/${SIZE}/minimal-portfolio
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- tapOn:
+    id: progress-mask-toggle
+- assertNotVisible: ".*₹[0-9].*"
+- tapOn:
+    id: progress-mask-toggle
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: UP
+- tapOn:
+    id: display-mode-standard
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
