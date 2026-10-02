@@ -1,0 +1,88 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic visual-QA history. No records are changed.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- assertVisible: "Mask values"
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- assertVisible: "Vs invested"
+- takeScreenshot: .expo/history-invested/${SHOT}/overview
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-comparison-2026-04
+    direction: DOWN
+- assertVisible:
+    id: snapshot-invested-comparison-2026-04
+    text: "-3.46%"
+- takeScreenshot: .expo/history-invested/${SHOT}/april-row
+- tapOn:
+    id: snapshot-month-2026-04
+- assertVisible: "April 2026"
+- assertVisible: "₹19,29,450.00"
+- assertVisible: '\+7.79% portfolio value change'
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-percentage
+    direction: DOWN
+- assertVisible:
+    id: snapshot-invested-percentage
+    text: "-3.46%"
+- scrollUntilVisible:
+    element: "Difference vs invested"
+    direction: DOWN
+- assertVisible: "₹16,18,000.00"
+- assertVisible: "₹16,76,000.00"
+- assertVisible: "-₹58,000.00"
+- takeScreenshot: .expo/history-invested/${SHOT}/detail
+- scrollUntilVisible:
+    element:
+      id: snapshot-comparison-heading
+    direction: DOWN
+- assertVisible: "Mar 2026"
+- assertVisible: "Apr 2026"
+- tapOn:
+    id: history-back
+- assertVisible:
+    id: snapshot-month-2026-04
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///progress"
+- tapOn:
+    id: open-monthly-history
+- assertNotVisible: ".*₹[0-9].*"
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-comparison-2026-04
+    direction: DOWN
+- assertVisible:
+    id: snapshot-invested-comparison-2026-04
+    text: "••••"
+- assertNotVisible: "-3.46%"
+- takeScreenshot: .expo/history-invested/${SHOT}/masked
+- tapOn:
+    id: snapshot-month-2026-04
+- scrollUntilVisible:
+    element:
+      id: snapshot-invested-percentage
+    direction: DOWN
+- assertVisible:
+    id: snapshot-invested-percentage
+    text: "••••"
+- assertNotVisible: ".*₹[0-9].*"
+- assertNotVisible: "-3.46%"
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- assertVisible: "Mask values"
+- stopApp

@@ -511,12 +511,18 @@ Accepted chart direction:
   change either chart or the headline month; `Apply range` commits only to the
   chart that opened it, and Android Back behaves like Cancel
 - Monthly History opens in a panel, newest stored year and months first. Rows
-  show portfolio value and a compact signed monthly change. The year selector
-  stays on one horizontally scrollable line, including long histories. A row's
-  full accessibility label and month details name the immediately previous
-  calendar month, including cross-year January comparisons; gaps/zero baselines
-  must not produce fabricated percentages. Estimated prices are disclosed.
-  Monthly change includes contributions and is not labelled investment return
+  show total portfolio value and `Vs invested`: the same month's portfolio value
+  less cash, compared with its recorded remaining invested basis. This excludes
+  sold holdings and is not monthly return or lifetime profit. PPF uses its
+  recorded balance-checkpoint basis, not reconstructed lifetime contributions.
+  Invalid/inconsistent values or a nonpositive basis show no percentage. Mask
+  both the comparison and its accessibility label with wealth values; zero is
+  neutral. The year selector stays on one horizontally scrollable line.
+  Details retain the immediately previous calendar-month value comparison,
+  including cross-year January comparisons, with gaps/zero baselines unavailable.
+  That change includes contributions and is not labelled investment return.
+  Estimated status in a row concerns that month's values; previous-month
+  estimate warnings remain in its detail comparison.
 - Monthly History includes neutral value bars on a shared selected-year scale.
   These represent portfolio value, not performance. Omit bars when masked,
   when any value in that year is negative, or when the whole year is zero.
