@@ -88,6 +88,7 @@ export function ReviewCashEntryScreen({
   );
   const [label, setLabel] = useState(() => initialEntry?.label ?? "");
   const [notes, setNotes] = useState(() => initialEntry?.notes ?? "");
+  const [isNoteExpanded, setIsNoteExpanded] = useState(() => Boolean(initialEntry?.notes));
   const [purpose, setPurpose] = useState<ManualCashPurpose>(() =>
     getInitialPurpose(initialEntry),
   );
@@ -295,7 +296,7 @@ export function ReviewCashEntryScreen({
       <View style={styles.content}>
         <ScreenHeader
           title="Review Cash Entry"
-          subtitle="Correct a cash entry"
+          subtitle={entry.label}
         />
 
         <PremiumCard>
@@ -396,13 +397,26 @@ export function ReviewCashEntryScreen({
             testID="cash-correction-label-input"
             value={label}
           />
-          <FormTextField
-            label="Notes"
-            multiline
-            onChangeText={setNotes}
-            testID="cash-correction-notes-input"
-            value={notes}
-          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isNoteExpanded }}
+            onPress={() => setIsNoteExpanded((expanded) => !expanded)}
+            style={({ pressed }) => [styles.noteToggle, pressed && styles.pressed]}
+            testID="cash-correction-note-toggle"
+          >
+            <AppText color="secondary" weight="medium">
+              {isNoteExpanded ? "Hide note" : notes ? "Show note" : "Add note"}
+            </AppText>
+          </Pressable>
+          {isNoteExpanded ? (
+            <FormTextField
+              label="Notes"
+              multiline
+              onChangeText={setNotes}
+              testID="cash-correction-notes-input"
+              value={notes}
+            />
+          ) : null}
           {errors.save ? (
             <AppText
               accessibilityLiveRegion="polite"
@@ -415,30 +429,29 @@ export function ReviewCashEntryScreen({
           ) : null}
           <View style={styles.actions}>
             <AppButton
-              disabled={isSaving}
-              title="Cancel"
-              variant="secondary"
-              onPress={onCancel}
-            />
-            <AppButton
               accessibilityState={{ busy: isSaving, disabled: isSaving }}
               disabled={isSaving}
               title={isSaving ? "Saving..." : "Save changes"}
               testID="save-cash-correction-button"
               onPress={save}
             />
+            <AppButton
+              disabled={isSaving}
+              title="Cancel"
+              variant="secondary"
+              onPress={onCancel}
+            />
           </View>
         </PremiumCard>
 
-        <PremiumCard>
-          <SectionHeader title="Remove entry" />
-          <AppText color="secondary" variant="caption">
-            Removing this record recalculates your cash balance and monthly
-            metrics immediately.
-          </AppText>
+        <View style={styles.removalSection}>
           {isConfirmingDelete ? (
-            <View style={styles.deleteConfirmation}>
-              <AppText weight="bold">Delete this cash entry?</AppText>
+            <PremiumCard>
+              <SectionHeader title="Delete this cash entry?" />
+              <AppText color="secondary" variant="caption">
+                Removing this record recalculates your cash balance and monthly
+                metrics immediately.
+              </AppText>
               <AppText color="secondary" variant="caption">
                 This cannot be undone.
               </AppText>
@@ -458,7 +471,7 @@ export function ReviewCashEntryScreen({
                   onPress={deleteEntry}
                 />
               </View>
-            </View>
+            </PremiumCard>
           ) : (
             <AppButton
               title="Delete cash entry"
@@ -467,7 +480,7 @@ export function ReviewCashEntryScreen({
               onPress={() => setIsConfirmingDelete(true)}
             />
           )}
-        </PremiumCard>
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -475,19 +488,21 @@ export function ReviewCashEntryScreen({
 
 const styles = StyleSheet.create({
   actions: {
-    flexDirection: "row",
     gap: spacing.sm,
-    justifyContent: "flex-end",
   },
   content: {
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
+    gap: spacing.cardGap,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  deleteConfirmation: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.button,
-    gap: spacing.sm,
-    padding: spacing.md,
+  removalSection: {
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: spacing.md,
+  },
+  noteToggle: {
+    justifyContent: "center",
+    minHeight: interaction.minimumTouchTarget,
   },
   errorText: {
     color: colors.loss,
