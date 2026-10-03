@@ -45,14 +45,14 @@ The Cash and Backup images above were inspected again for this review. They are 
 | All relevant native edge states, long names and long numeric values | Incomplete. Component tests and selected native examples do not fulfill the full wording of this requirement. |
 | Keyboard, validation and important data outcomes | Recorded for changed Add Holding, PPF, Futures and CAS password flows. Tests with local debug/file-picker adjustments are explicitly identified. |
 | Interactions, masking and signed cues | Recorded per batch. Existing colors were reused; no new contrast-compliance claim. |
-| Live font-scale transition | Unresolved separately from settled large-text layouts. Original debug clipping cleared after restart. No release-equivalent reproduction is established. |
+| Live font-scale transition | Failed on signed preview 1.0.19 / 20 in both modes. [Fresh evidence](release-font-scale-evidence.md) reproduces clipping and route resets; a cold reopen clears the inspected Settings clipping. Narrow normal-text comparison wrapping also needs correction. |
 | Published evidence and truthful limits | Reports linked above. No phone, TalkBack or performance sign-off. |
 | Every observation resolved or agreed deferred | Awaiting remaining native coverage and review of the explicit dispositions above. Do not close the tracker yet. |
 
 ## Remaining execution
 
 1. Review the bounded native edge-state passes against the earlier screen reports. [Holdings edge-state evidence](holdings-edge-states-evidence.md) covers long names, large exact values, missing prices, refresh failure, empty and masked Holdings/detail states. [Progress edge-state evidence](progress-edge-states-evidence.md) covers single-point/missing-month charts, zero-only History, empty/building/error states and retry, plus the reproduced status and clipped-amount fixes. Each report distinguishes full flows, focused recaptures and remaining limits. These passes are not a claim that every state in the app has been inspected.
-2. Reproduce the live font-scale change on a fresh release-equivalent build, or obtain explicit agreement to defer it with its limitation recorded. Use the private-signing workflow in [Android release process](../release/android-release-process.md). Do not enable destructive QA routes in release or substitute the public debug key. No cloud build is authorized by this review.
+2. The user-authorized signed preview 1.0.19 / 20 reproduced live font-scale clipping and route resets in both modes. See [release font-scale evidence](release-font-scale-evidence.md), which also records narrow normal-text comparison wrapping. Correct and retest these findings, or obtain explicit agreement to defer them. Do not enable destructive QA routes in release or substitute the public debug key. This review does not authorize another cloud build.
 3. Review the dispositions and remaining evidence against #512, then update its individual acceptance checkboxes. A merged implementation checklist alone is not closure evidence.
 
 ## Tracker closure correction
