@@ -1,0 +1,57 @@
+appId: com.abdulshaikh.cogvest
+---
+# No documents selected; password text is synthetic and discarded on leaving.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///import-transactions"
+- scrollUntilVisible:
+    element:
+      text: ".*365 days.*"
+    direction: DOWN
+- takeScreenshot: .expo/import-constraints/${PHASE}/${SIZE}/${MODE}-tradebook
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-cogvestCsvV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-cogvestCsvV1
+- scrollUntilVisible:
+    element:
+      id: save-transaction-csv-template
+    direction: DOWN
+- takeScreenshot: .expo/import-constraints/${PHASE}/${SIZE}/${MODE}-csv
+- scrollUntilVisible:
+    element:
+      id: transaction-import-source-camsKfinCasPdfV1
+    direction: UP
+- tapOn:
+    id: transaction-import-source-camsKfinCasPdfV1
+- scrollUntilVisible:
+    element:
+      id: cas-statement-password
+    direction: DOWN
+- takeScreenshot: .expo/import-constraints/${PHASE}/${SIZE}/${MODE}-cas
+- tapOn:
+    id: cas-statement-password
+- inputText: "synthetic-only"
+- assertVisible:
+    id: cas-statement-password
+- takeScreenshot: .expo/import-constraints/${PHASE}/${SIZE}/${MODE}-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: transaction-import-back
+    direction: UP
+- tapOn:
+    id: transaction-import-back
