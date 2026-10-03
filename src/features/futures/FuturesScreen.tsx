@@ -381,11 +381,14 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <Money value={`${account.openingWalletUsdt} USDT`} masked={masked} />
             <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { walletBaseline.current = walletSnapshot; setEditingAccount(true); }} />
           </> : <>
-            <TimeField label="Starting wallet time" value={openingAt} onChange={setOpeningAt} error={fieldErrors["futures-opening-at"]} testID="futures-opening-at" />
             <EntryField label="Observed starting wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={openingWallet} onChangeText={setOpeningWallet} testID="futures-opening-wallet" />
-            <EntryField label="INR per USDT at starting wallet date" keyboardType="decimal-pad" value={openingRate} onChangeText={setOpeningRate} testID="futures-opening-rate" />
-            {openingRate ? <TimeField label="Rate observed at" value={openingRateAt} onChange={setOpeningRateAt} suggestedAt={openingAt} suggestedLabel="Observed at wallet time" error={fieldErrors["futures-opening-rate-at"]} testID="futures-opening-rate-at" /> : null}
-            {openingRate ? <EntryField label="Starting rate source" value={openingRateSource} onChangeText={setOpeningRateSource} testID="futures-opening-rate-source" /> : null}
+            <TimeField label="Starting wallet time" value={openingAt} onChange={setOpeningAt} error={fieldErrors["futures-opening-at"]} testID="futures-opening-at" />
+            <View style={styles.conversionGroup} testID="futures-opening-conversion">
+              <SectionHeader title="INR conversion" />
+              <EntryField label="INR per USDT at starting wallet date" keyboardType="decimal-pad" value={openingRate} onChangeText={setOpeningRate} testID="futures-opening-rate" />
+              {openingRate ? <TimeField label="Rate observed at" value={openingRateAt} onChange={setOpeningRateAt} suggestedAt={openingAt} suggestedLabel="Observed at wallet time" error={fieldErrors["futures-opening-rate-at"]} testID="futures-opening-rate-at" /> : null}
+              {openingRate ? <EntryField label="Starting rate source" value={openingRateSource} onChangeText={setOpeningRateSource} testID="futures-opening-rate-source" /> : null}
+            </View>
             <AppButton title={account ? "Save corrected wallet" : "Create futures wallet"} onPress={saveAccount} testID="futures-save-account" />
           </>}
         </PremiumCard>
@@ -542,6 +545,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
 }
 
 const styles = StyleSheet.create({
+  conversionGroup: { gap: spacing.md, paddingTop: spacing.sm },
   fill: { flex: 1 },
   modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
   breakdown: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },

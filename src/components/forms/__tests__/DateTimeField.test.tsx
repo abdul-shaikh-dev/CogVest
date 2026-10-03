@@ -17,6 +17,7 @@ describe("DateTimeField", () => {
     const onChange = jest.fn();
     const ui = render(<DateTimeField label="Activity time" value={at} onChange={onChange} testID="time" />);
     expect(ui.queryByTestId("time")).toBeNull();
+    expect(ui.getByTestId("time-exact-toggle")).toHaveAccessibilityState({ expanded: false });
     expect(onChange).not.toHaveBeenCalled();
     fireEvent.press(ui.getByTestId("time-date"));
     fireEvent(ui.getByTestId("time-picker"), "onChange", { type: "dismissed" });
@@ -25,6 +26,11 @@ describe("DateTimeField", () => {
     fireEvent(ui.getByTestId("time-picker"), "onChange", { type: "set" }, new Date(2026, 8, 1, 9, 45));
     const result = new Date(onChange.mock.calls[0][0]);
     expect([result.getHours(), result.getMinutes(), result.getSeconds(), result.getMilliseconds()]).toEqual([9, 45, 58, 123]);
+    fireEvent.press(ui.getByTestId("time-exact-toggle"));
+    expect(ui.getByTestId("time-exact-toggle")).toHaveAccessibilityState({ expanded: true });
+    expect(ui.getByTestId("time").props.value).toBe(at);
+    fireEvent.press(ui.getByTestId("time-exact-toggle"));
+    expect(ui.queryByTestId("time")).toBeNull();
     fireEvent.press(ui.getByTestId("time-exact-toggle"));
     expect(ui.getByTestId("time").props.value).toBe(at);
   });
