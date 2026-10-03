@@ -90,6 +90,10 @@ one correction pass are normally enough.
   and do not switch, rebase, or sync unnecessarily.
 - Do not revert unrelated user changes.
 - Use `Closes #<issue>` in a PR body when merge should auto-close the issue.
+- For partial tracker work, use `Related to #<issue>`. Do not put closing
+  keywords beside the tracker number, even in a negated sentence. Before merging,
+  inspect `closingIssuesReferences` and verify that only fully completed issues
+  are listed. Verify the tracker state again after merge.
 - For CogVest implementation or documentation requests, branch, commit, push,
   and open a focused PR are authorized delivery steps unless the user asks for
   local-only work.
