@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type ScrollView,
 } from "react-native";
@@ -16,6 +17,7 @@ import {
   AppText,
   assetClassLabel,
   CategoryIcon,
+  getAdaptiveLayoutMode,
   IconButton,
   PremiumCard,
   ScreenContainer,
@@ -159,6 +161,8 @@ export function AddOpeningPositionForm({
   searchAssetLookupResults,
   store,
 }: AddOpeningPositionFormProps) {
+  const { width, fontScale } = useWindowDimensions();
+  const stackIdentifiers = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const holding = useAddOpeningPosition({
     initialVisualQaState,
     now,
@@ -513,7 +517,7 @@ export function AddOpeningPositionForm({
       {renderStepper()}
 
       {currentPhase === "asset" ? (
-      <PremiumCard testID="add-holding-phase-asset">
+      <PremiumCard section testID="add-holding-phase-asset">
         {hasSelectedAssetSummary ? (
           <View style={styles.selectedAssetSummary} testID="selected-asset-summary">
             <CategoryIcon assetClass={assetClass} size={20} />
@@ -523,21 +527,17 @@ export function AddOpeningPositionForm({
                 {symbol} • {ticker} • {selectedAssetSourceLabel}
               </AppText>
             </View>
-            <TouchableOpacity
+            <AppButton
               accessibilityLabel="Change selected asset"
-              accessibilityRole="button"
-              activeOpacity={0.74}
               onPress={() => {
                 setIsManualEntryExpanded(false);
                 changeSelectedAsset();
               }}
               style={styles.selectedAssetChange}
               testID="selected-asset-change"
-            >
-              <AppText color="secondary" variant="caption" weight="bold">
-                Change
-              </AppText>
-            </TouchableOpacity>
+              title="Change"
+              variant="ghost"
+            />
           </View>
         ) : !isManualEntryExpanded ? (
           <>
@@ -708,7 +708,7 @@ export function AddOpeningPositionForm({
                 ? "Use asset search instead"
                 : "Enter details manually"
             }
-            variant="ghost"
+            variant="secondary"
           />
         ) : null}
         {!hasSelectedAssetSummary && isManualEntryExpanded ? (
@@ -725,8 +725,8 @@ export function AddOpeningPositionForm({
             testID="asset-input"
             value={assetName}
           />
-          <View style={styles.row}>
-            <View style={styles.flex}>
+          <View style={stackIdentifiers ? styles.stackedIdentifiers : styles.row} testID="manual-asset-identifiers">
+            <View style={!stackIdentifiers && styles.flex}>
               <FormTextField
                 error={errors.symbol}
                 label="Symbol"
@@ -739,7 +739,7 @@ export function AddOpeningPositionForm({
                 value={symbol}
               />
             </View>
-            <View style={styles.flex}>
+            <View style={!stackIdentifiers && styles.flex}>
               <FormTextField
                 error={errors.ticker}
                 label="Ticker"
@@ -1492,6 +1492,10 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    gap: spacing.sm,
+  },
+  stackedIdentifiers: {
+    flexDirection: "column",
     gap: spacing.sm,
   },
   secondaryPositionFields: {
