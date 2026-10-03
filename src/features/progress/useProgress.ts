@@ -115,11 +115,13 @@ type MonthEndSnapshotAutomationRunResult = {
 
 function getSnapshotStatusKind({
   hasData,
+  hasStoredHistory,
   hasIncompletePpfHistory,
   hasReconstructedHistory,
   status,
 }: {
   hasData: boolean;
+  hasStoredHistory: boolean;
   hasIncompletePpfHistory: boolean;
   hasReconstructedHistory: boolean;
   status: SnapshotAutomationStatusState;
@@ -144,7 +146,7 @@ function getSnapshotStatusKind({
   if (status.warnings.length > 0) return "records-incomplete";
   if (status.provisionalMonths.length > 0) return "estimated";
   if (status.status === "idle") return "checking";
-  if (status.status === "insufficient-data") return "waiting-for-first-month";
+  if (status.status === "insufficient-data" && !hasStoredHistory) return "waiting-for-first-month";
   return "complete";
 }
 
@@ -1103,6 +1105,7 @@ export function useProgress({
       null,
     kind: getSnapshotStatusKind({
       hasData: hasData || monthlySummaries.length > 0,
+      hasStoredHistory: monthlySummaries.length > 0,
       hasIncompletePpfHistory: incompletePpfHistoryMonths.length > 0,
       hasReconstructedHistory: ppfExcludedHistory !== null,
       status: presentedAutomationStatus,

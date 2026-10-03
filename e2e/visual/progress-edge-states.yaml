@@ -1,0 +1,77 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=single&mode=${MODE}"
+- extendedWaitUntil:
+    visible:
+      id: open-monthly-history
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- runFlow:
+    file: progress-edge-chart.yaml
+    env:
+      SCENARIO: single
+- runFlow:
+    file: progress-edge-chart.yaml
+    env:
+      SCENARIO: gap
+- runFlow:
+    file: progress-edge-chart.yaml
+    env:
+      SCENARIO: zero
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=building&mode=${MODE}"
+- extendedWaitUntil:
+    visible: "Building monthly history"
+    timeout: 30000
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-building
+- tapOn:
+    id: progress-edge-finish
+- extendedWaitUntil:
+    visible: "₹15K"
+    timeout: 30000
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-built
+- tapOn:
+    id: open-monthly-history
+- tapOn:
+    id: snapshot-month-2026-08
+- assertVisible: "₹15,000.00"
+- tapOn:
+    id: history-back
+- tapOn:
+    id: snapshot-month-2026-06
+- assertVisible: "₹12,000.00"
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=error&mode=${MODE}"
+- extendedWaitUntil:
+    visible: "Historical prices are unavailable"
+    timeout: 30000
+- tapOn:
+    id: month-end-snapshot-status-card
+- assertVisible: "2 months are waiting.*"
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-error
+- tapOn: "Retry monthly history"
+- extendedWaitUntil:
+    visible: "Historical prices are unavailable"
+    timeout: 30000
+- tapOn:
+    id: month-end-snapshot-status-card
+- assertVisible: "2 months are waiting.*"
+- tapOn: "Close snapshot status"
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-06
+- assertNotVisible:
+    id: snapshot-month-2026-07
+- assertNotVisible:
+    id: snapshot-month-2026-08
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- assertVisible: "No portfolio history yet"
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-empty
