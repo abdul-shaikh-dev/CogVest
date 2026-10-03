@@ -1,0 +1,53 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&mode=${MODE}"
+- extendedWaitUntil:
+    visible:
+      id: holding-row-edge-long
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-list
+- tapOn:
+    id: holding-row-edge-long
+- scrollUntilVisible:
+    element: "₹12,19,31,84,926.08"
+    direction: DOWN
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-value
+- scrollUntilVisible:
+    element: "₹9,44,97,18,533.76"
+    direction: DOWN
+- assertVisible: "₹9,44,97,18,533.76"
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-invested
+- tapOn:
+    id: holding-detail-mask
+- assertNotVisible: "₹9,44,97,18,533.76"
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-masked
+- tapOn:
+    id: holding-detail-mask
+- assertVisible: "₹9,44,97,18,533.76"
+- tapOn:
+    id: holding-detail-back
+- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=pending&mode=${MODE}"
+- extendedWaitUntil:
+    visible:
+      id: holdings-pending-valuations
+    timeout: 30000
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-pending
+- tapOn:
+    id: holdings-refresh-pending-prices
+- tapOn:
+    id: holdings-more-button
+- tapOn:
+    id: holdings-valuation-details-button
+- assertVisible: "Quote refresh failed"
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-failed-refresh
+- tapOn:
+    id: holdings-panel-close
+- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- assertVisible: "No holdings yet"
+- takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-empty

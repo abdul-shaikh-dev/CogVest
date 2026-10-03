@@ -51,7 +51,7 @@ The Cash and Backup images above were inspected again for this review. They are 
 
 ## Remaining execution
 
-1. Add a bounded native edge-state pass on the merged app. Cover long asset names and large financial values on Holdings/detail at 360dp/130% text; inspect the affected empty, pending/error and masked states. Reuse deterministic fixtures and assert unchanged values. Fix any reproduced defects before marking this requirement satisfied.
+1. Continue the bounded native edge-state pass. [Holdings edge-state evidence](holdings-edge-states-evidence.md) covers long names, large exact values, missing prices, refresh failure, empty and masked Holdings/detail states in both modes at normal and 360dp/130% text. It records the reproduced layout defects and fixes. Progress building/error states, single-point/missing-month charts and zero-only History bars remain to be captured; the whole requirement is not yet satisfied.
 2. Reproduce the live font-scale change on a fresh release-equivalent build, or obtain explicit agreement to defer it with its limitation recorded. Use the private-signing workflow in [Android release process](../release/android-release-process.md). Do not enable destructive QA routes in release or substitute the public debug key. No cloud build is authorized by this review.
 3. Review the dispositions and remaining evidence against #512, then update its individual acceptance checkboxes. A merged implementation checklist alone is not closure evidence.
 

@@ -132,6 +132,7 @@ export function HoldingsScreen({
 }: HoldingsScreenProps) {
   const observedAt = now ?? new Date();
   const insets = useSafeAreaInsets();
+  const { width, fontScale } = useWindowDimensions();
   const [activePanel, setActivePanel] = useState<
     "add" | "insights" | "more" | "quotes"
   >();
@@ -473,10 +474,10 @@ export function HoldingsScreen({
 
         {activeDestination === "market" && pendingValuations > 0 ? (
           <View
-            style={styles.pendingValuationRow}
+            style={[styles.pendingValuationRow, (width < 400 || fontScale > 1.15) && styles.stackedContent]}
             testID="holdings-pending-valuations"
           >
-            <View style={styles.flex}>
+            <View style={styles.pendingValuationCopy}>
               <AppText weight="bold">
                 {pendingValuations} valuation
                 {pendingValuations === 1 ? "" : "s"} pending
@@ -1324,6 +1325,8 @@ function HoldingRow({
   const metricStyle = [styles.holdingMetric, (width < 400 || fontScale > 1.15) && styles.holdingMetricHalf];
   const weightAvailable = allocationAvailable && !pending;
   const identity = getHoldingRowIdentity(holding.asset);
+  const stackIdentity = (width < 400 || fontScale > 1.15) &&
+    (pending || holding.asset.name.length > 60);
   return (
     <Pressable
       accessibilityRole="button"
@@ -1344,7 +1347,7 @@ function HoldingRow({
       ]}
       testID={`holding-row-${holding.asset.id}`}
     >
-      <View style={styles.compactRow}>
+      <View style={[styles.compactRow, stackIdentity && styles.stackedContent]}>
         <View style={styles.assetCopy}>
           <AppText weight="medium">{holding.asset.name}</AppText>
           <AppText color="secondary" variant="caption">
@@ -1352,7 +1355,7 @@ function HoldingRow({
             {holding.quoteSource === "manual" ? " · Manual" : ""}
           </AppText>
         </View>
-        <View style={styles.valueColumn}>
+        <View style={[styles.valueColumn, stackIdentity && styles.stackedValue]}>
           <MaskedValue
             style={styles.holdingNumber}
             variant={pending ? "body" : "section"}
@@ -1474,6 +1477,9 @@ function HoldingDetails({
   const assetTrades = trades.filter((trade) => trade.assetId === holding.asset.id);
   const firstPurchase = getFirstRecordedPurchase(assetOpeningPositions, assetTrades);
   const quoteContext = getHoldingQuoteContext(holding, undefined, now);
+  const currentValueText = holding.currentValue === null
+    ? "Valuation pending"
+    : formatINR(holding.currentValue);
   return (
     <View
       style={styles.expandedSection}
@@ -1497,12 +1503,8 @@ function HoldingDetails({
         </AppText>
         <MaskedValue
           masked={masked && !isPending}
-          value={
-            holding.currentValue === null
-              ? "Valuation pending"
-              : formatINR(holding.currentValue)
-          }
-          variant="hero"
+          value={currentValueText}
+          variant={holding.currentValue !== null && currentValueText.length > 14 ? "title" : "hero"}
           weight="bold"
         />
         <View style={styles.valueQuoteContext} testID={`holding-quote-context-${holding.asset.id}`}>
@@ -1819,6 +1821,9 @@ function getHoldingRowAccessibilityLabel({
 }
 
 const styles = StyleSheet.create({
+  stackedContent: { flexDirection: "column", alignItems: "stretch" },
+  stackedValue: { alignItems: "flex-start" },
+  pendingValuationCopy: { flexGrow: 1, flexShrink: 1 },
   performanceLine: {
     flexDirection: "row",
     flexWrap: "wrap",
