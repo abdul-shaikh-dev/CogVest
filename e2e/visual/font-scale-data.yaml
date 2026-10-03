@@ -1,0 +1,49 @@
+appId: com.abdulshaikh.cogvest
+---
+# Continue after font-scale-draft's return to 1.0. Use only a disposable fixture.
+- tapOn:
+    id: save-cash-entry-button
+- assertVisible:
+    id: cash-screen
+- assertVisible: ".*Font transition draft.*"
+- tapOn: ".*Font transition draft.*"
+- assertVisible:
+    id: review-cash-entry-screen
+- assertVisible: "1234.56"
+- assertVisible: "Font transition draft"
+- takeScreenshot: .expo/font-fix/saved-cash
+- back
+- tapOn:
+    id: tab-progress
+- scrollUntilVisible:
+    element:
+      id: open-monthly-history
+    direction: UP
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-08
+- assertVisible:
+    id: snapshot-month-2026-07
+- assertVisible:
+    id: snapshot-month-2026-05
+- assertNotVisible:
+    id: snapshot-month-2026-06
+- tapOn:
+    id: snapshot-month-2026-08
+- assertVisible: "\u20b912,000.00"
+- assertVisible: "\u20b910,000.00"
+- takeScreenshot: .expo/font-fix/stored-august
+- tapOn:
+    id: history-back
+- tapOn:
+    id: snapshot-month-2026-07
+- assertVisible: "\u20b913,000.00"
+- assertVisible: "\u20b910,000.00"
+- tapOn:
+    id: history-back
+- tapOn:
+    id: snapshot-month-2026-05
+- assertVisible: "\u20b910,000.00"
+- tapOn:
+    id: close-monthly-history

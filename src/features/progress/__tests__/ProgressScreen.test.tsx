@@ -758,6 +758,32 @@ describe("ProgressScreen", () => {
     expect(getByText("May close")).toBeTruthy();
   });
 
+  it.each(["standard", "minimal"] as const)("reflows comparison groups on narrow widths and live font changes in %s", (displayMode) => {
+    const original = Dimensions.get("window");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    store.getState().addMonthlySnapshot(aprilSnapshot);
+    store.getState().addMonthlySnapshot(maySnapshot);
+    const snapshots = store.getState().monthlySnapshots;
+    try {
+      act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1 } }));
+      const view = render(<ProgressScreen store={store} />);
+      if (displayMode === "minimal") fireEvent.press(view.getByTestId("progress-details-toggle"));
+      expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "column" });
+      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
+      expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "row" });
+      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1.3 } }));
+      expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "column" });
+      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
+      expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "row" });
+      expect(within(view.getByTestId("progress-difference-percent")).getAllByText(/%/).length).toBeGreaterThan(0);
+      expect(store.getState().monthlySnapshots).toEqual(snapshots);
+      view.unmount();
+    } finally {
+      act(() => Dimensions.set({ window: original }));
+    }
+  });
+
   it("labels legacy snapshot performance unavailable instead of guessing", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);

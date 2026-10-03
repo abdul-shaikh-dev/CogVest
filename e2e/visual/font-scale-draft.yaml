@@ -1,0 +1,30 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      true: ${PHASE == 'prepare'}
+    commands:
+      - tapOn:
+          id: tab-cash
+      - tapOn:
+          id: cash-entry-deposit
+      - tapOn:
+          id: cash-amount-input
+      - inputText: "1234.56"
+      - hideKeyboard
+      - tapOn:
+          id: cash-label-input
+      - inputText: "Font transition draft"
+      - hideKeyboard
+- assertVisible: "Deposit cash"
+- scrollUntilVisible:
+    element:
+      id: cash-amount-input
+    direction: UP
+- assertVisible: "1234.56"
+- scrollUntilVisible:
+    element:
+      id: cash-label-input
+    direction: DOWN
+- assertVisible: "Font transition draft"
+- takeScreenshot: .expo/font-fix/draft-${STAGE}
