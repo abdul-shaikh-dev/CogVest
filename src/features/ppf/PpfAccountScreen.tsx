@@ -79,7 +79,7 @@ type PpfAccountField =
   | "balanceAsOf"
   | "fyContributions";
 
-type PpfFormSection = "account" | "opening" | "baseline";
+type PpfFormSection = "account" | "opening" | "baseline" | "identification";
 
 const ppfAccountErrorFields: Record<string, PpfAccountField> = {
   "Nickname is required.": "nickname",
@@ -698,7 +698,7 @@ function PpfAccountForm({
             }}
             testID="ppf-account-section"
           >
-            <PremiumCard section>
+            <PremiumCard section style={styles.formSection}>
               <SectionHeader title="Account" />
               <View
                 onLayout={(event) =>
@@ -740,27 +740,65 @@ function PpfAccountForm({
                   value={provider}
                 />
               </View>
-              <View
-                onLayout={(event) =>
-                  recordFieldLayout("suffix", "account", event.nativeEvent.layout.y)
-                }
-              >
+            </PremiumCard>
+          </View>
+          <View
+            onLayout={(event) => {
+              sectionY.current.baseline = event.nativeEvent.layout.y;
+            }}
+          >
+            <PremiumCard section style={styles.formSection}>
+              <SectionHeader title="Starting balance" />
+              <View onLayout={(event) => recordFieldLayout("balance", "baseline", event.nativeEvent.layout.y)}>
                 <FormTextField
-                  error={fieldErrors.suffix}
+                  error={fieldErrors.balance}
                   inputRef={(node) => {
-                    inputRefs.current.suffix = node;
+                    inputRefs.current.balance = node;
                   }}
-                  keyboardType="number-pad"
-                  label="Account suffix (optional)"
+                  keyboardType="decimal-pad"
+                  label="Confirmed balance (INR)"
                   onChangeText={(value) => {
-                    setSuffix(value);
-                    clearFieldError("suffix");
+                    setBalance(value);
+                    clearFieldError("balance");
                   }}
-                  placeholder="Last 2 to 4 digits"
-                  testID="ppf-suffix-input"
-                  value={suffix}
+                  testID="ppf-balance-input"
+                  value={balance}
                 />
               </View>
+              <View onLayout={(event) => recordFieldLayout("balanceAsOf", "baseline", event.nativeEvent.layout.y)}>
+                <DatePickerField
+                  error={fieldErrors.balanceAsOf}
+                  fieldRef={(node) => {
+                    controlRefs.current.balanceAsOf = node;
+                  }}
+                  label="Balance confirmed on"
+                  onChange={(value) => {
+                    setBalanceAsOf(value);
+                    clearFieldError("balanceAsOf");
+                  }}
+                  testID="ppf-balance-date"
+                  value={balanceAsOf}
+                />
+              </View>
+              <View onLayout={(event) => recordFieldLayout("fyContributions", "baseline", event.nativeEvent.layout.y)}>
+                <FormTextField
+                  error={fieldErrors.fyContributions}
+                  inputRef={(node) => {
+                    inputRefs.current.fyContributions = node;
+                  }}
+                  keyboardType="decimal-pad"
+                  label="Contributed this financial year (optional)"
+                  onChangeText={(value) => {
+                    setFyContributions(value);
+                    clearFieldError("fyContributions");
+                  }}
+                  testID="ppf-fy-contribution-input"
+                  value={fyContributions}
+                />
+              </View>
+              <AppText color="secondary" variant="caption">
+                Enter only the amount already included in this confirmed balance. No transaction dates will be invented.
+              </AppText>
             </PremiumCard>
           </View>
           <View
@@ -768,7 +806,7 @@ function PpfAccountForm({
               sectionY.current.opening = event.nativeEvent.layout.y;
             }}
           >
-            <PremiumCard section>
+            <PremiumCard section style={styles.formSection}>
           <SectionHeader title="Opening and status" />
           <SelectionField
             label="Opening information"
@@ -839,61 +877,34 @@ function PpfAccountForm({
           </View>
           <View
             onLayout={(event) => {
-              sectionY.current.baseline = event.nativeEvent.layout.y;
+              sectionY.current.identification = event.nativeEvent.layout.y;
             }}
+            testID="ppf-identification-section"
           >
-            <PremiumCard section>
-              <SectionHeader title="Starting balance" />
-              <View onLayout={(event) => recordFieldLayout("balance", "baseline", event.nativeEvent.layout.y)}>
+            <PremiumCard section style={styles.formSection}>
+              <SectionHeader title="Optional identification" />
+              <View
+                onLayout={(event) =>
+                  recordFieldLayout("suffix", "identification", event.nativeEvent.layout.y)
+                }
+                testID="ppf-suffix-field"
+              >
                 <FormTextField
-                  error={fieldErrors.balance}
+                  error={fieldErrors.suffix}
                   inputRef={(node) => {
-                    inputRefs.current.balance = node;
+                    inputRefs.current.suffix = node;
                   }}
-                  keyboardType="decimal-pad"
-                  label="Confirmed balance (INR)"
+                  keyboardType="number-pad"
+                  label="Account suffix (optional)"
                   onChangeText={(value) => {
-                    setBalance(value);
-                    clearFieldError("balance");
+                    setSuffix(value);
+                    clearFieldError("suffix");
                   }}
-                  testID="ppf-balance-input"
-                  value={balance}
+                  placeholder="Last 2 to 4 digits"
+                  testID="ppf-suffix-input"
+                  value={suffix}
                 />
               </View>
-              <View onLayout={(event) => recordFieldLayout("balanceAsOf", "baseline", event.nativeEvent.layout.y)}>
-                <DatePickerField
-                  error={fieldErrors.balanceAsOf}
-                  fieldRef={(node) => {
-                    controlRefs.current.balanceAsOf = node;
-                  }}
-                  label="Balance confirmed on"
-                  onChange={(value) => {
-                    setBalanceAsOf(value);
-                    clearFieldError("balanceAsOf");
-                  }}
-                  testID="ppf-balance-date"
-                  value={balanceAsOf}
-                />
-              </View>
-              <View onLayout={(event) => recordFieldLayout("fyContributions", "baseline", event.nativeEvent.layout.y)}>
-                <FormTextField
-                  error={fieldErrors.fyContributions}
-                  inputRef={(node) => {
-                    inputRefs.current.fyContributions = node;
-                  }}
-                  keyboardType="decimal-pad"
-                  label="Contributed this financial year (optional)"
-                  onChangeText={(value) => {
-                    setFyContributions(value);
-                    clearFieldError("fyContributions");
-                  }}
-                  testID="ppf-fy-contribution-input"
-                  value={fyContributions}
-                />
-              </View>
-          <AppText color="secondary" variant="caption">
-            Enter only the amount already included in this confirmed balance. No transaction dates will be invented.
-          </AppText>
             </PremiumCard>
           </View>
         {error ? <AppText selectable style={styles.error}>{error}</AppText> : null}
@@ -951,6 +962,7 @@ const styles = StyleSheet.create({
   detailValue: { flex: 1, textAlign: "right" },
   error: { color: colors.loss },
   flex: { flex: 1 },
+  formSection: { paddingVertical: spacing.sm },
   ledgerRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, minHeight: 64, paddingVertical: spacing.sm },
   ledgerActions: {
     flexDirection: "row",

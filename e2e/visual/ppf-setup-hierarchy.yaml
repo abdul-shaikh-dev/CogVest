@@ -1,0 +1,29 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///ppf-account"
+- assertVisible:
+    id: ppf-account-form-screen
+- takeScreenshot: .expo/ppf-setup-hierarchy/${PHASE}/${SIZE}/${MODE}-entry
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- takeScreenshot: .expo/ppf-setup-hierarchy/${PHASE}/${SIZE}/${MODE}-balance
+- tapOn:
+    id: ppf-balance-input
+- inputText: "250000"
+- assertVisible:
+    id: ppf-balance-input
+- takeScreenshot: .expo/ppf-setup-hierarchy/${PHASE}/${SIZE}/${MODE}-keyboard
+- hideKeyboard
+- back
+- assertVisible: "Discard account changes?"
+- tapOn:
+    id: discard-ppf-account

@@ -20,6 +20,40 @@ const account: PpfAccount = {
 };
 
 describe("PpfAccountScreen", () => {
+  it.each(["standard", "minimal"] as const)("prioritizes the balance before optional identifiers in %s mode", (displayMode) => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf("ppf-provider-input")).toBeLessThan(tree.indexOf("ppf-balance-input"));
+    expect(tree.indexOf("ppf-balance-date")).toBeLessThan(tree.indexOf("ppf-opening-mode"));
+    expect(tree.indexOf("ppf-opening-mode")).toBeLessThan(tree.indexOf("ppf-suffix-input"));
+    expect(screen.getByText("Balance confirmed on")).toBeTruthy();
+    expect(screen.getByText("Account suffix (optional)")).toBeTruthy();
+    expect(store.getState().ppfAccounts).toEqual([]);
+  });
+
+  it("retains optional identifiers and baseline contributions through review and save", () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+    fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "1234");
+    fireEvent.changeText(screen.getByTestId("ppf-fy-contribution-input"), "5000");
+    fireEvent.press(screen.getByTestId("review-ppf-account"));
+    fireEvent.press(screen.getByTestId("edit-ppf-account-details"));
+    expect(screen.getByTestId("ppf-suffix-input")).toHaveProp("value", "1234");
+    expect(screen.getByTestId("ppf-fy-contribution-input")).toHaveProp("value", "5000");
+    fireEvent.press(screen.getByTestId("review-ppf-account"));
+    fireEvent.press(screen.getByTestId("save-ppf-account"));
+    expect(store.getState().ppfAccounts[0]).toMatchObject({
+      accountNumberSuffix: "1234",
+      confirmedBalance: 250000,
+      balanceAsOf: "2026-08-15",
+      baselineFinancialYearContributions: { amount: 5000, financialYearStart: 2026 },
+    });
+  });
+
   it("reveals the first invalid field inline without clearing entered values", async () => {
     const focus = jest.spyOn(TextInput.prototype, "focus");
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
@@ -60,6 +94,25 @@ describe("PpfAccountScreen", () => {
 
     focus.mockRestore();
     scrollTo.mockRestore();
+  });
+
+  it("reveals an invalid suffix in its relocated optional section", async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    try {
+      fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+      fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+      fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
+      fireEvent(screen.getByTestId("ppf-identification-section"), "layout", { nativeEvent: { layout: { y: 1200 } } });
+      fireEvent(screen.getByTestId("ppf-suffix-field"), "layout", { nativeEvent: { layout: { y: 60 } } });
+      fireEvent.press(screen.getByTestId("review-ppf-account"));
+      await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ animated: true, y: 1244 }));
+      expect(screen.getByText("Account suffix must contain the final 2 to 4 digits only.")).toBeTruthy();
+      expect(store.getState().ppfAccounts).toEqual([]);
+    } finally {
+      scrollTo.mockRestore();
+    }
   });
 
   it("reviews and saves a dedicated PPF account without market fields", () => {
