@@ -1,0 +1,50 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic visual-QA portfolio with no Futures wallet.
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- takeScreenshot: .expo/futures-wallet-hierarchy/${PHASE}/${SIZE}/${MODE}-entry
+- tapOn:
+    id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at
+    direction: DOWN
+- tapOn:
+    id: futures-opening-at
+- eraseText: 50
+- inputText: "2026-09-01T10:20:58.123+05:30"
+- assertVisible:
+    id: futures-opening-at
+- takeScreenshot: .expo/futures-wallet-hierarchy/${PHASE}/${SIZE}/${MODE}-exact-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at-exact-toggle
+    direction: UP
+- tapOn:
+    id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate
+- inputText: "90"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-source
+    direction: DOWN
+- takeScreenshot: .expo/futures-wallet-hierarchy/${PHASE}/${SIZE}/${MODE}-conversion
+- back
+- assertVisible: "Discard unsaved changes?"
+- tapOn:
+    id: futures-discard

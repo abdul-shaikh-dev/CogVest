@@ -1,7 +1,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useState, type Ref } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
-import { AppButton, AppText } from "@/src/components/common";
+import { AppButton, AppText, DisclosureButton } from "@/src/components/common";
 import { futuresEntryDate, futuresTimeZone, replaceFuturesTimePart } from "@/src/domain/futuresEntry";
 import { colors, radii, spacing } from "@/src/theme";
 import { FormTextField } from "./FormTextField";
@@ -33,10 +33,8 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
     <AppText color="secondary" variant="caption">Device time · {futuresTimeZone(selected ?? now)}</AppText>
     {suggestedAt && futuresEntryDate(suggestedAt) && value !== suggestedAt ? <AppButton title={suggestedLabel} variant="ghost"
       onPress={() => onChange(suggestedAt)} testID={`${testID}-use-time`} /> : null}
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: exact }}
-      onPress={() => { Keyboard.dismiss(); setExact(!exact); }} style={styles.exact} testID={`${testID}-exact-toggle`}>
-      <AppText color="secondary" variant="caption">{exact ? "Hide exact timestamp" : "Edit exact timestamp"}</AppText>
-    </Pressable>
+    <DisclosureButton expanded={exact} title="Exact timestamp"
+      onPress={() => { Keyboard.dismiss(); setExact(!exact); }} testID={`${testID}-exact-toggle`} />
     {exact ? <FormTextField label={`${label} · exact timestamp with timezone`} value={value} onChangeText={onChange}
       error={error} testID={testID} />
       : error ? <AppText accessibilityRole="alert" style={styles.error} variant="caption">{error}</AppText> : null}
@@ -48,6 +46,5 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
 const styles = StyleSheet.create({
   container: { gap: spacing.xs }, buttons: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   button: { minHeight: 48, justifyContent: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  exact: { minHeight: 48, justifyContent: "center", alignSelf: "flex-start" },
   invalid: { borderWidth: 1, borderColor: colors.loss }, error: { color: colors.loss },
 });

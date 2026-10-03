@@ -21,6 +21,21 @@ function setTime(screen: ReturnType<typeof render>, id: string, value: string) {
 }
 
 describe("manual Futures screen", () => {
+  it.each(["standard", "minimal"] as const)("groups wallet amount, time and conversion evidence in %s mode", (displayMode) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    const screen = render(<FuturesScreen onBack={jest.fn()} store={store} />);
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf("futures-opening-wallet")).toBeLessThan(tree.indexOf("futures-opening-at-field"));
+    expect(tree.indexOf("futures-opening-at-field")).toBeLessThan(tree.indexOf("futures-opening-conversion"));
+    expect(screen.getByText("INR conversion")).toBeTruthy();
+    expect(screen.queryByTestId("futures-opening-at")).toBeNull();
+    fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
+    expect(screen.getByTestId("futures-opening-conversion")).toHaveTextContent(/Rate observed at/);
+    expect(screen.getByTestId("futures-opening-conversion")).toHaveTextContent(/Starting rate source/);
+    expect(store.getState().futuresAccounts).toEqual([]);
+  });
+
   it("cancels wallet deletion through buttons and Android dismissal, then deletes only once", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
