@@ -355,7 +355,7 @@ function SelectedMonthPanel({
   summaryOnly?: boolean;
 }) {
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width } = useWindowDimensions();
 
   if (partialHistory || summaryOnly) {
     return (
@@ -412,9 +412,9 @@ function SelectedMonthPanel({
         style={styles.selectedPanel}
         testID={`${testIDPrefix}-selected-panel`}
       >
-        <View style={[
+        <View testID="portfolio-comparison-layout" style={[
           styles.portfolioSelectionContent,
-          fontScale > 1.15 ? { flexDirection: "column", alignItems: "stretch" } : null,
+          fontScale > 1.15 || width < 440 ? { flexDirection: "column", alignItems: "stretch" } : null,
         ]}>
             <View style={styles.gapOutcome}>
               <AppText color="secondary" variant="caption">Vs invested · excludes cash</AppText>

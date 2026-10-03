@@ -1,0 +1,33 @@
+appId: com.abdulshaikh.cogvest
+---
+# Replaces portfolio data. Only run on a disposable test installation.
+# Push e2e/fixtures/font-scale-history.json into this device's Downloads first.
+- tapOn:
+    id: tab-settings
+- scrollUntilVisible:
+    element:
+      id: restore-backup-action
+    direction: DOWN
+- tapOn:
+    id: restore-backup-action
+- tapOn:
+    id: choose-backup-file
+- tapOn: "font-scale-history.json"
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- tapOn:
+    id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-done
+    timeout: 30000
+- tapOn:
+    id: backup-restore-done

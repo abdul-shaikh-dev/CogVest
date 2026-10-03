@@ -1,0 +1,18 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      true: ${PHASE == 'prepare'}
+    commands:
+      - tapOn:
+          id: tab-settings
+      - scrollUntilVisible:
+          element:
+            id: display-mode-${MODE}
+          direction: UP
+      - tapOn:
+          id: display-mode-${MODE}
+- assertVisible: "Settings"
+- assertVisible:
+    id: display-mode-${MODE}
+- takeScreenshot: .expo/font-fix/settings-${MODE}-${STAGE}

@@ -1,0 +1,38 @@
+appId: com.abdulshaikh.cogvest
+---
+# Synthetic stored history: May 10K, July 13K, August 12K, invested 10K.
+# Run prepare at 1.0, change Android font_scale externally with the app open,
+# then run capture at 1.3 and again at 1.0. No launch/reload in capture phase.
+- runFlow:
+    when:
+      true: ${PHASE == 'prepare'}
+    commands:
+      - tapOn:
+          id: tab-settings
+      - scrollUntilVisible:
+          element:
+            id: display-mode-${MODE}
+          direction: UP
+      - tapOn:
+          id: display-mode-${MODE}
+      - tapOn:
+          id: tab-progress
+      - runFlow:
+          when:
+            true: ${MODE == 'minimal'}
+          commands:
+            - scrollUntilVisible:
+                element:
+                  id: progress-details-toggle
+                direction: UP
+            - tapOn:
+                id: progress-details-toggle
+- assertVisible:
+    id: progress-screen
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible: ".*Portfolio.*12K.*Invested.*10K.*"
+- takeScreenshot: .expo/font-fix/${MODE}-${STAGE}
