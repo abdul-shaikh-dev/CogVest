@@ -1,0 +1,18 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- assertVisible: "No portfolio history yet"
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=gap&mode=${MODE}"
+- runFlow:
+    when:
+      true: ${MODE == 'minimal'}
+    commands:
+      - tapOn:
+          id: progress-details-toggle
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+    centerElement: true
+- assertVisible: ".*Portfolio.*12K.*Invested.*10K.*"
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-gap-summary

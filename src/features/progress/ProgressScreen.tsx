@@ -451,13 +451,13 @@ function SelectedMonthPanel({
                 <AppText color="secondary" variant="caption">
                   {portfolioLabel}
                 </AppText>
-                <MaskedValue exactValue={formatINR(portfolioValue)} masked={maskWealthValues} value={formatCompactINR(portfolioValue)} variant="caption" weight="bold" />
+                <MaskedValue style={styles.gapAmount} exactValue={formatINR(portfolioValue)} masked={maskWealthValues} value={formatCompactINR(portfolioValue)} variant="caption" weight="bold" />
               </View>
               <View style={styles.gapValueRow}>
                 <AppText color="secondary" variant="caption">
                   Invested
                 </AppText>
-                <MaskedValue exactValue={formatINR(investedValue)} masked={maskWealthValues} value={formatCompactINR(investedValue)} variant="caption" weight="bold" />
+                <MaskedValue style={styles.gapAmount} exactValue={formatINR(investedValue)} masked={maskWealthValues} value={formatCompactINR(investedValue)} variant="caption" weight="bold" />
               </View>
             </View>
           </View>
@@ -2004,6 +2004,7 @@ const styles = StyleSheet.create({
   },
   gapOutcome: {
     flex: 2,
+    minWidth: 0,
     gap: spacing.xs,
   },
   comparisonMetricPair: {
@@ -2023,7 +2024,12 @@ const styles = StyleSheet.create({
   },
   gapValues: {
     flex: 1,
+    minWidth: 144,
     gap: spacing.xs,
+  },
+  gapAmount: {
+    flex: 1,
+    textAlign: "right",
   },
   legendItemDimmed: {
     opacity: 0.45,

@@ -1,0 +1,81 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- extendedWaitUntil:
+    visible: "No portfolio history yet"
+    timeout: 30000
+- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=${SCENARIO}&mode=${MODE}"
+- extendedWaitUntil:
+    visible:
+      id: open-monthly-history
+    timeout: 30000
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-overview
+- runFlow:
+    when:
+      true: ${SCENARIO != 'single'}
+    commands:
+      - runFlow:
+          when:
+            true: ${MODE == 'minimal'}
+          commands:
+            - tapOn:
+                id: progress-details-toggle
+      - scrollUntilVisible:
+          element:
+            id: portfolio-trend-chart
+          direction: DOWN
+          centerElement: true
+      - takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-portfolio
+      - runFlow:
+          when:
+            true: ${SCENARIO == 'zero'}
+          commands:
+            - scrollUntilVisible:
+                element:
+                  text: "No asset-class value in this range."
+                direction: DOWN
+                centerElement: true
+      - runFlow:
+          when:
+            true: ${SCENARIO == 'gap'}
+          commands:
+            - scrollUntilVisible:
+                element:
+                  id: asset-trend-chart
+                direction: DOWN
+                centerElement: true
+      - takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-asset
+      - scrollUntilVisible:
+          element:
+            id: open-monthly-history
+          direction: UP
+- tapOn:
+    id: open-monthly-history
+- assertVisible:
+    id: snapshot-month-2026-08
+- runFlow:
+    when:
+      true: ${SCENARIO == 'zero'}
+    commands:
+      - assertNotVisible:
+          id: history-bar-scale
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-history
+- tapOn:
+    id: snapshot-month-2026-08
+- assertVisible: "${SCENARIO == 'zero' ? '₹0.00' : '₹12,000.00'}"
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-detail
+- tapOn:
+    id: close-monthly-history
+- scrollUntilVisible:
+    element:
+      id: progress-mask-toggle
+    direction: UP
+- tapOn:
+    id: progress-mask-toggle
+- tapOn:
+    id: open-monthly-history
+- assertNotVisible:
+    id: history-bar-scale
+- takeScreenshot: .expo/progress-edge/${SIZE}/${MODE}-${SCENARIO}-masked
+- tapOn:
+    id: close-monthly-history
