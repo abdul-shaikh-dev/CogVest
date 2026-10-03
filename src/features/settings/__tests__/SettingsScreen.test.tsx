@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import Constants from "expo-constants";
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, within } from "@testing-library/react-native";
 
 import { SettingsScreen } from "@/src/features/settings";
 import { MASKED_INR_VALUE } from "@/src/components/common";
@@ -27,6 +27,25 @@ const mockedConstants = Constants as unknown as {
 };
 
 describe("SettingsScreen", () => {
+  it.each(["standard", "minimal"] as const)("separates investment tools from backup and groups app facts once in %s mode", (displayMode) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    const view = render(<SettingsScreen store={store} />);
+    const tools = within(view.getByTestId("futures-settings-card"));
+    const backup = within(view.getByTestId("backup-settings-card"));
+    expect(tools.getByRole("header", { name: "Investment tools" })).toBeTruthy();
+    expect(tools.getByTestId("open-futures-action")).toBeTruthy();
+    expect(tools.queryByTestId("restore-backup-action")).toBeNull();
+    expect(backup.queryByTestId("open-futures-action")).toBeNull();
+    expect(backup.getByText("Save an unencrypted manual copy to a location you choose.")).toBeTruthy();
+    expect(backup.getByText("Review a backup before it replaces this device's portfolio.")).toBeTruthy();
+    const layout = JSON.stringify(view.toJSON());
+    expect(layout.indexOf('"testID":"futures-settings-card"')).toBeLessThan(layout.indexOf('"testID":"backup-settings-card"'));
+    expect(view.getAllByRole("header", { name: "App information" })).toHaveLength(1);
+    expect(view.queryByText("About")).toBeNull();
+    expect(view.getByText("Base currency")).toBeTruthy();
+    expect(view.getByText("Version")).toBeTruthy();
+  });
   it("uses named choices and disclosures without generic action text", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const view = render(<SettingsScreen store={store} />);

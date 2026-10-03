@@ -1,0 +1,34 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///settings"
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- scrollUntilVisible:
+    element:
+      id: open-futures-action
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    when:
+      true: ${PHASE == 'after'}
+    commands:
+      - assertVisible: "Investment tools"
+- takeScreenshot: .expo/settings-tool-groups/${PHASE}/${SIZE}/${MODE}-tools
+- scrollUntilVisible:
+    element: "Version"
+    direction: DOWN
+- runFlow:
+    when:
+      true: ${PHASE == 'after'}
+    commands:
+      - assertNotVisible: "About"
+      - assertVisible: "Base currency"
+- takeScreenshot: .expo/settings-tool-groups/${PHASE}/${SIZE}/${MODE}-information
