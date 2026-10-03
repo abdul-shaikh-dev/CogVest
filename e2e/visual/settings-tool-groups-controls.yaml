@@ -1,0 +1,59 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: open-futures-action
+    direction: UP
+- tapOn:
+    id: open-futures-action
+- assertVisible: "USDT Futures"
+- tapOn:
+    id: futures-back
+- scrollUntilVisible:
+    element:
+      id: backup-portfolio-action
+    direction: DOWN
+- tapOn:
+    id: backup-portfolio-action
+- assertVisible: "Save a manual backup"
+- assertVisible:
+    id: choose-backup-location
+- tapOn:
+    id: backup-back
+- scrollUntilVisible:
+    element:
+      id: restore-backup-action
+    direction: DOWN
+- tapOn:
+    id: restore-backup-action
+- assertVisible: "Choose a backup to review"
+- assertVisible:
+    id: choose-backup-file
+- tapOn:
+    id: backup-back
+- scrollUntilVisible:
+    element:
+      id: privacy-details-toggle
+    direction: DOWN
+- tapOn:
+    id: privacy-details-toggle
+- assertVisible: "Records stay in CogVest's app-private Android storage."
+- tapOn:
+    id: privacy-details-toggle
+- scrollUntilVisible:
+    element:
+      id: settings-price-details-toggle
+    direction: DOWN
+- tapOn:
+    id: settings-price-details-toggle
+- scrollUntilVisible:
+    element: "Newest price update date"
+    direction: DOWN
+- assertVisible: "Newest price update date"
+- scrollUntilVisible:
+    element:
+      id: settings-price-details-toggle
+    direction: UP
+- tapOn:
+    id: settings-price-details-toggle

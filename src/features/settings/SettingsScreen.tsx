@@ -162,6 +162,18 @@ export function SettingsScreen({
           </AppText>
         </PremiumCard>
 
+        <PremiumCard section testID="futures-settings-card">
+          <SectionHeader title="Investment tools" />
+          <GroupedListRow
+            icon="swap-horizontal-outline"
+            title="Binance USDT futures"
+            meta="Manually record cross-margin, one-way positions and wallet activity."
+            onPress={() => router.push("/futures")}
+            showChevron
+            testID="open-futures-action"
+          />
+        </PremiumCard>
+
         <PremiumCard section testID="backup-settings-card">
           <SectionHeader title="Portfolio backup" />
           <GroupedListRow
@@ -179,17 +191,6 @@ export function SettingsScreen({
             showChevron
             testID="restore-backup-action"
             title="Restore backup"
-          />
-        </PremiumCard>
-
-        <PremiumCard section testID="futures-settings-card">
-          <GroupedListRow
-            icon="swap-horizontal-outline"
-            title="Binance USDT futures"
-            meta="Manually record cross-margin, one-way positions and wallet activity."
-            onPress={() => router.push("/futures")}
-            showChevron
-            testID="open-futures-action"
           />
         </PremiumCard>
 
@@ -309,7 +310,6 @@ export function SettingsScreen({
           </PremiumCard>
 
           <PremiumCard section>
-            <SectionHeader title="About" />
             <GroupedListRow
               icon="cash-outline"
               title="Base currency"
