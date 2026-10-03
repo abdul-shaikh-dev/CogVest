@@ -2,7 +2,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 
-import { AppButton, AppText } from "@/src/components/common";
+import { AppButton, AppText, SectionHeader } from "@/src/components/common";
 import { buildAssetHistory, downsampleAssetHistory } from "@/src/domain/calculations/assetHistory";
 import { formatDate } from "@/src/domain/formatters";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
@@ -190,7 +190,7 @@ export function AssetHistoryPanel({
   if (history.supported === false) {
     return (
       <View style={styles.section} testID="asset-history-panel">
-        <AppText variant="section" weight="bold">History</AppText>
+        <SectionHeader title="History" />
         <AppText color="secondary" testID="asset-history-message">
           {history.message ?? "Market history is not available for this asset."}
         </AppText>
@@ -204,7 +204,7 @@ export function AssetHistoryPanel({
       style={styles.section}
       testID="asset-history-panel"
     >
-      <AppText variant="section" weight="bold">History</AppText>
+      <SectionHeader title="History" />
 
       <View style={styles.controls}>
         {([['price', 'Price history'], ['holdingValue', 'Your holding value']] as const).map(([value, title]) => (
@@ -395,7 +395,7 @@ export function AssetHistoryPanel({
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.md, paddingVertical: spacing.lg },
+  section: { gap: spacing.md, paddingBottom: spacing.md },
   controls: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   range: { paddingHorizontal: 12 },
   readout: { gap: spacing.xs },

@@ -1,0 +1,65 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///settings"
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///holdings"
+- scrollUntilVisible:
+    element:
+      id: holding-row-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- assertVisible:
+    id: holding-detail-pnl
+- assertVisible:
+    id: holding-detail-pnl-percent
+- takeScreenshot: .expo/holding-detail-hierarchy/${PHASE}/${SIZE}/${MODE}-position
+- runFlow:
+    when:
+      true: ${PHASE == 'after'}
+    commands:
+      - assertVisible: "₹36,250.00"
+      - tapOn:
+          id: holding-detail-mask
+      - assertNotVisible: "₹36,250.00"
+      - takeScreenshot: .expo/holding-detail-hierarchy/${PHASE}/${SIZE}/${MODE}-masked
+      - tapOn:
+          id: holding-detail-mask
+      - scrollUntilVisible:
+          element: "25"
+          direction: DOWN
+      - assertVisible: "25"
+      - assertVisible: "₹1,450.00"
+      - scrollUntilVisible:
+          element:
+            id: holding-view-records
+          direction: DOWN
+      - tapOn:
+          id: holding-view-records
+      - scrollUntilVisible:
+          element:
+            id: review-opening-position-visual-qa-opening-hdfc
+          direction: DOWN
+      - assertVisible:
+          id: review-opening-position-visual-qa-opening-hdfc
+      - scrollUntilVisible:
+          element:
+            id: holding-view-records
+          direction: UP
+      - tapOn:
+          id: holding-view-records
+- scrollUntilVisible:
+    element: "History"
+    direction: DOWN
+- takeScreenshot: .expo/holding-detail-hierarchy/${PHASE}/${SIZE}/${MODE}-history
+- tapOn:
+    id: holding-detail-back

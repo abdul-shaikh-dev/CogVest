@@ -1491,7 +1491,7 @@ function HoldingDetails({
           </AppText>
         </View>
       </View>
-      <PremiumCard>
+      <View style={styles.detailValuation} testID="holding-detail-valuation">
         <AppText color="secondary" variant="caption">
           Current value
         </AppText>
@@ -1541,45 +1541,47 @@ function HoldingDetails({
           </View>
         </View>
         <AppText color="secondary" variant="caption">Unrealized on remaining units</AppText>
-        <AppText color="secondary" variant="caption">
-          Invested in remaining units
-        </AppText>
-        <MaskedValue
-          masked={masked}
-          value={formatINR(holding.totalInvested)}
-          weight="bold"
-        />
-      </PremiumCard>
-      <AppText variant="section" weight="bold">
-        Your position
-      </AppText>
-      <View style={styles.detailGrid}>
-        <Detail
-          label="Quantity"
-          testID={`holding-quantity-${holding.asset.id}`}
-          value={formatQuantity(holding.totalUnits)}
-        />
-        <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
-        <Detail
-          label="Current price"
-          value={
-            holding.currentPrice === null
-              ? "Unavailable"
-              : formatINR(holding.currentPrice)
-          }
-        />
-        <Detail
-          label="Market holdings share"
-          value={
-            allocationAvailable && !isPending
-              ? `${item.allocationPct.toFixed(1)}%`
-              : "Unavailable"
-          }
-        />
-        <Detail
-          label="First recorded purchase"
-          value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
-        />
+        <View style={styles.detailInvested}>
+          <AppText color="secondary" variant="caption">
+            Invested in remaining units
+          </AppText>
+          <MaskedValue
+            masked={masked}
+            value={formatINR(holding.totalInvested)}
+            weight="bold"
+          />
+        </View>
+      </View>
+      <View style={styles.detailPosition} testID="holding-detail-position">
+        <SectionHeader title="Your position" />
+        <View style={styles.detailGrid}>
+          <Detail
+            label="Quantity"
+            testID={`holding-quantity-${holding.asset.id}`}
+            value={formatQuantity(holding.totalUnits)}
+          />
+          <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
+          <Detail
+            label="Current price"
+            value={
+              holding.currentPrice === null
+                ? "Unavailable"
+                : formatINR(holding.currentPrice)
+            }
+          />
+          <Detail
+            label="Market holdings share"
+            value={
+              allocationAvailable && !isPending
+                ? `${item.allocationPct.toFixed(1)}%`
+                : "Unavailable"
+            }
+          />
+          <Detail
+            label="First recorded purchase"
+            value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
+          />
+        </View>
       </View>
       <View style={styles.detailActions} testID="holding-primary-actions">
         {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
@@ -1877,6 +1879,15 @@ const styles = StyleSheet.create({
   detailActions: {
     gap: spacing.xs,
   },
+  detailValuation: {
+    gap: spacing.sm,
+  },
+  detailInvested: {
+    gap: spacing.xs,
+  },
+  detailPosition: {
+    gap: spacing.sm,
+  },
 
   assetCopy: {
     flex: 1,
@@ -1915,7 +1926,8 @@ const styles = StyleSheet.create({
   detailGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.md,
+    columnGap: spacing.md,
+    rowGap: spacing.sm,
   },
   expandedSection: {
     gap: spacing.md,
@@ -2182,7 +2194,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border.subtle,
     borderRadius: radii.sm,
     borderWidth: 1,
-    marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
