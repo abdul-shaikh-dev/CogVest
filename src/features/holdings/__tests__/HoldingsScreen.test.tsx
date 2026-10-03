@@ -951,6 +951,22 @@ describe("HoldingsScreen", () => {
     );
   });
 
+  it.each(["standard", "minimal"] as const)("keeps labelled values, position and history in %s details without changing records", (displayMode) => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ displayMode });
+    const records = store.getState().trades;
+    const view = render(<HoldingsScreen store={store} />);
+    fireEvent.press(view.getByTestId(`holding-row-${asset.id}`));
+    const valuation = within(view.getByTestId("holding-detail-valuation"));
+    expect(valuation.getByText("Current value")).toBeTruthy();
+    expect(valuation.getByText("Invested in remaining units")).toBeTruthy();
+    expect(valuation.getByTestId("holding-detail-pnl")).toBeTruthy();
+    expect(valuation.getByTestId("holding-detail-pnl-percent")).toBeTruthy();
+    expect(within(view.getByTestId("holding-detail-position")).getByRole("header", { name: "Your position" })).toBeTruthy();
+    expect(within(view.getByTestId("asset-history-panel")).getByRole("header", { name: "History" })).toBeTruthy();
+    expect(store.getState().trades).toBe(records);
+  });
+
   it("exposes a Sell / redeem action from expanded holding details", () => {
     const store = seedMixedHoldings();
     const onSellRedeem = jest.fn();
@@ -968,9 +984,10 @@ describe("HoldingsScreen", () => {
       (child) => child.props.testID === "holding-primary-actions",
     );
     const positionIndex = detailChildren.findIndex(
-      (child) => child.props.children === "Your position",
+      (child) => child.props.testID === "holding-detail-position",
     );
     expect(actionsIndex).toBeGreaterThan(-1);
+    expect(positionIndex).toBeGreaterThan(-1);
     expect(positionIndex).toBeLessThan(actionsIndex);
     fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
 
