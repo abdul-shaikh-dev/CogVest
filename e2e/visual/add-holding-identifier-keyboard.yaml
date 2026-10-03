@@ -1,0 +1,48 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      visible:
+        id: holding-discard-exit
+    commands:
+      - tapOn:
+          id: holding-discard-exit
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: toggle-manual-asset-entry
+- scrollUntilVisible:
+    element:
+      id: continue-class-button
+    direction: DOWN
+- tapOn:
+    id: continue-class-button
+- scrollUntilVisible:
+    element: "Asset name is required."
+    direction: UP
+- assertVisible: "Asset name is required."
+- takeScreenshot: .expo/add-holding-search-hierarchy/after/${SIZE}/validation
+- scrollUntilVisible:
+    element:
+      id: ticker-input
+    direction: DOWN
+- tapOn:
+    id: ticker-input
+- inputText: "SYNTHETICLONG.NS"
+- assertVisible:
+    id: ticker-input
+- takeScreenshot: .expo/add-holding-search-hierarchy/after/${SIZE}/ticker-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: quote-source-id-input
+    direction: DOWN
+- tapOn:
+    id: quote-source-id-input
+- inputText: "SYNTHETICLONG.NS"
+- assertVisible:
+    id: quote-source-id-input
+- takeScreenshot: .expo/add-holding-search-hierarchy/after/${SIZE}/source-keyboard
+- hideKeyboard
+- back
+- tapOn:
+    id: holding-discard-exit

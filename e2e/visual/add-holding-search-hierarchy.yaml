@@ -1,0 +1,71 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      visible:
+        id: add-holding-exit
+    commands:
+      - tapOn:
+          id: add-holding-exit
+- runFlow:
+    when:
+      visible:
+        id: holding-discard-exit
+    commands:
+      - tapOn:
+          id: holding-discard-exit
+- openLink: "cogvest:///settings"
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: UP
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- assertVisible:
+    id: asset-lookup-input
+- takeScreenshot: .expo/add-holding-search-hierarchy/${PHASE}/${SIZE}/${MODE}-search
+- tapOn:
+    id: toggle-manual-asset-entry
+- takeScreenshot: .expo/add-holding-search-hierarchy/${PHASE}/${SIZE}/${MODE}-manual
+- tapOn:
+    id: asset-input
+- inputText: "Synthetic long asset name for layout verification"
+- assertVisible:
+    id: asset-input
+- takeScreenshot: .expo/add-holding-search-hierarchy/${PHASE}/${SIZE}/${MODE}-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: toggle-manual-asset-entry
+    direction: UP
+- tapOn:
+    id: toggle-manual-asset-entry
+- tapOn:
+    id: asset-lookup-input
+- inputText: "hdfc"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: existing-asset-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: existing-asset-visual-qa-asset-hdfc
+- takeScreenshot: .expo/add-holding-search-hierarchy/${PHASE}/${SIZE}/${MODE}-selected
+- tapOn:
+    id: selected-asset-change
+- assertVisible:
+    id: asset-lookup-input
+- tapOn:
+    id: add-holding-exit
+- runFlow:
+    when:
+      visible:
+        id: holding-discard-exit
+    commands:
+      - tapOn:
+          id: holding-discard-exit

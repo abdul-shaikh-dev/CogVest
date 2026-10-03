@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react-native";
-import { BackHandler, StyleSheet } from "react-native";
+import { BackHandler, Dimensions, StyleSheet } from "react-native";
 
 import { AddOpeningPositionForm } from "@/src/features/openingPositions";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -82,6 +82,32 @@ function toggleReviewDetails(
 }
 
 describe("AddOpeningPositionForm", () => {
+  it.each([
+    { width: 400, fontScale: 1, direction: "row" as const, displayMode: "standard" as const },
+    { width: 340, fontScale: 1, direction: "column" as const, displayMode: "minimal" as const },
+    { width: 400, fontScale: 1.3, direction: "column" as const, displayMode: "standard" as const },
+  ])("keeps manual labels and values at $width dp and $fontScale text scale", ({ width, fontScale, direction, displayMode }) => {
+    const original = Dimensions.get("window");
+    act(() => Dimensions.set({ window: { width, height: 800, scale: 3, fontScale } }));
+    try {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      store.getState().updatePreferences({ displayMode });
+      const view = render(<AddOpeningPositionForm store={store} />);
+      expect(view.getByTestId("add-holding-phase-asset")).toHaveStyle({ backgroundColor: "transparent" });
+      fireEvent.press(view.getByTestId("toggle-manual-asset-entry"));
+      expect(view.getByTestId("manual-asset-identifiers")).toHaveStyle({ flexDirection: direction });
+      fireEvent.changeText(view.getByLabelText("Symbol"), "SYNTHETIC");
+      fireEvent.changeText(view.getByLabelText("Ticker"), "SYNTHETIC.NS");
+      expect(view.getByLabelText("Symbol")).toHaveProp("value", "SYNTHETIC");
+      expect(view.getByLabelText("Ticker")).toHaveProp("value", "SYNTHETIC.NS");
+      expect(view.getByLabelText("Quote source ID")).toBeTruthy();
+      expect(view.getByRole("button", { name: "Use asset search instead" })).toBeTruthy();
+      expect(store.getState().openingPositions).toEqual([]);
+    } finally {
+      act(() => Dimensions.set({ window: original }));
+    }
+  });
+
   it("keeps asset context on position entry and groups review gains", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<AddOpeningPositionForm initialVisualQaState="review" store={store} />);
