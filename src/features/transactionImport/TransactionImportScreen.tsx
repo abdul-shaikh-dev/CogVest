@@ -217,12 +217,19 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
             {externalLinkStatus ? <AppText accessibilityLiveRegion="polite" color="secondary" testID="import-source-link-fallback" variant="caption">{externalLinkStatus}</AppText> : null}
           </View> : null}
         </View> : null}
-        <AppText color="secondary" variant="caption">{controller.sourceId === "camsKfinCasPdfV1" ? `PDFs can contain up to ${casPdfMaxPages} pages and ${casPdfMaxBytes / (1024 * 1024)} MB.` : `Each file can contain up to ${controller.maxRows} rows and 1 MB.`} Unsupported events stay visible and are never guessed.</AppText>
+        <View style={styles.limits} testID="transaction-import-limits">
+          <AppText color="secondary" variant="caption">{controller.sourceId === "camsKfinCasPdfV1" ? `Detailed CAS PDF: up to ${casPdfMaxPages} pages, ${casPdfMaxBytes / (1024 * 1024)} MB.` : `Per CSV: up to ${controller.maxRows} rows, 1 MB.`}</AppText>
+          {controller.sourceId === "zerodhaTradebookEqV1" ? <>
+            <AppText color="secondary" variant="caption">Up to {controller.maxFiles} Tradebooks; Console allows 365 days per file.</AppText>
+            <AppText color="secondary" variant="caption">Overlapping trades are checked before import.</AppText>
+          </> : null}
+          <AppText color="secondary" variant="caption">Unsupported events stay visible and are never guessed.</AppText>
+        </View>
         {controller.sourceId === "cogvestCsvV1" ? <>
           <AppButton disabled={!props.saveCsvTemplate || isSavingTemplate || controller.isResolving || controller.isSaving} onPress={saveTemplate} testID="save-transaction-csv-template" title={isSavingTemplate ? "Saving template..." : "Save CSV template"} variant="secondary" />
           {templateStatus ? <AppText color="secondary" testID="transaction-csv-template-status" variant="caption">{templateStatus}</AppText> : null}
-        </> : controller.sourceId === "zerodhaTradebookEqV1" ? <AppText color="secondary" variant="caption">Console exports at most 365 days per Tradebook. Add up to {controller.maxFiles} annual files; overlapping trades are detected before import.</AppText> : <>
-          <AppText color="secondary" variant="caption">Choose a detailed CAS PDF with transaction history. The statement is read on this device, and its password is never saved.</AppText>
+        </> : controller.sourceId === "camsKfinCasPdfV1" ? <>
+          <AppText color="secondary" variant="caption">Read on this device. Password never saved.</AppText>
           <View
             collapsable={false}
             onLayout={(event) => { passwordFieldYRef.current = event.nativeEvent.layout.y; }}
@@ -240,7 +247,7 @@ export function TransactionImportScreen(props: TransactionImportScreenProps) {
               value={controller.casPassword}
             />
           </View>
-        </>}
+        </> : null}
         {controller.files.length > 0 ? <View style={styles.fileList}>
           {controller.files.map((file, index) => <View key={file.id} style={styles.fileRow} testID={`transaction-import-file-${index}`}>
             <View style={styles.fileDetails}>
@@ -536,6 +543,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   card: { gap: spacing.md },
+  limits: { gap: spacing.xs },
   coverageControl: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minHeight: 56, padding: spacing.md },
   coverageControlSelected: { borderColor: colors.primary, borderWidth: 1 },
   divider: { backgroundColor: colors.border.subtle, height: StyleSheet.hairlineWidth },

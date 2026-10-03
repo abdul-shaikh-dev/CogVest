@@ -29,6 +29,30 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
+  it.each(["standard", "minimal"] as const)("keeps source-specific limits and safety notes visible in %s mode", (displayMode) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().updatePreferences({ displayMode });
+    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
+    const limits = () => within(screen.getByTestId("transaction-import-limits"));
+    expect(limits().getByText("Per CSV: up to 500 rows, 1 MB.")).toBeTruthy();
+    expect(limits().getByText("Up to 10 Tradebooks; Console allows 365 days per file.")).toBeTruthy();
+    expect(limits().getByText("Overlapping trades are checked before import.")).toBeTruthy();
+    expect(limits().getByText("Unsupported events stay visible and are never guessed.")).toBeTruthy();
+    expect(screen.queryByTestId("transaction-import-source-guide-details")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    expect(limits().getByText("Detailed CAS PDF: up to 250 pages, 10 MB.")).toBeTruthy();
+    expect(limits().queryByText(/Tradebooks/u)).toBeNull();
+    expect(screen.getByText("Read on this device. Password never saved.")).toBeTruthy();
+    expect(screen.getByTestId("cas-statement-password").props.secureTextEntry).toBe(true);
+
+    fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
+    expect(limits().getByText("Per CSV: up to 500 rows, 1 MB.")).toBeTruthy();
+    expect(limits().queryByText(/Detailed CAS|Tradebooks/u)).toBeNull();
+    expect(screen.getByTestId("save-transaction-csv-template")).toBeTruthy();
+    expect(store.getState().trades).toEqual([]);
+  });
+
   it("distinguishes source selection from the PPF destination", () => {
     const onAddPpfAccount = jest.fn();
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });

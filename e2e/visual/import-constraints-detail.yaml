@@ -1,0 +1,32 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///import-transactions"
+- assertVisible:
+    id: transaction-import-screen
+- runFlow:
+    when:
+      visible: "Open debugger to view warn.*"
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- scrollUntilVisible:
+    element:
+      text: "Unsupported events stay visible and are never guessed."
+    direction: DOWN
+    centerElement: true
+- assertVisible: "Per CSV: up to 500 rows, 1 MB."
+- assertVisible: "Up to 10 Tradebooks; Console allows 365 days per file."
+- assertVisible: "Overlapping trades are checked before import."
+- takeScreenshot: .expo/import-constraints/after/${SIZE}/tradebook-limits-detail
+- scrollUntilVisible:
+    element:
+      id: transaction-import-back
+    direction: UP
+- tapOn:
+    id: transaction-import-back
