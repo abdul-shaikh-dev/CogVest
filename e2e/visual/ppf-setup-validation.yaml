@@ -1,0 +1,96 @@
+appId: com.abdulshaikh.cogvest
+---
+# Dedicated synthetic test. Resets emulator data, not a user's portfolio.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "cogvest:///ppf-account"
+- tapOn:
+    id: ppf-provider-input
+- inputText: "India Post"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "250000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-suffix-input
+    direction: DOWN
+- tapOn:
+    id: ppf-suffix-input
+- inputText: "123456"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- assertVisible: "Account suffix must contain the final 2 to 4 digits only."
+- assertVisible:
+    id: ppf-suffix-input
+- takeScreenshot: .expo/ppf-setup-hierarchy/after/large/suffix-validation
+- tapOn:
+    id: ppf-suffix-input
+- eraseText
+- inputText: "1234"
+- assertVisible:
+    id: ppf-suffix-input
+    text: "1234"
+- takeScreenshot: .expo/ppf-setup-hierarchy/after/large/suffix-keyboard
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- assertVisible:
+    id: ppf-account-review-screen
+- takeScreenshot: .expo/ppf-setup-hierarchy/after/large/review
+- scrollUntilVisible:
+    element:
+      id: edit-ppf-account-details
+    direction: DOWN
+- tapOn:
+    id: edit-ppf-account-details
+- back
+- assertVisible: "Discard account changes?"
+- tapOn:
+    id: keep-editing-ppf-account
+- scrollUntilVisible:
+    element:
+      id: ppf-suffix-input
+    direction: DOWN
+- assertVisible:
+    id: ppf-suffix-input
+    text: "1234"
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- scrollUntilVisible:
+    element:
+      id: save-ppf-account
+    direction: DOWN
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-confirmed-balance-card
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "PPF account count: 1"
+- scrollUntilVisible:
+    element:
+      text: "PPF balance: ₹2,50,000.00 | synthetic asset none"
+    direction: DOWN
+- assertVisible: "PPF balance: ₹2,50,000.00 | synthetic asset none"
