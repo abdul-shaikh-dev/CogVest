@@ -18,7 +18,7 @@ import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/componen
 import { RecoveryScreen } from "@/src/features/recovery";
 import { getPortfolioStore } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
 
 function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
   useMonthEndSnapshotAutomation({ enabled });
@@ -68,6 +68,16 @@ export async function loadRequiredFonts({
 
 export default function RootLayout() {
   const store = getPortfolioStore();
+  const appearance = useSyncExternalStore(store.subscribe,
+    () => store.getState().preferences.appearance ?? "dark",
+    () => store.getState().preferences.appearance ?? "dark");
+  return <ThemeProvider preference={appearance}><RootContents /></ThemeProvider>;
+}
+
+function RootContents() {
+  const { colors, scheme } = useTheme();
+  const styles = useStyles();
+  const store = getPortfolioStore();
   const restoreEpoch = useSyncExternalStore(store.subscribe,
     () => store.getState().restoreEpoch, () => store.getState().restoreEpoch);
   const previousRestoreEpoch = useRef(restoreEpoch);
@@ -112,7 +122,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
         <Modal visible={showRestoreComplete} onRequestClose={() => setShowRestoreComplete(false)} animationType="fade">
           <ScreenContainer scroll>
             <PremiumCard style={styles.restoreComplete}>
@@ -167,9 +177,9 @@ export default function RootLayout() {
             />
             <Stack
               screenOptions={{
-                contentStyle: { backgroundColor: "#1C1B1F" },
-                headerStyle: { backgroundColor: "#1C1B1F" },
-                headerTintColor: "#E6E1E5",
+                contentStyle: { backgroundColor: colors.background },
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.text.primary,
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -229,7 +239,7 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   restoreComplete: {
     gap: spacing.lg,
     marginTop: spacing.xl,
@@ -260,7 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   assetGateButtonText: {
-    color: colors.text.primary,
+    color: colors.text.inverse,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -271,6 +281,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   root: {
+    backgroundColor: colors.background,
     flex: 1,
   },
-});
+}));

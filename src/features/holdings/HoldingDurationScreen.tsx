@@ -18,7 +18,7 @@ import {
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 export function HoldingDurationScreen({
   onClose,
@@ -29,6 +29,7 @@ export function HoldingDurationScreen({
   store?: StoreApi<PortfolioStoreState>;
   now?: Date;
 }) {
+  const styles = useStyles();
   const state = useSyncExternalStore(
     store.subscribe,
     store.getState,
@@ -169,8 +170,8 @@ export function HoldingDurationScreen({
     </ScreenContainer>
   );
 }
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   content: { gap: spacing.cardGap, paddingTop: spacing.md },
   group: { gap: spacing.sm },
   holding: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle, paddingBottom: spacing.lg },
-});
+}));

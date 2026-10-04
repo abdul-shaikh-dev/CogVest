@@ -21,7 +21,7 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, createThemedStyles } from "@/src/theme";
 
 import { useSellRedeemHolding } from "./useSellRedeemHolding";
 
@@ -48,6 +48,7 @@ export function SellRedeemScreen({
   onSaved,
   store = getPortfolioStore(),
 }: SellRedeemScreenProps) {
+  const styles = useStyles();
   const flow = useSellRedeemHolding({ assetId, now, store });
   const { fontScale } = useWindowDimensions();
   const stackFields = getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -313,6 +314,7 @@ function PreviewValue({
   testID?: string;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.previewValue}>
       <AppText color="secondary" variant="caption">
@@ -329,7 +331,7 @@ function PreviewValue({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   assetCopy: {
     flex: 1,
     gap: spacing.xs,
@@ -390,4 +392,4 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
   },
-});
+}));

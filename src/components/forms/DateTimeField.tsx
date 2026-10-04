@@ -3,13 +3,14 @@ import { useState, type Ref } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppText, DisclosureButton } from "@/src/components/common";
 import { futuresEntryDate, futuresTimeZone, replaceFuturesTimePart } from "@/src/domain/futuresEntry";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, createThemedStyles } from "@/src/theme";
 import { FormTextField } from "./FormTextField";
 
 type Props = { value: string; label: string; onChange: (value: string) => void; testID: string;
   error?: string; suggestedAt?: string; suggestedLabel?: string; now?: Date; fieldRef?: Ref<View> };
 
 export function DateTimeField({ value, label, onChange, testID, error, suggestedAt, suggestedLabel = "Use event time", now = new Date(), fieldRef }: Props) {
+  const styles = useStyles();
   const [mode, setMode] = useState<"date" | "time">();
   const [exact, setExact] = useState(false);
   const selected = futuresEntryDate(value);
@@ -43,8 +44,8 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: { gap: spacing.xs }, buttons: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   button: { minHeight: 48, justifyContent: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   invalid: { borderWidth: 1, borderColor: colors.loss }, error: { color: colors.loss },
-});
+}));

@@ -1,0 +1,7 @@
+appId: com.abdulshaikh.cogvest
+---
+- tapOn:
+    id: cash-date-input
+- assertVisible: "OK"
+- takeScreenshot: .expo/appearance-537/picker-${STAGE}
+- tapOn: "CANCEL"

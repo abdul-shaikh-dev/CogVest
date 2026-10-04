@@ -13,7 +13,7 @@ import {
   type DailyPriceCacheBenchmarkResult,
 } from "@/src/testing/dailyPriceCacheFixture";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 const qaMmkvId = "cogvest-daily-price-qa";
 
@@ -46,6 +46,7 @@ function statusPass(result: DailyPriceCacheBenchmarkResult) {
 }
 
 export default function QuoteCacheQaRoute() {
+  const styles = useStyles();
   const params = useLocalSearchParams<{ token?: string }>();
   const enabled = canUseVisualQaHarness({
     isDevelopment: __DEV__,
@@ -155,7 +156,7 @@ export default function QuoteCacheQaRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   content: {
     gap: spacing.md,
     paddingTop: spacing.lg,
@@ -165,4 +166,4 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.md,
   },
-});
+}));

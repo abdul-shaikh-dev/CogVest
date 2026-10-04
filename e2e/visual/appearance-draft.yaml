@@ -1,0 +1,36 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      true: ${PHASE == 'prepare'}
+    commands:
+      - openLink: "cogvest:///settings"
+      - scrollUntilVisible:
+          element:
+            id: appearance-system
+          direction: UP
+      - tapOn:
+          id: appearance-system
+      - openLink: "cogvest:///cash"
+      - tapOn:
+          id: cash-entry-deposit
+      - tapOn:
+          id: cash-amount-input
+      - inputText: "1234.56"
+      - hideKeyboard
+      - tapOn:
+          id: cash-label-input
+      - inputText: "Appearance transition draft"
+      - hideKeyboard
+- assertVisible: "Deposit cash"
+- scrollUntilVisible:
+    element:
+      id: cash-amount-input
+    direction: UP
+- assertVisible: "1234.56"
+- scrollUntilVisible:
+    element:
+      id: cash-label-input
+    direction: DOWN
+- assertVisible: "Appearance transition draft"
+- takeScreenshot: .expo/appearance-537/draft-${STAGE}

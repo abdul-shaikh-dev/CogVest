@@ -4,12 +4,15 @@ import type { StoreApi } from "zustand/vanilla";
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { DisplayMode, Quote } from "@/src/types";
+import type { AppearancePreference } from "@/src/types/preferences";
 
 type UseSettingsInput = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
 export type UseSettingsResult = {
+  appearance: AppearancePreference;
+  setAppearance: (appearance: AppearancePreference) => void;
   displayMode: DisplayMode;
   maskWealthValues: boolean;
   quoteStatus: SettingsQuoteStatus;
@@ -113,6 +116,8 @@ export function useSettings({
 
   return {
     displayMode: snapshot.preferences.displayMode,
+    appearance: snapshot.preferences.appearance ?? "dark",
+    setAppearance: (appearance) => store.getState().updatePreferences({ appearance }),
     maskWealthValues: snapshot.preferences.maskWealthValues,
     quoteStatus: deriveQuoteStatus(snapshot.quoteCache),
     setDisplayMode,

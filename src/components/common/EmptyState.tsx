@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, createThemedStyles } from "@/src/theme";
 
 import { AppButton } from "./AppButton";
 import { AppText } from "./AppText";
@@ -26,6 +26,7 @@ export function EmptyState({
   secondaryActionTestID,
   title,
 }: EmptyStateProps) {
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       <AppText align="center" variant="title" weight="bold">
@@ -49,7 +50,7 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   card: {
     alignItems: "center",
     backgroundColor: colors.surface.card,
@@ -57,4 +58,4 @@ const styles = StyleSheet.create({
     gap: spacing.cardInner,
     padding: spacing.md,
   },
-});
+}));

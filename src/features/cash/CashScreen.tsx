@@ -19,7 +19,7 @@ import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntryType } from "@/src/types";
 
 import {
@@ -65,6 +65,7 @@ export function CashScreen({
   onCorrectEntry,
   store = getPortfolioStore(),
 }: CashScreenProps) {
+  const styles = useStyles();
   const {
     addEntry,
     balance,
@@ -407,9 +408,9 @@ export function CashScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   modalRoot: { flex: 1, backgroundColor: colors.background },
-  confirmBackdrop: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: "rgba(0,0,0,0.7)" },
+  confirmBackdrop: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.scrim },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
@@ -472,4 +473,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: interaction.pressedOpacity,
   },
-});
+}));

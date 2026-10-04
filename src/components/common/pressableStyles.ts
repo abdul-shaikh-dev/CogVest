@@ -8,7 +8,8 @@ export function androidRipple(
   return {
     borderless: false,
     color,
-    foreground: false,
+    // Keep ripple updates from replacing a theme-switched background drawable.
+    foreground: true,
   };
 }
 

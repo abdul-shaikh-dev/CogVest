@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, type PressableProps } from "react-native";
 
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme } from "@/src/theme";
 import { AppText } from "./AppText";
 import { androidRipple, getPressedStateStyle, minimumTouchTargetStyle } from "./pressableStyles";
 
@@ -11,6 +11,7 @@ type DisclosureButtonProps = Pick<PressableProps, "onPress" | "testID"> & {
 };
 
 export function DisclosureButton({ expanded, title, ...props }: DisclosureButtonProps) {
+  const { colors } = useTheme();
   return (
     <Pressable
       {...props}

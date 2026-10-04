@@ -13,7 +13,7 @@ import {
   seedAssetSearchQaStore,
 } from "@/src/testing/assetSearchFixture";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 type Measurement = {
   detail: string;
@@ -36,6 +36,7 @@ function now() {
 }
 
 export default function AssetSearchQaRoute() {
+  const styles = useStyles();
   const params = useLocalSearchParams<{ token?: string; profile?: string }>();
   const profileRenders = params.profile === "1";
   const isFocused = useIsFocused();
@@ -282,7 +283,7 @@ export default function AssetSearchQaRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -303,4 +304,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1,
   },
-});
+}));

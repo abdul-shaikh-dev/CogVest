@@ -38,33 +38,10 @@ jest.mock("expo-router", () => {
   return { Tabs };
 });
 
-type TestElement = React.ReactElement<{
-  children?: React.ReactNode;
-  name?: string;
-  options?: Record<string, unknown>;
-}>;
-
-function isElement(node: unknown): node is TestElement {
-  return React.isValidElement(node);
-}
-
-function collectScreens(node: unknown): TestElement[] {
-  if (!isElement(node)) {
-    return [];
-  }
-
-  const ownScreen = node.props.name ? [node] : [];
-  const childScreens = React.Children.toArray(node.props.children).flatMap(
-    collectScreens,
-  );
-
-  return [...ownScreen, ...childScreens];
-}
-
 describe("TabLayout", () => {
   it("configures bounded fitting without abbreviating the Dashboard label", () => {
-    const layout = TabLayout();
-    const options = layout.props.screenOptions({ route: { name: "dashboard" } });
+    const layout = render(<TabLayout />);
+    const options = layout.UNSAFE_getByType("Tabs" as never).props.screenOptions({ route: { name: "dashboard" } });
     const { getByText } = render(options.tabBarLabel({ color: "#98989D" }));
     expect(getByText("Dashboard").props).toMatchObject({
       adjustsFontSizeToFit: true,
@@ -75,8 +52,8 @@ describe("TabLayout", () => {
   });
 
   it("registers Progress as the tab route name with stable automation ID", () => {
-    const layout = TabLayout();
-    const screens = collectScreens(layout);
+    const layout = render(<TabLayout />);
+    const screens = layout.UNSAFE_getAllByType("Tabs.Screen" as never);
     const progress = screens.find((screen) => screen.props.name === "progress");
 
     expect(progress?.props.options).toMatchObject({

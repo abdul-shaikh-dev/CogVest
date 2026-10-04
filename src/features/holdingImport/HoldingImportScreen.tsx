@@ -23,7 +23,7 @@ import type {
   OpeningPositionCommandResult,
   PortfolioStoreState,
 } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 import type { PickedHoldingsCsv } from "./useHoldingImport";
 import { useHoldingImport } from "./useHoldingImport";
@@ -45,6 +45,7 @@ type HoldingImportScreenProps = {
 };
 
 export function HoldingImportScreen(props: HoldingImportScreenProps) {
+  const styles = useStyles();
   const controller = useHoldingImport(props);
   const masked = controller.snapshot.preferences.maskWealthValues;
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
@@ -312,6 +313,7 @@ function Summary({
   masked?: boolean;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.summaryItem}>
       <AppText color="secondary" variant="caption">{label}</AppText>
@@ -320,7 +322,7 @@ function Summary({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   errorText: { color: colors.loss },
   introCard: { gap: spacing.md, marginBottom: spacing.md },
@@ -329,4 +331,4 @@ const styles = StyleSheet.create({
   section: { gap: spacing.cardGap },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   summaryItem: { minWidth: "42%" },
-});
+}));

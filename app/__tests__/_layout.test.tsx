@@ -49,6 +49,7 @@ jest.mock("@/src/features/progress", () => ({
 jest.mock("@/src/store", () => ({
   getPortfolioStore: () => ({
     getState: () => ({
+      preferences: { appearance: "dark" },
       resetAffectedStorage: mockResetAffectedStorage,
       storageRecovery: mockRecoveryState,
     }),

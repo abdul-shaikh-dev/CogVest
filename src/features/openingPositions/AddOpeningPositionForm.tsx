@@ -36,7 +36,7 @@ import {
   sectorTypeLabel,
 } from "@/src/domain/assets";
 import { formatINR, formatPercentage } from "@/src/domain/formatters";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type {
   Asset,
   AssetClass,
@@ -104,6 +104,7 @@ function ReviewDetailRow({
   testID?: string;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.reviewDetailRow} testID={testID}>
       <AppText color="secondary" variant="caption">
@@ -125,6 +126,7 @@ function ReviewSectionHeader({
   testID: string;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.reviewSectionHeader}>
       <SectionHeader title={title} />
@@ -161,6 +163,7 @@ export function AddOpeningPositionForm({
   searchAssetLookupResults,
   store,
 }: AddOpeningPositionFormProps) {
+  const styles = useStyles();
   const { width, fontScale } = useWindowDimensions();
   const stackIdentifiers = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const holding = useAddOpeningPosition({
@@ -1367,7 +1370,7 @@ export function AddOpeningPositionForm({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     gap: spacing.sm,
     paddingTop: spacing.sm,
@@ -1384,7 +1387,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   assetChipActive: {
-    backgroundColor: "rgba(46,125,82,0.24)",
+    backgroundColor: colors.selected,
   },
   assetChipCopy: {
     flex: 1,
@@ -1405,7 +1408,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   classChipActive: {
-    backgroundColor: "rgba(46,125,82,0.24)",
+    backgroundColor: colors.selected,
   },
   classRow: {
     flexDirection: "row",
@@ -1438,7 +1441,7 @@ const styles = StyleSheet.create({
     color: colors.loss,
   },
   exitBackdrop: {
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.scrim,
     flex: 1,
     justifyContent: "flex-end",
     padding: spacing.md,
@@ -1628,11 +1631,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   unknownDateControlSelected: {
-    backgroundColor: "rgba(46,125,82,0.16)",
+    backgroundColor: colors.selected,
   },
   unknownDateSummary: {
     gap: spacing.xs,
     minHeight: interaction.minimumTouchTarget,
     justifyContent: "center",
   },
-});
+}));

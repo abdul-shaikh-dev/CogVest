@@ -17,7 +17,7 @@ import {
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 import { useSettings } from "./useSettings";
 
@@ -41,12 +41,16 @@ const displayOptions = [
 export function SettingsScreen({
   store = getPortfolioStore(),
 }: SettingsScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const [isPrivacyDetailsExpanded, setIsPrivacyDetailsExpanded] =
     useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const {
+    appearance,
+    setAppearance,
     displayMode,
     maskWealthValues,
     quoteStatus,
@@ -120,6 +124,28 @@ export function SettingsScreen({
             />
           </View>
         </Pressable>
+
+        <PremiumCard section testID="appearance-settings">
+          <SectionHeader title="Appearance" />
+          <View accessibilityLabel="Appearance" accessibilityRole="radiogroup">
+            {([
+              { value: "system", label: "Follow system" },
+              { value: "light", label: "Light" },
+              { value: "dark", label: "Dark" },
+            ] as const).map((option) => (
+              <Pressable key={option.value} accessibilityRole="radio"
+                accessibilityLabel={`${option.label} appearance`}
+                accessibilityState={{ checked: appearance === option.value }}
+                testID={`appearance-${option.value}`}
+                onPress={() => setAppearance(option.value)}
+                style={({ pressed }) => [styles.appearanceOption, pressed && styles.pressed]}>
+                <AppText style={styles.appearanceLabel}>{option.label}</AppText>
+                <Ionicons accessible={false} name={appearance === option.value ? "radio-button-on" : "radio-button-off"}
+                  size={24} color={appearance === option.value ? colors.primary : colors.text.secondary} />
+              </Pressable>
+            ))}
+          </View>
+        </PremiumCard>
 
         <PremiumCard section testID="display-mode-settings">
           <SectionHeader title="Display" />
@@ -329,7 +355,9 @@ export function SettingsScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  appearanceOption: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: interaction.minimumTouchTarget, paddingVertical: spacing.sm },
+  appearanceLabel: { flex: 1 },
   controlIcon: {
     flexShrink: 0,
   },
@@ -394,6 +422,7 @@ const styles = StyleSheet.create({
     width: 18,
   },
   switchThumbOn: {
+    backgroundColor: colors.text.inverse,
     alignSelf: "flex-end",
   },
   switchTrack: {
@@ -416,4 +445,4 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "space-between",
   },
-});
+}));

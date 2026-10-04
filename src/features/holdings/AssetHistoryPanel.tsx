@@ -6,7 +6,7 @@ import { AppButton, AppText, SectionHeader } from "@/src/components/common";
 import { buildAssetHistory, downsampleAssetHistory } from "@/src/domain/calculations/assetHistory";
 import { formatDate } from "@/src/domain/formatters";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme, createThemedStyles } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
 import { useAssetHistory } from "./useAssetHistory";
@@ -71,6 +71,8 @@ export function AssetHistoryPanel({
   historyCache,
   onChartLayout,
 }: AssetHistoryPanelProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [months, setMonths] = useState(3);
   const [mode, setMode] = useState<"price" | "holdingValue">("price");
   const [selection, setSelection] = useState<number | null>(null);
@@ -394,7 +396,7 @@ export function AssetHistoryPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   section: { gap: spacing.md, paddingBottom: spacing.md },
   controls: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   range: { paddingHorizontal: 12 },
@@ -407,4 +409,4 @@ const styles = StyleSheet.create({
   },
   navigationLabel: { flex: 1, gap: spacing.xs },
   axis: { color: colors.text.secondary, fontSize: 11 },
-});
+}));

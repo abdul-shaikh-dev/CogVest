@@ -504,6 +504,7 @@ export type StorageRecoveryState = {
 
 export function createDefaultPreferences(): Preferences {
   return {
+    appearance: "system",
     defaultChartRange: "1M",
     displayMode: "standard",
     hasCompletedOnboarding: false,
@@ -637,6 +638,7 @@ function migratePortfolioSnapshot(
     preferences: {
       ...createDefaultPreferences(),
       ...stored.preferences,
+      appearance: stored.preferences?.appearance ?? "dark",
     },
     schemaVersion: portfolioSchemaVersion,
     // Migration preserves stored financial values exactly; normalization applies

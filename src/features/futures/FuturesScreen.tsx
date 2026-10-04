@@ -17,7 +17,7 @@ import {
   type UsdmMark,
 } from "@/src/domain/usdmFutures";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 
 type EventKind = "execution" | "funding" | "transfer";
@@ -84,6 +84,8 @@ const blankEvent = (): EventDraft => ({
 });
 
 function Choice({ label, selected, onPress, testID, checkbox = false }: { label: string; selected: boolean; onPress: () => void; testID?: string; checkbox?: boolean }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return <Pressable accessibilityRole={checkbox ? "checkbox" : "radio"} accessibilityLabel={label} accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.choice, checkbox && styles.checkbox, selected && styles.selected]} testID={testID}>
     {checkbox ? <Ionicons name={selected ? "checkbox" : "square-outline"} size={22} color={selected ? colors.primary : colors.text.secondary} accessible={false} /> : null}
     <AppText weight={selected ? "bold" : "regular"} style={checkbox ? styles.choiceLabel : undefined}>{label}</AppText>
@@ -110,6 +112,7 @@ const valuationLabels: Record<ReturnType<typeof replayUsdmFutures>["valuationSta
 };
 
 export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack: () => void; store?: StoreApi<PortfolioStoreState> }) {
+  const styles = useStyles();
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const account = state.futuresAccounts.find((item) => item.id === ACCOUNT_ID);
   const scrollRef = useRef<ScrollView>(null);
@@ -544,7 +547,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   </KeyboardAvoidingView></EntryErrors.Provider>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   conversionGroup: { gap: spacing.md, paddingTop: spacing.sm },
   fill: { flex: 1 },
   modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
@@ -560,4 +563,4 @@ const styles = StyleSheet.create({
   checkbox: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   choiceLabel: { flex: 1 },
   error: { color: colors.loss },
-});
+}));

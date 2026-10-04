@@ -10,7 +10,7 @@ import {
   SectionHeader,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore, InstrumentType, SectorType } from "@/src/types";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useAddTrade } from "./useAddTrade";
@@ -26,6 +26,7 @@ export function AddTradeForm({
   now = new Date(),
   store = getPortfolioStore(),
 }: AddTradeFormProps) {
+  const styles = useStyles();
   const trade = useAddTrade({ now, store });
 
   return (
@@ -329,7 +330,7 @@ export function AddTradeForm({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     gap: spacing.sm,
     paddingBottom: spacing.lg,
@@ -401,4 +402,4 @@ const styles = StyleSheet.create({
   successText: {
     color: colors.profit,
   },
-});
+}));

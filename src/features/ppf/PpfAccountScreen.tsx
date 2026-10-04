@@ -43,7 +43,7 @@ import {
   validatePpfAccount,
 } from "@/src/domain/ppf";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, spacing } from "@/src/theme";
+import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import type { PpfAccount, PpfAccountStatus } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -117,6 +117,7 @@ export function PpfAccountScreen({
   onEntry,
   store = getPortfolioStore(),
 }: PpfAccountScreenProps) {
+  const styles = useStyles();
   const snapshot = usePortfolioSnapshot(store);
   const { fontScale, width } = useWindowDimensions();
   const stackRows = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -444,6 +445,7 @@ function PpfAccountForm({
   onComplete: (accountId: string) => void;
   store: StoreApi<PortfolioStoreState>;
 }) {
+  const styles = useStyles();
   const currentFinancialYear = getFinancialYearStart(now);
   const [nickname, setNickname] = useState(account?.nickname ?? legacyName ?? "My PPF");
   const [provider, setProvider] = useState(account?.provider ?? "");
@@ -927,6 +929,7 @@ function PpfAccountForm({
 }
 
 function Metric({ label, masked, value }: { label: string; masked: boolean; value: string }) {
+  const styles = useStyles();
   return (
     <PremiumCard section style={styles.metric}>
       <AppText color="secondary" variant="caption">{label}</AppText>
@@ -936,6 +939,7 @@ function Metric({ label, masked, value }: { label: string; masked: boolean; valu
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   return (
@@ -952,7 +956,7 @@ function entryLabel(type: "contribution" | "interestCredit" | "withdrawal" | "re
   return type === "contribution" ? "Contribution" : "Withdrawal";
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   balanceCard: { gap: spacing.sm },
   balanceHeading: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
@@ -982,4 +986,4 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   separator: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
-});
+}));

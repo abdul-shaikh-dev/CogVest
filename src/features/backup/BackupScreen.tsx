@@ -12,7 +12,7 @@ import {
   SectionHeader,
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 export type BackupReview = {
   appVersion: string;
@@ -62,6 +62,7 @@ export function BackupScreen({
   restorePortfolioBackup,
   selectPortfolioBackup,
 }: BackupScreenProps) {
+  const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const stackedCounts = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const [isBusy, setIsBusy] = useState(false);
@@ -291,7 +292,7 @@ export function BackupScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   card: { gap: spacing.md },
   content: { gap: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.md },
   countRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
@@ -305,4 +306,4 @@ const styles = StyleSheet.create({
   countNumber: { fontVariant: ["tabular-nums"] },
   countRight: { textAlign: "right" },
   counts: { gap: spacing.xs },
-});
+}));

@@ -1,0 +1,75 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic visual-QA portfolio. No financial records are changed.
+- runFlow:
+    when:
+      visible:
+        id: close-monthly-history
+    commands:
+      - tapOn:
+          id: close-monthly-history
+- openLink: "cogvest:///settings"
+- assertVisible: "Settings"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: appearance-${APPEARANCE}
+    direction: UP
+- tapOn:
+    id: appearance-${APPEARANCE}
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/settings
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: DOWN
+- tapOn:
+    id: display-mode-${MODE}
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/holdings
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Portfolio value"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/dashboard
+- openLink: "cogvest:///progress"
+- assertVisible: "Monthly Progress"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/progress
+- tapOn:
+    id: open-monthly-history
+- takeScreenshot: .expo/appearance-537/${SHOT}/monthly-history
+- tapOn:
+    id: close-monthly-history
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- takeScreenshot: .expo/appearance-537/${SHOT}/cash
+- openLink: "cogvest:///backup"
+- assertVisible:
+    id: backup-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/backup
+- openLink: "cogvest:///add-holding"
+- assertVisible: "Search asset"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/add-holding
+- back
+- openLink: "cogvest:///import-transactions"
+- assertVisible:
+    id: transaction-import-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/import
+- openLink: "cogvest:///futures"
+- assertVisible:
+    id: futures-screen
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-537/${SHOT}/futures
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 5"
+- assertVisible: "Opening position count: 4"
+- assertVisible: "Trade count: 0"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Total invested: ₹12,37,551.60"
+- takeScreenshot: .expo/appearance-537/${SHOT}/data-evidence

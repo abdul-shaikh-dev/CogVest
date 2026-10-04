@@ -27,6 +27,18 @@ const mockedConstants = Constants as unknown as {
 };
 
 describe("SettingsScreen", () => {
+  it("persists appearance separately from display mode and masking", () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    store.getState().updatePreferences({ displayMode: "minimal", maskWealthValues: true });
+    const view = render(<SettingsScreen store={store} />);
+    expect(view.getByTestId("appearance-system").props.accessibilityState.checked).toBe(true);
+    for (const appearance of ["light", "dark", "system"] as const) {
+      fireEvent.press(view.getByTestId(`appearance-${appearance}`));
+      expect(view.getByTestId(`appearance-${appearance}`).props.accessibilityState.checked).toBe(true);
+      expect(createPortfolioStore({ storage }).getState().preferences).toMatchObject({ appearance, displayMode: "minimal", maskWealthValues: true });
+    }
+  });
   it.each(["standard", "minimal"] as const)("separates investment tools from backup and groups app facts once in %s mode", (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });

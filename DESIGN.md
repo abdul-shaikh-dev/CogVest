@@ -67,7 +67,7 @@ quieter. Standard retains its information-rich hierarchy.
 
 The visual atmosphere is:
 
-- Calm: surfaces are dark, stable, and low-contrast enough to reduce fatigue.
+- Calm: use neutral graphite or soft light surfaces, with readable text in both.
 - Premium: spacing, alignment, and typography are precise; nothing feels rushed.
 - Disciplined: every element has a purpose and every number has context.
 - Local-first: the app feels personal and private, not social or cloud-centric.
@@ -87,23 +87,30 @@ Do not copy any brand directly. Use the references only as directional cues.
 
 ## 2. Color Palette & Roles
 
-Use these colors as the canonical CogVest palette.
+Issue #537 approves neutral graphite and soft light. Shared semantic tokens live
+in `src/theme/palettes.ts`; read them with `useTheme` and `createThemedStyles`,
+never a fixed palette in screen/component code.
 
-| Token | Hex | Role |
-| --- | --- | --- |
-| Background | `#000000` | OLED root canvas and app background |
-| Surface | `#1C1C1E` | Default cards, panels, grouped content |
-| Elevated Surface | `#2C2C2E` | Inputs, active cards, selected panels, action wells |
-| Primary Text | `#F5F5F7` | Headings, primary values, selected labels |
-| Secondary Text | `#98989D` | Body copy, labels, supporting metrics |
-| Muted Text | `#636366` | Captions, timestamps, empty-state helper text |
-| Primary Green | `#34C759` | Main CTA, active tab, selected state, positive brand emphasis |
-| Deep Green | `#248A3D` | Reserved darker accent, not a text-bearing selected control |
-| Inverse Text | `#000000` | Labels on bright filled primary/destructive actions |
-| Separator | `rgba(255,255,255,0.10)` | Hairline separators only when needed |
-| Positive | `#34C759` | Gains, positive returns, successful states |
-| Warning | `#F59E0B` | Incomplete data, stale quotes, non-blocking risk |
-| Negative | `#FF453A` | Losses, destructive actions, validation errors |
+| Token | Dark | Light | Role |
+| --- | --- | --- | --- |
+| Background | `#181A1B` | `#F4F6F5` | Root canvas |
+| Surface | `#222527` | `#FFFFFF` | Cards and sheets |
+| Elevated | `#2D3133` | `#E9EEEB` | Inputs and active panels |
+| Primary text | `#F1F3F4` | `#18241D` | Headings and values |
+| Secondary/muted text | `#AFB6BA` | `#526258` | Readable supporting copy |
+| Primary/profit | `#5CDA86` | `#176B3B` | Actions and signed gains |
+| Inverse text | `#18241D` | `#FFFFFF` | Filled action labels |
+| Separator | `#3E4447` | `#D2DCD5` | Quiet dividers |
+| Strong border | `#828C91` | `#718078` | Control outlines |
+| Warning | `#F5BD62` | `#805300` | Incomplete data and stale quotes |
+| Loss | `#FF8278` | `#B42318` | Signed losses and errors |
+
+Appearance is independent from Standard/Minimal and masking. New installs follow
+Android; existing installs and old backups without a preference retain Dark.
+An unavailable system scheme resolves to Dark. Theme changes must not remount
+navigation or clear drafts. Native dialogs follow the chosen appearance through
+React Native Appearance. Brand artwork and the pre-JavaScript splash remain
+Private Ink; the splash cannot read the saved app override before startup.
 
 Rules:
 
@@ -119,13 +126,13 @@ Rules:
 - Prefer borderless true-dark surfaces. Use only subtle hairline separators when structure needs extra clarity.
 - Financial values must remain readable on all surfaces.
 - All financial values must be maskable and INR-first.
-- Filled primary and destructive actions use black inverse labels, not white.
+- Filled primary and destructive actions use the theme's inverse label color.
   Selected filters, chart ranges, history months and conviction chips use the
   same primary/inverse pair. Do not put secondary gray on a filled green control.
 - Enabled pressed controls retain 98% opacity. Android ripples are behind the
   text: black at 6% for primary/destructive actions, 18% for neutral surfaces.
   Do not overlay a foreground ripple on labels or fade active controls to 75%.
-- Secondary text is `#98989D` on dark root/card/elevated surfaces. Test resting
+- Secondary text uses the palette's secondary token. Test resting
   and composited pressed states at 4.5:1 minimum; disabled styling is not proof
   of active-state compliance. Gains/losses retain their separate semantic colors.
 

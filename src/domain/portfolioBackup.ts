@@ -302,7 +302,7 @@ function parsePayload(raw: unknown): BackupPayload {
   const hasFuturesAccounts = (portfolioRaw.schemaVersion as number) >= 14;
   requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
   if (!isPlainObject(portfolioRaw.preferences) || ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].some((key) => !Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
-  requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
+  requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "appearance") ? ["appearance"] : []), ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
   if (!parsed.success) fail("portfolio records are invalid");
   assertNoDiscardedFields(portfolioRaw, parsed.data);

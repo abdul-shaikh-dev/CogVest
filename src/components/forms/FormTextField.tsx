@@ -3,7 +3,7 @@ import type { KeyboardTypeOptions, ReturnKeyTypeOptions } from "react-native";
 import { StyleSheet, TextInput, View } from "react-native";
 
 import { AppText } from "@/src/components/common";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 type FormTextFieldProps = {
   error?: string;
@@ -38,6 +38,8 @@ export function FormTextField({
   testID,
   value,
 }: FormTextFieldProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.container}>
       <AppText color="secondary" variant="caption" weight="medium">
@@ -69,7 +71,7 @@ export function FormTextField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
@@ -92,4 +94,4 @@ const styles = StyleSheet.create({
     minHeight: 88,
     textAlignVertical: "top",
   },
-});
+}));

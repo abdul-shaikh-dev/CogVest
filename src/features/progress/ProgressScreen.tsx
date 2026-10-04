@@ -44,7 +44,7 @@ import { useReducedMotionPreference } from "@/src/hooks";
 import type { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
 import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
@@ -108,7 +108,7 @@ const chartSections = 2;
 const chartInitialSpacing = 18;
 const chartEndSpacing = 36;
 
-function getSeriesColor(label: string) {
+function getSeriesColor(colors: ThemeColors, label: string) {
   switch (label) {
     case "Portfolio":
       return colors.profit;
@@ -228,26 +228,14 @@ function getChartSpacing(pointCount: number, width: number) {
   );
 }
 
-function getDimmedSeriesColor(label: string) {
-  switch (label) {
-    case "Portfolio":
-    case "Equity":
-      return "rgba(52,199,89,0.24)";
-    case "Invested":
-      return "rgba(255,255,255,0.24)";
-    case "Debt":
-      return "rgba(10,132,255,0.24)";
-    case "Crypto":
-      return "rgba(255,214,10,0.24)";
-    default:
-      return "rgba(142,142,147,0.24)";
-  }
+function getDimmedSeriesColor(colors: ThemeColors, label: string) {
+  return `${getSeriesColor(colors, label)}3D`;
 }
 
-function getDisplayedSeriesColor(label: string, focusedSeries: string | null) {
+function getDisplayedSeriesColor(colors: ThemeColors, label: string, focusedSeries: string | null) {
   return focusedSeries && focusedSeries !== label
-    ? getDimmedSeriesColor(label)
-    : getSeriesColor(label);
+    ? getDimmedSeriesColor(colors, label)
+    : getSeriesColor(colors, label);
 }
 
 function TrendLegend({
@@ -263,6 +251,8 @@ function TrendLegend({
   testIDPrefix: string;
   portfolioLabel?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.chartLegend}>
       {series.map((item) => {
@@ -288,7 +278,7 @@ function TrendLegend({
               style={[
                 styles.legendLine,
                 item.label === "Invested" ? styles.legendLineDashed : null,
-                { borderColor: getSeriesColor(item.label) },
+                { borderColor: getSeriesColor(colors, item.label) },
               ]}
             />
             <AppText color="secondary" variant="caption" weight="medium">
@@ -354,6 +344,7 @@ function SelectedMonthPanel({
   investedComparison?: MonthlyProgressChartData["investedComparisons"][number];
   summaryOnly?: boolean;
 }) {
+  const styles = useStyles();
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const { fontScale, width } = useWindowDimensions();
 
@@ -565,6 +556,8 @@ function TrendChart({
   investedComparisons?: MonthlyProgressChartData["investedComparisons"];
   summaryOnly?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
@@ -663,30 +656,30 @@ function TrendChart({
             areaChart={gapSegments.length === 0}
             lineSegments={gapSegments}
             lineSegments2={gapSegments}
-            color1={getDisplayedSeriesColor(
+            color1={getDisplayedSeriesColor(colors,
               series[0]?.label ?? "",
               focusedSeries,
             )}
-            color2={getDisplayedSeriesColor(
+            color2={getDisplayedSeriesColor(colors,
               series[1]?.label ?? "",
               focusedSeries,
             )}
             curved={false}
             data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
             data2={partialHistory || summaryOnly ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
-            dataPointsColor1={getSeriesColor(series[0]?.label ?? "")}
-            dataPointsColor2={getSeriesColor(series[1]?.label ?? "")}
+            dataPointsColor1={getSeriesColor(colors, series[0]?.label ?? "")}
+            dataPointsColor2={getSeriesColor(colors, series[1]?.label ?? "")}
             disableScroll
-            endFillColor="rgba(52,199,89,0)"
+            endFillColor={`${colors.profit}00`}
             endOpacity={0}
             endSpacing={chartEndSpacing}
             initialSpacing={chartInitialSpacing}
-            intersectionAreaConfig={partialHistory || summaryOnly || gapSegments.length > 0 ? undefined : { fillColor: "rgba(52,199,89,0.14)" }}
+            intersectionAreaConfig={partialHistory || summaryOnly || gapSegments.length > 0 ? undefined : { fillColor: `${colors.profit}24` }}
             isAnimated={!isReducedMotionEnabled}
             rulesColor={colors.border.subtle}
             rulesType="dashed"
             spacing={spacingValue}
-            startFillColor="rgba(52,199,89,0.18)"
+            startFillColor={`${colors.profit}2E`}
             startOpacity={0.18}
             thickness1={3}
             thickness2={3}
@@ -707,9 +700,9 @@ function TrendChart({
             adjustToWidth
             curved={false}
             dataSet={displayedSeries.map((item, index) => ({
-              color: getDisplayedSeriesColor(item.label, focusedSeries),
+              color: getDisplayedSeriesColor(colors, item.label, focusedSeries),
               data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),
-              dataPointsColor: getSeriesColor(item.label),
+              dataPointsColor: getSeriesColor(colors, item.label),
               lineSegments: gapSegments,
               thickness: 3,
             }))}
@@ -772,6 +765,7 @@ function ChartRangeSelector({
   selectedRange: MonthlyChartRange;
   testIDPrefix: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.rangeSelector}>
       {MONTHLY_CHART_RANGES.map((range) => {
@@ -829,6 +823,7 @@ function MonthPickerField({
   testID: string;
   value: string;
 }) {
+  const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -932,6 +927,7 @@ function CustomMonthRangeControls({
   onApply: (range: MonthlyChartCustomRange) => void;
   testIDPrefix: string;
 }) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotionPreference();
   const [startMonth, setStartMonth] = useState(appliedRange.startMonth);
@@ -1203,6 +1199,7 @@ function ChartRangeContext({
   hasGaps: boolean;
   testID: string;
 }) {
+  const styles = useStyles();
   const firstMonth = monthLabels[0];
   const lastMonth = monthLabels.at(-1);
   const displayedRange = firstMonth && lastMonth
@@ -1221,6 +1218,7 @@ function ChartRangeContext({
 }
 
 function ChartCardHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.chartCardHeader}>
       <SectionHeader title={title} />
@@ -1320,6 +1318,7 @@ function ProgressTrendCards({
   ppfExcludedHistory: { estimatedMonths: string[]; missingMonths: string[] } | null;
   showDetails?: boolean;
 }) {
+  const styles = useStyles();
   const [customRangeTarget, setCustomRangeTarget] = useState<"asset" | "portfolio" | null>(null);
 
   if (isHistoryBuilding) {
@@ -1496,6 +1495,7 @@ function SnapshotStatusCard({
   onRetry: () => void;
   status: ProgressSnapshotAutomationStatus;
 }) {
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotionPreference();
@@ -1635,6 +1635,7 @@ export function ProgressScreen({
   onSetUpPortfolio,
   store = getPortfolioStore(),
 }: ProgressScreenProps) {
+  const styles = useStyles();
   const progress = useProgress({ historicalPriceFetcher, now, store });
   const hasInvalidSnapshot = store.getState().monthlySnapshots.some((snapshot) => Object.keys(validateMonthlySnapshot(snapshot)).length > 0);
   const futuresAccountCount = useSyncExternalStore(store.subscribe,
@@ -1921,7 +1922,7 @@ export function ProgressScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   monthNavigation: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   monthNavigationLabel: { flex: 1, gap: 2 },
 
@@ -2078,7 +2079,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   monthPickerOptionSelected: {
-    backgroundColor: "rgba(52,199,89,0.12)",
+    backgroundColor: colors.selected,
   },
   monthPickerOptions: {
     gap: spacing.xs,
@@ -2098,7 +2099,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   monthPickerOverlay: {
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.scrim,
     flex: 1,
     justifyContent: "flex-end",
     padding: spacing.md,
@@ -2216,4 +2217,4 @@ const styles = StyleSheet.create({
   lossText: {
     color: colors.loss,
   },
-});
+}));

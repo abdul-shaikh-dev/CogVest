@@ -19,7 +19,7 @@ import { formatCurrency, formatDate } from "@/src/domain/formatters";
 import { calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 type TradeHistoryScreenProps = {
   assetId: string;
@@ -36,6 +36,8 @@ export function TradeHistoryScreen({
   store = getPortfolioStore(),
   now = new Date(),
 }: TradeHistoryScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const { fontScale } = useWindowDimensions();
   const stackValues = getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -332,7 +334,7 @@ function deletionFailureMessage(
   return "Select at least one transaction before reviewing deletion.";
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
   },
@@ -352,8 +354,8 @@ const styles = StyleSheet.create({
   historyCard: { gap: spacing.md },
   impactRow: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingBottom: spacing.sm },
   modalActions: { gap: spacing.sm },
-  modalBackdrop: { backgroundColor: "rgba(0,0,0,0.78)", flex: 1, justifyContent: "center", padding: spacing.lg },
+  modalBackdrop: { backgroundColor: colors.scrim, flex: 1, justifyContent: "center", padding: spacing.lg },
   modalContent: { gap: spacing.md },
   modalSheet: { backgroundColor: colors.surface.card, borderRadius: radii.sheet, gap: spacing.md, maxHeight: "90%", padding: spacing.lg },
   selectionActions: { gap: spacing.sm },
-});
+}));
