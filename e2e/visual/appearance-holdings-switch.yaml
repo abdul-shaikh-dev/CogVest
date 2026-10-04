@@ -1,0 +1,43 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow:
+    when:
+      visible:
+        id: close-cash-entry-button
+    commands:
+      - tapOn:
+          id: close-cash-entry-button
+- openLink: "cogvest:///settings"
+- assertVisible:
+    id: settings-screen
+- scrollUntilVisible:
+    element:
+      id: appearance-${APPEARANCE}
+    direction: UP
+- tapOn:
+    id: appearance-${APPEARANCE}
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: DOWN
+- tapOn:
+    id: display-mode-${MODE}
+- tapOn:
+    id: tab-holdings
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-fixes/${STAGE}
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- takeScreenshot: .expo/appearance-fixes/${STAGE}-deeplink
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 5"
+- assertVisible: "Opening position count: 4"
+- assertVisible: "Trade count: 0"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Total invested: ₹12,37,551.60"
+- takeScreenshot: .expo/appearance-fixes/${STAGE}-data

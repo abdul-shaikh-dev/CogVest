@@ -21,13 +21,6 @@ const implementation = `
     fun visit(view: android.view.View) {
       if (view is com.facebook.react.views.modal.ReactModalHostView) {
         view.dialog?.window?.let { modalWindow ->
-          if (!view.transparent) {
-            // These background values mirror the approved semantic palettes.
-            val background = android.graphics.Color.parseColor(if (light) "#F4F6F5" else "#181A1B")
-            modalWindow.decorView.setBackgroundColor(background)
-            @Suppress("DEPRECATION")
-            modalWindow.navigationBarColor = background
-          }
           androidx.core.view.WindowInsetsControllerCompat(modalWindow, modalWindow.decorView).apply {
             isAppearanceLightStatusBars = light
             isAppearanceLightNavigationBars = light

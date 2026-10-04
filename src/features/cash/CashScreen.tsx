@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Modal, Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { CashEntryRow } from "@/src/components/cards";
@@ -281,7 +281,8 @@ export function CashScreen({
     </ScreenContainer>
 
     <Modal animationType="none" visible={isEntryVisible} onRequestClose={requestEntryClose} testID="cash-entry-modal">
-      <KeyboardAvoidingView behavior="height" style={styles.modalRoot}>
+      {/* Android Modal already uses adjustResize; a second height adjustment leaves stale keyboard space. */}
+      <View style={styles.modalRoot} testID="cash-entry-root">
         <ScreenContainer scroll testID="cash-entry-panel">
         {mode && modeCopy ? (
           <View style={styles.content} testID="cash-entry-form" accessibilityViewIsModal>
@@ -382,7 +383,7 @@ export function CashScreen({
           </View>
         ) : null}
         </ScreenContainer>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
     <Modal
       animationType="none"

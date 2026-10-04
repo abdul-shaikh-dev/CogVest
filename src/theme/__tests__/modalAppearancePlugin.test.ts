@@ -1,4 +1,3 @@
-import { darkColors, lightColors } from "../palettes";
 const { patchModalAppearance } = require("../../../plugins/withModalAppearance");
 
 describe("Android modal appearance integration", () => {
@@ -9,9 +8,7 @@ describe("Android modal appearance integration", () => {
     expect(patched).toContain("super.onResume()");
     expect(patched).toContain("isAppearanceLightStatusBars = light");
     expect(patched).toContain("isAppearanceLightNavigationBars = light");
-    expect(patched).toContain("if (!view.transparent)");
-    expect(patched).toContain(darkColors.background);
-    expect(patched).toContain(lightColors.background);
+    expect(patched).not.toContain("setBackgroundColor");
     expect(patched).not.toMatch(/recreate\(|dismiss\(/);
     expect(patchModalAppearance(patched)).toBe(patched);
   });

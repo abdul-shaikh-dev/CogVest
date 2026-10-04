@@ -4,6 +4,13 @@ appId: com.abdulshaikh.cogvest
     when:
       true: ${PHASE == 'prepare'}
     commands:
+      - runFlow:
+          when:
+            visible:
+              id: close-cash-entry-button
+          commands:
+            - tapOn:
+                id: close-cash-entry-button
       - openLink: "cogvest:///settings"
       - scrollUntilVisible:
           element:
@@ -16,11 +23,16 @@ appId: com.abdulshaikh.cogvest
           id: cash-entry-deposit
       - tapOn:
           id: cash-amount-input
+      - eraseText: 200
       - inputText: "1234.56"
       - hideKeyboard
       - tapOn:
           id: cash-label-input
+      - eraseText: 200
       - inputText: "Appearance transition draft"
+      - assertVisible:
+          id: cash-label-input
+      - takeScreenshot: .expo/appearance-537/draft-keyboard-${STAGE}
       - hideKeyboard
 - assertVisible: "Deposit cash"
 - scrollUntilVisible:
