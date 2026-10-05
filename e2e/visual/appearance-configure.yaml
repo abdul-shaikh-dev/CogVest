@@ -1,0 +1,23 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: appearance-${APPEARANCE}
+    direction: UP
+- tapOn:
+    id: appearance-${APPEARANCE}
+- assertVisible:
+    id: appearance-${APPEARANCE}
+    checked: true
+- scrollUntilVisible:
+    element:
+      id: display-mode-${MODE}
+    direction: DOWN
+- tapOn:
+    id: display-mode-${MODE}
+- assertVisible:
+    id: display-mode-${MODE}
+    checked: true
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-completion/${SHOT}/settings

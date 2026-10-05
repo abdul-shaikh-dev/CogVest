@@ -1,0 +1,72 @@
+appId: com.abdulshaikh.cogvest
+---
+# Paired with futures-refinement-setup.yaml. No writes in this review.
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///futures"
+- assertVisible: "999 USDT"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/wallet
+- scrollUntilVisible:
+    element: "Qty 1.*Entry 100 USDT.*"
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/position
+- scrollUntilVisible:
+    element:
+      id: "edit-futures-.*"
+    direction: DOWN
+- tapOn:
+    id: "edit-futures-.*"
+- scrollUntilVisible:
+    element:
+      id: futures-quantity
+    direction: DOWN
+- assertVisible:
+    id: futures-quantity
+    text: "1"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/execution-editor
+- scrollUntilVisible:
+    element:
+      id: futures-cancel-event
+    direction: DOWN
+- tapOn:
+    id: futures-cancel-event
+- scrollUntilVisible:
+    element:
+      id: futures-add-cash-funding
+    direction: DOWN
+- tapOn:
+    id: futures-add-cash-funding
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/funding-editor
+- scrollUntilVisible:
+    element:
+      id: futures-cancel-cash
+    direction: DOWN
+- tapOn:
+    id: futures-cancel-cash
+- scrollUntilVisible:
+    element:
+      id: futures-mark-BTCUSDT
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/valuation-editor
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- takeScreenshot: .expo/appearance-completion/${SHOT}/delete-wallet
+- tapOn:
+    id: futures-cancel-delete
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///futures"
+- assertNotVisible: "999 USDT"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-completion/${SHOT}/wallet-masked
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle

@@ -1,0 +1,25 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Portfolio value"
+- assertVisible: "Mask values"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/dashboard
+- tapOn:
+    id: dashboard-mask-toggle
+- assertVisible: "Show values"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/dashboard-masked
+- openLink: "cogvest:///holdings"
+- assertVisible:
+    id: holding-row-visual-qa-asset-bitcoin
+- assertNotVisible: "₹13.9L"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/holdings-masked
+- tapOn: "Show values"
+- assertVisible: "₹13.9L"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/holdings
+- openLink: "cogvest:///progress"
+- assertVisible: "Monthly Progress"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/progress
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/cash
