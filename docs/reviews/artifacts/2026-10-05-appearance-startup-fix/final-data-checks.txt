@@ -1,0 +1,16 @@
+Running on Pixel_10_Pro
+ > Flow appearance-release-empty
+Open cogvest:///holdings... COMPLETED
+Assert that "No holdings yet" is visible... COMPLETED
+Assert that "My PPF" is not visible... COMPLETED
+Open cogvest:///futures... COMPLETED
+Assert that "Create futures wallet" is visible... COMPLETED
+Open cogvest:///cash... COMPLETED
+Assert that "?0.00" is visible... COMPLETED
+Assert that "No cash movement yet" is visible... COMPLETED
+Wait for animation to end... COMPLETED
+Take screenshot .expo/appearance-completion/release-cleanup/cash... COMPLETED
+Open cogvest:///dashboard... COMPLETED
+Assert that "Your portfolio starts here" is visible... COMPLETED
+Wait for animation to end... COMPLETED
+Take screenshot .expo/appearance-completion/release-cleanup/dashboard... COMPLETED
