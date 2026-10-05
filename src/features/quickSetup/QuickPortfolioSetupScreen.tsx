@@ -130,7 +130,7 @@ export function QuickPortfolioSetupScreen({
               {
                 label: "Invested",
                 masked: dashboard.maskWealthValues,
-                value: formatINR(dashboard.rollupTotals.totalInvested),
+                value: dashboard.investedCapitalComplete ? formatINR(dashboard.rollupTotals.totalInvested) : "Unknown",
               },
               {
                 label: "Current",

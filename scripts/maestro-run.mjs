@@ -29,6 +29,7 @@ const defaultFlows = [
   "e2e/futures-cash-funding.yaml",
   "e2e/investing-cash-migration.yaml",
   "e2e/epf-persistence.yaml",
+  "e2e/epf-reporting.yaml",
   "e2e/holdings.yaml",
   "e2e/holdings-list-first.yaml",
   "e2e/holdings-list-first-layout.yaml",

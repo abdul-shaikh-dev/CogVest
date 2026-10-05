@@ -1641,6 +1641,9 @@ export function ProgressScreen({
   const futuresAccountCount = useSyncExternalStore(store.subscribe,
     () => store.getState().futuresAccounts.length,
     () => store.getState().futuresAccounts.length);
+  const epfAccountCount = useSyncExternalStore(store.subscribe,
+    () => store.getState().epf.accounts.length,
+    () => store.getState().epf.accounts.length);
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
   const isHistoryBuilding =
@@ -1700,6 +1703,10 @@ export function ProgressScreen({
         {futuresAccountCount > 0 ? <PremiumCard testID="progress-futures-scope">
           <AppText weight="bold">Futures are not in monthly history</AppText>
           <AppText color="secondary" variant="caption">These stored month-end values exclude manual futures accounts. Current dashboard totals can include a reconciled futures wallet; past snapshots are not reconstructed from today's mark price or INR rate.</AppText>
+        </PremiumCard> : null}
+        {epfAccountCount > 0 ? <PremiumCard testID="progress-epf-scope">
+          <AppText weight="bold">EPF is not in monthly history</AppText>
+          <AppText color="secondary" variant="caption">Dashboard includes recorded EPF balances. This history excludes EPF; earlier balances are not inferred from today's recorded value.</AppText>
         </PremiumCard> : null}
         {selectedSummary ? (
           <>
@@ -1795,7 +1802,7 @@ export function ProgressScreen({
                     progress.portfolioValue === null
                       ? undefined
                       : formatINR(progress.portfolioValue),
-                  label: "Portfolio",
+                  label: epfAccountCount ? "Value ex. EPF" : "Portfolio",
                   masked:
                     progress.preferences.maskWealthValues &&
                     progress.portfolioValue !== null,
@@ -1806,7 +1813,7 @@ export function ProgressScreen({
                 },
                 {
                   exactValue: formatINR(progress.totalInvested),
-                  label: "Invested",
+                  label: epfAccountCount ? "Invested ex. EPF" : "Invested",
                   masked: progress.preferences.maskWealthValues,
                   value: formatCompactINR(progress.totalInvested),
                 },

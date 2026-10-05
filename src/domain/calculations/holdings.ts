@@ -626,12 +626,14 @@ export function calculateAllocation({
   cashBalance,
   holdings,
   ppfConfirmedBalance = 0,
+  epfRecordedBalance = 0,
 }: {
   cashBalance: number;
   holdings: Holding[];
   ppfConfirmedBalance?: number;
+  epfRecordedBalance?: number | null;
 }): AllocationItem[] {
-  if (holdings.some((holding) => holding.valuation.status === "pending")) {
+  if (epfRecordedBalance === null || !Number.isFinite(epfRecordedBalance) || holdings.some((holding) => holding.valuation.status === "pending")) {
     return [];
   }
 
@@ -646,10 +648,10 @@ export function calculateAllocation({
     );
   }
 
-  if (ppfConfirmedBalance !== 0) {
+  if (ppfConfirmedBalance !== 0 || epfRecordedBalance !== 0) {
     values.set(
       "debt",
-      decimal(values.get("debt") ?? 0).plus(ppfConfirmedBalance),
+      decimal(values.get("debt") ?? 0).plus(ppfConfirmedBalance).plus(epfRecordedBalance),
     );
   }
 

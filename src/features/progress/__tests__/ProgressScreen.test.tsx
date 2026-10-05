@@ -6,6 +6,7 @@ import { ProgressScreen, ReviewSnapshotScreen } from "@/src/features/progress";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { createEpfReportingFixture, epfReportingDate } from "@/src/testing/epfReportingFixture";
 import * as visualQaSeed from "@/src/testing/visualQaSeed";
 import { colors, interaction } from "@/src/theme";
 import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition } from "@/src/types";
@@ -34,6 +35,17 @@ const aprilSnapshot: MonthlySnapshot = {
   monthlyInvestment: 50000,
   portfolioValue: 1260000,
 };
+
+test("explicitly scopes stored history when EPF is included on Dashboard", () => {
+  const qa = jest.spyOn(visualQaSeed, "isVisualQaSessionActive").mockReturnValue(true);
+  const store = createEpfReportingFixture();
+  const view = render(<ProgressScreen store={store} now={epfReportingDate}
+    historicalPriceFetcher={async () => ({ ok: false, error: "No synthetic provider" })} />);
+  expect(view.getByTestId("progress-epf-scope")).toBeTruthy();
+  expect(view.getByText("EPF is not in monthly history")).toBeTruthy();
+  view.unmount();
+  qa.mockRestore();
+});
 
 const maySnapshot: MonthlySnapshot = {
   cashValue: 140000,

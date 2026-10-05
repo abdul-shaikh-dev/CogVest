@@ -1,0 +1,33 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-reporting-qa?token=cogvest-local-visual-qa"
+- assertVisible: "Unknown"
+- assertVisible: "EPF recorded balances"
+- assertVisible: "₹1,40,000.00"
+- assertVisible: "₹2,00,000.00"
+- takeScreenshot: .expo/epf-545/standard
+- scrollUntilVisible:
+    element:
+      id: dashboard-allocation-debt
+    direction: DOWN
+- assertVisible: "100.00%"
+- takeScreenshot: .expo/epf-545/allocation
+- openLink: "cogvest:///epf-reporting-qa?token=cogvest-local-visual-qa&mode=minimal"
+- tapOn:
+    text: "Invested & returns"
+    retryTapIfNoChange: true
+- assertVisible: "Unknown"
+- tapOn:
+    id: dashboard-mask-toggle
+- assertNotVisible: "₹1,40,000.00"
+- assertVisible: "Amount hidden"
+- takeScreenshot: .expo/epf-545/masked
+- openLink: "cogvest:///epf-reporting-qa?token=cogvest-local-visual-qa&mode=progress"
+- assertVisible: "EPF is not in monthly history"
+- takeScreenshot: .expo/epf-545/history-scope

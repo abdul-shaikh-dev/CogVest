@@ -143,6 +143,7 @@ export function DashboardScreen({
     cashBalance: dashboard.cashBalance,
     futuresEquityInr: dashboard.futuresEquityInr,
     ppfConfirmedBalance: dashboard.ppfConfirmedBalance,
+    epfRecordedBalance: dashboard.epfSummary.value,
   });
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
   const positiveAllocationTotal = normalizeMoney(
@@ -287,12 +288,12 @@ export function DashboardScreen({
               <AppText color="secondary" variant="caption">
                 {dashboard.futuresContributions.some((item) => item.status === "pending") ? "Known invested" : "Invested"}
               </AppText>
-              <MaskedValue
+              {dashboard.investedCapitalComplete ? <MaskedValue
                 exactValue={formatINR(totalInvested)}
                 masked={dashboard.maskWealthValues}
                 value={formatCompactINR(totalInvested)}
                 weight="bold"
-              />
+              /> : <AppText color="secondary" weight="bold">Unknown</AppText>}
             </View>
             <View
               style={[
@@ -303,7 +304,7 @@ export function DashboardScreen({
               ]}
             >
               <AppText color="secondary" variant="caption">
-                {dashboard.futuresContributions.length ? "Portfolio P&L" : "Holdings P&L"}
+                {dashboard.futuresContributions.length || dashboard.epfSummary.accountCount ? "Portfolio P&L" : "Holdings P&L"}
               </AppText>
               {totalPnL === null ? (
                 <AppText color="secondary" weight="bold">Unavailable</AppText>
@@ -327,11 +328,11 @@ export function DashboardScreen({
               adaptiveLayoutMode === "accessibility" && styles.heroMetricCellFull,
             ]} testID="dashboard-pnl-percent">
               <AppText color="secondary" variant="caption">
-                {dashboard.futuresContributions.length ? "Portfolio P&L %" : "Holdings P&L %"}
+                {dashboard.futuresContributions.length || dashboard.epfSummary.accountCount ? "Portfolio P&L %" : "Holdings P&L %"}
               </AppText>
               {totalPnLPct !== null ? (
                 <AppText
-                  accessibilityLabel={`${dashboard.futuresContributions.length ? "Portfolio" : "Holdings"} P&L percentage ${formatPercentage(totalPnLPct)}`}
+                  accessibilityLabel={`${dashboard.futuresContributions.length || dashboard.epfSummary.accountCount ? "Portfolio" : "Holdings"} P&L percentage ${formatPercentage(totalPnLPct)}`}
                   style={
                     totalPnLPct >= 0
                       ? styles.positiveText
@@ -374,7 +375,7 @@ export function DashboardScreen({
             {showPriceDetails ? (
               <View style={styles.priceDetails} testID="dashboard-price-details">
                 <AppText color="secondary" variant="caption">
-                  Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.
+                  Current holdings, cash and recorded {dashboard.epfSummary.accountCount ? "PPF/EPF" : "PPF"} balances, using available prices. Not a month-end snapshot.
                 </AppText>
                 <AppText color="secondary" variant="caption">{quoteStatus.detail}</AppText>
                 {hasCompleteValuation && dashboard.quoteFreshness.total > 0 ? (
@@ -389,14 +390,28 @@ export function DashboardScreen({
                 </AppText>
                 {!dashboard.maskWealthValues && dashboard.totalValue !== null ? (
                   <AppText color="secondary" testID="dashboard-exact-values" variant="caption">
-                    Exact values: portfolio {formatINR(dashboard.totalValue)} · invested {formatINR(totalInvested)}
-                    {totalPnL === null ? "" : ` · ${dashboard.futuresContributions.length ? "portfolio" : "holdings"} P&L ${formatSignedINR(totalPnL)}`}
+                    Exact values: portfolio {formatINR(dashboard.totalValue)} · invested {dashboard.investedCapitalComplete ? formatINR(totalInvested) : "unknown"}
+                    {totalPnL === null ? "" : ` · ${dashboard.futuresContributions.length || dashboard.epfSummary.accountCount ? "portfolio" : "holdings"} P&L ${formatSignedINR(totalPnL)}`}
                   </AppText>
                 ) : null}
               </View>
             ) : null}
           </View>
         </PremiumCard>
+
+        {dashboard.epfSummary.accountCount > 0 ? <PremiumCard section testID="dashboard-epf-status">
+          <AppText weight="bold">EPF recorded balances</AppText>
+          {dashboard.epfSummary.value === null ? <AppText color="secondary">EPF value unavailable. Review account evidence.</AppText> :
+            <MaskedValue testID="dashboard-epf-value" value={formatCompactINR(dashboard.epfSummary.value)} exactValue={formatINR(dashboard.epfSummary.value)} masked={dashboard.maskWealthValues} />}
+          {dashboard.epfSummary.accounts.map(account => <AppText key={account.accountId} color="secondary" variant="caption">
+            Last evidence {account.lastEvidenceDate}{account.historyComplete ? "" : " · later activity unconfirmed"}
+          </AppText>)}
+          {!dashboard.investedCapitalComplete ? <AppText color="secondary">EPF invested capital is unknown. Portfolio P&amp;L is unavailable.</AppText> : null}
+          {dashboard.epfSummary.inTransit ? <AppText color="secondary">Includes an EPF transfer in transit, counted once.</AppText> : null}
+          {dashboard.epfSummary.reasons.some(reason => reason.endsWith(":unknownWithdrawalDestination") || reason.endsWith(":untrackedTransferOrigin")) ?
+            <AppText color="secondary">Some EPF movements have an unconfirmed origin or destination.</AppText> : null}
+          <AppText color="secondary" variant="caption">Included in Debt. EPF history is not included in Progress yet.</AppText>
+        </PremiumCard> : null}
 
         {dashboard.futuresContributions.length ? <PremiumCard testID="dashboard-futures-status">
           <AppText weight="bold">USDT Futures</AppText>
@@ -552,7 +567,7 @@ export function DashboardScreen({
               </Pressable>
             </View>
             <AppText color="secondary" testID="dashboard-allocation-scope" variant="caption">
-              Share of portfolio value · includes recorded PPF and Futures equity
+              Share of portfolio value · includes recorded {dashboard.epfSummary.accountCount ? "PPF/EPF" : "PPF"} and Futures equity
             </AppText>
             {hasNegativeCash ? (
               <AppText color="secondary" variant="caption">
