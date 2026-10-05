@@ -67,6 +67,50 @@ const etfBuyTrade: Trade = {
 };
 
 describe("DashboardScreen", () => {
+  it("reconciles combined Crypto and linked PPF Debt with portfolio wealth, including masked breakdowns", () => {
+    const now = new Date("2026-10-05T12:00:00Z");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+    store.getState().addAsset({ ...asset, id: "spot", name: "Bitcoin", symbol: "BTC", ticker: "bitcoin",
+      assetClass: "crypto", instrumentType: "crypto", exchange: "CRYPTO" });
+    store.getState().addOpeningPosition({ id: "spot-opening", assetId: "spot", date: "2026-10-01",
+      quantity: 1, averageCostPrice: 100000, currentPrice: 100000 });
+    store.getState().addAsset({ ...asset, id: "old-ppf", assetClass: "debt", instrumentType: "ppf" });
+    store.getState().addOpeningPosition({ id: "old-ppf-opening", assetId: "old-ppf", date: "2026-10-01",
+      quantity: 1, averageCostPrice: 50000, currentPrice: 50000 });
+    store.getState().addPpfAccount({ id: "ppf", nickname: "PPF", provider: "Post Office", status: "active",
+      legacyAssetId: "old-ppf", balanceAsOf: "2026-10-04", confirmedBalance: 50000,
+      createdAt: "2026-10-04T12:00:00Z", opening: { kind: "financialYear", financialYearStart: 2020 } });
+    store.getState().saveFuturesAccount({ id: "wallet", settlementAsset: "USDT", marginMode: "cross",
+      positionMode: "one-way", openingAt: "2026-10-01T12:00:00Z", openingWalletUsdt: "3000",
+      events: [
+        { id: "open", type: "execution", at: "2026-10-02T12:00:00Z", contract: "ETHUSDT",
+          side: "buy", quantity: "1", price: "3000", feeUsdt: "0", leverage: "1" },
+        { id: "close", type: "execution", at: "2026-10-03T12:00:00Z", contract: "ETHUSDT",
+          side: "sell", quantity: "1", price: "4000", feeUsdt: "0", leverage: "1" },
+      ],
+      eventRates: [
+        { eventId: "open", inrPerUsdt: "85", observedAt: "2026-10-02T12:00:00Z", source: "Recorded" },
+        { eventId: "close", inrPerUsdt: "85", observedAt: "2026-10-03T12:00:00Z", source: "Recorded" },
+      ],
+      openingRate: { inrPerUsdt: "85", observedAt: "2026-10-01T12:00:00Z", source: "Recorded" },
+      valuation: { asOf: now.toISOString(), marks: [],
+        inrRate: { inrPerUsdt: "85", observedAt: now.toISOString(), source: "Recorded" },
+        reconciliation: { observedWalletUsdt: "4000", observedAt: now.toISOString(), source: "Recorded",
+          allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true } } });
+    const before = JSON.stringify({ assets: store.getState().assets, accounts: store.getState().futuresAccounts,
+      ppf: store.getState().ppfAccounts, cash: store.getState().cashEntries });
+    const screen = render(<DashboardScreen store={store} now={now} />);
+    expect(within(screen.getByTestId("dashboard-allocation-crypto")).getByLabelText("₹4,40,000.00")).toBeTruthy();
+    expect(within(screen.getByTestId("dashboard-allocation-debt")).getByLabelText("₹50,000.00")).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-allocation-futures")).toBeNull();
+    fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
+    expect(screen.getByTestId("dashboard-crypto-spot").props.accessibilityLabel).toBe("₹1,00,000.00");
+    expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("₹3,40,000.00");
+    fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
+    expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("Amount hidden");
+    expect(JSON.stringify({ assets: store.getState().assets, accounts: store.getState().futuresAccounts,
+      ppf: store.getState().ppfAccounts, cash: store.getState().cashEntries })).toBe(before);
+  });
   it.each(["standard", "minimal"] as const)("shows incomplete valuation honestly in %s and resolves it after quote refresh", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
@@ -179,7 +223,10 @@ describe("DashboardScreen", () => {
           source: "Observed wallet", allOpenPositionsConfirmed: true,
           allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true } },
     }));
-    expect(screen.getByText("Futures equity")).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-allocation-futures")).toBeNull();
+    fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
+    expect(screen.getByText("Futures wallet equity")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("₹0.00");
   });
 
   it("does not hide unsupported-currency warnings behind first-run setup", () => {
@@ -804,7 +851,7 @@ describe("DashboardScreen", () => {
     ).toBeTruthy();
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
     expect(
-      allocationCard.getByText("Share of market holdings and cash · recorded PPF excluded"),
+      allocationCard.getByText("Share of portfolio value · includes recorded PPF and Futures equity"),
     ).toBeTruthy();
     expect(allocationCard.getByText("150.00%")).toBeTruthy();
     expect(allocationCard.getByText("₹300")).toBeTruthy();

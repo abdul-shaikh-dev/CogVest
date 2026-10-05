@@ -1,0 +1,17 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///futures"
+- scrollUntilVisible:
+    element:
+      text: "4000 USDT"
+    direction: UP
+- assertVisible: "4000 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-delete-account
+    direction: DOWN
+- tapOn:
+    id: futures-delete-account
+- tapOn:
+    id: futures-confirm-delete
+- runFlow: appearance-final-data.yaml

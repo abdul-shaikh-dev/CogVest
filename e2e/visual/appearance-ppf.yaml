@@ -46,6 +46,20 @@ env:
     id: save-ppf-account
 - assertVisible: "₹1,000.00"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-account
+- runFlow:
+    when:
+      true: ${typeof ALLOCATION_PROOF !== 'undefined' && ALLOCATION_PROOF === 'true'}
+    commands:
+      - openLink: "cogvest:///dashboard"
+      - scrollUntilVisible:
+          element:
+            id: dashboard-allocation-debt
+          direction: DOWN
+      # Existing synthetic Debt is 57,110; the temporary PPF adds 1,000 once.
+      - assertVisible: "₹58.11K"
+      - waitForAnimationToEnd
+      - takeScreenshot: .expo/crypto-allocation/${SHOT}/ppf-debt
+      - back
 - tapOn:
     id: add-ppf-entry
 - tapOn:
