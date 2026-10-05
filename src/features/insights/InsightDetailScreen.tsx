@@ -13,7 +13,7 @@ import {
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 import { useBehaviorInsights } from "./useBehaviorInsights";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
@@ -28,6 +28,7 @@ export function InsightDetailScreen({
   store?: StoreApi<PortfolioStoreState>;
   now?: Date;
 }) {
+  const styles = useStyles();
   const { details, masked, minimal } = useBehaviorInsights(store, now);
   const detail = details.find((item) => item.kind === kind);
   const [recordsShown, setRecordsShown] = useState(0);
@@ -164,7 +165,7 @@ export function InsightDetailScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   content: { gap: spacing.cardGap, paddingTop: spacing.md },
   group: { gap: spacing.md },
   fact: {
@@ -181,4 +182,4 @@ const styles = StyleSheet.create({
   intrinsic: { flex: 0 },
   stackedValue: { flex: 0, textAlign: "left" },
   record: { gap: spacing.xs, paddingVertical: spacing.sm },
-});
+}));

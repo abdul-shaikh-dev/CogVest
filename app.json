@@ -2,13 +2,13 @@
   "expo": {
     "name": "CogVest",
     "slug": "cogvest",
-    "version": "1.0.20",
+    "version": "1.0.23",
     "platforms": [
       "android"
     ],
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "cogvest",
     "splash": {
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.abdulshaikh.cogvest",
-      "versionCode": 21,
+      "versionCode": 24,
       "icon": "./assets/brand/icon.png",
       "allowBackup": false,
       "adaptiveIcon": {
@@ -36,6 +36,8 @@
       "./plugins/withPrivateDataBackupPolicy",
       "./plugins/withLeastPrivilegeAndroidPermissions",
       "./plugins/withBoundedDocumentRead",
+      "./plugins/withModalAppearance",
+      "./plugins/withStartupWindow",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

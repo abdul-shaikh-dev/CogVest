@@ -186,7 +186,7 @@ describe("common UI primitives", () => {
     expect(rippleNodes[0].props.android_ripple).toEqual({
       borderless: false,
       color: expectedRipple,
-      foreground: false,
+      foreground: true,
     });
   });
 
@@ -194,7 +194,7 @@ describe("common UI primitives", () => {
     expect(androidRipple()).toEqual({
       borderless: false,
       color: interaction.rippleColor,
-      foreground: false,
+      foreground: true,
     });
     expect(minimumTouchTargetStyle).toEqual({
       minHeight: interaction.minimumTouchTarget,

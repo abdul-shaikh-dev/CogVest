@@ -10,7 +10,7 @@ import {
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { formatDate, formatINR } from "@/src/domain/formatters";
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme, createThemedStyles } from "@/src/theme";
 import type { CashEntry } from "@/src/types";
 
 type CashEntryRowProps = {
@@ -53,6 +53,8 @@ export function CashEntryRow({
   masked = false,
   onPress,
 }: CashEntryRowProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
   const isAddition = entry.type === "addition";
@@ -110,7 +112,7 @@ export function CashEntryRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   dateRail: { alignItems: "center", width: 28, gap: spacing.xs },
   entryBody: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.sm },
   trailing: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
@@ -137,4 +139,4 @@ const styles = StyleSheet.create({
   withdrawal: {
     color: colors.loss,
   },
-});
+}));

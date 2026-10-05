@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { AppText, getAdaptiveLayoutMode } from "@/src/components/common";
-import { colors } from "@/src/theme";
+import { useTheme, createThemedStyles } from "@/src/theme";
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
@@ -45,6 +45,7 @@ function TabIcon({
 }
 
 function TabLabel({ color, routeName }: { color: string; routeName: string }) {
+  const styles = useStyles();
   return (
     <AppText
       adjustsFontSizeToFit
@@ -59,6 +60,8 @@ function TabLabel({ color, routeName }: { color: string; routeName: string }) {
 }
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const accessibilityLayout =
     getAdaptiveLayoutMode(fontScale) === "accessibility";
@@ -129,7 +132,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   tabBar: {
     backgroundColor: colors.surface.card,
     borderTopColor: colors.border.subtle,
@@ -147,4 +150,4 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     textAlign: "center",
   },
-});
+}));

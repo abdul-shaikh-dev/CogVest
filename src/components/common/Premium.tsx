@@ -11,7 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
 import type { AssetClass } from "@/src/types";
 
 import { AppText } from "./AppText";
@@ -85,17 +85,17 @@ export function getMetricColumnCount(fontScale: number) {
   return 4;
 }
 
-const assetClassConfig: Record<
+const getAssetClassConfig = (colors: ThemeColors): Record<
   AssetClass | "neutral",
   { color: string; icon: keyof typeof Ionicons.glyphMap; label: string }
-> = {
+> => ({
   cash: { color: colors.cashBlue, icon: "wallet-outline", label: "Cash" },
   crypto: { color: colors.cryptoAmber, icon: "logo-bitcoin", label: "Crypto" },
   debt: { color: colors.blue, icon: "shield-outline", label: "Debt" },
   etf: { color: colors.primary, icon: "trending-up-outline", label: "Equity" },
   neutral: { color: colors.text.secondary, icon: "analytics-outline", label: "Info" },
   stock: { color: colors.primary, icon: "trending-up-outline", label: "Equity" },
-};
+});
 
 export function PremiumCard({
   children,
@@ -104,6 +104,7 @@ export function PremiumCard({
   style,
   testID,
 }: PremiumCardProps) {
+  const styles = useStyles();
   return (
     <View
       style={[styles.card, elevated && styles.elevatedCard, section && styles.openSection, style]}
@@ -121,6 +122,7 @@ export function ScreenHeader({
   subtitle,
   title,
 }: ScreenHeaderProps) {
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const shouldStack = getAdaptiveLayoutMode(fontScale) !== "standard";
 
@@ -164,13 +166,15 @@ export function IconButton({
   onPress?: () => void;
   testID?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
-      android_ripple={androidRipple(plain ? "rgba(255,255,255,0.12)" : undefined)}
+      android_ripple={androidRipple(colors.ripple)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
@@ -204,6 +208,7 @@ export function HeroMetric({
   subValueTone?: "positive" | "negative" | "secondary";
   value: string;
 }) {
+  const styles = useStyles();
   const toneStyle =
     subValueTone === "positive"
       ? styles.positiveText
@@ -227,6 +232,7 @@ export function HeroMetric({
 }
 
 export function MetricGroup({ metrics, testID }: MetricGroupProps) {
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const columns = getMetricColumnCount(fontScale);
   const adaptiveCellStyle =
@@ -270,6 +276,7 @@ export function SectionHeader({
   actionLabel?: string;
   title: string;
 }) {
+  const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const shouldStack = getAdaptiveLayoutMode(fontScale) !== "standard";
 
@@ -296,7 +303,8 @@ export function CategoryIcon({
   assetClass?: AssetClass | "neutral";
   size?: number;
 }) {
-  const config = assetClassConfig[assetClass];
+  const { colors } = useTheme();
+  const config = getAssetClassConfig(colors)[assetClass];
 
   return (
     <Ionicons
@@ -309,7 +317,7 @@ export function CategoryIcon({
 }
 
 export function assetClassLabel(assetClass: AssetClass) {
-  return assetClassConfig[assetClass].label;
+  return { cash: "Cash", crypto: "Crypto", debt: "Debt", etf: "Equity", stock: "Equity" }[assetClass];
 }
 
 export function GroupedListRow({
@@ -326,6 +334,8 @@ export function GroupedListRow({
   selected = false,
   showChevron = false,
 }: GroupedListRowProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const content = (
     <>
       {icon ? (
@@ -385,7 +395,7 @@ export function GroupedListRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   brandText: {
     color: colors.primary,
   },
@@ -416,7 +426,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
   },
   groupedRowSelected: {
-    backgroundColor: "rgba(52,199,89,0.10)",
+    backgroundColor: colors.selected,
     borderRadius: radii.button,
     marginHorizontal: spacing.xs * -1,
     paddingHorizontal: spacing.xs,
@@ -519,4 +529,4 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     flexDirection: "column",
   },
-});
+}));

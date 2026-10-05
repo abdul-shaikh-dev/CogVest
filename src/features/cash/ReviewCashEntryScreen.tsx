@@ -17,7 +17,7 @@ import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntry, CashEntryType } from "@/src/types";
 
 import {
@@ -76,6 +76,7 @@ export function ReviewCashEntryScreen({
   onReviewLinkedFutures,
   store = getPortfolioStore(),
 }: ReviewCashEntryScreenProps) {
+  const styles = useStyles();
   const snapshot = usePortfolioSnapshot(store);
   const entry = snapshot.cashEntries.find((item) => item.id === entryId);
   const initialEntryRef = useRef(entry);
@@ -486,7 +487,7 @@ export function ReviewCashEntryScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     gap: spacing.sm,
   },
@@ -546,4 +547,4 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: spacing.xs,
   },
-});
+}));

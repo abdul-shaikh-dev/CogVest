@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Modal, Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { CashEntryRow } from "@/src/components/cards";
@@ -19,7 +19,7 @@ import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntryType } from "@/src/types";
 
 import {
@@ -65,6 +65,7 @@ export function CashScreen({
   onCorrectEntry,
   store = getPortfolioStore(),
 }: CashScreenProps) {
+  const styles = useStyles();
   const {
     addEntry,
     balance,
@@ -280,7 +281,8 @@ export function CashScreen({
     </ScreenContainer>
 
     <Modal animationType="none" visible={isEntryVisible} onRequestClose={requestEntryClose} testID="cash-entry-modal">
-      <KeyboardAvoidingView behavior="height" style={styles.modalRoot}>
+      {/* Android Modal already uses adjustResize; a second height adjustment leaves stale keyboard space. */}
+      <View style={styles.modalRoot} testID="cash-entry-root">
         <ScreenContainer scroll testID="cash-entry-panel">
         {mode && modeCopy ? (
           <View style={styles.content} testID="cash-entry-form" accessibilityViewIsModal>
@@ -381,7 +383,7 @@ export function CashScreen({
           </View>
         ) : null}
         </ScreenContainer>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
     <Modal
       animationType="none"
@@ -407,9 +409,9 @@ export function CashScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   modalRoot: { flex: 1, backgroundColor: colors.background },
-  confirmBackdrop: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: "rgba(0,0,0,0.7)" },
+  confirmBackdrop: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.scrim },
   content: {
     gap: spacing.cardGap,
     paddingBottom: spacing.lg,
@@ -472,4 +474,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: interaction.pressedOpacity,
   },
-});
+}));

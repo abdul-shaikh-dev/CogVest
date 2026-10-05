@@ -16,7 +16,7 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore, OpeningPosition } from "@/src/types";
 
 import {
@@ -64,6 +64,7 @@ export function ReviewOpeningPositionScreen({
   openingPositionId,
   store = getPortfolioStore(),
 }: ReviewOpeningPositionScreenProps) {
+  const styles = useStyles();
   const snapshot = usePortfolioSnapshot(store);
   const currentPosition = snapshot.openingPositions.find(
     (position) => position.id === openingPositionId,
@@ -503,7 +504,7 @@ export function ReviewOpeningPositionScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     gap: spacing.sm,
   },
@@ -554,6 +555,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   unknownDateControlSelected: {
-    backgroundColor: "rgba(46,125,82,0.16)",
+    backgroundColor: colors.selected,
   },
-});
+}));

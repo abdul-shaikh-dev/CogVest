@@ -31,7 +31,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getFinancialYearStart, validatePpfLedgerEntry } from "@/src/domain/ppf";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, spacing } from "@/src/theme";
+import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
 
@@ -61,6 +61,7 @@ export function PpfEntryScreen({
   onComplete: () => void;
   store?: StoreApi<PortfolioStoreState>;
 }) {
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const account = snapshot.ppfAccounts.find((item) => item.id === accountId);
   const existing = snapshot.ppfLedgerEntries.find((item) => item.id === entryId);
@@ -397,6 +398,7 @@ function entryLabel(type: EntryType) {
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   return (
@@ -407,7 +409,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
@@ -430,4 +432,4 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 48,
   },
-});
+}));

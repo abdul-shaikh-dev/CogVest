@@ -44,7 +44,7 @@ import type {
   RefreshQuotesInput,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
 import type { Holding } from "@/src/types";
 
 import { useDashboard } from "./useDashboard";
@@ -142,7 +142,7 @@ function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
   return assetClassLabel(assetClass);
 }
 
-function getAllocationColor(assetClass: DisplayAllocationClass) {
+function getAllocationColor(colors: ThemeColors, assetClass: DisplayAllocationClass) {
   if (assetClass === "futures") return colors.cryptoAmber;
   if (assetClass === "cash") {
     return colors.cashBlue;
@@ -181,6 +181,8 @@ export function DashboardScreen({
   refreshQuotes,
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const currentDate = now ?? new Date();
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [showPerformance, setShowPerformance] = useState(false);
@@ -642,7 +644,7 @@ export function DashboardScreen({
                   {!hasNegativeCash ? (
                     <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.allocationTrack}>
                       <View testID={`dashboard-allocation-bar-${item.assetClass}`} style={{
-                        backgroundColor: getAllocationColor(item.assetClass),
+                        backgroundColor: getAllocationColor(colors, item.assetClass),
                         height: "100%",
                         width: getAllocationWidth(item.value, positiveAllocationTotal),
                       }} />
@@ -829,7 +831,7 @@ function getQuoteStatus({
   };
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   priceDisclosure: {
     minHeight: 48,
     flexDirection: "row",
@@ -988,4 +990,4 @@ const styles = StyleSheet.create({
   warningText: {
     color: colors.warning,
   },
-});
+}));

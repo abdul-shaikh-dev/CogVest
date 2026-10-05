@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { AppText, SectionHeader } from "@/src/components/common";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 
 export type SelectionOption<T extends string> = {
   label: string;
@@ -36,6 +36,7 @@ export function SelectionField<T extends string>({
   testIDPrefix,
   value,
 }: SelectionFieldProps<T>) {
+  const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption =
     options.find((option) => option.value === value) ?? options[0];
@@ -130,7 +131,7 @@ export function SelectionField<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   compactField: {
     alignSelf: "flex-start",
     flexShrink: 1,
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   backdrop: {
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.scrim,
     flex: 1,
     justifyContent: "flex-end",
     padding: spacing.md,
@@ -180,4 +181,4 @@ const styles = StyleSheet.create({
     maxHeight: "84%",
     padding: spacing.md,
   },
-});
+}));

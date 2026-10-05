@@ -25,7 +25,7 @@ import { projectDemergers } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 type ManageAssetsScreenProps = {
   onBack: () => void;
@@ -66,6 +66,8 @@ export function ManageAssetsScreen({
   onReviewAsset,
   store = getPortfolioStore(),
 }: ManageAssetsScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const demergerAdjustments = projectDemergers({
     assets: snapshot.assets,
@@ -184,8 +186,8 @@ export function ManageAssetsScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  active: { backgroundColor: "rgba(52,199,89,0.12)" },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  active: { backgroundColor: colors.selected },
   closed: { backgroundColor: colors.surface.elevated },
   content: { gap: spacing.cardGap, paddingBottom: spacing.xl },
   copy: { flex: 1, minWidth: 0, gap: spacing.xs },
@@ -199,4 +201,4 @@ const styles = StyleSheet.create({
   searchField: { alignItems: "center", backgroundColor: colors.surface.card, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md },
   searchInput: { color: colors.text.primary, flex: 1, minHeight: 48, paddingVertical: spacing.sm },
   status: { borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-});
+}));

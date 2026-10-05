@@ -4,7 +4,7 @@ import type { StoreApi } from "zustand/vanilla";
 import { AppText, PremiumCard, SectionHeader } from "@/src/components/common";
 import type { InsightKind } from "@/src/domain/calculations/behaviorInsightDetails";
 import type { PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, useTheme } from "@/src/theme";
 import { useBehaviorInsights } from "./useBehaviorInsights";
 
 export function InsightCards({
@@ -16,6 +16,7 @@ export function InsightCards({
   now?: Date;
   onOpen?: (kind: InsightKind) => void;
 }) {
+  const { colors } = useTheme();
   const { details, masked, minimal } = useBehaviorInsights(store, now);
   if (minimal) return null;
   return (

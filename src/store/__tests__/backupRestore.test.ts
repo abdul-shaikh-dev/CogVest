@@ -21,7 +21,7 @@ function payload(): BackupPayload {
       ...createEmptyPortfolioSnapshot(),
       assets: [{ id: "sample", name: "Example stock", ticker: "SAMPLE.NS", symbol: "SAMPLE", currency: "INR", assetClass: "stock", exchange: "NSE", instrumentType: "stock", sectorType: "other", quoteSourceId: "SAMPLE.NS" }],
       openingPositions: [{ id: "opening", assetId: "sample", date: "2026-01-01", quantity: 2, averageCostPrice: 100 }],
-      preferences: { defaultChartRange: "ALL", displayMode: "minimal", hasCompletedOnboarding: true, maskWealthValues: true },
+      preferences: { appearance: "dark", defaultChartRange: "ALL", displayMode: "minimal", hasCompletedOnboarding: true, maskWealthValues: true },
     },
     quoteCache: { sample: { assetId: "sample", asOf: now().toISOString(), currency: "INR", price: 125, source: "manual" } },
     historicalQuoteCache: {},

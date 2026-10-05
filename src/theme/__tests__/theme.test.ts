@@ -94,17 +94,17 @@ function pressedContrastRatio({
 }
 
 describe("theme tokens", () => {
-  it("matches the V1 premium true-dark palette", () => {
-    expect(colors.background).toBe("#000000");
-    expect(colors.surface.card).toBe("#1C1C1E");
-    expect(colors.surface.elevated).toBe("#2C2C2E");
-    expect(colors.primary).toBe("#34C759");
-    expect(colors.deepGreen).toBe("#248A3D");
-    expect(colors.profit).toBe("#34C759");
-    expect(colors.text.primary).toBe("#FFFFFF");
-    expect(colors.text.secondary).toBe("#98989D");
-    expect(colors.text.inverse).toBe("#000000");
-    expect(colors.border.subtle).toBe("rgba(255,255,255,0.10)");
+  it("matches the approved neutral graphite palette", () => {
+    expect(colors.background).toBe("#181A1B");
+    expect(colors.surface.card).toBe("#222527");
+    expect(colors.surface.elevated).toBe("#2D3133");
+    expect(colors.primary).toBe("#5CDA86");
+    expect(colors.deepGreen).toBe("#5CDA86");
+    expect(colors.profit).toBe("#5CDA86");
+    expect(colors.text.primary).toBe("#F1F3F4");
+    expect(colors.text.secondary).toBe("#AFB6BA");
+    expect(colors.text.inverse).toBe("#18241D");
+    expect(colors.border.subtle).toBe("#3E4447");
   });
 
   it("captures Android interaction rules", () => {

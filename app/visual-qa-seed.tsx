@@ -8,9 +8,10 @@ import {
   canUseVisualQaHarness,
   seedVisualQaPortfolio,
 } from "@/src/testing/visualQaSeed";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 export default function VisualQaSeedRoute() {
+  const styles = useStyles();
   const params = useLocalSearchParams<{
     holdings?: string;
     history?: string;
@@ -104,7 +105,7 @@ export default function VisualQaSeedRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   content: {
     gap: spacing.md,
     paddingTop: spacing.xl,
@@ -112,4 +113,4 @@ const styles = StyleSheet.create({
   error: {
     color: colors.loss,
   },
-});
+}));

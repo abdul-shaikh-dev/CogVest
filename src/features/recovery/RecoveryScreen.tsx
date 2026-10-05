@@ -7,7 +7,7 @@ import {
   PremiumCard,
   ScreenContainer,
 } from "@/src/components/common";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 
 type RecoveryScreenProps = {
   affectedAreas: string[];
@@ -20,6 +20,7 @@ export function RecoveryScreen({
   recoveryCopiesPreserved,
   onReset,
 }: RecoveryScreenProps) {
+  const styles = useStyles();
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   return (
@@ -92,7 +93,7 @@ export function RecoveryScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: {
     gap: spacing.sm,
     marginTop: spacing.sm,
@@ -124,4 +125,4 @@ const styles = StyleSheet.create({
   heading: {
     gap: spacing.sm,
   },
-});
+}));

@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 
 import { AppText } from "./AppText";
 import {
@@ -48,6 +48,7 @@ export function AppButton({
   variant = "primary",
   ...props
 }: AppButtonProps) {
+  const styles = useStyles();
   const isDisabled = Boolean(disabled);
   const resolvedTextColor =
     textColor ??
@@ -81,7 +82,7 @@ export function AppButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   base: {
     alignItems: "center",
     borderRadius: radii.button,
@@ -102,4 +103,4 @@ const styles = StyleSheet.create({
   destructive: {
     backgroundColor: colors.loss,
   },
-});
+}));

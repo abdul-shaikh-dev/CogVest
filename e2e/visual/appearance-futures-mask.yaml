@@ -1,0 +1,16 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Mask values"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///futures"
+- assertNotVisible: "999 USDT"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-completion/${SHOT}/wallet-masked
+- openLink: "cogvest:///dashboard"
+- tapOn:
+    id: dashboard-mask-toggle
+- openLink: "cogvest:///futures"
+- assertVisible: "999 USDT"

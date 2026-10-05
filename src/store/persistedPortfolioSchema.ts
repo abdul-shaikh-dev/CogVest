@@ -485,6 +485,7 @@ const ppfLedgerEntrySchema = z.discriminatedUnion("type", [
 
 const preferencesSchema = z
   .object({
+    appearance: z.enum(["system", "light", "dark"]).optional(),
     defaultChartRange: z
       .enum(["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"])
       .optional(),

@@ -1,29 +1,7 @@
-export {};
-export const colors = {
-  background: "#000000",
-  blue: "#0A84FF",
-  cashBlue: "#64D2FF",
-  cryptoAmber: "#FFD60A",
-  deepGreen: "#248A3D",
-  primary: "#34C759",
-  profit: "#34C759",
-  loss: "#FF453A",
-  warning: "#FF9F0A",
-  border: {
-    subtle: "rgba(255,255,255,0.10)",
-    strong: "#38383A",
-  },
-  surface: {
-    card: "#1C1C1E",
-    elevated: "#2C2C2E",
-  },
-  text: {
-    primary: "#FFFFFF",
-    secondary: "#98989D",
-    muted: "#48484A",
-    inverse: "#000000",
-  },
-} as const;
+// Static palettes are for verification; runtime UI must subscribe with useTheme.
+export { darkColors as colors, darkColors, lightColors } from "./palettes";
+export type { ThemeColors } from "./palettes";
+export { ThemeProvider, useTheme, createThemedStyles, resolveAppearance } from "./ThemeProvider";
 
 export const spacing = {
   xs: 4,

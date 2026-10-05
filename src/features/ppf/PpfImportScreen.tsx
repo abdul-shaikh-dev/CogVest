@@ -25,7 +25,7 @@ import {
 } from "@/src/domain/ppfCsvImport";
 import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
@@ -51,6 +51,7 @@ export function PpfImportScreen({
   store = getPortfolioStore(),
   now = () => new Date(),
 }: PpfImportScreenProps) {
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const { fontScale, width } = useWindowDimensions();
   const stackRows = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -413,6 +414,7 @@ export function PpfImportScreen({
 }
 
 function Checkbox({ checked, label, onPress, testID }: { checked: boolean; label: string; onPress: () => void; testID: string }) {
+  const styles = useStyles();
   return (
     <Pressable accessibilityLabel={label} accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={styles.checkbox} testID={testID}>
       <AppText color={checked ? "primary" : "secondary"} weight="bold">{checked ? "✓" : "○"}</AppText>
@@ -422,6 +424,7 @@ function Checkbox({ checked, label, onPress, testID }: { checked: boolean; label
 }
 
 function Summary({ label, masked = false, value }: { label: string; masked?: boolean; value: number | string }) {
+  const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const fullWidth = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const display = typeof value === "number" ? formatINR(value) : value;
@@ -445,7 +448,7 @@ function friendlyEntryType(type: PpfLedgerEntry["type"]) {
   return "Balance reconciliation";
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   checkbox: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, minHeight: 48 },
   checkboxText: { flex: 1 },
@@ -461,4 +464,4 @@ const styles = StyleSheet.create({
   fullWidth: { flexBasis: "100%" },
   result: { gap: spacing.md },
   stacked: { flexDirection: "column", alignItems: "stretch" },
-});
+}));

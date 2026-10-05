@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { Keyboard, Modal } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Modal } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
@@ -21,6 +21,13 @@ function selectDate(
 }
 
 describe("CashScreen", () => {
+  it("lets the Android modal resize without a second keyboard height owner", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<CashScreen store={store} />);
+    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    expect(screen.getByTestId("cash-entry-root")).toHaveStyle({ flex: 1 });
+    expect(screen.UNSAFE_queryByType(KeyboardAvoidingView)).toBeNull();
+  });
   it.each(["standard", "minimal"] as const)("compacts zero metrics without implying no withdrawals in %s mode", (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });

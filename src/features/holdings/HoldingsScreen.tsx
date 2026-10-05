@@ -49,7 +49,7 @@ import type {
 } from "@/src/services/quotes";
 import { getHoldingQuoteContext } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
 import {
@@ -100,11 +100,7 @@ const filterOrder: HoldingFilter[] = [
   "high-allocation",
 ];
 
-const exposureColors: Record<ExposureSegment["color"], string> = {
-  amber: colors.cryptoAmber,
-  blue: colors.blue,
-  green: colors.primary,
-};
+
 
 export function HoldingsScreen({
   isActive = true,
@@ -130,6 +126,8 @@ export function HoldingsScreen({
   statusMessage,
   store = getPortfolioStore(),
 }: HoldingsScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const observedAt = now ?? new Date();
   const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
@@ -1143,6 +1141,7 @@ function InsightCard({
   positive?: boolean;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <PremiumCard style={styles.insightCard}>
       <AppText color="secondary" variant="caption" weight="medium">
@@ -1163,6 +1162,8 @@ function InsightCard({
 }
 
 function ExposurePanel({ segments }: { segments: ExposureSegment[] }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <PremiumCard style={styles.exposureCard}>
       <View style={styles.sectionHeading}>
@@ -1181,7 +1182,7 @@ function ExposurePanel({ segments }: { segments: ExposureSegment[] }) {
             style={[
               styles.exposureSegment,
               {
-                backgroundColor: exposureColors[segment.color],
+                backgroundColor: ({ amber: colors.cryptoAmber, blue: colors.blue, green: colors.primary })[segment.color],
                 flex: Math.max(segment.percentage, 1),
               },
             ]}
@@ -1195,7 +1196,7 @@ function ExposurePanel({ segments }: { segments: ExposureSegment[] }) {
             <View
               style={[
                 styles.legendDot,
-                { backgroundColor: exposureColors[segment.color] },
+                { backgroundColor: ({ amber: colors.cryptoAmber, blue: colors.blue, green: colors.primary })[segment.color] },
               ]}
             />
             <View style={styles.legendCopy}>
@@ -1221,6 +1222,7 @@ function DestinationTab({
   onPress: () => void;
   testID: string;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="tab"
@@ -1254,6 +1256,7 @@ function FilterRow({
   onSelect: (filter: HoldingFilter) => void;
   selected: HoldingFilter;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.filters}>
       {filterOrder.map((filter) => {
@@ -1318,6 +1321,7 @@ function HoldingRow({
   HoldingDetailsProps,
   "allocationAvailable" | "item" | "masked" | "minimal"
 > & { onPress: () => void }) {
+  const styles = useStyles();
   const { holding } = item;
   const pending = holding.currentValue === null;
   const pnlAvailable = holding.unrealisedPnL !== null;
@@ -1468,6 +1472,7 @@ function HoldingDetails({
   onToggleRecords,
   trades,
 }: HoldingDetailsProps) {
+  const styles = useStyles();
   const { holding } = item;
   const isPending = holding.valuation.status === "pending";
   const positive = (holding.unrealisedPnL ?? 0) >= 0;
@@ -1683,6 +1688,7 @@ function Detail({
   tone?: "negative" | "positive";
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.detail} testID={testID}>
       <AppText color="secondary" variant="caption">
@@ -1820,7 +1826,7 @@ function getHoldingRowAccessibilityLabel({
   ].join(". ");
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   stackedContent: { flexDirection: "column", alignItems: "stretch" },
   stackedValue: { alignItems: "flex-start" },
   pendingValuationCopy: { flexGrow: 1, flexShrink: 1 },
@@ -2107,7 +2113,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   panelBackdrop: {
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.scrim,
     flex: 1,
     justifyContent: "flex-end",
     paddingHorizontal: spacing.md,
@@ -2205,4 +2211,4 @@ const styles = StyleSheet.create({
   warningText: {
     color: colors.warning,
   },
-});
+}));

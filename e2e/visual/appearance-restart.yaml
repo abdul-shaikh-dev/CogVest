@@ -1,0 +1,23 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible: "Dashboard"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/cold-dashboard
+- openLink: "cogvest:///settings"
+- scrollUntilVisible:
+    element:
+      id: appearance-${APPEARANCE}
+    direction: UP
+- assertVisible:
+    id: appearance-${APPEARANCE}
+    checked: true
+- takeScreenshot: .expo/appearance-completion/${SHOT}/persisted-choice

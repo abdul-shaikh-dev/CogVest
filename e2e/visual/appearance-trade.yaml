@@ -1,0 +1,42 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- tapOn:
+    id: "review-trade-.*"
+- assertVisible:
+    id: trade-correction-quantity-input
+    text: "2"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/trade-editor
+- scrollUntilVisible:
+    element:
+      id: trade-correction-total
+    direction: DOWN
+- assertVisible:
+    id: trade-correction-total
+    text: "₹205.00"
+- scrollUntilVisible:
+    element:
+      id: trade-correction-context-toggle
+    direction: DOWN
+- tapOn:
+    id: trade-correction-context-toggle
+- scrollUntilVisible:
+    element:
+      id: trade-correction-notes-input
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/trade-context
+- scrollUntilVisible:
+    element:
+      id: delete-trade-button
+    direction: DOWN
+- tapOn:
+    id: delete-trade-button
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-trade-button
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/trade-delete
+- tapOn: "Keep transaction"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹49,795.00"

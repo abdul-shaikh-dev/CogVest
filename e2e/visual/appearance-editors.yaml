@@ -1,0 +1,57 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- assertVisible:
+    id: asset-name-input
+    text: "HDFC Bank"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/asset-editor
+- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- assertVisible:
+    id: opening-correction-quantity-input
+    text: "25"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/opening-editor
+- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- assertVisible:
+    id: cash-correction-amount-input
+    text: "10000"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/cash-editor
+- scrollUntilVisible:
+    element:
+      id: delete-cash-entry-button
+    direction: DOWN
+- tapOn:
+    id: delete-cash-entry-button
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-cash-entry-button
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/cash-delete
+- tapOn: "Keep entry"
+- openLink: "cogvest:///review-snapshot"
+- tapOn:
+    id: snapshot-portfolio-input
+- eraseText: 20
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: save-monthly-snapshot-button
+    direction: DOWN
+- tapOn:
+    id: save-monthly-snapshot-button
+- scrollUntilVisible:
+    element: "Portfolio value must equal Equity + Debt + Crypto + Cash."
+    direction: UP
+- takeScreenshot: .expo/appearance-completion/${SHOT}/snapshot-error
+- scrollUntilVisible:
+    element:
+      id: cancel-snapshot-review-button
+    direction: DOWN
+- tapOn:
+    id: cancel-snapshot-review-button
+- openLink: "cogvest:///insight?kind=missing"
+- assertVisible: "Insight unavailable"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/unavailable
+- openLink: "cogvest:///cash"
+- assertVisible: "₹50,000.00"

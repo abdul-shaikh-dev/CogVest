@@ -19,7 +19,7 @@ import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
 import { formatCurrency, formatINR } from "@/src/domain/formatters";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
 
 type ReviewTradeScreenProps = {
@@ -56,6 +56,7 @@ export function ReviewTradeScreen({
   store = getPortfolioStore(),
   tradeId,
 }: ReviewTradeScreenProps) {
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const currentTrade = snapshot.trades.find((item) => item.id === tradeId);
   const initialTradeRef = useRef(currentTrade);
@@ -334,7 +335,7 @@ export function ReviewTradeScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   content: { gap: spacing.cardGap, paddingTop: spacing.md, paddingBottom: spacing.lg },
   contextToggle: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: interaction.minimumTouchTarget },
@@ -348,4 +349,4 @@ const styles = StyleSheet.create({
   pressed: { opacity: interaction.pressedOpacity },
   row: { flexDirection: "row", gap: spacing.sm },
   stacked: { flexDirection: "column" },
-});
+}));

@@ -10,7 +10,7 @@ import {
   calendarDateToLocalDate,
   formatLocalCalendarDate,
 } from "@/src/domain/dates";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 
 type DatePickerFieldProps = {
   error?: string;
@@ -45,6 +45,7 @@ export function DatePickerField({
   testID,
   value,
 }: DatePickerFieldProps) {
+  const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedDate = calendarDateToLocalDate(value) ?? maximumDate;
 
@@ -100,7 +101,7 @@ export function DatePickerField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
@@ -124,4 +125,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-});
+}));

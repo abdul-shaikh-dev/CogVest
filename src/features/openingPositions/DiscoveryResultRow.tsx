@@ -7,7 +7,7 @@ import {
   instrumentTypeLabel,
 } from "@/src/domain/assets";
 import type { Asset } from "@/src/types";
-import { colors, interaction, spacing } from "@/src/theme";
+import { interaction, spacing, createThemedStyles, useTheme } from "@/src/theme";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 
 function resultInstrumentLabel(result: Pick<AssetLookupResult, "instrumentType">) {
@@ -36,6 +36,8 @@ export const DiscoveryResultRow = memo(function DiscoveryResultRow({ result, onS
   result: AssetLookupResult;
   onSelect: (result: AssetLookupResult) => void;
 }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const instrument = resultInstrumentLabel(result);
   const venue = venueLabel(result.exchange);
 
@@ -61,6 +63,8 @@ export const SavedAssetRow = memo(function SavedAssetRow({ asset, onSelect }: {
   asset: Asset;
   onSelect: (asset: Asset) => void;
 }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const instrument = savedInstrumentLabel(asset);
   const venue = venueLabel(asset.exchange);
 
@@ -81,7 +85,7 @@ export const SavedAssetRow = memo(function SavedAssetRow({ asset, onSelect }: {
   </TouchableOpacity>;
 });
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   savedRow: { alignItems: "flex-start", borderBottomColor: colors.border.subtle,
     borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm,
     minHeight: interaction.minimumTouchTarget, paddingVertical: spacing.sm },
@@ -89,4 +93,4 @@ const styles = StyleSheet.create({
   row: { alignItems: "flex-start", borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 56 },
   copy: { flex: 1, gap: spacing.xs, minWidth: 0 },
-});
+}));

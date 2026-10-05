@@ -12,7 +12,7 @@ import { AssetSearchField } from "@/src/features/openingPositions/AssetSearchFie
 import { EntryProgress } from "@/src/components/common/EntryProgress";
 import { searchAssetLookupResults, type AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, spacing } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 import { useRecordPurchase } from "./useRecordPurchase";
 
@@ -24,6 +24,7 @@ type Props = {
 
 export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCancel, onSaved,
   store = getPortfolioStore(), searchAssets = searchAssetLookupResults }: Props) {
+  const styles = useStyles();
   const flow = useRecordPurchase({ initialAssetId, now, store });
   const { fontScale } = useWindowDimensions();
   const stackCash = getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -159,13 +160,14 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
 }
 
 function ReviewValue({ label, value, testID }: { label: string; value: string; testID: string }) {
+  const styles = useStyles();
   return <View style={styles.reviewValue}>
     <AppText color="secondary" variant="caption">{label}</AppText>
     <AppText style={styles.number} weight="bold" testID={testID}>{value}</AppText>
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   flex: { flex: 1 }, content: { gap: spacing.lg }, asset: { gap: spacing.xs },
   error: { color: colors.loss },
   reviewGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
@@ -175,4 +177,4 @@ const styles = StyleSheet.create({
   cashImpactStacked: { flexDirection: "column" },
   cashValue: { flex: 1, gap: spacing.xs },
   modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
-});
+}));

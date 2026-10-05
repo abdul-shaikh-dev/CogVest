@@ -1,8 +1,10 @@
 export type ChartRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
 
 export type DisplayMode = "minimal" | "standard";
+export type AppearancePreference = "system" | "light" | "dark";
 
 export type Preferences = {
+  appearance?: AppearancePreference;
   defaultChartRange: ChartRange;
   displayMode: DisplayMode;
   hasCompletedOnboarding: boolean;

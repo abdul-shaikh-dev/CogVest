@@ -32,7 +32,7 @@ import {
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { colors, interaction, radii, spacing } from "@/src/theme";
+import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
 
 type ReviewAssetScreenProps = {
@@ -77,6 +77,7 @@ function ChoiceGroup<T extends string>({
   testIDPrefix: string;
   value: T;
 }) {
+  const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel =
     label === "Asset class"
@@ -155,6 +156,7 @@ export function ReviewAssetScreen({
   onComplete,
   store = getPortfolioStore(),
 }: ReviewAssetScreenProps) {
+  const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const { fontScale, width } = useWindowDimensions();
   const stackActions = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -423,11 +425,11 @@ export function ReviewAssetScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   stacked: { flexDirection: "column" },
   confirmationActions: { gap: spacing.sm },
-  confirmationBackdrop: { backgroundColor: "rgba(0,0,0,0.78)", flex: 1, justifyContent: "center", padding: spacing.md },
+  confirmationBackdrop: { backgroundColor: colors.scrim, flex: 1, justifyContent: "center", padding: spacing.md },
   confirmationContent: { gap: spacing.md, paddingBottom: spacing.sm },
   confirmationScroll: { flexShrink: 1 },
   confirmationSheet: { backgroundColor: colors.surface.card, borderRadius: radii.sheet, gap: spacing.md, maxHeight: "100%", padding: spacing.lg },
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
   dangerCard: { gap: spacing.md },
   error: { color: colors.loss },
   fixedRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "space-between", paddingVertical: spacing.sm },
-  modalBackdrop: { backgroundColor: "rgba(0,0,0,0.72)", flex: 1, justifyContent: "flex-end", padding: spacing.md },
+  modalBackdrop: { backgroundColor: colors.scrim, flex: 1, justifyContent: "flex-end", padding: spacing.md },
   optionDivider: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   optionRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 52, paddingVertical: spacing.sm },
   optionSheet: { backgroundColor: colors.surface.card, borderRadius: radii.sheet, maxHeight: "84%", padding: spacing.md },
@@ -443,4 +445,4 @@ const styles = StyleSheet.create({
   pickerField: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", minHeight: interaction.minimumTouchTarget, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   pressed: { opacity: interaction.pressedOpacity },
   section: { gap: spacing.md },
-});
+}));

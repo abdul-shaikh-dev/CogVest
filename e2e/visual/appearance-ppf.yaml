@@ -1,0 +1,88 @@
+appId: com.abdulshaikh.cogvest
+env:
+  EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
+---
+# Creates then removes this task's synthetic PPF account. Run after day 4 of
+# the current month, with no existing PPF accounts. No cash link.
+# Pass EMPTY_PORTFOLIO=true for the isolated signed-preview fixture.
+# The earlier debug provider-input failure is retained in the October 5 report.
+- runFlow: appearance-configure.yaml
+- openLink: "cogvest:///ppf-account"
+- waitForAnimationToEnd
+- tapOn:
+    id: ppf-provider-input
+- waitForAnimationToEnd
+- inputText: "a"
+- hideKeyboard
+- assertVisible:
+    id: ppf-provider-input
+    text: "a"
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "1000"
+- hideKeyboard
+- tapOn:
+    id: ppf-balance-date
+- tapOn: "4"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- assertVisible:
+    id: ppf-account-review-screen
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-account-review
+- scrollUntilVisible:
+    element:
+      id: save-ppf-account
+    direction: DOWN
+- tapOn:
+    id: save-ppf-account
+- assertVisible: "₹1,000.00"
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-account
+- tapOn:
+    id: add-ppf-entry
+- tapOn:
+    id: ppf-entry-amount
+- inputText: "100"
+# Do not send Android Back here: it can open the unsaved-entry guard.
+- scrollUntilVisible:
+    element:
+      id: review-ppf-entry
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-entry
+- tapOn:
+    id: review-ppf-entry
+- assertVisible:
+    id: ppf-entry-review-screen
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-entry-review
+- tapOn:
+    id: edit-ppf-entry
+- back
+- assertVisible:
+    id: discard-ppf-entry
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-discard
+- tapOn:
+    id: discard-ppf-entry
+- assertVisible: "₹1,000.00"
+- scrollUntilVisible:
+    element:
+      id: delete-ppf-account
+    direction: DOWN
+- tapOn:
+    id: delete-ppf-account
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-ppf-account
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-delete
+- tapOn:
+    id: confirm-delete-ppf-account
+- openLink: "cogvest:///cash"
+- assertVisible: "${EXPECTED_CASH}"

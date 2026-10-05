@@ -21,7 +21,7 @@ import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import type { AmfiSchemeLookupResult } from "@/src/services/mutualFunds/amfiSchemeCatalog";
 import { casPdfMaxBytes, casPdfMaxPages } from "@/src/services/import-export";
 import type { PortfolioStoreState, TransactionImportCommandResult } from "@/src/store";
-import { colors, radii, spacing } from "@/src/theme";
+import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 import type {
   PickedCasStatement,
@@ -49,6 +49,8 @@ type TransactionImportScreenProps = {
 };
 
 export function TransactionImportScreen(props: TransactionImportScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const controller = useTransactionImport(props);
   const importDemergers = controller.plan.demergers?.filter((event) =>
     event.kind === "entitlement" && controller.plan.holdings.some((holding) =>
@@ -456,6 +458,7 @@ function HoldingMatch({ group, onSelect }: {
   group: ReturnType<typeof useTransactionImport>["groups"][number];
   onSelect: (key: string, asset: Asset) => void;
 }) {
+  const styles = useStyles();
   const [changing, setChanging] = useState(false);
   const chosen = group.selectedAsset ?? group.suggestedAsset;
   return <View style={styles.holdingPreview} testID={`transaction-import-asset-${group.key}`}>
@@ -482,10 +485,13 @@ function HoldingMatch({ group, onSelect }: {
 }
 
 function ModeButton({ active, description, onPress, testID, title }: { active: boolean; description: string; onPress: () => void; testID: string; title: string }) {
+  const styles = useStyles();
   return <Pressable accessibilityRole="radio" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.modeButton, active && styles.modeButtonActive]} testID={testID}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></Pressable>;
 }
 
 function SourceAction({ description, onPress, testID, title }: { description: string; onPress: () => void; testID: string; title: string }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.sourceRow, pressed && styles.pressed]} testID={testID}>
     <View style={styles.sourceCopy}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></View>
     <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name="chevron-forward" size={20} color={colors.text.secondary} />
@@ -493,6 +499,8 @@ function SourceAction({ description, onPress, testID, title }: { description: st
 }
 
 function SourceChoice({ active, description, onPress, testID, title }: { active: boolean; description: string; onPress: () => void; testID: string; title: string }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return <Pressable accessibilityRole="radio" accessibilityLabel={title} accessibilityHint={description} accessibilityState={{ checked: active }} onPress={onPress} style={({ pressed }) => [styles.sourceRow, pressed && styles.pressed]} testID={testID}>
     <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name={active ? "radio-button-on" : "radio-button-off"} size={24} color={active ? colors.primary : colors.text.secondary} />
     <View style={styles.sourceCopy}><AppText weight="bold">{title}</AppText><AppText color="secondary" variant="caption">{description}</AppText></View>
@@ -512,6 +520,7 @@ function Summary({
   testID: string;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.summary}>
       <AppText color="secondary" variant="caption">
@@ -525,6 +534,8 @@ function Summary({
 }
 
 function ReviewDisclosure({ expanded, onPress, testID, title }: { expanded: boolean; onPress: () => void; testID: string; title: string }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={({ pressed }) => [styles.helpRow, pressed && styles.pressed]} testID={testID}>
     <AppText style={styles.sourceCopy} weight="bold">{title}</AppText>
     <Ionicons accessible={false} importantForAccessibility="no-hide-descendants" name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.text.secondary} />
@@ -532,14 +543,16 @@ function ReviewDisclosure({ expanded, onPress, testID, title }: { expanded: bool
 }
 
 function ErrorCard({ message, testID }: { message: string; testID?: string }) {
+  const styles = useStyles();
   return <PremiumCard testID={testID}><AppText style={styles.error} weight="bold">{message}</AppText></PremiumCard>;
 }
 
 function InlineError({ message, testID }: { message: string; testID?: string }) {
+  const styles = useStyles();
   return <View style={styles.inlineError} testID={testID}><AppText accessibilityLiveRegion="polite" style={styles.error} weight="bold">{message}</AppText></View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   flex: { flex: 1 },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   card: { gap: spacing.md },
@@ -574,4 +587,4 @@ const styles = StyleSheet.create({
   statementSelection: { alignItems: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, padding: spacing.sm },
   stepNumber: { backgroundColor: colors.surface.elevated, borderRadius: radii.button, minWidth: 28, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, textAlign: "center" },
   unsupported: { gap: spacing.xs },
-});
+}));

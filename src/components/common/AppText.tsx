@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import type { TextProps, TextStyle } from "react-native";
 import { StyleSheet, Text } from "react-native";
 
-import { colors, typography } from "@/src/theme";
+import { typography, useTheme, type ThemeColors } from "@/src/theme";
 
 type TextVariant = "caption" | "body" | "section" | "title" | "largeTitle" | "hero";
-type TextColor = keyof typeof colors.text | "primary";
+type TextColor = keyof ThemeColors["text"];
 
 export type AppTextProps = TextProps & {
   align?: TextStyle["textAlign"];
@@ -24,6 +24,7 @@ export function AppText({
   weight = "regular",
   ...props
 }: AppTextProps) {
+  const { colors } = useTheme();
   return (
     <Text
       {...props}
