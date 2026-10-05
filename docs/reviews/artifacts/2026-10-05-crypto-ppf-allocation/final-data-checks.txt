@@ -1,0 +1,23 @@
+Running on CogVest_UX_Proof
+ > Flow crypto-allocation-cleanup
+Open cogvest:///futures... COMPLETED
+Scrolling UP until "4000 USDT" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Assert that "4000 USDT" is visible... COMPLETED
+Scrolling DOWN until id: futures-delete-account is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-delete-account... COMPLETED
+Tap on id: futures-confirm-delete... COMPLETED
+Run appearance-final-data.yaml...
+  Open cogvest:///futures... COMPLETED
+  Assert that "Create futures wallet" is visible... COMPLETED
+  Open cogvest:///cash... COMPLETED
+  Assert that "?50,000.00" is visible... COMPLETED
+  Open cogvest:///e2e-evidence?token=cogvest-local-visual-qa... COMPLETED
+  Assert that "Asset count: 5" is visible... COMPLETED
+  Assert that "Opening position count: 4" is visible... COMPLETED
+  Assert that "Trade count: 0" is visible... COMPLETED
+  Assert that "Cash entry count: 4" is visible... COMPLETED
+  Assert that "PPF account count: 0" is visible... COMPLETED
+  Assert that "Total invested: ?12,37,551.60" is visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/appearance-completion/final-data... COMPLETED
+Run appearance-final-data.yaml... COMPLETED

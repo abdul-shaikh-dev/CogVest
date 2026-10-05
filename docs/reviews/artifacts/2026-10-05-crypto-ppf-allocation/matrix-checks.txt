@@ -1,0 +1,114 @@
+Running on CogVest_UX_Proof
+ > Flow crypto-allocation-matrix
+Run appearance-configure.yaml...
+  Open cogvest:///settings... COMPLETED
+  Scrolling UP until id: appearance-${APPEARANCE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: appearance-${APPEARANCE}... COMPLETED
+  Assert that id: appearance-${APPEARANCE} is visible... COMPLETED
+  Scrolling DOWN until id: display-mode-${MODE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: display-mode-${MODE}... COMPLETED
+  Assert that id: display-mode-${MODE} is visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/appearance-completion/${SHOT}/settings... COMPLETED
+Run appearance-configure.yaml... COMPLETED
+Stop com.abdulshaikh.cogvest... COMPLETED
+Launch app "com.abdulshaikh.cogvest"... COMPLETED
+Assert that id: dashboard-screen is visible... COMPLETED
+Run crypto-allocation-review.yaml...
+  Open cogvest:///dashboard... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-breakdown is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible...
+    Tap on id: dashboard-crypto-breakdown... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Assert that "?3.4L", id: dashboard-crypto-futures is visible... COMPLETED
+  Assert that "?17,30,400.00" is visible... COMPLETED
+  Assert that "?13,90,400.00" is visible... COMPLETED
+  Assert that id: dashboard-allocation-futures is not visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/crypto-allocation/${SHOT}/breakdown... COMPLETED
+Run crypto-allocation-review.yaml... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED
+Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Assert that "?3.4L" is not visible... COMPLETED
+Assert that "?3,40,000.00" is not visible... COMPLETED
+Take screenshot .expo/crypto-allocation/${SHOT}/masked... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED
+Running on CogVest_UX_Proof
+ > Flow crypto-allocation-matrix
+Run appearance-configure.yaml...
+  Open cogvest:///settings... COMPLETED
+  Scrolling UP until id: appearance-${APPEARANCE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: appearance-${APPEARANCE}... COMPLETED
+  Assert that id: appearance-${APPEARANCE} is visible... COMPLETED
+  Scrolling DOWN until id: display-mode-${MODE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: display-mode-${MODE}... COMPLETED
+  Assert that id: display-mode-${MODE} is visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/appearance-completion/${SHOT}/settings... COMPLETED
+Run appearance-configure.yaml... COMPLETED
+Stop com.abdulshaikh.cogvest... COMPLETED
+Launch app "com.abdulshaikh.cogvest"... COMPLETED
+Assert that id: dashboard-screen is visible... COMPLETED
+Run crypto-allocation-review.yaml...
+  Open cogvest:///dashboard... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-breakdown is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible...
+    Tap on id: dashboard-crypto-breakdown... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Assert that "?3.4L", id: dashboard-crypto-futures is visible... COMPLETED
+  Assert that "?17,30,400.00" is visible... COMPLETED
+  Assert that "?13,90,400.00" is visible... COMPLETED
+  Assert that id: dashboard-allocation-futures is not visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/crypto-allocation/${SHOT}/breakdown... COMPLETED
+Run crypto-allocation-review.yaml... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED
+Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Assert that "?3.4L" is not visible... COMPLETED
+Assert that "?3,40,000.00" is not visible... COMPLETED
+Take screenshot .expo/crypto-allocation/${SHOT}/masked... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED
+Running on CogVest_UX_Proof
+ > Flow crypto-allocation-matrix
+Run appearance-configure.yaml...
+  Open cogvest:///settings... COMPLETED
+  Scrolling UP until id: appearance-${APPEARANCE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: appearance-${APPEARANCE}... COMPLETED
+  Assert that id: appearance-${APPEARANCE} is visible... COMPLETED
+  Scrolling DOWN until id: display-mode-${MODE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: display-mode-${MODE}... COMPLETED
+  Assert that id: display-mode-${MODE} is visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/appearance-completion/${SHOT}/settings... COMPLETED
+Run appearance-configure.yaml... COMPLETED
+Stop com.abdulshaikh.cogvest... COMPLETED
+Launch app "com.abdulshaikh.cogvest"... COMPLETED
+Assert that id: dashboard-screen is visible... COMPLETED
+Run crypto-allocation-review.yaml...
+  Open cogvest:///dashboard... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-breakdown is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible...
+    Tap on id: dashboard-crypto-breakdown... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Assert that "?3.4L", id: dashboard-crypto-futures is visible... COMPLETED
+  Assert that "?17,30,400.00" is visible... COMPLETED
+  Assert that "?13,90,400.00" is visible... COMPLETED
+  Assert that id: dashboard-allocation-futures is not visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/crypto-allocation/${SHOT}/breakdown... COMPLETED
+Run crypto-allocation-review.yaml... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED
+Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Assert that "?3.4L" is not visible... COMPLETED
+Assert that "?3,40,000.00" is not visible... COMPLETED
+Take screenshot .expo/crypto-allocation/${SHOT}/masked... COMPLETED
+Scrolling UP until id: dashboard-mask-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: dashboard-mask-toggle... COMPLETED

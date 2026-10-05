@@ -1,0 +1,96 @@
+Running on CogVest_UX_Proof
+ > Flow crypto-allocation
+Run appearance-configure.yaml...
+  Open cogvest:///settings... COMPLETED
+  Scrolling UP until id: appearance-${APPEARANCE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: appearance-${APPEARANCE}... COMPLETED
+  Assert that id: appearance-${APPEARANCE} is visible... COMPLETED
+  Scrolling DOWN until id: display-mode-${MODE} is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Tap on id: display-mode-${MODE}... COMPLETED
+  Assert that id: display-mode-${MODE} is visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/appearance-completion/${SHOT}/settings... COMPLETED
+Run appearance-configure.yaml... COMPLETED
+Run ${output.openingAt = new Date(Date.now() - 7200000).toISOString()}... COMPLETED
+Run ${output.valuationAt = new Date(Date.now() - 60000).toISOString()}... COMPLETED
+Open cogvest:///futures... COMPLETED
+Assert that "Create futures wallet" is visible... COMPLETED
+Tap on id: futures-opening-at-exact-toggle... COMPLETED
+Tap on id: futures-opening-at... COMPLETED
+Erase 50 characters... COMPLETED
+Input text ${output.openingAt}... COMPLETED
+Hide Keyboard... COMPLETED
+Tap on id: futures-opening-wallet... COMPLETED
+Erase 20 characters... COMPLETED
+Input text 4000... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-opening-rate is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-opening-rate... COMPLETED
+Input text 85... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-opening-rate-at-exact-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-opening-rate-at-exact-toggle... COMPLETED
+Tap on id: futures-opening-rate-at... COMPLETED
+Input text ${output.openingAt}... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-opening-rate-source is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-opening-rate-source... COMPLETED
+Input text Synthetic rate... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-save-account is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-save-account... COMPLETED
+Scrolling UP until "4000 USDT" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Assert that "4000 USDT" is visible... COMPLETED
+Scrolling DOWN until id: futures-valuation-at-exact-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-valuation-at-exact-toggle... COMPLETED
+Tap on id: futures-valuation-at... COMPLETED
+Erase 50 characters... COMPLETED
+Input text ${output.valuationAt}... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-observed-wallet is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-observed-wallet... COMPLETED
+Input text 4000... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-observed-wallet-at-exact-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-observed-wallet-at-exact-toggle... COMPLETED
+Tap on id: futures-observed-wallet-at... COMPLETED
+Input text ${output.valuationAt}... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-wallet-source is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-wallet-source... COMPLETED
+Input text Synthetic wallet... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-current-rate is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-current-rate... COMPLETED
+Input text 85... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-current-rate-at-exact-toggle is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-current-rate-at-exact-toggle... COMPLETED
+Tap on id: futures-current-rate-at... COMPLETED
+Input text ${output.valuationAt}... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-current-rate-source is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-current-rate-source... COMPLETED
+Input text Synthetic rate... COMPLETED
+Hide Keyboard... COMPLETED
+Scrolling DOWN until id: futures-positions-confirmed is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-positions-confirmed... COMPLETED
+Scrolling DOWN until id: futures-events-confirmed is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-events-confirmed... COMPLETED
+Scrolling DOWN until id: futures-boundary-confirmed is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-boundary-confirmed... COMPLETED
+Scrolling DOWN until id: futures-save-valuation is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on id: futures-save-valuation... COMPLETED
+Assert that id: futures-error is not visible... COMPLETED
+Run crypto-allocation-review.yaml...
+  Open cogvest:///dashboard... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-breakdown is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible...
+    Tap on id: dashboard-crypto-breakdown... COMPLETED
+  Run flow when id: dashboard-crypto-futures is not visible... COMPLETED
+  Scrolling DOWN until id: dashboard-crypto-futures is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+  Assert that "?3.4L", id: dashboard-crypto-futures is visible... COMPLETED
+  Assert that id: dashboard-allocation-futures is not visible... COMPLETED
+  Wait for animation to end... COMPLETED
+  Take screenshot .expo/crypto-allocation/${SHOT}/breakdown... COMPLETED
+Run crypto-allocation-review.yaml... COMPLETED
