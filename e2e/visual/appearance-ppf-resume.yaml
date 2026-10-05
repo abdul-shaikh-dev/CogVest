@@ -1,0 +1,44 @@
+appId: com.abdulshaikh.cogvest
+env:
+  EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
+---
+# Resume a diagnostic run stopped at discard confirmation. Do not recreate data.
+- tapOn:
+    id: keep-editing-ppf-entry
+- assertVisible:
+    id: ppf-entry-amount
+    text: "100"
+- scrollUntilVisible:
+    element:
+      id: review-ppf-entry
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-entry
+- tapOn:
+    id: review-ppf-entry
+- assertVisible:
+    id: ppf-entry-review-screen
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-entry-review
+- tapOn:
+    id: edit-ppf-entry
+- back
+- assertVisible:
+    id: discard-ppf-entry
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-discard
+- tapOn:
+    id: discard-ppf-entry
+- assertVisible: "₹1,000.00"
+- scrollUntilVisible:
+    element:
+      id: delete-ppf-account
+    direction: DOWN
+- tapOn:
+    id: delete-ppf-account
+- scrollUntilVisible:
+    element:
+      id: confirm-delete-ppf-account
+    direction: DOWN
+- takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-delete
+- tapOn:
+    id: confirm-delete-ppf-account
+- openLink: "cogvest:///cash"
+- assertVisible: "${EXPECTED_CASH}"

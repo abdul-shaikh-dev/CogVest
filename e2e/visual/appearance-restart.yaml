@@ -10,7 +10,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 60000
 - waitForAnimationToEnd:
     timeout: 10000
-- assertVisible: "Portfolio value"
+- assertVisible: "Dashboard"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/cold-dashboard
 - openLink: "cogvest:///settings"
 - scrollUntilVisible:

@@ -1,4 +1,6 @@
 appId: com.abdulshaikh.cogvest
+env:
+  EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
 ---
 # Remove only the synthetic wallet created by futures-refinement-setup.yaml.
 - openLink: "cogvest:///futures"
@@ -14,4 +16,4 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///futures"
 - assertVisible: "Create futures wallet"
 - openLink: "cogvest:///cash"
-- assertVisible: "₹50,000.00"
+- assertVisible: "${EXPECTED_CASH}"

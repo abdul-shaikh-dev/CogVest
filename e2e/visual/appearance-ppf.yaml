@@ -1,8 +1,11 @@
 appId: com.abdulshaikh.cogvest
+env:
+  EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
 ---
 # Creates then removes this task's synthetic PPF account. Run after day 4 of
 # the current month, with no existing PPF accounts. No cash link.
-# Diagnostic only: blocked at provider input on 2026-10-05. Not a passing gate.
+# Pass EMPTY_PORTFOLIO=true for the isolated signed-preview fixture.
+# The earlier debug provider-input failure is retained in the October 5 report.
 - runFlow: appearance-configure.yaml
 - openLink: "cogvest:///ppf-account"
 - waitForAnimationToEnd
@@ -48,7 +51,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: ppf-entry-amount
 - inputText: "100"
-- hideKeyboard
+# Do not send Android Back here: it can open the unsaved-entry guard.
 - scrollUntilVisible:
     element:
       id: review-ppf-entry
@@ -82,4 +85,4 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: confirm-delete-ppf-account
 - openLink: "cogvest:///cash"
-- assertVisible: "₹50,000.00"
+- assertVisible: "${EXPECTED_CASH}"

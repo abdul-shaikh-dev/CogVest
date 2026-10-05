@@ -1,0 +1,17 @@
+appId: com.abdulshaikh.cogvest
+---
+# Signed-preview fixture cleanup, using public UI rather than debug evidence.
+- openLink: "cogvest:///holdings"
+- assertVisible: "No holdings yet"
+- assertNotVisible: "My PPF"
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹0.00"
+- assertVisible: "No cash movement yet"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-completion/release-cleanup/cash
+- openLink: "cogvest:///dashboard"
+- assertVisible: "Your portfolio starts here"
+- waitForAnimationToEnd
+- takeScreenshot: .expo/appearance-completion/release-cleanup/dashboard
