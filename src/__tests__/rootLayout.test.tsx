@@ -115,6 +115,10 @@ describe("RootLayout", () => {
     const { getByTestId } = render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
+    expect(getByTestId("stack-screen-index").props.options).toEqual({
+      headerShown: false,
+      animation: "none",
+    });
     expect(getByTestId("stack-screen-add-holding").props.options).toEqual({
       headerShown: false,
     });

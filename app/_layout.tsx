@@ -182,6 +182,7 @@ function RootContents() {
                 headerTintColor: colors.text.primary,
               }}
             >
+              <Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="add-holding" options={{ headerShown: false }} />
               <Stack.Screen name="record-purchase" options={{ headerShown: false }} />
