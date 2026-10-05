@@ -40,6 +40,11 @@ function snapshot(
 }
 
 describe("buildMonthlyPerformanceBasis", () => {
+  it.each(["addition", "withdrawal"] as const)("treats EPF %s as crossing the current EPF-excluded history scope", (type) => {
+    const basis = buildMonthlyPerformanceBasis({ cashEntries: [cashEntry({ amount: 1000, type, purpose: "epfTransfer",
+      date: "2026-05-16", linkedEpf: { accountId: "epf", eventId: "event" } })], openingPositions: [], targetMonth: "2026-05" });
+    expect(basis).toMatchObject({ status: "complete", netExternalFlow: type === "addition" ? 1000 : -1000 });
+  });
   it.each([
     ["withdrawal", 9010, 20000, 10990, -9010],
     ["addition", 1795, 10990, 12785, 1795],

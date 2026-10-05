@@ -73,7 +73,9 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
 
   // Historical Progress excludes Futures, so its Cash leg crosses this report's
   // boundary even though the paired movement is internal to the whole portfolio.
-  if (entry.purpose === "futuresTransfer" && entry.linkedFutures) {
+  // EPF account history is also outside this report until its scoped integration.
+  if ((entry.purpose === "futuresTransfer" && entry.linkedFutures) ||
+      (entry.purpose === "epfTransfer" && entry.linkedEpf)) {
     return {
       amount: entry.type === "addition" ? decimal(entry.amount) : decimal(entry.amount).negated(),
       date: entry.date,

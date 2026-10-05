@@ -26,6 +26,25 @@ function harness() {
 }
 
 describe("backup file service", () => {
+  it("previews EPF account and audit counts without changing data before restore", async () => {
+    const { service, store, file } = harness();
+    store.getState().applyEpfCommand({ commandId: "epf-setup", reason: "Statement", change: {
+      type: "accountPut", account: { id: "epf", nickname: "EPF", provider: "employerTrust", status: "active", currency: "INR",
+        checkpoint: { date: "2026-01-01", balance: { total: 1000, components: null }, capital: null,
+          source: "trustStatement", recordedAt: "2026-01-02T00:00:00Z" }, historyCompleteThrough: null },
+    } }, store.getState().getBackupRevision());
+    const saved = store.getState().captureBackup().payload;
+    file.write(await createPortfolioBackup(saved, meta, digest));
+    store.getState().applyEpfCommand({ commandId: "epf-delete", reason: "Remove test account", change: { type: "accountRemove", id: "epf" } }, store.getState().getBackupRevision());
+    const before = store.getState();
+    const prepared = (await service.selectPortfolioBackup())!;
+    expect(prepared.review.counts).toEqual(expect.arrayContaining([
+      { label: "EPF accounts", current: 0, backup: 1 }, { label: "EPF edit history", current: 2, backup: 1 },
+    ]));
+    expect(store.getState()).toBe(before);
+    await service.restorePortfolioBackup(prepared);
+    expect(store.getState().epf).toEqual(saved.portfolio.epf);
+  });
   it("exports a verified file without changing the portfolio", async () => {
     const { service, store, file } = harness();
     const original = store.getState().captureBackup();

@@ -1,0 +1,47 @@
+appId: com.abdulshaikh.cogvest
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-persistence-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: epf-qa-stage
+- assertVisible: "Legacy staged; restart required"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-persistence-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: epf-qa-run
+- extendedWaitUntil:
+    visible: "PASS: EPF 135000; Cash 7000; audit 2; corrupt restore blocked"
+    timeout: 30000
+- takeScreenshot: .expo/epf-544/native-restore
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-persistence-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: epf-qa-check
+- assertVisible: "PASS: cold restart preserved exact records"
+- takeScreenshot: .expo/epf-544/cold-restart
+- openLink: "cogvest:///epf-persistence-qa?token=cogvest-local-visual-qa&page=review"
+- assertVisible: "Linked EPF movement"
+- assertNotVisible:
+    id: save-cash-correction-button
+- takeScreenshot: .expo/epf-544/protected-cash
+- openLink: "cogvest:///epf-persistence-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: epf-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
