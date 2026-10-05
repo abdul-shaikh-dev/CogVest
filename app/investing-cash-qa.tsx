@@ -43,6 +43,7 @@ function EnabledQa({ page }: { page?: string }) {
         storage.setRawItem(expectedKey, canonical(payload));
         const legacy = JSON.parse(JSON.stringify(payload.portfolio));
         legacy.schemaVersion = 14;
+        delete legacy.epf;
         legacy.cashEntries[0].purpose = "income";
         legacy.monthlySnapshots.forEach((snapshot: Record<string, unknown>) => { snapshot.salary = 165000; snapshot.monthlyExpense = 50000; });
         storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));
@@ -63,7 +64,7 @@ function EnabledQa({ page }: { page?: string }) {
   try { identical = expected !== null && canonical(state.captureBackup().payload) === expected; } catch { /* Show failure, never hide a recovery incident. */ }
   return <ScreenContainer scroll>
     <AppText variant="title">Investing Cash migration QA</AppText>
-    <AppText testID="qa-migration-result">{staged ? "Legacy schema 14 staged; cold restart required" : identical ? "PASS: full payload preserved; schema 15" : "No verified migrated payload"}</AppText>
+    <AppText testID="qa-migration-result">{staged ? "Legacy schema 14 staged; cold restart required" : identical ? "PASS: full payload preserved; schema 16" : "No verified migrated payload"}</AppText>
     <AppText testID="qa-migration-cash">Cash balance: {calculateCashBalance(state.cashEntries, now)}</AppText>
     <AppText testID="qa-migration-futures">Futures: {state.futuresAccounts[0]?.events.length ?? 0} linked transfer</AppText>
     <AppButton title="Stage synthetic legacy data" testID="qa-stage-legacy" onPress={stageLegacy} />

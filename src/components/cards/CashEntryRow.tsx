@@ -37,6 +37,8 @@ function getCashEntryMovement(entry: CashEntry) {
       return "Sale proceeds";
     case "futuresTransfer":
       return entry.type === "withdrawal" ? "To USDT Futures" : "From USDT Futures";
+    case "epfTransfer":
+      return entry.type === "withdrawal" ? "To EPF" : "From EPF";
     case "withdrawal":
       return "Cash withdrawal";
     case "legacyUncategorized":

@@ -48,7 +48,8 @@ function payload(): BackupPayload {
         hasCompletedOnboarding: true,
         maskWealthValues: false,
       },
-      schemaVersion: 15,
+      schemaVersion: 16,
+      epf: { accounts: [], events: [], cashLinks: [], audit: [] },
       trades: [],
     },
     quoteCache: {

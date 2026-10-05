@@ -107,10 +107,13 @@ export function createBackupService(runtime: BackupRuntime) {
         review: {
           createdAt: decoded.createdAt,
           appVersion: decoded.appVersion,
-          counts: countCollections.map(([key, label]) => ({
+          counts: [...countCollections.map(([key, label]) => ({
             label, current: current[key].length,
             backup: decoded.payload.portfolio[key].length,
-          })),
+          })), ...([ ["accounts", "EPF accounts"], ["events", "EPF entries"],
+            ["cashLinks", "EPF Cash links"], ["audit", "EPF edit history"] ] as const)
+            .filter(([key]) => current.epf[key].length || decoded.payload.portfolio.epf[key].length)
+            .map(([key, label]) => ({ label, current: current.epf[key].length, backup: decoded.payload.portfolio.epf[key].length }))],
         },
       };
       prepared.set(result, { payload: decoded.payload, revision, epoch: current.restoreEpoch });
