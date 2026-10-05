@@ -1,0 +1,30 @@
+appId: com.abdulshaikh.cogvest
+---
+- runFlow: appearance-configure.yaml
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow: crypto-allocation-review.yaml
+- scrollUntilVisible:
+    element:
+      id: dashboard-mask-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-crypto-futures
+    direction: DOWN
+- assertNotVisible: "₹3.4L"
+- assertNotVisible: "₹3,40,000.00"
+- takeScreenshot: .expo/crypto-allocation/${SHOT}/masked
+- scrollUntilVisible:
+    element:
+      id: dashboard-mask-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-mask-toggle

@@ -6,6 +6,13 @@ change. The solver and display remain separate work.
 
 ## Boundary
 
+Reporting update (#539/#540): the current Dashboard groups spot holdings and
+USDT Futures net equity under Crypto, with separate Spot/Futures detail; recorded
+PPF balances belong to Debt. This classification does not change any XIRR flow
+boundary. Futures remains a separate account model, not leveraged notional or
+Cash. Historical monthly snapshots retain their existing, separately labelled
+coverage and are not rewritten by this allocation change.
+
 The owner subsequently requested Investments XIRR, Whole-portfolio XIRR and
 per-asset XIRR. They are separate measures, not fallback names for one calculation.
 This batch's code audits only the whole-portfolio history boundary described

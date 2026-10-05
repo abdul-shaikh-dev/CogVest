@@ -22,7 +22,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: dashboard-allocation-scope
     direction: DOWN
-- assertVisible: "Share of market holdings and cash.*recorded PPF excluded"
+- assertVisible: "Share of portfolio value.*includes recorded PPF and Futures equity"
 - assertNotVisible:
     id: dashboard-price-details
 - takeScreenshot: .expo/ux13-dashboard

@@ -1,0 +1,27 @@
+appId: com.abdulshaikh.cogvest
+---
+- openLink: "cogvest:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-crypto-breakdown
+    direction: DOWN
+- runFlow:
+    when:
+      notVisible:
+        id: dashboard-crypto-futures
+    commands:
+      - tapOn:
+          id: dashboard-crypto-breakdown
+- scrollUntilVisible:
+    element:
+      id: dashboard-crypto-futures
+    direction: DOWN
+- assertVisible:
+    id: dashboard-crypto-futures
+    text: "₹3.4L"
+- assertVisible: "₹17,30,400.00"
+- assertVisible: "₹13,90,400.00"
+- assertNotVisible:
+    id: dashboard-allocation-futures
+- waitForAnimationToEnd
+- takeScreenshot: .expo/crypto-allocation/${SHOT}/breakdown

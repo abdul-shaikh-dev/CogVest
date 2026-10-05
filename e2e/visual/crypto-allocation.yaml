@@ -1,0 +1,147 @@
+appId: com.abdulshaikh.cogvest
+---
+# Existing synthetic portfolio only. No data clearing or existing wallet replacement.
+- runFlow: appearance-configure.yaml
+- evalScript: ${output.openingAt = new Date(Date.now() - 7200000).toISOString()}
+- evalScript: ${output.valuationAt = new Date(Date.now() - 60000).toISOString()}
+- openLink: "cogvest:///futures"
+- assertVisible: "Create futures wallet"
+- tapOn:
+    id: futures-opening-at-exact-toggle
+- tapOn:
+    id: futures-opening-at
+- eraseText: 50
+- inputText: ${output.openingAt}
+- hideKeyboard
+- tapOn:
+    id: futures-opening-wallet
+- eraseText: 20
+- inputText: "4000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate
+- inputText: "85"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-at-exact-toggle
+- tapOn:
+    id: futures-opening-rate-at
+- inputText: ${output.openingAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-source
+- inputText: "Synthetic rate"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-save-account
+    direction: DOWN
+- tapOn:
+    id: futures-save-account
+- scrollUntilVisible:
+    element:
+      text: "4000 USDT"
+    direction: UP
+- assertVisible: "4000 USDT"
+- scrollUntilVisible:
+    element:
+      id: futures-valuation-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-valuation-at-exact-toggle
+- tapOn:
+    id: futures-valuation-at
+- eraseText: 50
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet
+- inputText: "4000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-observed-wallet-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-observed-wallet-at-exact-toggle
+- tapOn:
+    id: futures-observed-wallet-at
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-wallet-source
+    direction: DOWN
+- tapOn:
+    id: futures-wallet-source
+- inputText: "Synthetic wallet"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate
+- inputText: "85"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-at-exact-toggle
+- tapOn:
+    id: futures-current-rate-at
+- inputText: ${output.valuationAt}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-current-rate-source
+    direction: DOWN
+- tapOn:
+    id: futures-current-rate-source
+- inputText: "Synthetic rate"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-positions-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-positions-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-events-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-events-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-boundary-confirmed
+    direction: DOWN
+- tapOn:
+    id: futures-boundary-confirmed
+- scrollUntilVisible:
+    element:
+      id: futures-save-valuation
+    direction: DOWN
+- tapOn:
+    id: futures-save-valuation
+- assertNotVisible:
+    id: futures-error
+- runFlow: crypto-allocation-review.yaml

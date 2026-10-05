@@ -84,6 +84,7 @@ export type DashboardState = {
   hasPortfolioRecords: boolean;
   futuresContributions: (UsdmPortfolioContribution & { accountId: string })[];
   futuresEquityInr: number | null;
+  ppfConfirmedBalance: number;
   instrumentAllocation: MetadataAllocationItem[];
   isRefreshing: boolean;
   maskWealthValues: boolean;
@@ -338,6 +339,7 @@ export function useDashboard({
   }
 
   return {
+    ppfConfirmedBalance: ppfSummary.confirmedBalance,
     allocation: calculateAllocation({
       cashBalance,
       holdings,

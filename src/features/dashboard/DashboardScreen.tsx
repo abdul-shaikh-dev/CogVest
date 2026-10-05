@@ -33,9 +33,7 @@ import {
 } from "@/src/domain/formatters";
 import { formatMonthYear } from "@/src/domain/dates";
 import {
-  decimal,
   normalizeMoney,
-  normalizePercentage,
   sumFinancialValues,
 } from "@/src/domain/precision";
 import type {
@@ -45,7 +43,7 @@ import type {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
-import type { Holding } from "@/src/types";
+import { calculateReportingAllocation, type ReportingAllocationClass } from "@/src/domain/calculations/reportingAllocation";
 
 import { useDashboard } from "./useDashboard";
 import { InsightCards } from "@/src/features/insights";
@@ -83,58 +81,7 @@ function formatUnsignedPercentage(value: number) {
   return formatPercentage(value).replace("+", "");
 }
 
-type DisplayAllocationClass = "cash" | "crypto" | "debt" | "equity" | "futures";
-
-type DisplayAllocationItem = {
-  assetClass: DisplayAllocationClass;
-  percentage: number | null;
-  value: number;
-};
-
-function toDisplayAllocation(
-  holdings: Holding[],
-  cashBalance: number,
-  futuresEquityInr: number | null,
-): DisplayAllocationItem[] {
-  if (futuresEquityInr === null || futuresEquityInr < 0 || holdings.some((holding) => holding.valuation.status === "pending")) {
-    return [];
-  }
-
-  const values = {
-    cash: decimal(cashBalance),
-    crypto: decimal(0),
-    debt: decimal(0),
-    equity: decimal(0),
-    futures: decimal(futuresEquityInr),
-  };
-
-  for (const holding of holdings) {
-    const displayClass =
-      holding.asset.assetClass === "stock" || holding.asset.assetClass === "etf"
-        ? "equity"
-        : holding.asset.assetClass;
-    values[displayClass] = values[displayClass].plus(
-      holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0,
-    );
-  }
-
-  const totalValue = sumFinancialValues(Object.values(values));
-
-  return (["equity", "debt", "crypto", "futures", "cash"] as const)
-    .map((assetClass) => ({
-      assetClass,
-      percentage:
-        totalValue.greaterThan(0)
-          ? normalizePercentage(
-              values[assetClass].dividedBy(totalValue).times(100),
-            )
-          : null,
-      value: normalizeMoney(values[assetClass]),
-    }));
-}
-
-function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
-  if (assetClass === "futures") return "Futures equity";
+function getDisplayAllocationLabel(assetClass: ReportingAllocationClass) {
   if (assetClass === "equity") {
     return "Equity";
   }
@@ -142,8 +89,7 @@ function getDisplayAllocationLabel(assetClass: DisplayAllocationClass) {
   return assetClassLabel(assetClass);
 }
 
-function getAllocationColor(colors: ThemeColors, assetClass: DisplayAllocationClass) {
-  if (assetClass === "futures") return colors.cryptoAmber;
+function getAllocationColor(colors: ThemeColors, assetClass: ReportingAllocationClass) {
   if (assetClass === "cash") {
     return colors.cashBlue;
   }
@@ -186,16 +132,18 @@ export function DashboardScreen({
   const currentDate = now ?? new Date();
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [showPerformance, setShowPerformance] = useState(false);
+  const [showCryptoBreakdown, setShowCryptoBreakdown] = useState(false);
   const { fontScale } = useWindowDimensions();
   const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now: currentDate, refreshQuotes, store });
   const isMinimalMode = dashboard.displayMode === "minimal";
-  useEffect(() => { setShowPerformance(false); }, [isMinimalMode]);
-  const displayAllocation = toDisplayAllocation(
-    dashboard.holdings,
-    dashboard.cashBalance,
-    dashboard.futuresEquityInr,
-  ).filter((item) => item.assetClass !== "futures" || dashboard.futuresContributions.length > 0);
+  useEffect(() => { setShowPerformance(false); setShowCryptoBreakdown(false); }, [isMinimalMode]);
+  const displayAllocation = calculateReportingAllocation({
+    holdings: dashboard.holdings,
+    cashBalance: dashboard.cashBalance,
+    futuresEquityInr: dashboard.futuresEquityInr,
+    ppfConfirmedBalance: dashboard.ppfConfirmedBalance,
+  });
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
   const positiveAllocationTotal = normalizeMoney(
     sumFinancialValues(positiveAllocation.map((item) => item.value)),
@@ -604,7 +552,7 @@ export function DashboardScreen({
               </Pressable>
             </View>
             <AppText color="secondary" testID="dashboard-allocation-scope" variant="caption">
-              Share of market holdings and cash · recorded PPF excluded
+              Share of portfolio value · includes recorded PPF and Futures equity
             </AppText>
             {hasNegativeCash ? (
               <AppText color="secondary" variant="caption">
@@ -621,7 +569,7 @@ export function DashboardScreen({
                     adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked,
                   ]}>
                     <View style={styles.allocationLegendLabel}>
-                      <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass === "futures" ? "crypto" : item.assetClass} size={20} />
+                      <CategoryIcon assetClass={item.assetClass === "equity" ? "stock" : item.assetClass} size={20} />
                       <AppText variant="body">
                         {getDisplayAllocationLabel(item.assetClass)}
                       </AppText>
@@ -649,6 +597,26 @@ export function DashboardScreen({
                         width: getAllocationWidth(item.value, positiveAllocationTotal),
                       }} />
                     </View>
+                  ) : null}
+                  {item.cryptoBreakdown && (item.value !== 0 || dashboard.futuresContributions.length > 0) ? (
+                    <>
+                      <DisclosureButton title="Spot / Futures" expanded={showCryptoBreakdown}
+                        onPress={() => setShowCryptoBreakdown(value => !value)} testID="dashboard-crypto-breakdown" />
+                      {showCryptoBreakdown ? (
+                        <View>
+                          {(["spot", "futures"] as const).map(kind => (
+                            <View key={kind} style={[styles.allocationLegendRow,
+                              adaptiveLayoutMode !== "standard" && styles.allocationHeaderStacked]}>
+                              <AppText color="secondary" variant="caption">{kind === "spot" ? "Spot" : "Futures wallet equity"}</AppText>
+                              <MaskedValue masked={dashboard.maskWealthValues}
+                                testID={`dashboard-crypto-${kind}`}
+                                exactValue={formatINR(item.cryptoBreakdown![kind])}
+                                value={formatCompactINR(item.cryptoBreakdown![kind])} />
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
+                    </>
                   ) : null}
                 </View>
               ))}
