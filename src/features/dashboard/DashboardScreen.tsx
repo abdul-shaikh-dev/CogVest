@@ -28,6 +28,7 @@ import {
 } from "@/src/components/common";
 import {
   formatCompactINR,
+  formatDate,
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
@@ -406,7 +407,7 @@ export function DashboardScreen({
           {dashboard.epfSummary.value === null ? <AppText color="secondary">EPF value unavailable. Review account evidence.</AppText> :
             <MaskedValue testID="dashboard-epf-value" value={formatCompactINR(dashboard.epfSummary.value)} exactValue={formatINR(dashboard.epfSummary.value)} masked={dashboard.maskWealthValues} />}
           {dashboard.epfSummary.accounts.map(account => <AppText key={account.accountId} color="secondary" variant="caption">
-            Last evidence {account.lastEvidenceDate}{account.historyComplete ? "" : " · later activity unconfirmed"}
+            {dashboard.epfAccountNames[account.accountId] ?? "EPF account"} · as of {formatDate(account.lastEvidenceDate)}{account.historyComplete ? "" : " · later activity unconfirmed"}
           </AppText>)}
           {!dashboard.investedCapitalComplete ? <AppText color="secondary">EPF invested capital is unknown. Portfolio P&amp;L is unavailable.</AppText> : null}
           {dashboard.epfSummary.inTransit ? <AppText color="secondary">Includes an EPF transfer in transit, counted once.</AppText> : null}
