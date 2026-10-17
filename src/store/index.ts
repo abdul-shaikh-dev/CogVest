@@ -1,4 +1,5 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { emptyEpfState, planEpfCommand, previewEpfAccountDeletion, validateEpfState, type EpfState, type EpfCommand } from "@/src/domain/epf/persistence";
 import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
@@ -116,12 +117,13 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 15;
+export const portfolioSchemaVersion = 16;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
 
 export type RawPortfolioSnapshot = {
+  epf: EpfState;
   assets: Asset[];
   cashEntries: CashEntry[];
   futuresAccounts: UsdmFuturesAccount[];
@@ -135,6 +137,8 @@ export type RawPortfolioSnapshot = {
 };
 
 export type PortfolioStoreState = RawPortfolioSnapshot & {
+  applyEpfCommand: (command: EpfCommand, expectedRevision: string) => "applied" | "alreadyApplied";
+  previewEpfAccountDeletion: (accountId: string) => ReturnType<typeof previewEpfAccountDeletion>;
   restoreEpoch: number;
   captureBackup: () => { payload: BackupPayload; revision: string };
   getBackupRevision: () => string;
@@ -514,6 +518,7 @@ export function createDefaultPreferences(): Preferences {
 
 export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
   return {
+    epf: emptyEpfState(),
     assets: [],
     cashEntries: [],
     futuresAccounts: [],
@@ -625,6 +630,7 @@ function migratePortfolioSnapshot(
 
   return {
     assets,
+    epf: stored.epf ?? emptyEpfState(),
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
     futuresAccounts: stored.futuresAccounts ?? [],
     monthlySnapshots: (stored.monthlySnapshots ?? []).map(
@@ -757,6 +763,7 @@ function selectRawSnapshot(
   state: PortfolioStoreState,
 ): RawPortfolioSnapshot {
   return {
+    epf: state.epf,
     assets: state.assets,
     cashEntries: state.cashEntries,
     futuresAccounts: state.futuresAccounts,
@@ -784,6 +791,7 @@ function persistPortfolioTransition(
   transition: Partial<RawPortfolioSnapshot>,
 ) {
   validateSplitInventory({ ...state, ...transition });
+  validateEpfState(transition.epf ?? state.epf, transition.cashEntries ?? state.cashEntries);
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
@@ -809,6 +817,8 @@ function isLinkedCashEntry(entry: CashEntry) {
   return (
     Boolean(entry.linkedTradeId) ||
     Boolean(entry.linkedFutures) ||
+    Boolean(entry.linkedEpf) ||
+    entry.purpose === "epfTransfer" ||
     entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||
     entry.purpose === "saleProceeds"
@@ -1895,6 +1905,27 @@ export function createPortfolioStore({
   const store = createStore<PortfolioStoreState>((set, get) => ({
     ...snapshot,
     restoreEpoch: 0,
+    previewEpfAccountDeletion: (accountId) => previewEpfAccountDeletion(get().epf, accountId),
+    applyEpfCommand: (command, expectedRevision) => {
+      const state = get();
+      assertBackupReady(state);
+      const plan = planEpfCommand(state.epf, state.cashEntries, command, now().toISOString());
+      if (plan.status === "alreadyApplied") return plan.status;
+      if (revision(state) !== expectedRevision) throw new Error("Your portfolio changed. Review the EPF change again.");
+      const affectedCashDates = [...state.cashEntries, ...plan.cashEntries]
+        .filter((entry) => entry.linkedEpf).map((entry) => entry.date.slice(0, 7)).sort();
+      const monthlySnapshots = affectedCashDates.length && JSON.stringify(plan.cashEntries) !== JSON.stringify(state.cashEntries)
+        ? refreshFuturesCashSnapshotHistory({ ...state, cashEntries: plan.cashEntries,
+          earliestAffectedMonth: affectedCashDates[0] }) : state.monthlySnapshots;
+      const transition = { epf: plan.epf, cashEntries: plan.cashEntries, monthlySnapshots };
+      // Enforce backup graph and collection limits before committing.
+      validateBackupPayload({ portfolio: { ...selectRawSnapshot(state), ...transition },
+        quoteCache: state.quoteCache, historicalQuoteCache: state.historicalQuoteCache,
+        casFolioSalt: storage.getRawItem(casFolioSaltStorageKey) });
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
+      return plan.status;
+    },
     getBackupRevision: () => {
       const state = get();
       assertBackupReady(state);

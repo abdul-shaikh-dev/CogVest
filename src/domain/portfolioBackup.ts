@@ -1,4 +1,5 @@
 import { hasCanonicalAssetConflict } from "@/src/domain/assets";
+import { emptyEpfState } from "@/src/domain/epf/persistence";
 import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
@@ -207,7 +208,7 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
 
 function validateGraph(payload: BackupPayload) {
   const { portfolio } = payload;
-  const sections: Array<readonly unknown[]> = [portfolio.assets, portfolio.cashEntries, portfolio.futuresAccounts, portfolio.monthlySnapshots, portfolio.openingPositions, portfolio.ppfAccounts, portfolio.ppfLedgerEntries, portfolio.trades];
+  const sections: Array<readonly unknown[]> = [portfolio.assets, portfolio.cashEntries, portfolio.futuresAccounts, portfolio.monthlySnapshots, portfolio.openingPositions, portfolio.ppfAccounts, portfolio.ppfLedgerEntries, portfolio.trades, portfolio.epf.accounts, portfolio.epf.events, portfolio.epf.cashLinks, portfolio.epf.audit];
   const futuresEvents = portfolio.futuresAccounts.reduce((sum, account) => sum + account.events.length, 0);
   if (sections.some((section) => section.length > portfolioBackupMaxRecords) || sections.reduce((sum, section) => sum + section.length, futuresEvents) > portfolioBackupMaxTotalRecords) fail("too many records");
   uniqueIds(portfolio.assets, "asset"); uniqueIds(portfolio.cashEntries, "cash entry"); uniqueIds(portfolio.monthlySnapshots, "snapshot");
@@ -252,7 +253,7 @@ function validateGraph(payload: BackupPayload) {
     requireDate(entry.date, "cash entry date");
     if (!entry.linkedTradeId &&
       entry.purpose !== "purchaseFunding" &&
-      entry.purpose !== "saleProceeds" && entry.purpose !== "futuresTransfer" &&
+      entry.purpose !== "saleProceeds" && entry.purpose !== "futuresTransfer" && entry.purpose !== "epfTransfer" &&
       (entry.type === "withdrawal" ? entry.purpose !== "withdrawal" : !["capitalContribution", "legacyUncategorized"].includes(entry.purpose))) fail("cash entry purpose is invalid");
   }
   validateCashLinks(portfolio.cashEntries, portfolio.trades);
@@ -298,9 +299,9 @@ function parsePayload(raw: unknown): BackupPayload {
   requireExactKeys(raw, ["portfolio", "quoteCache", "historicalQuoteCache", "casFolioSalt"], "payload");
   if (!isPlainObject(raw.portfolio) || !isPlainObject(raw.quoteCache) || !isPlainObject(raw.historicalQuoteCache) || (raw.casFolioSalt !== null && typeof raw.casFolioSalt !== "string")) fail("payload shape is invalid");
   const portfolioRaw = raw.portfolio;
-  if (![9, 10, 11, 12, 13, 14, 15].includes(portfolioRaw.schemaVersion as number)) fail("portfolio must be a complete supported snapshot");
+  if (![9, 10, 11, 12, 13, 14, 15, 16].includes(portfolioRaw.schemaVersion as number)) fail("portfolio must be a complete supported snapshot");
   const hasFuturesAccounts = (portfolioRaw.schemaVersion as number) >= 14;
-  requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
+  requireExactKeys(portfolioRaw, ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), ...(portfolioRaw.schemaVersion === 16 ? ["epf"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "schemaVersion", "trades"], "portfolio");
   if (!isPlainObject(portfolioRaw.preferences) || ["assets", "cashEntries", ...(hasFuturesAccounts ? ["futuresAccounts"] : []), "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "trades"].some((key) => !Array.isArray(portfolioRaw[key]))) fail("portfolio must be a complete supported snapshot");
   requireExactKeys(portfolioRaw.preferences, ["defaultChartRange", "displayMode", "hasCompletedOnboarding", "maskWealthValues", ...(Object.hasOwn(portfolioRaw.preferences, "appearance") ? ["appearance"] : []), ...(Object.hasOwn(portfolioRaw.preferences, "nudgeVersions") ? ["nudgeVersions"] : [])], "preferences");
   const parsed = parsePersistedPortfolio(JSON.stringify(portfolioRaw));
@@ -318,7 +319,7 @@ function parsePayload(raw: unknown): BackupPayload {
   }
   // Validate legacy classification before mapping; malformed direction must not be repaired.
   if ((parsed.data.cashEntries ?? []).some((entry) => entry.purpose === "income" && entry.type !== "addition")) fail("legacy income direction is invalid");
-  const portfolio = { ...parsed.data, cashEntries: (parsed.data.cashEntries ?? []).map(migrateInvestingCashEntry), monthlySnapshots: (parsed.data.monthlySnapshots ?? []).map(migrateInvestingSnapshot), futuresAccounts: parsed.data.futuresAccounts ?? [], schemaVersion: 15 } as RawPortfolioSnapshot;
+  const portfolio = { ...parsed.data, cashEntries: (parsed.data.cashEntries ?? []).map(migrateInvestingCashEntry), monthlySnapshots: (parsed.data.monthlySnapshots ?? []).map(migrateInvestingSnapshot), futuresAccounts: parsed.data.futuresAccounts ?? [], epf: parsed.data.epf ?? emptyEpfState(), schemaVersion: 16 } as RawPortfolioSnapshot;
   const payload: BackupPayload = { casFolioSalt: raw.casFolioSalt, historicalQuoteCache: historicalQuoteCache.data, portfolio, quoteCache: quoteCache.data };
   validateGraph(payload);
   return payload;
@@ -327,6 +328,8 @@ function parsePayload(raw: unknown): BackupPayload {
 /** Validates a detached live snapshot before the store can stage a replacement. */
 export function validateBackupPayload(input: unknown): BackupPayload {
   inspectBounds(input);
+  // Reserve envelope metadata space so accepted live changes remain exportable.
+  if (utf8Length(JSON.stringify(input)) > backupMaxBytes - 4096) fail("payload exceeds the supported backup size");
   const checked = parsePayload(input);
   return JSON.parse(JSON.stringify(checked)) as BackupPayload;
 }

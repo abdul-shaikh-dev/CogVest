@@ -7,7 +7,7 @@ type LegacySnapshot = MonthlySnapshot & { salary?: number; monthlyExpense?: numb
 
 /** Retire household metadata without rounding or reconstructing financial records. */
 export function migrateInvestingCashEntry(entry: LegacyCashEntry): CashEntry {
-  if (entry.purpose === "income" && (entry.type !== "addition" || entry.linkedTradeId || entry.linkedFutures)) {
+  if (entry.purpose === "income" && (entry.type !== "addition" || entry.linkedTradeId || entry.linkedFutures || entry.linkedEpf)) {
     throw new Error("Legacy income must be a Cash addition.");
   }
   return {

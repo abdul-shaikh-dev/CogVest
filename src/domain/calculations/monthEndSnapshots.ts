@@ -60,7 +60,8 @@ export function refreshFuturesCashSnapshotHistory({
   assets,
   cashEntries,
   earliestAffectedMonth = cashEntries
-    .filter((entry) => entry.purpose === "futuresTransfer" && entry.linkedFutures)
+    .filter((entry) => (entry.purpose === "futuresTransfer" && entry.linkedFutures) ||
+      (entry.purpose === "epfTransfer" && entry.linkedEpf))
     .map((entry) => entry.date.slice(0, 7)).sort()[0],
   monthlySnapshots,
   openingPositions,

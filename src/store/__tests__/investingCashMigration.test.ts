@@ -28,6 +28,7 @@ function fixture() {
   const expected = store.getState().captureBackup().payload;
   const legacy = JSON.parse(JSON.stringify(expected));
   legacy.portfolio.schemaVersion = 14;
+  delete legacy.portfolio.epf;
   legacy.portfolio.cashEntries[0].purpose = "income";
   legacy.portfolio.cashEntries[0].notes = "Salary money I chose to invest";
   expected.portfolio.cashEntries[0].notes = legacy.portfolio.cashEntries[0].notes;

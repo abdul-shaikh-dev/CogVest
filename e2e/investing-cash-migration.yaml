@@ -19,7 +19,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 120000
 - openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
-- assertVisible: "PASS: full payload preserved; schema 15"
+- assertVisible: "PASS: full payload preserved; schema 16"
 - assertVisible: "Futures: 1 linked transfer"
 - takeScreenshot: investing-cash-migration-payload
 - stopApp
@@ -30,7 +30,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 120000
 - openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
-- assertVisible: "PASS: full payload preserved; schema 15"
+- assertVisible: "PASS: full payload preserved; schema 16"
 - openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=cash"
 - assertVisible:
     id: cash-screen

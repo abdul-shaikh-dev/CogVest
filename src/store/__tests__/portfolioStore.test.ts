@@ -2470,6 +2470,7 @@ describe("portfolio store", () => {
     const persisted = storage.getItem(portfolioStorageKey);
 
     expect(persisted).toEqual({
+      epf: { accounts: [], events: [], cashLinks: [], audit: [] },
       assets: [asset],
       cashEntries: [cashEntry],
       futuresAccounts: [],
