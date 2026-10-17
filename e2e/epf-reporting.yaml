@@ -30,4 +30,13 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/epf-545/masked
 - openLink: "cogvest:///epf-reporting-qa?token=cogvest-local-visual-qa&mode=progress"
 - assertVisible: "EPF is not in monthly history"
+- scrollUntilVisible:
+    element:
+      id: progress-epf-month
+    direction: DOWN
+- assertVisible: "EPF at end of September 2026"
+- assertVisible:
+    id: progress-epf-month-value
+    text: "₹1,40,000.00"
+- assertVisible: "Last recorded balance; later activity is unconfirmed."
 - takeScreenshot: .expo/epf-545/history-scope
