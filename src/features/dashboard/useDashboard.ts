@@ -1,4 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
+import { summarizeEpfForReporting, includeEpfInPortfolioTotals, epfContributionsForMonth, type EpfReportingSummary } from "@/src/domain/epf/reporting";
+import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -74,6 +76,8 @@ export type DashboardMonthlyMetrics = {
 };
 
 export type DashboardState = {
+  epfSummary: EpfReportingSummary;
+  investedCapitalComplete: boolean;
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
@@ -192,7 +196,7 @@ function calculateMonthlyMetrics(
       )
       .map((entry) => (entry.type === "contribution" ? entry.amount : 0)),
   );
-  const totalInvestment = investment.plus(ppfInvestment);
+  const totalInvestment = investment.plus(ppfInvestment).plus(epfContributionsForMonth(state.epf, formatLocalCalendarDate(now)));
   return {
     cashAdded: normalizeMoney(cashAdded),
     cashChange: normalizeMoney(cashAdded.minus(cashWithdrawn)),
@@ -214,10 +218,11 @@ export function useDashboard({
     snapshot.quoteCache,
   );
   const asOf = formatLocalCalendarDate(now);
-  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
-    snapshot.ppfAccounts,
-    asOf,
-  );
+  // EPF-linked legacy holdings are replaced by the account value included below.
+  const linkedLegacyAssetIds = new Set([
+    ...getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf),
+    ...getLinkedLegacyEpfAssetIds(snapshot.epf.accounts, asOf),
+  ]);
   const supportedAssetIds = new Set(
     snapshot.assets
       .filter(
@@ -264,7 +269,7 @@ export function useDashboard({
     ? null : decimal(spotRollupTotals.totalCurrentValue).plus(futuresEquity);
   const combinedPnl = spotRollupTotals.pnl === null || pendingFutures.length
     ? null : decimal(spotRollupTotals.pnl).plus(futuresEquity).minus(futuresInvested);
-  const rollupTotals: PortfolioRollupTotals = {
+  const nonEpfRollupTotals: PortfolioRollupTotals = {
     ...spotRollupTotals,
     holdingsCurrentValue: spotRollupTotals.holdingsCurrentValue === null || pendingFutures.length
       ? null : normalizeMoney(decimal(spotRollupTotals.holdingsCurrentValue).plus(futuresEquity)),
@@ -283,6 +288,8 @@ export function useDashboard({
       valuedHoldings: spotRollupTotals.valuationCoverage.valuedHoldings + futuresContributions.length - pendingFutures.length,
     },
   };
+  const epfSummary = summarizeEpfForReporting(snapshot.epf, asOf);
+  const { totals: rollupTotals, capitalComplete: investedCapitalComplete } = includeEpfInPortfolioTotals(nonEpfRollupTotals, epfSummary);
   const quoteFreshness = summarizeQuoteFreshness(
     holdings
       .filter((holding) => holding.asset.assetClass !== "cash")
@@ -339,11 +346,14 @@ export function useDashboard({
   }
 
   return {
+    epfSummary,
+    investedCapitalComplete,
     ppfConfirmedBalance: ppfSummary.confirmedBalance,
     allocation: calculateAllocation({
       cashBalance,
       holdings,
       ppfConfirmedBalance: ppfSummary.confirmedBalance,
+      epfRecordedBalance: epfSummary.value,
     }),
     cashBalance,
     convictionReadiness: getConvictionReadiness(
@@ -359,7 +369,7 @@ export function useDashboard({
     holdings,
     futuresContributions,
     hasPortfolioRecords: [snapshot.cashEntries, snapshot.trades, snapshot.openingPositions,
-      snapshot.ppfAccounts, snapshot.ppfLedgerEntries, snapshot.futuresAccounts, snapshot.monthlySnapshots]
+      snapshot.ppfAccounts, snapshot.ppfLedgerEntries, snapshot.futuresAccounts, snapshot.monthlySnapshots, snapshot.epf.accounts]
       .some((records) => records.length > 0),
     futuresEquityInr: pendingFutures.length ? null : normalizeMoney(futuresEquity),
     instrumentAllocation: calculateInstrumentAllocation(holdings),

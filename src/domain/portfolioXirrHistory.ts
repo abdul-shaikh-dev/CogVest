@@ -1,15 +1,18 @@
 import { getCalendarDatePart, parseCalendarDate } from "./dates";
 import { decimal } from "./precision";
 import type { UsdmFuturesAccount } from "./usdmFutures";
+import type { EpfState } from "./epf/persistence";
 import type { Asset, CashEntry, OpeningPosition, PpfAccount, PpfLedgerEntry, Trade } from "@/src/types";
 
-export type XirrHistorySource = "portfolio" | "asset" | "cash" | "trade" | "opening" | "ppf" | "ppf-entry" | "futures";
+export type XirrHistorySource = "portfolio" | "asset" | "cash" | "trade" | "opening" | "ppf" | "ppf-entry" | "futures"
+  | "epf" | "epf-event";
 export type XirrHistoryReference = { source: XirrHistorySource; id: string };
 export type XirrHistoryGap = XirrHistoryReference & {
   reason: "history-not-confirmed" | "invalid-date" | "invalid-amount" | "duplicate-id"
     | "ambiguous-cash" | "unmatched-trade-cash" | "unlinked-trade"
     | "foreign-currency" | "missing-asset" | "opening-history"
-    | "asset-transfer-boundary" | "ppf-history-and-boundary" | "futures-history-and-boundary";
+    | "asset-transfer-boundary" | "ppf-history-and-boundary" | "futures-history-and-boundary"
+    | "epf-history-and-boundary";
 };
 
 export type PortfolioXirrHistoryInput = {
@@ -21,6 +24,8 @@ export type PortfolioXirrHistoryInput = {
   ppfAccounts: readonly PpfAccount[];
   ppfLedgerEntries: readonly PpfLedgerEntry[];
   futuresAccounts: readonly UsdmFuturesAccount[];
+  /** EPF is inside the whole-portfolio boundary; see docs/epf-accounting-contract.md. */
+  epf?: Pick<EpfState, "accounts" | "events">;
 };
 
 export type PortfolioXirrHistoryAudit = {
@@ -100,6 +105,9 @@ export function auditPortfolioXirrHistory(input: PortfolioXirrHistoryInput): Por
     } else if (entry.purpose === "futuresTransfer") {
       // Not an external flow merely because the monthly Progress report excludes Futures.
       gap(reference, "futures-history-and-boundary");
+    } else if (entry.purpose === "epfTransfer") {
+      // Paired EPF funding is internal only once EPF flows are complete inside the boundary.
+      gap(reference, "epf-history-and-boundary");
     } else gap(reference, "ambiguous-cash");
   }
 
@@ -129,6 +137,15 @@ export function auditPortfolioXirrHistory(input: PortfolioXirrHistoryInput): Por
   }
   for (const account of unique(input.futuresAccounts, "futures")) {
     gap({ source: "futures", id: account.id }, "futures-history-and-boundary");
+  }
+  // A checkpoint is a bounded-period opening value, never dated lifetime contributions.
+  for (const account of unique(input.epf?.accounts ?? [], "epf")) {
+    gap({ source: "epf", id: account.id }, "epf-history-and-boundary");
+  }
+  for (const event of unique(input.epf?.events ?? [], "epf-event")) {
+    if (effective(event.effectiveDate, { source: "epf-event", id: event.id })) {
+      gap({ source: "epf-event", id: event.id }, "epf-history-and-boundary");
+    }
   }
   result.recordedExternalCashFlows.sort((a, b) => a.date.localeCompare(b.date) || a.reference.id.localeCompare(b.reference.id));
   return result;

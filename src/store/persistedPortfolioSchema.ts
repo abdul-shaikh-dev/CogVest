@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { emptyEpfState, epfStateSchema, validateEpfState } from "@/src/domain/epf/persistence";
-import type { CashEntry } from "@/src/types";
+import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
+import type { Asset, CashEntry } from "@/src/types";
 
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
@@ -626,6 +627,7 @@ const persistedPortfolioSchema = z
     }
     try {
       validateEpfState(portfolio.epf ?? emptyEpfState(), (portfolio.cashEntries ?? []) as CashEntry[]);
+      validateEpfLegacyLinks((portfolio.epf ?? emptyEpfState()).accounts, (portfolio.assets ?? []) as Asset[]);
     } catch {
       context.addIssue({ code: "custom", message: "EPF records or Cash links are invalid.", path: ["epf"] });
     }

@@ -9,13 +9,15 @@ export function calculateReportingAllocation(input: {
   holdings: readonly Holding[];
   cashBalance: number;
   ppfConfirmedBalance: number;
+  epfRecordedBalance?: number | null;
   futuresEquityInr: number | null;
 }) {
-  if (input.futuresEquityInr === null || input.futuresEquityInr < 0 ||
+  const epf = input.epfRecordedBalance === undefined ? 0 : input.epfRecordedBalance;
+  if (epf === null || !Number.isFinite(epf) || epf < 0 || input.futuresEquityInr === null || input.futuresEquityInr < 0 ||
       ![input.cashBalance, input.ppfConfirmedBalance, input.futuresEquityInr].every(Number.isFinite) ||
       input.holdings.some(holding => holding.valuation.status === "pending")) return [];
   const values = {
-    equity: decimal(0), debt: decimal(input.ppfConfirmedBalance),
+    equity: decimal(0), debt: decimal(input.ppfConfirmedBalance).plus(epf),
     crypto: decimal(input.futuresEquityInr), cash: decimal(input.cashBalance),
   };
   let spotCrypto = decimal(0);

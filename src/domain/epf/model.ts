@@ -39,6 +39,8 @@ export const epfAccountSchema = z.object({
     recordedAt: timestamp,
   }).strict(),
   historyCompleteThrough: epfDateSchema.nullable(),
+  // Explicit link to a manually entered EPF-like holding. Never matched by name.
+  legacyAssetId: id.optional(),
 }).strict().refine(
   (account) => account.historyCompleteThrough === null ||
     account.historyCompleteThrough >= account.checkpoint.date,

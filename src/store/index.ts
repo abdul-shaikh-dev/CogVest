@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { emptyEpfState, planEpfCommand, previewEpfAccountDeletion, validateEpfState, type EpfState, type EpfCommand } from "@/src/domain/epf/persistence";
+import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
@@ -342,7 +343,7 @@ export type AssetCorrectionResult =
       status: "applied";
     })
   | {
-      reason: "duplicateIdentity" | "invalidAsset" | "notFound";
+      reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "notFound";
       status: "rejected";
     };
 
@@ -361,7 +362,7 @@ export type AssetDeletionResult =
       impact: AssetDeletionImpact;
       status: "applied";
     })
-  | { reason: "insufficientCash" | "notFound" | "linkedDemerger"; status: "rejected" };
+  | { reason: "insufficientCash" | "notFound" | "linkedDemerger" | "linkedEpf"; status: "rejected" };
 
 export type ManualCashDeletionResult =
   | { entry: CashEntry; status: "applied" }
@@ -792,6 +793,7 @@ function persistPortfolioTransition(
 ) {
   validateSplitInventory({ ...state, ...transition });
   validateEpfState(transition.epf ?? state.epf, transition.cashEntries ?? state.cashEntries);
+  validateEpfLegacyLinks((transition.epf ?? state.epf).accounts, transition.assets ?? state.assets);
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
@@ -2461,6 +2463,11 @@ export function createPortfolioStore({
       const asset = normalizeAssetMetadata({ ...input, ...(existingAsset.stockSplits ? { stockSplits: existingAsset.stockSplits } : {}), ...(existingAsset.demerger ? { demerger: existingAsset.demerger } : {}) });
       if ((existingAsset.demerger || state.assets.some((item) => item.demerger?.childAssetId === existingAsset.id)) &&
           (asset.isin !== existingAsset.isin || asset.currency !== existingAsset.currency || asset.assetClass !== existingAsset.assetClass)) return { reason: "invalidAsset", status: "rejected" };
+      try {
+        validateEpfLegacyLinks(state.epf.accounts, state.assets.map((item) => (item.id === asset.id ? asset : item)));
+      } catch {
+        return { reason: "linkedEpf", status: "rejected" };
+      }
       if (!hasValidAssetIdentity(asset)) {
         return { reason: "invalidAsset", status: "rejected" };
       }
@@ -2748,6 +2755,7 @@ export function createPortfolioStore({
       const asset = state.assets.find((item) => item.id === assetId);
       if (!asset) return { reason: "notFound", status: "rejected" };
       if (asset.demerger || state.assets.some((item) => item.demerger?.childAssetId === assetId)) return { reason: "linkedDemerger", status: "rejected" };
+      if (state.epf.accounts.some((account) => account.legacyAssetId === assetId)) return { reason: "linkedEpf", status: "rejected" };
 
       const removedTrades = state.trades.filter(
         (trade) => trade.assetId === assetId,

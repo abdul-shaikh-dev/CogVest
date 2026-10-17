@@ -272,7 +272,9 @@ export function HoldingImportScreen(props: HoldingImportScreenProps) {
         <PremiumCard elevated testID="holding-import-summary">
           <SectionHeader title="Portfolio after import" />
           <View style={styles.summaryGrid}>
-            <Summary label="Invested" masked={masked} value={formatINR(controller.plan.summary.resultingInvested)} />
+            <Summary label="Invested" masked={masked && controller.plan.summary.resultingInvestedComplete}
+              value={controller.plan.summary.resultingInvestedComplete
+                ? formatINR(controller.plan.summary.resultingInvested) : "Unknown"} />
             <Summary
               label="Current"
               masked={

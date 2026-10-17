@@ -207,4 +207,38 @@ describe("EPF durable account records", () => {
     restarted.getState().resetAffectedStorage();
     expect(restarted.getState().epf).toEqual(emptyEpfState());
   });
+
+  test("legacy holding links are explicit, validated, durable and protect the linked holding", async () => {
+    const { store, storage, apply } = harness();
+    store.getState().addAsset({ id: "legacy", name: "Old EPF", symbol: "EPF", ticker: "EPF", assetClass: "debt", currency: "INR", instrumentType: "other" });
+    store.getState().addAsset({ id: "stock", name: "Stock", symbol: "S", ticker: "S.NS", assetClass: "stock", currency: "INR", instrumentType: "stock" });
+    const raw = storage.getRawItem(portfolioStorageKey);
+    expect(() => apply({ type: "accountPut", account: { ...account(), legacyAssetId: "stock" } })).toThrow();
+    expect(() => apply({ type: "accountPut", account: { ...account(), legacyAssetId: "missing" } })).toThrow();
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(raw);
+    expect(store.getState().epf.accounts).toEqual([]);
+
+    apply({ type: "accountPut", account: { ...account(), legacyAssetId: "legacy" } });
+    expect(() => apply({ type: "accountPut", account: { ...account("b"), legacyAssetId: "legacy" } })).toThrow();
+    expect(store.getState().deleteAsset("legacy")).toEqual({ reason: "linkedEpf", status: "rejected" });
+    expect(store.getState().assets.some((asset) => asset.id === "legacy")).toBe(true);
+    const legacy = store.getState().assets.find((asset) => asset.id === "legacy")!;
+    expect(store.getState().correctAsset({ ...legacy, assetClass: "stock", instrumentType: "stock" })).toEqual({ reason: "linkedEpf", status: "rejected" });
+    expect(store.getState().correctAsset({ ...legacy, name: "Old employer EPF" }).status).toBe("applied");
+    expect(createPortfolioStore({ storage, now }).getState().epf.accounts[0].legacyAssetId).toBe("legacy");
+
+    const text = await createPortfolioBackup(store.getState().captureBackup().payload,
+      { appVersion: "1.0.24", createdAt: now().toISOString() }, digest);
+    const parsed = await parsePortfolioBackup(text, digest);
+    const destination = harness();
+    destination.store.getState().replaceFromBackup(parsed.payload, destination.store.getState().getBackupRevision());
+    expect(destination.store.getState().epf.accounts[0].legacyAssetId).toBe("legacy");
+
+    const dangling = JSON.parse(JSON.stringify(parsed.payload));
+    dangling.portfolio.assets = dangling.portfolio.assets.filter((asset: { id: string }) => asset.id !== "legacy");
+    const target = harness();
+    const before = target.store.getState();
+    expect(() => target.store.getState().replaceFromBackup(dangling, target.store.getState().getBackupRevision())).toThrow();
+    expect(target.store.getState()).toBe(before);
+  });
 });

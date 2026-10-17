@@ -100,6 +100,33 @@ known remaining capital does not establish dated lifetime contribution flows.
 Likewise unknown lifetime capital need not block a future bounded-period return
 using an evidenced opening value and complete subsequent flows.
 
+## Reporting and history scope (#545)
+
+Current wealth includes recorded EPF value once, in Debt. Dashboard, Quick
+Setup and the holdings CSV import summary share this scope. Unknown EPF capital
+makes aggregate invested capital "Unknown" and P&L unavailable. Holdings
+totals are market plus PPF and are labelled as market scope; they never add EPF.
+
+Stored monthly snapshots exclude EPF and are not rewritten. Progress labels
+them "ex. EPF". Month-end EPF values are derived on demand from current
+evidence (`buildEpfMonthlyHistory`) and shown separately for the selected
+month. Nothing is persisted, so corrections and deletions restate only that
+view and can never trigger a snapshot rebuild. Months before the earliest
+checkpoint are not emitted. Each completed month is `confirmed` (every account
+covered with confirmed-complete history), `lastRecorded` (a carried value), or
+`partial` (some account has no checkpoint; total unavailable, not zero).
+Monthly contributions, credited interest, withdrawals and reconciliation are
+reported separately; tracked EPF transfers are never a flow and in-transit
+money is disclosed. A reversal offsets its original in the reversal's month.
+
+A legacy EPF-like holding is linked only explicitly through `legacyAssetId`
+on its EPF account; nothing is matched by name. The holding must be an INR
+`debt` or `other` instrument (or untyped `debt`), linked to at most one
+account, and cannot be deleted while linked. From the account checkpoint date
+the account value replaces the holding in EPF-inclusive totals. The holding
+itself is kept and still appears in Holdings and in stored snapshots, which
+exclude EPF, so it is never counted twice. The link editor ships with #546.
+
 ## XIRR event map for #533
 
 | Event | Per-account | Investments / Whole-portfolio |
@@ -116,6 +143,9 @@ using an evidenced opening value and complete subsequent flows.
 
 Investor-sign convention is negative for contributions and positive for
 withdrawals. No solver or production XIRR input builder is implemented here.
+The whole-portfolio history audit reports every EPF account, effective event
+and EPF-linked Cash entry as `epf-history-and-boundary`, so EPF is blocked
+explicitly rather than omitted or read as an external deposit.
 Tracked Cash linkage is deliberately not accepted as a bare string: #544/#533
 must validate both records and their values before treating such a withdrawal
 as an internal transfer. Until then record destination as unknown rather than
