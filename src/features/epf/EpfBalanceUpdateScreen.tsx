@@ -1,6 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { BackHandler, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { BackHandler, KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -13,9 +12,6 @@ import {
   ScreenHeader,
   SectionHeader,
   SensitiveValueReveal,
-  androidRipple,
-  getPressedStateStyle,
-  minimumTouchTargetStyle,
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
@@ -23,9 +19,10 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { calculateEpfLedger } from "@/src/domain/epf";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { spacing, createThemedStyles, useTheme } from "@/src/theme";
+import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 import { applyEpfChange } from "./EpfAccountScreen";
+import { EpfCheckRow } from "./EpfCheckRow";
 import {
   buildEpfBalanceUpdate,
   draftTotal,
@@ -49,7 +46,6 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const { colors } = useTheme();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const account = snapshot.epf.accounts.find((item) => item.id === accountId);
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
@@ -229,22 +225,9 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
               testIDPrefix="epf-update-evidence" value={evidence} />
             <FormTextField error={errors.reason} inputRef={(node) => { inputRefs.current.reason = node; }}
               label="Reason" onChangeText={(value) => update("reason", value)} testID="epf-update-reason-input" value={draft.reason} />
-            <Pressable
-              accessibilityLabel="All activity up to this date is recorded"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: historyComplete }}
-              android_ripple={androidRipple()}
-              onPress={() => setHistoryComplete((checked) => !checked)}
-              style={({ pressed }) => [styles.checkRow, getPressedStateStyle({ pressed })]}
-              testID="epf-update-history-complete"
-            >
-              <Ionicons color={historyComplete ? colors.primary : colors.text.secondary}
-                name={historyComplete ? "checkbox" : "square-outline"} size={22} />
-              <View style={styles.flex}>
-                <AppText>All activity up to this date is recorded</AppText>
-                <AppText color="secondary" variant="caption">Lets Progress treat month ends up to this date as confirmed.</AppText>
-              </View>
-            </Pressable>
+            <EpfCheckRow checked={historyComplete} helper="Lets Progress treat month ends up to this date as confirmed."
+              label="All activity up to this date is recorded" onToggle={() => setHistoryComplete((checked) => !checked)}
+              testID="epf-update-history-complete" />
           </PremiumCard>
           {message ? <AppText selectable style={styles.error}>{message}</AppText> : null}
           <View style={styles.actions}>
@@ -269,7 +252,6 @@ function Detail({ label, testID, value }: { label: string; testID?: string; valu
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
-  checkRow: { ...minimumTouchTargetStyle, alignItems: "center", flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.xs },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
   flex: { flex: 1 },

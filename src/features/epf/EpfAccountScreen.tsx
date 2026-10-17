@@ -31,7 +31,7 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
-import type { EpfAccount, EpfEvent } from "@/src/domain/epf";
+import type { EpfAccount } from "@/src/domain/epf";
 import type { EpfChange } from "@/src/domain/epf/persistence";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
 import { formatDate, formatINR } from "@/src/domain/formatters";
@@ -53,6 +53,7 @@ import {
   type EpfAccountField,
   type EpfFieldErrors,
 } from "./epfAccountForm";
+import { eventAmountLabel, eventTitle } from "./epfEntryForm";
 
 type EpfAccountScreenProps = {
   accountId?: string;
@@ -60,6 +61,7 @@ type EpfAccountScreenProps = {
   onBack: () => void;
   onComplete: (accountId: string) => void;
   onUpdateBalance: (accountId: string) => void;
+  onOpenEntry?: (accountId: string, entryId?: string) => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -79,24 +81,13 @@ export function applyEpfChange(
   }
 }
 
-function eventLabel(event: EpfEvent) {
-  switch (event.type) {
-    case "reconciliation": return "Balance update";
-    case "contribution": return event.party === "employee" ? "Employee contribution" : "Employer contribution";
-    case "interest": return "Official interest";
-    case "withdrawal": return "Withdrawal";
-    case "externalTransferIn": return "Transfer in";
-    case "transfer": return "Transfer between accounts";
-    case "reversal": return "Provider reversal";
-  }
-}
-
 export function EpfAccountScreen({
   accountId,
   now = new Date(),
   onBack,
   onComplete,
   onUpdateBalance,
+  onOpenEntry,
   store = getPortfolioStore(),
 }: EpfAccountScreenProps) {
   const styles = useStyles();
@@ -146,16 +137,18 @@ export function EpfAccountScreen({
 
   return (
     <EpfAccountDetail account={existing as EpfAccount} now={now} onBack={onBack}
-      onEdit={() => setIsEditing(true)} onUpdateBalance={() => onUpdateBalance((existing as EpfAccount).id)} store={store} />
+      onEdit={() => setIsEditing(true)} onUpdateBalance={() => onUpdateBalance((existing as EpfAccount).id)}
+      onOpenEntry={onOpenEntry ? (entryId) => onOpenEntry((existing as EpfAccount).id, entryId) : undefined} store={store} />
   );
 }
 
-function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, store }: {
+function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpenEntry, store }: {
   account: EpfAccount;
   now: Date;
   onBack: () => void;
   onEdit: () => void;
   onUpdateBalance: () => void;
+  onOpenEntry?: (entryId?: string) => void;
   store: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
@@ -242,10 +235,14 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, store
                 value={masked ? MASKED_INR_VALUE : formatINR(account.checkpoint.balance.total)} />
               {events.map((event) => (
                 <GroupedListRow key={event.id} meta={formatDate(event.effectiveDate)} testID={`epf-event-${event.id}`}
-                  title={eventLabel(event)}
-                  value={event.type === "reconciliation" ? (masked ? MASKED_INR_VALUE : formatINR(event.balance.total)) : undefined} />
+                  accessibilityLabel={`${eventTitle(event)}, ${formatDate(event.effectiveDate)}${masked ? "" : `, ${eventAmountLabel(event, account.id)}`}`}
+                  onPress={onOpenEntry ? () => onOpenEntry(event.id) : undefined} showChevron title={eventTitle(event)}
+                  value={masked ? MASKED_INR_VALUE : eventAmountLabel(event, account.id)} />
               ))}
             </View>
+          ) : null}
+          {onOpenEntry ? (
+            <AppButton onPress={() => onOpenEntry()} testID="add-epf-entry" title="Add entry" variant="secondary" />
           ) : null}
         </PremiumCard>
 
