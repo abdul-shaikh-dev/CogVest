@@ -960,7 +960,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   balanceCard: { gap: spacing.sm },
   balanceHeading: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  balanceValue: { fontSize: 34 },
+  // A matching line height keeps comma descenders visible at this size.
+  balanceValue: { fontSize: 34, lineHeight: 42 },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   detailRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between", minHeight: interaction.minimumTouchTarget },
   detailValue: { flex: 1, textAlign: "right" },
