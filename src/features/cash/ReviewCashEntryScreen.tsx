@@ -118,6 +118,15 @@ export function ReviewCashEntryScreen({
   }
 
   if (isLinkedCashEntry(entry)) {
+    if (entry.linkedEpf) {
+      return <ScreenContainer testID="review-cash-entry-screen"><View style={styles.content}>
+        <ScreenHeader title="Review Cash Entry" subtitle="Linked EPF movement" />
+        <PremiumCard>
+          <AppText color="secondary">This Cash movement is paired with an EPF record. It cannot be edited separately. EPF account editing will be available with the EPF account screens.</AppText>
+        </PremiumCard>
+        <AppButton title="Back to Cash Ledger" variant="secondary" onPress={onCancel} />
+      </View></ScreenContainer>;
+    }
     if (entry.linkedFutures) {
       const account = snapshot.futuresAccounts.find((item) => item.id === entry.linkedFutures?.accountId);
       const transfer = account?.events.find((item) => item.id === entry.linkedFutures?.eventId);

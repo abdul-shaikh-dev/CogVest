@@ -43,6 +43,14 @@ function createStore(entry: CashEntry = manualEntry) {
 }
 
 describe("ReviewCashEntryScreen", () => {
+  it("protects an EPF Cash counterpart without claiming a missing investment trade", () => {
+    const { store } = createStore();
+    store.setState({ cashEntries: [{ ...manualEntry, purpose: "epfTransfer", linkedEpf: { accountId: "epf", eventId: "event" } }] });
+    const screen = render(<ReviewCashEntryScreen entryId={manualEntry.id} onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    expect(screen.getByText("Linked EPF movement")).toBeTruthy();
+    expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
+    expect(screen.queryByText("Linked transaction unavailable")).toBeNull();
+  });
   it("keeps existing notes visible and saves them when the editor is collapsed", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();

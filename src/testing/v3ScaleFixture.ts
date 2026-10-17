@@ -157,6 +157,7 @@ export function createV3ScaleFixture(): V3ScaleFixture {
     ]),
   );
   const portfolio: RawPortfolioSnapshot = {
+    epf: { accounts: [], events: [], cashLinks: [], audit: [] },
     assets,
     cashEntries: [],
     futuresAccounts: [],
