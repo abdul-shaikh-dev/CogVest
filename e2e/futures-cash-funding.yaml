@@ -30,6 +30,10 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///futures"
 - tapOn:
     id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at
+    direction: DOWN
 - tapOn:
     id: futures-opening-at
 - eraseText: 50
@@ -49,6 +53,10 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: futures-cash-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-cash-at
+    direction: DOWN
 - tapOn:
     id: futures-cash-at
 - eraseText: 50
@@ -84,6 +92,10 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: futures-cash-rate-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-at
+    direction: DOWN
 - tapOn:
     id: futures-cash-rate-at
 - inputText: ${output.fundingAt}

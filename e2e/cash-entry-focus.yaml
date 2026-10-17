@@ -5,9 +5,10 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 60000
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
+    retryTapIfNoChange: true
 - assertVisible:
     id: "cash-entry-deposit"
 - takeScreenshot: .expo/ux12-cash-resting

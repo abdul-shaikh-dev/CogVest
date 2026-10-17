@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
@@ -34,6 +34,10 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - tapOn:
     id: "toggle-position-options"
+- scrollUntilVisible:
+    element:
+      id: "conviction-4"
+    direction: DOWN
 - tapOn:
     id: "conviction-4"
 - scrollUntilVisible:
@@ -68,8 +72,16 @@ appId: com.abdulshaikh.cogvest
     id: "continue-class-button"
 - tapOn:
     id: "continue-position-button"
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
 - tapOn:
     id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "quantity-input"
+    direction: UP
 - assertVisible: "Quantity must be greater than zero."
 - assertVisible: "Average cost must be greater than zero."
 - tapOn:

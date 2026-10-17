@@ -1,10 +1,11 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
+- launchApp:
+    clearState: true
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
@@ -26,7 +27,8 @@ appId: com.abdulshaikh.cogvest
     id: "holding-duration-screen"
 - assertVisible: "HDFC Bank"
 - assertVisible: "More than 12 months recorded"
-- assertVisible: "Acquired.*2024.*elapsed days"
+- assertVisible: "[0-9]+ days recorded"
+- assertVisible: "Acquired .*2024"
 - assertVisible: "Nifty 50 ETF"
 - assertVisible: "Comparison unavailable"
 - tapOn:

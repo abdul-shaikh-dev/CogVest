@@ -2,8 +2,10 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
     retryTapIfNoChange: true
@@ -41,11 +43,11 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "${output.currentLocalDate}"
 - scrollUntilVisible:
     element:
-      text: "Tap to review or correct"
+      text: 'Review Broker cash\..*'
     direction: DOWN
 - waitForAnimationToEnd
 - tapOn:
-    text: "Review Broker cash"
+    text: 'Review Broker cash\..*'
     retryTapIfNoChange: true
 - assertVisible:
     id: "review-cash-entry-screen"
@@ -64,5 +66,5 @@ appId: com.abdulshaikh.cogvest
     id: "confirm-delete-cash-entry-button"
 - assertVisible:
     id: "cash-screen"
-- assertNotVisible: "Tap to review or correct"
+- assertNotVisible: 'Review Broker cash\..*'
 - assertVisible: "No cash movement yet"

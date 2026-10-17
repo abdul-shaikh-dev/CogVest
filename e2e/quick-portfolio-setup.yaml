@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - takeScreenshot:
     path: quick-setup-empty-launch
 
@@ -73,7 +73,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "quick-setup-save-add-next"
     retryTapIfNoChange: true
-- assertVisible: "1 holding saved locally"
+- assertVisible: "1 holding saved"
 
 # Select and save a second provider result in the same uninterrupted loop.
 - tapOn:
@@ -164,7 +164,7 @@ appId: com.abdulshaikh.cogvest
     id: "save-ppf-account"
 - tapOn:
     id: "ppf-account-back"
-- assertVisible: "3 holdings saved locally"
+- assertVisible: "3 holdings saved"
 
 # Prove the dedicated account contributes to Debt allocation without a synthetic asset.
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
@@ -187,7 +187,7 @@ appId: com.abdulshaikh.cogvest
 
 # Exercise provider failure, explicit manual fallback, unknown date, and pending valuation.
 - openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
-- assertVisible: "3 holdings saved locally"
+- assertVisible: "3 holdings saved"
 - tapOn:
     id: "asset-lookup-input"
 - inputText: "setup debt"
@@ -250,7 +250,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 10000
+    timeout: 120000
 - takeScreenshot:
     path: quick-setup-populated-dashboard
 

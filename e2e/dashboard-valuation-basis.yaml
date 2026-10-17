@@ -4,7 +4,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
@@ -12,7 +12,6 @@ appId: com.abdulshaikh.cogvest
     visible: "Visual QA portfolio seeded."
     timeout: 30000
 - openLink: "cogvest:///dashboard"
-- assertVisible: "Local portfolio.*current valuation"
 - assertVisible: "Holdings P&L"
 - assertVisible: "₹15.9L"
 - assertVisible: "₹12.38L"

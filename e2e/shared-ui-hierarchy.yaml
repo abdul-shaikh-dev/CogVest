@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
@@ -39,7 +39,8 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux15-cash
 - tapOn:
     id: tab-settings
-- assertVisible: "Local-first controls"
+- assertVisible:
+    id: settings-screen
 - assertNotVisible: "Local only"
 - assertVisible:
     id: value-mask-toggle

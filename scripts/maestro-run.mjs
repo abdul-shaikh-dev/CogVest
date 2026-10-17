@@ -157,6 +157,25 @@ for (const flow of flows) {
   }
 }
 
+// Android 15+ blocks network for apps behind another activity, such as the
+// system file picker. A debug build then loses its Metro Fast Refresh socket and
+// shows a warning banner over bottom-of-screen actions. Allowlisting the app
+// from background network restrictions keeps that socket open; it does not
+// change app behaviour under test and is reset by reinstalling the app.
+const allowlistAdbPath = findExecutable("adb");
+if (allowlistAdbPath) {
+  const allowlist = run(allowlistAdbPath, [
+    "shell",
+    "dumpsys",
+    "deviceidle",
+    "whitelist",
+    "+com.abdulshaikh.cogvest",
+  ]);
+  if (allowlist.status !== 0) {
+    console.log("WARN unable to exempt CogVest from background network restrictions");
+  }
+}
+
 for (const flow of flows) {
   if (flow.replaceAll("\\", "/") === holdingsCsvFlow) {
     const adbPath = findExecutable("adb");

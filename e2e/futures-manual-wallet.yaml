@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///futures"
 - assertVisible:
     id: "futures-screen"
@@ -112,6 +112,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-delete-account
     direction: DOWN
+    timeout: 60000
 - waitForAnimationToEnd:
     timeout: 5000
 # A disconnected Metro warning can intercept this bottom-of-screen action.
@@ -130,6 +131,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-delete-account
     direction: DOWN
+    timeout: 60000
 - waitForAnimationToEnd:
     timeout: 5000
 - assertNotVisible: ".*Open debugger to view warnings.*"

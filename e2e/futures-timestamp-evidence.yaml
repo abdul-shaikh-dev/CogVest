@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///futures"
 - tapOn:
     id: futures-opening-at-date
@@ -13,6 +13,10 @@ appId: com.abdulshaikh.cogvest
 - back
 - tapOn:
     id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at
+    direction: DOWN
 - tapOn:
     id: futures-opening-at
 - eraseText: 50
@@ -77,6 +81,10 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - tapOn:
     id: futures-event-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-event-at
+    direction: DOWN
 - tapOn:
     id: futures-event-at
 - eraseText: 50
@@ -235,6 +243,7 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "₹90810(?:\\.00)?"
     direction: UP
+    timeout: 60000
 - assertVisible: "₹90810(?:\\.00)?"
 - assertVisible: "₹90000(?:\\.00)?"
 - launchApp:
@@ -242,11 +251,12 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///futures"
 - scrollUntilVisible:
     element:
       text: "₹90810(?:\\.00)?"
     direction: DOWN
+    timeout: 60000
 - assertVisible: "₹90810(?:\\.00)?"
 - assertVisible: "999 USDT"

@@ -2,8 +2,10 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - openLink: "cogvest:///add-holding"
 - assertVisible:
     id: "add-holding-screen"
@@ -49,6 +51,10 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - tapOn:
     id: "toggle-position-options"
+- scrollUntilVisible:
+    element:
+      id: "conviction-4"
+    direction: DOWN
 - tapOn:
     id: "conviction-4"
 - tapOn:

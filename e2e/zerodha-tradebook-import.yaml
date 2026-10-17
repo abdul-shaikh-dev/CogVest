@@ -5,7 +5,9 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
+# The system picker remembers its last folder and view; start it fresh.
+- clearState: com.google.android.documentsui
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace with visual QA data"
@@ -28,17 +30,17 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
-- tapOn: "Show roots"
-- extendedWaitUntil:
-    visible: "Downloads"
-    timeout: 5000
-- tapOn:
-    text: "Downloads"
-    retryTapIfNoChange: true
+- runFlow: standalone/helpers/open-downloads.yaml
 - extendedWaitUntil:
     visible: "zerodha-tradebook-2024.csv"
     timeout: 10000
 - tapOn: "zerodha-tradebook-2024.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: "transaction-import-preflight"
@@ -50,28 +52,31 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "transaction-import-mode-full-history"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "transaction-import-mode-full-history"
+    selected: true
 - scrollUntilVisible:
     element:
       id: "select-transaction-csv"
     direction: UP
 - tapOn:
     id: "select-transaction-csv"
-- tapOn: "Show roots"
-- extendedWaitUntil:
-    visible: "Downloads"
-    timeout: 5000
-- tapOn:
-    text: "Downloads"
-    retryTapIfNoChange: true
+- runFlow: standalone/helpers/open-downloads.yaml
 - extendedWaitUntil:
     visible: "zerodha-tradebook-2025.csv"
     timeout: 10000
 - tapOn: "zerodha-tradebook-2025.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: "transaction-import-shared-cutover"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - tapOn:
     id: "transaction-import-shared-cutover"
@@ -80,7 +85,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "transaction-import-no-external-activity"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - tapOn:
     id: "transaction-import-no-external-activity"
@@ -89,6 +93,10 @@ appId: com.abdulshaikh.cogvest
       id: "transaction-import-dry-run"
     direction: DOWN
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-summary-conflicts"
+    direction: DOWN
 - assertVisible:
     id: "transaction-import-summary-additions"
     text: "2"
@@ -144,9 +152,14 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
-- tapOn: "Show roots"
-- tapOn: "Downloads"
+- runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: "zerodha-tradebook-2024.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: "transaction-import-preflight"
@@ -158,20 +171,28 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "transaction-import-mode-full-history"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "transaction-import-mode-full-history"
+    selected: true
 - scrollUntilVisible:
     element:
       id: "select-transaction-csv"
     direction: UP
 - tapOn:
     id: "select-transaction-csv"
-- tapOn: "Show roots"
-- tapOn: "Downloads"
+- runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: "zerodha-tradebook-2025.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: "transaction-import-no-external-activity"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - tapOn:
     id: "transaction-import-no-external-activity"
@@ -180,17 +201,23 @@ appId: com.abdulshaikh.cogvest
       id: "transaction-import-dry-run"
     direction: DOWN
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-summary-conflicts"
+    direction: DOWN
 - assertVisible:
     id: "transaction-import-summary-additions"
     text: "0"
 - assertVisible:
     id: "transaction-import-summary-duplicates"
     text: "3"
+# All rows are duplicates, so the import stays disabled; the button sits at
+# the end of the page and cannot be centred.
 - scrollUntilVisible:
     element:
       id: "confirm-transaction-import"
+      enabled: false
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - extendedWaitUntil:

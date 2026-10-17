@@ -9,8 +9,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Imported transaction count: 2"
 - assertVisible: "Cash entry count: 4"
 - assertVisible: "Opening position count: 4"
+# The synthetic CAS uses a real AMFI ISIN, so it adds a new fund rather than
+# matching the seeded Sample Equity Fund.
 - scrollUntilVisible:
     element:
-      id: e2e-asset-samplefund-values
+      id: e2e-asset-inf209k01yy7-values
     direction: DOWN
 - assertVisible: "Values: invested .*1,200.00.*quantity 12"

@@ -2,10 +2,13 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
+    retryTapIfNoChange: true
 - tapOn:
     id: "cash-entry-deposit"
 - tapOn:
@@ -23,9 +26,11 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-cash-entry-button"
 - assertVisible: "₹1,000.00"
-- openLink: "cogvest:///add-trade"
-- assertVisible:
-    id: "add-trade-screen"
+# Add Holding records an opening position (no Cash effect); Record a purchase
+# is the Cash-funded buy, so only the 2 x 100 purchase reduces Cash.
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: "toggle-manual-asset-entry"
 - tapOn:
     id: "asset-input"
 - inputText: "Accounting Test Asset"
@@ -37,32 +42,68 @@ appId: com.abdulshaikh.cogvest
     id: "ticker-input"
 - inputText: "ACCT.NS"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: "quantity-input"
-    direction: DOWN
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
 - tapOn:
     id: "quantity-input"
-- inputText: "2"
-- pressKey: BACK
+- inputText: "1"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "50"
 - tapOn:
     id: "price-input"
 - inputText: "100"
-- pressKey: BACK
+- hideKeyboard
 - scrollUntilVisible:
     element:
-      id: "review-trade-button"
+      id: "review-holding-button"
     direction: DOWN
 - tapOn:
-    id: "review-trade-button"
-- assertVisible: "Total: ₹200.00"
+    id: "review-holding-button"
 - scrollUntilVisible:
     element:
-      id: "save-trade-button"
+      id: "save-holding-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "save-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///cash"
+- assertVisible: "₹1,000.00"
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-add-button
+- tapOn:
+    id: record-purchase-option
+- tapOn:
+    id: "existing-asset-.*"
+- tapOn:
+    id: purchase-quantity
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: purchase-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-review-button
     direction: DOWN
 - tapOn:
-    id: "save-trade-button"
-- assertVisible: "Holding saved."
+    id: purchase-review-button
+- assertVisible:
+    id: purchase-cash-debit
+    text: "₹200.00"
+- tapOn:
+    id: purchase-confirm
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
 - tapOn:
     id: "tab-cash"
 - assertVisible: "₹800.00"
