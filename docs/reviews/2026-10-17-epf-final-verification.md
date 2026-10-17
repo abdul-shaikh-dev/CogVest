@@ -79,8 +79,11 @@ route, EPF flows and one Dashboard label. They split into:
   a6b01fb), `trade-correction` and `asset-correction` (new "Add or update an
   investment" chooser, 24dffaf), `add-holding-pending-valuation`.
 - Environment: the Android file picker reopening in a remembered folder for
-  `holdings-csv-import` and `zerodha-tradebook-import`, and Gboard's stylus
-  sheet before it was disabled.
+  `holdings-csv-import` and `zerodha-tradebook-import`, Gboard's stylus
+  sheet before it was disabled, and the debug client's Metro connection
+  dropping after the system file picker returns, which raises the
+  development warning banner in `cas-native-import` and
+  `futures-manual-wallet`.
 
 These flows are being brought up to date in a separate PR so this one stays
 EPF-only.
