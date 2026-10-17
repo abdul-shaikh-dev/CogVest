@@ -57,6 +57,7 @@ type DashboardScreenProps = {
   now?: Date;
   onAddTrade?: () => void;
   onOpenHoldings?: () => void;
+  onOpenEpf?: () => void;
   onOpenProgress?: () => void;
   onOpenInsight?: (kind: InsightKind) => void;
   onQuickSetup?: () => void;
@@ -120,6 +121,7 @@ export function DashboardScreen({
   now,
   onAddTrade,
   onOpenHoldings,
+  onOpenEpf,
   onOpenProgress,
   onOpenInsight,
   onQuickSetup,
@@ -410,7 +412,8 @@ export function DashboardScreen({
           {dashboard.epfSummary.inTransit ? <AppText color="secondary">Includes an EPF transfer in transit, counted once.</AppText> : null}
           {dashboard.epfSummary.reasons.some(reason => reason.endsWith(":unknownWithdrawalDestination") || reason.endsWith(":untrackedTransferOrigin")) ?
             <AppText color="secondary">Some EPF movements have an unconfirmed origin or destination.</AppText> : null}
-          <AppText color="secondary" variant="caption">Included in Debt. EPF history is not included in Progress yet.</AppText>
+          <AppText color="secondary" variant="caption">Included in Debt. Progress shows EPF month-end values separately.</AppText>
+          {onOpenEpf ? <AppButton onPress={onOpenEpf} testID="dashboard-open-epf" title="View EPF accounts" variant="ghost" /> : null}
         </PremiumCard> : null}
 
         {dashboard.futuresContributions.length ? <PremiumCard testID="dashboard-futures-status">

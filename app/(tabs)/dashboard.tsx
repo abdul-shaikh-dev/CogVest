@@ -15,6 +15,9 @@ export default function DashboardScreen() {
       onOpenHoldings={() => {
         router.navigate("/(tabs)/holdings");
       }}
+      onOpenEpf={() => {
+        router.navigate({ pathname: "/(tabs)/holdings", params: { destination: "epf" } });
+      }}
       onOpenProgress={() => {
         router.navigate("/(tabs)/progress");
       }}

@@ -200,6 +200,8 @@ function RootContents() {
               />
               <Stack.Screen name="ppf-account" options={{ headerShown: false }} />
               <Stack.Screen name="ppf-entry" options={{ headerShown: false }} />
+              <Stack.Screen name="epf-account" options={{ headerShown: false }} />
+              <Stack.Screen name="epf-update" options={{ headerShown: false }} />
               <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen name="investing-cash-qa" options={{ headerShown: false }} />
