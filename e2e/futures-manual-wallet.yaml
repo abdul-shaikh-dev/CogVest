@@ -21,12 +21,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-add-event"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-add-event"
 - scrollUntilVisible:
     element:
       id: "futures-quantity"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-quantity"
 - inputText: "1"
@@ -35,6 +37,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-price"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-price"
 - inputText: "100"
@@ -43,6 +46,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-fee"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-fee"
 - eraseText: 10
@@ -52,6 +56,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-leverage"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-leverage"
 - inputText: "10"
@@ -60,21 +65,25 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-save-event"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-save-event"
 - scrollUntilVisible:
     element:
       text: "999 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element: "Edit"
     direction: DOWN
+    timeout: 60000
 - tapOn: "Edit"
 - scrollUntilVisible:
     element:
       id: "futures-price"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-price"
 - eraseText: 20
@@ -84,12 +93,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "futures-save-event"
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: "futures-save-event"
 - scrollUntilVisible:
     element:
       text: "Qty 1.*Entry 120 USDT.*"
     direction: UP
+    timeout: 60000
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
 - openLink: "cogvest:///backup?mode=export"
 - assertVisible: "This backup contains sensitive financial information and is not encrypted."
@@ -126,6 +137,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element: "999 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:
@@ -148,6 +160,7 @@ appId: com.abdulshaikh.cogvest
 - scrollUntilVisible:
     element: ${output.backupName}
     direction: DOWN
+    timeout: 60000
 - tapOn: ${output.backupName}
 - extendedWaitUntil:
     visible:
@@ -158,6 +171,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: continue-restore-confirmation
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: continue-restore-confirmation
 - tapOn:
@@ -175,11 +189,13 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "999 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:
       text: "Qty 1.*Entry 120 USDT.*"
     direction: DOWN
+    timeout: 60000
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
 - launchApp:
     clearState: false
@@ -193,11 +209,13 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "999 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:
       text: "Qty 1.*Entry 120 USDT.*"
     direction: DOWN
+    timeout: 60000
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
 - waitForAnimationToEnd:
     timeout: 5000

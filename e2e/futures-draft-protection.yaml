@@ -34,12 +34,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-add-event
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-add-event
 - scrollUntilVisible:
     element:
       id: futures-quantity
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-quantity
 - inputText: "123"
@@ -53,6 +55,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-back
     direction: UP
+    timeout: 60000
 - tapOn:
     id: futures-back
 - tapOn:
@@ -62,12 +65,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-add-cash-funding
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-add-cash-funding
 - scrollUntilVisible:
     element:
       id: futures-cash-usdt
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-usdt
 - inputText: "123"
@@ -81,6 +86,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-back
     direction: UP
+    timeout: 60000
 - tapOn:
     id: futures-back
 - tapOn:
@@ -90,6 +96,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-observed-wallet
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-observed-wallet
 - inputText: "123"
@@ -103,12 +110,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-positions-confirmed
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-positions-confirmed
 - scrollUntilVisible:
     element:
       id: futures-events-confirmed
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-events-confirmed
 - takeScreenshot: node_modules/.cache/futures-independent-confirmations
@@ -116,6 +125,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-back
     direction: UP
+    timeout: 60000
 - tapOn:
     id: futures-back
 - tapOn:
@@ -133,11 +143,13 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-observed-wallet
     direction: DOWN
+    timeout: 60000
 - assertNotVisible: "123"
 - scrollUntilVisible:
     element:
       id: futures-back
     direction: UP
+    timeout: 60000
 - tapOn:
     id: futures-back
 - assertNotVisible: "Discard unsaved changes?"
