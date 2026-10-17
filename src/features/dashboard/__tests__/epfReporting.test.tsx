@@ -39,7 +39,7 @@ test.each(["standard", "minimal"] as const)("shows EPF evidence, unknown basis a
   const screen = render(<DashboardScreen store={store} now={epfReportingDate} />);
   expect(within(screen.getByTestId("dashboard-allocation-debt")).getByLabelText("₹2,00,000.00")).toBeTruthy();
   expect(screen.getByTestId("dashboard-epf-value").props.accessibilityLabel).toBe("₹1,40,000.00");
-  expect(screen.getByText("Last evidence 2026-01-01 · later activity unconfirmed")).toBeTruthy();
+  expect(screen.getByText("EPF · as of 01 Jan 2026 · later activity unconfirmed")).toBeTruthy();
   if (displayMode === "minimal") fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
   expect(screen.getByText("Unknown")).toBeTruthy();
   expect(screen.getAllByText("Unavailable")).toHaveLength(2);

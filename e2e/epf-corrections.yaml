@@ -1,0 +1,116 @@
+appId: com.abdulshaikh.cogvest
+---
+# Withdrawal into tracked Cash, deleting it, and a cancelled draft, through the
+# real screens on an isolated synthetic database; persisted state re-read each step.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-entries"
+- tapOn:
+    id: epf-accounts-qa-seed-entries
+- assertVisible: "PASS: seeded Acme 140000 and Beta 0"
+
+# Withdrawal of 5,000 into tracked Cash.
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      id: add-epf-entry
+    direction: DOWN
+- tapOn:
+    id: add-epf-entry
+- tapOn:
+    id: epf-entry-kind-picker
+- tapOn:
+    id: epf-entry-kind-withdrawal
+- tapOn:
+    id: epf-entry-amount-input
+- inputText: "5000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-entry-destination-picker
+    direction: DOWN
+- tapOn:
+    id: epf-entry-destination-picker
+- tapOn:
+    id: epf-entry-destination-cash
+- scrollUntilVisible:
+    element:
+      id: review-epf-entry
+    direction: DOWN
+- tapOn:
+    id: review-epf-entry
+- assertVisible: "Your tracked Cash increases by ₹5,000.00. Both records are saved together."
+- takeScreenshot: .expo/epf-547/withdrawal-review
+- tapOn:
+    id: save-epf-entry
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,35,000.00"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=state"
+- tapOn:
+    id: epf-accounts-qa-state
+- assertVisible: "STATE: EPF 135000; moving 0; entries 1; Cash 5000; links 1"
+
+# Delete the withdrawal; its linked Cash entry goes with it.
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      id: epf-activity-toggle
+    direction: DOWN
+- tapOn:
+    id: epf-activity-toggle
+- scrollUntilVisible:
+    element:
+      text: "Withdrawal"
+    direction: DOWN
+- tapOn: "Withdrawal"
+- scrollUntilVisible:
+    element:
+      id: delete-epf-entry
+    direction: DOWN
+- tapOn:
+    id: delete-epf-entry
+- assertVisible: ".*linked Cash entry is removed too.*"
+- tapOn:
+    id: confirm-delete-epf-entry
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=state"
+- tapOn:
+    id: epf-accounts-qa-state
+- assertVisible: "STATE: EPF 140000; moving 0; entries 0; Cash 0; links 0"
+
+# A cancelled draft saves nothing.
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      id: add-epf-entry
+    direction: DOWN
+- tapOn:
+    id: add-epf-entry
+- tapOn:
+    id: epf-entry-amount-input
+- inputText: "1200"
+- hideKeyboard
+- back
+- assertVisible: "Discard this entry?"
+- tapOn:
+    id: discard-epf-entry
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=state"
+- tapOn:
+    id: epf-accounts-qa-state
+- assertVisible: "STATE: EPF 140000; moving 0; entries 0; Cash 0; links 0"
+
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"

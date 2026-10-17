@@ -1,0 +1,70 @@
+appId: com.abdulshaikh.cogvest
+---
+# Run manually with the emulator font scale raised (adb shell settings put
+# system font_scale 1.3); restore 1.0 afterwards. Not part of the default suite.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-matrix"
+- tapOn:
+    id: epf-accounts-qa-seed-matrix
+- assertVisible: "PASS: seeded EPF 142567 with 50000 moving"
+
+# dark · standard · values shown
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=detail&appearance=dark&mode=standard&masked=0"
+- assertVisible:
+    id: epf-account-total
+- assertVisible: "₹92,567.00"
+- takeScreenshot: .expo/epf-547/large-text/dark-standard-shown-detail
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=holdings&appearance=dark&mode=standard&masked=0"
+- assertVisible:
+    id: holdings-epf-section
+- assertVisible: "₹1,42,567.00"
+- takeScreenshot: .expo/epf-547/large-text/dark-standard-shown-holdings
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=dashboard&appearance=dark&mode=standard&masked=0"
+- scrollUntilVisible:
+    element:
+      id: dashboard-epf-status
+    direction: DOWN
+- assertVisible: "EPF recorded balances"
+- assertVisible: "Includes an EPF transfer in transit, counted once."
+- takeScreenshot: .expo/epf-547/large-text/dark-standard-shown-dashboard
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=progress&appearance=dark&mode=standard&masked=0"
+- assertVisible: "EPF is not in monthly history"
+- takeScreenshot: .expo/epf-547/large-text/dark-standard-shown-progress
+
+# light · minimal · masked
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=detail&appearance=light&mode=minimal&masked=1"
+- assertVisible:
+    id: epf-account-total
+- assertVisible: "Amount hidden"
+- assertNotVisible: "₹92,567.00"
+- takeScreenshot: .expo/epf-547/large-text/light-minimal-masked-detail
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=holdings&appearance=light&mode=minimal&masked=1"
+- assertVisible:
+    id: holdings-epf-section
+- assertNotVisible: "₹1,42,567.00"
+- takeScreenshot: .expo/epf-547/large-text/light-minimal-masked-holdings
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=dashboard&appearance=light&mode=minimal&masked=1"
+- scrollUntilVisible:
+    element:
+      id: dashboard-epf-status
+    direction: DOWN
+- assertVisible: "EPF recorded balances"
+- assertVisible: "Includes an EPF transfer in transit, counted once."
+- takeScreenshot: .expo/epf-547/large-text/light-minimal-masked-dashboard
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=matrix&screen=progress&appearance=light&mode=minimal&masked=1"
+- assertVisible: "EPF is not in monthly history"
+- takeScreenshot: .expo/epf-547/large-text/light-minimal-masked-progress
+
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"

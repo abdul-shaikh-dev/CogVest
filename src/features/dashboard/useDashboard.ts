@@ -77,6 +77,7 @@ export type DashboardMonthlyMetrics = {
 
 export type DashboardState = {
   epfSummary: EpfReportingSummary;
+  epfAccountNames: Record<string, string>;
   investedCapitalComplete: boolean;
   allocation: AllocationItem[];
   cashBalance: number;
@@ -347,6 +348,7 @@ export function useDashboard({
 
   return {
     epfSummary,
+    epfAccountNames: Object.fromEntries(snapshot.epf.accounts.map((account) => [account.id, account.nickname])),
     investedCapitalComplete,
     ppfConfirmedBalance: ppfSummary.confirmedBalance,
     allocation: calculateAllocation({
