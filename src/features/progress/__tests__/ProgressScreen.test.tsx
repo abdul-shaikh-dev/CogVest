@@ -43,6 +43,11 @@ test("explicitly scopes stored history when EPF is included on Dashboard", () =>
     historicalPriceFetcher={async () => ({ ok: false, error: "No synthetic provider" })} />);
   expect(view.getByTestId("progress-epf-scope")).toBeTruthy();
   expect(view.getByText("EPF is not in monthly history")).toBeTruthy();
+  expect(view.getByText("EPF at end of September 2026")).toBeTruthy();
+  expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,40,000.00");
+  expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent("Last recorded balance; later activity is unconfirmed.");
+  act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+  expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("Amount hidden");
   view.unmount();
   qa.mockRestore();
 });

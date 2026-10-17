@@ -116,6 +116,26 @@ describe("whole-portfolio XIRR history preflight", () => {
     expect(result.gaps.map(({ reason }) => reason)).toEqual(expect.arrayContaining(["opening-history", "ppf-history-and-boundary", "futures-history-and-boundary"]));
   });
 
+  it("blocks EPF checkpoints, events and paired Cash instead of omitting or treating them as deposits", () => {
+    const epfAccount = { id: "epf", nickname: "EPF", provider: "epfo" as const, status: "active" as const,
+      currency: "INR" as const, historyCompleteThrough: null, checkpoint: { date: "2025-01-01",
+        balance: { total: 140000, components: null }, capital: null, source: "epfoStatement" as const,
+        recordedAt: "2025-01-02T00:00:00Z" } };
+    const contribution = { id: "employee", accountId: "epf", type: "contribution" as const, party: "employee" as const,
+      amount: 1200, effectiveDate: "2025-02-01", postedDate: "2025-02-01", recordedAt: "2025-02-02T00:00:00Z", evidence: "Passbook" };
+    const result = auditPortfolioXirrHistory(input({
+      epf: { accounts: [epfAccount], events: [contribution, { ...contribution, id: "future", effectiveDate: "2026-06-01" }] },
+      cashEntries: [{ ...funding, linkedTradeId: undefined, purpose: "epfTransfer", amount: 1200, linkedEpf: { accountId: "epf", eventId: "employee" } }],
+    }));
+    expect(result.recordedExternalCashFlows).toEqual([]);
+    expect(result.gaps).toEqual(expect.arrayContaining([
+      { source: "epf", id: "epf", reason: "epf-history-and-boundary" },
+      { source: "epf-event", id: "employee", reason: "epf-history-and-boundary" },
+      { source: "cash", id: "funding", reason: "epf-history-and-boundary" },
+    ]));
+    expect(result.gaps).not.toContainEqual(expect.objectContaining({ id: "future" }));
+  });
+
   it("retains decimal facts and leaves the caller's records unchanged", () => {
     const records = input({ cashEntries: [{ ...deposit, amount: 1234.56 }, withdrawal], trades: [buy] });
     const before = JSON.stringify(records);

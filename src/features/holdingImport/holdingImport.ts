@@ -6,6 +6,8 @@ import {
   calculatePortfolioRollupTotals,
 } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
+import { includeEpfInPortfolioTotals, summarizeEpfForReporting } from "@/src/domain/epf/reporting";
 import type { ParsedHoldingsCsvRow } from "@/src/domain/holdingsCsv";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import {
@@ -43,6 +45,8 @@ export type HoldingsCsvPlan = {
     pendingValuations: number;
     resultingCurrentValue: number | null;
     resultingInvested: number;
+    /** False when unknown EPF capital makes resultingInvested only a subtotal. */
+    resultingInvestedComplete: boolean;
     updates: number;
   };
 };
@@ -336,27 +340,31 @@ export function buildHoldingsCsvImportPlan({
   }
 
   const asOf = formatLocalCalendarDate(now);
-  const linkedLegacyPpfAssetIds = getLinkedLegacyPpfAssetIds(
-    state.ppfAccounts,
-    asOf,
-  );
+  const linkedLegacyAssetIds = new Set([
+    ...getLinkedLegacyPpfAssetIds(state.ppfAccounts, asOf),
+    ...getLinkedLegacyEpfAssetIds(state.epf.accounts, asOf),
+  ]);
   const holdings = calculateHoldings({
     assets,
     openingPositions,
     quoteCache,
     trades: state.trades,
-  }).filter((holding) => !linkedLegacyPpfAssetIds.has(holding.asset.id));
+  }).filter((holding) => !linkedLegacyAssetIds.has(holding.asset.id));
   const cashBalance = calculateCashBalance(state.cashEntries, now);
   const ppfSummary = calculatePpfPortfolioSummary({
     accounts: state.ppfAccounts,
     asOf,
     entries: state.ppfLedgerEntries,
   });
-  const totals = calculatePortfolioRollupTotals(
-    calculateConsolidatedHoldingRows(holdings),
-    cashBalance,
-    holdings,
-    ppfSummary,
+  // Same EPF scope as Dashboard; unknown EPF capital is not shown as invested.
+  const { totals, capitalComplete } = includeEpfInPortfolioTotals(
+    calculatePortfolioRollupTotals(
+      calculateConsolidatedHoldingRows(holdings),
+      cashBalance,
+      holdings,
+      ppfSummary,
+    ),
+    summarizeEpfForReporting(state.epf, asOf),
   );
 
   return {
@@ -367,6 +375,7 @@ export function buildHoldingsCsvImportPlan({
       pendingValuations: totals.valuationCoverage.pendingHoldings,
       resultingCurrentValue: totals.totalCurrentValue,
       resultingInvested: totals.totalInvested,
+      resultingInvestedComplete: capitalComplete,
       updates,
     },
   };

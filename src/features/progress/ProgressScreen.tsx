@@ -45,6 +45,7 @@ import type { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { interaction, radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
+import { EpfHistoryScope } from "./EpfHistoryScope";
 import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
@@ -1704,10 +1705,8 @@ export function ProgressScreen({
           <AppText weight="bold">Futures are not in monthly history</AppText>
           <AppText color="secondary" variant="caption">These stored month-end values exclude manual futures accounts. Current dashboard totals can include a reconciled futures wallet; past snapshots are not reconstructed from today's mark price or INR rate.</AppText>
         </PremiumCard> : null}
-        {epfAccountCount > 0 ? <PremiumCard testID="progress-epf-scope">
-          <AppText weight="bold">EPF is not in monthly history</AppText>
-          <AppText color="secondary" variant="caption">Dashboard includes recorded EPF balances. This history excludes EPF; earlier balances are not inferred from today's recorded value.</AppText>
-        </PremiumCard> : null}
+        <EpfHistoryScope maskWealthValues={progress.preferences.maskWealthValues}
+          month={selectedSummary?.snapshot.month} now={now} store={store} />
         {selectedSummary ? (
           <>
             <View style={styles.monthlyAnswer} testID="progress-monthly-answer">

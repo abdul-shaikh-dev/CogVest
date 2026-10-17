@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
 import { summarizeEpfForReporting, includeEpfInPortfolioTotals, epfContributionsForMonth, type EpfReportingSummary } from "@/src/domain/epf/reporting";
+import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -217,10 +218,11 @@ export function useDashboard({
     snapshot.quoteCache,
   );
   const asOf = formatLocalCalendarDate(now);
-  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
-    snapshot.ppfAccounts,
-    asOf,
-  );
+  // EPF-linked legacy holdings are replaced by the account value included below.
+  const linkedLegacyAssetIds = new Set([
+    ...getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf),
+    ...getLinkedLegacyEpfAssetIds(snapshot.epf.accounts, asOf),
+  ]);
   const supportedAssetIds = new Set(
     snapshot.assets
       .filter(

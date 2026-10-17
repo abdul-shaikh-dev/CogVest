@@ -9,6 +9,7 @@ import { createPortfolioStore } from "@/src/store";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
 import type { ParsedHoldingsCsvRow } from "@/src/domain/holdingsCsv";
 import { buildE2ePortfolioEvidence } from "@/src/testing/e2eEvidence";
+import { createEpfReportingFixture, epfReportingDate } from "@/src/testing/epfReportingFixture";
 
 const row: ParsedHoldingsCsvRow = {
   averageCost: 1450,
@@ -109,8 +110,24 @@ describe("holdings CSV import planning", () => {
       pendingValuations: 0,
       resultingCurrentValue: 41956.25,
       resultingInvested: 36250,
+      resultingInvestedComplete: true,
       updates: 0,
     });
+  });
+
+  it("projects the same EPF scope as Dashboard without claiming unknown EPF capital", () => {
+    const store = createEpfReportingFixture();
+    const asset = assetFromLookupResult(lookup);
+    const plan = buildHoldingsCsvImportPlan({
+      batchId: "csv-epf",
+      now: epfReportingDate,
+      resolutions: [{
+        allowExistingUpdate: false, asset, candidates: [lookup], row, status: "ready",
+        quote: { asOf: "2026-10-05T09:00:00.000Z", assetId: asset.id, currency: "INR", price: 1600, source: "yahoo" },
+      }],
+      state: store.getState(),
+    });
+    expect(plan.summary).toMatchObject({ resultingCurrentValue: 240000, resultingInvestedComplete: false });
   });
 
   it("blocks duplicate rows, transaction history, and unconfirmed updates", () => {

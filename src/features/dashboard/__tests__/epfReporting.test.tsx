@@ -18,6 +18,21 @@ test("EPF + PPF + Debt is 200000 once, with unknown capital and no snapshot muta
   expect(result.current.investedCapitalComplete).toBe(true);
 });
 
+test("a linked legacy EPF holding is replaced by its account without deleting the holding", () => {
+  const store = createEpfReportingFixture();
+  store.getState().addAsset({ id: "legacy-epf", name: "Old EPF", symbol: "EPF", ticker: "EPF",
+    assetClass: "debt", currency: "INR", instrumentType: "other" });
+  store.getState().addOpeningPosition({ id: "legacy-opening", assetId: "legacy-epf", date: "2025-06-01",
+    quantity: 1, averageCostPrice: 130000, currentPrice: 140000 });
+  const total = (now: Date) => renderHook(() => useDashboard({ store, now })).result.current.totalValue;
+  expect(total(epfReportingDate)).toBe(340000);
+  const account = store.getState().epf.accounts[0];
+  act(() => store.getState().applyEpfCommand({ commandId: "link", reason: "Link old EPF holding",
+    change: { type: "accountPut", account: { ...account, legacyAssetId: "legacy-epf" } } }, store.getState().getBackupRevision()));
+  expect(total(epfReportingDate)).toBe(200000);
+  expect(store.getState().assets.some((asset) => asset.id === "legacy-epf")).toBe(true);
+});
+
 test.each(["standard", "minimal"] as const)("shows EPF evidence, unknown basis and masking in %s mode", displayMode => {
   const store = createEpfReportingFixture();
   store.getState().updatePreferences({ displayMode });
