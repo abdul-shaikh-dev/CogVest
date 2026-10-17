@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -35,6 +35,9 @@ import {
 } from "@/src/components/common";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
+import { epfProviderLabel, epfStatusLabel } from "@/src/features/epf/epfAccountForm";
 import { instrumentTypeLabel, sectorTypeLabel } from "@/src/domain/assets";
 import {
   formatCompactINR,
@@ -77,6 +80,9 @@ type HoldingsScreenProps = {
   onAddTrade?: () => void;
   onRecordPurchase?: (assetId?: string) => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
+  onAddEpfAccount?: () => void;
+  /** A new object requests that destination once, e.g. from the Dashboard EPF card. */
+  destinationRequest?: { destination: HoldingsDestination };
   onOpenFutures?: () => void;
   onImportHoldings?: () => void;
   onImportTransactions?: () => void;
@@ -84,6 +90,7 @@ type HoldingsScreenProps = {
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
   onReviewPpfAccount?: (accountId: string) => void;
+  onReviewEpfAccount?: (accountId: string) => void;
   onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
   onQuickSetup?: () => void;
@@ -111,6 +118,8 @@ export function HoldingsScreen({
   onAddTrade,
   onRecordPurchase,
   onAddPpfAccount,
+  onAddEpfAccount,
+  destinationRequest,
   onOpenFutures,
   onImportHoldings,
   onImportTransactions,
@@ -118,6 +127,7 @@ export function HoldingsScreen({
   onReviewAllTrades,
   onReviewOpeningPosition,
   onReviewPpfAccount,
+  onReviewEpfAccount,
   onReviewTrades,
   onSellRedeem,
   onQuickSetup,
@@ -134,9 +144,11 @@ export function HoldingsScreen({
   const [activePanel, setActivePanel] = useState<
     "add" | "insights" | "more" | "quotes"
   >();
-  const [selectedDestination, setSelectedDestination] = useState<
-    "market" | "ppf"
-  >("market");
+  const [selectedDestination, setSelectedDestination] =
+    useState<HoldingsDestination>(destinationRequest?.destination ?? "market");
+  useEffect(() => {
+    if (destinationRequest) setSelectedDestination(destinationRequest.destination);
+  }, [destinationRequest]);
   const scrollRef = useRef<ScrollView>(null);
   const detailScrollRef = useRef<ScrollView>(null);
   const detailScrollOffset = useRef(0);
@@ -192,11 +204,16 @@ export function HoldingsScreen({
   const hasMarketHoldings = marketHoldings.length > 0;
   const hasPpfDestination =
     ppfSummary.accounts.length > 0 || legacyPpfHoldings.length > 0;
-  const activeDestination = hasMarketHoldings
-    ? hasPpfDestination
-      ? selectedDestination
-      : "market"
-    : "ppf";
+  const epfState = useSyncExternalStore(store.subscribe, () => store.getState().epf, () => store.getState().epf);
+  const epfAsOf = formatLocalCalendarDate(observedAt);
+  const epfSummary = useMemo(() => summarizeEpfForReporting(epfState, epfAsOf), [epfState, epfAsOf]);
+  const hasEpfDestination = epfState.accounts.length > 0;
+  const destinations = (["market", "ppf", "epf"] as const).filter((destination) =>
+    destination === "market" ? hasMarketHoldings
+      : destination === "ppf" ? hasPpfDestination : hasEpfDestination);
+  const activeDestination: HoldingsDestination = (destinations as readonly HoldingsDestination[]).includes(selectedDestination)
+    ? selectedDestination
+    : destinations[0] ?? "market";
   function selectDestination(destination: HoldingsDestination) {
     if (destination === activeDestination) return;
     Keyboard.dismiss();
@@ -213,7 +230,7 @@ export function HoldingsScreen({
           (Math.abs(gesture.dy) > 12 && Math.abs(gesture.dy) >= Math.abs(gesture.dx))) {
         verticalGesture.current = true;
       }
-      return hasMarketHoldings && hasPpfDestination && !activePanel &&
+      return destinations.length > 1 && !activePanel &&
         !selectedAssetId && !verticalGesture.current && gesture.numberActiveTouches === 1 &&
         isHorizontalIntent(gesture.dx, gesture.dy);
     },
@@ -225,8 +242,8 @@ export function HoldingsScreen({
     },
     onPanResponderTerminate: () => { verticalGesture.current = true; },
     onPanResponderRelease: (_, gesture) => {
-      const destination = destinationAfterSwipe(gesture.dx, gesture.dy);
-      if (destination && !verticalGesture.current && hasMarketHoldings && hasPpfDestination &&
+      const destination = destinationAfterSwipe(gesture.dx, gesture.dy, destinations, activeDestination);
+      if (destination && !verticalGesture.current && destinations.length > 1 &&
           !activePanel && !selectedAssetId) selectDestination(destination);
     },
     onPanResponderTerminationRequest: () => true,
@@ -253,7 +270,7 @@ export function HoldingsScreen({
       : summary.bestReturn;
   const exposureSegments = getExposureSegments(allocationItems);
   const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
-  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"}${ppfRecordCount > 0 ? ` · PPF ${ppfRecordCount}` : ""}`;
+  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"}${ppfRecordCount > 0 ? ` · PPF ${ppfRecordCount}` : ""}${hasEpfDestination ? ` · EPF ${epfState.accounts.length}` : ""}`;
   const quoteStatus = getQuoteStatus({
     failed: failed.length,
     isRefreshing,
@@ -370,20 +387,18 @@ export function HoldingsScreen({
           }
         />
 
-        {hasMarketHoldings && hasPpfDestination ? (
+        {destinations.length > 1 ? (
           <View accessibilityRole="tablist" testID="holdings-destination-tabs" style={styles.destinationTabs}>
-            <DestinationTab
-              active={activeDestination === "market"}
-              label={`Market ${marketHoldings.length}`}
-              onPress={() => selectDestination("market")}
-              testID="holdings-market-tab"
-            />
-            <DestinationTab
-              active={activeDestination === "ppf"}
-              label={`PPF ${ppfRecordCount}`}
-              onPress={() => selectDestination("ppf")}
-              testID="holdings-ppf-tab"
-            />
+            {destinations.map((destination) => (
+              <DestinationTab
+                active={activeDestination === destination}
+                key={destination}
+                label={destination === "market" ? `Market ${marketHoldings.length}`
+                  : destination === "ppf" ? `PPF ${ppfRecordCount}` : `EPF ${epfState.accounts.length}`}
+                onPress={() => selectDestination(destination)}
+                testID={`holdings-${destination}-tab`}
+              />
+            ))}
           </View>
         ) : null}
 
@@ -579,7 +594,60 @@ export function HoldingsScreen({
           </View>
         ) : null}
 
-        {!hasMarketHoldings && !hasPpfDestination ? (
+        {activeDestination === "epf" && hasEpfDestination ? (
+          <View style={styles.ppfSection} testID="holdings-epf-section">
+            <View style={styles.sectionActionHeader}>
+              <SectionHeader title="EPF accounts" />
+              {onAddEpfAccount ? (
+                <AppButton onPress={onAddEpfAccount} testID="add-epf-account" title="Add account" variant="secondary" />
+              ) : null}
+            </View>
+            <View style={styles.epfTotalRow} testID="holdings-epf-total">
+              <AppText color="secondary">Recorded EPF · in Debt</AppText>
+              {epfSummary.value === null ? (
+                <AppText weight="bold">Unavailable</AppText>
+              ) : (
+                <MaskedValue exactValue={formatINR(epfSummary.value)} masked={maskWealthValues}
+                  testID="holdings-epf-total-value" value={formatCompactINR(epfSummary.value)} weight="bold" />
+              )}
+            </View>
+            {epfState.accounts.map((account) => {
+              const value = epfSummary.accounts.find((item) => item.accountId === account.id);
+              return (
+                <Pressable
+                  accessibilityLabel={`Open ${account.nickname}`}
+                  accessibilityRole="button"
+                  key={account.id}
+                  onPress={() => onReviewEpfAccount?.(account.id)}
+                  style={({ pressed }) => [styles.ppfAccountCard, getPressedStateStyle({ pressed })]}
+                  testID={`epf-account-${account.id}`}
+                >
+                  <CategoryIcon assetClass="debt" size={22} />
+                  <View style={styles.flex}>
+                    <AppText weight="bold">{account.nickname}</AppText>
+                    <AppText color="secondary" variant="caption">
+                      {[account.employerLabel ?? epfProviderLabel(account.provider),
+                        account.status === "active" ? null : epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
+                    </AppText>
+                  </View>
+                  <View style={styles.ppfValue}>
+                    {value ? (
+                      <MaskedValue exactValue={formatINR(value.balance.total)} masked={maskWealthValues}
+                        value={formatCompactINR(value.balance.total)} weight="bold" />
+                    ) : (
+                      <AppText weight="bold">Unavailable</AppText>
+                    )}
+                    <AppText color="secondary" variant="caption">
+                      {value ? `As of ${formatDate(value.lastEvidenceDate)}` : "Needs review"}
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {!hasMarketHoldings && !hasPpfDestination && !hasEpfDestination ? (
           <EmptyState
             actionLabel={
               onQuickSetup
@@ -879,6 +947,17 @@ export function HoldingsScreen({
                         }}
                         testID="add-ppf-account"
                         title="Add PPF account"
+                        variant="secondary"
+                      />
+                    ) : null}
+                    {onAddEpfAccount ? (
+                      <AppButton
+                        onPress={() => {
+                          setActivePanel(undefined);
+                          onAddEpfAccount();
+                        }}
+                        testID="add-epf-account-option"
+                        title="Add EPF account"
                         variant="secondary"
                       />
                     ) : null}
@@ -2100,6 +2179,14 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   ppfSection: {
     gap: spacing.sm,
+  },
+  epfTotalRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    minHeight: interaction.minimumTouchTarget,
   },
   ppfValue: {
     alignItems: "flex-end",

@@ -306,6 +306,50 @@ describe("HoldingsScreen", () => {
     expect(getByText("Reliance Industries")).toBeTruthy();
   });
 
+  it("adds a counted EPF destination with its recorded total, rows and requested opening", () => {
+    const store = seedMarketAndPpf();
+    store.getState().applyEpfCommand({ commandId: "epf", reason: "Statement", change: { type: "accountPut", account: {
+      id: "acme", nickname: "Acme EPF", provider: "epfo", employerLabel: "Acme Ltd", status: "transferred", currency: "INR",
+      historyCompleteThrough: null, checkpoint: { date: "2026-03-31", balance: { total: 140000, components: { employee: 100000, employer: 40000 } },
+        capital: null, source: "epfoStatement", recordedAt: "2026-04-01T00:00:00Z" } } } }, store.getState().getBackupRevision());
+    const onReviewEpfAccount = jest.fn();
+    const onAddEpfAccount = jest.fn();
+    const screen = render(<HoldingsScreen onAddEpfAccount={onAddEpfAccount} onReviewEpfAccount={onReviewEpfAccount} store={store} />);
+    expect(screen.getByTestId("holdings-epf-tab")).toHaveTextContent("EPF 1");
+    expect(screen.queryByTestId("holdings-epf-section")).toBeNull();
+    fireEvent.press(screen.getByTestId("holdings-epf-tab"));
+    expect(screen.getByTestId("holdings-epf-total-value").props.accessibilityLabel).toBe("₹1,40,000.00");
+    expect(screen.getByTestId("epf-account-acme")).toHaveTextContent(/Acme Ltd · Transferred/);
+    expect(screen.queryByText("Reliance Industries")).toBeNull();
+    fireEvent.press(screen.getByTestId("epf-account-acme"));
+    expect(onReviewEpfAccount).toHaveBeenCalledWith("acme");
+    fireEvent.press(screen.getByTestId("add-epf-account"));
+    expect(onAddEpfAccount).toHaveBeenCalledTimes(1);
+    screen.unmount();
+
+    const requested = render(<HoldingsScreen destinationRequest={{ destination: "epf" }} store={store} />);
+    expect(requested.getByTestId("holdings-epf-section")).toBeTruthy();
+    requested.unmount();
+    const onlyEpf = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    onlyEpf.getState().applyEpfCommand({ commandId: "epf", reason: "Statement", change: { type: "accountPut",
+      account: store.getState().epf.accounts[0] } }, onlyEpf.getState().getBackupRevision());
+    const epfOnly = render(<HoldingsScreen store={onlyEpf} />);
+    expect(epfOnly.queryByTestId("holdings-destination-tabs")).toBeNull();
+    expect(epfOnly.getByTestId("holdings-epf-section")).toBeTruthy();
+    expect(epfOnly.queryByText("No holdings yet")).toBeNull();
+  });
+
+  it("keeps Add EPF in the Add menu", () => {
+    const onAddEpfAccount = jest.fn();
+    const { getByTestId } = render(
+      <HoldingsScreen onAddEpfAccount={onAddEpfAccount} onAddTrade={jest.fn()} onQuickSetup={jest.fn()}
+        store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
+    );
+    fireEvent.press(getByTestId("holdings-add-button"));
+    fireEvent.press(getByTestId("add-epf-account-option"));
+    expect(onAddEpfAccount).toHaveBeenCalledTimes(1);
+  });
+
   it("renders Market and PPF tabs before the market search field", () => {
     const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const order = testIdOrder(screen.toJSON());

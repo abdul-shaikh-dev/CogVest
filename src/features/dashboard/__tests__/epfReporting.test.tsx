@@ -46,3 +46,14 @@ test.each(["standard", "minimal"] as const)("shows EPF evidence, unknown basis a
   fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
   expect(screen.getByTestId("dashboard-epf-value").props.accessibilityLabel).toBe("Amount hidden");
 });
+
+test("the EPF card opens the accounts and describes Progress scope accurately", () => {
+  const store = createEpfReportingFixture();
+  const onOpenEpf = jest.fn();
+  const screen = render(<DashboardScreen store={store} now={epfReportingDate} onOpenEpf={onOpenEpf} />);
+  expect(screen.getByText("Included in Debt. Progress shows EPF month-end values separately.")).toBeTruthy();
+  fireEvent.press(screen.getByTestId("dashboard-open-epf"));
+  expect(onOpenEpf).toHaveBeenCalledTimes(1);
+  screen.unmount();
+  expect(render(<DashboardScreen store={store} now={epfReportingDate} />).queryByTestId("dashboard-open-epf")).toBeNull();
+});

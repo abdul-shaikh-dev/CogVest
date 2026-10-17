@@ -1,0 +1,114 @@
+appId: com.abdulshaikh.cogvest
+---
+# Drives the real EPF account screens against an isolated synthetic database,
+# re-reads the persisted records exactly, then clears that database.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- assertVisible: "Add EPF account"
+- tapOn:
+    id: epf-nickname-input
+- inputText: "Acme"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-employee-input
+    direction: DOWN
+- tapOn:
+    id: epf-employee-input
+- inputText: "100000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-employer-input
+    direction: DOWN
+- tapOn:
+    id: epf-employer-input
+- inputText: "40000"
+- hideKeyboard
+- assertVisible:
+    id: epf-form-total
+    text: "₹1,40,000.00"
+- assertVisible: "Use the two EPF balances only.*EPS pension contribution.*"
+- takeScreenshot: .expo/epf-546/add-form
+- scrollUntilVisible:
+    element:
+      id: review-epf-account
+    direction: DOWN
+- tapOn:
+    id: review-epf-account
+- assertVisible:
+    id: epf-review-total
+    text: "₹1,40,000.00"
+- takeScreenshot: .expo/epf-546/add-review
+- tapOn:
+    id: save-epf-account
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
+- assertVisible: "As of .* · later activity not confirmed"
+- assertVisible:
+    id: epf-capital
+- takeScreenshot: .expo/epf-546/detail
+- tapOn:
+    id: update-epf-balance
+- assertVisible: "Currently ₹1,40,000.00, as of .*"
+- scrollUntilVisible:
+    element:
+      id: epf-update-employee-input
+    direction: DOWN
+- tapOn:
+    id: epf-update-employee-input
+- inputText: "104000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-update-employer-input
+    direction: DOWN
+- tapOn:
+    id: epf-update-employer-input
+- inputText: "41567"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-update-history-complete
+    direction: DOWN
+- tapOn:
+    id: epf-update-history-complete
+- scrollUntilVisible:
+    element:
+      id: review-epf-update
+    direction: DOWN
+- tapOn:
+    id: review-epf-update
+- assertVisible:
+    id: epf-update-previous
+    text: "₹1,40,000.00"
+- assertVisible:
+    id: epf-update-new
+    text: "₹1,45,567.00"
+- assertVisible:
+    id: epf-update-difference
+    text: '\+₹5,567.00'
+- takeScreenshot: .expo/epf-546/update-review
+- tapOn:
+    id: save-epf-update
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,45,567.00"
+- assertVisible: "As of .* · all activity recorded"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=check"
+- tapOn:
+    id: epf-accounts-qa-check
+- assertVisible: "PASS: EPF 145567; capital unknown; 1 reconciliation; audit 3"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"

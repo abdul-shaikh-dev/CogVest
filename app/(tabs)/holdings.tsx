@@ -6,10 +6,11 @@ import { HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings
 import { useQuickSetupSession } from "@/src/features/quickSetup";
 
 export default function HoldingsScreen() {
-  const params = useLocalSearchParams<{ statusMessage?: string; openAddMenu?: string }>();
+  const params = useLocalSearchParams<{ statusMessage?: string; openAddMenu?: string; destination?: string }>();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const [statusMessage, setStatusMessage] = useState<string>();
+  const [destinationRequest, setDestinationRequest] = useState<{ destination: "epf" }>();
   const quickSetup = useQuickSetupSession();
 
   useEffect(() => {
@@ -20,6 +21,12 @@ export default function HoldingsScreen() {
     setStatusMessage(params.statusMessage);
     router.setParams({ statusMessage: undefined });
   }, [isFocused, params.statusMessage]);
+
+  useEffect(() => {
+    if (!isFocused || params.destination !== "epf") return;
+    setDestinationRequest({ destination: "epf" });
+    router.setParams({ destination: undefined });
+  }, [isFocused, params.destination]);
 
   useEffect(
     () =>
@@ -32,6 +39,7 @@ export default function HoldingsScreen() {
   return (
     <HoldingsFeatureScreen
       isActive={isFocused}
+      destinationRequest={destinationRequest}
       openAddMenu={params.openAddMenu === "true"}
       onAddMenuOpened={() => router.setParams({ openAddMenu: undefined })}
       onOpenDuration={() => router.push("/holding-duration")}
@@ -52,6 +60,12 @@ export default function HoldingsScreen() {
               }
             : {},
         });
+      }}
+      onAddEpfAccount={() => {
+        router.push("/epf-account");
+      }}
+      onReviewEpfAccount={(accountId) => {
+        router.push({ pathname: "/epf-account", params: { accountId } });
       }}
       onReviewAllTrades={() => {
         router.push("/holding-transactions");
