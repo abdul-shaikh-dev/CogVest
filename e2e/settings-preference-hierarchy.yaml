@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
@@ -37,14 +37,14 @@ appId: com.abdulshaikh.cogvest
     checked: true
 - openLink: "cogvest:///dashboard"
 - assertNotVisible: "₹15.9L"
-- assertVisible: "₹\\*\\*\\*\\* \\*\\*,\\*\\*\\*\\.\\*\\*"
+- assertVisible: "₹••••"
 - assertNotVisible: "This Month"
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - tapOn:
     id: tab-settings
 - assertVisible:
@@ -74,7 +74,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Manual price updates"
 - assertNotVisible: "Live"
 - scrollUntilVisible:
-    element: "About"
+    element: "Base currency"
     direction: DOWN
 - assertVisible: "Base currency"
 - assertVisible: "INR"

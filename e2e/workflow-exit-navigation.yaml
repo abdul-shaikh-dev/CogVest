@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
@@ -17,8 +17,8 @@ appId: com.abdulshaikh.cogvest
     id: "holdings-screen"
 - tapOn:
     id: "holdings-add-button"
-- assertVisible: "Add one holding"
-- tapOn: "Add one holding"
+- assertVisible: "Add existing holding"
+- tapOn: "Add existing holding"
 - assertVisible:
     id: "add-holding-screen"
 - tapOn:

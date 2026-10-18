@@ -107,6 +107,18 @@ checks and Android smoke checks should still work.
   `adb install -r path/to/app.apk`.
 - Flow cannot find a control: verify the installed build is current, confirm
   the stable testID still exists in source, and rerun from a clean app state.
+- "Open debugger to view warnings." covers bottom actions on a debug build:
+  Android 15+ blocks network for an app behind another activity, such as the
+  system file picker, which drops the Metro Fast Refresh socket. The runner
+  exempts `com.abdulshaikh.cogvest` with
+  `adb shell dumpsys deviceidle whitelist +com.abdulshaikh.cogvest`; rerun that
+  after reinstalling the app if you run flows with `maestro test` directly.
+- Typed labels change (for example "contribution" becomes "contributions"):
+  turn off Gboard auto-correction, spell check and the suggestion strip under
+  Gboard settings > Corrections & suggestions. Also turn off stylus
+  handwriting (`adb shell settings put secure stylus_handwriting_enabled 0`).
+- Keep animation scales at 1. With them at 0, Reanimated logs a reduced-motion
+  warning on debug builds and raises the same warning banner.
 
 ## Add Holding And Quick Setup Evidence
 

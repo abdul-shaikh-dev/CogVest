@@ -2,29 +2,40 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "cash-screen"
 - tapOn:
     id: "cash-entry-deposit"
 - tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
-- hideKeyboard
 - tapOn:
     id: "cash-label-input"
-- inputText: "Asset correction cash"
-- hideKeyboard
+# Typed values avoid "rr": a debug build reloads on a double R keystroke that
+# reaches the app instead of a focused field.
+- inputText: "Asset fix cash"
+# Label and date stay above the keyboard; hideKeyboard here can act as Back
+# and leave the Cash tab.
 - tapOn:
     id: "cash-date-input"
-- inputText: "2026-07-18"
-- hideKeyboard
+- tapOn: "OK"
 - scrollUntilVisible:
     element:
       id: "save-cash-entry-button"
     direction: DOWN
 - tapOn:
     id: "save-cash-entry-button"
-- openLink: "cogvest:///add-trade"
+# Manual holding plus a Cash-funded purchase, so deleting the asset must restore Cash.
+- openLink: "cogvest:///add-holding"
+- tapOn:
+    id: "toggle-manual-asset-entry"
 - tapOn:
     id: "asset-input"
 - inputText: "Original Asset"
@@ -36,31 +47,66 @@ appId: com.abdulshaikh.cogvest
     id: "ticker-input"
 - inputText: "ORIG.NS"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: "quantity-input"
-    direction: DOWN
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
 - tapOn:
     id: "quantity-input"
-- inputText: "2"
-- pressKey: BACK
+- inputText: "1"
+- tapOn:
+    id: "average-cost-input"
+- inputText: "50"
 - tapOn:
     id: "price-input"
 - inputText: "100"
-- pressKey: BACK
+- hideKeyboard
 - scrollUntilVisible:
     element:
-      id: "review-trade-button"
+      id: "review-holding-button"
     direction: DOWN
 - tapOn:
-    id: "review-trade-button"
+    id: "review-holding-button"
 - scrollUntilVisible:
     element:
-      id: "save-trade-button"
+      id: "save-holding-button"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "save-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holding-save-complete"
+- openLink: "cogvest:///holdings"
+- tapOn:
+    id: holdings-add-button
+- tapOn:
+    id: record-purchase-option
+- tapOn:
+    id: "existing-asset-.*"
+- tapOn:
+    id: purchase-quantity
+- inputText: "2"
+- hideKeyboard
+- tapOn:
+    id: purchase-price
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: purchase-review-button
     direction: DOWN
 - tapOn:
-    id: "save-trade-button"
-- assertVisible: "Holding saved."
+    id: purchase-review-button
+- assertVisible:
+    id: purchase-cash-debit
+    text: "₹200.00"
+- tapOn:
+    id: purchase-confirm
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 15000
 - tapOn:
     id: "tab-holdings"
 - tapOn:
@@ -76,7 +122,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "asset-name-input"
 - eraseText: 30
-- inputText: "Corrected Asset"
+- inputText: "Renamed Asset"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -84,18 +130,23 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - doubleTapOn:
     id: "save-asset-correction-button"
+# Editing from Manage Assets returns there, showing the corrected name.
 - assertVisible:
-    id: "holdings-screen"
-- assertVisible: "Asset details saved."
+    id: "manage-assets-screen"
+- assertVisible: "Renamed Asset"
 - stopApp
 - launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-holdings"
 - tapOn:
     id: "holdings-more-button"
 - tapOn:
     id: "holdings-manage-assets-button"
-- assertVisible: "Corrected Asset"
+- assertVisible: "Renamed Asset"
 - tapOn:
     id: "manage-asset-.*"
 - scrollUntilVisible:
@@ -104,18 +155,23 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "delete-asset-button"
-- assertVisible: "Delete Corrected Asset?"
+- assertVisible: "Delete Renamed Asset?"
 - doubleTapOn:
     id: "confirm-delete-asset-button"
 - assertVisible:
-    id: "holdings-screen"
-- assertVisible: "Asset and linked records deleted."
+    id: "manage-assets-screen"
+- assertNotVisible: "Renamed Asset"
+- openLink: "cogvest:///holdings"
 - assertVisible: "No holdings yet"
 - tapOn:
     id: "tab-cash"
 - assertVisible: "₹1,000.00"
 - stopApp
 - launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
 - assertVisible:

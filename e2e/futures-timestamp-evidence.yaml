@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///futures"
 - tapOn:
     id: futures-opening-at-date
@@ -13,6 +13,11 @@ appId: com.abdulshaikh.cogvest
 - back
 - tapOn:
     id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at
+    direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-opening-at
 - eraseText: 50
@@ -27,6 +32,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-opening-rate
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-opening-rate
 - inputText: "90"
@@ -35,12 +41,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-opening-rate-at-use-time
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-opening-rate-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-opening-rate-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-opening-rate-source
 - inputText: "Historical INR quote"
@@ -49,18 +57,21 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-save-account
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-account
 - scrollUntilVisible:
     element:
       id: futures-add-event
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-add-event
 - scrollUntilVisible:
     element:
       id: futures-save-event
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-event
 - hideKeyboard
@@ -75,8 +86,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-event-at-exact-toggle
     direction: UP
+    timeout: 60000
 - tapOn:
     id: futures-event-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-event-at
+    direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-event-at
 - eraseText: 50
@@ -86,6 +103,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-price
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-price
 - inputText: "100"
@@ -99,6 +117,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-leverage
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-leverage
 - inputText: "10"
@@ -107,6 +126,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-event-rate
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-event-rate
 - inputText: "90"
@@ -115,12 +135,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-event-rate-at-use-time
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-event-rate-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-event-rate-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-event-rate-source
 - inputText: "Historical INR quote"
@@ -129,17 +151,20 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-save-event
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-event
 - scrollUntilVisible:
     element:
       text: "999 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:
       id: futures-save-valuation
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-valuation
 - hideKeyboard
@@ -153,12 +178,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-observed-wallet-at-use-time
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-observed-wallet-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-wallet-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-wallet-source
 - inputText: "Binance wallet"
@@ -167,6 +194,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-mark-BTCUSDT
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-mark-BTCUSDT
 - inputText: "110"
@@ -175,6 +203,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-mark-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-mark-source
 - inputText: "Binance mark"
@@ -183,12 +212,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-mark-at-use-time
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-mark-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-current-rate
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-current-rate
 - inputText: "90"
@@ -197,12 +228,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-current-rate-at-use-time
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-current-rate-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-current-rate-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-current-rate-source
 - inputText: "Observed INR quote"
@@ -211,30 +244,35 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-positions-confirmed
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-positions-confirmed
 - scrollUntilVisible:
     element:
       id: futures-events-confirmed
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-events-confirmed
 - scrollUntilVisible:
     element:
       id: futures-boundary-confirmed
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-boundary-confirmed
 - scrollUntilVisible:
     element:
       id: futures-save-valuation
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-valuation
 - scrollUntilVisible:
     element:
       text: "₹90810(?:\\.00)?"
     direction: UP
+    timeout: 60000
 - assertVisible: "₹90810(?:\\.00)?"
 - assertVisible: "₹90000(?:\\.00)?"
 - launchApp:
@@ -242,11 +280,12 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///futures"
 - scrollUntilVisible:
     element:
       text: "₹90810(?:\\.00)?"
     direction: DOWN
+    timeout: 60000
 - assertVisible: "₹90810(?:\\.00)?"
 - assertVisible: "999 USDT"

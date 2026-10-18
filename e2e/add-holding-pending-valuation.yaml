@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
@@ -91,8 +91,10 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-opening-correction-button"
     retryTapIfNoChange: true
-- assertVisible:
-    id: "holdings-screen"
+# Saving a correction returns to the open holding's details, not the list.
+- extendedWaitUntil:
+    visible: '(Portfolio history updated|Saved\. Portfolio history will refresh automatically)\.'
+    timeout: 15000
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Quote: missing | missing"
 - assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"

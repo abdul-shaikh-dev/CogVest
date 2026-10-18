@@ -2,14 +2,18 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-progress"
 - assertVisible:
     id: "progress-screen"
-- tapOn: "Snapshot status and review"
-- tapOn: "Review month-end snapshot"
+# A fresh install has no history, so Progress shows its empty state and no
+# status card; the month-end review screen is opened directly.
+- assertVisible: "No portfolio history yet"
+- openLink: "cogvest:///review-snapshot"
 - assertVisible:
     id: "review-snapshot-screen"
 - scrollUntilVisible:

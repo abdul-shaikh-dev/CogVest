@@ -7,9 +7,12 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible: "Visual QA portfolio seeded."
+    timeout: 30000
 - openLink: "cogvest:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
@@ -25,6 +28,12 @@ appId: com.abdulshaikh.cogvest
     id: select-cas-statement
 - runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: cas-native-synthetic.pdf
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: transaction-import-screen-error
@@ -41,6 +50,15 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - tapOn:
     id: read-cas-statement
+- extendedWaitUntil:
+    visible:
+      id: transaction-import-row-accounting
+    timeout: 20000
+# The review can land scrolled past the notices; start from the read action.
+- scrollUntilVisible:
+    element:
+      id: read-cas-statement
+    direction: UP
 - scrollUntilVisible:
     element:
       id: cas-administrative-notices
@@ -54,25 +72,27 @@ appId: com.abdulshaikh.cogvest
     element:
       id: transaction-import-show-balances
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: transaction-import-show-balances
 - scrollUntilVisible:
     element:
-      id: transaction-import-holding-summary-visual-qa-asset-sample-fund
+      id: transaction-import-holding-summary-.*
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: transaction-import-cost-.*
     direction: DOWN
 - assertVisible: "2 transactions"
 - assertVisible:
-    id: transaction-import-units-visual-qa-asset-sample-fund
+    id: transaction-import-units-.*
     text: "12"
 - assertVisible:
-    id: transaction-import-cost-visual-qa-asset-sample-fund
+    id: transaction-import-cost-.*
     text: "₹100.00"
 - scrollUntilVisible:
     element:
       id: confirm-transaction-import
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: confirm-transaction-import
 - extendedWaitUntil:
@@ -85,7 +105,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - runFlow: helpers/cas-import-evidence.yaml
 - openLink: "cogvest:///import-transactions"
 - tapOn:
@@ -102,6 +122,12 @@ appId: com.abdulshaikh.cogvest
     id: select-cas-statement
 - runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: cas-native-synthetic.pdf
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: transaction-import-row-accounting

@@ -5,7 +5,9 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
+# The system picker remembers its last folder and view; start it fresh.
+- clearState: com.google.android.documentsui
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace with visual QA data"
@@ -28,17 +30,17 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "select-transaction-csv"
-- tapOn: "Show roots"
-- extendedWaitUntil:
-    visible: "Downloads"
-    timeout: 5000
-- tapOn:
-    text: "Downloads"
-    retryTapIfNoChange: true
+- runFlow: standalone/helpers/open-downloads.yaml
 - extendedWaitUntil:
     visible: "transactions-import-v1.csv"
     timeout: 10000
 - tapOn: "transactions-import-v1.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: "transaction-import-preflight"
@@ -48,7 +50,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "transaction-import-mode-full-history"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "transaction-import-mode-full-history"
     retryTapIfNoChange: true
@@ -59,7 +60,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "transaction-import-shared-cutover"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - tapOn:
     id: "transaction-import-shared-cutover"
@@ -74,14 +74,12 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "transaction-import-show-balances"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "transaction-import-show-balances"
 - scrollUntilVisible:
     element:
       id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - assertVisible:
     id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
@@ -89,7 +87,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "transaction-import-replacement-visual-qa-asset-niftybees"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - assertVisible:
     id: "transaction-import-replacement-visual-qa-asset-niftybees"
@@ -99,7 +96,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "confirm-transaction-import"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - runFlow:
     when:
@@ -111,7 +107,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "confirm-transaction-import"
     direction: DOWN
-    centerElement: true
     timeout: 10000
 - tapOn:
     id: "confirm-transaction-import"

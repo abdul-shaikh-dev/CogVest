@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
@@ -36,6 +36,11 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: asset-trend-previous-month
+# The selected-month panel sits below the plot on tall phone layouts.
+- scrollUntilVisible:
+    element:
+      id: asset-trend-selected-panel
+    direction: DOWN
 - assertVisible:
     id: asset-trend-selected-panel
     text: "Apr 2026.*% versus Mar 2026.*"

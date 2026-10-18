@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
@@ -22,6 +22,12 @@ appId: com.abdulshaikh.cogvest
     id: select-cas-statement
 - runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: cas-native-synthetic.pdf
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: transaction-import-match-summary
@@ -36,7 +42,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: confirm-transaction-import
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: confirm-transaction-import
 - extendedWaitUntil:
@@ -79,7 +84,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 60000
+    timeout: 120000
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 1"
 - assertVisible: "Trade count: 2"
@@ -103,6 +108,12 @@ appId: com.abdulshaikh.cogvest
     id: select-cas-statement
 - runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: cas-native-synthetic.pdf
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - scrollUntilVisible:
     element:
       id: transaction-import-row-accounting

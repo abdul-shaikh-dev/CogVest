@@ -5,7 +5,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - openLink: "cogvest:///add-holding"
 - tapOn:
     id: toggle-manual-asset-entry
@@ -74,17 +74,29 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Sample ETF"
 - assertVisible: "Invested"
 - assertVisible: "₹180"
-- assertVisible: "Equity · ETF · Diversified"
+- assertVisible: "SAMPLEETF · ETF.*"
+- tapOn:
+    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      text: "Equity · ETF · Diversified"
+    direction: DOWN
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
-    timeout: 30000
+    timeout: 120000
 - tapOn:
     id: tab-holdings
 - assertVisible: "Sample ETF"
-- assertVisible: "Equity · ETF · Diversified"
 - assertVisible: "Invested"
 - assertVisible: "₹180"
+- assertVisible: "SAMPLEETF · ETF.*"
+- tapOn:
+    id: "holding-row-.*"
+- scrollUntilVisible:
+    element:
+      text: "Equity · ETF · Diversified"
+    direction: DOWN
 - takeScreenshot: .expo/asset-class-280-saved-etf

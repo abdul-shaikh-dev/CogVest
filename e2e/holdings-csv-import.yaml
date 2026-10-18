@@ -5,7 +5,9 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 30000
+    timeout: 120000
+# The system picker remembers its last folder and view; start it fresh.
+- clearState: com.google.android.documentsui
 - openLink: "cogvest:///import-holdings?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
@@ -13,18 +15,16 @@ appId: com.abdulshaikh.cogvest
     timeout: 30000
 - tapOn:
     id: "save-holdings-csv-template"
-- tapOn: "Show roots"
+# A fresh folder picker opens at storage root, where saving is not allowed.
 - extendedWaitUntil:
     visible: "Documents"
-    timeout: 5000
+    timeout: 10000
 - tapOn:
     text: "Documents"
     retryTapIfNoChange: true
-- tapOn:
-    point: "82%,50%"
-- tapOn: "NEW FOLDER"
-- inputText: "CogVestTemplateTest"
-- tapOn: "OK"
+- extendedWaitUntil:
+    visible: "Files in Documents"
+    timeout: 10000
 - tapOn: "Use this folder"
 - runFlow:
     when:
@@ -32,21 +32,22 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn: "Allow"
 - extendedWaitUntil:
-    visible: "cogvest-holdings-v1.csv saved. Replace the example rows, then choose the completed CSV."
+    # Repeat runs in the same folder get a numbered copy, e.g. "(1)".
+    visible: 'cogvest-holdings-v1.*\.csv saved\. Replace the example rows, then choose the completed CSV\.'
     timeout: 10000
 - tapOn:
     id: "select-holdings-csv"
-- tapOn: "Show roots"
-- extendedWaitUntil:
-    visible: "Downloads"
-    timeout: 5000
-- tapOn:
-    text: "Downloads"
-    retryTapIfNoChange: true
+- runFlow: standalone/helpers/open-downloads.yaml
 - extendedWaitUntil:
     visible: "holdings-import-v1.csv"
     timeout: 10000
 - tapOn: "holdings-import-v1.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
 - extendedWaitUntil:
     visible:
       id: "holding-import-row-3-candidate-visual-qa-lookup-tcs"
@@ -86,7 +87,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "confirm-holdings-import"
     direction: DOWN
-    centerElement: true
 - tapOn:
     text: "Import all holdings"
     retryTapIfNoChange: true
@@ -100,7 +100,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible:
       id: "dashboard-screen"
-    timeout: 10000
+    timeout: 120000
 - assertVisible: "Portfolio value"
 - assertVisible: "₹6.51K"
 - assertVisible: "Invested"

@@ -22,6 +22,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: save-cash-entry-button
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: save-cash-entry-button
 - assertVisible: "Futures source cash"
@@ -30,6 +31,11 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///futures"
 - tapOn:
     id: futures-opening-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-opening-at
+    direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-opening-at
 - eraseText: 50
@@ -41,14 +47,21 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-add-cash-funding
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-add-cash-funding
 - scrollUntilVisible:
     element:
       id: futures-cash-at-exact-toggle
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-cash-at
+    direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-at
 - eraseText: 50
@@ -58,6 +71,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-cash-usdt
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-usdt
 - inputText: "100"
@@ -66,6 +80,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-cash-inr
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-inr
 - inputText: "9000"
@@ -74,6 +89,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-cash-rate
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-rate
 - inputText: "90"
@@ -82,8 +98,14 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-cash-rate-at-exact-toggle
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-rate-at-exact-toggle
+- scrollUntilVisible:
+    element:
+      id: futures-cash-rate-at
+    direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-rate-at
 - inputText: ${output.fundingAt}
@@ -92,6 +114,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-cash-rate-source
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-cash-rate-source
 - inputText: "Conversion receipt"
@@ -100,6 +123,7 @@ appId: com.abdulshaikh.cogvest
     element:
       id: futures-save-cash-funding
     direction: DOWN
+    timeout: 60000
 - tapOn:
     id: futures-save-cash-funding
 - runFlow:
@@ -112,6 +136,7 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "100 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "100 USDT"
 - openLink: "cogvest:///cash"
 - assertVisible: "Futures wallet funding"
@@ -128,4 +153,5 @@ appId: com.abdulshaikh.cogvest
     element:
       text: "100 USDT"
     direction: UP
+    timeout: 60000
 - assertVisible: "100 USDT"

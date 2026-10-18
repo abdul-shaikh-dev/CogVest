@@ -2,8 +2,10 @@ appId: com.abdulshaikh.cogvest
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
 - tapOn:
@@ -29,8 +31,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Broker cash"
 - stopApp
 - launchApp
-- assertVisible:
-    id: "dashboard-screen"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
 - tapOn:
     id: "tab-cash"
 - assertVisible: "Broker cash"
