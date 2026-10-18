@@ -47,11 +47,15 @@ import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { interaction, radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
 import { EpfHistoryScope } from "./EpfHistoryScope";
 import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
+import { getProgressEmptyStateKind } from "./progressEmptyState";
 import { useProgress, type ProgressSnapshotAutomationStatus } from "./useProgress";
 
 type ProgressScreenProps = {
   historicalPriceFetcher?: typeof resolveHistoricalPrice;
   now?: Date;
+  onAddHolding?: () => void;
+  /** Opens the EPF account when there is one, or the EPF accounts list when there are several. */
+  onOpenEpf?: (accountId?: string) => void;
   onOpenHoldings?: () => void;
   onReviewSnapshot?: () => void;
   onSetUpPortfolio?: () => void;
@@ -1628,9 +1632,15 @@ function SnapshotStatusCard({
   );
 }
 
+function getSingleEpfAccountId(state: PortfolioStoreState) {
+  return state.epf.accounts.length === 1 ? state.epf.accounts[0].id : undefined;
+}
+
 export function ProgressScreen({
   historicalPriceFetcher,
   now,
+  onAddHolding,
+  onOpenEpf,
   onOpenHoldings,
   onReviewSnapshot,
   onSetUpPortfolio,
@@ -1645,6 +1655,10 @@ export function ProgressScreen({
   const epfAccountCount = useSyncExternalStore(store.subscribe,
     () => store.getState().epf.accounts.length,
     () => store.getState().epf.accounts.length);
+  const singleEpfAccountId = useSyncExternalStore(store.subscribe,
+    () => getSingleEpfAccountId(store.getState()),
+    () => getSingleEpfAccountId(store.getState()));
+  const emptyStateKind = getProgressEmptyStateKind({ epfAccountCount, hasSnapshotRecords: progress.hasData });
   const isReducedMotionEnabled = useReducedMotionPreference();
   const isMinimalMode = progress.preferences.displayMode === "minimal";
   const isHistoryBuilding =
@@ -1913,6 +1927,17 @@ export function ProgressScreen({
               ))}
             </PremiumCard> : null}
           </>
+        ) : emptyStateKind === "epfOnly" ? (
+          <EmptyState
+            actionLabel={epfAccountCount === 1 ? "Open EPF account" : "Open EPF accounts"}
+            actionTestID="progress-empty-open-epf"
+            title="Monthly history starts with market or cash activity"
+            message="EPF balances appear in Dashboard totals and in each EPF account's history."
+            onAction={() => onOpenEpf?.(singleEpfAccountId)}
+            secondaryActionLabel="Add holdings"
+            secondaryActionTestID="progress-empty-add-holding"
+            onSecondaryAction={() => onAddHolding?.()}
+          />
         ) : (
           <EmptyState
             actionLabel="Set up portfolio"
