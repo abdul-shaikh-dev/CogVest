@@ -1,4 +1,7 @@
-import { buildEpfEntry, buildEpfReversal, draftFromEpfEvent, emptyEpfEntryDraft, type EpfEntryDraft } from "../epfEntryForm";
+import {
+  buildEpfEntry, buildEpfReversal, draftFromEpfEvent, emptyEpfEntryDraft, eventAmountLabel, eventTitle,
+  financialYearOptions, financialYearPeriod, type EpfEntryDraft,
+} from "../epfEntryForm";
 import { calculateEpfLedger, type EpfAccount, type EpfEvent } from "@/src/domain/epf";
 
 const now = new Date("2026-10-17T10:00:00Z");
@@ -147,4 +150,68 @@ test("a provider reversal references an earlier entry and cannot be duplicated",
   expect(!early.ok && early.errors.date).toMatch(/before the entry/);
   const blank = buildEpfReversal(contribution.event, { date: "2026-06-01", reason: " " }, { accounts: [acme], events: [contribution.event], id: "r4", now });
   expect(!blank.ok && blank.errors.reason).toBeDefined();
+});
+
+describe("financial year summary", () => {
+  const old: EpfAccount = { ...acme, checkpoint: { ...acme.checkpoint, date: "2024-03-31" } };
+  const summaryContext = (events: EpfEvent[] = []) => ({ ...context(events, "s1"), account: old, accounts: [old] });
+  const year = (patch: Partial<EpfEntryDraft> = {}) => draft({ kind: "yearSummary", periodStart: "2024-04-01", date: "2025-03-31",
+    contributionEmployee: "21600", contributionEmployer: "6600", interestEmployee: "9500", interestEmployer: "3800",
+    closingEmployee: "131100", closingEmployer: "50400", ...patch });
+
+  test("offers each year after the starting balance and trims the current one to today", () => {
+    expect(financialYearOptions(old, now).map((item) => item.label)).toEqual(["2026-27", "2025-26", "2024-25"]);
+    expect(financialYearPeriod("2024-04-01", old, now)).toEqual({ periodStart: "2024-04-01", date: "2025-03-31" });
+    expect(financialYearPeriod("2026-04-01", old, now)).toEqual({ periodStart: "2026-04-01", date: "2026-10-17" });
+    expect(financialYearPeriod("2026-04-01", acme, now).periodStart).toBe("2026-04-01");
+  });
+
+  test("records one year that matches the passbook closing balance", () => {
+    const result = buildEpfEntry(year(), summaryContext());
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    expect(result.plan.event).toMatchObject({ type: "yearSummary", periodStart: "2024-04-01", effectiveDate: "2025-03-31",
+      contributions: { employee: 21600, employer: 6600 }, interest: { employee: 9500, employer: 3800 },
+      closing: { employee: 131100, employer: 50400 }, evidence: "EPFO passbook" });
+    expect(result.plan.effect).toMatchObject({ totalBefore: 140000, totalAfter: 181500, cashChange: 0 });
+    expect(eventTitle(result.plan.event)).toBe("FY 2024-25 summary");
+    expect(eventAmountLabel(result.plan.event, "a")).toBe("+₹41,500.00");
+    expect(draftFromEpfEvent(result.plan.event, "a", false, now)).toMatchObject({ kind: "yearSummary", periodStart: "2024-04-01",
+      date: "2025-03-31", contributionEmployee: "21600", closingEmployer: "50400" });
+  });
+
+  test("names the mismatch by part instead of saving", () => {
+    const result = buildEpfEntry(year({ closingEmployee: "131550" }), summaryContext());
+    expect(!result.ok && result.message).toBe("The closing balance on 31 Mar 2025 does not match: employee ₹1,31,100.00 calculated, " +
+      "₹1,31,550.00 in the passbook. Check the totals, and any withdrawal or transfer recorded in this period.");
+  });
+
+  test("needs the closing balance at 31 Mar, every part, and a period inside one year", () => {
+    const missing = buildEpfEntry(year({ closingEmployee: "", closingEmployer: "" }), summaryContext());
+    expect(!missing.ok && missing.errors.closingEmployee).toBe("Enter the passbook closing balance for this part.");
+    const shorter = buildEpfEntry(year({ date: "2024-09-30", closingEmployee: "", closingEmployer: "", interestEmployee: "0", interestEmployer: "0" }), summaryContext());
+    expect(shorter.ok && shorter.plan.event).toMatchObject({ closing: null });
+    const blank = buildEpfEntry(year({ interestEmployer: "" }), summaryContext());
+    expect(!blank.ok && blank.errors.interestEmployer).toMatch(/or 0/);
+    const zero = buildEpfEntry(year({ contributionEmployee: "0", contributionEmployer: "0", interestEmployee: "0", interestEmployer: "0",
+      date: "2024-09-30", closingEmployee: "", closingEmployer: "" }), summaryContext());
+    expect(!zero.ok && zero.errors.contributionEmployee).toBe("Enter the contributions or interest for the period.");
+    const across = buildEpfEntry(year({ date: "2025-04-30" }), summaryContext());
+    expect(!across.ok && across.errors.date).toBe("End within the same financial year, by 31 Mar 2025.");
+    const early = buildEpfEntry(year({ periodStart: "2024-03-31" }), summaryContext());
+    expect(!early.ok && early.errors.periodStart).toMatch(/after the starting balance/);
+  });
+
+  test("explains entries already recorded inside the period, in both directions", () => {
+    const may: EpfEvent = { id: "c1", accountId: "a", type: "contribution", party: "employee", amount: 1800,
+      effectiveDate: "2024-05-01", postedDate: "2024-05-01", recordedAt: "2026-10-17T10:00:00Z", evidence: "EPFO passbook" };
+    const blocked = buildEpfEntry(year(), summaryContext([may]));
+    expect(!blocked.ok && blocked.message).toBe("1 entry is already recorded in this period, starting with the Employee contribution " +
+      "on 01 May 2024. Delete them, or shorten the period so it does not overlap them.");
+    const saved = buildEpfEntry(year(), summaryContext());
+    if (!saved.ok) throw new Error("summary");
+    const inside = buildEpfEntry(draft({ kind: "employeeContribution", amount: "1800", date: "2024-06-01" }),
+      { ...summaryContext([saved.plan.event]), id: "c2" });
+    expect(!inside.ok && inside.message).toBe("The FY 2024-25 summary already includes 01 Apr 2024 to 31 Mar 2025. " +
+      "Correct the summary instead, or shorten its period first.");
+  });
 });

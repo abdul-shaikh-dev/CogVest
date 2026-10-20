@@ -47,6 +47,9 @@ function shiftCapital(value: number | null, amount: number | null, sign: 1 | -1)
   return result;
 }
 
+/** Financial years run 1 Apr to 31 Mar; this is the calendar year they start in. */
+const financialYear = (date: string) => Number(date.slice(0, 4)) - (date.slice(5, 7) < "04" ? 1 : 0);
+
 function references(event: EpfEvent) {
   return event.type === "transfer" ? [event.sourceId, event.destinationId] : [event.accountId];
 }
@@ -85,6 +88,29 @@ function validate(ledger: EpfLedger, today: string) {
         !(other.type === "reversal" && other.reversesId === settlement.id));
       if (later) errors.push("A final settlement must be the last entry in its account.");
     }
+    if (event.type === "yearSummary") {
+      const summary = event;
+      if (summary.periodStart > summary.effectiveDate || financialYear(summary.periodStart) !== financialYear(summary.effectiveDate)) {
+        errors.push("A financial year summary must start and end within one financial year.");
+      }
+      if (summary.closing === null && summary.effectiveDate.slice(5) === "03-31") {
+        errors.push("A financial year summary ending on 31 Mar needs the passbook closing balance.");
+      }
+      const account = accounts.get(summary.accountId);
+      if (account && summary.periodStart <= account.checkpoint.date) {
+        errors.push("A financial year summary must start after the account's starting balance.");
+      }
+      const inside = (date: string) => date >= summary.periodStart && date <= summary.effectiveDate;
+      const owned = ledger.events.some((other) => other.id !== summary.id && other.type !== "transfer" &&
+        other.accountId === summary.accountId && (
+          // A balance update inside would be replaced by, then added to, the period totals.
+          ((other.type === "contribution" || other.type === "interest" || other.type === "reconciliation") && inside(other.effectiveDate)) ||
+          (other.type === "yearSummary" && other.periodStart <= summary.effectiveDate && other.effectiveDate >= summary.periodStart)));
+      if (owned) errors.push("A financial year summary owns its period; remove the contributions, interest, balance updates or summaries recorded inside it.");
+      if (sum([summary.contributions.employee, summary.contributions.employer, summary.interest.employee, summary.interest.employer]) <= 0) {
+        errors.push("Event amounts must be positive.");
+      }
+    }
     if (event.type === "contribution" && event.party === "employer" && event.voluntary) {
       errors.push("Voluntary PF is an employee contribution.");
     }
@@ -108,7 +134,7 @@ function validate(ledger: EpfLedger, today: string) {
       }
     }
     const amount = event.type === "contribution" ? event.amount
-      : event.type === "reconciliation" || event.type === "reversal" ? null : event.amount.total;
+      : event.type === "reconciliation" || event.type === "reversal" || event.type === "yearSummary" ? null : event.amount.total;
     if (amount !== null && amount <= 0) errors.push("Event amounts must be positive.");
   }
   return errors;
@@ -139,11 +165,12 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
       lastEvidenceDate: account.checkpoint.date, historyComplete,
     });
   }
-  // A settlement empties its account, so same-day entries replay before it and
-  // only its own reversal after it.
+  // A passbook closing balance is struck after the day's other activity, so a
+  // summary replays after same-day entries. A settlement empties its account,
+  // so it comes later still, followed only by its own reversal.
   const settlementIds = new Set(ledger.events.flatMap((event) => event.type === "withdrawal" && event.settlement ? [event.id] : []));
-  const dayRank = (event: EpfEvent) => settlementIds.has(event.id) ? 1
-    : event.type === "reversal" && settlementIds.has(event.reversesId) ? 2 : 0;
+  const dayRank = (event: EpfEvent) => event.type === "yearSummary" ? 1 : settlementIds.has(event.id) ? 2
+    : event.type === "reversal" && settlementIds.has(event.reversesId) ? 3 : 0;
   const steps = ledger.events.flatMap((event) => {
     const debit = { date: event.effectiveDate, event, credit: false };
     return event.type === "transfer" && event.creditDate
@@ -202,6 +229,18 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
           },
         }, 1);
         state.capital = shiftCapital(state.capital, event.amount, 1);
+      } else if (event.type === "yearSummary") {
+        const employee = add(event.contributions.employee, event.interest.employee);
+        const employer = add(event.contributions.employer, event.interest.employer);
+        state.balance = shift(state.balance, { total: add(employee, employer), components: { employee, employer } }, 1);
+        state.capital = shiftCapital(state.capital, add(event.contributions.employee, event.contributions.employer), 1);
+        const closing = event.closing;
+        if (closing && (!decimal(state.balance.total).equals(add(closing.employee, closing.employer)) ||
+          (state.balance.components && (!decimal(state.balance.components.employee).equals(closing.employee) ||
+            !decimal(state.balance.components.employer).equals(closing.employer))))) {
+          throw new Error("A financial year summary must match its passbook closing balance.");
+        }
+        reasons.add(`${event.id}:summarizedFlows`);
       } else if (event.type === "withdrawal" && event.settlement) {
         const due = shift(state.balance, event.settlement.interest, 1);
         const paid = event.amount;

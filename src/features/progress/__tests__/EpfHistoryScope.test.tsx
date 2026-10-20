@@ -71,3 +71,20 @@ test("discloses money moving between tracked accounts without changing combined 
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,40,000.00");
   expect(view.getByTestId("progress-epf-month-transit").props.accessibilityLabel).toBe("₹50,000.00");
 });
+
+test("months inside a financial-year summary are unavailable; its end month shows the year's totals", () => {
+  const { store, apply } = setup();
+  apply({ type: "accountPut", account: account("a", "2025-03-31", 140000, "2026-07-01") });
+  apply({ type: "eventPut", cash: null, event: { id: "fy25", accountId: "a", type: "yearSummary", periodStart: "2025-04-01",
+    effectiveDate: "2026-03-31", postedDate: "2026-03-31", recordedAt: "2026-05-01T00:00:00Z", evidence: "EPFO passbook",
+    contributions: { employee: 21600, employer: 6600 }, interest: { employee: 9500, employer: 3800 },
+    closing: { employee: 120000, employer: 61500 } } });
+  const view = render(<EpfHistoryScope maskWealthValues={false} month="2025-10" now={now} store={store} />);
+  expect(view.getByTestId("progress-epf-month-value")).toHaveTextContent("Unavailable");
+  expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent(/Inside a financial-year summary/);
+  view.rerender(<EpfHistoryScope maskWealthValues={false} month="2026-03" now={now} store={store} />);
+  expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,81,500.00");
+  expect(view.getByTestId("progress-epf-month-contributions").props.accessibilityLabel).toBe("₹28,200.00");
+  expect(view.getByTestId("progress-epf-month-interest").props.accessibilityLabel).toBe("₹13,300.00");
+  expect(view.getByTestId("progress-epf-month-summarized")).toHaveTextContent(/financial-year summary/);
+});

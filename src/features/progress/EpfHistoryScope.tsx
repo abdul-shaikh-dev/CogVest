@@ -19,6 +19,7 @@ const statusCopy: Record<EpfMonthValue["status"], string> = {
   confirmed: "Confirmed month-end balance.",
   lastRecorded: "Last recorded balance; later activity is unconfirmed.",
   partial: "Unavailable: not every account has a balance for this month.",
+  summarized: "Inside a financial-year summary; only the balance at the end of its period is recorded.",
 };
 
 /**
@@ -76,6 +77,11 @@ export function EpfHistoryScope({ maskWealthValues, month, now, store }: {
               <AppText color="secondary" variant="caption">Credited interest</AppText>
               {amount(row.flows.interest, "progress-epf-month-interest")}
             </View>
+          ) : null}
+          {row.flows.summarized ? (
+            <AppText color="secondary" variant="caption" testID="progress-epf-month-summarized">
+              Includes totals for a whole period from a financial-year summary.
+            </AppText>
           ) : null}
           {row.inTransit > 0 ? (
             <View style={styles.line}>

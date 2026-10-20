@@ -1,0 +1,147 @@
+appId: com.abdulshaikh.cogvest
+---
+# Records a financial-year summary through the real screens on an isolated
+# synthetic database: a closing mismatch is named and blocked, the corrected
+# summary saves, and the persisted ledger is re-read before cleanup.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-entries"
+- tapOn:
+    id: epf-accounts-qa-seed-entries
+- assertVisible: "PASS: seeded Acme 140000 and Beta 0"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
+
+# The starting balance is 30 days old, so the current year's period runs from
+# the day after it to today and its closing balance is optional.
+- scrollUntilVisible:
+    element:
+      id: add-epf-entry
+    direction: DOWN
+- tapOn:
+    id: add-epf-entry
+- tapOn:
+    id: epf-entry-kind-picker
+- tapOn:
+    id: epf-entry-kind-yearSummary
+- assertVisible:
+    id: epf-summary-year-picker
+- assertNotVisible:
+    id: epf-entry-amount-input
+- tapOn:
+    id: epf-summary-contribution-employee-input
+- inputText: "5400"
+- hideKeyboard
+- tapOn:
+    id: epf-summary-contribution-employer-input
+- inputText: "1650"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-summary-interest-employee-input
+    direction: DOWN
+- tapOn:
+    id: epf-summary-interest-employee-input
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-summary-interest-employer-input
+    direction: DOWN
+- tapOn:
+    id: epf-summary-interest-employer-input
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-summary-closing-employee-input
+    direction: DOWN
+- tapOn:
+    id: epf-summary-closing-employee-input
+- inputText: "105500"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-summary-closing-employer-input
+    direction: DOWN
+- tapOn:
+    id: epf-summary-closing-employer-input
+- inputText: "41650"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-summary-period-hint
+    direction: DOWN
+- takeScreenshot: .expo/epf-568/summary-form
+- scrollUntilVisible:
+    element:
+      id: review-epf-entry
+    direction: DOWN
+- tapOn:
+    id: review-epf-entry
+- scrollUntilVisible:
+    element:
+      id: epf-entry-error
+    direction: DOWN
+- assertVisible:
+    id: epf-entry-error
+    text: ".*employee ₹1,05,400.00 calculated, ₹1,05,500.00 in the passbook.*"
+- takeScreenshot: .expo/epf-568/summary-mismatch
+
+# Correct the employee closing balance and save.
+- scrollUntilVisible:
+    element:
+      id: epf-summary-closing-employee-input
+    direction: UP
+- tapOn:
+    id: epf-summary-closing-employee-input
+- eraseText: 10
+- inputText: "105400"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-epf-entry
+    direction: DOWN
+- tapOn:
+    id: review-epf-entry
+- assertVisible:
+    id: epf-entry-effect-acme
+    text: "₹1,40,000.00 → ₹1,47,050.00"
+- assertVisible:
+    id: epf-entry-summary-period
+- assertVisible:
+    id: epf-entry-role
+    text: ".*matches the passbook closing balance.*"
+- takeScreenshot: .expo/epf-568/summary-review
+- tapOn:
+    id: save-epf-entry
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,47,050.00"
+- scrollUntilVisible:
+    element:
+      id: epf-activity-toggle
+    direction: DOWN
+- tapOn:
+    id: epf-activity-toggle
+- assertVisible: "FY 2026-27 summary"
+- takeScreenshot: .expo/epf-568/activity
+
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=state"
+- tapOn:
+    id: epf-accounts-qa-state
+- assertVisible: "STATE: EPF 147050; moving 0; entries 1; Cash 0; links 0"
+- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"

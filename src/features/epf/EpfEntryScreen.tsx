@@ -33,6 +33,8 @@ import {
   epfEntryKindOptions,
   epfWithdrawalDestinationOptions,
   eventTitle,
+  financialYearOptions,
+  financialYearPeriod,
   type EpfEntryDraft,
   type EpfEntryField,
   type EpfEntryKind,
@@ -40,7 +42,18 @@ import {
 } from "./epfEntryForm";
 
 const fieldOrder: EpfEntryField[] = ["amount", "employee", "employer", "settlementInterest", "settlementInterestEmployee",
-  "settlementInterestEmployer", "targetAccountId", "date", "postedDate", "creditDate"];
+  "settlementInterestEmployer", "contributionEmployee", "contributionEmployer", "interestEmployee", "interestEmployer",
+  "closingEmployee", "closingEmployer", "targetAccountId", "periodStart", "date", "postedDate", "creditDate"];
+
+const summaryFields: Array<{ field: "contributionEmployee" | "contributionEmployer" | "interestEmployee" | "interestEmployer"
+  | "closingEmployee" | "closingEmployer"; label: string; testID: string }> = [
+  { field: "contributionEmployee", label: "Employee contributions (INR)", testID: "epf-summary-contribution-employee-input" },
+  { field: "contributionEmployer", label: "Employer contributions (INR)", testID: "epf-summary-contribution-employer-input" },
+  { field: "interestEmployee", label: "Employee interest (INR)", testID: "epf-summary-interest-employee-input" },
+  { field: "interestEmployer", label: "Employer interest (INR)", testID: "epf-summary-interest-employer-input" },
+  { field: "closingEmployee", label: "Closing balance, employee (INR)", testID: "epf-summary-closing-employee-input" },
+  { field: "closingEmployer", label: "Closing balance, employer (INR)", testID: "epf-summary-closing-employer-input" },
+];
 
 const dateLabel: Record<EpfEntryKind, string> = {
   employeeContribution: "Credited on",
@@ -49,6 +62,7 @@ const dateLabel: Record<EpfEntryKind, string> = {
   withdrawal: "Paid out on",
   transferOut: "Left this account on",
   transferIn: "Received on",
+  yearSummary: "Period ends on",
 };
 
 function roleCopy(plan: EpfEntryPlan, draft: EpfEntryDraft) {
@@ -74,6 +88,10 @@ function roleCopy(plan: EpfEntryPlan, draft: EpfEntryDraft) {
         : "Moves money between your EPF accounts. Combined EPF is unchanged.";
     case "transferIn":
       return "Adds value from an account CogVest does not track. Its earlier history and contributions stay unknown.";
+    case "yearSummary":
+      return `Contributions count as money put in and interest as return, all on ${formatDate(plan.event.effectiveDate)}. ` +
+        (plan.event.type === "yearSummary" && plan.event.closing ? "The result matches the passbook closing balance. " : "") +
+        "Progress shows no EPF value for months inside the period, only at its end.";
   }
 }
 
@@ -142,6 +160,12 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
   }
 
   const otherAccounts = snapshot.epf.accounts.filter((item) => item.id !== account.id);
+  const yearOptions = financialYearOptions(account, now);
+  function choosePeriod(yearStart: string) {
+    const period = financialYearPeriod(yearStart, account!, now);
+    update("periodStart", period.periodStart);
+    update("date", period.date);
+  }
   function update<Key extends keyof EpfEntryDraft>(key: Key, value: EpfEntryDraft[Key]) {
     setDraft((current) => ({ ...current, [key]: value }));
     setErrors((current) => {
@@ -192,6 +216,10 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
             title="Review EPF entry"
           />
           <PremiumCard>
+            {plan.event.type === "yearSummary" ? (
+              <Line label="Period" testID="epf-entry-summary-period"
+                value={`${formatDate(plan.event.periodStart)} – ${formatDate(plan.event.effectiveDate)}`} />
+            ) : null}
             {plan.effect.accounts.map((item) => (
               <Line key={item.accountId} label={item.nickname} testID={`epf-entry-effect-${item.accountId}`}
                 value={`${item.before === null ? "—" : formatINR(item.before)} → ${item.after === null ? "—" : formatINR(item.after)}`} />
@@ -244,12 +272,32 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
             <>
               <PremiumCard section style={styles.formSection}>
                 {existing ? null : (
-                  <SelectionField label="Entry type" onChange={(value) => update("kind", value)}
-                    options={epfEntryKindOptions} testIDPrefix="epf-entry-kind" value={draft.kind} />
+                  <SelectionField label="Entry type" onChange={(value) => {
+                    // A summary moves the date to its period end; other entries start from today again.
+                    if (draft.kind === "yearSummary" && value !== "yearSummary") update("date", formatLocalCalendarDate(now));
+                    update("kind", value);
+                    const latest = financialYearOptions(account, now)[0];
+                    if (value === "yearSummary" && latest) choosePeriod(latest.value);
+                  }} options={epfEntryKindOptions} testIDPrefix="epf-entry-kind" value={draft.kind} />
                 )}
-                <FormTextField error={errors.amount} inputRef={(node) => { inputRefs.current.amount = node; }}
-                  keyboardType="decimal-pad" label="Amount (INR)" onChangeText={(value) => update("amount", value)}
-                  testID="epf-entry-amount-input" value={draft.amount} />
+                {draft.kind === "yearSummary" ? (
+                  <>
+                    <SelectionField label="Financial year" onChange={choosePeriod} options={yearOptions}
+                      testIDPrefix="epf-summary-year" value={yearOptions.find((item) => item.value <= draft.periodStart)?.value ?? ""} />
+                    <AppText color="secondary" variant="caption">
+                      Copy the year's totals from your passbook. Enter the employer EPF share only, not the EPS pension share.
+                    </AppText>
+                    {summaryFields.map(({ field, label, testID }) => (
+                      <FormTextField error={errors[field]} inputRef={(node) => { inputRefs.current[field] = node; }} key={field}
+                        keyboardType="decimal-pad" label={field.startsWith("closing") && draft.date.slice(5) !== "03-31" ? label.replace("(INR)", "(INR, optional)") : label}
+                        onChangeText={(value) => update(field, value)} testID={testID} value={draft[field]} />
+                    ))}
+                  </>
+                ) : (
+                  <FormTextField error={errors.amount} inputRef={(node) => { inputRefs.current.amount = node; }}
+                    keyboardType="decimal-pad" label="Amount (INR)" onChangeText={(value) => update("amount", value)}
+                    testID="epf-entry-amount-input" value={draft.amount} />
+                )}
                 {draft.kind === "employeeContribution" ? (
                   <EpfCheckRow checked={draft.voluntary} helper="Extra amount you chose to contribute above the required share."
                     label="Voluntary PF" onToggle={() => update("voluntary", !draft.voluntary)} testID="epf-entry-voluntary" />
@@ -319,6 +367,16 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
               </PremiumCard>
               <PremiumCard section style={styles.formSection}>
                 <SectionHeader title="Dates and source" />
+                {draft.kind === "yearSummary" ? (
+                  <>
+                    <DatePickerField error={errors.periodStart} fieldRef={(node) => { inputRefs.current.periodStart = node; }}
+                      label="Period starts on" maximumDate={now} onChange={(value) => update("periodStart", value)}
+                      testID="epf-summary-period-start" value={draft.periodStart} />
+                    <AppText color="secondary" variant="caption" testID="epf-summary-period-hint">
+                      Keep the whole year unless it had a withdrawal or final settlement. Then end this period the day before the withdrawal, or on the settlement date, and record the rest separately.
+                    </AppText>
+                  </>
+                ) : null}
                 <DatePickerField error={errors.date} fieldRef={(node) => { inputRefs.current.date = node; }}
                   label={draft.kind === "withdrawal" && draft.settlement ? "Settled on" : dateLabel[draft.kind]} maximumDate={now} onChange={(value) => update("date", value)}
                   testID="epf-entry-date" value={draft.date} />
