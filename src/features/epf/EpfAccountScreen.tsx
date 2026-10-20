@@ -166,6 +166,8 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const components = value?.balance.components ?? null;
+  const reversedIds = new Set(events.flatMap((event) => event.type === "reversal" ? [event.reversesId] : []));
+  const settlement = events.find((event) => event.type === "withdrawal" && event.settlement && !reversedIds.has(event.id));
 
   return (
     <ScreenContainer scroll testID="epf-account-screen">
@@ -173,7 +175,8 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
         <ScreenHeader
           action={<IconButton accessibilityLabel="Edit EPF account" icon="create-outline" onPress={onEdit} testID="edit-epf-account" />}
           leading={<IconButton accessibilityLabel="Back to Holdings" icon="arrow-back" onPress={onBack} testID="epf-account-back" />}
-          subtitle={[epfProviderLabel(account.provider), account.employerLabel, epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
+          subtitle={[epfProviderLabel(account.provider), account.employerLabel,
+            settlement ? `Settled on ${formatDate(settlement.effectiveDate)}` : epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
           title={account.nickname}
         />
 
@@ -189,16 +192,17 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
             <AppText style={styles.balanceValue} testID="epf-account-total" weight="bold">Unavailable</AppText>
           )}
           <AppText color="secondary" variant="caption" testID="epf-account-evidence">
-            {value
-              ? `As of ${formatDate(value.lastEvidenceDate)} · ${value.historyComplete ? "all activity recorded" : "later activity not confirmed"}`
-              : "This account's records need review before a balance can be shown."}
+            {settlement ? `Paid out in full on ${formatDate(settlement.effectiveDate)}`
+              : value
+                ? `As of ${formatDate(value.lastEvidenceDate)} · ${value.historyComplete ? "all activity recorded" : "later activity not confirmed"}`
+                : "This account's records need review before a balance can be shown."}
           </AppText>
           {account.status !== "active" && value && value.balance.total > 0 ? (
             <AppText color="secondary" variant="caption">
               {epfStatusLabel(account.status)} accounts keep their balance in your portfolio until it is withdrawn or moved.
             </AppText>
           ) : null}
-          <AppButton onPress={onUpdateBalance} testID="update-epf-balance" title="Update balance" />
+          {settlement ? null : <AppButton onPress={onUpdateBalance} testID="update-epf-balance" title="Update balance" />}
         </PremiumCard>
 
         <PremiumCard section>
@@ -220,10 +224,22 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
             </View>
           ) : null}
           <View style={styles.separator} />
-          <Row label="Invested capital" stacked={stacked} testID="epf-capital" value="Unknown" />
-          <AppText color="secondary" variant="caption">
-            A statement balance includes past interest, so it does not show how much was contributed.
-          </AppText>
+          {value && value.capital !== null ? (
+            <>
+              <Row label="Invested capital" masked={masked} stacked={stacked} testID="epf-capital" value={formatINR(value.capital)} />
+              <AppText color="secondary" variant="caption">
+                {settlement ? "Nothing remains invested after the final settlement."
+                  : "Contributions recorded since this account started from ₹0. Interest is return, not invested capital."}
+              </AppText>
+            </>
+          ) : (
+            <>
+              <Row label="Invested capital" stacked={stacked} testID="epf-capital" value="Unknown" />
+              <AppText color="secondary" variant="caption">
+                A statement balance includes past interest, so it does not show how much was contributed.
+              </AppText>
+            </>
+          )}
         </PremiumCard>
 
         <PremiumCard section>
@@ -241,7 +257,7 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
               ))}
             </View>
           ) : null}
-          {onOpenEntry ? (
+          {onOpenEntry && !settlement ? (
             <AppButton onPress={() => onOpenEntry()} testID="add-epf-entry" title="Add entry" variant="secondary" />
           ) : null}
         </PremiumCard>
@@ -475,7 +491,9 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
             <ReviewDetail label="Status" value={epfStatusLabel(candidate.status)} />
           </PremiumCard>
           <AppText color="secondary" variant="caption">
-            CogVest tracks EPF from this balance in Debt. Earlier contributions and interest are not rebuilt, and invested capital stays unknown.
+            {candidate.checkpoint.capital === 0
+              ? "Starting from ₹0, so the contributions you add count as invested capital. Interest counts as return."
+              : "CogVest tracks EPF from this balance in Debt. Earlier contributions and interest are not rebuilt, and invested capital stays unknown."}
           </AppText>
           {message ? <AppText selectable style={styles.error} testID="epf-account-save-error">{message}</AppText> : null}
           <View style={styles.actions}>

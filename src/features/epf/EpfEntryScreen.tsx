@@ -39,7 +39,8 @@ import {
   type EpfEntryPlan,
 } from "./epfEntryForm";
 
-const fieldOrder: EpfEntryField[] = ["amount", "employee", "employer", "targetAccountId", "date", "postedDate", "creditDate"];
+const fieldOrder: EpfEntryField[] = ["amount", "employee", "employer", "settlementInterest", "settlementInterestEmployee",
+  "settlementInterestEmployer", "targetAccountId", "date", "postedDate", "creditDate"];
 
 const dateLabel: Record<EpfEntryKind, string> = {
   employeeContribution: "Credited on",
@@ -58,6 +59,10 @@ function roleCopy(plan: EpfEntryPlan, draft: EpfEntryDraft) {
     case "interest":
       return "Counted as return earned, not as money put in.";
     case "withdrawal":
+      if (plan.event.type === "withdrawal" && plan.event.settlement) {
+        return `Pays out the whole balance, including ${formatINR(plan.event.settlement.interest.total)} interest credited with the claim. ` +
+          "The interest counts as return, and the account ends at ₹0.";
+      }
       return draft.destination === "cash"
         ? `Your tracked Cash increases by ${formatINR(plan.effect.cashChange)}. Both records are saved together.`
         : draft.destination === "external"
@@ -183,7 +188,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
         <View style={styles.content}>
           <ScreenHeader
             leading={<IconButton accessibilityLabel="Back to entry editor" icon="arrow-back" onPress={() => setReview(undefined)} />}
-            subtitle={`${epfEntryKindOptions.find((option) => option.value === draft.kind)!.label} · ${formatDate(plan.event.effectiveDate)}`}
+            subtitle={`${eventTitle(plan.event)} · ${formatDate(plan.event.effectiveDate)}`}
             title="Review EPF entry"
           />
           <PremiumCard>
@@ -266,6 +271,29 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
                   </>
                 ) : null}
                 {draft.kind === "withdrawal" ? (
+                  <>
+                    <EpfCheckRow checked={draft.settlement} label="Final settlement (closes the account)"
+                      helper="The claim paid out everything, including interest up to the settlement date that the passbook may list under the year end."
+                      onToggle={() => update("settlement", !draft.settlement)} testID="epf-entry-settlement" />
+                    {draft.settlement ? (
+                      <>
+                        <FormTextField error={errors.settlementInterest} inputRef={(node) => { inputRefs.current.settlementInterest = node; }}
+                          keyboardType="decimal-pad" label="Interest paid with the settlement (INR)"
+                          onChangeText={(value) => update("settlementInterest", value)}
+                          testID="epf-entry-settlement-interest-input" value={draft.settlementInterest} />
+                        <FormTextField error={errors.settlementInterestEmployee} inputRef={(node) => { inputRefs.current.settlementInterestEmployee = node; }}
+                          keyboardType="decimal-pad" label="Employee interest (optional)"
+                          onChangeText={(value) => update("settlementInterestEmployee", value)}
+                          testID="epf-entry-settlement-interest-employee-input" value={draft.settlementInterestEmployee} />
+                        <FormTextField error={errors.settlementInterestEmployer} inputRef={(node) => { inputRefs.current.settlementInterestEmployer = node; }}
+                          keyboardType="decimal-pad" label="Employer interest (optional)"
+                          onChangeText={(value) => update("settlementInterestEmployer", value)}
+                          testID="epf-entry-settlement-interest-employer-input" value={draft.settlementInterestEmployer} />
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+                {draft.kind === "withdrawal" ? (
                   <SelectionField label="Where did the money go?" onChange={(value) => update("destination", value)}
                     options={epfWithdrawalDestinationOptions} testIDPrefix="epf-entry-destination" value={draft.destination} />
                 ) : null}
@@ -292,7 +320,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
               <PremiumCard section style={styles.formSection}>
                 <SectionHeader title="Dates and source" />
                 <DatePickerField error={errors.date} fieldRef={(node) => { inputRefs.current.date = node; }}
-                  label={dateLabel[draft.kind]} maximumDate={now} onChange={(value) => update("date", value)}
+                  label={draft.kind === "withdrawal" && draft.settlement ? "Settled on" : dateLabel[draft.kind]} maximumDate={now} onChange={(value) => update("date", value)}
                   testID="epf-entry-date" value={draft.date} />
                 {draft.kind === "interest" ? (
                   <DatePickerField error={errors.postedDate} fieldRef={(node) => { inputRefs.current.postedDate = node; }}

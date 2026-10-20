@@ -40,16 +40,23 @@ export type EpfEntryDraft = {
   postedDate: string;
   evidence: EpfEvidence;
   destination: EpfWithdrawalDestination;
+  /** A final settlement empties the account and includes the interest paid with the claim. */
+  settlement: boolean;
+  settlementInterest: string;
+  settlementInterestEmployee: string;
+  settlementInterestEmployer: string;
   targetAccountId: string;
   transferStatus: "completed" | "inTransit";
   creditDate: string;
 };
-export type EpfEntryField = "amount" | "employee" | "employer" | "date" | "postedDate" | "targetAccountId" | "creditDate";
+export type EpfEntryField = "amount" | "employee" | "employer" | "settlementInterest" | "settlementInterestEmployee"
+  | "settlementInterestEmployer" | "date" | "postedDate" | "targetAccountId" | "creditDate";
 
 export function emptyEpfEntryDraft(now: Date): EpfEntryDraft {
   const today = formatLocalCalendarDate(now);
   return { kind: "employeeContribution", amount: "", employee: "", employer: "", voluntary: false,
     date: today, postedDate: today, evidence: "statement", destination: "external",
+    settlement: false, settlementInterest: "", settlementInterestEmployee: "", settlementInterestEmployer: "",
     targetAccountId: "", transferStatus: "completed", creditDate: today };
 }
 
@@ -71,7 +78,10 @@ export function draftFromEpfEvent(event: EpfEvent, accountId: string, cashLinked
       return { ...common, kind: "interest", amount: String(event.amount.total), ...split(event.amount) };
     case "withdrawal":
       return { ...common, kind: "withdrawal", amount: String(event.amount.total), ...split(event.amount),
-        destination: cashLinked ? "cash" : event.destination };
+        destination: cashLinked ? "cash" : event.destination,
+        ...(event.settlement ? { settlement: true, settlementInterest: String(event.settlement.interest.total),
+          settlementInterestEmployee: split(event.settlement.interest).employee,
+          settlementInterestEmployer: split(event.settlement.interest).employer } : {}) };
     case "externalTransferIn":
       return { ...common, kind: "transferIn", amount: String(event.amount.total), ...split(event.amount) };
     case "transfer":
@@ -142,6 +152,25 @@ export function buildEpfEntry(
     if (employee !== null && employer !== null) components = { employee, employer };
   }
 
+  const settles = draft.kind === "withdrawal" && draft.settlement;
+  let settlementInterest: EpfBalance | null = null;
+  if (settles) {
+    const interest = parseInrAmount(draft.settlementInterest);
+    if (interest === null) errors.settlementInterest = "Enter the interest paid with the settlement, or 0 if none.";
+    let interestComponents: EpfBalance["components"] = null;
+    if (draft.settlementInterestEmployee.trim() || draft.settlementInterestEmployer.trim()) {
+      const employee = parseInrAmount(draft.settlementInterestEmployee);
+      const employer = parseInrAmount(draft.settlementInterestEmployer);
+      if (employee === null) errors.settlementInterestEmployee = "Enter the employee part, or leave both parts blank.";
+      if (employer === null) errors.settlementInterestEmployer = "Enter the employer part, or leave both parts blank.";
+      if (employee !== null && employer !== null && interest !== null && !decimal(employee).plus(employer).equals(interest)) {
+        errors.settlementInterestEmployer = "The two parts must add up to the interest.";
+      }
+      if (employee !== null && employer !== null) interestComponents = { employee, employer };
+    }
+    if (interest !== null) settlementInterest = { total: interest, components: interestComponents };
+  }
+
   if (draft.kind === "interest") {
     const postedError = validDate(draft.postedDate, today);
     if (postedError) errors.postedDate = postedError;
@@ -180,7 +209,8 @@ export function buildEpfEntry(
     case "withdrawal":
       // Linked Cash requires the unknown destination plus an explicit, validated Cash record.
       event = { ...base, accountId: context.account.id, type: "withdrawal", amount: balance, capitalReduction: null,
-        destination: draft.destination === "external" ? "external" : "unknown" };
+        destination: draft.destination === "external" ? "external" : "unknown",
+        ...(settles && settlementInterest ? { settlement: { interest: settlementInterest } } : {}) };
       break;
     case "transferIn":
       event = { ...base, accountId: context.account.id, type: "externalTransferIn", amount: balance, capital: null };
@@ -199,8 +229,8 @@ export function buildEpfEntry(
   const before = calculateEpfLedger(ledger, today, today);
   const after = changeEpfEvent(ledger, { type: "put", event }, today);
   if (!before.ok || !after.ok) {
-    return { ok: false, errors: {},
-      message: "This entry conflicts with other recorded EPF activity, for example by making a balance negative. Check the amount and date." };
+    return { ok: false, errors: {}, message: explainWithdrawalConflict(event, context, today)
+      || "This entry conflicts with other recorded EPF activity, for example by making a balance negative. Check the amount and date." };
   }
   const affected = event.type === "transfer" ? [event.sourceId, event.destinationId] : [context.account.id];
   const value = (result: typeof before, id: string) => result.ok
@@ -213,6 +243,35 @@ export function buildEpfEntry(
     inTransitAfter: after.result.inTransit,
     cashChange: cash ? amount : 0,
   } } };
+}
+
+/** Names the recorded balance behind a rejected withdrawal, so the fix is clear. */
+function explainWithdrawalConflict(event: EpfEvent,
+  context: { account: EpfAccount; accounts: readonly EpfAccount[]; events: readonly EpfEvent[] }, today: string) {
+  if (event.type !== "withdrawal") return null;
+  const others = context.events.filter((item) => item.id !== event.id);
+  if (event.settlement) {
+    const later = others.filter((item) => (item.type === "transfer"
+      ? [item.sourceId, item.destinationId] : [item.accountId]).includes(context.account.id) && item.effectiveDate > event.effectiveDate)
+      .sort((left, right) => left.effectiveDate.localeCompare(right.effectiveDate))[0];
+    if (later) {
+      return `A final settlement must be the last entry in this account. Remove the ${eventTitle(later).toLowerCase()} on ${formatDate(later.effectiveDate)}: ` +
+        "the settlement already pays interest up to its own date.";
+    }
+  }
+  const atDate = calculateEpfLedger({ accounts: [...context.accounts], events: others }, event.effectiveDate, today);
+  const recorded = atDate.ok ? atDate.accounts.find((item) => item.accountId === context.account.id)?.balance.total : undefined;
+  if (recorded === undefined) return null;
+  if (event.settlement) {
+    const due = decimal(recorded).plus(event.settlement.interest.total).toNumber();
+    return `On ${formatDate(event.effectiveDate)} the recorded balance is ${formatINR(recorded)}. With ${formatINR(event.settlement.interest.total)} interest ` +
+      `that makes ${formatINR(due)}, but ${formatINR(event.amount.total)} was paid. Check for missing contributions, the interest amount or the split.`;
+  }
+  if (event.amount.total > recorded) {
+    return `On ${formatDate(event.effectiveDate)} ${context.account.nickname} has a recorded balance of ${formatINR(recorded)}, less than this ` +
+      `${formatINR(event.amount.total)} withdrawal. If the payout closed the account and included interest, mark it as a final settlement.`;
+  }
+  return null;
 }
 
 export function buildEpfReversal(
@@ -242,7 +301,7 @@ export function eventTitle(event: EpfEvent) {
     case "reconciliation": return "Balance update";
     case "contribution": return event.party === "employee" ? `Employee contribution${event.voluntary ? " (voluntary)" : ""}` : "Employer contribution";
     case "interest": return "Official interest";
-    case "withdrawal": return "Withdrawal";
+    case "withdrawal": return event.settlement ? "Final settlement" : "Withdrawal";
     case "externalTransferIn": return "Transfer in";
     case "transfer": return "Transfer between accounts";
     case "reversal": return "Provider reversal";

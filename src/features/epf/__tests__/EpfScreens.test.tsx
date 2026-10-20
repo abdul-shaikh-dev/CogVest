@@ -111,6 +111,8 @@ describe("Add EPF account", () => {
     expect(screen.queryByTestId("epf-breakdown")).toBeNull();
     fireEvent.press(screen.getByTestId("epf-breakdown-toggle"));
     expect(screen.getByTestId("epf-employee-balance").props.accessibilityLabel).toBe("₹0.00");
+    expect(screen.getByTestId("epf-capital").props.accessibilityLabel).toBe("₹0.00");
+    expect(screen.getByText("Contributions recorded since this account started from ₹0. Interest is return, not invested capital.")).toBeTruthy();
   });
 });
 

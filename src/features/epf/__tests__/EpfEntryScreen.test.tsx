@@ -108,6 +108,37 @@ test("a withdrawal into tracked Cash saves both records together and deleting it
   expect(store.getState().cashEntries.some((entry) => entry.id === link.cashEntryId)).toBe(false);
 });
 
+test("a final settlement records the interest paid with the claim, empties the account and shows it as settled", () => {
+  const store = setup();
+  enter(store, (screen) => {
+    choose(screen, "epf-entry-kind", "withdrawal");
+    fireEvent.changeText(screen.getByTestId("epf-entry-amount-input"), "144000");
+    fireEvent.changeText(screen.getByTestId("epf-entry-employee-input"), "103000");
+    fireEvent.changeText(screen.getByTestId("epf-entry-employer-input"), "41000");
+    fireEvent.press(screen.getByTestId("epf-entry-settlement"));
+    expect(screen.getByText("Settled on")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("epf-entry-settlement-interest-input"), "4000");
+    fireEvent.changeText(screen.getByTestId("epf-entry-settlement-interest-employee-input"), "3000");
+    fireEvent.changeText(screen.getByTestId("epf-entry-settlement-interest-employer-input"), "1000");
+    setDate(screen, "epf-entry-date", "2026-06-01");
+    fireEvent.press(screen.getByTestId("review-epf-entry"));
+    expect(screen.getByTestId("epf-entry-effect-acme")).toHaveTextContent("₹1,40,000.00 → ₹0.00");
+    expect(screen.getByTestId("epf-entry-role")).toHaveTextContent("Pays out the whole balance, including ₹4,000.00 interest " +
+      "credited with the claim. The interest counts as return, and the account ends at ₹0.");
+    fireEvent.press(screen.getByTestId("save-epf-entry"));
+  });
+  expect(total(store)).toMatchObject({ total: 0, capital: 0 });
+  expect(store.getState().epf.events[0]).toMatchObject({ settlement: { interest: { total: 4000 } } });
+
+  const detail = render(<EpfAccountScreen accountId="acme" now={now} onBack={jest.fn()} onComplete={jest.fn()}
+    onUpdateBalance={jest.fn()} store={store} />);
+  expect(detail.getByText("EPFO · Settled on 01 Jun 2026")).toBeTruthy();
+  expect(detail.getByTestId("epf-capital")).toHaveTextContent("₹0.00");
+  expect(detail.getByTestId("epf-account-evidence")).toHaveTextContent("Paid out in full on 01 Jun 2026");
+  expect(detail.getByText("Nothing remains invested after the final settlement.")).toBeTruthy();
+  expect(detail.queryByTestId("update-epf-balance")).toBeNull();
+});
+
 test("a 50,000 transfer keeps combined EPF unchanged in transit, completes from either side, and never duplicates", () => {
   const store = setup([account("acme", "Acme", 140000, 100000, 40000), account("beta", "Beta", 0)]);
   enter(store, (screen) => {

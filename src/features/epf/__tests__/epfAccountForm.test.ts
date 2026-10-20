@@ -53,6 +53,16 @@ test("editing keeps identity, legacy link, provenance time and unknown capital u
   expect(moved.ok && moved.account).toMatchObject({ historyCompleteThrough: null, checkpoint: { recordedAt: now.toISOString() } });
 });
 
+test("an account started from ₹0 has known capital until its balance is edited above zero", () => {
+  const fresh = buildEpfAccount({ ...draft, employee: "0", employer: "0" }, { id: "z", now });
+  expect(fresh.ok && fresh.account.checkpoint.capital).toBe(0);
+  if (!fresh.ok) throw new Error("setup");
+  const renamed = buildEpfAccount({ ...draftFromEpfAccount(fresh.account), nickname: "New job" }, { existing: fresh.account, id: "z", now });
+  expect(renamed.ok && renamed.account.checkpoint.capital).toBe(0);
+  const funded = buildEpfAccount({ ...draftFromEpfAccount(fresh.account), employee: "5000" }, { existing: fresh.account, id: "z", now });
+  expect(funded.ok && funded.account.checkpoint.capital).toBeNull();
+});
+
 test("a total-only legacy checkpoint is not split by a guessed ratio", () => {
   const created = buildEpfAccount(draft, { id: "a", now });
   if (!created.ok) throw new Error("setup");

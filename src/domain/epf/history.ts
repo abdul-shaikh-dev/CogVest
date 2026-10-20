@@ -65,15 +65,20 @@ function flowsForMonth(events: readonly EpfEvent[], month: string): EpfMonthFlow
     if (event.type === "transfer" || event.effectiveDate.slice(0, 7) !== month) continue;
     if (event.type === "contribution") contributions = contributions.plus(event.amount);
     else if (event.type === "interest") interest = interest.plus(event.amount.total);
-    else if (event.type === "withdrawal") withdrawals = withdrawals.plus(event.amount.total);
-    else if (event.type === "externalTransferIn") externalTransfersIn = externalTransfersIn.plus(event.amount.total);
+    else if (event.type === "withdrawal") {
+      withdrawals = withdrawals.plus(event.amount.total);
+      if (event.settlement) interest = interest.plus(event.settlement.interest.total);
+    } else if (event.type === "externalTransferIn") externalTransfersIn = externalTransfersIn.plus(event.amount.total);
     else if (event.type === "reconciliation") reconciled = true;
     else {
       // A reversal offsets its original in the reversal's own effective month.
       const original = byId.get(event.reversesId);
       if (original?.type === "contribution") contributions = contributions.minus(original.amount);
       else if (original?.type === "interest") interest = interest.minus(original.amount.total);
-      else if (original?.type === "withdrawal") withdrawals = withdrawals.minus(original.amount.total);
+      else if (original?.type === "withdrawal") {
+        withdrawals = withdrawals.minus(original.amount.total);
+        if (original.settlement) interest = interest.minus(original.settlement.interest.total);
+      }
     }
   }
   return {

@@ -77,6 +77,14 @@ function validate(ledger: EpfLedger, today: string) {
         errors.push("Events must follow both account checkpoints; reconcile checkpoint overlap explicitly.");
       }
     }
+    if (event.type === "withdrawal" && event.settlement) {
+      if (event.capitalReduction !== null) errors.push("A final settlement empties the account; leave its capital reduction unset.");
+      const settlement = event;
+      const later = ledger.events.some((other) => other.id !== settlement.id &&
+        references(other).includes(settlement.accountId) && other.effectiveDate > settlement.effectiveDate &&
+        !(other.type === "reversal" && other.reversesId === settlement.id));
+      if (later) errors.push("A final settlement must be the last entry in its account.");
+    }
     if (event.type === "contribution" && event.party === "employer" && event.voluntary) {
       errors.push("Voluntary PF is an employee contribution.");
     }
@@ -131,11 +139,16 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
       lastEvidenceDate: account.checkpoint.date, historyComplete,
     });
   }
+  // A settlement empties its account, so same-day entries replay before it and
+  // only its own reversal after it.
+  const settlementIds = new Set(ledger.events.flatMap((event) => event.type === "withdrawal" && event.settlement ? [event.id] : []));
+  const dayRank = (event: EpfEvent) => settlementIds.has(event.id) ? 1
+    : event.type === "reversal" && settlementIds.has(event.reversesId) ? 2 : 0;
   const steps = ledger.events.flatMap((event) => {
     const debit = { date: event.effectiveDate, event, credit: false };
     return event.type === "transfer" && event.creditDate
       ? [debit, { date: event.creditDate, event, credit: true }] : [debit];
-  }).sort((a, b) => a.date.localeCompare(b.date) ||
+  }).sort((a, b) => a.date.localeCompare(b.date) || dayRank(a.event) - dayRank(b.event) ||
     Date.parse(a.event.recordedAt) - Date.parse(b.event.recordedAt) || a.event.id.localeCompare(b.event.id) ||
     Number(a.credit) - Number(b.credit));
   const transit = new Map<string, { value: number; capital: number | null }>();
@@ -170,7 +183,11 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
           state.capital = shiftCapital(state.capital, original.amount, -1);
         } else if (original.type === "withdrawal" || original.type === "interest") {
           state.balance = shift(state.balance, original.amount, original.type === "withdrawal" ? 1 : -1);
-          if (original.type === "withdrawal") state.capital = shiftCapital(state.capital, original.capitalReduction, 1);
+          if (original.type === "withdrawal") {
+            if (original.settlement) state.balance = shift(state.balance, original.settlement.interest, -1);
+            // Capital before a settlement was not recorded, so it is unknown again.
+            state.capital = shiftCapital(state.capital, original.capitalReduction, 1);
+          }
         }
         reasons.add(`${event.id}:reversalFlowReview`);
       } else if (event.type === "reconciliation") {
@@ -185,6 +202,18 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
           },
         }, 1);
         state.capital = shiftCapital(state.capital, event.amount, 1);
+      } else if (event.type === "withdrawal" && event.settlement) {
+        const due = shift(state.balance, event.settlement.interest, 1);
+        const paid = event.amount;
+        if (!decimal(due.total).equals(paid.total) || (due.components && paid.components &&
+          (!decimal(due.components.employee).equals(paid.components.employee) ||
+            !decimal(due.components.employer).equals(paid.components.employer)))) {
+          throw new Error("A final settlement must pay out the whole balance, including the interest paid with it.");
+        }
+        state.balance = { total: 0, components: due.components && paid.components ? { employee: 0, employer: 0 } : null };
+        // Nothing remains, so neither does any contributed capital.
+        state.capital = 0;
+        if (event.destination === "unknown") reasons.add(`${event.id}:unknownWithdrawalDestination`);
       } else {
         state.balance = shift(state.balance, event.amount, event.type === "withdrawal" ? -1 : 1);
         if (event.type === "withdrawal") {
