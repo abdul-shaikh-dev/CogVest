@@ -55,6 +55,7 @@ const base = {
   evidence: id,
 };
 const accountEvent = { ...base, accountId: id };
+const split = z.object({ employee: money, employer: money }).strict();
 export const epfEventSchema = z.discriminatedUnion("type", [
   z.object({ ...accountEvent, type: z.literal("contribution"),
     party: z.enum(["employee", "employer"]), amount: money,
@@ -75,6 +76,12 @@ export const epfEventSchema = z.discriminatedUnion("type", [
   }).strict(),
   z.object({ ...accountEvent, type: z.literal("reconciliation"),
     balance: epfBalanceSchema, capital: money.nullable(), reason: id,
+  }).strict(),
+  // One financial year (or part of one) from the passbook's printed totals. All of
+  // its flows take effect on effectiveDate, the period end. Closing is the
+  // passbook balance it must reconcile to; required for a period ending 31 Mar.
+  z.object({ ...accountEvent, type: z.literal("yearSummary"), periodStart: epfDateSchema,
+    contributions: split, interest: split, closing: split.nullable(),
   }).strict(),
   z.object({ ...accountEvent, type: z.literal("reversal"), reversesId: id, reason: id,
   }).strict(),

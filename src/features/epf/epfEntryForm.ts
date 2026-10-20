@@ -10,7 +10,8 @@ export type EpfEntryKind =
   | "interest"
   | "withdrawal"
   | "transferOut"
-  | "transferIn";
+  | "transferIn"
+  | "yearSummary";
 
 export const epfEntryKindOptions: Array<{ label: string; value: EpfEntryKind }> = [
   { label: "Employee contribution", value: "employeeContribution" },
@@ -19,6 +20,7 @@ export const epfEntryKindOptions: Array<{ label: string; value: EpfEntryKind }> 
   { label: "Withdrawal", value: "withdrawal" },
   { label: "Transfer to another tracked EPF account", value: "transferOut" },
   { label: "Transfer in from an untracked account", value: "transferIn" },
+  { label: "Financial year summary (passbook totals)", value: "yearSummary" },
 ];
 
 export type EpfWithdrawalDestination = "external" | "unknown" | "cash";
@@ -48,16 +50,56 @@ export type EpfEntryDraft = {
   targetAccountId: string;
   transferStatus: "completed" | "inTransit";
   creditDate: string;
+  /** A financial-year summary covers periodStart to date, from the passbook's totals. */
+  periodStart: string;
+  contributionEmployee: string;
+  contributionEmployer: string;
+  interestEmployee: string;
+  interestEmployer: string;
+  closingEmployee: string;
+  closingEmployer: string;
 };
+export type EpfSummaryField = "periodStart" | "contributionEmployee" | "contributionEmployer" | "interestEmployee"
+  | "interestEmployer" | "closingEmployee" | "closingEmployer";
 export type EpfEntryField = "amount" | "employee" | "employer" | "settlementInterest" | "settlementInterestEmployee"
-  | "settlementInterestEmployer" | "date" | "postedDate" | "targetAccountId" | "creditDate";
+  | "settlementInterestEmployer" | "date" | "postedDate" | "targetAccountId" | "creditDate" | EpfSummaryField;
 
 export function emptyEpfEntryDraft(now: Date): EpfEntryDraft {
   const today = formatLocalCalendarDate(now);
   return { kind: "employeeContribution", amount: "", employee: "", employer: "", voluntary: false,
     date: today, postedDate: today, evidence: "statement", destination: "external",
     settlement: false, settlementInterest: "", settlementInterestEmployee: "", settlementInterestEmployer: "",
-    targetAccountId: "", transferStatus: "completed", creditDate: today };
+    targetAccountId: "", transferStatus: "completed", creditDate: today, periodStart: today,
+    contributionEmployee: "", contributionEmployer: "", interestEmployee: "", interestEmployer: "",
+    closingEmployee: "", closingEmployer: "" };
+}
+
+const startOfFinancialYear = (date: string) => `${Number(date.slice(0, 4)) - (date.slice(5, 7) < "04" ? 1 : 0)}-04-01`;
+function dayAfter(date: string) {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+export function financialYearLabel(date: string) {
+  const start = Number(startOfFinancialYear(date).slice(0, 4));
+  return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
+}
+
+/** Financial years after the starting balance, newest first, keyed by their start date. */
+export function financialYearOptions(account: EpfAccount, now: Date): Array<{ label: string; value: string }> {
+  const first = Number(startOfFinancialYear(dayAfter(account.checkpoint.date)).slice(0, 4));
+  const last = Number(startOfFinancialYear(formatLocalCalendarDate(now)).slice(0, 4));
+  const options: Array<{ label: string; value: string }> = [];
+  for (let year = last; year >= first; year -= 1) options.push({ label: financialYearLabel(`${year}-04-01`), value: `${year}-04-01` });
+  return options;
+}
+
+/** The whole financial year, trimmed to the starting balance and to today. */
+export function financialYearPeriod(yearStart: string, account: EpfAccount, now: Date) {
+  const today = formatLocalCalendarDate(now);
+  const yearEnd = `${Number(yearStart.slice(0, 4)) + 1}-03-31`;
+  const afterCheckpoint = dayAfter(account.checkpoint.date);
+  return { periodStart: afterCheckpoint > yearStart ? afterCheckpoint : yearStart, date: yearEnd < today ? yearEnd : today };
 }
 
 const splitKinds = new Set<EpfEntryKind>(["interest", "withdrawal", "transferOut", "transferIn"]);
@@ -89,6 +131,12 @@ export function draftFromEpfEvent(event: EpfEvent, accountId: string, cashLinked
         targetAccountId: event.sourceId === accountId ? event.destinationId : event.sourceId,
         transferStatus: event.status === "completed" ? "completed" : "inTransit",
         creditDate: event.creditDate ?? base.creditDate };
+    case "yearSummary":
+      return { ...common, kind: "yearSummary", periodStart: event.periodStart,
+        contributionEmployee: String(event.contributions.employee), contributionEmployer: String(event.contributions.employer),
+        interestEmployee: String(event.interest.employee), interestEmployer: String(event.interest.employer),
+        closingEmployee: event.closing ? String(event.closing.employee) : "",
+        closingEmployer: event.closing ? String(event.closing.employer) : "" };
     default:
       throw new Error("This entry type is not edited with the entry form.");
   }
@@ -113,6 +161,8 @@ export type EpfEntryPlan = {
   cash: { id: string; label: string } | null;
   effect: EpfEntryEffect;
 };
+type EpfEntryResult = { ok: true; plan: EpfEntryPlan } | { ok: false; errors: EpfFieldErrors<EpfEntryField>; message?: string };
+type EpfLedgerContext = { account: EpfAccount; accounts: readonly EpfAccount[]; events: readonly EpfEvent[] };
 
 /**
  * Builds the exact evidenced record for an optional ledger entry. Contributions
@@ -129,7 +179,8 @@ export function buildEpfEntry(
     now: Date;
     existing?: EpfEvent;
   },
-): { ok: true; plan: EpfEntryPlan } | { ok: false; errors: EpfFieldErrors<EpfEntryField>; message?: string } {
+): EpfEntryResult {
+  if (draft.kind === "yearSummary") return buildYearSummary(draft, context);
   const today = formatLocalCalendarDate(context.now);
   const errors: EpfFieldErrors<EpfEntryField> = {};
   const amount = parseInrAmount(draft.amount);
@@ -225,11 +276,15 @@ export function buildEpfEntry(
   const cash = draft.kind === "withdrawal" && draft.destination === "cash"
     ? { id: context.cashId, label: `From ${context.account.nickname} EPF` } : null;
 
+  return planEntry(event, cash, context, today);
+}
+
+function planEntry(event: EpfEvent, cash: EpfEntryPlan["cash"], context: EpfLedgerContext, today: string): EpfEntryResult {
   const ledger = { accounts: [...context.accounts], events: [...context.events] };
   const before = calculateEpfLedger(ledger, today, today);
   const after = changeEpfEvent(ledger, { type: "put", event }, today);
   if (!before.ok || !after.ok) {
-    return { ok: false, errors: {}, message: explainWithdrawalConflict(event, context, today)
+    return { ok: false, errors: {}, message: explainWithdrawalConflict(event, context, today) || explainSummaryConflict(event, context, today)
       || "This entry conflicts with other recorded EPF activity, for example by making a balance negative. Check the amount and date." };
   }
   const affected = event.type === "transfer" ? [event.sourceId, event.destinationId] : [context.account.id];
@@ -241,13 +296,104 @@ export function buildEpfEntry(
     totalBefore: before.total,
     totalAfter: after.result.total,
     inTransitAfter: after.result.inTransit,
-    cashChange: cash ? amount : 0,
+    cashChange: cash && event.type === "withdrawal" ? event.amount.total : 0,
   } } };
 }
 
+/**
+ * One financial year, or part of one, from the passbook's printed totals. Its
+ * closing balance is checked on every replay, so a reconciled year stays so.
+ */
+function buildYearSummary(draft: EpfEntryDraft,
+  context: EpfLedgerContext & { id: string; now: Date; existing?: EpfEvent }): EpfEntryResult {
+  const today = formatLocalCalendarDate(context.now);
+  const errors: EpfFieldErrors<EpfEntryField> = {};
+  const startError = validDate(draft.periodStart, today);
+  const endError = validDate(draft.date, today);
+  if (startError) errors.periodStart = startError;
+  else if (draft.periodStart <= context.account.checkpoint.date) {
+    errors.periodStart = `Start after the starting balance (${formatDate(context.account.checkpoint.date)}). That balance already includes earlier activity.`;
+  }
+  if (endError) errors.date = endError;
+  else if (!startError && draft.date < draft.periodStart) errors.date = "The period cannot end before it starts.";
+  else if (!startError && startOfFinancialYear(draft.date) !== startOfFinancialYear(draft.periodStart)) {
+    errors.date = `End within the same financial year, by 31 Mar ${Number(startOfFinancialYear(draft.periodStart).slice(0, 4)) + 1}.`;
+  }
+  const part = (field: EpfSummaryField, message: string) => {
+    const value = parseInrAmount(draft[field]);
+    if (value === null) errors[field] = message;
+    return value ?? 0;
+  };
+  const contributions = {
+    employee: part("contributionEmployee", "Enter the employee contributions for the period, or 0."),
+    employer: part("contributionEmployer", "Enter the employer contributions for the period, or 0."),
+  };
+  const interest = {
+    employee: part("interestEmployee", "Enter the employee interest for the period, or 0."),
+    employer: part("interestEmployer", "Enter the employer interest for the period, or 0."),
+  };
+  const yearEnd = draft.date.slice(5) === "03-31";
+  let closing: { employee: number; employer: number } | null = null;
+  if (yearEnd || draft.closingEmployee.trim() || draft.closingEmployer.trim()) {
+    const message = yearEnd ? "Enter the passbook closing balance for this part." : "Enter this part, or leave both closing parts blank.";
+    closing = { employee: part("closingEmployee", message), employer: part("closingEmployer", message) };
+  }
+  if (!errors.contributionEmployee && !errors.contributionEmployer && !errors.interestEmployee && !errors.interestEmployer &&
+    decimal(contributions.employee).plus(contributions.employer).plus(interest.employee).plus(interest.employer).lte(0)) {
+    errors.contributionEmployee = "Enter the contributions or interest for the period.";
+  }
+  if (Object.keys(errors).length) return { ok: false, errors };
+  const evidence = draft.evidence === "ownRecord" ? "Own record"
+    : context.account.provider === "epfo" ? "EPFO passbook" : "Employer trust statement";
+  const event: EpfEvent = { id: context.existing?.id ?? context.id, recordedAt: context.now.toISOString(),
+    effectiveDate: draft.date, postedDate: draft.date, evidence, accountId: context.account.id, type: "yearSummary",
+    periodStart: draft.periodStart, contributions, interest, closing };
+  return planEntry(event, null, context, today);
+}
+
+/** Names the entries inside the period, or the closing gap by part, behind a rejected summary. */
+function explainSummaryConflict(event: EpfEvent, context: EpfLedgerContext, today: string) {
+  const others = context.events.filter((item) => item.id !== event.id);
+  if (event.type === "contribution" || event.type === "interest") {
+    const owner = others.find((item) => item.type === "yearSummary" && item.accountId === context.account.id &&
+      item.periodStart <= event.effectiveDate && event.effectiveDate <= item.effectiveDate);
+    return owner?.type === "yearSummary"
+      ? `The ${eventTitle(owner)} already includes ${formatDate(owner.periodStart)} to ${formatDate(owner.effectiveDate)}. ` +
+        "Correct the summary instead, or shorten its period first."
+      : null;
+  }
+  if (event.type !== "yearSummary") return null;
+  const inside = others.filter((item) => item.type !== "transfer" && item.accountId === context.account.id && (
+    ((item.type === "contribution" || item.type === "interest" || item.type === "reconciliation") &&
+      item.effectiveDate >= event.periodStart && item.effectiveDate <= event.effectiveDate) ||
+    (item.type === "yearSummary" && item.periodStart <= event.effectiveDate && item.effectiveDate >= event.periodStart)))
+    .sort((left, right) => left.effectiveDate.localeCompare(right.effectiveDate));
+  if (inside.length) {
+    return `${inside.length === 1 ? "1 entry is" : `${inside.length} entries are`} already recorded in this period, starting with the ` +
+      `${eventTitle(inside[0])} on ${formatDate(inside[0].effectiveDate)}. Delete them, or shorten the period so it does not overlap them.`;
+  }
+  if (!event.closing) return null;
+  const closing = event.closing;
+  // Same-day entries replay before the summary, so the balance on its end date
+  // without it, plus its own totals, is what the passbook closing must equal.
+  const without = calculateEpfLedger({ accounts: [...context.accounts], events: others }, event.effectiveDate, today);
+  const state = without.ok ? without.accounts.find((item) => item.accountId === context.account.id) : undefined;
+  if (!state) return null;
+  const added = (party: "employee" | "employer") => decimal(event.contributions[party]).plus(event.interest[party]);
+  const components = state.balance.components;
+  const gaps = components
+    ? (["employee", "employer"] as const).map((party) => [party, added(party).plus(components[party]).toNumber()] as const)
+      .filter(([party, calculated]) => !decimal(calculated).equals(closing[party]))
+      .map(([party, calculated]) => `${party} ${formatINR(calculated)} calculated, ${formatINR(closing[party])} in the passbook`)
+    : [`total ${formatINR(added("employee").plus(added("employer")).plus(state.balance.total).toNumber())} calculated, ` +
+      `${formatINR(decimal(closing.employee).plus(closing.employer).toNumber())} in the passbook`];
+  if (!gaps.length) return null;
+  return `The closing balance on ${formatDate(event.effectiveDate)} does not match: ${gaps.join("; ")}. ` +
+    "Check the totals, and any withdrawal or transfer recorded in this period.";
+}
+
 /** Names the recorded balance behind a rejected withdrawal, so the fix is clear. */
-function explainWithdrawalConflict(event: EpfEvent,
-  context: { account: EpfAccount; accounts: readonly EpfAccount[]; events: readonly EpfEvent[] }, today: string) {
+function explainWithdrawalConflict(event: EpfEvent, context: EpfLedgerContext, today: string) {
   if (event.type !== "withdrawal") return null;
   const others = context.events.filter((item) => item.id !== event.id);
   if (event.settlement) {
@@ -305,6 +451,7 @@ export function eventTitle(event: EpfEvent) {
     case "externalTransferIn": return "Transfer in";
     case "transfer": return "Transfer between accounts";
     case "reversal": return "Provider reversal";
+    case "yearSummary": return `FY ${financialYearLabel(event.effectiveDate)} summary`;
   }
 }
 
@@ -320,5 +467,8 @@ export function eventAmountLabel(event: EpfEvent, accountId: string) {
       return event.sourceId === accountId ? `−${formatINR(event.amount.total)}`
         : event.status === "completed" ? `+${formatINR(event.amount.total)}` : "Arriving";
     case "reversal": return "Reversal";
+    case "yearSummary":
+      return `+${formatINR(decimal(event.contributions.employee).plus(event.contributions.employer)
+        .plus(event.interest.employee).plus(event.interest.employer).toNumber())}`;
   }
 }

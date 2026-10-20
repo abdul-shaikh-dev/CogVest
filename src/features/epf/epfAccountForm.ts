@@ -157,6 +157,12 @@ export function buildEpfBalanceUpdate(
   if (!allErrors.date && draft.date <= context.account.checkpoint.date) {
     allErrors.date = `Use a date after the starting balance (${formatDate(context.account.checkpoint.date)}). To fix the starting balance, edit the account.`;
   }
+  const summary = context.events.find((event) => event.type === "yearSummary" && event.accountId === context.account.id &&
+    event.periodStart <= draft.date && draft.date <= event.effectiveDate);
+  if (!allErrors.date && summary?.type === "yearSummary") {
+    allErrors.date = `A financial year summary already covers ${formatDate(summary.periodStart)} to ${formatDate(summary.effectiveDate)}. ` +
+      "Use a later date, or correct the summary.";
+  }
   if (Object.keys(allErrors).length || employee === null || employer === null) return { ok: false, errors: allErrors };
 
   const today = formatLocalCalendarDate(context.now);

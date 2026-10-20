@@ -251,3 +251,32 @@ test("masks values until revealed, and the account activity lists signed entries
   expect(masked.getByTestId("reveal-epf-entry")).toBeTruthy();
   expect(masked.queryByTestId("epf-entry-amount-input")).toBeNull();
 });
+
+test("a financial year summary reconciles a whole year to the passbook in one entry", () => {
+  const old = account("acme", "Acme", 140000, 100000, 40000);
+  const store = setup([{ ...old, checkpoint: { ...old.checkpoint, date: "2024-03-31" } }]);
+  const fill = (screen: ReturnType<typeof render>, closingEmployee: string) => {
+    choose(screen, "epf-entry-kind", "yearSummary");
+    choose(screen, "epf-summary-year", "2024-04-01");
+    for (const [id, value] of [["contribution-employee", "21600"], ["contribution-employer", "6600"], ["interest-employee", "9500"],
+      ["interest-employer", "3800"], ["closing-employee", closingEmployee], ["closing-employer", "50400"]]) {
+      fireEvent.changeText(screen.getByTestId(`epf-summary-${id}-input`), value);
+    }
+    expect(screen.queryByTestId("epf-entry-amount-input")).toBeNull();
+    fireEvent.press(screen.getByTestId("review-epf-entry"));
+  };
+  enter(store, (screen) => {
+    fill(screen, "131550");
+    expect(screen.getByTestId("epf-entry-error")).toHaveTextContent(/employee ₹1,31,100.00 calculated, ₹1,31,550.00 in the passbook/);
+  });
+  const { onComplete } = enter(store, (screen) => {
+    fill(screen, "131100");
+    expect(screen.getByTestId("epf-entry-summary-period")).toHaveTextContent("01 Apr 2024 – 31 Mar 2025");
+    expect(screen.getByTestId("epf-entry-effect-acme")).toHaveTextContent("₹1,40,000.00 → ₹1,81,500.00");
+    expect(screen.getByTestId("epf-entry-role")).toHaveTextContent(/matches the passbook closing balance/);
+    fireEvent.press(screen.getByTestId("save-epf-entry"));
+  });
+  expect(onComplete).toHaveBeenCalled();
+  expect(total(store).accounts[0].balance).toEqual({ total: 181500, components: { employee: 131100, employer: 50400 } });
+  expect(store.getState().epf.events[0]).toMatchObject({ type: "yearSummary", periodStart: "2024-04-01", effectiveDate: "2025-03-31" });
+});

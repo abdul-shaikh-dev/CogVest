@@ -6,7 +6,7 @@ import {
   emptyEpfAccountDraft,
   parseInrAmount,
 } from "../epfAccountForm";
-import type { EpfAccount } from "@/src/domain/epf";
+import type { EpfAccount, EpfEvent } from "@/src/domain/epf";
 
 const now = new Date("2026-10-17T10:00:00Z");
 const draft = { ...emptyEpfAccountDraft(now), nickname: "Acme EPF", employee: "100000", employer: "40000", date: "2026-03-31" };
@@ -95,5 +95,15 @@ describe("balance update", () => {
     const result = buildEpfBalanceUpdate({ employee: "1", employer: "1", date: "2026-03-31", reason: " " }, context);
     expect(!result.ok && Object.keys(result.errors).sort()).toEqual(["date", "reason"]);
     expect(!result.ok && result.errors.date).toMatch(/after the starting balance \(31 Mar 2026\)/);
+  });
+
+  test("points to the financial year summary that already covers the date", () => {
+    const summary: EpfEvent = { id: "fy", type: "yearSummary", accountId: "a", periodStart: "2026-04-01", effectiveDate: "2026-09-30",
+      postedDate: "2026-09-30", recordedAt: now.toISOString(), evidence: "EPFO passbook", closing: null,
+      contributions: { employee: 5000, employer: 1500 }, interest: { employee: 0, employer: 0 } };
+    const result = buildEpfBalanceUpdate({ employee: "104000", employer: "41567", date: "2026-09-30", reason: "Statement" },
+      { ...context, events: [summary] });
+    expect(!result.ok && result.errors.date).toBe("A financial year summary already covers 01 Apr 2026 to 30 Sept 2026. " +
+      "Use a later date, or correct the summary.");
   });
 });

@@ -35,6 +35,7 @@ const defaultFlows = [
   "e2e/epf-corrections.yaml",
   "e2e/epf-matrix.yaml",
   "e2e/epf-progress-empty.yaml",
+  "e2e/epf-year-summary.yaml",
   "e2e/holdings.yaml",
   "e2e/holdings-list-first.yaml",
   "e2e/holdings-list-first-layout.yaml",

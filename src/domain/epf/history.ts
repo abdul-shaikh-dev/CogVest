@@ -8,8 +8,10 @@ import type { EpfState } from "./persistence";
  * confirmed: every account has evidence and confirmed-complete history at month end.
  * lastRecorded: every account has a checkpoint, but some value is carried forward.
  * partial: some account has no checkpoint yet; the EPF total is unavailable.
+ * summarized: month end falls inside a financial-year summary, whose flows only
+ * land at its period end; the EPF total is unavailable, not the pre-summary value.
  */
-export type EpfMonthStatus = "confirmed" | "lastRecorded" | "partial";
+export type EpfMonthStatus = "confirmed" | "lastRecorded" | "partial" | "summarized";
 
 export type EpfMonthFlows = {
   /** Employee and employer EPF contributions, net of provider reversals. Capital, not return. */
@@ -22,6 +24,8 @@ export type EpfMonthFlows = {
   externalTransfersIn: number;
   /** A reconciliation replaced a balance; its difference is neither deposit nor gain. */
   reconciled: boolean;
+  /** Contributions or interest include a financial-year summary's period totals. */
+  summarized: boolean;
 };
 
 export type EpfMonthValue = {
@@ -60,6 +64,7 @@ function flowsForMonth(events: readonly EpfEvent[], month: string): EpfMonthFlow
   let withdrawals = decimal(0);
   let externalTransfersIn = decimal(0);
   let reconciled = false;
+  let summarized = false;
   for (const event of events) {
     // Tracked EPF-to-EPF transfers are internal and never appear as a flow.
     if (event.type === "transfer" || event.effectiveDate.slice(0, 7) !== month) continue;
@@ -70,7 +75,11 @@ function flowsForMonth(events: readonly EpfEvent[], month: string): EpfMonthFlow
       if (event.settlement) interest = interest.plus(event.settlement.interest.total);
     } else if (event.type === "externalTransferIn") externalTransfersIn = externalTransfersIn.plus(event.amount.total);
     else if (event.type === "reconciliation") reconciled = true;
-    else {
+    else if (event.type === "yearSummary") {
+      contributions = contributions.plus(event.contributions.employee).plus(event.contributions.employer);
+      interest = interest.plus(event.interest.employee).plus(event.interest.employer);
+      summarized = true;
+    } else {
       // A reversal offsets its original in the reversal's own effective month.
       const original = byId.get(event.reversesId);
       if (original?.type === "contribution") contributions = contributions.minus(original.amount);
@@ -87,6 +96,7 @@ function flowsForMonth(events: readonly EpfEvent[], month: string): EpfMonthFlow
     withdrawals: normalizeMoney(withdrawals),
     externalTransfersIn: normalizeMoney(externalTransfersIn),
     reconciled,
+    summarized,
   };
 }
 
@@ -107,15 +117,21 @@ export function buildEpfMonthlyHistory(epf: EpfState, today: string): EpfMonthly
     const monthEnd = monthEndOf(month);
     const result = calculateEpfLedger(ledger, monthEnd, today);
     if (!result.ok) return result;
-    const covered = result.accounts.length;
-    const status: EpfMonthStatus = result.total === null ? "partial"
+    // Inside a summary period the account still shows its opening value, which is
+    // not a month-end balance, so it is left out of the covered value too.
+    const inSummary = new Set(epf.events.flatMap((event) => event.type === "yearSummary" &&
+      event.periodStart <= monthEnd && monthEnd < event.effectiveDate ? [event.accountId] : []));
+    const coveredAccounts = result.accounts.filter((account) => !inSummary.has(account.accountId));
+    const covered = coveredAccounts.length;
+    const status: EpfMonthStatus = result.total === null ? "partial" : inSummary.size ? "summarized"
       : result.accounts.every((account) => account.historyComplete) ? "confirmed" : "lastRecorded";
     months.push({
       month,
       monthEnd,
       status,
-      value: result.total,
-      coveredValue: result.coveredTotal,
+      value: inSummary.size ? null : result.total,
+      coveredValue: normalizeMoney(result.accounts.filter((account) => inSummary.has(account.accountId))
+        .reduce((value, account) => value.minus(account.balance.total), decimal(result.coveredTotal))),
       coveredAccountCount: covered,
       accountCount: epf.accounts.length,
       inTransit: result.inTransit,

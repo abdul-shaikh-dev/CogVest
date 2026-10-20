@@ -37,6 +37,7 @@ from PPF.
 | Official credited interest | Add evidenced credit | Unchanged | A return, not contribution; checkpoint interest is already included |
 | Withdrawal | Subtract evidenced amount | Subtract evidenced capital reduction; otherwise unknown | Destination external or unknown; no automatic Cash credit |
 | Final settlement (withdrawal with `settlement`) | Credit the interest paid with the claim, then pay out exactly the whole balance; ends at ₹0 | ₹0, because nothing remains | Must be the account's last entry; interest is return in the settlement month |
+| Financial-year summary (#568) | Add the period's contributions and interest by component on its end date; must then equal its passbook closing | Add its contributions only if prior capital is known | Owns its period; flows reported in the end month |
 | Transfer from untracked EPF | Add evidenced amount | Add evidenced transferred capital only if both bases are known | Origin-history limitation remains explicit |
 | Matched tracked transfer | Debit source, credit destination | Move evidenced capital, never create it | One record owns both legs; no Cash write |
 | Reconciliation | Replace with absolute confirmed value | Explicit evidenced capital or unknown | Reason required; difference is not classified as gain or deposit |
@@ -50,6 +51,25 @@ that interest to equal the amount paid, by component when both are known.
 Any later entry on that account is rejected, so the year-end interest line
 cannot be added a second time. A provider reversal of a settlement restores
 the balance, removes its interest and leaves capital unknown.
+
+A financial-year summary records one financial year, or part of one, from the
+passbook's printed totals: employee and employer contributions and interest,
+plus the closing balance. All of its flows take effect on its period end, after
+that day's other entries and before a same-day settlement. Interest is exact
+because EPFO credits it on 31 Mar; contributions arrive late on paper, so
+months inside the period have no month-end value. The period stays inside one
+financial year and starts after the checkpoint. The closing balance is
+required when the period ends on 31 Mar and is checked on every replay, by
+component when known, so later edits cannot break a reconciled year.
+A summary owns its period: contributions, interest, reconciliations and other
+summaries on that account inside it are rejected. A reconciliation would
+replace the balance and the period totals would then count earlier months
+again. Withdrawals, transfers and a final settlement may fall inside it and
+are replayed on their own dates against the balance then. When a withdrawal needs that year's contributions,
+the year is split: one summary ends the day before it, another covers the
+rest. A settlement year is summarised up to the settlement date. A summary is
+corrected by editing it, never reversed. Withdrawals and transfer-ins are not
+folded into a summary.
 
 Known capital that would become negative is rejected, not floored. If the capital
 split of a withdrawal or transfer is unavailable, the caller must use unknown.
@@ -127,7 +147,9 @@ month. Nothing is persisted, so corrections and deletions restate only that
 view and can never trigger a snapshot rebuild. Months before the earliest
 checkpoint are not emitted. Each completed month is `confirmed` (every account
 covered with confirmed-complete history), `lastRecorded` (a carried value), or
-`partial` (some account has no checkpoint; total unavailable, not zero).
+`partial` (some account has no checkpoint; total unavailable, not zero), or
+`summarized` (month end inside a financial-year summary period; total
+unavailable, since the opening value is not a month-end balance).
 Monthly contributions, credited interest, withdrawals and reconciliation are
 reported separately; tracked EPF transfers are never a flow and in-transit
 money is disclosed. A reversal offsets its original in the reversal's month.
@@ -148,6 +170,8 @@ exclude EPF, so it is never counted twice. The link editor ships with #546.
 | Employee payroll contribution | Inflow to account | External inflow unless paired funding evidence places source inside the measured boundary |
 | Employer EPF contribution | Inflow, never earned return | External contribution, never market gain |
 | Interest | Internal earnings | Internal earnings |
+| Financial-year summary contributions | Aggregate period inflow, not an exact dated flow | Same; coverage reason `summarizedFlows`. #533 excludes the period from exact XIRR or shows a labelled approximation |
+| Financial-year summary interest | Internal earnings on the period end (exact) | Internal earnings |
 | Tracked EPF transfer | Source outflow and destination inflow at evidenced dates | Internal when both sides belong to the boundary; transit must reconcile |
 | Untracked-origin transfer | Account inflow with unknown prior history | Boundary/origin evidence needed; cannot assume complete lifetime flow |
 | Withdrawal | Account outflow | External only if outside boundary; unknown destination blocks classification |

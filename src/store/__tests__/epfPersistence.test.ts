@@ -193,6 +193,31 @@ describe("EPF durable account records", () => {
     expect(destination.store.getState().captureBackup().payload).toEqual(payload);
   });
 
+  test("a financial-year summary survives restart and backup round trip", async () => {
+    const { store, storage, apply } = harness();
+    apply({ type: "accountPut", account: account() });
+    // FY 2025-26 from 2 Jan, with closing 1,12,000 + 45,000.
+    apply({ type: "eventPut", cash: null, event: { id: "fy25", type: "yearSummary", accountId: "a", periodStart: "2026-01-02",
+      effectiveDate: "2026-03-31", postedDate: "2026-03-31", recordedAt: "2026-04-02T00:00:00Z", evidence: "EPFO passbook",
+      contributions: { employee: 5400, employer: 1650 }, interest: { employee: 6600, employer: 3350 },
+      closing: { employee: 112000, employer: 45000 } } });
+    const { accounts, events } = store.getState().epf;
+    expect(calculateEpfLedger({ accounts, events }, "2026-10-05", "2026-10-05")).toMatchObject({ ok: true, total: 157000 });
+    const payload = store.getState().captureBackup().payload;
+    expect(createPortfolioStore({ storage, now }).getState().captureBackup().payload).toEqual(payload);
+    const text = await createPortfolioBackup(payload, { appVersion: "1.0.24", createdAt: now().toISOString() }, digest);
+    const destination = harness();
+    destination.store.getState().replaceFromBackup((await parsePortfolioBackup(text, digest)).payload,
+      destination.store.getState().getBackupRevision());
+    expect(destination.store.getState().captureBackup().payload).toEqual(payload);
+    // A restored summary whose closing no longer matches is rejected, not silently loaded.
+    const tampered = JSON.parse(JSON.stringify(payload));
+    tampered.portfolio.epf.events[0].closing.employee += 1;
+    const target = harness();
+    expect(() => target.store.getState().replaceFromBackup(tampered, target.store.getState().getBackupRevision())).toThrow();
+    expect(target.store.getState().epf.events).toEqual([]);
+  });
+
   test.each(["missing", "future", "dangling", "amount", "audit", "privateField", "orphanCash"])("rejects %s restore without replacing any records", (kind) => {
     const { store, storage, apply } = harness();
     apply({ type: "accountPut", account: account() });
