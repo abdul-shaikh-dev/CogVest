@@ -175,6 +175,24 @@ describe("EPF durable account records", () => {
     expect(createPortfolioStore({ storage: destination.storage, now }).getState().epf).toEqual(payload.portfolio.epf);
   });
 
+  test("a final settlement into Cash survives restart and backup round trip", async () => {
+    const { store, storage, apply } = harness();
+    apply({ type: "accountPut", account: account() });
+    apply({ type: "eventPut", cash: { id: "settled-cash", label: "EPF settlement" }, event: { ...withdrawal, id: "settlement",
+      amount: { total: 145000, components: { employee: 103500, employer: 41500 } },
+      settlement: { interest: { total: 5000, components: { employee: 3500, employer: 1500 } } } } });
+    const { accounts, events } = store.getState().epf;
+    expect(calculateEpfLedger({ accounts, events }, "2026-10-05", "2026-10-05")).toMatchObject({ ok: true, total: 0, capital: 0 });
+    expect(store.getState().cashEntries.find((entry) => entry.id === "settled-cash")?.amount).toBe(145000);
+    const payload = store.getState().captureBackup().payload;
+    expect(createPortfolioStore({ storage, now }).getState().captureBackup().payload).toEqual(payload);
+    const text = await createPortfolioBackup(payload, { appVersion: "1.0.24", createdAt: now().toISOString() }, digest);
+    const destination = harness();
+    destination.store.getState().replaceFromBackup((await parsePortfolioBackup(text, digest)).payload,
+      destination.store.getState().getBackupRevision());
+    expect(destination.store.getState().captureBackup().payload).toEqual(payload);
+  });
+
   test.each(["missing", "future", "dangling", "amount", "audit", "privateField", "orphanCash"])("rejects %s restore without replacing any records", (kind) => {
     const { store, storage, apply } = harness();
     apply({ type: "accountPut", account: account() });

@@ -66,6 +66,9 @@ export const epfEventSchema = z.discriminatedUnion("type", [
   z.object({ ...accountEvent, type: z.literal("withdrawal"), amount: epfBalanceSchema,
     capitalReduction: money.nullable(),
     destination: z.enum(["external", "unknown"]),
+    // A final settlement pays out the whole balance, including interest that the
+    // provider credits up to the settlement date inside the claim.
+    settlement: z.object({ interest: epfBalanceSchema }).strict().optional(),
   }).strict(),
   z.object({ ...accountEvent, type: z.literal("externalTransferIn"),
     amount: epfBalanceSchema, capital: money.nullable(),

@@ -61,7 +61,45 @@ test("withdrawals never credit Cash silently; tracked Cash is an explicit linked
   expect(toCash.cash).toEqual({ id: "cash-1", label: "From Acme EPF" });
   expect(toCash.effect.cashChange).toBe(5000);
   const tooMuch = buildEpfEntry(draft({ kind: "withdrawal", amount: "150000" }), context());
-  expect(!tooMuch.ok && tooMuch.message).toMatch(/negative/);
+  expect(!tooMuch.ok && tooMuch.message).toBe("On 05 May 2026 Acme has a recorded balance of ₹1,40,000.00, less than this " +
+    "₹1,50,000.00 withdrawal. If the payout closed the account and included interest, mark it as a final settlement.");
+});
+
+describe("final settlement", () => {
+  // Acme holds 1,00,000 + 40,000. The claim also pays 3,000 + 1,000 interest.
+  const settle = (patch: Partial<EpfEntryDraft> = {}) => draft({ kind: "withdrawal", amount: "144000", employee: "103000",
+    employer: "41000", settlement: true, settlementInterest: "4000", settlementInterestEmployee: "3000",
+    settlementInterestEmployer: "1000", ...patch });
+
+  test("records the payout and the interest paid with it as one entry that empties the account", () => {
+    const result = buildEpfEntry(settle(), context());
+    expect(result.ok && result.plan.event).toMatchObject({ type: "withdrawal", capitalReduction: null,
+      amount: { total: 144000, components: { employee: 103000, employer: 41000 } },
+      settlement: { interest: { total: 4000, components: { employee: 3000, employer: 1000 } } } });
+    expect(result.ok && result.plan.effect).toMatchObject({ totalBefore: 140000, totalAfter: 0 });
+    expect(result.ok && draftFromEpfEvent(result.plan.event, "a", false, now)).toMatchObject({ settlement: true,
+      settlementInterest: "4000", settlementInterestEmployee: "3000", settlementInterestEmployer: "1000" });
+  });
+
+  test("names the shortfall when balance plus interest is not what was paid", () => {
+    const result = buildEpfEntry(settle({ amount: "145000", employee: "104000" }), context());
+    expect(!result.ok && result.message).toBe("On 05 May 2026 the recorded balance is ₹1,40,000.00. With ₹4,000.00 interest " +
+      "that makes ₹1,44,000.00, but ₹1,45,000.00 was paid. Check for missing contributions, the interest amount or the split.");
+  });
+
+  test("points to a later entry, such as interest the passbook lists under the year end", () => {
+    const yearEnd = plan({ kind: "interest", amount: "4000", date: "2026-06-30", postedDate: "2026-06-30" }, [], "late");
+    const result = buildEpfEntry(settle(), context([yearEnd.event]));
+    expect(!result.ok && result.message).toBe("A final settlement must be the last entry in this account. Remove the " +
+      "official interest on 30 Jun 2026: the settlement already pays interest up to its own date.");
+  });
+
+  test("requires the interest amount and a split that adds up", () => {
+    const blank = buildEpfEntry(settle({ settlementInterest: "" }), context());
+    expect(!blank.ok && blank.errors.settlementInterest).toBe("Enter the interest paid with the settlement, or 0 if none.");
+    const split = buildEpfEntry(settle({ settlementInterestEmployer: "900" }), context());
+    expect(!split.ok && split.errors.settlementInterestEmployer).toBe("The two parts must add up to the interest.");
+  });
 });
 
 test("a 50,000 transfer between tracked accounts leaves combined value unchanged, in transit or completed", () => {

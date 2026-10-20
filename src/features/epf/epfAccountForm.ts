@@ -117,8 +117,9 @@ export function buildEpfAccount(draft: EpfAccountDraft, options: { existing?: Ep
     checkpoint: {
       date: draft.date,
       balance: { total: decimal(employee).plus(employer).toNumber(), components: { employee, employer } },
-      // Capital stays unknown: a statement balance includes years of interest.
-      capital: existing?.checkpoint.capital ?? null,
+      // A ₹0 balance holds no capital. Otherwise capital stays unknown, because a
+      // statement balance includes years of interest.
+      capital: employee === 0 && employer === 0 ? 0 : checkpointChanged ? null : existing!.checkpoint.capital,
       source: draft.evidence === "ownRecord" ? "userConfirmed"
         : draft.provider === "epfo" ? "epfoStatement" : "trustStatement",
       recordedAt: checkpointChanged ? options.now.toISOString() : existing!.checkpoint.recordedAt,

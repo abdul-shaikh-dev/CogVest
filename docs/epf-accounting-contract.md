@@ -19,6 +19,9 @@ Capital is independently evidenced remaining contributed capital, not tax cost
 basis. Null means unknown. A statement balance can contain years of interest and
 does not establish lifetime capital. No contribution history is invented from
 salary, statutory percentages, an opening value or a pension contribution.
+A checkpoint of exactly ₹0, such as an account opened at a new job before its
+first credit, holds no capital, so its capital is known to be ₹0 (#567).
+Contributions recorded after it then build known capital.
 
 Account status never removes money: inactive, transferred or closed records with
 a nonzero balance remain valued. Currency, dates, finite exact-paise amounts,
@@ -33,10 +36,20 @@ from PPF.
 | Employee/employer contribution | Add actual contribution to its component | Add contribution only if prior capital is known | No automatic payroll or Cash entry |
 | Official credited interest | Add evidenced credit | Unchanged | A return, not contribution; checkpoint interest is already included |
 | Withdrawal | Subtract evidenced amount | Subtract evidenced capital reduction; otherwise unknown | Destination external or unknown; no automatic Cash credit |
+| Final settlement (withdrawal with `settlement`) | Credit the interest paid with the claim, then pay out exactly the whole balance; ends at ₹0 | ₹0, because nothing remains | Must be the account's last entry; interest is return in the settlement month |
 | Transfer from untracked EPF | Add evidenced amount | Add evidenced transferred capital only if both bases are known | Origin-history limitation remains explicit |
 | Matched tracked transfer | Debit source, credit destination | Move evidenced capital, never create it | One record owns both legs; no Cash write |
 | Reconciliation | Replace with absolute confirmed value | Explicit evidenced capital or unknown | Reason required; difference is not classified as gain or deposit |
 | Provider reversal | Inverse of referenced contribution, interest or withdrawal | Inverse of its known capital effect; unknown stays unknown | Explicit reason and original event required; return-flow review |
+
+EPFO pays interest up to the settlement date inside a final claim, but its
+passbook lists that interest under the next financial-year end (#566). A final
+settlement therefore records the interest on the settlement itself, taken from
+the passbook's interest line, and validation requires recorded balance plus
+that interest to equal the amount paid, by component when both are known.
+Any later entry on that account is rejected, so the year-end interest line
+cannot be added a second time. A provider reversal of a settlement restores
+the balance, removes its interest and leaves capital unknown.
 
 Known capital that would become negative is rejected, not floored. If the capital
 split of a withdrawal or transfer is unavailable, the caller must use unknown.
