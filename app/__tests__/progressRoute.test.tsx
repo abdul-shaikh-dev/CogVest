@@ -25,4 +25,17 @@ describe("Progress route", () => {
     element.props.onReviewSnapshot();
     expect(mockPush).toHaveBeenCalledWith("/review-snapshot");
   });
+
+  it("routes EPF-only actions to the account, the EPF list, or Add Holding", () => {
+    const element = ProgressRoute();
+
+    element.props.onOpenEpf("epf-main");
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/epf-account", params: { accountId: "epf-main" } });
+
+    element.props.onOpenEpf(undefined);
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: "/(tabs)/holdings", params: { destination: "epf" } });
+
+    element.props.onAddHolding();
+    expect(mockPush).toHaveBeenCalledWith("/add-holding");
+  });
 });

@@ -265,6 +265,71 @@ describe("ProgressScreen", () => {
     expect(onSetUpPortfolio).toHaveBeenCalledTimes(1);
   });
 
+  describe("with EPF but no monthly history", () => {
+    const now = new Date("2026-07-10T10:00:00Z");
+    const putEpfAccount = (store: ReturnType<typeof createPortfolioStore>, id: string) => act(() => {
+      store.getState().applyEpfCommand({ commandId: `put-${id}`, reason: "Statement", change: { type: "accountPut", account: {
+        id, nickname: id, provider: "epfo", status: "active", currency: "INR", historyCompleteThrough: null,
+        checkpoint: { date: "2026-06-30", balance: { total: 140000, components: null }, capital: null,
+          source: "epfoStatement", recordedAt: "2026-06-30T10:00:00Z" },
+      } } }, store.getState().getBackupRevision());
+    });
+    const renderProgress = (store: ReturnType<typeof createPortfolioStore>) => {
+      const handlers = { onAddHolding: jest.fn(), onOpenEpf: jest.fn(), onSetUpPortfolio: jest.fn() };
+      return { handlers, view: render(<ProgressScreen {...handlers} now={now} store={store} />) };
+    };
+
+    it("explains EPF-only history and opens the single EPF account", () => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+      putEpfAccount(store, "epf-main");
+      const { handlers, view } = renderProgress(store);
+
+      expect(view.getByText("Monthly history starts with market or cash activity")).toBeTruthy();
+      expect(view.queryByText("No portfolio history yet")).toBeNull();
+      expect(view.queryByTestId("progress-empty-setup")).toBeNull();
+      fireEvent.press(view.getByText("Open EPF account"));
+      expect(handlers.onOpenEpf).toHaveBeenCalledWith("epf-main");
+      fireEvent.press(view.getByTestId("progress-empty-add-holding"));
+      expect(handlers.onAddHolding).toHaveBeenCalledTimes(1);
+      expect(handlers.onSetUpPortfolio).not.toHaveBeenCalled();
+    });
+
+    it("opens the EPF accounts list when there are several", () => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+      putEpfAccount(store, "epf-current");
+      putEpfAccount(store, "epf-previous");
+      const { handlers, view } = renderProgress(store);
+
+      fireEvent.press(view.getByText("Open EPF accounts"));
+      expect(handlers.onOpenEpf).toHaveBeenCalledWith(undefined);
+    });
+
+    it("keeps the setup state once Cash exists alongside EPF", () => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+      putEpfAccount(store, "epf-main");
+      store.getState().addCashEntry({
+        amount: 5000, date: "2026-07-01T00:00:00.000Z", id: "cash-epf", label: "Salary",
+        purpose: "capitalContribution", type: "addition",
+      });
+      const { view } = renderProgress(store);
+
+      expect(view.queryByTestId("progress-empty-open-epf")).toBeNull();
+    });
+
+    it("keeps the setup state once PPF exists alongside EPF", () => {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+      putEpfAccount(store, "epf-main");
+      store.getState().addPpfAccount({
+        id: "ppf", nickname: "Test PPF", provider: "HDFC", status: "active",
+        opening: { kind: "financialYear", financialYearStart: 2020 },
+        balanceAsOf: "2026-07-01", confirmedBalance: 720000, createdAt: "2026-07-01T00:00:00Z",
+      });
+      const { view } = renderProgress(store);
+
+      expect(view.queryByTestId("progress-empty-open-epf")).toBeNull();
+    });
+  });
+
   it("keeps pending valuation readable while masking no-snapshot portfolio values", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });

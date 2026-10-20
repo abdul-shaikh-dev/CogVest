@@ -1,0 +1,67 @@
+appId: com.abdulshaikh.cogvest
+---
+# An EPF-only portfolio has no monthly history yet, but it is not an empty
+# portfolio: Progress must point to the EPF account instead of portfolio setup.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- tapOn:
+    id: tab-progress
+- assertVisible: "No portfolio history yet"
+- tapOn:
+    id: tab-dashboard
+- openLink: "cogvest:///epf-account"
+- assertVisible: "Add EPF account"
+- tapOn:
+    id: epf-nickname-input
+- inputText: "Acme"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-employee-input
+    direction: DOWN
+- tapOn:
+    id: epf-employee-input
+- inputText: "100000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-employer-input
+    direction: DOWN
+- tapOn:
+    id: epf-employer-input
+- inputText: "40000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-epf-account
+    direction: DOWN
+- tapOn:
+    id: review-epf-account
+- tapOn:
+    id: save-epf-account
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
+- back
+- tapOn:
+    id: tab-progress
+- assertVisible: "Monthly history starts with market or cash activity"
+- assertNotVisible: "No portfolio history yet"
+- assertVisible:
+    id: progress-epf-scope
+- takeScreenshot: .expo/epf-563/progress-epf-only
+- scrollUntilVisible:
+    element:
+      id: progress-empty-open-epf
+    direction: DOWN
+- assertVisible:
+    id: progress-empty-add-holding
+- tapOn:
+    id: progress-empty-open-epf
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
