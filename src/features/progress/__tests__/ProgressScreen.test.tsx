@@ -285,6 +285,8 @@ describe("ProgressScreen", () => {
       const { handlers, view } = renderProgress(store);
 
       expect(view.getByText("Monthly history starts with market or cash activity")).toBeTruthy();
+      expect(view.getByText("Add holdings or Cash activity to start month-end history.")).toBeTruthy();
+      expect(view.getByTestId("progress-epf-scope")).toBeTruthy();
       expect(view.queryByText("No portfolio history yet")).toBeNull();
       expect(view.queryByTestId("progress-empty-setup")).toBeNull();
       fireEvent.press(view.getByText("Open EPF account"));

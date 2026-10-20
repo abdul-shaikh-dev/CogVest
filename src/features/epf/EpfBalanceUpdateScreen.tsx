@@ -26,6 +26,7 @@ import { EpfCheckRow } from "./EpfCheckRow";
 import {
   buildEpfBalanceUpdate,
   draftTotal,
+  epfBalanceDateHint,
   epfEvidenceOptions,
   type EpfBalanceUpdate,
   type EpfEvidence,
@@ -221,6 +222,7 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
             <DatePickerField error={errors.date} fieldRef={(node) => { inputRefs.current.date = node; }}
               label="Balance as of" maximumDate={now} onChange={(value) => update("date", value)}
               testID="epf-update-date" value={draft.date} />
+            <AppText color="secondary" testID="epf-update-date-hint" variant="caption">{epfBalanceDateHint}</AppText>
             <SelectionField label="Source" onChange={setEvidence} options={epfEvidenceOptions}
               testIDPrefix="epf-update-evidence" value={evidence} />
             <FormTextField error={errors.reason} inputRef={(node) => { inputRefs.current.reason = node; }}

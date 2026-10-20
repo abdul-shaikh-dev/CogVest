@@ -1932,7 +1932,7 @@ export function ProgressScreen({
             actionLabel={epfAccountCount === 1 ? "Open EPF account" : "Open EPF accounts"}
             actionTestID="progress-empty-open-epf"
             title="Monthly history starts with market or cash activity"
-            message="EPF balances appear in Dashboard totals and in each EPF account's history."
+            message="Add holdings or Cash activity to start month-end history."
             onAction={() => onOpenEpf?.(singleEpfAccountId)}
             secondaryActionLabel="Add holdings"
             secondaryActionTestID="progress-empty-add-holding"
