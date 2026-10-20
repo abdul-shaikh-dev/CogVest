@@ -45,6 +45,7 @@ describe("Add EPF account", () => {
     const { store } = setup();
     const screen = render(<EpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onUpdateBalance={jest.fn()} store={store} />);
     expect(screen.getByTestId("epf-eps-note")).toHaveTextContent(/Leave out the EPS pension contribution/);
+    expect(screen.getByTestId("epf-balance-date-hint")).toHaveTextContent("Use the date of the latest credit in your passbook, not the \"Closing balance as on\" date for the current year.");
     fireEvent.changeText(screen.getByTestId("epf-nickname-input"), "Acme EPF");
     fireEvent.changeText(screen.getByTestId("epf-employee-input"), "100000");
     fireEvent.changeText(screen.getByTestId("epf-employer-input"), "40000");
@@ -222,6 +223,7 @@ describe("Update EPF balance", () => {
   it("reviews prior, new and difference as a correction, not a deposit or return", () => {
     const { store, screen, onComplete } = updateSetup();
     expect(screen.getByTestId("epf-update-current")).toHaveTextContent("Currently ₹1,40,000.00, as of 31 Mar 2026.");
+    expect(screen.getByTestId("epf-update-date-hint")).toHaveTextContent("Use the date of the latest credit in your passbook, not the \"Closing balance as on\" date for the current year.");
     fireEvent.changeText(screen.getByTestId("epf-update-employee-input"), "104000");
     fireEvent.changeText(screen.getByTestId("epf-update-employer-input"), "41567");
     fireEvent.press(screen.getByTestId("epf-update-history-complete"));

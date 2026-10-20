@@ -43,6 +43,7 @@ import {
   draftFromEpfAccount,
   draftTotal,
   emptyEpfAccountDraft,
+  epfBalanceDateHint,
   epfEvidenceOptions,
   epfPassbookUrl,
   epfProviderLabel,
@@ -559,6 +560,7 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
             <DatePickerField error={errors.date} fieldRef={(node) => { inputRefs.current.date = node; }}
               label="Balance as of" maximumDate={now} onChange={(value) => update("date", value)}
               testID="epf-balance-date" value={draft.date} />
+            <AppText color="secondary" testID="epf-balance-date-hint" variant="caption">{epfBalanceDateHint}</AppText>
             <SelectionField label="Source" onChange={(value) => update("evidence", value)}
               options={epfEvidenceOptions} testIDPrefix="epf-evidence" value={draft.evidence} />
           </PremiumCard>

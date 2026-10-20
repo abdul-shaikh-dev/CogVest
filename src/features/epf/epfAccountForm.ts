@@ -25,6 +25,8 @@ export const epfEvidenceOptions: Array<{ label: string; value: EpfEvidence }> = 
 ];
 
 export const epfPassbookUrl = "https://passbook.epfindia.gov.in/MemberPassBook/login";
+/** The passbook dates the current year's running balance at the coming year end, a future date. */
+export const epfBalanceDateHint = "Use the date of the latest credit in your passbook, not the \"Closing balance as on\" date for the current year.";
 
 export function epfStatusLabel(status: EpfStatus) {
   return epfStatusOptions.find((option) => option.value === status)?.label ?? status;
