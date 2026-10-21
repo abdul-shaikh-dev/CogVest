@@ -161,6 +161,7 @@ appId: com.abdulshaikh.cogvest
     element: ${output.backupName}
     direction: DOWN
     timeout: 60000
+# selector: the exported file's name in the Android document picker
 - tapOn: ${output.backupName}
 - extendedWaitUntil:
     visible:

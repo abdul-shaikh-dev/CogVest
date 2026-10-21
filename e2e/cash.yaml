@@ -41,13 +41,14 @@ appId: com.abdulshaikh.cogvest
 - runScript:
     file: scripts/current-local-date.js
 - assertVisible: "${output.currentLocalDate}"
+# The Broker cash deposit is the only cash entry.
 - scrollUntilVisible:
     element:
-      text: 'Review Broker cash\..*'
+      id: "review-cash-entry-.*"
     direction: DOWN
 - waitForAnimationToEnd
 - tapOn:
-    text: 'Review Broker cash\..*'
+    id: "review-cash-entry-.*"
     retryTapIfNoChange: true
 - assertVisible:
     id: "review-cash-entry-screen"

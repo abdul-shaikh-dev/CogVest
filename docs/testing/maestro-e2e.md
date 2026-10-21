@@ -82,7 +82,46 @@ command still exits non-zero when any flow fails.
   touches their journey.
 
 If a tier can't be run, say which one and why rather than reporting the change
-as verified. `src/__tests__/maestroFlowInventory.test.ts` fails when a
+as verified.
+
+## Selector Policy
+
+Copy and layout should be free to change without breaking end-to-end coverage.
+Flows in `e2e/` and `e2e/helpers/` follow these rules:
+
+1. **Navigate and act by `testID`.** Use text only where the text itself is
+   under test, such as an exact financial value or an error message, or where
+   no `testID` can exist (native alerts, the Android document picker).
+2. **Assert results through `e2e-evidence`** (stored records and values), not
+   through visible summary text.
+3. **Scroll to the element you will act on**, never to a nearby heading. Don't
+   use `centerElement: true` unless the element is known to have content below
+   it.
+4. **Don't use `hideKeyboard` before tapping a field that is already visible.**
+   It acts as Back when no keyboard is shown. Tap the next field directly.
+5. **Avoid typed values containing "rr"** while flows run on debug builds.
+
+Maestro text matching is case-insensitive and regex-based, so a text selector
+can also match a longer string: "Monthly History" matched "Checking monthly
+history" and hid a missed tap.
+
+`npm run maestro:lint` (part of `npm run test:verify`) reports text taps, text
+scroll targets, `centerElement: true` and typed "rr" values. Rule 4 needs the
+screen state, so review it by hand. Native UI text (the visual QA seed alert,
+the default alert "OK", the Android pickers and fixture file names) is allowed
+in `scripts/maestro-lint.mjs`. Exempt any other intentional case with a comment
+directly above the command that gives the reason:
+
+```yaml
+# selector: the exported file's name in the Android document picker
+- tapOn: ${output.backupName}
+```
+
+`e2e/selector-baseline.json` counts the selectors that predate the policy, per
+flow and rule. A count may only go down: the lint fails when a flow gains a
+violation, and asks you to run `npm run maestro:lint -- --update-baseline` when
+a conversion lowers one. Convert flows in small batches by area, and verify
+each batch on the emulator without weakening any assertion. `src/__tests__/maestroFlowInventory.test.ts` fails when a
 top-level flow is missing from the full tier, or a smoke flow is not in it.
 
 ## Flow Set

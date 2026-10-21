@@ -4,6 +4,13 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-22: smoke tier after the #559 selector conversion, 12 passed, 0 failed, 12m 13s
+
+- Commit: `c26a90f` (main) plus the #559 changes: selector lint, smoke-flow
+  selectors converted to testIDs, and the `review-cash-entry-*` testID.
+- AVD, build and command: as below.
+- Per-flow durations are within 8 seconds of the previous run.
+
 ## 2026-10-22: smoke tier, 12 passed, 0 failed, 12m 15s
 
 - Commit: `d48d8bf` (main) plus the #558 runner change.

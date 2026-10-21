@@ -122,7 +122,9 @@ Run checks proportionate to the change:
 - Build/install a fresh local APK before claiming installed-release behavior was
   tested. Do not test an older installed build.
 - Use Maestro for important user journeys and assert resulting data, not only
-  navigation or success messages.
+  navigation or success messages. Follow the selector policy in
+  `docs/testing/maestro-e2e.md`: act by `testID`, and use text only where the
+  text is under test.
 - Run the Maestro smoke tier (`npm run maestro:smoke`) for changes to UI or
   `e2e/`. Run the full tier (`npm run maestro:test`) weekly and before a release
   gate, and log it in `docs/testing/e2e-runs.md`.

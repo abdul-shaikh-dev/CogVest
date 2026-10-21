@@ -82,7 +82,8 @@ appId: com.abdulshaikh.cogvest
     id: "review-ppf-entry"
 - assertVisible:
     id: "ppf-entry-review-screen"
-- tapOn: "Edit entry"
+- tapOn:
+    id: "edit-ppf-entry"
 - scrollUntilVisible:
     element:
       id: "ppf-entry-notes"
@@ -90,14 +91,16 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Annual contribution"
 - pressKey: BACK
 - assertVisible: "Discard entry changes?"
-- tapOn: "Keep editing"
+- tapOn:
+    id: "keep-editing-ppf-entry"
 - scrollUntilVisible:
     element:
       id: "ppf-entry-notes"
     direction: DOWN
 - assertVisible: "Annual contribution"
 - pressKey: BACK
-- tapOn: "Discard changes"
+- tapOn:
+    id: "discard-ppf-entry"
 - assertVisible:
     id: "ppf-confirmed-balance-card"
 - assertVisible: "₹1,00,000.00"
@@ -117,7 +120,9 @@ appId: com.abdulshaikh.cogvest
     id: "holdings-ppf-section"
 - assertVisible: "My PPF"
 - assertVisible: "₹1L"
-- tapOn: "My PPF"
+# My PPF is the only PPF account.
+- tapOn:
+    id: "ppf-account-.*"
 - assertVisible:
     id: "ppf-confirmed-balance-card"
 - assertVisible: "₹1,00,000.00"

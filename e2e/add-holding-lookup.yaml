@@ -41,7 +41,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -67,7 +66,9 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "existing-asset-results"
     timeout: 5000
-- tapOn: 'Use HDFC Bank\. Saved.*'
+# The saved HDFC Bank asset is the only saved result.
+- tapOn:
+    id: "existing-asset-.*"
 - tapOn:
     id: "continue-class-button"
 - tapOn:
@@ -81,6 +82,7 @@ appId: com.abdulshaikh.cogvest
 - hideKeyboard
 - tapOn:
     id: "review-holding-button"
+# selector: the reused provider quote is the value under test
 - scrollUntilVisible:
     element:
       text: "₹1,678.25"
@@ -91,7 +93,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true

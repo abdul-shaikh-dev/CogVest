@@ -69,9 +69,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Row 3 • 1 unit"
 - assertVisible: "₹6,000.00"
 - assertVisible: "₹6,506.75"
+# The import button sits directly below the summary's last row.
 - scrollUntilVisible:
     element:
-      text: "Skipped"
+      id: "confirm-holdings-import"
     direction: DOWN
     timeout: 10000
 - assertVisible: "Skipped"
@@ -88,7 +89,7 @@ appId: com.abdulshaikh.cogvest
       id: "confirm-holdings-import"
     direction: DOWN
 - tapOn:
-    text: "Import all holdings"
+    id: "confirm-holdings-import"
     retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
