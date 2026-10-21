@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -65,6 +65,24 @@ const defaultFlows = [
   "e2e/workflow-exit-navigation.yaml",
 ];
 
+// One flow per primary journey, each asserting stored results. Run it for every
+// change to UI or e2e/; run the full default list weekly and before a release gate.
+const smokeFlows = [
+  "e2e/smoke-launch.yaml",
+  "e2e/navigation.yaml",
+  "e2e/add-holding-lookup.yaml",
+  "e2e/record-purchase.yaml",
+  "e2e/cash.yaml",
+  "e2e/trade-correction.yaml",
+  "e2e/holdings-csv-import.yaml",
+  "e2e/epf-accounts.yaml",
+  "e2e/ppf-account.yaml",
+  "e2e/progress-snapshot-history.yaml",
+  "e2e/value-masking.yaml",
+  "e2e/persistence.yaml",
+];
+const smokeBudgetMs = 15 * 60 * 1000;
+
 function candidateNames(command) {
   if (process.platform !== "win32") {
     return [command];
@@ -113,8 +131,9 @@ if (!maestroPath) {
   process.exit(1);
 }
 
-const requestedFlows = process.argv.slice(2);
-const flows = requestedFlows.length > 0 ? requestedFlows : defaultFlows;
+const isSmoke = process.argv.includes("--smoke");
+const requestedFlows = process.argv.slice(2).filter((arg) => arg !== "--smoke");
+const flows = requestedFlows.length > 0 ? requestedFlows : isSmoke ? smokeFlows : defaultFlows;
 const holdingsCsvFlow = "e2e/holdings-csv-import.yaml";
 const holdingsCsvFixture = "e2e/fixtures/holdings-import-v1.csv";
 const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
@@ -128,17 +147,11 @@ const zerodhaTradebookFixtures = [
 ];
 
 function pushFixture(adbPath, fixture) {
-  if (!existsSync(fixture)) {
-    console.log(`FAIL fixture not found: ${fixture}`);
-    process.exit(1);
-  }
+  if (!existsSync(fixture)) return `fixture not found: ${fixture}`;
   const fileName = fixture.split(/[\\/]/u).at(-1);
   const destination = `/sdcard/Download/${fileName}`;
   const push = run(adbPath, ["push", fixture, destination]);
-  if (push.status !== 0) {
-    console.log(`FAIL unable to copy ${fileName} to Android Downloads`);
-    process.exit(push.status ?? 1);
-  }
+  if (push.status !== 0) return `unable to copy ${fileName} to Android Downloads`;
   const scan = run(adbPath, [
     "shell",
     "am",
@@ -148,10 +161,8 @@ function pushFixture(adbPath, fixture) {
     "-d",
     `file://${destination}`,
   ]);
-  if (scan.status !== 0) {
-    console.log(`FAIL unable to register ${fileName} with Android`);
-    process.exit(scan.status ?? 1);
-  }
+  if (scan.status !== 0) return `unable to register ${fileName} with Android`;
+  return null;
 }
 
 for (const flow of flows) {
@@ -180,13 +191,20 @@ if (allowlistAdbPath) {
   }
 }
 
-for (const flow of flows) {
-  if (flow.replaceAll("\\", "/") === holdingsCsvFlow) {
-    const adbPath = findExecutable("adb");
-    if (!adbPath || !existsSync(holdingsCsvFixture)) {
-      console.log("FAIL holdings CSV fixture or adb not found");
-      process.exit(1);
-    }
+/** Copies the files a flow picks through the system picker; returns a setup error. */
+function prepareFlow(flow) {
+  const normalized = flow.replaceAll("\\", "/");
+  const fixtures = {
+    [holdingsCsvFlow]: [holdingsCsvFixture],
+    [transactionsCsvFlow]: [transactionsCsvFixture],
+    [zerodhaTradebookFlow]: zerodhaTradebookFixtures,
+    [casNativeFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
+    [casNativeFreshPortfolioFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
+  }[normalized];
+  if (!fixtures) return null;
+  const adbPath = findExecutable("adb");
+  if (!adbPath) return "adb not found";
+  if (normalized === holdingsCsvFlow) {
     const directory = run(adbPath, [
       "shell",
       "rm",
@@ -194,88 +212,83 @@ for (const flow of flows) {
       "/sdcard/Documents/CogVestTemplateTest",
     ]);
     if (directory.status !== 0) {
-      console.log("FAIL unable to reset the Android CSV template test folder");
-      process.exit(directory.status ?? 1);
-    }
-    const push = run(adbPath, [
-      "push",
-      holdingsCsvFixture,
-      "/sdcard/Download/holdings-import-v1.csv",
-    ]);
-    if (push.status !== 0) {
-      console.log("FAIL unable to copy the holdings CSV fixture to Android Downloads");
-      process.exit(push.status ?? 1);
-    }
-    const scan = run(adbPath, [
-      "shell",
-      "am",
-      "broadcast",
-      "-a",
-      "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
-      "-d",
-      "file:///sdcard/Download/holdings-import-v1.csv",
-    ]);
-    if (scan.status !== 0) {
-      console.log("FAIL unable to register the holdings CSV fixture with Android");
-      process.exit(scan.status ?? 1);
+      return "unable to reset the Android CSV template test folder";
     }
   }
-  if (flow.replaceAll("\\", "/") === transactionsCsvFlow) {
-    const adbPath = findExecutable("adb");
-    if (!adbPath || !existsSync(transactionsCsvFixture)) {
-      console.log("FAIL transaction CSV fixture or adb not found");
-      process.exit(1);
-    }
-    const push = run(adbPath, [
-      "push",
-      transactionsCsvFixture,
-      "/sdcard/Download/transactions-import-v1.csv",
-    ]);
-    if (push.status !== 0) {
-      console.log("FAIL unable to copy the transaction CSV fixture to Android Downloads");
-      process.exit(push.status ?? 1);
-    }
-    const scan = run(adbPath, [
-      "shell",
-      "am",
-      "broadcast",
-      "-a",
-      "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
-      "-d",
-      "file:///sdcard/Download/transactions-import-v1.csv",
-    ]);
-    if (scan.status !== 0) {
-      console.log("FAIL unable to register the transaction CSV fixture with Android");
-      process.exit(scan.status ?? 1);
-    }
+  for (const fixture of fixtures) {
+    const error = pushFixture(adbPath, fixture);
+    if (error) return error;
   }
-  if (flow.replaceAll("\\", "/") === zerodhaTradebookFlow) {
-    const adbPath = findExecutable("adb");
-    if (!adbPath) {
-      console.log("FAIL adb not found");
-      process.exit(1);
-    }
-    zerodhaTradebookFixtures.forEach((fixture) =>
-      pushFixture(adbPath, fixture),
-    );
-  }
-  if ([casNativeFlow, casNativeFreshPortfolioFlow].includes(flow.replaceAll("\\", "/"))) {
-    const adbPath = findExecutable("adb");
-    if (!adbPath) {
-      console.log("FAIL adb not found");
-      process.exit(1);
-    }
-    pushFixture(adbPath, "e2e/fixtures/cas-native-synthetic.pdf");
-  }
-  console.log(`RUN maestro test ${flow}`);
+  return null;
+}
+
+/** Streams Maestro's output live and keeps it to name the failing step. */
+function runMaestro(flow) {
   const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR
     ? [`--test-output-dir=${process.env.MAESTRO_TEST_OUTPUT_DIR}`]
     : [];
-  const result = run(maestroPath, ["test", flow, ...outputArgs]);
-  if (result.status !== 0) {
-    console.log(`FAIL Maestro flow failed: ${flow}`);
-    process.exit(result.status ?? 1);
-  }
+  return new Promise((resolve) => {
+    let output = "";
+    const child = spawn(maestroPath, ["test", flow, ...outputArgs], {
+      shell: process.platform === "win32" && /\.(cmd|bat)$/iu.test(maestroPath),
+      stdio: ["inherit", "pipe", "pipe"],
+    });
+    const collect = (stream, target) => stream.on("data", (chunk) => {
+      target.write(chunk);
+      output += chunk.toString();
+    });
+    collect(child.stdout, process.stdout);
+    collect(child.stderr, process.stderr);
+    child.on("error", (error) => resolve({ output: error.message, status: 1 }));
+    child.on("close", (status) => resolve({ output, status: status ?? 1 }));
+  });
 }
+
+function failingStep(output) {
+  const lines = output
+    .replace(/\u001b\[[0-9;]*m/gu, "")
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (
+    lines.findLast((line) => /FAILED/u.test(line)) ??
+    lines.findLast((line) => /error|not found|timeout/iu.test(line)) ??
+    "see Maestro output above"
+  );
+}
+
+function formatDuration(ms) {
+  const seconds = Math.round(ms / 1000);
+  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+}
+
+const results = [];
+const suiteStart = Date.now();
+for (const flow of flows) {
+  const flowStart = Date.now();
+  const setupError = prepareFlow(flow);
+  if (setupError) {
+    console.log(`FAIL setup for ${flow}: ${setupError}`);
+    results.push({ flow, passed: false, durationMs: 0, step: `setup: ${setupError}` });
+    continue;
+  }
+  console.log(`RUN maestro test ${flow}`);
+  const { output, status } = await runMaestro(flow);
+  const passed = status === 0;
+  if (!passed) console.log(`FAIL Maestro flow failed: ${flow}`);
+  results.push({ flow, passed, durationMs: Date.now() - flowStart, step: passed ? "" : failingStep(output) });
+}
+
+const totalMs = Date.now() - suiteStart;
+const failures = results.filter((result) => !result.passed);
+console.log("");
+console.log(`SUMMARY ${isSmoke && requestedFlows.length === 0 ? "smoke" : "Maestro"} run: ${results.length - failures.length} passed, ${failures.length} failed, ${formatDuration(totalMs)}`);
+for (const result of results) {
+  console.log(`${result.passed ? "PASS" : "FAIL"} ${formatDuration(result.durationMs).padStart(7)}  ${result.flow}${result.passed ? "" : `\n       ${result.step}`}`);
+}
+if (isSmoke && requestedFlows.length === 0 && totalMs > smokeBudgetMs) {
+  console.log(`WARN smoke tier took ${formatDuration(totalMs)}, over its ${formatDuration(smokeBudgetMs)} budget`);
+}
+if (failures.length > 0) process.exit(1);
 
 console.log("DONE Maestro local E2E flows complete");

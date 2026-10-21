@@ -48,6 +48,12 @@ Check readiness:
 npm run maestro:check
 ```
 
+Run the smoke tier (at most 15 minutes):
+
+```powershell
+npm run maestro:smoke
+```
+
 Run the full local flow suite:
 
 ```powershell
@@ -59,6 +65,25 @@ Run one flow:
 ```powershell
 npm run maestro:test -- e2e/smoke-launch.yaml
 ```
+
+Every run ends with a summary listing each flow's result, its duration and,
+for a failure, the failing step. A failing flow does not stop the run; the
+command still exits non-zero when any flow fails.
+
+## Run Cadence
+
+- **Smoke tier** (`smokeFlows` in `scripts/maestro-run.mjs`): one flow per
+  primary journey, each asserting stored results. Run it for every change to
+  UI or `e2e/`. Its budget is 15 minutes on the reference AVD. The runner warns
+  when the tier goes over; swap a slow flow out rather than raising the budget.
+- **Full tier** (`defaultFlows`, every top-level `e2e/*.yaml`): run it weekly
+  and before any release gate. Record the result in [`e2e-runs.md`](e2e-runs.md).
+- **Standalone flows** (`e2e/standalone/`): run them by path when a change
+  touches their journey.
+
+If a tier can't be run, say which one and why rather than reporting the change
+as verified. `src/__tests__/maestroFlowInventory.test.ts` fails when a
+top-level flow is missing from the full tier, or a smoke flow is not in it.
 
 ## Flow Set
 
