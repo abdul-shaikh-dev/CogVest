@@ -13,7 +13,7 @@ import type {
 
 import { useCash } from "../../cash/useCash";
 import { useMonthEndSnapshotAutomation } from "../useMonthEndSnapshotAutomation";
-import { needsHistoricalPrice, useProgress } from "../useProgress";
+import { automationWarningMessage, needsHistoricalPrice, useProgress } from "../useProgress";
 
 it("requests month-end prices for split residual units but not unresolved quantities", () => {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -1417,5 +1417,19 @@ describe("useProgress", () => {
       await result.current.ensureMonthEndSnapshot();
     });
     expect(historicalPriceFetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe("month-end snapshot warnings", () => {
+  test("explain a demerger cost basis instead of asking for review", () => {
+    expect(automationWarningMessage("2023-07", "1 holding used verified demerger cost basis before listing."))
+      .toBe("2023-07: A demerged holding is valued at verified cost until the new shares list. No action is needed.");
+    expect(automationWarningMessage("2025-10", "2 holdings used verified demerger cost basis before listing."))
+      .toBe("2025-10: 2 demerged holdings are valued at verified cost until the new shares list. No action is needed.");
+  });
+
+  test("show an unrecognised reason as it is", () => {
+    expect(automationWarningMessage("2024-01", "No holdings, PPF accounts, trades, or cash entries were available to derive for target month 2024-01."))
+      .toBe("2024-01: No holdings, PPF accounts, trades, or cash entries were available to derive for target month 2024-01.");
   });
 });

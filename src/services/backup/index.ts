@@ -27,6 +27,7 @@ type BackupRuntime = {
   onRestored: () => void;
 };
 
+const invalidBackupPrefix = "Invalid CogVest backup:";
 const countCollections = [
   ["assets", "Assets"], ["openingPositions", "Opening positions"],
   ["trades", "Investment records"], ["cashEntries", "Cash entries"],
@@ -80,8 +81,10 @@ export function createBackupService(runtime: BackupRuntime) {
         catch { throw new Error("Backup was not completed. Remove the incomplete new backup file from the selected folder."); }
       }
       if (isCancellation(error)) return undefined;
-      if (error instanceof Error && error.message.startsWith("Invalid CogVest backup:")) {
-        throw new Error("Some saved records need review before CogVest can create a restorable backup. Your data is unchanged.");
+      if (error instanceof Error && error.message.startsWith(invalidBackupPrefix)) {
+        // Name the failing rule; a generic message leaves no way to find the record.
+        const reason = error.message.slice(invalidBackupPrefix.length).trim().replace(/[.\s]+$/u, "");
+        throw new Error(`CogVest can't create a restorable backup yet: ${reason}. Your data is unchanged.`);
       }
       throw new Error(error instanceof Error && /portfolio changed|back it up|recovery/iu.test(error.message)
         ? error.message : "Backup could not be saved. Check folder access and free space, then try again.");

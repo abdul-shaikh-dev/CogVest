@@ -117,7 +117,13 @@ function requireExactKeys(value: Record<string, unknown>, keys: readonly string[
 }
 
 function requireDate(value: string, label: string) {
-  if (value !== getCalendarDatePart(value) && !isIsoTimestamp(value)) fail(`${label} is not a valid date`);
+  if (value !== getCalendarDatePart(value) && !isIsoTimestamp(value) && !isLocalDateTime(value)) fail(`${label} is not a valid date`);
+}
+
+/** Broker execution times, such as Zerodha's, are local wall-clock times without an offset. */
+function isLocalDateTime(value: string) {
+  const match = /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?$/u.exec(value);
+  return match !== null && parseCalendarDate(match[1]) !== null;
 }
 
 function isIsoTimestamp(value: string) {
@@ -159,6 +165,11 @@ function validateCashLinks(cashEntries: CashEntry[], trades: Trade[]) {
   }
 }
 
+/** Names a holding the way the user knows it, so a blocked backup says where to look. */
+function assetLabel(asset: { id: string; name?: string; symbol?: string }) {
+  return asset.symbol || asset.name || asset.id;
+}
+
 function validateInventory(portfolio: RawPortfolioSnapshot) {
   const demergerAdjustments = projectDemergers(portfolio);
   for (const asset of portfolio.assets) {
@@ -173,7 +184,7 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
       stockSplits: asset.stockSplits,
       demergerAdjustments: assetDemergerAdjustments,
     }).isExact)) {
-      fail("demerged quantity or acquisition cost is unresolved");
+      fail(`demerged quantity or acquisition cost is unresolved for ${assetLabel(asset)}`);
     }
     if (asset.stockSplits?.length || demergerAdjustments.some((event) => event.assetId === asset.id)) {
       let quantity = decimal(0);
@@ -182,7 +193,7 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
         demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === asset.id) })) {
         quantity = event.type === "demerger" ? quantity.plus(event.adjustment.kind === "entitlement" ? event.adjustment.quantity : 0) : event.type === "split" ? splitQuantity(quantity, event.split) : quantity.plus(
           event.type === "opening" ? event.position.quantity : getTradeQuantityDelta(event.trade));
-        if (quantity.isNegative()) fail(`inventory oversells asset '${asset.id}'`);
+        if (quantity.isNegative()) fail(`more ${assetLabel(asset)} is sold than was held on ${event.date}`);
       }
       continue;
     }
@@ -201,7 +212,7 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
     let quantity = decimal(0);
     for (const event of events) {
       quantity = quantity.plus(event.delta);
-      if (quantity.lessThan(0)) fail(`inventory oversells asset '${asset.id}'`);
+      if (quantity.lessThan(0)) fail(`more ${assetLabel(asset)} is sold than was held on ${event.date}`);
     }
   }
 }
@@ -237,15 +248,24 @@ function validateGraph(payload: BackupPayload) {
       if (trade.fees !== undefined) requireFinancialValue(trade.fees, "trade fees", 0);
       const gross = decimal(trade.quantity).times(trade.pricePerUnit);
       const expected = trade.type === "buy" ? gross.plus(trade.fees ?? 0) : gross.minus(trade.fees ?? 0);
-      if (!isWithinQuantum(trade.totalValue, expected, moneyQuantum)) fail("trade total is inconsistent");
+      if (!isWithinQuantum(trade.totalValue, expected, moneyQuantum)) {
+        const asset = portfolio.assets.find((item) => item.id === trade.assetId);
+        fail(`the ${trade.type} of ${asset ? assetLabel(asset) : "a holding"} on ${getCalendarDatePart(trade.date)} has a total that does not match quantity × price`);
+      }
     }
   }
   const importFingerprints = new Set<string>();
   for (const trade of portfolio.trades) {
     const provenance = trade.importProvenance;
     if (!provenance?.fingerprint) continue;
-    const identity = `${provenance.sourceFormat}\u0000${provenance.account?.trim().toUpperCase() ?? ""}\u0000${provenance.fingerprint}`;
-    if (importFingerprints.has(identity)) fail("duplicate import fingerprint");
+    // Like the importer, a broker trade ID identifies a fill; partial fills of one
+    // order share every other field, so the fingerprint applies only without one.
+    const externalId = provenance.externalId?.trim().toUpperCase();
+    const key = externalId ? `id\u0000${externalId}` : `fingerprint\u0000${provenance.fingerprint}`;
+    const identity = `${provenance.sourceFormat}\u0000${provenance.account?.trim().toUpperCase() ?? ""}\u0000${key}`;
+    if (importFingerprints.has(identity)) {
+      fail(`two imported ${provenance.sourceSymbol ?? "trade"} records on ${getCalendarDatePart(trade.date)} have the same source identity`);
+    }
     importFingerprints.add(identity);
   }
   for (const entry of portfolio.cashEntries) {
@@ -263,8 +283,8 @@ function validateGraph(payload: BackupPayload) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/u.test(snapshot.month) || months.has(snapshot.month)) fail("monthly snapshots must have unique valid months");
     months.add(snapshot.month);
     for (const [label, value] of Object.entries({ cashValue: snapshot.cashValue, cryptoValue: snapshot.cryptoValue, debtValue: snapshot.debtValue, equityValue: snapshot.equityValue, investedValue: snapshot.investedValue, monthlyInvestment: snapshot.monthlyInvestment, portfolioValue: snapshot.portfolioValue })) requireFinancialValue(value, `snapshot ${label}`);
-    const snapshotErrors = validateMonthlySnapshot(snapshot);
-    if (Object.keys(snapshotErrors).length > 0) fail("snapshot values need correction in Progress before backup");
+    const snapshotError = Object.values(validateMonthlySnapshot(snapshot))[0];
+    if (snapshotError) fail(`the ${snapshot.month} month-end snapshot needs correction in Progress: ${snapshotError}`);
     if (snapshot.generated) requireIsoTimestamp(snapshot.generated.generatedAt, "snapshot generation time");
     snapshot.generated?.priceEvidence?.forEach((evidence) => { if (!assetIds.has(evidence.assetId)) fail("snapshot evidence has a dangling asset"); });
   }

@@ -390,7 +390,7 @@ function automationMessage({
   return "The first monthly snapshot will be created after a full portfolio month is complete.";
 }
 
-function automationWarningMessage(targetMonth: string, warning: string) {
+export function automationWarningMessage(targetMonth: string, warning: string) {
   if (warning.includes("PPF account") && warning.includes("confirmed balance checkpoint")) {
     return "Earlier PPF balances are missing. Today's PPF balance cannot be used for past months. Add a confirmed earlier balance only if your statement supports it; market and cash charts exclude PPF until its history is available.";
   }
@@ -406,7 +406,14 @@ function automationWarningMessage(targetMonth: string, warning: string) {
     return `${targetMonth}: ${warning}`;
   }
 
-  return `${targetMonth}: Some portfolio records need review before this month can be completed.`;
+  const demerger = /^(\d+) holdings? used verified demerger cost basis before listing/u.exec(warning);
+  if (demerger) {
+    const count = Number(demerger[1]);
+    return `${targetMonth}: ${count === 1 ? "A demerged holding is" : `${count} demerged holdings are`} valued at verified cost until the new shares list. No action is needed.`;
+  }
+
+  // Show the specific reason; a generic "needs review" leaves no way to find the record.
+  return `${targetMonth}: ${warning}`;
 }
 
 function summarizeMonthlyWarnings(warnings: string[]) {
