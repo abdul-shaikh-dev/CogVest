@@ -123,6 +123,9 @@ Run checks proportionate to the change:
   tested. Do not test an older installed build.
 - Use Maestro for important user journeys and assert resulting data, not only
   navigation or success messages.
+- Run the Maestro smoke tier (`npm run maestro:smoke`) for changes to UI or
+  `e2e/`. Run the full tier (`npm run maestro:test`) weekly and before a release
+  gate, and log it in `docs/testing/e2e-runs.md`.
 - For UI changes, inspect emulator screenshots or the live app when practical.
 
 If emulator or external-provider verification is unavailable, report the exact
@@ -138,7 +141,8 @@ performance budgets unchanged and disclose environment differences when comparin
 - `npm run android`: local native development build/install.
 - `npm run android:doctor`: tool and emulator readiness.
 - `npm run android:smoke -- --strict`: installed package smoke check.
-- `npm run maestro:test`: local E2E flows.
+- `npm run maestro:smoke`: smoke-tier E2E flows (at most 15 minutes).
+- `npm run maestro:test`: full local E2E suite.
 - APK is locally installable; AAB is for Play distribution.
 
 Detailed setup and release commands live in `README.md`,

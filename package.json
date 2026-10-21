@@ -18,6 +18,7 @@
     "test:v1:pc": "npm run test:verify && npm run android:doctor && npm run android:smoke -- --strict",
     "maestro:check": "node scripts/maestro-check.mjs",
     "maestro:test": "node scripts/maestro-run.mjs",
+    "maestro:smoke": "node scripts/maestro-run.mjs --smoke",
     "visual-qa:android": "node scripts/android-visual-qa.mjs"
   },
   "jest": {
