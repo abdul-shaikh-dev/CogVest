@@ -42,7 +42,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -52,7 +51,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "view-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "view-holding-button"
     retryTapIfNoChange: true

@@ -123,6 +123,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Opening position count: 1"
 - assertVisible: "Cash entry count: 0"
 - assertVisible: "Values: invested ₹200.00 | current ₹250.00 | quantity 2"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
       text: "Position 1: quantity 2 | average ₹100.00 | date unknown | measured unset | note none | conviction none"

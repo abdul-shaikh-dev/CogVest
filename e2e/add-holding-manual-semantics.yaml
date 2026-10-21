@@ -61,7 +61,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -75,11 +74,13 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Market: INR | NSE | RELIANCE.NS"
 - assertVisible: "Quote: missing | missing"
 - assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
       text: "Position 1: quantity 2 | average ₹1,200.00 | date unknown | measured unset | note Manual fallback evidence | conviction none"
     direction: DOWN
 - assertVisible: "Position 1: quantity 2 | average ₹1,200.00 | date unknown | measured unset | note Manual fallback evidence | conviction none"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
       text: "Position 1 manual price: ₹1,300.00"

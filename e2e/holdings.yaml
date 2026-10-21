@@ -30,7 +30,8 @@ appId: com.abdulshaikh.cogvest
     id: "add-holding-phase-class"
 - assertVisible: "Stocks"
 - assertVisible: "ETFs"
-- tapOn: "Stocks"
+- tapOn:
+    id: "asset-class-stock"
 - assertVisible: "Stock"
 - takeScreenshot: .expo/asset-class-280-stocks
 - tapOn:
@@ -61,7 +62,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -71,7 +71,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "view-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "view-holding-button"
     retryTapIfNoChange: true

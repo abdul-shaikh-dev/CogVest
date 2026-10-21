@@ -4,6 +4,17 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-22: import and add-holding flows after the #559 batches, 14 passed
+
+- Commit: main plus the import and add-holding selector batches. AVD and build
+  as below; flows run by path.
+- zerodha-tradebook-import 2m 50s, quick-portfolio-setup 3m 00s.
+- add-holding-asset-class 1m 31s, add-holding-asset-switch 1m 39s,
+  add-holding-edited-quote 0m 50s, add-holding-manual-semantics 1m 22s,
+  add-holding-pending-valuation 1m 37s, add-holding-review-hierarchy 1m 19s,
+  add-holding-unknown-date 1m 02s, add-trade 1m 15s, asset-correction 2m 53s,
+  funded-buy-cash 1m 50s, holdings 1m 09s, opening-position-correction 1m 29s.
+
 ## 2026-10-22: futures flows after the #559 futures selector batch, 3 passed
 
 - Commit: `61788f1` (main) plus the futures selector batch and the

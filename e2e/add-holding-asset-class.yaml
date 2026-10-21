@@ -26,15 +26,18 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "ETFs"
 - assertVisible: "Debt"
 - assertVisible: "Crypto"
-- tapOn: "ETFs"
+- tapOn:
+    id: "asset-class-etf"
 - assertVisible: "ETF"
 - assertVisible:
     id: sector-not-applicable
-- tapOn: "Stocks"
+- tapOn:
+    id: "asset-class-stock"
 - assertVisible: "Stock"
 - assertVisible:
     id: sector-type-picker
-- tapOn: "ETFs"
+- tapOn:
+    id: "asset-class-etf"
 - assertVisible: "ETF"
 - takeScreenshot: .expo/asset-class-280-etfs
 - scrollUntilVisible:
@@ -59,7 +62,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: save-holding-button
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: save-holding-button
 - assertVisible:
@@ -68,7 +70,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: view-holding-button
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: view-holding-button
 - assertVisible: "Sample ETF"
@@ -77,6 +78,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "SAMPLEETF · ETF.*"
 - tapOn:
     id: "holding-row-.*"
+# selector: the saved classification is the value under test
 - scrollUntilVisible:
     element:
       text: "Equity · ETF · Diversified"
@@ -95,6 +97,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "SAMPLEETF · ETF.*"
 - tapOn:
     id: "holding-row-.*"
+# selector: the saved classification is the value under test
 - scrollUntilVisible:
     element:
       text: "Equity · ETF · Diversified"

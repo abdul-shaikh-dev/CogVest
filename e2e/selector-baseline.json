@@ -1,36 +1,4 @@
 {
-  "e2e/add-holding-asset-class.yaml": {
-    "text-tap": 3,
-    "center-element": 2,
-    "text-scroll": 2
-  },
-  "e2e/add-holding-asset-switch.yaml": {
-    "center-element": 1,
-    "text-scroll": 1
-  },
-  "e2e/add-holding-edited-quote.yaml": {
-    "center-element": 1,
-    "text-scroll": 1
-  },
-  "e2e/add-holding-manual-semantics.yaml": {
-    "center-element": 1,
-    "text-scroll": 2
-  },
-  "e2e/add-holding-pending-valuation.yaml": {
-    "center-element": 3
-  },
-  "e2e/add-holding-review-hierarchy.yaml": {
-    "text-scroll": 1
-  },
-  "e2e/add-holding-unknown-date.yaml": {
-    "center-element": 1
-  },
-  "e2e/add-trade.yaml": {
-    "center-element": 2
-  },
-  "e2e/asset-correction.yaml": {
-    "center-element": 1
-  },
   "e2e/bulk-transaction-delete.yaml": {
     "text-scroll": 3,
     "text-tap": 2
@@ -53,15 +21,8 @@
   "e2e/epf-reporting.yaml": {
     "text-tap": 1
   },
-  "e2e/funded-buy-cash.yaml": {
-    "center-element": 1
-  },
   "e2e/holding-duration.yaml": {
     "text-tap": 1
-  },
-  "e2e/holdings.yaml": {
-    "text-tap": 1,
-    "center-element": 2
   },
   "e2e/insight-details.yaml": {
     "text-scroll": 1,
@@ -70,9 +31,6 @@
   "e2e/minimal-mode.yaml": {
     "text-scroll": 4
   },
-  "e2e/opening-position-correction.yaml": {
-    "center-element": 2
-  },
   "e2e/ppf-history-fallback.yaml": {
     "text-scroll": 1,
     "text-tap": 1
@@ -80,18 +38,10 @@
   "e2e/privacy-settings.yaml": {
     "text-scroll": 4
   },
-  "e2e/quick-portfolio-setup.yaml": {
-    "text-scroll": 1,
-    "center-element": 3
-  },
   "e2e/settings-preference-hierarchy.yaml": {
     "text-scroll": 3
   },
   "e2e/workflow-exit-navigation.yaml": {
-    "text-tap": 1
-  },
-  "e2e/zerodha-tradebook-import.yaml": {
-    "text-scroll": 1,
     "text-tap": 1
   }
 }
