@@ -154,6 +154,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 60000
 - tapOn:
     id: futures-save-event
+# selector: the wallet balance is the value under test
 - scrollUntilVisible:
     element:
       text: "999 USDT"
@@ -268,6 +269,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 60000
 - tapOn:
     id: futures-save-valuation
+# selector: the INR equity is the value under test
 - scrollUntilVisible:
     element:
       text: "₹90810(?:\\.00)?"
@@ -282,6 +284,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 120000
 - openLink: "cogvest:///futures"
+# selector: the INR equity is the value under test
 - scrollUntilVisible:
     element:
       text: "₹90810(?:\\.00)?"

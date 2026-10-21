@@ -66,6 +66,14 @@ describe("Maestro selector policy lint", () => {
     ]);
   });
 
+  it("reports a scroll whose element is given inline as text", () => {
+    expect(lint([
+      "- scrollUntilVisible:",
+      '    element: "Edit"',
+      "    direction: DOWN",
+    ].join("\n"))).toEqual([{ line: 1, rule: "text-scroll", detail: "Edit" }]);
+  });
+
   it("allows native UI text and annotated exceptions", () => {
     expect(lint([
       '- tapOn: "Replace with visual QA data"',

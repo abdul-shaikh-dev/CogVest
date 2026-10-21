@@ -423,7 +423,7 @@ export function DashboardScreen({
             <AppText color="secondary">{item.status === "ready" ? "Reconciled wallet equity included; notional excluded." : `Portfolio total pending: ${item.reason}`}</AppText>
             {item.equityInr !== null ? <MaskedValue value={formatCompactINR(Number(item.equityInr))} exactValue={formatINR(Number(item.equityInr))} masked={dashboard.maskWealthValues} /> : null}
           </View>)}
-          <AppButton title="Review Futures" variant="secondary" onPress={() => router.push("/futures")} />
+          <AppButton title="Review Futures" variant="secondary" onPress={() => router.push("/futures")} testID="dashboard-review-futures" />
         </PremiumCard> : null}
 
         {quickSetupSavedCount > 0 &&

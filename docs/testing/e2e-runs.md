@@ -4,6 +4,16 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-22: futures flows after the #559 futures selector batch, 3 passed
+
+- Commit: `61788f1` (main) plus the futures selector batch and the
+  `dashboard-review-futures` testID. AVD and build as below; flows run by path.
+- futures-manual-wallet: PASS, 3m 17s. futures-cash-funding: PASS, 2m 21s.
+- futures-timestamp-evidence: the first run failed scrolling to the INR equity
+  value `₹90810`, a step the batch only annotated. The unchanged flow from main
+  then passed (3m 53s), and the batch version passed twice (4m 07s, 4m 14s).
+  Treat that scroll as flaky on this AVD.
+
 ## 2026-10-22: smoke tier after the #559 selector conversion, 12 passed, 0 failed, 12m 13s
 
 - Commit: `c26a90f` (main) plus the #559 changes: selector lint, smoke-flow
