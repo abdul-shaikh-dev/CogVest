@@ -60,6 +60,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "toggle-review-details"
+# selector: the purchase date in the review details is the value under test
 - scrollUntilVisible:
     element:
       text: "2026-05-29"
@@ -69,7 +70,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "quick-setup-save-add-next"
     direction: UP
-    centerElement: true
 - tapOn:
     id: "quick-setup-save-add-next"
     retryTapIfNoChange: true
@@ -108,7 +108,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "quick-setup-save-add-next"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "quick-setup-save-add-next"
     retryTapIfNoChange: true
@@ -231,7 +230,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "quick-setup-save-finish"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "quick-setup-save-finish"
     retryTapIfNoChange: true

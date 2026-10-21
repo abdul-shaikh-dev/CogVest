@@ -42,7 +42,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -52,6 +51,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Quote: missing | missing"
 - assertVisible: "Values: invested ₹3,000.00 | current ₹3,400.00 | quantity 2"
 - assertVisible: "Duplicate identity count: 0"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
       text: "Position 1 manual price: ₹1,700.00"

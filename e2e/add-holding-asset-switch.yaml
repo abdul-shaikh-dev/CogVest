@@ -101,7 +101,6 @@ appId: com.abdulshaikh.cogvest
     element:
       id: "save-holding-button"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "save-holding-button"
     retryTapIfNoChange: true
@@ -113,6 +112,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Classification: etf | etf | diversified"
 - assertVisible: "Quote: yahoo | ₹255.32"
 - assertVisible: "Values: invested ₹750.00 | current ₹765.96 | quantity 3"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
       text: "Position 1: quantity 3 | average ₹250.00 | date unknown | measured unset | note none | conviction none"

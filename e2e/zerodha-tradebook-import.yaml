@@ -111,15 +111,17 @@ appId: com.abdulshaikh.cogvest
           point: "94%,93%"
 - scrollUntilVisible:
     element:
-      text: "Confirm transaction import"
+      id: "confirm-transaction-import"
     direction: DOWN
     centerElement: false
     visibilityPercentage: 50
     timeout: 10000
+# Trades are being imported, not only share adjustments.
+- assertVisible: "Confirm transaction import"
 - takeScreenshot:
     path: zerodha-tradebook-import-preview
 - tapOn:
-    text: "Confirm transaction import"
+    id: "confirm-transaction-import"
 - extendedWaitUntil:
     visible:
       id: "holdings-screen"
