@@ -67,11 +67,14 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: epf-activity-toggle
+# The withdrawal is the account's only entry.
 - scrollUntilVisible:
     element:
-      text: "Withdrawal"
+      id: "epf-event-.*"
     direction: DOWN
-- tapOn: "Withdrawal"
+- assertVisible: "Withdrawal"
+- tapOn:
+    id: "epf-event-.*"
 - scrollUntilVisible:
     element:
       id: delete-epf-entry

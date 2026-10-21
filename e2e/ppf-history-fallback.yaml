@@ -83,10 +83,12 @@ appId: com.abdulshaikh.cogvest
     id: date-input
 - tapOn:
     id: android:id/date_picker_header_year
+# selector: the year list in the Android date picker
 - scrollUntilVisible:
     element:
       text: "2024"
     direction: UP
+# selector: the year list in the Android date picker
 - tapOn: "2024"
 - tapOn: "OK"
 - tapOn:

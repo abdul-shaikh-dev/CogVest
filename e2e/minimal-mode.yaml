@@ -33,6 +33,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "Invested"
 - tapOn:
     id: holding-row-visual-qa-asset-bitcoin
+# selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element: "Invested in remaining units"
     direction: DOWN
@@ -46,6 +47,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Withdraw"
 - assertNotVisible: "This month"
 - openLink: "cogvest:///progress"
+# selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element: "Portfolio Growth"
     direction: DOWN
@@ -56,6 +58,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - tapOn:
     id: progress-details-toggle
+# selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element: "Value by asset class"
     direction: DOWN
@@ -87,6 +90,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "display-mode-minimal"
 - openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
+# selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element:
       text: "Review holding"

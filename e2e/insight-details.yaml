@@ -29,6 +29,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "insight-show-records"
+# selector: the recorded conviction shown in the insight is the value under test
 - scrollUntilVisible:
     element:
       text: "Opening position.*conviction 4/5"
@@ -56,14 +57,16 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Not enough data yet"
 - openLink: "cogvest:///insight?kind=missing"
 - assertVisible: "Insight unavailable"
-- tapOn: "Back to Dashboard"
+- tapOn:
+    id: "insight-unavailable-back"
 - openLink: "cogvest:///settings"
 - tapOn:
     id: "display-mode-minimal"
 - openLink: "cogvest:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - assertNotVisible: "What contributed"
-- tapOn: "Done"
+- tapOn:
+    id: "insight-paused-done"
 - openLink: "cogvest:///settings"
 - tapOn:
     id: "display-mode-standard"

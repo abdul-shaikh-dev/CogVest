@@ -20,7 +20,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/epf-545/allocation
 - openLink: "cogvest:///epf-reporting-qa?token=cogvest-local-visual-qa&mode=minimal"
 - tapOn:
-    text: "Invested & returns"
+    id: dashboard-performance-toggle
     retryTapIfNoChange: true
 - assertVisible: "Unknown"
 - tapOn:

@@ -18,7 +18,8 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "holdings-add-button"
 - assertVisible: "Add existing holding"
-- tapOn: "Add existing holding"
+- tapOn:
+    id: "add-one-holding-option"
 - assertVisible:
     id: "add-holding-screen"
 - tapOn:

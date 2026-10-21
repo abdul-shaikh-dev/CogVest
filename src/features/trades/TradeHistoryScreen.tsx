@@ -121,6 +121,7 @@ export function TradeHistoryScreen({
           title={isSelecting ? "Cancel selection" : "Back to Holdings"}
           variant="ghost"
           onPress={isSelecting ? leaveSelection : onBack}
+          testID={isSelecting ? "cancel-transaction-selection" : "trade-history-back"}
         />
         <ScreenHeader
           title="Transactions"

@@ -35,14 +35,16 @@ appId: com.abdulshaikh.cogvest
 - pressKey: BACK
 - scrollUntilVisible:
     element:
-      text: "1 selected"
+      id: transaction-selection-count
     direction: UP
 - assertVisible: "1 selected"
 - scrollUntilVisible:
     element:
-      text: "Cancel selection"
+      id: cancel-transaction-selection
     direction: UP
-- tapOn: "Cancel selection"
+- assertVisible: "Cancel selection"
+- tapOn:
+    id: cancel-transaction-selection
 - assertVisible: ".*Accounting QA.*Purchase.*"
 - tapOn:
     id: start-transaction-selection
@@ -59,8 +61,9 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "1 transaction removed. Portfolio and automatic history updated."
 - scrollUntilVisible:
     element:
-      text: "Back to Holdings"
+      id: trade-history-back
     direction: UP
-- tapOn: "Back to Holdings"
+- tapOn:
+    id: trade-history-back
 - assertVisible: "Units 10; basis 500; cash 0"
 - takeScreenshot: .expo/ux-enlarged/bulk-delete-result

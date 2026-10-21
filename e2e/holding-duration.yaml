@@ -47,7 +47,8 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///holding-duration"
 - assertVisible: "Optional analysis is paused"
 - assertNotVisible: "HDFC Bank"
-- tapOn: "Done"
+- tapOn:
+    id: "holding-duration-paused-done"
 - openLink: "cogvest:///settings"
 - tapOn:
     id: "display-mode-standard"

@@ -15,21 +15,17 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: "privacy-details-toggle"
+# selector: the encryption disclosure is the copy under test
 - scrollUntilVisible:
     element: ".*CogVest does not add its own encryption.*"
     direction: DOWN
 - assertVisible: ".*CogVest does not add its own encryption.*"
 - takeScreenshot: .expo/ux14-privacy
 - scrollUntilVisible:
-    element: "Android backup"
-    direction: DOWN
-- scrollUntilVisible:
-    element: "Excluded"
+    element:
+      id: "settings-android-backup"
     direction: DOWN
 - assertVisible: "Android backup"
 - assertVisible: "Excluded"
-- scrollUntilVisible:
-    element: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
-    direction: DOWN
 - assertVisible: "Cloud backup, device-to-device, and cross-platform transfer are disabled."
 - takeScreenshot: .expo/ux14-backup
