@@ -45,6 +45,15 @@ describe("backup file service", () => {
     await service.restorePortfolioBackup(prepared);
     expect(store.getState().epf).toEqual(saved.portfolio.epf);
   });
+  it("names the record that blocks a restorable backup", async () => {
+    const { service, store, file } = harness();
+    store.setState({ monthlySnapshots: [{ id: "snapshot-2025-10", month: "2025-10", cashValue: 100, cryptoValue: 0, debtValue: 0,
+      equityValue: 1000, investedValue: 1000, monthlyInvestment: 0, portfolioValue: 1200 }] });
+    await expect(service.exportPortfolioBackup()).rejects.toThrow("CogVest can't create a restorable backup yet: the 2025-10 month-end " +
+      "snapshot needs correction in Progress: Portfolio value must equal Equity + Debt + Crypto + Cash. Your data is unchanged.");
+    expect(file.write).not.toHaveBeenCalled();
+  });
+
   it("exports a verified file without changing the portfolio", async () => {
     const { service, store, file } = harness();
     const original = store.getState().captureBackup();

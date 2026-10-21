@@ -237,6 +237,25 @@ describe("portable portfolio backup", () => {
     expect(decoded.payload.quoteCache["asset-stock"]?.source).toBe("manual");
   });
 
+  it("round trips broker partial fills that share a fingerprint but not a trade ID", async () => {
+    const fills = payload();
+    const fill = (id: string, externalId: string, originalRowNumber: number) => ({
+      assetId: "asset-stock", date: "2026-01-02T14:01:59", id, pricePerUnit: 100, quantity: 1, totalValue: 100, type: "buy" as const,
+      importProvenance: { account: "AB1234", externalId, fingerprint: "same-order-fingerprint", importBatchId: "batch-zerodha", originalRowNumber, sourceFormat: "zerodha-tradebook", sourceVersion: "1" },
+    });
+    fills.portfolio.trades.push(fill("fill-1", "1000001", 1), fill("fill-2", "1000002", 2));
+    const decoded = await parsePortfolioBackup(await createPortfolioBackup(fills, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest), digest);
+    expect(decoded.payload.portfolio.trades.map((trade) => trade.date)).toContain("2026-01-02T14:01:59");
+
+    const repeated = payload();
+    repeated.portfolio.trades.push(fill("fill-1", "1000001", 1), { ...fill("fill-2", " 1000001 ", 2) });
+    await expect(createPortfolioBackup(repeated, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("have the same source identity");
+
+    const invalidTime = payload();
+    invalidTime.portfolio.trades.push({ ...fill("fill-1", "1000001", 1), date: "2026-01-02T24:00:00" });
+    await expect(createPortfolioBackup(invalidTime, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("trade date is not a valid date");
+  });
+
   it("uses deterministic canonical bytes independent of input key order", async () => {
     const first = await backup();
     const second = await createPortfolioBackup(JSON.parse(JSON.stringify(payload())) as BackupPayload, { createdAt: "2026-09-10T10:00:00.000Z", appVersion: "1.0.1" }, digest);
@@ -265,7 +284,7 @@ describe("portable portfolio backup", () => {
     if (!sale || sale.type !== "sell") throw new Error("Fixture sale is missing.");
     invalid.portfolio.trades[1] = { ...sale, quantity: 3, totalValue: 358 };
     invalid.portfolio.cashEntries[2] = { ...invalid.portfolio.cashEntries[2], amount: 358 };
-    await expect(createPortfolioBackup(invalid, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("oversells");
+    await expect(createPortfolioBackup(invalid, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("more EXAMPLE is sold than was held on 2026-01-03");
     const noSalt = payload();
     noSalt.casFolioSalt = null;
     await expect(createPortfolioBackup(noSalt, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("CAS provenance");
