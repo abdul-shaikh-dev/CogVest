@@ -65,6 +65,7 @@ export function InsightDetailScreen({
             title="Insight unavailable"
             message="This link does not match an available insight. Your records have not changed."
             actionLabel="Back to Dashboard"
+            actionTestID="insight-unavailable-back"
             onAction={onClose}
           />
         ) : minimal ? (
@@ -72,6 +73,7 @@ export function InsightDetailScreen({
             title="Insights are paused"
             message="Minimal Mode keeps optional observations out of view. Your holdings and records are still available."
             actionLabel="Done"
+            actionTestID="insight-paused-done"
             onAction={onClose}
           />
         ) : (

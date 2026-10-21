@@ -64,17 +64,20 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: settings-price-details-toggle
 - scrollUntilVisible:
-    element: "Newest price update date"
+    element:
+      id: settings-newest-price-date
     direction: DOWN
 - assertVisible: "Newest price update date"
 - takeScreenshot: .expo/ux14-prices
 - scrollUntilVisible:
-    element: "Manual price updates"
+    element:
+      id: settings-manual-price-updates
     direction: DOWN
 - assertVisible: "Manual price updates"
 - assertNotVisible: "Live"
 - scrollUntilVisible:
-    element: "Base currency"
+    element:
+      id: settings-base-currency
     direction: DOWN
 - assertVisible: "Base currency"
 - assertVisible: "INR"

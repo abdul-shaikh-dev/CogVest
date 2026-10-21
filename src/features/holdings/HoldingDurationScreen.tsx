@@ -73,6 +73,7 @@ export function HoldingDurationScreen({
             title="Optional analysis is paused"
             message="Minimal Mode keeps this reference out of view."
             actionLabel="Done"
+            actionTestID="holding-duration-paused-done"
             onAction={onClose}
           />
         ) : masked ? (

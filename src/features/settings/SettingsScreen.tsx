@@ -260,6 +260,7 @@ export function SettingsScreen({
                   icon="cloud-offline-outline"
                   title="Android backup"
                   meta="Cloud backup, device-to-device, and cross-platform transfer are disabled."
+                  testID="settings-android-backup"
                   value="Excluded"
                 />
                 <GroupedListRow
@@ -308,7 +309,7 @@ export function SettingsScreen({
                 <AppText color="secondary" variant="caption">
                   These are separate price updates. Prices entered with initial holdings may also be in use; check Dashboard for valuation coverage.
                 </AppText>
-                <View style={styles.priceDate}>
+                <View style={styles.priceDate} testID="settings-newest-price-date">
                   <AppText weight="bold">Newest price update date</AppText>
                   <AppText color="secondary">{quoteStatus.latestQuoteLabel}</AppText>
                   <AppText color="secondary" variant="caption">
@@ -325,6 +326,7 @@ export function SettingsScreen({
                 />
                 <GroupedListRow
                   icon="cloud-offline-outline"
+                  testID="settings-manual-price-updates"
                   title="Manual price updates"
                   meta="You can enter a price when automatic pricing is unavailable."
                   value={`${quoteStatus.manualFallbackCount} price update${
@@ -338,6 +340,7 @@ export function SettingsScreen({
           <PremiumCard section>
             <GroupedListRow
               icon="cash-outline"
+              testID="settings-base-currency"
               title="Base currency"
               meta="Portfolio totals are reported in INR."
               value="INR"

@@ -4,6 +4,22 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-23: final #559 batch, 13 flows passed
+
+- Commit: main plus the final selector batch. AVD and build as below; flows
+  run by path.
+- bulk-transaction-delete 0m 43s, cash-entry-focus 1m 27s, contextual-nudges
+  1m 54s, holding-duration 0m 46s, insight-details 0m 56s, minimal-mode 1m 06s,
+  privacy-settings 0m 27s, settings-preference-hierarchy 1m 01s,
+  epf-corrections 1m 24s, epf-reporting 0m 28s, workflow-exit-navigation
+  0m 40s, ppf-history-fallback 2m 19s.
+- dashboard-valuation-basis failed at `assertVisible: "₹15.9L"`, and so did
+  the unchanged flow from main. It launched without clearing state, and the
+  visual QA seed keeps an existing Futures wallet, so a Futures wallet left by
+  an earlier flow raised the total to ₹23.1L. The full tier runs it before any
+  Futures flow, which hid this. With `clearState: true` it passed (0m 33s),
+  including directly after futures-cash-funding.
+
 ## 2026-10-22: import and add-holding flows after the #559 batches, 14 passed
 
 - Commit: main plus the import and add-holding selector batches. AVD and build

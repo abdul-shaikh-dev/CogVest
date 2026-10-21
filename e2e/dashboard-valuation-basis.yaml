@@ -1,6 +1,8 @@
 appId: com.abdulshaikh.cogvest
 ---
-- launchApp
+# The visual QA seed leaves Futures wallets in place, so start from a clean app.
+- launchApp:
+    clearState: true
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
@@ -33,6 +35,7 @@ appId: com.abdulshaikh.cogvest
     id: dashboard-price-details-toggle
 - assertVisible:
     id: dashboard-price-details
+# selector: the valuation-basis explanation is the copy under test
 - scrollUntilVisible:
     element:
       text: "Current holdings, cash and recorded PPF balances.*"
