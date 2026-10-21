@@ -61,6 +61,7 @@ appId: com.abdulshaikh.cogvest
 - openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Trade count: 1"
 - assertVisible: "Cash entry count: 5"
+# selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element: "Values: invested ₹36,455.00.*quantity 27"
     direction: DOWN

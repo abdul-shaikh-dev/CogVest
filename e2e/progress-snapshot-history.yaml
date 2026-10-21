@@ -37,6 +37,7 @@ appId: com.abdulshaikh.cogvest
     id: "selected-snapshot-summary"
 - assertVisible: "₹19,87,450.00"
 - takeScreenshot: .expo/progress-277-month-detail
+# selector: the selected month's stored note is the value under test
 - scrollUntilVisible:
     element: "May parity seed"
     direction: DOWN

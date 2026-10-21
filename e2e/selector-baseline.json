@@ -56,17 +56,6 @@
   "e2e/funded-buy-cash.yaml": {
     "center-element": 1
   },
-  "e2e/futures-cash-funding.yaml": {
-    "text-tap": 2,
-    "text-scroll": 2
-  },
-  "e2e/futures-manual-wallet.yaml": {
-    "text-scroll": 6,
-    "text-tap": 4
-  },
-  "e2e/futures-timestamp-evidence.yaml": {
-    "text-scroll": 3
-  },
   "e2e/holding-duration.yaml": {
     "text-tap": 1
   },
@@ -79,7 +68,7 @@
     "text-tap": 2
   },
   "e2e/minimal-mode.yaml": {
-    "text-scroll": 1
+    "text-scroll": 4
   },
   "e2e/opening-position-correction.yaml": {
     "center-element": 2
@@ -88,9 +77,15 @@
     "text-scroll": 1,
     "text-tap": 1
   },
+  "e2e/privacy-settings.yaml": {
+    "text-scroll": 4
+  },
   "e2e/quick-portfolio-setup.yaml": {
     "text-scroll": 1,
     "center-element": 3
+  },
+  "e2e/settings-preference-hierarchy.yaml": {
+    "text-scroll": 3
   },
   "e2e/workflow-exit-navigation.yaml": {
     "text-tap": 1

@@ -75,7 +75,8 @@ export function lintFlow(source) {
     }
     if (/^\s*(?:-\s*)?scrollUntilVisible:\s*$/u.test(line)) {
       const block = blockOf(index);
-      const text = block.map((entry) => /^\s*text:\s*(.+)$/u.exec(entry)?.[1]).find(Boolean);
+      // The target is either `element: "<text>"` or an element block with `text:`.
+      const text = block.map((entry) => /^\s*(?:element|text):\s*(\S.*)$/u.exec(entry)?.[1]).find(Boolean);
       if (text !== undefined && !block.some((entry) => /^\s*id:/u.test(entry)) && !isAllowedText(unquote(text))) {
         report(index, "text-scroll", unquote(text));
       }

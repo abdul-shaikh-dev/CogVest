@@ -131,7 +131,9 @@ appId: com.abdulshaikh.cogvest
       visible:
         id: dashboard-screen
     commands:
-      - tapOn: "Review Futures"
+      - tapOn:
+          id: dashboard-review-futures
+# selector: the wallet balance is the value under test
 - scrollUntilVisible:
     element:
       text: "100 USDT"
@@ -148,7 +150,9 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- tapOn: "Review Futures"
+- tapOn:
+    id: dashboard-review-futures
+# selector: the wallet balance is the value under test
 - scrollUntilVisible:
     element:
       text: "100 USDT"
