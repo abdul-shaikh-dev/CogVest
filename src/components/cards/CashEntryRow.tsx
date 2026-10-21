@@ -108,6 +108,7 @@ export function CashEntryRow({
       android_ripple={androidRipple()}
       onPress={onPress}
       style={({ pressed }) => getPressedStateStyle({ pressed })}
+      testID={`review-cash-entry-${entry.id}`}
     >
       {content}
     </Pressable>
