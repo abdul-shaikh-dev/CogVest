@@ -33,6 +33,10 @@ those boundaries. Historical plans are not implementation instructions.
 - Persist raw user records; derive portfolio views with pure functions.
 - Put financial calculations and validation in `src/domain/`.
 - Keep business logic out of UI components.
+- Split a screen component once it passes about 600 lines: move sections into
+  sibling components, pure view logic into a tested view-model module, and
+  styles into their own module. Keep JSX lines readable rather than packing
+  props onto one long line.
 - No backend, authentication, cloud sync, analytics, or push notifications in V1.
 - Behavior fields such as conviction are optional.
 - INR is the reporting/base currency. Preserve each asset and quote's native

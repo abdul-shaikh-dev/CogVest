@@ -3,17 +3,14 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import {
   BackHandler,
   Keyboard,
-  Modal,
   PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   TextInput,
   View,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -21,52 +18,46 @@ import {
   AppText,
   CategoryIcon,
   EmptyState,
-  GroupedListRow,
   IconButton,
-  MaskedValue,
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
-  SectionHeader,
-  androidRipple,
-  assetClassLabel,
-  getPressedStateStyle,
-  minimumTouchTargetStyle,
 } from "@/src/components/common";
-import { useReducedMotionPreference } from "@/src/hooks";
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
-import { epfProviderLabel, epfStatusLabel } from "@/src/features/epf/epfAccountForm";
-import { instrumentTypeLabel, sectorTypeLabel } from "@/src/domain/assets";
-import {
-  formatCompactINR,
-  formatINR,
-  formatDate,
-  formatPercentage,
-} from "@/src/domain/formatters";
-import type {
-  QuoteFreshnessSummary,
-  QuoteRefreshResult,
-  RefreshQuotesInput,
-} from "@/src/services/quotes";
-import { getHoldingQuoteContext } from "@/src/services/quotes";
+import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
-import type { Asset, OpeningPosition, Trade } from "@/src/types";
+import { useTheme } from "@/src/theme";
 
+import { HoldingDetailModal } from "./HoldingDetails";
+import { HoldingRow } from "./HoldingRow";
+import { EpfAccountsSection, PpfAccountsSection } from "./HoldingsAccountSections";
+import { DestinationTab, FilterRow } from "./HoldingsFilters";
+import {
+  AddHoldingsPanel,
+  HoldingsOptionsPanel,
+  HoldingsPanelSheet,
+  PortfolioInsightsPanel,
+  ValuationDetailsPanel,
+  type HoldingsPanel,
+} from "./HoldingsPanels";
 import {
   createHoldingReviewItems,
   filterHoldingReviewItems,
   getExposureSegments,
   getHoldingReviewSummary,
-  getFirstRecordedPurchase,
-  type ExposureSegment,
   type HoldingFilter,
   type HoldingReviewItem,
 } from "./holdingsReview";
+import { useStyles } from "./holdingsStyles";
+import {
+  getFilterCounts,
+  getFilterLabel,
+  getHoldingsSubtitle,
+  getQuoteStatus,
+} from "./holdingsViewModel";
 import { useHoldings } from "./useHoldings";
-import { AssetHistoryPanel } from "./AssetHistoryPanel";
 import { destinationAfterSwipe, isHorizontalIntent, type HoldingsDestination } from "./destinationSwipe";
 
 type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
@@ -100,15 +91,6 @@ type HoldingsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
-const filterOrder: HoldingFilter[] = [
-  "all",
-  "winners",
-  "losers",
-  "high-allocation",
-];
-
-
-
 export function HoldingsScreen({
   isActive = true,
   openAddMenu,
@@ -139,18 +121,14 @@ export function HoldingsScreen({
   const { colors } = useTheme();
   const styles = useStyles();
   const observedAt = now ?? new Date();
-  const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
-  const [activePanel, setActivePanel] = useState<
-    "add" | "insights" | "more" | "quotes"
-  >();
+  const [activePanel, setActivePanel] = useState<HoldingsPanel>();
   const [selectedDestination, setSelectedDestination] =
     useState<HoldingsDestination>(destinationRequest?.destination ?? "market");
   useEffect(() => {
     if (destinationRequest) setSelectedDestination(destinationRequest.destination);
   }, [destinationRequest]);
   const scrollRef = useRef<ScrollView>(null);
-  const detailScrollRef = useRef<ScrollView>(null);
   const detailScrollOffset = useRef(0);
   const verticalGesture = useRef(false);
   useEffect(() => {
@@ -180,7 +158,6 @@ export function HoldingsScreen({
     store,
   });
   const isMinimalMode = displayMode === "minimal";
-  const isReducedMotionEnabled = useReducedMotionPreference();
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<HoldingFilter>("all");
   const [selectedAssetId, setSelectedAssetId] = useState<string>();
@@ -270,7 +247,11 @@ export function HoldingsScreen({
       : summary.bestReturn;
   const exposureSegments = getExposureSegments(allocationItems);
   const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
-  const subtitle = `${marketHoldings.length} market ${marketHoldings.length === 1 ? "position" : "positions"}${ppfRecordCount > 0 ? ` · PPF ${ppfRecordCount}` : ""}${hasEpfDestination ? ` · EPF ${epfState.accounts.length}` : ""}`;
+  const subtitle = getHoldingsSubtitle({
+    epfAccounts: epfState.accounts.length,
+    marketPositions: marketHoldings.length,
+    ppfRecords: ppfRecordCount,
+  });
   const quoteStatus = getQuoteStatus({
     failed: failed.length,
     isRefreshing,
@@ -511,140 +492,26 @@ export function HoldingsScreen({
         ) : null}
 
         {activeDestination === "ppf" && hasPpfDestination ? (
-          <View style={styles.ppfSection} testID="holdings-ppf-section">
-            <View style={styles.sectionActionHeader}>
-              <SectionHeader title="PPF accounts" />
-              {onAddPpfAccount ? (
-                <AppButton
-                  onPress={() => onAddPpfAccount()}
-                  testID="add-ppf-account"
-                  title="Add account"
-                  variant="secondary"
-                />
-              ) : null}
-            </View>
-            {ppfSummary.accounts.map((item) => (
-              <Pressable
-                accessibilityLabel={`Open ${item.account.nickname}`}
-                accessibilityRole="button"
-                key={item.account.id}
-                onPress={() => onReviewPpfAccount?.(item.account.id)}
-                style={({ pressed }) => [
-                  styles.ppfAccountCard,
-                  getPressedStateStyle({ pressed }),
-                ]}
-                testID={`ppf-account-${item.account.id}`}
-              >
-                <CategoryIcon assetClass="debt" size={22} />
-                <View style={styles.flex}>
-                  <AppText weight="bold">{item.account.nickname}</AppText>
-                  <AppText color="secondary" variant="caption">
-                    {item.account.provider} •{" "}
-                    {maskWealthValues
-                      ? "Contribution details hidden"
-                      : item.contributionContext.financialYearContributions > 0
-                        ? `${formatCompactINR(item.contributionContext.financialYearContributions)} contributed this FY`
-                        : "No contribution recorded this FY"}
-                  </AppText>
-                </View>
-                <View style={styles.ppfValue}>
-                  <MaskedValue
-                    masked={maskWealthValues}
-                    value={formatCompactINR(item.confirmedBalance)}
-                    weight="bold"
-                  />
-                  <AppText color="secondary" variant="caption">
-                    Confirmed
-                  </AppText>
-                </View>
-              </Pressable>
-            ))}
-            {legacyPpfHoldings.map((holding) => (
-              <PremiumCard
-                elevated
-                key={holding.asset.id}
-                testID={`legacy-ppf-${holding.asset.id}`}
-              >
-                <AppText weight="bold">
-                  Move {holding.asset.name} to the PPF ledger
-                </AppText>
-                <AppText color="secondary" variant="caption">
-                  This older holding uses market-style fields. Linking it
-                  preserves the original record for audit and replaces it in
-                  portfolio totals with the confirmed account balance.
-                </AppText>
-                {onAddPpfAccount ? (
-                  <AppButton
-                    onPress={() =>
-                      onAddPpfAccount({
-                        assetId: holding.asset.id,
-                        name: holding.asset.name,
-                      })
-                    }
-                    testID={`convert-legacy-ppf-${holding.asset.id}`}
-                    title="Set up PPF account"
-                    variant="secondary"
-                  />
-                ) : null}
-              </PremiumCard>
-            ))}
-            {reviewItems
+          <PpfAccountsSection
+            legacyPpfHoldings={legacyPpfHoldings}
+            maskWealthValues={maskWealthValues}
+            onAddPpfAccount={onAddPpfAccount}
+            onReviewPpfAccount={onReviewPpfAccount}
+            ppfHoldingRows={reviewItems
               .filter((item) => item.holding.asset.instrumentType === "ppf")
               .map(renderHoldingRow)}
-          </View>
+            ppfSummary={ppfSummary}
+          />
         ) : null}
 
         {activeDestination === "epf" && hasEpfDestination ? (
-          <View style={styles.ppfSection} testID="holdings-epf-section">
-            <View style={styles.sectionActionHeader}>
-              <SectionHeader title="EPF accounts" />
-              {onAddEpfAccount ? (
-                <AppButton onPress={onAddEpfAccount} testID="add-epf-account" title="Add account" variant="secondary" />
-              ) : null}
-            </View>
-            <View style={styles.epfTotalRow} testID="holdings-epf-total">
-              <AppText color="secondary">Recorded EPF · in Debt</AppText>
-              {epfSummary.value === null ? (
-                <AppText weight="bold">Unavailable</AppText>
-              ) : (
-                <MaskedValue exactValue={formatINR(epfSummary.value)} masked={maskWealthValues}
-                  testID="holdings-epf-total-value" value={formatCompactINR(epfSummary.value)} weight="bold" />
-              )}
-            </View>
-            {epfState.accounts.map((account) => {
-              const value = epfSummary.accounts.find((item) => item.accountId === account.id);
-              return (
-                <Pressable
-                  accessibilityLabel={`Open ${account.nickname}`}
-                  accessibilityRole="button"
-                  key={account.id}
-                  onPress={() => onReviewEpfAccount?.(account.id)}
-                  style={({ pressed }) => [styles.ppfAccountCard, getPressedStateStyle({ pressed })]}
-                  testID={`epf-account-${account.id}`}
-                >
-                  <CategoryIcon assetClass="debt" size={22} />
-                  <View style={styles.flex}>
-                    <AppText weight="bold">{account.nickname}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {[account.employerLabel ?? epfProviderLabel(account.provider),
-                        account.status === "active" ? null : epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
-                    </AppText>
-                  </View>
-                  <View style={styles.ppfValue}>
-                    {value ? (
-                      <MaskedValue exactValue={formatINR(value.balance.total)} masked={maskWealthValues}
-                        value={formatCompactINR(value.balance.total)} weight="bold" />
-                    ) : (
-                      <AppText weight="bold">Unavailable</AppText>
-                    )}
-                    <AppText color="secondary" variant="caption">
-                      {value ? `As of ${formatDate(value.lastEvidenceDate)}` : "Needs review"}
-                    </AppText>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          <EpfAccountsSection
+            epfState={epfState}
+            epfSummary={epfSummary}
+            maskWealthValues={maskWealthValues}
+            onAddEpfAccount={onAddEpfAccount}
+            onReviewEpfAccount={onReviewEpfAccount}
+          />
         ) : null}
 
         {!hasMarketHoldings && !hasPpfDestination && !hasEpfDestination ? (
@@ -755,1547 +622,85 @@ export function HoldingsScreen({
         ) : null}
 
         {selectedItem ? (
-          <Modal
-            animationType={isReducedMotionEnabled ? "none" : "fade"}
-            visible={isActive}
-            onRequestClose={closeDetail}
-            onShow={() =>
-              detailScrollRef.current?.scrollTo({
-                animated: false,
-                y: detailScrollOffset.current,
-              })
+          <HoldingDetailModal
+            allocationAvailable={
+              allocationAvailable &&
+              selectedItem.holding.asset.instrumentType !== "ppf" &&
+              selectedItem.holding.asset.assetClass !== "cash"
             }
-            testID="holding-detail-modal"
-          >
-            <View
-              accessibilityViewIsModal
-              style={[
-                styles.detailScreen,
-                { paddingTop: insets.top, paddingBottom: insets.bottom },
-              ]}
-            >
-              <View style={styles.detailHeader}>
-                <IconButton
-                  accessibilityLabel="Back to holdings"
-                  icon="arrow-back"
-                  onPress={closeDetail}
-                  testID="holding-detail-back"
-                />
-                <AppText style={styles.flex} weight="bold">
-                  Holding details
-                </AppText>
-                <IconButton
-                  accessibilityLabel={
-                    maskWealthValues ? "Show values" : "Hide values"
-                  }
-                  icon={maskWealthValues ? "eye-off-outline" : "eye-outline"}
-                  onPress={toggleMaskWealthValues}
-                  testID="holding-detail-mask"
-                />
-              </View>
-              {statusMessage ? (
-                <View
-                  accessibilityLiveRegion="polite"
-                  style={styles.detailStatus}
-                  testID="holding-detail-status-message"
-                >
-                  <PremiumCard style={styles.statusCard}>
-                    <AppText style={styles.positiveText} weight="bold">
-                      {statusMessage}
-                    </AppText>
-                  </PremiumCard>
-                </View>
-              ) : null}
-              <ScrollView
-                contentContainerStyle={styles.detailContent}
-                onScroll={(event) => {
-                  detailScrollOffset.current = event.nativeEvent.contentOffset.y;
-                }}
-                ref={detailScrollRef}
-                scrollEventThrottle={16}
-                testID="holding-detail-scroll"
-              >
-                <HoldingDetails
-                  key={selectedItem.holding.asset.id}
-                  allocationAvailable={
-                    allocationAvailable &&
-                    selectedItem.holding.asset.instrumentType !== "ppf" &&
-                    selectedItem.holding.asset.assetClass !== "cash"
-                  }
-                  item={selectedItem}
-                  assets={assets}
-                  masked={maskWealthValues}
-                  minimal={isMinimalMode}
-                  now={observedAt}
-                  openingPositions={openingPositions}
-                  recordsVisible={selectedRecordsVisible}
-                  trades={trades}
-                  onToggleRecords={() =>
-                    setSelectedRecordsVisible((visible) => !visible)
-                  }
-                  onReviewOpeningPosition={
-                    onReviewOpeningPosition
-                      ? (id) => onReviewOpeningPosition(id)
-                      : undefined
-                  }
-                  onReviewTrades={
-                    onReviewTrades
-                      ? (id) => onReviewTrades(id)
-                      : undefined
-                  }
-                  onSellRedeem={
-                    onSellRedeem
-                      ? (id) => onSellRedeem(id)
-                      : undefined
-                  }
-                  onRecordPurchase={onRecordPurchase}
-                />
-              </ScrollView>
-            </View>
-          </Modal>
+            assets={assets}
+            closeDetail={closeDetail}
+            detailScrollOffset={detailScrollOffset}
+            isActive={isActive}
+            masked={maskWealthValues}
+            minimal={isMinimalMode}
+            now={observedAt}
+            onRecordPurchase={onRecordPurchase}
+            onReviewOpeningPosition={onReviewOpeningPosition}
+            onReviewTrades={onReviewTrades}
+            onSellRedeem={onSellRedeem}
+            openingPositions={openingPositions}
+            selectedItem={selectedItem}
+            selectedRecordsVisible={selectedRecordsVisible}
+            setSelectedRecordsVisible={setSelectedRecordsVisible}
+            statusMessage={statusMessage}
+            toggleMaskWealthValues={toggleMaskWealthValues}
+            trades={trades}
+          />
         ) : null}
 
-        <Modal
-          animationType={isReducedMotionEnabled ? "none" : "fade"}
-          onRequestClose={() => setActivePanel(undefined)}
-          transparent
-          visible={activePanel !== undefined}
-        >
-          <View
-            style={[
-              styles.panelBackdrop,
-              {
-                paddingBottom: Math.max(insets.bottom, spacing.md),
-                paddingTop: Math.max(insets.top, spacing.md),
-              },
-            ]}
-          >
-            <Pressable
-              accessibilityLabel="Close holdings panel"
-              accessibilityRole="button"
-              onPress={() => setActivePanel(undefined)}
-              style={StyleSheet.absoluteFill}
+        <HoldingsPanelSheet activePanel={activePanel} setActivePanel={setActivePanel}>
+          {activePanel === "add" ? (
+            <AddHoldingsPanel
+              onAddEpfAccount={onAddEpfAccount}
+              onAddPpfAccount={onAddPpfAccount}
+              onAddTrade={onAddTrade}
+              onClose={() => setActivePanel(undefined)}
+              onImportHoldings={onImportHoldings}
+              onImportTransactions={onImportTransactions}
+              onOpenFutures={onOpenFutures}
+              onQuickSetup={onQuickSetup}
+              onRecordPurchase={onRecordPurchase}
+              quickSetupSavedCount={quickSetupSavedCount}
             />
-            <View accessibilityViewIsModal style={styles.panelSheet}>
-              <View style={styles.panelHeader}>
-                {activePanel === "quotes" ? (
-                  <AppButton
-                    onPress={() => setActivePanel("more")}
-                    title="Back"
-                    variant="ghost"
-                  />
-                ) : null}
-                <AppText
-                  accessibilityRole="header"
-                  style={styles.panelTitle}
-                  variant="title"
-                  weight="bold"
-                >
-                  {activePanel === "add"
-                    ? "Add holdings"
-                    : activePanel === "more"
-                      ? "Holdings options"
-                      : activePanel === "quotes"
-                        ? "Valuation details"
-                        : "Portfolio insights"}
-                </AppText>
-                <AppButton
-                  onPress={() => setActivePanel(undefined)}
-                  testID="holdings-panel-close"
-                  title="Close"
-                  variant="ghost"
-                />
-              </View>
-              <ScrollView contentContainerStyle={styles.panelContent}>
-                {activePanel === "add" ? (
-                  <>
-                    <AppText color="secondary" variant="caption">
-                      Record new activity or add investments you already own.
-                    </AppText>
-                    {onRecordPurchase ? <AppButton title="Record purchase" testID="record-purchase-option"
-                      onPress={() => { setActivePanel(undefined); onRecordPurchase(); }} /> : null}
-                    {onAddTrade ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onAddTrade();
-                        }}
-                        testID="add-one-holding-option"
-                        title="Add existing holding"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {onQuickSetup ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onQuickSetup();
-                        }}
-                        testID="add-multiple-holdings-option"
-                        title={
-                          quickSetupSavedCount > 0
-                            ? `Continue setup (${quickSetupSavedCount} saved)`
-                            : "Add multiple holdings"
-                        }
-                      />
-                    ) : null}
-                    {onAddPpfAccount ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onAddPpfAccount();
-                        }}
-                        testID="add-ppf-account"
-                        title="Add PPF account"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {onAddEpfAccount ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onAddEpfAccount();
-                        }}
-                        testID="add-epf-account-option"
-                        title="Add EPF account"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {onImportHoldings ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onImportHoldings();
-                        }}
-                        testID="import-holdings-csv-option"
-                        title="Import holdings CSV"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {onOpenFutures ? (
-                      <GroupedListRow
-                        title="Futures wallet"
-                        meta="Manual USDT positions · separate from holdings"
-                        value="›"
-                        testID="holdings-open-futures"
-                        onPress={() => { setActivePanel(undefined); onOpenFutures(); }}
-                      />
-                    ) : null}
-                    {onImportTransactions ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onImportTransactions();
-                        }}
-                        testID="import-transactions-csv-option"
-                        title="Import transaction history"
-                        variant="secondary"
-                      />
-                    ) : null}
-                  </>
-                ) : null}
+          ) : null}
 
-                {activePanel === "more" ? (
-                  <>
-                    <AppButton
-                      onPress={() => {
-                        toggleMaskWealthValues();
-                        setActivePanel(undefined);
-                      }}
-                      testID="holdings-mask-toggle"
-                      title={maskWealthValues ? "Show values" : "Mask values"}
-                      variant="secondary"
-                    />
-                    <AppButton
-                      onPress={() => setActivePanel("quotes")}
-                      testID="holdings-valuation-details-button"
-                      title="Valuation details"
-                      variant="secondary"
-                    />
-                    {onReviewAllTrades && trades.length > 0 ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onReviewAllTrades();
-                        }}
-                        testID="holdings-transactions-button"
-                        title="Transactions"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {onManageAssets ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onManageAssets();
-                        }}
-                        testID="holdings-manage-assets-button"
-                        title="Manage assets"
-                        variant="secondary"
-                      />
-                    ) : null}
-                    {!ppfSummary.accounts.length && onAddPpfAccount ? (
-                      <AppButton
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onAddPpfAccount();
-                        }}
-                        testID="add-ppf-account"
-                        title="Add PPF account"
-                        variant="secondary"
-                      />
-                    ) : null}
-                  </>
-                ) : null}
+          {activePanel === "more" ? (
+            <HoldingsOptionsPanel
+              hasPpfAccounts={ppfSummary.accounts.length > 0}
+              hasTrades={trades.length > 0}
+              maskWealthValues={maskWealthValues}
+              onAddPpfAccount={onAddPpfAccount}
+              onClose={() => setActivePanel(undefined)}
+              onManageAssets={onManageAssets}
+              onReviewAllTrades={onReviewAllTrades}
+              onShowValuationDetails={() => setActivePanel("quotes")}
+              toggleMaskWealthValues={toggleMaskWealthValues}
+            />
+          ) : null}
 
-                {activePanel === "quotes" ? (
-                  <>
-                    <AppText weight="bold">{quoteStatus.title}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {quoteStatus.detail}
-                    </AppText>
-                    {failed.length > 0 || timedOut.length > 0 ? (
-                      <AppText color="secondary" variant="caption">
-                        Some quote updates did not complete. Existing saved
-                        prices remain available when present.
-                      </AppText>
-                    ) : null}
-                    {hasMarketHoldings ? (
-                      <AppButton
-                        onPress={() => {
-                          void refresh();
-                        }}
-                        title="Refresh prices"
-                        variant="secondary"
-                      />
-                    ) : null}
-                  </>
-                ) : null}
+          {activePanel === "quotes" ? (
+            <ValuationDetailsPanel
+              hasMarketHoldings={hasMarketHoldings}
+              quoteStatus={quoteStatus}
+              refresh={() => refresh()}
+              refreshIncomplete={failed.length > 0 || timedOut.length > 0}
+            />
+          ) : null}
 
-                {activePanel === "insights" ? (
-                  <>
-                    {onOpenDuration ? (
-                      <AppButton
-                        title="Holding duration"
-                        variant="secondary"
-                        testID="holdings-duration-button"
-                        onPress={() => {
-                          setActivePanel(undefined);
-                          onOpenDuration();
-                        }}
-                      />
-                    ) : null}
-                    <AppText color="secondary" variant="caption">
-                      Position allocation excludes cash and PPF accounts. Asset
-                      mix compares market holdings only.
-                    </AppText>
-                    <View style={styles.insightGrid}>
-                      <InsightCard
-                        eyebrow="Dominant position"
-                        title={
-                          allocationAvailable && summary.dominant
-                            ? summary.dominant.holding.asset.name
-                            : "Awaiting valuation"
-                        }
-                        detail={
-                          allocationAvailable && summary.dominant
-                            ? `${formatPercentage(summary.dominant.allocationPct).replace("+", "")} allocation`
-                            : "Allocation is unavailable while a price is missing"
-                        }
-                      />
-                      {distinctBestReturn ? (
-                        <InsightCard
-                          eyebrow="Best return"
-                          title={distinctBestReturn.holding.asset.name}
-                          detail={`${formatPercentage(distinctBestReturn.holding.unrealisedPnLPct ?? 0)} return`}
-                          positive={
-                            (distinctBestReturn.holding.unrealisedPnL ?? 0) >= 0
-                          }
-                        />
-                      ) : null}
-                    </View>
-                    {allocationAvailable && exposureSegments.length ? (
-                      <ExposurePanel segments={exposureSegments} />
-                    ) : (
-                      <PremiumCard>
-                        <AppText weight="bold">Asset mix unavailable</AppText>
-                        <AppText color="secondary" variant="caption">
-                          Allocation remains unavailable until every market
-                          holding has a price.
-                        </AppText>
-                      </PremiumCard>
-                    )}
-                    <PremiumCard style={styles.topThreeCard}>
-                      <AppText weight="bold">Top three concentration</AppText>
-                      <AppText color="secondary" variant="caption">
-                        {allocationAvailable
-                          ? `${formatPercentage(summary.topThreeAllocationPct).replace("+", "")} of holding value, excluding cash and PPF accounts.`
-                          : "Unavailable while a market holding needs a price."}
-                      </AppText>
-                    </PremiumCard>
-                  </>
-                ) : null}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+          {activePanel === "insights" ? (
+            <PortfolioInsightsPanel
+              allocationAvailable={allocationAvailable}
+              distinctBestReturn={distinctBestReturn}
+              exposureSegments={exposureSegments}
+              onClose={() => setActivePanel(undefined)}
+              onOpenDuration={onOpenDuration}
+              summary={summary}
+            />
+          ) : null}
+        </HoldingsPanelSheet>
       </View>
     </ScreenContainer>
     </View>
   );
 }
-
-function getQuoteStatus({
-  failed,
-  isRefreshing,
-  quoteFreshness,
-  timedOut,
-}: {
-  failed: number;
-  isRefreshing: boolean;
-  quoteFreshness: QuoteFreshnessSummary;
-  timedOut: number;
-}) {
-  const counts = `Current ${quoteFreshness.current} · Stale ${quoteFreshness.stale} · Manual ${quoteFreshness.manual} · Missing ${quoteFreshness.missing}`;
-
-  if (isRefreshing) {
-    return {
-      detail: counts,
-      prominent: false,
-      title: "Refreshing quotes...",
-    };
-  }
-
-  if (failed > 0 || timedOut > 0) {
-    const outcomes = [
-      failed > 0 ? `${failed} failed` : "",
-      timedOut > 0 ? `${timedOut} timed out` : "",
-    ].filter(Boolean);
-    const usablePriceCount = quoteFreshness.total - quoteFreshness.missing;
-
-    return {
-      detail: `${counts}. ${outcomes.join(" · ")}. ${
-        usablePriceCount > 0
-          ? "Existing prices remain available."
-          : "No usable prices are available."
-      }`,
-      prominent: usablePriceCount === 0 || quoteFreshness.missing > 0,
-      title:
-        usablePriceCount > 0
-          ? "Refresh partially completed"
-          : "Quote refresh failed",
-    };
-  }
-
-  if (quoteFreshness.status === "empty") {
-    return {
-      detail: "Quote coverage appears after your first holding.",
-      prominent: false,
-      title: "No holdings to price",
-    };
-  }
-
-  const prominent = quoteFreshness.missing > 0;
-  const title = prominent
-    ? "Price coverage needs attention"
-    : quoteFreshness.status === "current"
-      ? "Prices up to date"
-      : "Using saved prices";
-
-  return {
-    detail: counts,
-    prominent,
-    title,
-  };
-}
-
-function InsightCard({
-  detail,
-  eyebrow,
-  positive,
-  title,
-}: {
-  detail: string;
-  eyebrow: string;
-  positive?: boolean;
-  title: string;
-}) {
-  const styles = useStyles();
-  return (
-    <PremiumCard style={styles.insightCard}>
-      <AppText color="secondary" variant="caption" weight="medium">
-        {eyebrow}
-      </AppText>
-      <AppText numberOfLines={2} style={styles.insightTitle} weight="bold">
-        {title}
-      </AppText>
-      <AppText
-        color="secondary"
-        style={positive === false ? styles.negativeText : undefined}
-        variant="caption"
-      >
-        {detail}
-      </AppText>
-    </PremiumCard>
-  );
-}
-
-function ExposurePanel({ segments }: { segments: ExposureSegment[] }) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <PremiumCard style={styles.exposureCard}>
-      <View style={styles.sectionHeading}>
-        <View style={styles.sectionHeadingCopy}>
-          <AppText weight="bold">Asset mix</AppText>
-          <AppText color="secondary" variant="caption">
-            Portfolio split by asset class
-          </AppText>
-        </View>
-      </View>
-
-      <View style={styles.exposureRail}>
-        {segments.map((segment) => (
-          <View
-            key={segment.key}
-            style={[
-              styles.exposureSegment,
-              {
-                backgroundColor: ({ amber: colors.cryptoAmber, blue: colors.blue, green: colors.primary })[segment.color],
-                flex: Math.max(segment.percentage, 1),
-              },
-            ]}
-          />
-        ))}
-      </View>
-
-      <View style={styles.exposureLegend}>
-        {segments.map((segment) => (
-          <View key={segment.key} style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: ({ amber: colors.cryptoAmber, blue: colors.blue, green: colors.primary })[segment.color] },
-              ]}
-            />
-            <View style={styles.legendCopy}>
-              <AppText variant="caption" weight="bold">
-                {segment.label} {segment.percentage.toFixed(0)}%
-              </AppText>
-            </View>
-          </View>
-        ))}
-      </View>
-    </PremiumCard>
-  );
-}
-
-function DestinationTab({
-  active,
-  label,
-  onPress,
-  testID,
-}: {
-  active: boolean;
-  label: string;
-  onPress: () => void;
-  testID: string;
-}) {
-  const styles = useStyles();
-  return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      android_ripple={androidRipple(
-        active ? interaction.primaryRippleColor : interaction.rippleColor,
-      )}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.destinationTab,
-        active && styles.destinationTabActive,
-        getPressedStateStyle({ pressed }),
-      ]}
-      testID={testID}
-    >
-      <AppText color={active ? "primary" : "secondary"} weight="bold">
-        {label}
-      </AppText>
-    </Pressable>
-  );
-}
-
-function FilterRow({
-  allocationAvailable,
-  counts,
-  onSelect,
-  selected,
-}: {
-  allocationAvailable: boolean;
-  counts: Record<HoldingFilter, number>;
-  onSelect: (filter: HoldingFilter) => void;
-  selected: HoldingFilter;
-}) {
-  const styles = useStyles();
-  return (
-    <View style={styles.filters}>
-      {filterOrder.map((filter) => {
-        const active = selected === filter;
-        const disabled = filter === "high-allocation" && !allocationAvailable;
-
-        return (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled, selected: active }}
-            android_ripple={androidRipple(
-              active ? interaction.primaryRippleColor : interaction.rippleColor,
-            )}
-            key={filter}
-            onPress={() => onSelect(filter)}
-            disabled={disabled}
-            style={({ pressed }) => [
-              styles.filterChip,
-              minimumTouchTargetStyle,
-              active && styles.filterChipActive,
-              getPressedStateStyle({ pressed }),
-            ]}
-            testID={`holdings-filter-${filter}`}
-          >
-            <AppText
-              color={active ? "inverse" : "secondary"}
-              variant="caption"
-              weight="bold"
-            >
-              {getFilterLabel(filter)} {counts[filter]}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-type HoldingDetailsProps = {
-  allocationAvailable: boolean;
-  assets: Asset[];
-  item: HoldingReviewItem;
-  masked: boolean;
-  minimal: boolean;
-  now: Date;
-  openingPositions: OpeningPosition[];
-  recordsVisible: boolean;
-  trades: Trade[];
-  onToggleRecords: () => void;
-  onReviewOpeningPosition?: (id: string) => void;
-  onReviewTrades?: (id: string) => void;
-  onSellRedeem?: (id: string) => void;
-  onRecordPurchase?: (assetId?: string) => void;
-};
-function HoldingRow({
-  allocationAvailable,
-  item,
-  masked,
-  minimal,
-  onPress,
-}: Pick<
-  HoldingDetailsProps,
-  "allocationAvailable" | "item" | "masked" | "minimal"
-> & { onPress: () => void }) {
-  const styles = useStyles();
-  const { holding } = item;
-  const pending = holding.currentValue === null;
-  const pnlAvailable = holding.unrealisedPnL !== null;
-  const { width, fontScale } = useWindowDimensions();
-  const metricStyle = [styles.holdingMetric, (width < 400 || fontScale > 1.15) && styles.holdingMetricHalf];
-  const weightAvailable = allocationAvailable && !pending;
-  const identity = getHoldingRowIdentity(holding.asset);
-  const stackIdentity = (width < 400 || fontScale > 1.15) &&
-    (pending || holding.asset.name.length > 60);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={getHoldingRowAccessibilityLabel({
-        identity,
-        item,
-        masked,
-        minimal,
-        weightAvailable,
-      })}
-      accessibilityHint="Opens a separate holding detail panel"
-      android_ripple={androidRipple()}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.holdingCard,
-        pressed && styles.holdingCardPressed,
-        getPressedStateStyle({ pressed }),
-      ]}
-      testID={`holding-row-${holding.asset.id}`}
-    >
-      <View style={[styles.compactRow, stackIdentity && styles.stackedContent]}>
-        <View style={styles.assetCopy}>
-          <AppText weight="medium">{holding.asset.name}</AppText>
-          <AppText color="secondary" variant="caption">
-            {identity}
-            {holding.quoteSource === "manual" ? " · Manual" : ""}
-          </AppText>
-        </View>
-        <View style={[styles.valueColumn, stackIdentity && styles.stackedValue]}>
-          <MaskedValue
-            style={styles.holdingNumber}
-            variant={pending ? "body" : "section"}
-            exactValue={
-              pending ? undefined : formatINR(holding.currentValue!)
-            }
-            masked={masked && !pending}
-            value={
-              pending
-                ? "Valuation pending"
-                : formatCompactINR(holding.currentValue!)
-            }
-            weight="bold"
-          />
-        </View>
-      </View>
-      <View style={styles.holdingMetrics}>
-        {!minimal ? <>
-        <View
-          style={metricStyle}
-          testID={`holding-pnl-${holding.asset.id}`}
-        >
-          <AppText color="secondary" variant="caption">
-            Holding P&amp;L
-          </AppText>
-          {pnlAvailable ? (
-              <MaskedValue
-                exactValue={formatINR(holding.unrealisedPnL!)}
-                masked={masked}
-                value={formatSignedCompactINR(holding.unrealisedPnL!)}
-                style={[
-                  styles.holdingNumber,
-                  holding.unrealisedPnL! >= 0 ? styles.positiveText : styles.negativeText,
-                ]}
-                weight="bold"
-              />
-          ) : (
-            <AppText color="secondary" weight="bold">—</AppText>
-          )}
-        </View>
-        <View style={metricStyle} testID={`holding-pnl-percent-${holding.asset.id}`}>
-          <AppText color="secondary" variant="caption">Holding P&amp;L %</AppText>
-          {holding.unrealisedPnLPct !== null ? (
-              <AppText
-                weight="bold"
-                style={[
-                  styles.holdingNumber,
-                  holding.unrealisedPnLPct >= 0
-                    ? styles.positiveText
-                    : styles.negativeText,
-                ]}
-              >
-                {formatPercentage(holding.unrealisedPnLPct)}
-              </AppText>
-          ) : (
-            <AppText color="secondary" weight="bold">
-              —
-            </AppText>
-          )}
-        </View>
-        <View style={metricStyle} testID={`holding-invested-${holding.asset.id}`}>
-          <AppText color="secondary" variant="caption">Invested</AppText>
-          <MaskedValue exactValue={formatINR(holding.totalInvested)} masked={masked}
-            value={formatCompactINR(holding.totalInvested)} style={styles.holdingNumber} weight="medium" />
-        </View>
-        </> : null}
-        <View
-          style={[minimal ? styles.holdingMetric : metricStyle, styles.holdingWeightMetric, minimal && styles.minimalWeightMetric]}
-          testID={`holding-weight-${holding.asset.id}`}
-        >
-          <AppText color="secondary" variant="caption">
-            Weight
-          </AppText>
-          <AppText color={weightAvailable ? "primary" : "secondary"} style={styles.holdingNumber} weight="medium">
-            {weightAvailable ? formatHoldingWeight(item.allocationPct) : "—"}
-          </AppText>
-        </View>
-      </View>
-      {weightAvailable ? (
-        <View
-          accessible={false}
-          importantForAccessibility="no-hide-descendants"
-          style={styles.holdingWeightTrack}
-          testID={`holding-weight-track-${holding.asset.id}`}
-        >
-          <View
-            style={[
-              styles.holdingWeightFill,
-              { width: `${Math.max(0, Math.min(100, item.allocationPct))}%` },
-            ]}
-          />
-        </View>
-      ) : null}
-    </Pressable>
-  );
-}
-function HoldingDetails({
-  allocationAvailable,
-  assets,
-  item,
-  masked,
-  minimal,
-  now,
-  openingPositions,
-  recordsVisible,
-  onReviewOpeningPosition,
-  onReviewTrades,
-  onSellRedeem,
-  onRecordPurchase,
-  onToggleRecords,
-  trades,
-}: HoldingDetailsProps) {
-  const styles = useStyles();
-  const { holding } = item;
-  const isPending = holding.valuation.status === "pending";
-  const positive = (holding.unrealisedPnL ?? 0) >= 0;
-  const assetOpeningPositions = openingPositions.filter(
-    (position) => position.assetId === holding.asset.id,
-  );
-  const assetTrades = trades.filter((trade) => trade.assetId === holding.asset.id);
-  const firstPurchase = getFirstRecordedPurchase(assetOpeningPositions, assetTrades);
-  const quoteContext = getHoldingQuoteContext(holding, undefined, now);
-  const currentValueText = holding.currentValue === null
-    ? "Valuation pending"
-    : formatINR(holding.currentValue);
-  return (
-    <View
-      style={styles.expandedSection}
-      testID={`holding-expanded-${holding.asset.id}`}
-    >
-      <View style={styles.detailIdentity}>
-        <CategoryIcon assetClass={holding.asset.assetClass} size={28} />
-        <View style={styles.flex}>
-          <AppText variant="title" weight="bold">
-            {holding.asset.name}
-          </AppText>
-          <AppText color="secondary" variant="caption">
-            {holding.asset.symbol} ·{" "}
-            {instrumentTypeLabel(holding.asset.instrumentType ?? "other")} · INR
-          </AppText>
-        </View>
-      </View>
-      <View style={styles.detailValuation} testID="holding-detail-valuation">
-        <AppText color="secondary" variant="caption">
-          Current value
-        </AppText>
-        <MaskedValue
-          masked={masked && !isPending}
-          value={currentValueText}
-          variant={holding.currentValue !== null && currentValueText.length > 14 ? "title" : "hero"}
-          weight="bold"
-        />
-        <View style={styles.valueQuoteContext} testID={`holding-quote-context-${holding.asset.id}`}>
-          <AppText color="secondary" variant="caption">
-            {quoteContext.label}
-          </AppText>
-        </View>
-        <View style={styles.performanceLine}>
-          <View style={styles.holdingMetric} testID="holding-detail-pnl">
-          <AppText color="secondary" variant="caption">Holding P&amp;L</AppText>
-          <MaskedValue
-            masked={masked && holding.unrealisedPnL !== null}
-            value={
-              holding.unrealisedPnL === null
-                ? "Return unavailable"
-                : formatSignedCompactINR(holding.unrealisedPnL)
-            }
-            style={
-              isPending
-                ? undefined
-                : positive
-                  ? styles.positiveText
-                  : styles.negativeText
-            }
-          />
-          </View>
-          <View style={styles.holdingMetric} testID="holding-detail-pnl-percent">
-          <AppText color="secondary" variant="caption">Holding P&amp;L %</AppText>
-          {holding.unrealisedPnLPct !== null ? (
-            <AppText
-              style={positive ? styles.positiveText : styles.negativeText}
-            >
-              {formatPercentage(holding.unrealisedPnLPct)}
-            </AppText>
-          ) : <AppText color="secondary">Unavailable</AppText>}
-          </View>
-        </View>
-        <AppText color="secondary" variant="caption">Unrealized on remaining units</AppText>
-        <View style={styles.detailInvested}>
-          <AppText color="secondary" variant="caption">
-            Invested in remaining units
-          </AppText>
-          <MaskedValue
-            masked={masked}
-            value={formatINR(holding.totalInvested)}
-            weight="bold"
-          />
-        </View>
-      </View>
-      <View style={styles.detailPosition} testID="holding-detail-position">
-        <SectionHeader title="Your position" />
-        <View style={styles.detailGrid}>
-          <Detail
-            label="Quantity"
-            testID={`holding-quantity-${holding.asset.id}`}
-            value={formatQuantity(holding.totalUnits)}
-          />
-          <Detail label="Avg cost" value={formatINR(holding.averageCostPrice)} />
-          <Detail
-            label="Current price"
-            value={
-              holding.currentPrice === null
-                ? "Unavailable"
-                : formatINR(holding.currentPrice)
-            }
-          />
-          <Detail
-            label="Market holdings share"
-            value={
-              allocationAvailable && !isPending
-                ? `${item.allocationPct.toFixed(1)}%`
-                : "Unavailable"
-            }
-          />
-          <Detail
-            label="First recorded purchase"
-            value={firstPurchase ? formatDate(firstPurchase) : "Unknown"}
-          />
-        </View>
-      </View>
-      <View style={styles.detailActions} testID="holding-primary-actions">
-        {(onReviewOpeningPosition && assetOpeningPositions.length > 0) ||
-        (onReviewTrades && assetTrades.length > 0) ? (
-          <GroupedListRow
-            title={recordsVisible ? "Hide records" : "View records"}
-            meta="Opening positions and corrections"
-            value={recordsVisible ? "−" : "›"}
-            testID="holding-view-records"
-            onPress={onToggleRecords}
-          />
-        ) : null}
-        {onRecordPurchase ? <GroupedListRow title="Record purchase" meta="Add units funded from Cash" value="›"
-          testID={`holding-record-purchase-${holding.asset.id}`} onPress={() => onRecordPurchase(holding.asset.id)} /> : null}
-        {onSellRedeem ? (
-          <GroupedListRow
-            title="Sell / redeem"
-            meta="Record a disposal and its cash proceeds"
-            value="›"
-            testID={`holding-sell-redeem-${holding.asset.id}`}
-            onPress={() => onSellRedeem(holding.asset.id)}
-          />
-        ) : null}
-      </View>
-      {recordsVisible && onReviewOpeningPosition && assetOpeningPositions.length > 0 ? (
-        <View style={styles.openingRecords}>
-          <AppText color="secondary" variant="caption" weight="bold">
-            Opening {assetOpeningPositions.length === 1 ? "record" : "records"}
-          </AppText>
-          {assetOpeningPositions.map((position) => (
-            <View key={position.id} style={styles.openingRecordRow}>
-              <View style={styles.openingRecordCopy}>
-                <AppText variant="caption" weight="bold">
-                  {position.date === null
-                    ? "First purchase date unknown"
-                    : formatDate(position.date)}
-                </AppText>
-                <AppText color="secondary" variant="caption">
-                  {formatQuantity(position.quantity)} units · avg{" "}
-                  {formatCompactINR(position.averageCostPrice)}
-                </AppText>
-              </View>
-              <AppButton
-                title="Review"
-                variant="secondary"
-                testID={`review-opening-position-${position.id}`}
-                onPress={() => onReviewOpeningPosition(position.id)}
-              />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {recordsVisible && onReviewTrades && assetTrades.length > 0 ? (
-        <AppButton
-          title={`Review ${assetTrades.length} ${assetTrades.length === 1 ? "transaction" : "transactions"}`}
-          variant="secondary"
-          testID={`review-transactions-${holding.asset.id}`}
-          onPress={() => onReviewTrades(holding.asset.id)}
-        />
-      ) : null}
-
-      <AssetHistoryPanel asset={holding.asset} assets={assets} openingPositions={openingPositions} trades={trades} masked={masked} minimal={minimal} />
-
-      <AppText color="secondary" variant="caption">
-        {formatClassification(item)}
-      </AppText>
-      <AppText color="secondary" variant="caption">
-        Market holdings share excludes cash and PPF. Purchase date is based on recorded
-        history.
-      </AppText>
-      {isPending && onReviewOpeningPosition && assetOpeningPositions[0] ? (
-        <AppButton
-          title="Enter manual price"
-          variant="secondary"
-          testID={`holding-enter-manual-price-${holding.asset.id}`}
-          onPress={() => onReviewOpeningPosition(assetOpeningPositions[0].id)}
-        />
-      ) : null}
-
-    </View>
-  );
-}
-
-function Detail({
-  label,
-  masked,
-  subdued,
-  testID,
-  tone,
-  value,
-}: {
-  label: string;
-  masked?: boolean;
-  subdued?: boolean;
-  testID?: string;
-  tone?: "negative" | "positive";
-  value: string;
-}) {
-  const styles = useStyles();
-  return (
-    <View style={styles.detail} testID={testID}>
-      <AppText color="secondary" variant="caption">
-        {label}
-      </AppText>
-      <MaskedValue
-        color={subdued ? "secondary" : undefined}
-        masked={masked}
-        style={
-          tone === "positive"
-            ? styles.positiveText
-            : tone === "negative"
-              ? styles.negativeText
-              : undefined
-        }
-        value={value}
-        variant="caption"
-        weight={subdued ? "medium" : "bold"}
-      />
-    </View>
-  );
-}
-
-function getFilterCounts(
-  items: HoldingReviewItem[],
-  allocationAvailable: boolean,
-) {
-  return {
-    all: items.length,
-    "high-allocation": allocationAvailable
-      ? items.filter((item) => item.allocationPct >= 10).length
-      : 0,
-    losers: items.filter(
-      (item) =>
-        item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL < 0,
-    ).length,
-    winners: items.filter(
-      (item) =>
-        item.holding.unrealisedPnL !== null && item.holding.unrealisedPnL >= 0,
-    ).length,
-  };
-}
-
-function getFilterLabel(filter: HoldingFilter) {
-  if (filter === "high-allocation") {
-    return "High allocation";
-  }
-
-  return filter.charAt(0).toUpperCase() + filter.slice(1);
-}
-
-function formatClassification(item: HoldingReviewItem) {
-  return [
-    assetClassLabel(item.holding.asset.assetClass),
-    instrumentTypeLabel(item.holding.asset.instrumentType ?? "other"),
-    sectorTypeLabel(item.holding.asset.sectorType ?? "other"),
-  ].join(" · ");
-}
-
-function formatQuantity(value: number) {
-  return Number.isInteger(value)
-    ? value.toString()
-    : value.toFixed(4).replace(/0+$/, "");
-}
-
-function formatSignedCompactINR(value: number) {
-  const amount = formatCompactINR(value);
-
-  return value > 0 ? `+${amount}` : amount;
-}
-
-function formatHoldingWeight(value: number) {
-  if (value > 0 && value < 0.05) return "<0.1%";
-  return `${value.toFixed(1)}%`;
-}
-
-function isRawIsin(value: string) {
-  return /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/u.test(value.trim().toUpperCase());
-}
-
-function getHoldingRowIdentity(asset: Asset) {
-  const instrumentType =
-    asset.instrumentType ??
-    (asset.assetClass === "stock" ? "stock" : "other");
-  const parts = [
-    isRawIsin(asset.symbol) ? undefined : asset.symbol,
-    instrumentTypeLabel(instrumentType),
-    instrumentType === "mutualFund"
-      ? assetClassLabel(asset.assetClass)
-      : undefined,
-  ];
-
-  return parts.filter(Boolean).join(" · ");
-}
-
-function getHoldingRowAccessibilityLabel({
-  identity,
-  item,
-  masked,
-  minimal,
-  weightAvailable,
-}: {
-  identity: string;
-  item: HoldingReviewItem;
-  masked: boolean;
-  minimal: boolean;
-  weightAvailable: boolean;
-}) {
-  const { holding } = item;
-  const currentValue =
-    holding.currentValue === null
-      ? "Current value unavailable"
-      : masked
-        ? "Current value hidden"
-        : `Current value ${formatINR(holding.currentValue)}`;
-  const invested = masked
-    ? "Invested value hidden"
-    : `Invested ${formatINR(holding.totalInvested)}`;
-  const pnl =
-    holding.unrealisedPnL === null
-      ? "Unrealised P and L unavailable"
-      : masked
-        ? `Unrealised P and L hidden, ${formatPercentage(holding.unrealisedPnLPct ?? 0)}`
-        : `Unrealised P and L ${formatINR(holding.unrealisedPnL)}, ${formatPercentage(holding.unrealisedPnLPct ?? 0)}`;
-  const weight = weightAvailable
-    ? `Weight ${formatHoldingWeight(item.allocationPct)}`
-    : "Weight unavailable";
-
-  return [
-    `Open ${holding.asset.name} details`,
-    identity,
-    currentValue,
-    ...(minimal ? [] : [invested, pnl]),
-    weight,
-  ].join(". ");
-}
-
-const useStyles = createThemedStyles((colors) => StyleSheet.create({
-  stackedContent: { flexDirection: "column", alignItems: "stretch" },
-  stackedValue: { alignItems: "flex-start" },
-  pendingValuationCopy: { flexGrow: 1, flexShrink: 1 },
-  performanceLine: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "baseline",
-    gap: spacing.sm,
-  },
-  searchField: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
-    paddingHorizontal: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    minHeight: 48,
-    color: colors.text.primary,
-    fontSize: 16,
-    paddingVertical: spacing.sm,
-  },
-  listHeading: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    columnGap: spacing.md,
-  },
-  listActions: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  listAction: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.xs,
-    justifyContent: "center",
-    minHeight: interaction.minimumTouchTarget,
-    paddingHorizontal: spacing.sm,
-  },
-  detailScreen: { flex: 1, backgroundColor: colors.background },
-  detailHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border.subtle,
-  },
-  detailContent: { padding: spacing.md, paddingBottom: spacing.xl },
-  detailStatus: { paddingHorizontal: spacing.md },
-  detailIdentity: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  detailActions: {
-    gap: spacing.xs,
-  },
-  detailValuation: {
-    gap: spacing.sm,
-  },
-  detailInvested: {
-    gap: spacing.xs,
-  },
-  detailPosition: {
-    gap: spacing.sm,
-  },
-
-  assetCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  compactRow: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  content: {
-    gap: spacing.sm,
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  destinationTab: {
-    alignItems: "center",
-    borderBottomColor: "transparent",
-    borderBottomWidth: 2,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: interaction.minimumTouchTarget,
-  },
-  destinationTabActive: {
-    borderBottomColor: colors.primary,
-  },
-  destinationTabs: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  detail: {
-    flexBasis: "45%",
-    flexGrow: 1,
-    gap: 2,
-  },
-  detailGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    columnGap: spacing.md,
-    rowGap: spacing.sm,
-  },
-  expandedSection: {
-    gap: spacing.md,
-  },
-  exposureCard: {
-    gap: spacing.sm,
-  },
-  exposureLegend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    columnGap: spacing.md,
-    rowGap: spacing.sm,
-  },
-  exposureRail: {
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    height: 10,
-    overflow: "hidden",
-  },
-  exposureSegment: {
-    height: "100%",
-  },
-  filterChip: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.pill,
-    justifyContent: "center",
-    paddingHorizontal: spacing.cardInner,
-    paddingVertical: spacing.xs,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-  },
-  filters: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  flex: {
-    flex: 1,
-  },
-  holdingCard: {
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border.subtle,
-    gap: spacing.sm,
-    overflow: "hidden",
-    paddingVertical: spacing.cardGap,
-    paddingHorizontal: spacing.xs,
-  },
-  holdingMetric: {
-    flex: 1,
-    gap: 2,
-    minWidth: 84,
-  },
-  holdingMetricHalf: {
-    flexBasis: "45%",
-  },
-  holdingCardPressed: {
-    backgroundColor: colors.surface.card,
-  },
-  holdingMetrics: {
-    columnGap: spacing.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    rowGap: spacing.xs,
-  },
-  holdingNumber: {
-    fontVariant: ["tabular-nums"],
-  },
-  holdingWeightMetric: {
-    alignItems: "flex-end",
-  },
-  minimalWeightMetric: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-  },
-  holdingWeightTrack: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    height: 3,
-    overflow: "hidden",
-    width: "100%",
-  },
-  holdingWeightFill: {
-    backgroundColor: colors.primary,
-    height: "100%",
-  },
-  holdingsList: {
-    backgroundColor: colors.background,
-  },
-  insightCard: {
-    flex: 1,
-    gap: spacing.xs,
-    minHeight: 88,
-  },
-  insightGrid: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  insightTitle: {
-    fontSize: 17,
-    lineHeight: 22,
-  },
-  legendCopy: {
-    flex: 1,
-    gap: 1,
-    minWidth: 0,
-  },
-  legendDot: {
-    borderRadius: radii.pill,
-    height: 8,
-    marginTop: 4,
-    width: 8,
-  },
-  legendItem: {
-    alignItems: "flex-start",
-    flexBasis: "46%",
-    flexGrow: 1,
-    flexDirection: "row",
-    gap: spacing.xs,
-    minWidth: 144,
-  },
-  negativeText: {
-    color: colors.loss,
-  },
-  openingRecordCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  openingRecordRow: {
-    alignItems: "center",
-    borderTopColor: colors.border.subtle,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-  },
-  openingRecords: {
-    gap: spacing.sm,
-  },
-  positiveText: {
-    color: colors.profit,
-  },
-  ppfAccountCard: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
-    flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 72,
-    padding: spacing.cardInner,
-  },
-  ppfEmptyRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  ppfSection: {
-    gap: spacing.sm,
-  },
-  epfTotalRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    justifyContent: "space-between",
-    minHeight: interaction.minimumTouchTarget,
-  },
-  ppfValue: {
-    alignItems: "flex-end",
-  },
-  pendingValuationRow: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
-    flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  panelBackdrop: {
-    backgroundColor: colors.scrim,
-    flex: 1,
-    justifyContent: "flex-end",
-    paddingHorizontal: spacing.md,
-  },
-  panelContent: {
-    gap: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  panelHeader: {
-    alignItems: "center",
-    borderBottomColor: colors.border.subtle,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingBottom: spacing.sm,
-  },
-  panelTitle: {
-    flex: 1,
-    minWidth: 0,
-  },
-  panelSheet: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.sheet,
-    gap: spacing.md,
-    maxHeight: "90%",
-    padding: spacing.md,
-  },
-  quoteStatus: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  quoteStatusCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  quoteStatusProminent: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.card,
-    padding: spacing.cardInner,
-  },
-  quoteDetailsAction: {
-    paddingHorizontal: spacing.xs,
-  },
-  recordAction: {
-    flexGrow: 0,
-  },
-  recordActions: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  resumeRow: {
-    alignItems: "center",
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.button,
-    flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  sectionHeading: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  sectionActionHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  sectionHeadingCopy: {
-    gap: 2,
-  },
-  statusCard: {
-    backgroundColor: colors.surface.card,
-    paddingVertical: spacing.sm,
-  },
-  topThreeCard: {
-    gap: spacing.xs,
-  },
-  valueColumn: {
-    alignItems: "flex-end",
-    minWidth: 72,
-  },
-  valueQuoteContext: {
-    borderColor: colors.border.subtle,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  warningText: {
-    color: colors.warning,
-  },
-}));
