@@ -4,6 +4,16 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-23: Progress screen split (#561), smoke 12 passed plus 8 Progress flows
+
+- Commit: main plus the #561 Progress split. AVD and build as below; the split
+  JS served by Metro.
+- Smoke tier: 12 passed, 0 failed, 14m 52s, inside the budget but close to it.
+- By path: progress-chart-month-navigation 1m 15s, progress-chart-range
+  1m 08s, snapshot-review 0m 31s, epf-progress-empty 0m 59s,
+  ppf-history-fallback 2m 54s, epf-reporting 0m 36s, minimal-mode 1m 13s,
+  contextual-nudges 2m 06s. All passed.
+
 ## 2026-10-22: Holdings screen split (#561), smoke 12 passed plus 10 Holdings flows
 
 - Commit: main plus the #561 Holdings split. AVD and build as below; the
