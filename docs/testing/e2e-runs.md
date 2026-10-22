@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-23: Add Holding form split (#561), smoke 11 of 12 then rerun, plus 12 Add Holding flows
+
+- Commit: main plus the #561 AddOpeningPositionForm split. AVD and build as
+  below; the split JS served by Metro.
+- Smoke tier: 11 passed, 1 failed, 16m 02s (over budget). The failure was
+  progress-snapshot-history: the `back` from a month's detail closed the whole
+  Monthly History panel while "Checking monthly history" was running, so
+  `snapshot-month-2026-05` was not visible. The split doesn't touch that code.
+  Rerun alone, it passed (0m 57s). Treat that `back` step as flaky while
+  snapshot automation is running.
+- By path: add-holding-asset-class 1m 59s, add-holding-asset-switch 1m 57s,
+  add-holding-back 1m 23s, add-holding-edited-quote 1m 02s,
+  add-holding-manual-semantics 1m 33s, add-holding-pending-valuation 1m 49s,
+  add-holding-review-hierarchy 1m 31s, add-holding-unknown-date 1m 14s,
+  add-trade 1m 30s, quick-portfolio-setup 3m 38s, workflow-exit-navigation
+  0m 53s, contextual-nudges 2m 10s. All passed.
+
 ## 2026-10-23: Progress screen split (#561), smoke 12 passed plus 8 Progress flows
 
 - Commit: main plus the #561 Progress split. AVD and build as below; the split
