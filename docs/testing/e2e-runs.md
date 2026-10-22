@@ -4,7 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
-## 2026-10-23: final #559 batch, 13 flows passed
+## 2026-10-22: Holdings screen split (#561), smoke 12 passed plus 10 Holdings flows
+
+- Commit: main plus the #561 Holdings split. AVD and build as below; the
+  debug build from earlier the same day, with the split JS served by Metro.
+- Smoke tier: 12 passed, 0 failed, 15m 08s. That is 8s over budget because
+  smoke-launch took 2m 13s on a cold Metro bundle; other flows were within
+  their usual range.
+- By path: holdings 1m 12s, holdings-list-first 1m 55s,
+  holdings-list-first-layout 0m 49s, holding-duration 0m 48s, minimal-mode
+  1m 15s, opening-position-correction 1m 31s, asset-correction 3m 12s,
+  workflow-exit-navigation 0m 44s, sell-quote-context 1m 05s,
+  add-holding-pending-valuation 1m 43s. All passed.
+
+## 2026-10-22: final #559 batch, 13 flows passed
 
 - Commit: main plus the final selector batch. AVD and build as below; flows
   run by path.
