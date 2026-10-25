@@ -15,7 +15,7 @@ import {
   type MonthlyChartCustomRange,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
-import { useReducedMotionPreference } from "@/src/hooks";
+import { useReducedMotionPreference, useSingleBackRequest } from "@/src/hooks";
 import { interaction, spacing } from "@/src/theme";
 
 import { useStyles } from "./progressStyles";
@@ -274,11 +274,12 @@ export function CustomMonthRangeControls({
 
     onCancel();
   }
+  const handleBackRequest = useSingleBackRequest(closeOrReturn);
 
   return (
     <Modal
       animationType={reducedMotion ? "none" : "fade"}
-      onRequestClose={closeOrReturn}
+      onRequestClose={handleBackRequest}
       testID={`${testIDPrefix}-modal`}
       transparent
       visible

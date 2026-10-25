@@ -14,7 +14,7 @@ jest.mock("@/src/store", () => ({
   ...jest.requireActual("@/src/store"),
   getPortfolioStore: jest.fn(() => { throw new Error("Persistent store must not be accessed"); }),
 }));
-jest.mock("@/src/hooks", () => ({ useReducedMotionPreference: () => true }));
+jest.mock("@/src/hooks", () => ({ ...jest.requireActual("@/src/hooks"), useReducedMotionPreference: () => true }));
 
 beforeEach(() => { mockParams = { token: "cogvest-local-visual-qa" }; });
 

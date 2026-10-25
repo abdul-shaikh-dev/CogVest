@@ -217,6 +217,41 @@ describe("MonthlyHistoryPanel", () => {
     });
   });
 
+  describe("Android back", () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    function pressBack(screen: ReturnType<typeof render>) {
+      act(() => {
+        screen.UNSAFE_getByType(Modal).props.onRequestClose();
+      });
+    }
+
+    // React Native 0.81 can deliver one back press to onRequestClose twice: once
+    // from the dialog's back dispatcher and again from its key listener, after
+    // the first has already re-rendered the overview.
+    it("treats one back press delivered twice as a single step back from a month", () => {
+      const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
+      const screen = render(
+        <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
+      );
+      fireEvent.press(screen.getByTestId("open-monthly-history"));
+      fireEvent.press(screen.getByTestId("snapshot-month-2026-04"));
+      expect(screen.getByTestId("selected-snapshot-summary")).toBeTruthy();
+
+      pressBack(screen);
+      clock.mockReturnValue(1_041);
+      pressBack(screen);
+
+      expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(true);
+      expect(screen.queryByTestId("selected-snapshot-summary")).toBeNull();
+      expect(screen.getByTestId("snapshot-month-2026-04")).toBeTruthy();
+
+      clock.mockReturnValue(2_000);
+      pressBack(screen);
+      expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(false);
+    });
+  });
+
   it("opens newest year first and lists only stored months newest first", () => {
     const { getByTestId, getByText } = render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
@@ -415,6 +450,8 @@ describe("MonthlyHistoryPanel", () => {
   });
 
   it("uses the modal Android back path to return from details before closing", () => {
+    // Two separate presses, far enough apart not to be one press delivered twice.
+    const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
     const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
@@ -428,10 +465,12 @@ describe("MonthlyHistoryPanel", () => {
     });
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
+    clock.mockReturnValue(2_000);
     act(() => {
       UNSAFE_getByType(Modal).props.onRequestClose();
     });
     expect(UNSAFE_getByType(Modal).props.visible).toBe(false);
+    clock.mockRestore();
   });
 
   it("masks financial amounts while retaining percentages and unavailable states", () => {

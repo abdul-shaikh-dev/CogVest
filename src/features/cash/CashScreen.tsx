@@ -17,6 +17,7 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
+import { useSingleBackRequest } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
@@ -102,6 +103,7 @@ export function CashScreen({
     }
     closeEntry();
   }
+  const handleEntryBackRequest = useSingleBackRequest(requestEntryClose);
 
   function openEntry(nextMode: CashEntryMode) {
     if (isSavingRef.current) return;
@@ -280,7 +282,7 @@ export function CashScreen({
       </View>
     </ScreenContainer>
 
-    <Modal animationType="none" visible={isEntryVisible} onRequestClose={requestEntryClose} testID="cash-entry-modal">
+    <Modal animationType="none" visible={isEntryVisible} onRequestClose={handleEntryBackRequest} testID="cash-entry-modal">
       {/* Android Modal already uses adjustResize; a second height adjustment leaves stale keyboard space. */}
       <View style={styles.modalRoot} testID="cash-entry-root">
         <ScreenContainer scroll testID="cash-entry-panel">
