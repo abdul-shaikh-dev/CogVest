@@ -4,6 +4,19 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-25: PPF account screen split (#561), smoke 11 of 12 then rerun, plus 3 PPF flows
+
+- Commit: main plus the #561 PpfAccountScreen split. AVD and build as below;
+  the split JS served by Metro.
+- The first attempt failed in every flow within seconds: the emulator had
+  exited, so Maestro found no device. Environmental. After restarting the AVD:
+- Smoke tier: 11 passed, 1 failed, 18m 11s (over budget). ppf-account passed
+  (2m 01s). progress-snapshot-history failed at the same step as on
+  2026-10-23. That is now 2 of the last 3 smoke runs. It passed when rerun
+  alone (0m 46s).
+- By path: ppf-history-fallback 2m 13s, holdings-list-first 1m 47s,
+  quick-portfolio-setup 2m 59s. All passed.
+
 ## 2026-10-23: Add Holding form split (#561), smoke 11 of 12 then rerun, plus 12 Add Holding flows
 
 - Commit: main plus the #561 AddOpeningPositionForm split. AVD and build as
