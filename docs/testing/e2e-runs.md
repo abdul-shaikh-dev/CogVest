@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-25: transaction import hook split (#561), smoke 12 passed plus 4 import flows
+
+- Commit: main plus the #561 useTransactionImport split. AVD and build as
+  below; the split JS served by Metro.
+- The emulator ran 2 to 3 times slower than in earlier runs today, in every
+  flow, including flows the split does not touch. Environmental.
+- First smoke run: 11 passed, 1 failed, 32m 46s. smoke-launch timed out on
+  "Bundling 100.0%" with a cold Metro cache after a restart. Import flows:
+  zerodha-tradebook-import 5m 37s, cas-native-import 6m 42s and
+  cas-native-fresh-portfolio 3m 43s passed. transactions-csv-import saved the
+  import and opened Holdings with "Transaction history imported.", but after
+  its 10s wait for `holdings-screen`.
+- Rerun of the two failures with Metro warm: smoke-launch 1m 22s,
+  transactions-csv-import 2m 48s. Both passed.
+- Second smoke run: 12 passed, 0 failed, 23m 41s. Over budget because of the
+  slow emulator.
+
 ## 2026-10-25: Dashboard screen split (#561), smoke 12 passed plus 7 Dashboard flows
 
 - Commit: main plus the #561 DashboardScreen split. AVD and build as below;
