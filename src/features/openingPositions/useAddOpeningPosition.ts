@@ -1099,3 +1099,5 @@ export function useAddOpeningPosition({
     viewSavedHolding,
   };
 }
+
+export type AddOpeningPositionController = ReturnType<typeof useAddOpeningPosition>;
