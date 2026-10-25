@@ -8,10 +8,7 @@ import {
   type TransactionCsvError,
   type UnsupportedTransactionCsvEvent,
 } from "@/src/domain/transactionCsv";
-import {
-  parseTransactionImportFile,
-  type TransactionImportSourceId,
-} from "@/src/domain/transactionImportSources";
+import type { TransactionImportSourceId } from "@/src/domain/transactionImportSources";
 import type { AssetLookupSearchResult } from "@/src/services/assetLookup";
 import { searchAssetLookupResults as searchAssetLookupResultsService } from "@/src/services/assetLookup";
 import {
@@ -33,27 +30,28 @@ import type { Asset } from "@/src/types";
 import { createId } from "@/src/utils";
 
 import {
-  assetForResolution,
   buildTransactionImportPlan,
   type TransactionCsvResolution,
   type TransactionImportMode,
 } from "./transactionImport";
-import { assetFromCasScheme, casFundAllocationCandidates, compatibleTransactionCandidate, conflictingHistoricalRows, inferCasFundAllocation, exactTradebookSuggestion, transactionAssetKey } from "./transactionImportMatching";
+import {
+  getCutoverHoldings,
+  getImportCoverage,
+  parseTransactionImportFiles,
+  type PickedTransactionCsv,
+  type SelectedTransactionImportFile,
+} from "./transactionImportAnalysis";
+import {
+  groupResolutions,
+  identityKey,
+  resolveTransactionRows,
+} from "./transactionImportResolution";
 import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 
 export { transactionCsvMaxBytes };
+export type { PickedTransactionCsv, SelectedTransactionImportFile };
 
 export const transactionImportMaxFiles = 10;
-
-export type PickedTransactionCsv = {
-  name: string;
-  size: number;
-  text: string;
-};
-
-export type SelectedTransactionImportFile = PickedTransactionCsv & {
-  id: string;
-};
 
 export type PickedCasStatement = CasPdfSourceFile;
 
@@ -74,150 +72,6 @@ export type UseTransactionImportOptions = {
   }) => Promise<AssetLookupSearchResult>;
   store?: StoreApi<PortfolioStoreState>;
 };
-
-type ResolutionGroup = {
-  casClassificationRequired?: boolean;
-  identityConflict?: boolean;
-  candidates: Asset[];
-  key: string;
-  rowNumbers: number[];
-  selectedAsset?: Asset;
-  suggestedAsset?: Asset;
-  title: string;
-};
-
-function normalized(value?: string) {
-  return value?.trim().toUpperCase() ?? "";
-}
-
-function assetFromLookupResult(result: {
-  assetClass: Asset["assetClass"];
-  currency: Asset["currency"];
-  exchange?: Asset["exchange"];
-  id: string;
-  instrumentType: NonNullable<Asset["instrumentType"]>;
-  name: string;
-  quoteSourceId: string;
-  sectorType: NonNullable<Asset["sectorType"]>;
-  symbol: string;
-  ticker: string;
-}): Asset {
-  return {
-    assetClass: result.assetClass,
-    currency: result.currency,
-    ...(result.exchange ? { exchange: result.exchange } : {}),
-    id: result.id,
-    instrumentType: result.instrumentType,
-    name: result.name,
-    quoteSourceId: result.quoteSourceId,
-    sectorType: result.sectorType,
-    symbol: result.symbol,
-    ticker: result.ticker,
-  };
-}
-
-function identityKey(resolution: TransactionCsvResolution) {
-  return transactionAssetKey(resolution.row);
-}
-
-function titleForResolution(resolution: TransactionCsvResolution) {
-  const { identity } = resolution.row;
-  return identity.kind === "isin"
-    ? `${resolution.row.symbol ? `${resolution.row.symbol} • ` : ""}ISIN ${identity.value}`
-    : `${identity.symbol} • ${identity.exchange}`;
-}
-
-function findExistingAsset(
-  row: TransactionCsvResolution["row"],
-  assets: Asset[],
-) {
-  if (row.identity.kind === "isin") {
-    const isin = normalizeIsin(row.identity.value);
-    return assets.find((asset) => normalizeIsin(asset.isin) === isin);
-  }
-
-  const { exchange, symbol } = row.identity;
-  return assets.find(
-    (asset) =>
-      normalized(asset.exchange) === normalized(exchange) &&
-      (normalized(asset.symbol) === normalized(symbol) ||
-        normalized(asset.ticker) === normalized(symbol)),
-  );
-}
-
-function lookupQuery(row: TransactionCsvResolution["row"]) {
-  return row.identity.kind === "isin"
-    ? row.isin ?? row.identity.value
-    : row.symbol ?? row.identity.symbol;
-}
-
-function groupResolutions(resolutions: TransactionCsvResolution[], existingAssets: Asset[]) {
-  const groups = new Map<string, ResolutionGroup>();
-  for (const resolution of resolutions) {
-    const key = identityKey(resolution);
-    const existing = groups.get(key);
-    if (existing) {
-      existing.rowNumbers.push(resolution.row.rowNumber);
-      continue;
-    }
-    groups.set(key, {
-      casClassificationRequired: Boolean(
-        resolution.candidates?.length &&
-        resolution.candidates.every((candidate) => candidate.id.startsWith("cas:")),
-      ),
-      candidates: resolution.candidates ?? [],
-      key,
-      rowNumbers: [resolution.row.rowNumber],
-      title: resolution.candidates?.find((candidate) => candidate.id.startsWith("cas:"))?.name
-        ?? titleForResolution(resolution),
-    });
-  }
-  for (const group of groups.values()) {
-    const selected = resolutions.find(
-      (resolution) =>
-        identityKey(resolution) === group.key &&
-        resolution.status === "ready" &&
-        resolution.asset,
-    );
-    if (selected?.asset) group.selectedAsset = selected.asset;
-    group.suggestedAsset = exactTradebookSuggestion(
-      resolutions.filter((resolution) => identityKey(resolution) === group.key).map((resolution) => resolution.row),
-      group.candidates,
-    );
-  }
-  const result = [...groups.values()];
-  const candidates = resolutions.map((resolution) => ({
-    row: resolution.row,
-    asset: resolution.asset ?? groups.get(identityKey(resolution))?.suggestedAsset,
-  }));
-  const conflicts = conflictingHistoricalRows(candidates, existingAssets);
-  for (const index of conflicts) {
-    const group = groups.get(identityKey(resolutions[index]))!;
-    group.identityConflict = true;
-    group.suggestedAsset = undefined;
-  }
-  return result;
-}
-
-async function mapWithConcurrency<T, R>(
-  values: T[],
-  limit: number,
-  worker: (value: T) => Promise<R>,
-) {
-  const results: R[] = new Array(values.length);
-  let nextIndex = 0;
-  async function runWorker() {
-    while (nextIndex < values.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      results[index] = await worker(values[index]);
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(limit, values.length) }, runWorker),
-  );
-  return results;
-}
 
 export function useTransactionImport({
   lookupAmfiSchemeClassifications = lookupAmfiSchemeClassificationsService,
@@ -287,117 +141,18 @@ export function useTransactionImport({
     casSchemes: CasSchemeReview[] = [],
     amfiClassifications: Record<string, AmfiSchemeClassification> = {},
   ) {
-    const casSchemesByIsin = new Map<string, CasSchemeReview[]>();
-    for (const scheme of casSchemes) {
-      const isin = normalizeIsin(scheme.isin);
-      if (!isin) continue;
-      casSchemesByIsin.set(isin, [
-        ...(casSchemesByIsin.get(isin) ?? []),
-        scheme,
-      ]);
-    }
-    const byKey = new Map<string, TransactionCsvResolution[]>();
-    for (const row of rows) {
-      const seed: TransactionCsvResolution = { row, status: "unresolved" };
-      const key = identityKey(seed);
-      byKey.set(key, [...(byKey.get(key) ?? []), seed]);
-    }
-
-    const resolvedGroups = await mapWithConcurrency(
-      [...byKey.values()],
-      4,
-      async (seeds) => {
-        const first = seeds[0];
-        const cacheKey = JSON.stringify([identityKey(first), ...new Set(seeds.map((seed) => `${seed.row.exchange}:${seed.row.symbol}:${seed.row.currency}`))].sort());
-        const cachedCandidates = lookupCacheRef.current.get(cacheKey)?.filter((asset) => seeds.every((seed) => compatibleTransactionCandidate(asset, seed.row)));
-        const existing = findExistingAsset(first.row, snapshot.assets);
-        if (existing) {
-          return seeds.map((seed) => ({
-            ...seed,
-            asset: existing,
-            status: "ready" as const,
-          }));
-        }
-        const selected = selectedAssetsRef.current.get(identityKey(first));
-        if (selected && seeds.every((seed) => compatibleTransactionCandidate(selected, seed.row))) {
-          return seeds.map((seed) => ({ ...seed, asset: selected, candidates: cachedCandidates, status: "ready" as const }));
-        }
-        const normalizedIsin = first.row.identity.kind === "isin"
-          ? normalizeIsin(first.row.identity.value)
-          : undefined;
-        const matchingCasSchemes = normalizedIsin
-          ? casSchemesByIsin.get(normalizedIsin)
-          : undefined;
-        const amfiClassification = normalizedIsin
-          ? amfiClassifications[normalizedIsin]
-          : undefined;
-        const inferredAllocations = new Set(
-          amfiClassification
-            ? [amfiClassification.allocation].filter(
-              (allocation): allocation is "debt" | "equity" => Boolean(allocation),
-            )
-            : matchingCasSchemes
-              ?.map((scheme) => inferCasFundAllocation(scheme.name))
-              .filter((allocation): allocation is "debt" | "equity" => Boolean(allocation)),
-        );
-        const inferredAllocation = inferredAllocations.size === 1
-          ? [...inferredAllocations][0]
-          : undefined;
-        const casAsset = matchingCasSchemes?.[0] && inferredAllocation
-          ? assetFromCasScheme(matchingCasSchemes[0], inferredAllocation)
-          : undefined;
-        if (casAsset) {
-          return seeds.map((seed) => ({
-            ...seed,
-            asset: casAsset,
-            status: "ready" as const,
-          }));
-        }
-        if (matchingCasSchemes?.[0]) {
-          const candidates = casFundAllocationCandidates(matchingCasSchemes[0]);
-          return seeds.map((seed) => ({
-            ...seed,
-            candidates,
-            status: "selectionRequired" as const,
-          }));
-        }
-        if (cachedCandidates?.length) return seeds.map((seed) => ({ ...seed, candidates: cachedCandidates, status: "selectionRequired" as const }));
-        try {
-          let lookup = await searchAssetLookupResults({
-            query: lookupQuery(first.row),
-          });
-          if (first.row.source?.format === "zerodha-tradebook" &&
-              !exactTradebookSuggestion(seeds.map((seed) => seed.row), lookup.results)) {
-            const symbols = [...new Set(seeds.map((seed) => seed.row.symbol).filter((symbol): symbol is string => Boolean(symbol)))];
-            for (const symbol of symbols) {
-              if (analysisId !== analysisIdRef.current) return seeds;
-              const bySymbol = await searchAssetLookupResults({ query: symbol });
-              lookup = { failures: [...lookup.failures, ...bySymbol.failures], results: [...lookup.results, ...bySymbol.results] };
-            }
-          }
-          const candidates = [...new Map(lookup.results.map(assetFromLookupResult)
-            .filter((asset) => seeds.every((seed) => compatibleTransactionCandidate(asset, seed.row)))
-            .map((asset) => [asset.id, asset])).values()];
-          if (candidates.length > 0 && analysisId === analysisIdRef.current) lookupCacheRef.current.set(cacheKey, candidates);
-          const status =
-            candidates.length > 0
-              ? ("selectionRequired" as const)
-              : ("unresolved" as const);
-          return seeds.map((seed) => ({
-            ...seed,
-            candidates,
-            status,
-          }));
-        } catch {
-          return seeds.map((seed) => ({
-            ...seed,
-            status: "unresolved" as const,
-          }));
-        }
-      },
-    );
+    const resolved = await resolveTransactionRows({
+      amfiClassifications,
+      casSchemes,
+      existingAssets: snapshot.assets,
+      isCurrent: () => analysisId === analysisIdRef.current,
+      lookupCache: lookupCacheRef.current,
+      rows,
+      searchAssetLookupResults,
+      selectedAssets: selectedAssetsRef.current,
+    });
     if (analysisId === analysisIdRef.current) {
-      setResolutions(resolvedGroups.flat());
+      setResolutions(resolved);
     }
   }
 
@@ -417,44 +172,12 @@ export function useTransactionImport({
 
     setIsResolving(true);
     try {
-      const parsedFiles = nextFiles.map((file, fileIndex) => {
-        if (
-          file.size > transactionCsvMaxBytes ||
-          file.text.length > transactionCsvMaxBytes
-        ) {
-          return {
-            errors: [
-              {
-                code: "fileLimit" as const,
-                message: `${file.name}: CSV files may be at most 1 MB.`,
-              },
-            ],
-            rows: [],
-            unsupportedEvents: [],
-          };
-        }
-        const parsed = parseTransactionImportFile({
-          fileIndex,
-          fileName: file.name,
-          sourceId: nextSourceId,
-          text: file.text,
-        });
-        const dates = parsed.rows.map((row) => row.tradeDate.slice(0, 10)).sort();
-        if (dates.length > 0) setFileSummaries((current) => ({ ...current,
-          [file.id]: `${dates[0]} to ${dates[dates.length - 1]} • ${parsed.rows.length} transactions`,
-        }));
-        return {
-          errors: parsed.errors.map((error) => ({
-            ...error,
-            message: `${file.name}: ${error.message}`,
-          })),
-          rows: parsed.rows,
-          unsupportedEvents: parsed.unsupportedEvents.map((event) => ({
-            ...event,
-            transactionType: `${file.name} • ${event.transactionType}`,
-          })),
-        };
-      });
+      const parsedFiles = parseTransactionImportFiles(
+        nextFiles,
+        nextSourceId,
+        (fileId, summary) =>
+          setFileSummaries((current) => ({ ...current, [fileId]: summary })),
+      );
       const errors = parsedFiles.flatMap((parsed) => parsed.errors);
       const unsupported = parsedFiles.flatMap(
         (parsed) => parsed.unsupportedEvents,
@@ -632,14 +355,7 @@ export function useTransactionImport({
   }
 
   const groups = groupResolutions(resolutions, snapshot.assets);
-  const resolvedDates = resolutions
-    .map((resolution) => resolution.row.tradeDate.slice(0, 10))
-    .filter(Boolean)
-    .sort();
-  const importCoverage = casReview?.normalization.coverage ??
-    (resolvedDates.length > 0
-      ? { from: resolvedDates[0], to: resolvedDates[resolvedDates.length - 1] }
-      : undefined);
+  const importCoverage = getImportCoverage(resolutions, casReview);
   function acceptSuggestedMatches() {
     const accepted = new Map<string, Asset>();
     for (const group of groups) {
@@ -669,24 +385,7 @@ export function useTransactionImport({
     state: snapshot,
     unsupportedCount,
   });
-  const cutoverHoldings = [
-    ...new Map(
-      resolutions
-        .flatMap((resolution) => {
-          // The plan may map a provider listing to an existing local holding.
-          const asset = assetForResolution(resolution, snapshot);
-          if (!asset) return [];
-          return snapshot.openingPositions
-            .filter(
-              (position) => position.assetId === asset.id,
-            )
-            .map(
-              (position) =>
-                [position.id, { asset, position }] as const,
-            );
-        }),
-    ).values(),
-  ];
+  const cutoverHoldings = getCutoverHoldings(resolutions, snapshot);
   const needsSharedCutover = cutoverHoldings.some(
     ({ position }) => !position.measuredAsOf,
   );
