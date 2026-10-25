@@ -4,6 +4,17 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-25: Dashboard screen split (#561), smoke 12 passed plus 7 Dashboard flows
+
+- Commit: main plus the #561 DashboardScreen split. AVD and build as below;
+  the split JS served by Metro.
+- Smoke tier: 12 passed, 0 failed, 14m 50s, inside the budget.
+- By path: dashboard-valuation-basis 0m 37s, minimal-mode 1m 10s,
+  epf-reporting 0m 32s, futures-cash-funding 2m 55s,
+  add-holding-pending-valuation 3m 28s, quick-portfolio-setup 4m 48s,
+  contextual-nudges 2m 49s. All passed.
+- A screenshot of the seeded Dashboard matched the unsplit screen.
+
 ## 2026-10-25: progress-snapshot-history back fix, smoke 12 passed plus 4 back flows
 
 - Commit: main plus the Modal back-request fix. AVD and build as below; the
