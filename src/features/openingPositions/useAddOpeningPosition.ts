@@ -1,6 +1,5 @@
 import * as Haptics from "expo-haptics";
 import {
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -9,12 +8,9 @@ import {
 import type { StoreApi } from "zustand/vanilla";
 
 import {
-  createCanonicalAssetMatcher,
   findCanonicalAsset,
   getDefaultAssetMetadata,
 } from "@/src/domain/assets";
-import { calculateHolding } from "@/src/domain/calculations";
-import { projectDemergers } from "@/src/domain/demergers";
 import {
   getV1AssetCurrencyIssue,
   getV1QuoteCurrencyIssue,
@@ -47,8 +43,19 @@ import { createId } from "@/src/utils";
 import type { JsonStorage } from "@/src/services/storage";
 
 import { validateOpeningPositionForm } from "./openingPositionForm";
-import { matchesDiscoveryFilter, searchSavedAssets, type DiscoveryFilter } from "./assetDiscovery";
-import { readRecentAssetSearches, saveRecentAssetSearch, clearRecentAssetSearches } from "./recentAssetSearches";
+import {
+  buildLookupAsset,
+  buildPreviewHolding,
+  buildReviewOpeningPosition,
+  commitOpeningPosition,
+  createReviewedAsset,
+  createVisualQaReviewAsset,
+  createVisualQaReviewPosition,
+  getAssetPhaseErrors,
+  getClassPhaseErrors,
+  getPositionPhaseErrors,
+} from "./addOpeningPositionModel";
+import { useAssetDiscovery } from "./useAssetDiscovery";
 
 export type AddHoldingPhase = "asset" | "class" | "position" | "review";
 export type FieldErrors = Partial<Record<string, string>>;
@@ -98,54 +105,22 @@ export function useAddOpeningPosition({
   const snapshot = usePortfolioSnapshot(store);
   const restoreEpochRef = useRef(snapshot.restoreEpoch);
   const initialReviewAsset: Asset | undefined =
-    initialVisualQaState === "review"
-      ? {
-          assetClass: "stock",
-          currency: "INR",
-          exchange: "NSE",
-          id: "visual-qa-review-asset",
-          instrumentType: "stock",
-          name: "HDFC Bank",
-          quoteSourceId: "HDFCBANK.NS",
-          sectorType: "financialServices",
-          symbol: "HDFCBANK",
-          ticker: "HDFCBANK.NS",
-        }
-      : undefined;
+    initialVisualQaState === "review" ? createVisualQaReviewAsset() : undefined;
   const initialReviewPosition: OpeningPosition | undefined =
-    initialVisualQaState === "review"
-      ? {
-          assetId: "visual-qa-review-asset",
-          averageCostPrice: 1450,
-          conviction: 4,
-          currentPrice: 1678.25,
-          date: "2024-04-15T00:00:00.000Z",
-          id: "visual-qa-review-opening",
-          notes: "Visual QA derived preview",
-          quantity: 25,
-        }
-      : undefined;
+    initialVisualQaState === "review" ? createVisualQaReviewPosition() : undefined;
   const [currentPhase, setCurrentPhase] = useState<AddHoldingPhase>(
     initialVisualQaState === "review" ? "review" : "asset",
   );
-  const [lookupQuery, setLookupQuery] = useState("");
-  const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>("all");
-  const [visibleResultCount, setVisibleResultCount] = useState(20);
-  const [visibleSavedCount, setVisibleSavedCount] = useState(6);
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try { return readRecentAssetSearches(recentSearchStorage); } catch { return []; }
+  const discovery = useAssetDiscovery({
+    assets: snapshot.assets,
+    recentSearchStorage,
+    searchAssetLookupResults,
   });
-  const [recentSearchStatus, setRecentSearchStatus] = useState("");
-  const [lookupResults, setLookupResults] = useState<AssetLookupResult[]>([]);
-  const [lookupResultQuery, setLookupResultQuery] = useState("");
+  const { rememberSearch, setLookupQuery, setLookupResults, setLookupStatus } = discovery;
   const [selectedLookupResult, setSelectedLookupResult] =
     useState<AssetLookupResult | undefined>();
   const [selectedLookupQuote, setSelectedLookupQuote] =
     useState<Quote | undefined>();
-  const [isLookupSearching, setIsLookupSearching] = useState(false);
-  const [lookupStatus, setLookupStatus] = useState("");
-  const [canRetryLookup, setCanRetryLookup] = useState(false);
-  const [lookupRetryKey, setLookupRetryKey] = useState(0);
   const [quoteStatus, setQuoteStatus] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>(
@@ -213,94 +188,13 @@ export function useAddOpeningPosition({
     () => snapshot.assets.find((asset) => asset.id === selectedAssetId),
     [selectedAssetId, snapshot.assets],
   );
-  const matchingExistingAssets = useMemo(() => searchSavedAssets(snapshot.assets, lookupQuery), [lookupQuery, snapshot.assets]);
-  const savedAssetMatcher = useMemo(() => createCanonicalAssetMatcher(snapshot.assets), [snapshot.assets]);
-  const filteredSavedAssets = useMemo(
-    () => matchingExistingAssets.filter((asset) => matchesDiscoveryFilter(asset, discoveryFilter)),
-    [discoveryFilter, matchingExistingAssets],
-  );
-  const filteredLookupResults = useMemo(
-    () =>
-      lookupResultQuery === lookupQuery.trim()
-        ? lookupResults
-            .slice(0, 100)
-            .filter(
-              (asset) =>
-                !savedAssetMatcher.find(asset) &&
-                matchesDiscoveryFilter(asset, discoveryFilter),
-            )
-        : [],
-    [discoveryFilter, lookupQuery, lookupResultQuery, lookupResults, savedAssetMatcher],
-  );
-  const visibleLookupResults = useMemo(
-    () => filteredLookupResults.slice(0, visibleResultCount),
-    [filteredLookupResults, visibleResultCount],
-  );
-  const visibleSavedAssets = useMemo(
-    () => filteredSavedAssets.slice(0, visibleSavedCount),
-    [filteredSavedAssets, visibleSavedCount],
-  );
-  useEffect(() => {
-    setVisibleResultCount(20);
-    setVisibleSavedCount(lookupQuery.trim() ? 20 : 6);
-  }, [lookupQuery, discoveryFilter]);
-  useEffect(() => { setLookupResults([]); }, [lookupQuery]);
 
-  function loadMoreLookupResults() {
-    setVisibleResultCount((count) => Math.min(count + 20, filteredLookupResults.length, 100));
-  }
-
-  function rememberSearch() {
-    try { setRecentSearches(saveRecentAssetSearch(lookupQuery, recentSearchStorage)); } catch {
-      setRecentSearchStatus("Recent search could not be saved on this device.");
-    }
-  }
-
-  function clearSearchHistory() {
-    try {
-      clearRecentAssetSearches(recentSearchStorage);
-      setRecentSearches([]);
-      setRecentSearchStatus("");
-    } catch { setRecentSearchStatus("Could not clear recent searches. Try again."); }
-  }
-
-  const previewHolding =
-    reviewAsset && reviewOpeningPosition
-      ? calculateHolding({
-          asset: reviewAsset,
-          demergerAdjustments: projectDemergers({
-            assets: snapshot.assets,
-            openingPositions: snapshot.openingPositions,
-            trades: snapshot.trades,
-          }).filter((adjustment) => adjustment.assetId === reviewAsset.id),
-          currentPrice:
-            reviewOpeningPosition.manualValuation?.price ??
-            selectedLookupQuote?.price ??
-            null,
-          openingPositions: [reviewOpeningPosition],
-          trades: [],
-          valuation: reviewOpeningPosition.manualValuation
-            ? {
-                asOf: reviewOpeningPosition.manualValuation.asOf,
-                currency: reviewOpeningPosition.manualValuation.currency,
-                price: reviewOpeningPosition.manualValuation.price,
-                source: "manual",
-                status: "manual",
-              }
-            : selectedLookupQuote
-              ? {
-                  asOf: selectedLookupQuote.asOf,
-                  currency: selectedLookupQuote.currency,
-                  price: selectedLookupQuote.price,
-                  source: selectedLookupQuote.source,
-                  status:
-                    selectedLookupQuote.source === "manual"
-                      ? "manual"
-                      : "fetched",
-                }
-              : { status: "pending" },
-        })
-      : undefined;
+  const previewHolding = buildPreviewHolding({
+    reviewAsset,
+    reviewOpeningPosition,
+    selectedLookupQuote,
+    snapshot,
+  });
 
   function resetReview() {
     setReviewAsset(undefined);
@@ -344,98 +238,40 @@ export function useAddOpeningPosition({
     setSuccessMessage("");
   }
 
+  const formFields = {
+    assetClass,
+    assetName,
+    averageCostPrice,
+    conviction,
+    currentPrice,
+    date,
+    dateUnknown,
+    instrumentType,
+    intendedHoldDays,
+    notes,
+    quoteSourceId,
+    quantity,
+    sectorType,
+    symbol,
+    ticker,
+  };
+
   function validateAssetPhase() {
-    const phaseErrors: FieldErrors = {};
-
-    if (assetName.trim().length === 0) {
-      phaseErrors.assetName = "Asset name is required.";
-    }
-
-    if (symbol.trim().length === 0) {
-      phaseErrors.symbol = "Symbol is required.";
-    }
-
-    if (ticker.trim().length === 0) {
-      phaseErrors.ticker = "Ticker is required.";
-    }
+    const phaseErrors = getAssetPhaseErrors({ assetName, symbol, ticker });
 
     setErrors(phaseErrors);
     return Object.keys(phaseErrors).length === 0;
   }
 
   function validateClassPhase() {
-    const result = validateOpeningPositionForm({
-      assetClass,
-      assetName: assetName || "Phase validation asset",
-      averageCostPrice: averageCostPrice || "1",
-      conviction,
-      currentPrice: currentPrice || "1",
-      date,
-      dateUnknown,
-      instrumentType,
-      intendedHoldDays,
-      notes,
-      quoteSourceId,
-      quantity: quantity || "1",
-      sectorType,
-      symbol: symbol || "PHASE",
-      ticker: ticker || "PHASE.NS",
-    }, now);
-    const phaseErrors: FieldErrors = {};
-
-    if (!result.isValid) {
-      if (result.errors.instrumentType) {
-        phaseErrors.instrumentType = result.errors.instrumentType;
-      }
-      if (result.errors.sectorType) {
-        phaseErrors.sectorType = result.errors.sectorType;
-      }
-    }
+    const phaseErrors = getClassPhaseErrors(formFields, now);
 
     setErrors(phaseErrors);
     return Object.keys(phaseErrors).length === 0;
   }
 
   function validatePositionPhase() {
-    const result = validateOpeningPositionForm({
-      assetClass,
-      assetName: assetName || "Phase validation asset",
-      averageCostPrice,
-      conviction,
-      currentPrice,
-      date,
-      dateUnknown,
-      instrumentType: instrumentType || "stock",
-      intendedHoldDays,
-      notes,
-      quoteSourceId,
-      quantity,
-      sectorType: sectorType || "other",
-      symbol: symbol || "PHASE",
-      ticker: ticker || "PHASE.NS",
-    }, now);
-    const phaseErrors: FieldErrors = {};
-
-    if (!result.isValid) {
-      if (result.errors.quantity) {
-        phaseErrors.quantity = result.errors.quantity;
-      }
-      if (result.errors.averageCostPrice) {
-        phaseErrors.averageCostPrice = result.errors.averageCostPrice;
-      }
-      if (result.errors.currentPrice) {
-        phaseErrors.currentPrice = result.errors.currentPrice;
-      }
-      if (result.errors.date) {
-        phaseErrors.date = result.errors.date;
-      }
-      if (result.errors.conviction) {
-        phaseErrors.conviction = result.errors.conviction;
-      }
-      if (result.errors.intendedHoldDays) {
-        phaseErrors.intendedHoldDays = result.errors.intendedHoldDays;
-      }
-    }
+    const phaseErrors = getPositionPhaseErrors(formFields, now);
 
     setErrors(phaseErrors);
     return Object.keys(phaseErrors).length === 0;
@@ -474,94 +310,6 @@ export function useAddOpeningPosition({
     }
   }
 
-  useEffect(() => {
-    const trimmedQuery = lookupQuery.trim();
-
-    if (trimmedQuery.length === 0) {
-      setLookupResults([]);
-      setLookupStatus("");
-      setIsLookupSearching(false);
-      setCanRetryLookup(false);
-      return undefined;
-    }
-
-    if (trimmedQuery.length < 2) {
-      setLookupResults([]);
-      setLookupStatus("Type at least 2 characters to search.");
-      setIsLookupSearching(false);
-      setCanRetryLookup(false);
-      return undefined;
-    }
-
-    let isCancelled = false;
-    const controller = new AbortController();
-
-    setIsLookupSearching(true);
-    setLookupStatus("Searching public asset directories...");
-    setCanRetryLookup(false);
-
-    const timeout = setTimeout(async () => {
-      try {
-        const result = await searchAssetLookupResults({ query: trimmedQuery, signal: controller.signal });
-
-        if (isCancelled) {
-          return;
-        }
-
-        const providerResults = result.results.filter((lookupResult) => !savedAssetMatcher.find(lookupResult));
-
-        setLookupResults(providerResults);
-        setLookupResultQuery(trimmedQuery);
-        setLookupStatus(
-          providerResults.length > 0
-            ? "Select a result to autofill asset details."
-            : matchingExistingAssets.length > 0
-              ? "This asset is already in your saved assets."
-            : "No public result found. You can enter details manually.",
-        );
-
-        if (
-          result.failures.length > 0 &&
-          providerResults.length === 0 &&
-          matchingExistingAssets.length === 0
-        ) {
-          setLookupStatus("Lookup unavailable. You can enter details manually.");
-          setCanRetryLookup(true);
-        } else if (result.failures.length > 0) {
-          setLookupStatus("Some sources are unavailable. Showing available matches; manual entry is also available.");
-        }
-      } catch {
-        if (!isCancelled) {
-          setLookupResults([]);
-          setLookupStatus("Lookup unavailable. You can enter details manually.");
-          setCanRetryLookup(true);
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLookupSearching(false);
-        }
-      }
-    }, 350);
-
-    return () => {
-      isCancelled = true;
-      controller.abort();
-      clearTimeout(timeout);
-    };
-  }, [
-    lookupQuery,
-    lookupRetryKey,
-    matchingExistingAssets.length,
-    searchAssetLookupResults,
-    snapshot.assets,
-    savedAssetMatcher,
-  ]);
-
-  function retryLookup() {
-    if (lookupQuery.trim().length >= 2 && !isLookupSearching) {
-      setLookupRetryKey((key) => key + 1);
-    }
-  }
 
   function changeSelectedAsset() {
     invalidateQuoteRequest();
@@ -655,20 +403,6 @@ export function useAddOpeningPosition({
     }
   }
 
-  function buildLookupAsset(result: AssetLookupResult): Asset {
-    return {
-      assetClass: result.assetClass,
-      currency: result.currency,
-      exchange: result.exchange,
-      id: createId("asset"),
-      instrumentType: result.instrumentType,
-      name: result.name,
-      quoteSourceId: result.quoteSourceId,
-      sectorType: result.sectorType,
-      symbol: result.symbol,
-      ticker: result.ticker,
-    };
-  }
 
   async function selectLookupResult(result: AssetLookupResult) {
     rememberSearch();
@@ -785,55 +519,24 @@ export function useAddOpeningPosition({
   }
 
   function buildReviewedAsset(): Asset {
-    const lookupAsset = selectedLookupResult
-      ? buildLookupAsset(selectedLookupResult)
-      : undefined;
-    const baseAsset = lookupAsset ?? selectedAsset;
-    const candidate = {
+    return createReviewedAsset({
       assetClass,
-      currency: baseAsset?.currency ?? "INR",
-      exchange:
-        baseAsset?.exchange ?? (assetClass === "crypto" ? "CRYPTO" : "NSE"),
-      id: selectedAssetId || createId("asset"),
+      assetName,
+      assets: snapshot.assets,
       instrumentType,
-      name: assetName.trim(),
-      quoteSourceId: quoteSourceId.trim() || ticker.trim(),
+      quoteSourceId,
       sectorType,
-      symbol: symbol.trim().toUpperCase(),
-      ticker:
-        assetClass === "crypto"
-          ? ticker.trim()
-          : ticker.trim().toUpperCase(),
-    } satisfies Asset;
-    const canonicalAsset = findCanonicalAsset(snapshot.assets, candidate);
-
-    return canonicalAsset
-      ? {
-          ...candidate,
-          id: canonicalAsset.id,
-        }
-      : candidate;
+      selectedAsset,
+      selectedAssetId,
+      selectedLookupResult,
+      symbol,
+      ticker,
+    });
   }
 
   function handleReview() {
     resetReview();
-    const result = validateOpeningPositionForm({
-      assetClass,
-      assetName,
-      averageCostPrice,
-      conviction,
-      currentPrice,
-      date,
-      dateUnknown,
-      instrumentType,
-      intendedHoldDays,
-      notes,
-      quoteSourceId,
-      quantity,
-      sectorType,
-      symbol,
-      ticker,
-    }, now);
+    const result = validateOpeningPositionForm(formFields, now);
 
     if (!result.isValid) {
       setErrors(result.errors);
@@ -854,43 +557,16 @@ export function useAddOpeningPosition({
       quickSetupDuplicate.kind === "update"
         ? quickSetupDuplicate.openingPositionId
         : createId("opening");
-    const providerQuote =
-      selectedLookupQuote ??
-      (selectedAsset ? snapshot.quoteCache[selectedAsset.id] : undefined);
-    const usesProviderQuote =
-      result.value.currentPrice !== undefined &&
-      providerQuote !== undefined &&
-      providerQuote.currency === asset.currency &&
-      providerQuote.price === result.value.currentPrice;
-
-    setReviewOpeningPosition({
-      assetId: asset.id,
-      averageCostPrice: result.value.averageCostPrice,
-      conviction: result.value.conviction,
-      intendedHoldDays: result.value.intendedHoldDays,
-      date: result.value.date,
-      id: commandId,
-      ...(quickSetupDuplicate.kind === "update"
-        ? {
-            measuredAsOf: snapshot.openingPositions.find(
-              (position) => position.id === commandId,
-            )?.measuredAsOf,
-          }
-        : {}),
-      ...(result.value.currentPrice === undefined || usesProviderQuote
-        ? {}
-        : {
-            manualValuation: {
-              asOf: now.toISOString(),
-              currency: asset.currency,
-              price: result.value.currentPrice,
-              provenance: "user" as const,
-              source: "manual" as const,
-            },
-          }),
-      notes: result.value.notes,
-      quantity: result.value.quantity,
-    });
+    setReviewOpeningPosition(buildReviewOpeningPosition({
+      asset,
+      commandId,
+      now,
+      quickSetupDuplicate,
+      selectedAsset,
+      selectedLookupQuote,
+      snapshot,
+      value: result.value,
+    }));
     reviewCommandIdRef.current = commandId;
     setCurrentPhase("review");
   }
@@ -925,35 +601,14 @@ export function useAddOpeningPosition({
           }
         : undefined;
 
-      const commandResult =
-        quickSetupDuplicate.kind === "update"
-          ? (() => {
-              const correction = store
-                .getState()
-                .correctOpeningPosition(reviewOpeningPosition);
-
-              if (correction.status !== "applied") {
-                throw new Error("Existing opening position could not be updated.");
-              }
-
-              if (quote) {
-                store.getState().upsertQuote(quote);
-              }
-
-              return {
-                asset: reviewAsset,
-                openingPosition: correction.openingPosition,
-                quote,
-                quoteCacheStatus: quote ? ("cached" as const) : ("notRequested" as const),
-                status: "applied" as const,
-              };
-            })()
-          : store.getState().recordOpeningPosition({
-              asset: reviewAsset,
-              commandId: reviewCommandIdRef.current,
-              openingPosition: reviewOpeningPosition,
-              quote,
-            });
+      const commandResult = commitOpeningPosition({
+        commandId: reviewCommandIdRef.current,
+        quickSetupDuplicate,
+        quote,
+        reviewAsset,
+        reviewOpeningPosition,
+        store,
+      });
 
       try {
         await Haptics.notificationAsync(
@@ -1037,22 +692,22 @@ export function useAddOpeningPosition({
     intendedHoldDays,
     instrumentTypeConfidence,
     isSaving,
-    isLookupSearching,
-    canRetryLookup,
-    lookupQuery,
-    lookupResults: visibleLookupResults,
-    lookupStatus,
-    retryLookup,
-    matchingExistingAssets: visibleSavedAssets,
-    discoveryFilter,
-    setDiscoveryFilter,
-    recentSearches,
-    recentSearchStatus,
-    clearSearchHistory,
-    hasMoreLookupResults: visibleResultCount < filteredLookupResults.length,
-    hasMoreSavedAssets: visibleSavedCount < filteredSavedAssets.length,
-    loadMoreLookupResults,
-    loadMoreSavedAssets: () => setVisibleSavedCount((count) => count + 20),
+    isLookupSearching: discovery.isLookupSearching,
+    canRetryLookup: discovery.canRetryLookup,
+    lookupQuery: discovery.lookupQuery,
+    lookupResults: discovery.lookupResults,
+    lookupStatus: discovery.lookupStatus,
+    retryLookup: discovery.retryLookup,
+    matchingExistingAssets: discovery.matchingExistingAssets,
+    discoveryFilter: discovery.discoveryFilter,
+    setDiscoveryFilter: discovery.setDiscoveryFilter,
+    recentSearches: discovery.recentSearches,
+    recentSearchStatus: discovery.recentSearchStatus,
+    clearSearchHistory: discovery.clearSearchHistory,
+    hasMoreLookupResults: discovery.hasMoreLookupResults,
+    hasMoreSavedAssets: discovery.hasMoreSavedAssets,
+    loadMoreLookupResults: discovery.loadMoreLookupResults,
+    loadMoreSavedAssets: discovery.loadMoreSavedAssets,
     metadataReviewMessage,
     moveToPhase,
     notes,

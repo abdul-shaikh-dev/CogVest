@@ -4,6 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-25: Add Holding hook split (#561), smoke 12 passed plus 11 Add Holding flows
+
+- Commit: main plus the #561 useAddOpeningPosition split. AVD and build as
+  below; the split JS served by Metro, warmed by one app launch first.
+- Smoke tier: 12 passed, 0 failed, 15m 56s (56s over budget).
+- By path: add-holding-asset-class 1m 56s, add-holding-asset-switch 1m 58s,
+  add-holding-edited-quote 1m 04s, add-holding-manual-semantics 1m 42s,
+  add-holding-pending-valuation 1m 56s, add-holding-review-hierarchy 1m 35s,
+  add-holding-unknown-date 1m 17s, add-trade 1m 32s, quick-portfolio-setup
+  3m 34s, workflow-exit-navigation 0m 49s. All passed.
+- add-holding-back failed at launch, before any app code ran: the dev
+  runtime showed "runtime not ready: Cannot create devtools websocket
+  connections". Environmental. Rerun alone, it passed (1m 30s).
+
 ## 2026-10-25: transaction import hook split (#561), smoke 12 passed plus 4 import flows
 
 - Commit: main plus the #561 useTransactionImport split. AVD and build as
