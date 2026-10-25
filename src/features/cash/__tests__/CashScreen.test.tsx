@@ -269,6 +269,8 @@ describe("CashScreen", () => {
     const keyboardDismiss = jest
       .spyOn(Keyboard, "dismiss")
       .mockImplementation(() => undefined);
+    // Two separate back presses, far enough apart not to be one press delivered twice.
+    const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
 
     try {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -295,6 +297,7 @@ describe("CashScreen", () => {
       keyboardVisibility.mockClear();
       keyboardDismiss.mockClear();
       keyboardVisibility.mockReturnValue(false);
+      clock.mockReturnValue(2_000);
       act(() => {
         screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
       });
@@ -306,6 +309,7 @@ describe("CashScreen", () => {
     } finally {
       keyboardVisibility.mockRestore();
       keyboardDismiss.mockRestore();
+      clock.mockRestore();
     }
   });
 

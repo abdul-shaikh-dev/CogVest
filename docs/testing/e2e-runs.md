@@ -4,6 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-25: progress-snapshot-history back fix, smoke 12 passed plus 4 back flows
+
+- Commit: main plus the Modal back-request fix. AVD and build as below; the
+  fix JS served by Metro.
+- Cause of the earlier flake: React Native 0.81 can deliver one Android back
+  press to a Modal's `onRequestClose` twice (about 41ms apart), so Monthly
+  History stepped back from the month and then closed. The fix ignores a
+  second request within 300ms.
+- A scratch flow repeating month → back → assert 10 times passed (1m 50s);
+  before the fix it failed by about the 10th press.
+- progress-snapshot-history alone 3 times: 0m 46s, 0m 45s, 0m 46s.
+- progress-chart-range 1m 00s, cash 0m 50s, cash-entry-focus 1m 27s.
+- Smoke tier: 12 passed, 0 failed, 13m 42s.
+
 ## 2026-10-23: Add Holding form split (#561), smoke 11 of 12 then rerun, plus 12 Add Holding flows
 
 - Commit: main plus the #561 AddOpeningPositionForm split. AVD and build as

@@ -12,6 +12,7 @@ import { colors, interaction } from "@/src/theme";
 import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition } from "@/src/types";
 
 jest.mock("@/src/hooks", () => ({
+  ...jest.requireActual("@/src/hooks"),
   useReducedMotionPreference: jest.fn(() => false),
 }));
 
@@ -1885,12 +1886,17 @@ describe("ProgressScreen", () => {
 
     expect(queryByTestId("portfolio-custom-range-end-year-2016")).toBeNull();
     expect(getByTestId("portfolio-custom-range-end-year-2026")).toBeTruthy();
+    // Three separate back presses, far enough apart not to be one press delivered twice.
+    const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
     fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(getByTestId("portfolio-custom-range-end-2026-02")).toBeTruthy();
+    clock.mockReturnValue(2_000);
     fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(getByTestId("portfolio-custom-range-panel")).toBeTruthy();
+    clock.mockReturnValue(3_000);
     fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
+    clock.mockRestore();
 
     const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
