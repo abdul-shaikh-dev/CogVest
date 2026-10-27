@@ -465,3 +465,5 @@ export function useTransactionImport({
     today: currentDate,
   };
 }
+
+export type TransactionImportController = ReturnType<typeof useTransactionImport>;
