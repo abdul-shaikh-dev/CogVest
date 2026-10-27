@@ -4,6 +4,22 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-28: transaction import screen split (#561), smoke 12 passed plus 4 import flows
+
+- Commit: main plus the #561 TransactionImportScreen split. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, debug build
+  with the split JS served by Metro, warmed by one app launch first.
+- First attempt, 2026-10-26: 4 passed, 8 failed. cash failed when the Maestro
+  driver's `inputText` call hit its 120s deadline. The driver then stayed
+  unreachable (gRPC UNAVAILABLE) and the emulator's shared storage crashed
+  ("Transport endpoint is not connected" on `/sdcard`), so every later flow
+  and an immediate rerun failed at launch or file setup. Environmental. The
+  emulator was restarted.
+- Smoke tier after the restart, 2026-10-27: 12 passed, 0 failed, 12m 53s.
+- Import flows, 2026-10-28, on a fresh emulator boot: 4 passed, 0 failed,
+  8m 33s. transactions-csv-import 1m 30s, zerodha-tradebook-import 2m 46s,
+  cas-native-import 2m 36s, cas-native-fresh-portfolio 1m 41s.
+
 ## 2026-10-25: Add Holding hook split (#561), smoke 12 passed plus 11 Add Holding flows
 
 - Commit: main plus the #561 useAddOpeningPosition split. AVD and build as

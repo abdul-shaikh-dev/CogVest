@@ -220,7 +220,7 @@ describe("TransactionImportScreen", () => {
     await waitFor(() => expect(screen.getByTestId("transaction-import-identity-conflicts")).toBeTruthy());
     expect(screen.queryByTestId("transaction-import-accept-matches")).toBeNull();
     expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
-    expect(screen.getByTestId("transaction-import-row-accounting").props.children.join("")).toContain("2 parsed rows");
+    expect(screen.getByTestId("transaction-import-row-accounting")).toHaveTextContent(/2 parsed rows/u);
     expect(store.getState().trades).toHaveLength(0);
   });
 
