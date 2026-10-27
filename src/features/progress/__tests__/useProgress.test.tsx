@@ -13,7 +13,8 @@ import type {
 
 import { useCash } from "../../cash/useCash";
 import { useMonthEndSnapshotAutomation } from "../useMonthEndSnapshotAutomation";
-import { automationWarningMessage, needsHistoricalPrice, useProgress } from "../useProgress";
+import { automationWarningMessage, needsHistoricalPrice } from "../progressSnapshotModel";
+import { useProgress } from "../useProgress";
 
 it("requests month-end prices for split residual units but not unresolved quantities", () => {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
