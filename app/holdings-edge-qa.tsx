@@ -36,7 +36,7 @@ function EnabledHoldingsEdgeQa({ scenario, minimal }: { scenario?: string; minim
 
 export default function HoldingsEdgeQaRoute() {
   const { token, scenario, mode } = useLocalSearchParams<{ token?: string; scenario?: string; mode?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) {
+  if (!canUseVisualQaHarness({ token })) {
     return <AppText testID="holdings-edge-qa-blocked">Holdings QA is unavailable.</AppText>;
   }
   return <EnabledHoldingsEdgeQa key={`${scenario}-${mode}`} scenario={scenario} minimal={mode === "minimal"} />;

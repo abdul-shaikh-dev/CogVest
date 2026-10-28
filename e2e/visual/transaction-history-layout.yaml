@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Paired with transaction-correction-setup; do not clear or reseed data.
 - launchApp:
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 30000
 - assertVisible: "Mask values"
-- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///holding-transactions?assetId=visual-qa-asset-hdfc"
 - assertVisible: "1 record"
 - assertVisible: "Purchase"
 - assertVisible: "₹205.00"
@@ -41,21 +41,21 @@ appId: com.abdulshaikh.cogvest
 - tapOn: "Cancel selection"
 - assertVisible: "1 record"
 - assertVisible: "₹205.00"
-- openLink: "cogvest:///holding-transactions"
+- openLink: "${SCHEME}:///holding-transactions"
 - assertVisible: "All holdings"
 - assertVisible: "HDFC Bank"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/transaction-history/${SHOT}/all
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - tapOn:
     id: dashboard-mask-toggle
-- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///holding-transactions?assetId=visual-qa-asset-hdfc"
 - assertNotVisible: ".*₹[0-9].*"
 - assertNotVisible: ".*2 units.*"
 - assertVisible: "values masked"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/transaction-history/${SHOT}/masked
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - tapOn:
     id: dashboard-mask-toggle
 - assertVisible: "Mask values"

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 120000
 # The system picker remembers its last folder and view; start it fresh.
 - clearState: com.google.android.documentsui
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace with visual QA data"
     timeout: 10000
@@ -17,7 +17,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "visual-qa-seed-screen"
     timeout: 10000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - extendedWaitUntil:
     visible:
       id: "transaction-import-screen"
@@ -114,7 +114,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "holdings-screen"
     timeout: 10000
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "e2e-evidence-screen"

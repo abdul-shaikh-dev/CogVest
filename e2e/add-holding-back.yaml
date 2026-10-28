@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - tapOn:
     id: asset-lookup-input
 - inputText: hdfc
@@ -80,12 +80,12 @@ appId: com.abdulshaikh.cogvest
 - back
 - assertVisible:
     id: dashboard-screen
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Opening position count: 1"
 - assertVisible: "Values: invested ₹3,000.00 | current ₹3,356.50 | quantity 2"
 
 # Explicit discard must not create a second financial record.
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - tapOn:
     id: asset-lookup-input
 - inputText: unfinished

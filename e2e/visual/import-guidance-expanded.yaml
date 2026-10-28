@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run with SHOT=default or narrow. In-app guidance only, not provider browsing.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 60000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - assertVisible:
     id: transaction-import-screen
 - tapOn:
@@ -30,8 +30,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "Add each annual file needed for your history. Tradebooks may omit external transfers and some corporate actions."
 - takeScreenshot: .expo/ux-guidance/${SHOT}-tradebook-bottom
-- openLink: "cogvest:///dashboard"
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///dashboard"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
 - scrollUntilVisible:
@@ -52,8 +52,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "Create the PDF password on the provider website. Enter it only when CogVest reads the downloaded PDF."
 - takeScreenshot: .expo/ux-guidance/${SHOT}-cas-bottom
-- openLink: "cogvest:///dashboard"
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///dashboard"
+- openLink: "${SCHEME}:///import-transactions"
 - scrollUntilVisible:
     element:
       id: transaction-import-source-cogvestCsvV1
@@ -68,7 +68,7 @@ appId: com.abdulshaikh.cogvest
     id: save-transaction-csv-template
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-guidance/${SHOT}-transaction-csv
-- openLink: "cogvest:///import-holdings"
+- openLink: "${SCHEME}:///import-holdings"
 - assertVisible: "Start with the CogVest template"
 - scrollUntilVisible:
     element:

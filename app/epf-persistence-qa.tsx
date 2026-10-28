@@ -94,6 +94,6 @@ function EnabledQa({ page }: { page?: string }) {
 
 export default function EpfPersistenceQaRoute() {
   const { token, page } = useLocalSearchParams<{ token?: string; page?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) return <AppText>EPF QA unavailable.</AppText>;
+  if (!canUseVisualQaHarness({ token })) return <AppText>EPF QA unavailable.</AppText>;
   return <EnabledQa key={page ?? "proof"} page={page} />;
 }

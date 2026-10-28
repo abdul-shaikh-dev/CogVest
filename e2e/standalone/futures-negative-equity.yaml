@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
 - evalScript: ${output.openingAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
 - evalScript: ${output.executionAt = new Date(Date.now() - 30 * 60 * 1000).toISOString()}
 - evalScript: ${output.valuationAt = new Date(Date.now() - 60 * 1000).toISOString()}
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-screen
 - tapOn:
@@ -202,7 +202,7 @@ appId: com.abdulshaikh.cogvest
     id: futures-save-valuation
 - assertNotVisible:
     id: futures-error
-- openLink: "cogvest:///"
+- openLink: "${SCHEME}:///"
 - assertVisible: "No spot prices needed"
 - assertVisible: "Allocation unavailable"
 - assertVisible: "Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet."

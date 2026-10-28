@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///scale-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///scale-qa?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: scale-qa-screen

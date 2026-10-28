@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow:
     when:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           id: holding-discard-exit
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - tapOn:
     id: toggle-manual-asset-entry
 - scrollUntilVisible:

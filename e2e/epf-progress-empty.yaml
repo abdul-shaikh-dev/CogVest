@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # An EPF-only portfolio has no monthly history yet, but it is not an empty
 # portfolio: Progress must point to the EPF account instead of portfolio setup.
@@ -13,7 +13,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "No portfolio history yet"
 - tapOn:
     id: tab-dashboard
-- openLink: "cogvest:///epf-account"
+- openLink: "${SCHEME}:///epf-account"
 - assertVisible: "Add EPF account"
 - tapOn:
     id: epf-nickname-input

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "add-holding-phase-asset"
@@ -92,10 +92,10 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: '(Portfolio history updated|Saved\. Portfolio history will refresh automatically)\.'
     timeout: 15000
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Quote: missing | missing"
 - assertVisible: "Values: invested ₹2,400.00 | current ₹2,600.00 | quantity 2"
-- openLink: "cogvest:///"
+- openLink: "${SCHEME}:///"
 - assertVisible:
     id: "dashboard-screen"
 - assertVisible: "₹2.6K"

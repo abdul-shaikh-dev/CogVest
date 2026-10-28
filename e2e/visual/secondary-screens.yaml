@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio, Standard Mode, unmasked. No financial writes.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holding-duration"
+- openLink: "${SCHEME}:///holding-duration"
 - assertVisible: "HDFC Bank"
 - assertVisible: "900 days recorded"
 - waitForAnimationToEnd
@@ -38,7 +38,7 @@ appId: com.abdulshaikh.cogvest
     id: duration-mask
 - tapOn:
     id: duration-back
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Conviction pattern"
 - assertVisible: "Not enough data yet"
 - waitForAnimationToEnd
@@ -75,29 +75,29 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: insight-done
-- openLink: "cogvest:///insight?kind=missing"
+- openLink: "${SCHEME}:///insight?kind=missing"
 - assertVisible: "Insight unavailable"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/secondary-screens/insight-unavailable-${SIZE}
 - tapOn: "Back to Dashboard"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-minimal
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - assertNotVisible:
     id: insight-evidence
 - waitForAnimationToEnd
 - takeScreenshot: .expo/secondary-screens/insight-minimal-${SIZE}
-- openLink: "cogvest:///holding-duration"
+- openLink: "${SCHEME}:///holding-duration"
 - assertVisible: "Optional analysis is paused"
 - assertNotVisible: "HDFC Bank"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/secondary-screens/duration-minimal-${SIZE}
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: "HDFC"
@@ -113,10 +113,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "15 Apr 2024"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/secondary-screens/retained-record-${SIZE}
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///recovery-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///recovery-qa?token=cogvest-local-visual-qa"
 - assertVisible:
     id: recovery-qa-blocked
-- openLink: "cogvest:///"
+- openLink: "${SCHEME}:///"
 - stopApp

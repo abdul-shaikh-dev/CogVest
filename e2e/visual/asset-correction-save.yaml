@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Add and remove one current-date synthetic holding; preserve the original portfolio.
 - launchApp:
@@ -7,9 +7,9 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///add-trade"
+- openLink: "${SCHEME}:///add-trade"
 - scrollUntilVisible:
     element:
       id: asset-input
@@ -50,9 +50,9 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: save-trade-button
 - assertVisible: "Holding saved."
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹49,800.00"
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - tapOn:
     id: manage-assets-search-input
 - inputText: "CORRECTIONQA"
@@ -77,7 +77,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - tapOn:
     id: manage-assets-search-input
 - inputText: "CORRECTIONQA"
@@ -110,12 +110,12 @@ appId: com.abdulshaikh.cogvest
     id: delete-asset-button
 - tapOn:
     id: confirm-delete-asset-button
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible: "5 assets"
 - assertNotVisible: ".*Correction QA Saved.*"
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - assertVisible:
     id: opening-correction-quantity-input
     text: "25"

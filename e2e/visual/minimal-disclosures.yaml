@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic audit portfolio. No data reset or record writes.
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-minimal
     direction: UP
 - tapOn:
     id: display-mode-minimal
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - extendedWaitUntil:
     visible:
       id: dashboard-performance-toggle
@@ -47,7 +47,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: ".*₹[0-9].*"
 - tapOn:
     id: progress-mask-toggle
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
       id: holding-row-visual-qa-asset-bitcoin
@@ -55,7 +55,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "Holding P&L %"
 - assertNotVisible: "Returns are since investment, not today."
 - takeScreenshot: .expo/minimal-disclosures/${SIZE}/holdings
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - extendedWaitUntil:
     visible:
       id: toggle-manual-asset-entry
@@ -65,12 +65,12 @@ appId: com.abdulshaikh.cogvest
     id: toggle-manual-asset-entry
 - assertVisible: "Asset name"
 - back
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-standard
     direction: UP
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"

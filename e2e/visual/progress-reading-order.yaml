@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,13 +6,13 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
 - waitForAnimationToEnd:

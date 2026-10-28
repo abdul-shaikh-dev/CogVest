@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -13,7 +13,7 @@ appId: com.abdulshaikh.cogvest
 # A fresh install has no history, so Progress shows its empty state and no
 # status card; the month-end review screen is opened directly.
 - assertVisible: "No portfolio history yet"
-- openLink: "cogvest:///review-snapshot"
+- openLink: "${SCHEME}:///review-snapshot"
 - assertVisible:
     id: "review-snapshot-screen"
 - scrollUntilVisible:

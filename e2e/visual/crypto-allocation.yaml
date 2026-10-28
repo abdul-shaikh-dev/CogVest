@@ -1,10 +1,10 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio only. No data clearing or existing wallet replacement.
 - runFlow: appearance-configure.yaml
 - evalScript: ${output.openingAt = new Date(Date.now() - 7200000).toISOString()}
 - evalScript: ${output.valuationAt = new Date(Date.now() - 60000).toISOString()}
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
 - tapOn:
     id: futures-opening-at-exact-toggle

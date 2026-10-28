@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Requires the task-owned setup wallet: 1000 opening, one buy at 100 with fee 1.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "999 USDT"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/futures-screens/normal/wallet
@@ -40,7 +40,7 @@ appId: com.abdulshaikh.cogvest
 - pressKey: BACK
 - tapOn:
     id: futures-discard
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:

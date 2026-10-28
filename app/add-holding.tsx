@@ -15,7 +15,6 @@ export default function AddHoldingScreen() {
     visualQaState?: string;
   }>();
   const canUseVisualQaState = canUseVisualQaHarness({
-    isDevelopment: __DEV__,
     token: params.token,
   });
   const visualQaState = canUseVisualQaState ? params.visualQaState : undefined;

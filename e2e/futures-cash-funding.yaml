@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -28,7 +28,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Futures source cash"
 - evalScript: ${output.openingAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}
 - evalScript: ${output.fundingAt = new Date(Date.now() - 30 * 60 * 1000).toISOString()}
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - tapOn:
     id: futures-opening-at-exact-toggle
 - scrollUntilVisible:
@@ -140,7 +140,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
     timeout: 60000
 - assertVisible: "100 USDT"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "Futures wallet funding"
 - assertVisible: "-₹9,000.00"
 - assertVisible: "₹1,000.00"

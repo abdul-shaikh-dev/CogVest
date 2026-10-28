@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Synthetic QA portfolio only; export-only, never restore/reset.
 # Requires Android Documents picker at Documents/CogVest-QA.
@@ -10,7 +10,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///backup?mode=export"
+- openLink: "${SCHEME}:///backup?mode=export"
 - tapOn:
     id: choose-backup-location
 - tapOn: USE THIS FOLDER

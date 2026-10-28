@@ -33,6 +33,7 @@
       "expo-router",
       "expo-font",
       "./plugins/withPrivateReleaseSigning",
+      "./plugins/withE2eBuildType",
       "./plugins/withPrivateDataBackupPolicy",
       "./plugins/withLeastPrivilegeAndroidPermissions",
       "./plugins/withBoundedDocumentRead",

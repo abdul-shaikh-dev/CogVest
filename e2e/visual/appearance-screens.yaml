@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic visual-QA portfolio. No financial records are changed.
 - runFlow:
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           id: close-monthly-history
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible: "Settings"
 - waitForAnimationToEnd
 - scrollUntilVisible:
@@ -25,16 +25,16 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holding-row-visual-qa-asset-bitcoin
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/holdings
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Portfolio value"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/dashboard
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible: "Monthly Progress"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/progress
@@ -43,30 +43,30 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/appearance-537/${SHOT}/monthly-history
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - takeScreenshot: .expo/appearance-537/${SHOT}/cash
-- openLink: "cogvest:///backup"
+- openLink: "${SCHEME}:///backup"
 - assertVisible:
     id: backup-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/backup
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertVisible: "Search asset"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/add-holding
 - back
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - assertVisible:
     id: transaction-import-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/import
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${SHOT}/futures
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 5"
 - assertVisible: "Opening position count: 4"
 - assertVisible: "Trade count: 0"

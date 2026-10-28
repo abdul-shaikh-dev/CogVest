@@ -4,6 +4,22 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-29: E2E build variant (#560), full tier 60 passed against the E2E APK, debug smoke 12 passed
+
+- Commit: main plus the #560 E2E build variant. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0.
+- Full tier against the E2E APK (`com.abdulshaikh.cogvest.e2e`, release-mode
+  JavaScript bundled in, built locally with `npm run android:e2e`), with Metro
+  stopped, the debug app also installed and no deviceidle allowlist: 60 passed,
+  0 failed, 70m 27s.
+- Smoke tier against a freshly built debug APK with Metro, through the same
+  `${APP_ID}`/`${SCHEME}` flows: 12 passed, 0 failed, 13m 22s.
+- Cold launch to `dashboard-screen`, three runs each: E2E build 2.30s, 2.35s,
+  2.48s; debug build with Metro already warm 10.95s, 11.63s, 11.63s.
+- After the review added `metro.config.js` (Metro cache keyed on the harness
+  flag), the E2E APK was rebuilt; its bundle contains the flag. Smoke tier
+  against it, Metro stopped: 12 passed, 0 failed, 13m 31s.
+
 ## 2026-10-28: Progress hook split (#561), smoke 12 passed plus 6 Progress flows
 
 - Commit: main plus the #561 useProgress split. AVD CogVest_UX_Proof, API 36,

@@ -1,8 +1,8 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
 - assertVisible: "No portfolio history yet"
-- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=gap&mode=${MODE}"
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=gap&mode=${MODE}"
 - runFlow:
     when:
       true: ${MODE == 'minimal'}

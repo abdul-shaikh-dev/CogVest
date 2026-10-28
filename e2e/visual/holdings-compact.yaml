@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio. MODE=standard|minimal, SIZE=normal|large.
 - launchApp:
@@ -7,10 +7,10 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holding-row-visual-qa-asset-bitcoin
 - takeScreenshot: .expo/holdings-compact/${SIZE}/${MODE}
@@ -43,8 +43,8 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/holdings-compact/${SIZE}/${MODE}-masked
 - tapOn:
     id: holdings-header-mask-toggle
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///holding-transactions"
+- openLink: "${SCHEME}:///holding-transactions"
 - assertVisible: "No transactions yet"
 - stopApp

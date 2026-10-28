@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: progress-summary-month
 - tapOn:

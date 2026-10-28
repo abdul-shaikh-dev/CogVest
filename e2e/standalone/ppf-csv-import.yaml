@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Disposable emulator only. Provision fixtures/ppf-import.csv in Downloads first.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - tapOn:
     id: ppf-nickname-input
 - eraseText
@@ -122,7 +122,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn: "CSV PPF"
 - assertVisible: "₹14,350.00"
 - scrollUntilVisible:
@@ -161,7 +161,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: ppf-import-save
 - assertVisible: "₹14,350.00"
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
 - scrollUntilVisible:

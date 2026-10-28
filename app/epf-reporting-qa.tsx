@@ -17,6 +17,6 @@ function Enabled({ minimal, progress }: { minimal: boolean; progress: boolean })
 }
 export default function EpfReportingQa() {
   const { token, mode } = useLocalSearchParams<{ token?: string; mode?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) return <AppText>EPF QA unavailable.</AppText>;
+  if (!canUseVisualQaHarness({ token })) return <AppText>EPF QA unavailable.</AppText>;
   return <Enabled key={mode} minimal={mode === "minimal"} progress={mode === "progress"} />;
 }

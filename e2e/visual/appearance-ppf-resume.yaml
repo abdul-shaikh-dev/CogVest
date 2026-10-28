@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 env:
   EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
 ---
@@ -40,5 +40,5 @@ env:
 - takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-delete
 - tapOn:
     id: confirm-delete-ppf-account
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "${EXPECTED_CASH}"

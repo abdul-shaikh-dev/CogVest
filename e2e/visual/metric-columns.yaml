@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio; no reset or saved edits. SIZE=normal|large.
 - launchApp:
@@ -7,10 +7,10 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 60000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-minimal
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertNotVisible: "Holdings P&L %"
 - tapOn:
     id: dashboard-performance-toggle
@@ -23,16 +23,16 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/metric-columns/${SIZE}/dashboard-masked
 - tapOn:
     id: dashboard-mask-toggle
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertNotVisible: "Holding P&L %"
 - takeScreenshot: .expo/metric-columns/${SIZE}/holdings-minimal
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Holdings P&L %"
 - takeScreenshot: .expo/metric-columns/${SIZE}/dashboard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "Holding P&L"
 - assertVisible: "Holding P&L %"
 - takeScreenshot: .expo/metric-columns/${SIZE}/holdings
@@ -47,7 +47,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹11,00,000.00"
 - takeScreenshot: .expo/metric-columns/${SIZE}/holding-detail
 - back
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: portfolio-trend-selected-panel
@@ -58,8 +58,8 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: progress-difference-percent
 - takeScreenshot: .expo/metric-columns/${SIZE}/progress
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///holding-transactions"
+- openLink: "${SCHEME}:///holding-transactions"
 - assertVisible: "No transactions yet"
 - stopApp

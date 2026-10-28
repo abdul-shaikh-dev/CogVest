@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run immediately after add-holding-discovery in the same synthetic QA session.
 - tapOn:
@@ -13,7 +13,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn: Clear recent searches
 - assertNotVisible:
     id: toggle-recent-asset-searches
-- openLink: "cogvest:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
 - tapOn:
     id: asset-lookup-input
 - eraseText

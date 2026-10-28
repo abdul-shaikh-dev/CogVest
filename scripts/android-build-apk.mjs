@@ -3,6 +3,9 @@ import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const isRelease = process.argv.includes("--release");
+const isE2e = process.argv.includes("--e2e");
+// Inlined only into the e2e bundle; see docs/testing/e2e-build-variant.md.
+const harnessFlag = "EXPO_PUBLIC_COGVEST_QA_HARNESS";
 const architectureArg = process.argv.find((argument) =>
   argument.startsWith("--architecture="),
 );
@@ -17,6 +20,16 @@ if (
   console.error("FAIL Unsupported Android architecture list.");
   process.exit(1);
 }
+if (isRelease && isE2e) {
+  console.error("FAIL Choose either --release or --e2e.");
+  process.exit(1);
+}
+
+if (!isE2e && process.env[harnessFlag] !== undefined) {
+  console.error(`FAIL ${harnessFlag} is set. Unset it, or use npm run android:e2e.`);
+  process.exit(1);
+}
+
 const rootDir = process.cwd();
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const gradleCommand = path.resolve(
@@ -25,7 +38,7 @@ const gradleCommand = path.resolve(
   process.platform === "win32" ? "gradlew.bat" : "gradlew",
 );
 
-function run(command, args) {
+function run(command, args, env = process.env) {
   const executable =
     process.platform === "win32"
       ? (process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe")
@@ -47,7 +60,7 @@ function run(command, args) {
       : args;
   const result = spawnSync(executable, commandArgs, {
     cwd: rootDir,
-    env: process.env,
+    env,
     stdio: "inherit",
   });
 
@@ -64,12 +77,11 @@ function run(command, args) {
 console.log("Applying durable Expo Android configuration...");
 run(npxCommand, ["expo", "prebuild", "--platform", "android", "--no-install"]);
 
-const gradleTask = isRelease ? "assembleRelease" : "assembleDebug";
-const outputPath = isRelease
-  ? "android/app/build/outputs/apk/release/app-release.apk"
-  : "android/app/build/outputs/apk/debug/app-debug.apk";
+const variant = isRelease ? "release" : isE2e ? "e2e" : "debug";
+const gradleTask = `assemble${variant[0].toUpperCase()}${variant.slice(1)}`;
+const outputPath = `android/app/build/outputs/apk/${variant}/app-${variant}.apk`;
 rmSync(path.resolve(rootDir, outputPath), { force: true });
-console.log(`Building CogVest Android ${isRelease ? "release" : "debug"} APK...`);
+console.log(`Building CogVest Android ${variant} APK...`);
 run(gradleCommand, [
   "-p",
   "android",
@@ -77,7 +89,7 @@ run(gradleCommand, [
   ...(architectures
     ? [`-PreactNativeArchitectures=${architectures}`]
     : []),
-]);
+], isE2e ? { ...process.env, [harnessFlag]: "cogvest-qa-harness-on" } : process.env);
 
 if (!existsSync(path.resolve(rootDir, outputPath))) {
   console.error(`FAIL Gradle completed without creating ${outputPath}`);

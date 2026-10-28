@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -28,7 +28,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹1,000.00"
 # Add Holding records an opening position (no Cash effect); Record a purchase
 # is the Cash-funded buy, so only the 2 x 100 purchase reduces Cash.
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - tapOn:
     id: "toggle-manual-asset-entry"
 - tapOn:
@@ -71,9 +71,9 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹1,000.00"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-add-button
 - tapOn:

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic visual-QA portfolio, restored through the backup UI.
 # SHOT identifies the display configuration. This flow does not modify records.
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible:
     id: dashboard-top-metrics
 - assertVisible: "Holdings P&L"
@@ -21,7 +21,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "Allocation"
 - takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/allocation
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - assertVisible: "Monthly History"
@@ -42,7 +42,7 @@ appId: com.abdulshaikh.cogvest
     id: snapshot-month-2026-04
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: dashboard-mask-toggle
@@ -50,7 +50,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: dashboard-mask-toggle
 - assertNotVisible: ".*₹[0-9].*"
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - assertVisible:
@@ -61,7 +61,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/dashboard-history-enhancement/${SHOT}/history-masked
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: dashboard-mask-toggle

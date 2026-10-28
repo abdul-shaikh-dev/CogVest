@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - stopApp
 - launchApp:
@@ -7,10 +7,10 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - tapOn: "Standard mode"
 - tapOn: "Show values"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=dashboard"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa&page=dashboard"
 - scrollUntilVisible:
     element:
       id: dashboard-monthly-context
@@ -19,7 +19,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "Record income"
 - assertNotVisible: "Investment rate"
 - takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-standard-activity"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
 - scrollUntilVisible:
     element:
       id: snapshot-investment-input
@@ -28,10 +28,10 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "Salary"
 - assertNotVisible: "Monthly expense"
 - takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-standard-snapshot"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - tapOn: "Minimal mode"
 - tapOn: "Mask values"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
 - assertNotVisible:
     id: snapshot-portfolio-input
 - takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-minimal-masked-snapshot-masked"
@@ -43,6 +43,6 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
     centerElement: true
 - takeScreenshot: "docs/reviews/artifacts/2026-09-30-investing-cash/${SIZE}-minimal-masked-snapshot"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - tapOn: "Standard mode"
 - tapOn: "Show values"

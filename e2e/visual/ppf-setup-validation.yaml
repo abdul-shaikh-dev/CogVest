@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Dedicated synthetic test. Resets emulator data, not a user's portfolio.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - tapOn:
     id: ppf-provider-input
 - inputText: "India Post"
@@ -87,7 +87,7 @@ appId: com.abdulshaikh.cogvest
     id: save-ppf-account
 - assertVisible:
     id: ppf-confirmed-balance-card
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "PPF account count: 1"
 - scrollUntilVisible:
     element:

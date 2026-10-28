@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp
 - extendedWaitUntil:
@@ -21,7 +21,7 @@ appId: com.abdulshaikh.cogvest
     id: "tab-settings"
 - assertVisible:
     id: "settings-screen"
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertVisible:
     id: "add-holding-screen"
 - assertVisible:

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # STATE: empty, populated, masked. Disposable emulator; synthetic data only.
 - launchApp:
@@ -11,11 +11,11 @@ appId: com.abdulshaikh.cogvest
     when:
       true: ${STATE != "empty"}
     commands:
-      - openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+      - openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
       - assertVisible: "Replace local developer data?"
       - tapOn: "Replace with visual QA data"
       - assertVisible: "Visual QA portfolio seeded."
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
 - waitForAnimationToEnd

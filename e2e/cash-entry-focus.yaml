@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -145,6 +145,6 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "-₹250.00"
 - takeScreenshot: .expo/ux12-cash-ledger
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Cash entry count: 2"
 - takeScreenshot: .expo/ux-enlarged/cash-saved-entry-count

@@ -37,6 +37,6 @@ function EnabledHistoryQa() {
 
 export default function AssetHistoryQaRoute() {
   const { token } = useLocalSearchParams<{ token?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) return <AppText testID="asset-history-qa-blocked">History QA is unavailable.</AppText>;
+  if (!canUseVisualQaHarness({ token })) return <AppText testID="asset-history-qa-blocked">History QA is unavailable.</AppText>;
   return <EnabledHistoryQa />;
 }

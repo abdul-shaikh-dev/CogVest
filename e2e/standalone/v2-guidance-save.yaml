@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Opt-in standalone synthetic portfolio. Adds Guidance Holding (2 units, INR 200 invested).
 # Does not reset data. Run once on the prepared V2 closeout portfolio.
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 30000
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertNotVisible:
     id: "nudge-metadata"
 - tapOn:
@@ -88,7 +88,7 @@ appId: com.abdulshaikh.cogvest
     id: "save-holding-button"
 - assertVisible:
     id: "holding-save-complete"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: "Guidance Holding"
@@ -103,27 +103,27 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: "nudge-minimal"
 - tapOn:
     id: "display-mode-minimal"
 - takeScreenshot: .expo/v2-release-guidance-minimal
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - assertNotVisible:
     id: "nudge-insights"
 - tapOn: "Done"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-standard"
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Conviction pattern"
 - assertNotVisible:
     id: "nudge-insights"
 - tapOn:
     id: "insight-back"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: "Guidance Holding"

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Disposable synthetic emulator. SHOT identifies the display configuration.
 - launchApp:
@@ -18,7 +18,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Add holdings"
 - assertVisible: "Import transaction history"
 - tapOn: "Close"
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
     timeout: 15000
@@ -26,7 +26,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 15000
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible:
     id: dashboard-portfolio-hero
 - assertNotVisible: "Your portfolio starts here"
@@ -36,7 +36,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertNotVisible: "Futures equity"
 - takeScreenshot: .expo/audit-hierarchy/${SHOT}/populated-dashboard
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible:
     id: cash-screen
 - scrollUntilVisible:
@@ -44,7 +44,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertNotVisible: "Tap to review or correct"
 - takeScreenshot: .expo/audit-hierarchy/${SHOT}/cash
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - tapOn:
@@ -56,13 +56,13 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/audit-hierarchy/${SHOT}/month-detail
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: value-mask-toggle
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹••••"
 - takeScreenshot: .expo/audit-hierarchy/${SHOT}/masked-cash
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - tapOn:

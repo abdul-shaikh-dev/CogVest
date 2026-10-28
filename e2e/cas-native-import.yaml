@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Fresh debug APK + Metro; push e2e/fixtures/cas-native-synthetic.pdf to Downloads.
 # Uses only invented data. The QA seed route is development-only.
@@ -8,12 +8,12 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
 - scrollUntilVisible:
@@ -107,7 +107,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 120000
 - runFlow: helpers/cas-import-evidence.yaml
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
 - scrollUntilVisible:

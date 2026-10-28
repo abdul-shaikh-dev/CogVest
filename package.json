@@ -9,7 +9,9 @@
     "android:apk": "node scripts/android-build-apk.mjs",
     "android:apk:emulator": "node scripts/android-build-apk.mjs --architecture=x86_64",
     "android:apk:release": "node scripts/android-build-apk.mjs --release",
+    "android:e2e": "node scripts/android-build-apk.mjs --e2e --architecture=x86_64",
     "doctor": "expo-doctor",
+    "release:check-harness": "node scripts/check-release-harness.mjs",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",
     "android:doctor": "node scripts/android-doctor.mjs",
@@ -20,7 +22,8 @@
     "maestro:test": "node scripts/maestro-run.mjs",
     "maestro:smoke": "node scripts/maestro-run.mjs --smoke",
     "maestro:lint": "node scripts/maestro-lint.mjs",
-    "visual-qa:android": "node scripts/android-visual-qa.mjs"
+    "visual-qa:android": "node scripts/android-visual-qa.mjs",
+    "ios": "expo run:ios"
   },
   "jest": {
     "preset": "jest-expo",
@@ -37,6 +40,7 @@
     "@react-native-community/datetimepicker": "8.4.4",
     "decimal.js-light": "^2.5.1",
     "expo": "~54.0.37",
+    "expo-application": "~7.0.8",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",
     "expo-file-system": "~19.0.24",

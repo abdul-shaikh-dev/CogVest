@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertVisible:
     id: "add-holding-phase-asset"
 - tapOn:
@@ -56,7 +56,7 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "holdings-screen"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: "settings-screen"
 - tapOn:
@@ -64,7 +64,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "value-mask-toggle"
     checked: true
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "Masking Test Asset"
 - assertVisible: "₹••••"
 - assertVisible: "+11.11%"
@@ -80,11 +80,11 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: "value-mask-toggle"
     checked: true
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "Masking Test Asset"
 - assertVisible: "₹••••"
 - assertVisible: "+11.11%"

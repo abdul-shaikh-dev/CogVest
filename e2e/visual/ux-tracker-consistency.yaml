@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio. No financial records are saved or deleted.
 - launchApp:
@@ -11,23 +11,23 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux-final/${SIZE}/dashboard
 - tapOn:
     id: dashboard-mask-toggle
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertNotVisible: ".*₹[0-9].*"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/holdings-masked
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertNotVisible: ".*₹[0-9].*"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertNotVisible: "₹50,000.00"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: value-mask-toggle
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/settings
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/holdings
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible: "5 assets"
 - assertVisible: "Search assets"
 - waitForAnimationToEnd
@@ -61,11 +61,11 @@ appId: com.abdulshaikh.cogvest
     id: manage-assets-back
 - assertVisible:
     id: holdings-screen
-- openLink: "cogvest:///holding-transactions"
+- openLink: "${SCHEME}:///holding-transactions"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/transactions
 - back
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/cash
@@ -125,7 +125,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: close-cash-entry-button
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       text: "Create Futures wallet"
@@ -134,10 +134,10 @@ appId: com.abdulshaikh.cogvest
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/futures-empty
 - back
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-final/${SIZE}/progress
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible: "5 assets"
 - stopApp
 - launchApp:
@@ -146,9 +146,9 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - assertVisible:
     id: opening-correction-quantity-input
     text: "25"

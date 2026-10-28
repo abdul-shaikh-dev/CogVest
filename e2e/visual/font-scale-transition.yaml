@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Synthetic stored history: May 10K, July 13K, August 12K, invested 10K.
 # Run prepare at 1.0, change Android font_scale externally with the app open,

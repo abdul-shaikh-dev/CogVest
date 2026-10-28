@@ -159,7 +159,7 @@ function QaMatrix({ options, store }: { options: MatrixOptions; store: ReturnTyp
 
 export default function EpfAccountsQaRoute() {
   const params = useLocalSearchParams<{ token?: string; page?: string; appearance?: string; mode?: string; masked?: string; screen?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token: params.token })) return <AppText>EPF QA unavailable.</AppText>;
+  if (!canUseVisualQaHarness({ token: params.token })) return <AppText>EPF QA unavailable.</AppText>;
   const matrix: MatrixOptions = {
     appearance: params.appearance === "light" ? "light" : "dark",
     mode: params.mode === "minimal" ? "minimal" : "standard",

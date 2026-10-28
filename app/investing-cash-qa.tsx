@@ -77,6 +77,6 @@ function EnabledQa({ page }: { page?: string }) {
 
 export default function InvestingCashQa() {
   const params = useLocalSearchParams<{ token?: string; page?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token: params.token })) return <ScreenContainer><AppText>Unavailable</AppText></ScreenContainer>;
+  if (!canUseVisualQaHarness({ token: params.token })) return <ScreenContainer><AppText>Unavailable</AppText></ScreenContainer>;
   return <EnabledQa key={params.page ?? "config"} page={params.page} />;
 }

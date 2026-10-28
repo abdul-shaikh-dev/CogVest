@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run after e2e/ppf-account.yaml, which leaves its synthetic account open.
 - launchApp:

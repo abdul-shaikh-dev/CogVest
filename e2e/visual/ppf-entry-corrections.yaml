@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing temporary UX PPF Review account: baseline INR 100000 on 2026-10-01.
 # Does not clear or seed the portfolio. Leaves the account empty after entry checks.
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
@@ -72,7 +72,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
@@ -92,6 +92,6 @@ appId: com.abdulshaikh.cogvest
     id: confirm-delete-ppf-entry
 - assertVisible: "₹1,00,000.00"
 - assertVisible: "No ledger entries yet"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - stopApp

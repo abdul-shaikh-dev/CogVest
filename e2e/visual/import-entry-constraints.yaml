@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # No documents selected; password text is synthetic and discarded on leaving.
 - launchApp:
@@ -7,14 +7,14 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-${MODE}
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - scrollUntilVisible:
     element:
       text: ".*365 days.*"

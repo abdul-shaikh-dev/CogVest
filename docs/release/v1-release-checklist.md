@@ -15,6 +15,9 @@
 
 ## Release-Candidate Gate
 
+- [ ] `npm run release:check-harness` passes in the release build's shell
+  before any local release build, so the production bundle has the QA harness
+  flag disabled.
 - [ ] Production AAB builds successfully.
 - [ ] EAS production build URL recorded.
 - [ ] Play Console internal testing upload ready/manual.

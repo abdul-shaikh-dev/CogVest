@@ -1,7 +1,7 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing visual QA portfolio: INR 50,000 cash and no Futures wallet.
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
 - tapOn:
     id: futures-save-account
@@ -53,9 +53,9 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: futures-save-cash-funding
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b941,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-delete-account
@@ -66,9 +66,9 @@ appId: com.abdulshaikh.cogvest
     id: futures-confirm-delete
 - assertVisible:
     id: futures-error
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b941,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: "delete-futures-.*"
@@ -77,9 +77,9 @@ appId: com.abdulshaikh.cogvest
     id: "delete-futures-.*"
 - tapOn:
     id: futures-cancel-delete
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b941,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: "delete-futures-.*"
@@ -88,9 +88,9 @@ appId: com.abdulshaikh.cogvest
     id: "delete-futures-.*"
 - tapOn:
     id: futures-confirm-delete
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b950,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-delete-account
@@ -99,6 +99,6 @@ appId: com.abdulshaikh.cogvest
     id: futures-delete-account
 - tapOn:
     id: futures-confirm-delete
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
-- openLink: "cogvest:///"
+- openLink: "${SCHEME}:///"

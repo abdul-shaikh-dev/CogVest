@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run after populated Progress; preserve the seeded session.
 - launchApp:

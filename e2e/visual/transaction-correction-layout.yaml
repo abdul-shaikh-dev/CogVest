@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run after setup. Keep the synthetic purchase unchanged until cleanup.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///holding-transactions?assetId=visual-qa-asset-hdfc"
 - tapOn:
     id: "review-trade-.*"
 - assertVisible:

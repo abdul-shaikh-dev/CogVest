@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Continue after font-scale-draft's return to 1.0. Use only a disposable fixture.
 - tapOn:

@@ -11,6 +11,8 @@ import type {
   Quote,
 } from "@/src/types";
 
+import { isQaHarnessEnabled } from "./qaHarness";
+
 export const visualQaSeedToken = "cogvest-local-visual-qa";
 let visualQaSessionActive = false;
 
@@ -19,13 +21,13 @@ export function isVisualQaSessionActive() {
 }
 
 export function canUseVisualQaHarness({
-  isDevelopment,
+  enabled = isQaHarnessEnabled(),
   token,
 }: {
-  isDevelopment: boolean;
+  enabled?: boolean;
   token?: string;
 }) {
-  return isDevelopment && token === visualQaSeedToken;
+  return enabled && token === visualQaSeedToken;
 }
 
 export const visualQaAssets: Asset[] = [

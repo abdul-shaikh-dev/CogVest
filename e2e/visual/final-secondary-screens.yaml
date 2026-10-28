@@ -1,9 +1,9 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run after final-primary-tabs, preserving the synthetic seeded session.
 - launchApp:
     stopApp: false
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - scrollUntilVisible:
     element:
       id: holding-row-visual-qa-asset-hdfc
@@ -15,46 +15,46 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux-final/${SHOT}/holding-detail
 - tapOn:
     id: holding-detail-back
-- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///holding-transactions?assetId=visual-qa-asset-hdfc"
 - assertVisible:
     id: trade-history-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/holding-records
-- openLink: "cogvest:///holding-duration"
+- openLink: "${SCHEME}:///holding-duration"
 - assertVisible:
     id: holding-duration-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/holding-history
-- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///asset?assetId=visual-qa-asset-hdfc"
 - assertVisible:
     id: review-asset-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/asset-correction
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible:
     id: manage-assets-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/manage-assets
-- openLink: "cogvest:///backup"
+- openLink: "${SCHEME}:///backup"
 - assertVisible: "This backup contains sensitive financial information and is not encrypted."
 - takeScreenshot: .expo/ux-final/${SHOT}/backup
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible:
     id: insight-detail-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/insight
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertVisible: "1 of 4"
 - takeScreenshot: .expo/ux-final/${SHOT}/add-holding
-- openLink: "cogvest:///holdings"
-- openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///holdings"
+- openLink: "${SCHEME}:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
 - assertVisible:
     id: add-holding-phase-review
 - takeScreenshot: .expo/ux-final/${SHOT}/holding-review
-- openLink: "cogvest:///quick-portfolio-setup"
+- openLink: "${SCHEME}:///quick-portfolio-setup"
 - assertVisible:
     id: quick-setup-source-choice
 - takeScreenshot: .expo/ux-final/${SHOT}/quick-setup
-- openLink: "cogvest:///import-holdings"
+- openLink: "${SCHEME}:///import-holdings"
 - assertVisible:
     id: holding-import-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/holdings-import
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-zerodhaTradebookEqV1
 - takeScreenshot: .expo/ux-final/${SHOT}/tradebook-source
@@ -88,11 +88,11 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: transaction-import-source-cogvestCsvV1
 - takeScreenshot: .expo/ux-final/${SHOT}/transaction-csv-source
-- openLink: "cogvest:///import-ppf"
+- openLink: "${SCHEME}:///import-ppf"
 - assertVisible:
     id: ppf-import-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/ppf-import-missing-account
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - assertVisible: "Monthly History"

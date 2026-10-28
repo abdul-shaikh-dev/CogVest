@@ -27,7 +27,7 @@ function RecoveryFixture({ preserved }: { preserved: boolean }) {
 
 export default function RecoveryQaRoute() {
   const { token, preserved } = useLocalSearchParams<{ token?: string; preserved?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) {
+  if (!canUseVisualQaHarness({ token })) {
     return <AppText testID="recovery-qa-blocked">Recovery QA is unavailable.</AppText>;
   }
   return (

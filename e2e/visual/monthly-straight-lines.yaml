@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic audit portfolio; no reset, seed or portfolio writes.
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-standard
     direction: UP
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - extendedWaitUntil:
     visible:
       id: progress-screen
@@ -42,14 +42,14 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
     centerElement: true
 - takeScreenshot: .expo/monthly-straight-lines/${SIZE}/standard-assets
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-minimal
     direction: UP
 - tapOn:
     id: display-mode-minimal
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: progress-mask-toggle
@@ -70,12 +70,12 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: ".*₹[0-9].*"
 - tapOn:
     id: progress-mask-toggle
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-standard
     direction: UP
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"

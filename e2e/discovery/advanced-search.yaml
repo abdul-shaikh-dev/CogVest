@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Opt-in, isolated memory fixture. Never clears installed app data.
 - stopApp
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 30000
-- openLink: "cogvest:///asset-search-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///asset-search-qa?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "asset-search-qa-screen"

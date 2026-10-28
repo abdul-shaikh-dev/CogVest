@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: progress-mask-toggle
@@ -17,14 +17,14 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "₹19.87L"
 - assertNotVisible: "₹17.21L"
 - takeScreenshot: .expo/issue400-masked-chart
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-minimal
     direction: DOWN
 - tapOn:
     id: display-mode-minimal
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: progress-mask-toggle

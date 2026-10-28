@@ -9,22 +9,22 @@ import {
 } from "@/src/testing/visualQaSeed";
 
 describe("visual QA harness access", () => {
-  it("requires both a development build and the local token", () => {
+  it("requires an enabled harness and the local token", () => {
     expect(
       canUseVisualQaHarness({
-        isDevelopment: true,
+        enabled: true,
         token: visualQaSeedToken,
       }),
     ).toBe(true);
     expect(
-      canUseVisualQaHarness({ isDevelopment: true, token: "wrong" }),
+      canUseVisualQaHarness({ enabled: true, token: "wrong" }),
     ).toBe(false);
   });
 
-  it("cannot be enabled in a release build with the known token", () => {
+  it("stays closed when the harness is disabled, even with the known token", () => {
     expect(
       canUseVisualQaHarness({
-        isDevelopment: false,
+        enabled: false,
         token: visualQaSeedToken,
       }),
     ).toBe(false);

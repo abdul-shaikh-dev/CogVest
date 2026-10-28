@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Preserves the existing synthetic portfolio and all stored months.
 - launchApp:
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 30000
 - takeScreenshot: .expo/ux504/${SIZE}/dashboard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holding-row-visual-qa-asset-bitcoin
 - takeScreenshot: .expo/ux504/${SIZE}/holding-detail
@@ -49,7 +49,7 @@ appId: com.abdulshaikh.cogvest
     id: holdings-open-futures
 - assertVisible: "Create futures wallet"
 - back
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertVisible: "Search asset"
 - takeScreenshot: .expo/ux504/${SIZE}/add-holding
 - tapOn:
@@ -59,7 +59,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux504/${SIZE}/add-keyboard
 - hideKeyboard
 - back
-- openLink: "cogvest:///record-purchase"
+- openLink: "${SCHEME}:///record-purchase"
 - assertVisible: "Search asset"
 - assertVisible: "Saved assets"
 - takeScreenshot: .expo/ux504/${SIZE}/purchase
@@ -70,7 +70,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/ux504/${SIZE}/purchase-keyboard
 - hideKeyboard
 - back
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-summary-month
 - takeScreenshot: .expo/ux504/${SIZE}/progress
@@ -108,8 +108,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "Apr 2026.*-3.46% versus invested.*"
 - takeScreenshot: .expo/ux504/${SIZE}/april-comparison
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b950,000.00"
-- openLink: "cogvest:///holding-transactions"
+- openLink: "${SCHEME}:///holding-transactions"
 - assertVisible: "No transactions yet"
 - stopApp

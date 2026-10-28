@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -12,13 +12,13 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           point: "94%,93%"
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "4 market positions"
 - assertVisible: "Value order.*Weight excludes cash and PPF"
 - assertVisible:
@@ -34,13 +34,13 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "₹13.9L"
 - assertVisible: "+26.40%"
 - takeScreenshot: .expo/issue398-four-holdings-masked
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&holdings=30"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa&holdings=30"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "30 market positions"
 - takeScreenshot: .expo/issue398-thirty-holdings
 - tapOn:

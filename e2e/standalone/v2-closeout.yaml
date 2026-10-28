@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Opt-in: existing standard visual-QA portfolio, prepared before release install.
 # No seed/reset, new financial records, or development evidence routes.
@@ -8,10 +8,10 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 60000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible:
     id: visual-qa-seed-blocked
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: "HDFC"
@@ -44,7 +44,7 @@ appId: com.abdulshaikh.cogvest
     id: duration-mask
 - tapOn:
     id: duration-back
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: open-insight-conviction
@@ -83,17 +83,17 @@ appId: com.abdulshaikh.cogvest
     id: insight-mask-toggle
 - tapOn:
     id: insight-back
-- openLink: "cogvest:///insight?kind=frequency"
+- openLink: "${SCHEME}:///insight?kind=frequency"
 - assertVisible: "Trading frequency"
 - assertNotVisible: "Not enough data yet"
 - takeScreenshot: .expo/v2-release-frequency
-- openLink: "cogvest:///insight?kind=patience"
+- openLink: "${SCHEME}:///insight?kind=patience"
 - assertVisible: "Planned holding periods"
 - assertVisible: "Not enough data yet"
-- openLink: "cogvest:///insight?kind=missing"
+- openLink: "${SCHEME}:///insight?kind=missing"
 - assertVisible: "Insight unavailable"
 - tapOn: "Back to Dashboard"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - runFlow:
     when:
       visible:
@@ -110,37 +110,37 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 30000
 - assertNotVisible: "Investment patterns"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holdings-search-input
 - assertNotVisible:
     id: holdings-insights-button
 - assertVisible: "Invested"
 - takeScreenshot: .expo/v2-release-minimal
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "Deposit"
 - assertVisible: "Withdraw"
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - tapOn: "Done"
-- openLink: "cogvest:///holding-duration"
+- openLink: "${SCHEME}:///holding-duration"
 - assertVisible: "Optional analysis is paused"
 - tapOn: "Done"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: nudge-minimal
 - tapOn:
     id: display-mode-standard
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Conviction pattern"
 - assertNotVisible:
     id: nudge-insights
 - tapOn:
     id: insight-back
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: "HDFC"

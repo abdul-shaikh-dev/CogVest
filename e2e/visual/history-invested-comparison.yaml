@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic visual-QA history. No records are changed.
 - launchApp:
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 30000
 - assertVisible: "Mask values"
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - assertVisible: "Vs invested"
@@ -52,10 +52,10 @@ appId: com.abdulshaikh.cogvest
     id: snapshot-month-2026-04
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - tapOn:
     id: dashboard-mask-toggle
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
 - assertNotVisible: ".*₹[0-9].*"
@@ -81,7 +81,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible: "-3.46%"
 - tapOn:
     id: close-monthly-history
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - tapOn:
     id: dashboard-mask-toggle
 - assertVisible: "Mask values"

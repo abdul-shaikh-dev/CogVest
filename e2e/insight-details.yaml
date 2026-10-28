@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
     timeout: 30000
@@ -14,7 +14,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: "open-insight-conviction"
@@ -49,24 +49,24 @@ appId: com.abdulshaikh.cogvest
     id: "insight-back"
 - assertVisible:
     id: "dashboard-screen"
-- openLink: "cogvest:///insight?kind=frequency"
+- openLink: "${SCHEME}:///insight?kind=frequency"
 - assertVisible: "Trading frequency"
 - assertNotVisible: "Not enough data yet"
-- openLink: "cogvest:///insight?kind=patience"
+- openLink: "${SCHEME}:///insight?kind=patience"
 - assertVisible: "Planned holding periods"
 - assertVisible: "Not enough data yet"
-- openLink: "cogvest:///insight?kind=missing"
+- openLink: "${SCHEME}:///insight?kind=missing"
 - assertVisible: "Insight unavailable"
 - tapOn:
     id: "insight-unavailable-back"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-minimal"
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - assertNotVisible: "What contributed"
 - tapOn:
     id: "insight-paused-done"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-standard"

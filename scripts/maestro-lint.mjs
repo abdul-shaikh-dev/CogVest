@@ -24,6 +24,8 @@ export const rules = {
   "text-scroll": "scrollUntilVisible targets display text; scroll to the testID you act on",
   "center-element": "centerElement: true depends on content below the element",
   "typed-rr": "typed value contains \"rr\", which debug builds can mangle",
+  "fixed-app-id": "appId is hardcoded; use `appId: ${APP_ID}` so the runner can target the debug or E2E build",
+  "fixed-scheme": "openLink uses a fixed scheme; use `${SCHEME}://` so the debug and E2E builds can be installed together",
 };
 
 function unquote(value) {
@@ -84,6 +86,10 @@ export function lintFlow(source) {
     if (/^\s*centerElement:\s*true\s*$/u.test(line)) report(index, "center-element", "");
     const typed = /^\s*(?:-\s*)?inputText:\s*(.+)$/u.exec(line);
     if (typed && /rr/iu.test(unquote(typed[1]))) report(index, "typed-rr", unquote(typed[1]));
+    const appId = /^appId:\s*(.+)$/u.exec(line);
+    if (appId && appId[1].trim() !== "${APP_ID}") report(index, "fixed-app-id", appId[1].trim());
+    const link = /^\s*(?:-\s*)?(?:openLink|link):\s*"?([a-z][a-z0-9+.-]*):\/\//u.exec(line);
+    if (link) report(index, "fixed-scheme", link[1]);
   });
   return findings;
 }

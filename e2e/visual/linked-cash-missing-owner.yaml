@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -9,7 +9,7 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           point: "94%,93%"
-- openLink: "cogvest:///accounting-qa?token=cogvest-local-visual-qa&run=missing-linked-cash"
+- openLink: "${SCHEME}:///accounting-qa?token=cogvest-local-visual-qa&run=missing-linked-cash"
 - assertVisible:
     id: "review-cash-entry-screen"
 - assertVisible: "Linked transaction unavailable"

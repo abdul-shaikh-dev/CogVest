@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 120000
 # The system picker remembers its last folder and view; start it fresh.
 - clearState: com.google.android.documentsui
-- openLink: "cogvest:///import-holdings?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///import-holdings?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "holding-import-screen"
@@ -106,7 +106,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹6.51K"
 - assertVisible: "Invested"
 - assertVisible: "₹6K"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 2"
 - assertVisible: "Opening position count: 2"
 - assertVisible: "Duplicate identity count: 0"

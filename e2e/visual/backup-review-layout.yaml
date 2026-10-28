@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic portfolio and cogvest-synthetic-design.json in Downloads.
 # Review only: never press the destructive replacement button.
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///backup?mode=restore"
+- openLink: "${SCHEME}:///backup?mode=restore"
 - tapOn:
     id: choose-backup-file
 - runFlow: ../standalone/helpers/open-downloads.yaml

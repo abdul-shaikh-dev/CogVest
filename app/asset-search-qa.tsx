@@ -41,7 +41,6 @@ export default function AssetSearchQaRoute() {
   const profileRenders = params.profile === "1";
   const isFocused = useIsFocused();
   const enabled = canUseVisualQaHarness({
-    isDevelopment: __DEV__,
     token: params.token,
   });
   const storeRef = useRef<ReturnType<typeof createPortfolioStore> | null>(null);
