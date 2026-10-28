@@ -4,6 +4,17 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-28: Progress hook split (#561), smoke 12 passed plus 6 Progress flows
+
+- Commit: main plus the #561 useProgress split. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, debug build with the split JS served
+  by Metro, warmed by one app launch first, on a fresh emulator boot.
+- Smoke tier: 12 passed, 0 failed, 12m 30s. progress-snapshot-history 0m 47s.
+- Progress flows: 6 passed, 0 failed, 6m 01s. progress-chart-range 0m 58s,
+  progress-chart-month-navigation 1m 07s, snapshot-review 0m 25s,
+  epf-progress-empty 0m 52s, ppf-history-fallback 2m 13s, epf-reporting
+  0m 27s.
+
 ## 2026-10-28: transaction import screen split (#561), smoke 12 passed plus 4 import flows
 
 - Commit: main plus the #561 TransactionImportScreen split. AVD
