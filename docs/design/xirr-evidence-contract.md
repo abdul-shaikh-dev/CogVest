@@ -1,6 +1,7 @@
 # XIRR evidence and eligibility contract
 
-30 October 2026. Related to #532 and #533. Proposal for owner review. No code,
+30 October 2026. Related to #532 and #533. Approved by the owner on 30 October
+2026, including the 7-day price limit and the fee handling in D4. No code,
 schema, dependency or UI change accompanies this note.
 
 [`portfolio-xirr-contract.md`](portfolio-xirr-contract.md) defines the three
@@ -13,7 +14,7 @@ audit. This note settles what that contract left open, so the input builders
    exist;
 3. the persisted measurement basis that Whole-portfolio XIRR needs.
 
-Each numbered decision (D1–D12) needs approval. Anything not decided here stays
+Decisions D1–D12 are approved as written. Anything not decided here stays
 unavailable, never estimated.
 
 ## Current records (schema 16)
