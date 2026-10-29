@@ -7,7 +7,7 @@ import type { XirrSummary } from "@/src/domain/xirrSummary";
 
 import { useStyles } from "./holdingsStyles";
 
-const flowLabel = { trade: "Transaction", distribution: "Payout", terminal: "Current value" } as const;
+const flowLabel = { trade: "Transaction", distribution: "Payout", account: "Account flow", terminal: "Current value" } as const;
 
 /** Annualised return for one holding, with the cash flows behind it (#535). */
 export function HoldingXirrPanel({ assetId, masked, summary }: { assetId: string; masked: boolean; summary: XirrSummary }) {

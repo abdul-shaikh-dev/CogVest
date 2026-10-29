@@ -43,15 +43,22 @@ const inputMessages: Array<[XirrUnavailableReason, string]> = [
   ["quote-currency", "The current price isn't in INR."],
   ["quote-after-end", "The current price is dated after the measurement date."],
   ["stale-quote", "Price is older than 7 days."],
-  ["ppf-not-supported", "PPF isn't included in this return yet."],
-  ["epf-not-supported", "EPF isn't included in this return yet."],
-  ["futures-not-supported", "Futures aren't included in this return yet."],
+  ["account-history-after-start", "An account's history before its starting balance isn't recorded."],
+  ["ppf-reconciliation", "A PPF balance correction isn't explained by recorded deposits or interest."],
+  ["epf-ledger-invalid", "EPF records need review before returns can be measured."],
+  ["epf-history-incomplete", "EPF history isn't confirmed complete up to today."],
+  ["epf-reconciliation", "An EPF balance update isn't explained by recorded contributions."],
+  ["futures-not-valued", "Futures needs a reconciled wallet valuation."],
+  ["futures-stale-valuation", "The Futures valuation is older than 7 days."],
+  ["futures-rates-missing", "A Futures transfer needs its INR rate on the transfer date."],
   ["no-assets", "No investments are recorded."],
 ];
 
 const limitationNotes: Record<XirrLimitation, string> = {
   "fees-not-in-source": "Some imported trades didn't include fees, so they aren't counted.",
   "manual-price": "Uses a manually entered price.",
+  "ppf-interest-accrual": "PPF uses its confirmed balance, without interest earned since the last credit.",
+  "epf-summarised-year": "Some EPF contributions come from a yearly passbook summary and are dated at its end.",
 };
 
 const solverMessages: Record<XirrUnavailable, string> = {

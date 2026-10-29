@@ -21,7 +21,8 @@ function assetInput(overrides: Partial<AssetXirrInput> = {}): AssetXirrInput {
 function investmentsInput(overrides: Partial<InvestmentsXirrInput> = {}): InvestmentsXirrInput {
   return {
     assets: [btc, eth, stock], trades: [buy, sell], openingPositions: [], quotes: { btc: quote() },
-    distributions: [], distributionCoverage: [], hasPpfAccounts: false, hasEpfAccounts: false, hasFuturesAccounts: false, endDate: "2026-01-01", ...overrides,
+    distributions: [], distributionCoverage: [], ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
+    endDate: "2026-01-01", today: "2026-01-01", valuationTime: "2026-01-01T12:00:00Z", ...overrides,
   };
 }
 const reasons = (result: ReturnType<typeof buildAssetXirrInput>) =>
@@ -202,10 +203,7 @@ describe("Investments XIRR input", () => {
     expect(result).toEqual({ status: "unavailable", reasons: [{ assetId: "stock", reason: "distributions-not-recorded" }] });
   });
 
-  it("blocks PPF, EPF and Futures until they are supported, and an empty portfolio", () => {
-    const result = buildInvestmentsXirrInput(investmentsInput({ hasPpfAccounts: true, hasEpfAccounts: true, hasFuturesAccounts: true }));
-    expect(result.status === "unavailable" && result.reasons.map(({ reason }) => reason))
-      .toEqual(["ppf-not-supported", "epf-not-supported", "futures-not-supported"]);
+  it("blocks an empty portfolio (PPF, EPF and Futures are covered in xirrAccountFlows.test.ts)", () => {
     expect(buildInvestmentsXirrInput(investmentsInput({ trades: [] })))
       .toEqual({ status: "unavailable", reasons: [{ assetId: "portfolio", reason: "no-assets" }] });
   });
