@@ -330,6 +330,7 @@ function deletionFailureMessage(
   }
   if (reason === "insufficientCash") return "Removing linked sale proceeds would make the recorded Cash timeline negative. Keep the proceeds or first correct the later cash-funded purchases.";
   if (reason === "corporateActionDependency") return "This selection would break a verified split, bonus, or demerger chain. Include all dependent history or keep the supporting transactions.";
+  if (reason === "linkedPayout") return "A selected purchase was funded by a reinvested payout. Change or delete that payout first.";
   if (reason === "inconsistentLink") return "A selected transaction has an inconsistent linked cash movement. Correct that record before deleting this batch.";
   if (reason === "notFound") return "One or more selected transactions changed or are no longer available. Cancel selection and try again.";
   return "Select at least one transaction before reviewing deletion.";

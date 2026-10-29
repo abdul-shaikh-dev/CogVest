@@ -44,6 +44,7 @@ function failureMessage(reason?: string) {
   if (reason === "insufficientCash") return "Cash available on this date is not enough for the corrected purchase.";
   if (reason === "oversold") return "This correction would sell more units than were held on that date.";
   if (reason === "inconsistentLink") return "The linked cash movement is inconsistent. The transaction was not changed.";
+  if (reason === "linkedPayout") return "A reinvested payout funds this purchase, so it can't be dated before that payout.";
   if (reason === "assetMismatch" || reason === "typeMismatch") return "Transaction identity changed. Return to Holdings and try again.";
   return "This transaction could not be saved safely. Review it and try again.";
 }

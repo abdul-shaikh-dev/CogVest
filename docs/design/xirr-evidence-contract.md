@@ -72,9 +72,13 @@ Effect on each boundary:
 
 Tax withheld is not a flow for any boundary; it never reached the investor.
 
-**D3. A per-asset, per-period "no distributions" confirmation**, stored with
-the date confirmed and the period it covers. Adding a distribution inside a
-confirmed period, or extending the period, invalidates it.
+**D3. A per-asset, ongoing payout confirmation**: "every payout from this asset
+since <date> is recorded, and I'll add new ones", including none. Owner decision
+30 October 2026, replacing a fixed period, because XIRR ends today and a fixed
+end date would need re-confirming daily. It stays valid until the user changes
+or removes it; recording new payouts is the expected upkeep and does not clear
+it. A result needs the confirmation to start on or before the first purchase.
+Stored as `distributionCoverage`, one per asset.
 
 Mutual-fund IDCW options and stocks without that confirmation stay unavailable.
 Growth options need the asset to be tagged as growth; until that tag exists,
@@ -177,13 +181,17 @@ block until classified. They are never auto-classified on migration.
 ### Cross-cutting
 
 **D12. Migration, backup and invalidation.**
-- Schema 16 → 17 adds empty `distributions`, `distributionConfirmations` and
-  `measurementBasis` collections, plus the optional PPF field. No existing record
-  changes and nothing is auto-confirmed.
+- Schema 16 → 17 adds empty `distributions` and `distributionCoverage`
+  collections and the Cash purpose `distribution` (batch 2). No existing record
+  changes and nothing is auto-confirmed. The measurement basis and PPF funding
+  source arrive with batch 3 in a later schema version.
 - Backup and restore include the new collections, with validation. Restoring an
   older backup yields an unconfirmed state.
-- Any edit inside a confirmed period clears the affected confirmation. Results
-  are always derived; nothing about XIRR is stored.
+- A payout to Cash owns its Cash addition: they are created, corrected and
+  deleted together, and the Cash leg can't be edited on its own. A buy funded by
+  a reinvested payout can't be deleted or dated before that payout, and an asset
+  with payouts can't be deleted. Results are always derived; nothing about XIRR
+  is stored.
 
 ## What this enables, in order
 

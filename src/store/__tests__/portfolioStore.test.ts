@@ -2473,6 +2473,8 @@ describe("portfolio store", () => {
       epf: { accounts: [], events: [], cashLinks: [], audit: [] },
       assets: [asset],
       cashEntries: [cashEntry],
+      distributionCoverage: [],
+      distributions: [],
       futuresAccounts: [],
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],

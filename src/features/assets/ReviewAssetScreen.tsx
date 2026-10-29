@@ -61,6 +61,9 @@ function failureMessage(reason?: string) {
   if (reason === "linkedDemerger") {
     return "This holding is linked to a demerger. Its parent and successor history must be corrected together.";
   }
+  if (reason === "linkedPayout") {
+    return "This holding has recorded dividends or payouts. Delete those before deleting it or changing its type or currency.";
+  }
   if (reason === "linkedEpf") {
     return "This holding is linked to an EPF account. Remove that link before deleting it or changing its type or currency.";
   }

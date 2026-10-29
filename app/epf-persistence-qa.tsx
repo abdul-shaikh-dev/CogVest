@@ -39,7 +39,7 @@ function EnabledQa({ page }: { page?: string }) {
     setBusy(true);
     try {
       const testStore = createPortfolioStore({ storage, now });
-      assert(testStore.getState().schemaVersion === 16 && testStore.getState().epf.accounts.length === 0, "Migration failed or fixture not reset");
+      assert(testStore.getState().schemaVersion === 17 && testStore.getState().epf.accounts.length === 0, "Migration failed or fixture not reset");
       assert(testStore.getState().cashEntries[0]?.amount === 2000, "Legacy Cash changed");
       testStore.getState().applyEpfCommand({ commandId: "setup", reason: "Synthetic statement", change: { type: "accountPut", account: {
         id: "epf", nickname: "Synthetic EPF", provider: "epfo", status: "active", currency: "INR", historyCompleteThrough: null,

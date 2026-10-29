@@ -1,7 +1,8 @@
 import { getCalendarDatePart, parseCalendarDate } from "./dates";
 import { decimal, sumFinancialValues } from "./precision";
+import { distributionNetAmount } from "./distributions";
 import { positionEvents, splitQuantity } from "./stockSplits";
-import type { Asset, OpeningPosition, Quote, Trade } from "@/src/types";
+import type { Asset, Distribution, DistributionCoverage, OpeningPosition, Quote, Trade } from "@/src/types";
 
 /**
  * Per-asset and Investments XIRR inputs from existing records.
@@ -12,12 +13,12 @@ import type { Asset, OpeningPosition, Quote, Trade } from "@/src/types";
 /** D7: the newest usable price may be at most this many calendar days before the end date. */
 export const XIRR_MAX_QUOTE_AGE_DAYS = 7;
 
-export type XirrFlowSource = "trade" | "terminal";
+export type XirrFlowSource = "trade" | "distribution" | "terminal";
 export type XirrFlow = { date: string; amountInr: string; source: XirrFlowSource; id: string };
 
 export type XirrUnavailableReason =
   | "invalid-end-date" | "missing-asset" | "cash-asset" | "foreign-currency"
-  | "distributions-not-recorded" | "opening-history" | "transfer-without-value"
+  | "distributions-not-recorded" | "payout-before-purchase" | "opening-history" | "transfer-without-value"
   | "demerger" | "split-needs-review" | "invalid-trade" | "duplicate-trade" | "no-purchases"
   | "units-mismatch" | "missing-quote" | "stale-quote" | "quote-after-end" | "quote-currency"
   | "ppf-not-supported" | "epf-not-supported" | "futures-not-supported" | "no-assets";
@@ -47,6 +48,9 @@ export type AssetXirrInput = {
   trades: readonly Trade[];
   openingPositions: readonly OpeningPosition[];
   quote: Quote | undefined;
+  /** Payouts of every asset; only this asset's are used. */
+  distributions: readonly Distribution[];
+  coverage: DistributionCoverage | undefined;
   endDate: string;
 };
 
@@ -92,7 +96,6 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
   }
   if (asset.assetClass === "cash") issue("cash-asset");
   if (asset.currency !== "INR") issue("foreign-currency");
-  if (!cannotDistribute(asset)) issue("distributions-not-recorded");
   if (isDemergerMember(asset, input.assets)) issue("demerger");
   input.openingPositions.filter((opening) => opening.assetId === assetId)
     .forEach((opening) => issue("opening-history", opening.id));
@@ -133,6 +136,20 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
   }
   if (!flows.some((flow) => decimal(flow.amountInr).isNegative())) issue("no-purchases");
 
+  // D1-D3: every payout counts as money returned to the investor on its date,
+  // whether paid to Cash, outside or reinvested (the reinvested buy stays a
+  // separate purchase). Assets that can pay out need ongoing coverage from the
+  // first purchase.
+  const firstFlow = flows.map((flow) => flow.date).sort()[0];
+  if (!cannotDistribute(asset) && (!input.coverage || !firstFlow || input.coverage.from > firstFlow)) {
+    issue("distributions-not-recorded");
+  }
+  for (const payout of input.distributions) {
+    if (payout.assetId !== assetId || payout.paidOn > endDate) continue;
+    if (!firstFlow || payout.paidOn < firstFlow) issue("payout-before-purchase", payout.id);
+    flows.push({ date: payout.paidOn, amountInr: distributionNetAmount(payout).toString(), source: "distribution", id: payout.id });
+  }
+
   // A disposal must never exceed the units held at that point, not only at the end.
   let units = decimal(0);
   let oversold = false;
@@ -171,7 +188,7 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
 }
 
 function compareFlows(a: XirrFlow, b: XirrFlow) {
-  if (a.source !== b.source) return a.source === "terminal" ? 1 : -1;
+  if ((a.source === "terminal") !== (b.source === "terminal")) return a.source === "terminal" ? 1 : -1;
   return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
 }
 
@@ -203,6 +220,8 @@ export type InvestmentsXirrInput = {
   trades: readonly Trade[];
   openingPositions: readonly OpeningPosition[];
   quotes: Readonly<Record<string, Quote>>;
+  distributions: readonly Distribution[];
+  distributionCoverage: readonly DistributionCoverage[];
   hasPpfAccounts: boolean;
   hasEpfAccounts: boolean;
   hasFuturesAccounts: boolean;
@@ -243,6 +262,8 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
     const outcome = assetOutcome({
       asset: assets.get(assetId), assetId, assets: input.assets, trades: input.trades,
       openingPositions: input.openingPositions, quote: input.quotes[assetId], endDate: input.endDate,
+      distributions: input.distributions,
+      coverage: input.distributionCoverage.find((item) => item.assetId === assetId),
     });
     if (!outcome.ok) {
       reasons.push(...outcome.reasons);

@@ -82,9 +82,11 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
     };
   }
 
+  // A payout into Cash is return earned inside the portfolio, not new money.
   if (
     (entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
-    (entry.type === "addition" && entry.purpose === "saleProceeds")
+    (entry.type === "addition" && entry.purpose === "saleProceeds") ||
+    (entry.type === "addition" && entry.purpose === "distribution" && entry.linkedDistributionId)
   ) {
     return null;
   }
