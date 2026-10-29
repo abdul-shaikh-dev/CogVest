@@ -74,16 +74,7 @@ appId: ${APP_ID}
     id: futures-observed-wallet
 - inputText: "4000"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-observed-wallet-at-exact-toggle
-    direction: DOWN
-- tapOn:
-    id: futures-observed-wallet-at-exact-toggle
-- tapOn:
-    id: futures-observed-wallet-at
-- inputText: ${output.valuationAt}
-- hideKeyboard
+# The wallet and rate share the valuation time above.
 - scrollUntilVisible:
     element:
       id: futures-wallet-source
@@ -99,16 +90,6 @@ appId: ${APP_ID}
 - tapOn:
     id: futures-current-rate
 - inputText: "85"
-- hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-current-rate-at-exact-toggle
-    direction: DOWN
-- tapOn:
-    id: futures-current-rate-at-exact-toggle
-- tapOn:
-    id: futures-current-rate-at
-- inputText: ${output.valuationAt}
 - hideKeyboard
 - scrollUntilVisible:
     element:

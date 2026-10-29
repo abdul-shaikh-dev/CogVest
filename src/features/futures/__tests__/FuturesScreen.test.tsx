@@ -182,7 +182,9 @@ describe("manual Futures screen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
     fireEvent.press(screen.getByTestId("futures-save-account"));
-    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    // Three confirmations plus "Different times for each", which starts off.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    expect(screen.getByTestId("futures-separate-times").props.accessibilityState.checked).toBe(false);
     fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
     fireEvent.press(screen.getByTestId("futures-events-confirmed"));
     expect(screen.getByTestId("futures-positions-confirmed").props.accessibilityState.checked).toBe(true);
@@ -279,16 +281,20 @@ describe("manual Futures screen", () => {
 
     setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1018");
-    setTime(screen, "futures-observed-wallet-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
     fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
-    setTime(screen, "futures-current-rate-at", "2026-09-29T11:00:00Z");
     fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
+    // One shared time: the per-field pickers stay hidden until asked for.
+    expect(screen.queryByTestId("futures-observed-wallet-at-field")).toBeNull();
     fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
     fireEvent.press(screen.getByTestId("futures-events-confirmed"));
     fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
     fireEvent.press(screen.getByTestId("futures-save-valuation"));
-    expect(store.getState().futuresAccounts[0].valuation?.reconciliation.observedWalletUsdt).toBe("1018");
+    expect(store.getState().futuresAccounts[0].valuation).toMatchObject({
+      asOf: "2026-09-29T11:00:00Z",
+      inrRate: { observedAt: "2026-09-29T11:00:00Z" },
+      reconciliation: { observedAt: "2026-09-29T11:00:00Z", observedWalletUsdt: "1018" },
+    });
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
     const restarted = createPortfolioStore({ storage, now: () => new Date("2026-09-29T12:00:00Z") });
     expect(restarted.getState().futuresAccounts[0].events).toHaveLength(2);
@@ -297,5 +303,50 @@ describe("manual Futures screen", () => {
     act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     expect(screen.queryByText(/1 @ 100 USDT/)).toBeNull();
     expect(screen.queryByText(/1 @ 120 USDT/)).toBeNull();
+  });
+
+  it("stores a separate observation time per field only when asked, and reopens that way", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    fireEvent.press(screen.getByTestId("futures-add-event"));
+    setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
+    fireEvent.changeText(screen.getByTestId("futures-price"), "100");
+    fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
+    fireEvent.press(screen.getByTestId("futures-save-event"));
+
+    setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1005");
+    fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
+    fireEvent.changeText(screen.getByTestId("futures-mark-BTCUSDT"), "105");
+    fireEvent.changeText(screen.getByTestId("futures-mark-source"), "Binance mark price");
+    fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
+    fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
+    expect(screen.queryByTestId("futures-mark-at-field")).toBeNull();
+
+    // Opening the per-field times starts each one at the shared time.
+    fireEvent.press(screen.getByTestId("futures-separate-times"));
+    fireEvent.press(screen.getByTestId("futures-mark-at-exact-toggle"));
+    expect(screen.getByTestId("futures-mark-at").props.value).toBe("2026-09-29T11:00:00Z");
+    fireEvent.changeText(screen.getByTestId("futures-mark-at"), "2026-09-29T10:58:00Z");
+    fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
+    fireEvent.press(screen.getByTestId("futures-events-confirmed"));
+    fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
+    fireEvent.press(screen.getByTestId("futures-save-valuation"));
+    expect(store.getState().futuresAccounts[0].valuation).toMatchObject({
+      asOf: "2026-09-29T11:00:00Z",
+      inrRate: { observedAt: "2026-09-29T11:00:00Z" },
+      marks: [{ contract: "BTCUSDT", observedAt: "2026-09-29T10:58:00Z" }],
+      reconciliation: { observedAt: "2026-09-29T11:00:00Z" },
+    });
+    expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
+
+    screen.unmount();
+    const reopened = render(<FuturesScreen onBack={() => {}} store={store} />);
+    expect(reopened.getByTestId("futures-separate-times").props.accessibilityState.checked).toBe(true);
+    expect(reopened.getByTestId("futures-mark-at-field")).toBeTruthy();
   });
 });

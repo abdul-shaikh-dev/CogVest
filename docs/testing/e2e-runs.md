@@ -4,6 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-29: Futures shared observation time (#562), 5 Futures flows passed
+
+- Commit: main plus the #562 Futures valuation change. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly built E2E APK, Metro
+  stopped.
+- By path: futures-manual-wallet 2m 56s, futures-draft-protection 2m 19s,
+  futures-timestamp-evidence 3m 24s, futures-cash-funding 2m 09s. All passed.
+- standalone/futures-negative-equity first failed at its opening step: since
+  #458 the exact-timestamp inputs sit behind an "Exact timestamp" toggle, which
+  the flow never opened. Pre-existing. With the toggles opened it passed
+  (2m 39s).
+- Screenshots, light, dark and font scale 1.3:
+  `docs/reviews/artifacts/2026-10-29-futures-valuation-time/`.
+
 ## 2026-10-29: E2E build variant (#560), full tier 60 passed against the E2E APK, debug smoke 12 passed
 
 - Commit: main plus the #560 E2E build variant. AVD CogVest_UX_Proof, API 36,

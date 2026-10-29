@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
-import { AppButton, AppText, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
+import { AppButton, AppText, DisclosureButton, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
 import { useDraftExit } from "./useDraftExit";
 import { DateTimeField, FormTextField } from "@/src/components/forms";
 import { futuresEntryErrors, type FuturesEntryField } from "@/src/domain/futuresEntry";
@@ -152,9 +152,28 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const [positionsConfirmed, setPositionsConfirmed] = useState(account?.valuation?.reconciliation.allOpenPositionsConfirmed ?? false);
   const [eventsConfirmed, setEventsConfirmed] = useState(account?.valuation?.reconciliation.allWalletEventsConfirmed ?? false);
   const [boundaryConfirmed, setBoundaryConfirmed] = useState(account?.valuation?.reconciliation.portfolioBoundaryConfirmed ?? false);
+  // By default the wallet, marks and rate share the valuation time; a saved valuation
+  // whose observations differ reopens with a time per field.
+  const [separateTimes, setSeparateTimes] = useState(() => {
+    const valuation = account?.valuation;
+    return Boolean(valuation) && [valuation?.reconciliation.observedAt, valuation?.inrRate.observedAt,
+      ...(valuation?.marks.map((mark) => mark.observedAt) ?? [])].some((at) => at !== valuation?.asOf);
+  });
+  const [valuationDetails, setValuationDetails] = useState(false);
+  const walletObservedAt = separateTimes ? observedWalletAt : valuationAt;
+  const marksObservedAt = separateTimes ? markAt : valuationAt;
+  const rateObservedAt = separateTimes ? rateAt : valuationAt;
+  const useSeparateTimes = () => {
+    if (!separateTimes) {
+      setObservedWalletAt((current) => current || valuationAt);
+      setMarkAt((current) => current || valuationAt);
+      setRateAt((current) => current || valuationAt);
+    }
+    setSeparateTimes(!separateTimes);
+  };
 
   const walletSnapshot = JSON.stringify([openingAt, openingWallet, openingRate, openingRateAt, openingRateSource]);
-  const valuationSnapshot = JSON.stringify([valuationAt, observedWallet, observedWalletAt, walletSource, rate, rateAt, rateSource, markPrices, markMargins, markSource, markAt, positionsConfirmed, eventsConfirmed, boundaryConfirmed]);
+  const valuationSnapshot = JSON.stringify([valuationAt, observedWallet, walletObservedAt, walletSource, rate, rateObservedAt, rateSource, markPrices, markMargins, markSource, marksObservedAt, positionsConfirmed, eventsConfirmed, boundaryConfirmed]);
   const walletBaseline = useRef(walletSnapshot);
   const valuationBaseline = useRef(valuationSnapshot);
   const eventBaseline = useRef(JSON.stringify(draft));
@@ -330,30 +349,32 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const saveValuation = () => {
     if (!account) return;
     if (!checkFields({
-      "futures-valuation-at": { value: valuationAt, label: "Valuation time", timestamp: true },
+      "futures-valuation-at": { value: valuationAt, label: "Observation time", timestamp: true },
+      ...(separateTimes ? {
+        "futures-observed-wallet-at": { value: observedWalletAt, label: "Wallet observation time", timestamp: true },
+        ...(openPositions.length ? { "futures-mark-at": { value: markAt, label: "Mark observation time", timestamp: true } } : {}),
+        "futures-current-rate-at": { value: rateAt, label: "Rate observation time", timestamp: true },
+      } : {}),
       "futures-observed-wallet": { value: observedWallet, label: "Observed wallet balance" },
-      "futures-observed-wallet-at": { value: observedWalletAt, label: "Wallet observation time", timestamp: true },
       "futures-wallet-source": { value: walletSource, label: "Wallet source" },
       "futures-current-rate": { value: rate, label: "INR per USDT" },
-      "futures-current-rate-at": { value: rateAt, label: "Rate observation time", timestamp: true },
       "futures-current-rate-source": { value: rateSource, label: "Rate source" },
       ...(openPositions.length ? {
         ...Object.fromEntries(openPositions.map((position) => [`futures-mark-${position.contract}`, {
           value: markPrices[position.contract] ?? "", label: `${position.contract} mark price`,
         }])),
-        "futures-mark-at": { value: markAt, label: "Mark observation time", timestamp: true },
         "futures-mark-source": { value: markSource, label: "Mark source" },
       } : {}),
     })) return;
     try {
       const replay = replayUsdmFutures(account, { asOf: valuationAt, marks: [], eventRates: account.eventRates });
       const marks: UsdmMark[] = replay.positions.filter((position) => position.signedQuantity !== "0").map((position) => ({
-        contract: position.contract, priceUsdt: markPrices[position.contract] ?? "", observedAt: markAt, source: markSource.trim(),
+        contract: position.contract, priceUsdt: markPrices[position.contract] ?? "", observedAt: marksObservedAt, source: markSource.trim(),
         ...(markMargins[position.contract] ? { reportedMarginUsdt: markMargins[position.contract] } : {}),
       }));
       store.getState().saveFuturesAccount({ ...account, valuation: {
-        asOf: valuationAt, marks, inrRate: { inrPerUsdt: rate, observedAt: rateAt, source: rateSource.trim() },
-        reconciliation: { observedWalletUsdt: observedWallet, observedAt: observedWalletAt, source: walletSource.trim(),
+        asOf: valuationAt, marks, inrRate: { inrPerUsdt: rate, observedAt: rateObservedAt, source: rateSource.trim() },
+        reconciliation: { observedWalletUsdt: observedWallet, observedAt: walletObservedAt, source: walletSource.trim(),
           allOpenPositionsConfirmed: positionsConfirmed, allWalletEventsConfirmed: eventsConfirmed,
           portfolioBoundaryConfirmed: boundaryConfirmed },
       } });
@@ -503,18 +524,29 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           {walletEditor}
           <PremiumCard>
             <SectionHeader title="Verify current value" />
-            <AppText color="secondary">Use the Futures wallet balance (not total equity), current mark prices, and an observed USDT/INR rate. Their sources and times stay with the record. Re-enter after changing activity.</AppText>
-            <TimeField label="Valuation time" value={valuationAt} onChange={setValuationAt} error={fieldErrors["futures-valuation-at"]} testID="futures-valuation-at" />
-            <EntryField label="Observed Futures wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={observedWallet} onChangeText={setObservedWallet} testID="futures-observed-wallet" />
-            <TimeField label="Wallet observed at" value={observedWalletAt} onChange={setObservedWalletAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-observed-wallet-at"]} testID="futures-observed-wallet-at" />
+            <AppText color="secondary">Enter what Binance shows now. Sources and times are saved with the valuation.</AppText>
+            <DisclosureButton expanded={valuationDetails} title="What to enter" onPress={() => setValuationDetails(!valuationDetails)} testID="futures-valuation-details-toggle" />
+            {valuationDetails ? <AppText color="secondary" testID="futures-valuation-details">Use the Futures wallet balance, not total equity, current mark prices and an observed USDT/INR rate. Re-enter after changing activity.</AppText> : null}
+            <TimeField label="Observed at" value={valuationAt} onChange={setValuationAt} error={fieldErrors["futures-valuation-at"]} testID="futures-valuation-at" />
+            <Choice checkbox label="Different times for each" selected={separateTimes} onPress={useSeparateTimes} testID="futures-separate-times" />
+            {separateTimes ? <>
+              <TimeField label="Wallet observed at" value={observedWalletAt} onChange={setObservedWalletAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-observed-wallet-at"]} testID="futures-observed-wallet-at" />
+              {openPositions.length ? <TimeField label="Marks observed at" value={markAt} onChange={setMarkAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-mark-at"]} testID="futures-mark-at" /> : null}
+              <TimeField label="Rate observed at" value={rateAt} onChange={setRateAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-current-rate-at"]} testID="futures-current-rate-at" />
+            </> : <AppText color="secondary" variant="caption">Wallet, marks and rate use this time.</AppText>}
+            <AppText weight="bold">Wallet</AppText>
+            <EntryField label="Futures wallet balance (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={observedWallet} onChangeText={setObservedWallet} testID="futures-observed-wallet" />
             <EntryField label="Wallet balance source" value={walletSource} onChangeText={setWalletSource} testID="futures-wallet-source" />
-            {openPositions.map((position) => <EntryField key={position.contract} label={`${position.contract} mark price (USDT)`} keyboardType="decimal-pad" value={markPrices[position.contract] ?? ""} onChangeText={(value) => setMarkPrices((current) => ({ ...current, [position.contract]: value }))} testID={`futures-mark-${position.contract}`} />)}
-            {openPositions.map((position) => <EntryField key={`margin-${position.contract}`} label={`${position.contract} Binance-reported position margin (USDT, optional)`} keyboardType="decimal-pad" secureTextEntry={masked} value={markMargins[position.contract] ?? ""} onChangeText={(value) => setMarkMargins((current) => ({ ...current, [position.contract]: value }))} testID={`futures-margin-${position.contract}`} />)}
+            {openPositions.length ? <AppText weight="bold">Marks</AppText> : null}
+            {openPositions.map((position) => [
+              <EntryField key={position.contract} label={`${position.contract} mark price (USDT)`} keyboardType="decimal-pad" value={markPrices[position.contract] ?? ""} onChangeText={(value) => setMarkPrices((current) => ({ ...current, [position.contract]: value }))} testID={`futures-mark-${position.contract}`} />,
+              <EntryField key={`margin-${position.contract}`} label={`${position.contract} position margin from Binance (USDT, optional)`} keyboardType="decimal-pad" secureTextEntry={masked} value={markMargins[position.contract] ?? ""} onChangeText={(value) => setMarkMargins((current) => ({ ...current, [position.contract]: value }))} testID={`futures-margin-${position.contract}`} />,
+            ])}
             {openPositions.length ? <EntryField label="Mark price source" value={markSource} onChangeText={setMarkSource} testID="futures-mark-source" /> : null}
-            {openPositions.length ? <TimeField label="Marks observed at" value={markAt} onChange={setMarkAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-mark-at"]} testID="futures-mark-at" /> : null}
+            <AppText weight="bold">INR rate</AppText>
             <EntryField label="INR per USDT" keyboardType="decimal-pad" value={rate} onChangeText={setRate} testID="futures-current-rate" />
-            <TimeField label="Rate observed at" value={rateAt} onChange={setRateAt} suggestedAt={valuationAt} suggestedLabel="Observed at valuation time" error={fieldErrors["futures-current-rate-at"]} testID="futures-current-rate-at" />
             <EntryField label="INR rate source" value={rateSource} onChangeText={setRateSource} testID="futures-current-rate-source" />
+            <AppText weight="bold">Before saving, confirm</AppText>
             <Choice checkbox label="All open positions checked against Binance" selected={positionsConfirmed} onPress={() => setPositionsConfirmed((value) => !value)} testID="futures-positions-confirmed" />
             <Choice checkbox label="All wallet events since starting balance entered" selected={eventsConfirmed} onPress={() => setEventsConfirmed((value) => !value)} testID="futures-events-confirmed" />
             <Choice checkbox label="Wallet is not already counted in Spot, Cash or another holding" selected={boundaryConfirmed} onPress={() => setBoundaryConfirmed((value) => !value)} testID="futures-boundary-confirmed" />
