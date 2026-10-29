@@ -4,6 +4,19 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-30: Holding XIRR (#535), smoke 14 passed
+
+- Commit: main (PR #600 merged) plus the #535 holding XIRR change. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK, Metro stopped.
+- Smoke tier (now 14 flows with xirr-holding): 14 passed, 0 failed, 11m 49s.
+  xirr-holding 0m 30s.
+- xirr-holding uses the isolated `xirr-qa` fixture (fixed clock, no quote
+  refresh). It asserts the unavailable reason, then confirms payouts, the
+  +10.00% rate, the period line and both audited flow amounts.
+- xirr-holding also passed in dark mode and at font scale 1.3. Screenshots:
+  `docs/reviews/artifacts/2026-10-30-holding-xirr/`.
+
 ## 2026-10-30: Payout records UI (#533), smoke 12 passed plus 1 fixed
 
 - Commit: main (8ed13d6, PR #599) plus the #533 payout UI. AVD CogVest_UX_Proof,

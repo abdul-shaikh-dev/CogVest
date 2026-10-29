@@ -676,7 +676,8 @@ describe("HoldingsScreen", () => {
       within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText(
         "Unavailable",
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
+    expect(getByTestId("holding-xirr-unavailable")).toBeTruthy();
   });
 
   it("keeps per-unit prices and percentages visible in masked expanded holdings", () => {
