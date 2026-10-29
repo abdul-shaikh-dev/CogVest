@@ -265,6 +265,13 @@ judgement):
 | #534 | Solver with oracle fixtures, after batch 1 | None |
 | #535 | Presentation in holding detail and a compact Dashboard selector | None |
 
+All batches are delivered (#596–#604 and the batch 3 UI). The batch 3 UI adds
+a Whole portfolio choice beside Investments on the Dashboard, a Whole-portfolio
+start screen (start date, opening values, and marking trades paid from outside)
+and a funding choice on PPF entries. The fingerprint covers every stored record,
+including legacy holdings that a PPF or EPF account replaces, so the Dashboard
+and the start screen agree on when the user must confirm again.
+
 Batch 1 can start once D4–D8 are approved. Batches 2 and 3 are critical changes
 (persistence and migration). Each needs failure-path tests, an adversarial diff
 review and full verification.

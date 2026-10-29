@@ -42,6 +42,8 @@ type DashboardScreenProps = {
   onOpenEpf?: () => void;
   onOpenProgress?: () => void;
   onOpenInsight?: (kind: InsightKind) => void;
+  /** Opens the whole-portfolio start (measurement basis) screen. */
+  onSetBasis?: () => void;
   onQuickSetup?: () => void;
   quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
@@ -56,6 +58,7 @@ export function DashboardScreen({
   onOpenProgress,
   onOpenInsight,
   onQuickSetup,
+  onSetBasis,
   quickSetupSavedCount = 0,
   refreshQuotes,
   store = getPortfolioStore(),
@@ -121,6 +124,7 @@ export function DashboardScreen({
         <DashboardCurrencyWarning dashboard={dashboard} />
 
         <DashboardPortfolioHero
+          onSetBasis={onSetBasis}
           adaptiveLayoutMode={adaptiveLayoutMode}
           dashboard={dashboard}
           hasCompleteValuation={hasCompleteValuation}

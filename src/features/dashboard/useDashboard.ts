@@ -44,7 +44,7 @@ import {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
-import { investmentsScope, investmentsXirrSummary } from "./investmentsXirr";
+import { investmentsScope, investmentsXirrSummary, wholePortfolioScope, wholePortfolioXirrSummary } from "./investmentsXirr";
 import type { DisplayMode, Holding } from "@/src/types";
 import {
   getCalendarDatePart,
@@ -84,6 +84,8 @@ export type DashboardState = {
   /** Annualised Investments return (D8), derived on demand. */
   investmentsXirr: XirrSummary;
   investmentsXirrScope: string;
+  wholePortfolioXirr: XirrSummary;
+  wholePortfolioXirrScope: string;
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
@@ -226,6 +228,7 @@ export function useDashboard({
   const asOf = formatLocalCalendarDate(now);
   // Recomputed when any record or the day changes; the solver is bounded but not free.
   const investmentsXirr = useMemo(() => investmentsXirrSummary(snapshot, now), [snapshot, asOf]);
+  const wholePortfolioXirr = useMemo(() => wholePortfolioXirrSummary(snapshot, now), [snapshot, asOf]);
   // EPF-linked legacy holdings are replaced by the account value included below.
   const linkedLegacyAssetIds = new Set([
     ...getLinkedLegacyPpfAssetIds(snapshot.ppfAccounts, asOf),
@@ -359,6 +362,8 @@ export function useDashboard({
     investedCapitalComplete,
     investmentsXirr,
     investmentsXirrScope: investmentsScope(snapshot),
+    wholePortfolioXirr,
+    wholePortfolioXirrScope: wholePortfolioScope(snapshot),
     ppfConfirmedBalance: ppfSummary.confirmedBalance,
     allocation: calculateAllocation({
       cashBalance,

@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-30: Whole-portfolio XIRR (#533, #535), smoke 13 passed plus 1 rerun
+
+- Commit: main (PR #604 merged) plus the whole-portfolio UI change. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK, Metro stopped.
+- Smoke tier: 13 passed, 1 failed, 11m 34s. holdings-csv-import failed at
+  "Launch app with clear state" before any app step, and passed unchanged on
+  rerun. Environmental. ppf-account (changed PPF entry screen) passed in 1m 18s.
+- New flow xirr-whole (full tier only): it chooses Whole portfolio on the
+  `xirr-qa` Dashboard and asserts the missing-start reason. Then it confirms a
+  start of 01 Jan 2025 and marks the unlinked trade as paid from outside, and
+  asserts +10.00% a year, Put in ₹10,000.00 and Current value ₹11,000.00.
+  Passed in light, dark and font scale 1.3. Screenshots:
+  `docs/reviews/artifacts/2026-10-30-whole-portfolio-xirr/`.
+- `npm run test:v1:pc` passed. Its strict smoke check covers the installed
+  development package; the E2E APK above is the fresh build under test.
+
 ## 2026-10-30: Dashboard Investments XIRR (#535), smoke 14 passed
 
 - Commit: main (PR #602 merged) plus the #535 Dashboard XIRR change. AVD

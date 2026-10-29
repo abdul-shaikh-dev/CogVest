@@ -84,6 +84,16 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     expect(reasons(overrides)).toContain(reason);
   });
 
+  it("fingerprints every stored record when the flows leave some out", () => {
+    const earlyBuy: BuyTrade = { ...buy, id: "early", date: "2024-06-01" };
+    const replaced: BuyTrade = { ...buy, id: "legacy", assetId: "legacy-ppf", date: "2024-01-01" };
+    const records = { assets: [stock], trades: [earlyBuy], quotes: { stock: quote }, distributionCoverage: market.distributionCoverage };
+    const evidence = input({ ...records, trades: [earlyBuy, replaced] });
+    const basis = openingBasis({ ...records, trades: [earlyBuy, replaced] });
+    expect(reasons({ ...records, basis })).toEqual(["basis-needs-reconfirming"]);
+    expect(rate({ ...records, basis, evidence }).rate).toBeCloseTo(0.1, 9);
+  });
+
   it("counts a trade paid from outside CogVest at its own amount", () => {
     const summary = rate({ ...market, trades: [{ ...buy, fundingSource: "external" }], cashEntries: [] });
     expect(summary.rate).toBeCloseTo(0.1, 9);

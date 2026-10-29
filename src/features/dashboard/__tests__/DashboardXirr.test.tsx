@@ -58,4 +58,23 @@ describe("Dashboard Investments XIRR", () => {
     act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
   });
+
+  it("switches to the whole portfolio, which asks for a start until one is set", () => {
+    const store = seed();
+    const onSetBasis = jest.fn();
+    const screen = render(<DashboardScreen now={now} onSetBasis={onSetBasis} store={store} />);
+    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-whole"));
+    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("Unavailable");
+    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Set a start date and opening value to measure the whole portfolio.");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-set-basis"));
+    expect(onSetBasis).toHaveBeenCalledTimes(1);
+    act(() => { store.getState().setMeasurementBasis({ startDate: "2025-01-01", kind: "inception", openingBreakdown: [] }); });
+    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Link this trade to Cash or mark its funding as external.");
+    act(() => { store.getState().setTradeFundingSource(["buy"], "external"); });
+    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByText("Covers everything CogVest tracks, Cash included, since 01 Jan 2025.")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-investments"));
+    expect(screen.getByText("Covers market holdings. Cash is excluded.")).toBeTruthy();
+  });
 });

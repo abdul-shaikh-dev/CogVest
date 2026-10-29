@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 
-import { AppText, MaskedValue } from "@/src/components/common";
+import { AppButton, AppText, MaskedValue } from "@/src/components/common";
 import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
@@ -23,15 +23,45 @@ function flowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
     paidIn: paidIn.toNumber(), returned: returned.toNumber(), current: current.toNumber() };
 }
 
-/** Annualised Investments return (#535) inside the Invested & returns area. */
-export function DashboardXirr({ masked, scope, summary }: { masked: boolean; scope: string; summary: XirrSummary }) {
+type XirrView = { scope: string; summary: XirrSummary };
+type Measure = "investments" | "whole";
+const measureLabel: Record<Measure, string> = { investments: "Investments", whole: "Whole portfolio" };
+
+/**
+ * Annualised return (#535) inside the Invested & returns area: Investments
+ * (D8) or the whole portfolio, Cash included, from the user's start (D9).
+ */
+export function DashboardXirr({ investments, masked, onSetBasis, whole }: {
+  investments: XirrView;
+  masked: boolean;
+  onSetBasis?: () => void;
+  whole: XirrView;
+}) {
   const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
+  const [measure, setMeasure] = useState<Measure>("investments");
+  const { scope, summary } = measure === "investments" ? investments : whole;
   const rateText = summary.status === "rate" ? `${formatPercentage(summary.rate * 100)} a year` : "Unavailable";
   return (
     <View testID="dashboard-xirr">
+      <View accessibilityRole="radiogroup" style={styles.xirrMeasures}>
+        {(["investments", "whole"] as const).map((item) => (
+          <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: measure === item }}
+            key={item}
+            onPress={() => setMeasure(item)}
+            style={[styles.xirrMeasure, measure === item && styles.xirrMeasureSelected]}
+            testID={`dashboard-xirr-measure-${item}`}
+          >
+            <AppText color={measure === item ? undefined : "secondary"} variant="caption" weight={measure === item ? "bold" : undefined}>
+              {measureLabel[item]}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
       <Pressable
-        accessibilityLabel={`Investments return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
+        accessibilityLabel={`${measureLabel[measure]} return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((value) => !value)}
@@ -39,7 +69,7 @@ export function DashboardXirr({ masked, scope, summary }: { masked: boolean; sco
         testID="dashboard-xirr-toggle"
       >
         <View style={styles.xirrLabel}>
-          <AppText color="secondary" variant="caption">Investments return (XIRR)</AppText>
+          <AppText color="secondary" variant="caption">{measureLabel[measure]} return (XIRR)</AppText>
           <AppText
             color={summary.status === "rate" ? undefined : "secondary"}
             style={summary.status !== "rate" || summary.rate === 0 ? undefined
@@ -58,7 +88,10 @@ export function DashboardXirr({ masked, scope, summary }: { masked: boolean; sco
         </AppText>
       ) : null}
       {summary.status === "unavailable" && !expanded ? (
-        <AppText color="secondary" variant="caption">{summary.messages[0]}</AppText>
+        <AppText color="secondary" testID="dashboard-xirr-reason" variant="caption">{summary.messages[0]}</AppText>
+      ) : null}
+      {measure === "whole" && onSetBasis ? (
+        <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Whole-portfolio start" variant="ghost" />
       ) : null}
       {expanded ? (
         <View style={styles.priceDetails} testID="dashboard-xirr-details">

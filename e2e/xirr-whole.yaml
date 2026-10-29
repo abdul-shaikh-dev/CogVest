@@ -1,0 +1,76 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///xirr-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: xirr-qa-reset-covered
+- assertVisible:
+    id: xirr-qa-status
+    text: "Fixture ready"
+- tapOn:
+    id: xirr-qa-open-dashboard
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-measure-whole
+    direction: DOWN
+- tapOn:
+    id: dashboard-xirr-measure-whole
+# selector: the unavailable reason is the text under test
+- assertVisible:
+    id: dashboard-xirr-reason
+    text: "Set a start date and opening value to measure the whole portfolio."
+- takeScreenshot: .expo/xirr-whole-${SHOT}-no-start
+- tapOn:
+    id: dashboard-xirr-set-basis
+- extendedWaitUntil:
+    visible:
+      id: measurement-basis-screen
+    timeout: 15000
+- tapOn:
+    id: save-basis
+# selector: the confirmed start date is under test
+- assertVisible:
+    id: measurement-basis-start
+    text: "Since 01 Jan 2025"
+- scrollUntilVisible:
+    element:
+      id: basis-mark-external
+    direction: DOWN
+- tapOn:
+    id: basis-mark-external
+- tapOn:
+    id: basis-confirm-mark-external
+# selector: the stored trade mark is under test
+- assertVisible:
+    id: basis-trade-funding-count
+    text: "1 marked as paid from outside CogVest."
+- takeScreenshot: .expo/xirr-whole-${SHOT}-basis
+- back
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-measure-whole
+    direction: DOWN
+- tapOn:
+    id: dashboard-xirr-measure-whole
+# selector: the whole-portfolio rate and its totals are the values under test
+- assertVisible:
+    id: dashboard-xirr-rate
+    text: "\\+10.00% a year"
+- tapOn:
+    id: dashboard-xirr-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-current
+    direction: DOWN
+- assertVisible:
+    id: dashboard-xirr-paid-in
+    text: "₹10,000.00"
+- assertVisible:
+    id: dashboard-xirr-current
+    text: "₹11,000.00"
+- takeScreenshot: .expo/xirr-whole-${SHOT}-rate

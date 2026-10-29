@@ -6,6 +6,7 @@ import { AppButton, AppText, ScreenContainer } from "@/src/components/common";
 import { DashboardScreen } from "@/src/features/dashboard";
 import { HoldingsScreen } from "@/src/features/holdings";
 import { PayoutsScreen } from "@/src/features/payouts";
+import { MeasurementBasisScreen } from "@/src/features/wholePortfolio";
 import type { RefreshQuotesInput } from "@/src/services/quotes";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
@@ -35,27 +36,33 @@ function EnabledQa({ page }: { page?: string }) {
     return <HoldingsScreen isActive now={now} onReviewPayouts={(assetId) => open("payouts", assetId)}
       onReviewTrades={() => undefined} refreshQuotes={noRefresh} store={store} />;
   }
-  if (page === "dashboard") return <DashboardScreen now={now} refreshQuotes={noRefresh} store={store} />;
+  if (page === "dashboard") {
+    return <DashboardScreen now={now} onSetBasis={() => open("basis")} refreshQuotes={noRefresh} store={store} />;
+  }
+  if (page === "basis") return <MeasurementBasisScreen now={now} onBack={() => router.back()} store={store} />;
   if (page === "payouts") {
     return <PayoutsScreen assetId="xirr-qa-stock" now={now} onAddPayout={() => undefined}
       onBack={() => router.back()} onReviewPayout={() => undefined} store={store} />;
   }
-  function reset() {
+  function reset(payoutsConfirmed = false) {
     const state = store.getState();
-    store.setState({ assets: [], cashEntries: [], distributionCoverage: [], distributions: [], monthlySnapshots: [], openingPositions: [], trades: [] });
+    store.setState({ assets: [], cashEntries: [], distributionCoverage: [], distributions: [], measurementBasis: null,
+      monthlySnapshots: [], openingPositions: [], trades: [] });
     state.clearQuoteCache();
     state.updatePreferences({ hasCompletedOnboarding: true, maskWealthValues: false, displayMode: "standard" });
     state.addAsset({ id: "xirr-qa-stock", name: "Synthetic Return Co", symbol: "SYNRET", ticker: "SYNRET.NS",
       currency: "INR", assetClass: "stock", exchange: "NSE" });
     state.addTrade({ id: "xirr-qa-buy", assetId: "xirr-qa-stock", type: "buy", date: "2025-01-01", quantity: 100, pricePerUnit: 100, totalValue: 10000 });
     state.upsertQuote({ asOf: "2026-01-01T10:00:00.000Z", assetId: "xirr-qa-stock", currency: "INR", price: 110, source: "yahoo" });
+    if (payoutsConfirmed) state.setDistributionCoverage("xirr-qa-stock", "2025-01-01");
     setReady(true);
   }
   return (
     <ScreenContainer scroll>
       <AppText variant="title">XIRR QA</AppText>
       <AppText testID="xirr-qa-status">{ready ? "Fixture ready" : "Isolated synthetic fixture"}</AppText>
-      <AppButton testID="xirr-qa-reset" title="Reset fixture" onPress={reset} />
+      <AppButton testID="xirr-qa-reset" title="Reset fixture" onPress={() => reset()} />
+      <AppButton testID="xirr-qa-reset-covered" title="Reset with payouts confirmed" onPress={() => reset(true)} />
       <AppButton testID="xirr-qa-open-holdings" title="Open holdings" onPress={() => open("holdings")} />
       <AppButton testID="xirr-qa-open-dashboard" title="Open dashboard" onPress={() => open("dashboard")} />
     </ScreenContainer>
