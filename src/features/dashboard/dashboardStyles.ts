@@ -3,6 +3,16 @@ import { StyleSheet } from "react-native";
 import { radii, spacing, createThemedStyles } from "@/src/theme";
 
 export const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  xirrLine: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  xirrLabel: {
+    flex: 1,
+    minWidth: 160,
+  },
   priceDisclosure: {
     minHeight: 48,
     flexDirection: "row",

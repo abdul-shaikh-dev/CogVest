@@ -308,6 +308,8 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
   for (const opening of openings) {
     if (start && opening.date > start) reasons.push({ assetId: opening.id, reason: "account-history-after-start" });
   }
+  // A value with nothing dated behind it (say, a Futures wallet opened with no balance) has no period.
+  if (!reasons.length && !flows.length) reasons.push({ assetId: portfolio, reason: "no-purchases" });
   if (reasons.length) return { status: "unavailable", reasons };
 
   flows.sort(compareFlows);

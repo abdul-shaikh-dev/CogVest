@@ -66,3 +66,25 @@ appId: ${APP_ID}
 - assertVisible: "-₹10,000.00"
 - assertVisible: "₹11,000.00"
 - takeScreenshot: .expo/xirr-${SHOT}-flows
+- openLink: "${SCHEME}:///xirr-qa?token=cogvest-local-visual-qa&page=dashboard"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-xirr-rate
+    timeout: 15000
+# selector: the Investments rate and breakdown totals are the values under test
+- assertVisible:
+    id: dashboard-xirr-rate
+    text: "\\+10.00% a year"
+- tapOn:
+    id: dashboard-xirr-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-current
+    direction: DOWN
+- assertVisible:
+    id: dashboard-xirr-paid-in
+    text: "₹10,000.00"
+- assertVisible:
+    id: dashboard-xirr-current
+    text: "₹11,000.00"
+- takeScreenshot: .expo/xirr-${SHOT}-dashboard

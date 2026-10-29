@@ -15,6 +15,7 @@ import {
 } from "@/src/domain/formatters";
 
 import { useStyles } from "./dashboardStyles";
+import { DashboardXirr } from "./DashboardXirr";
 import {
   formatSignedCompactINR,
   formatSignedINR,
@@ -172,6 +173,9 @@ export function DashboardPortfolioHero({
           ) : <AppText color="secondary" weight="bold">Unavailable</AppText>}
         </View>
       </View> : null}
+      {!isMinimalMode || showPerformance ? (
+        <DashboardXirr masked={dashboard.maskWealthValues} scope={dashboard.investmentsXirrScope} summary={dashboard.investmentsXirr} />
+      ) : null}
       <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
         <Pressable
           accessibilityRole="button"
