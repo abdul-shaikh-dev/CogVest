@@ -29,6 +29,8 @@ function fixture() {
   const legacy = JSON.parse(JSON.stringify(expected));
   legacy.portfolio.schemaVersion = 14;
   delete legacy.portfolio.epf;
+  delete legacy.portfolio.distributions;
+  delete legacy.portfolio.distributionCoverage;
   legacy.portfolio.cashEntries[0].purpose = "income";
   legacy.portfolio.cashEntries[0].notes = "Salary money I chose to invest";
   expected.portfolio.cashEntries[0].notes = legacy.portfolio.cashEntries[0].notes;

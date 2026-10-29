@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { emptyEpfState, epfStateSchema, validateEpfState } from "@/src/domain/epf/persistence";
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
-import type { Asset, CashEntry } from "@/src/types";
+import { distributionGraphProblems } from "@/src/domain/distributions";
+import type { Asset, CashEntry, Distribution, DistributionCoverage, Trade } from "@/src/types";
 
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
@@ -186,6 +187,7 @@ const cashEntrySchema = z.object({
   linkedTradeId: nonEmptyStringSchema.optional(),
   linkedFutures: z.object({ accountId: nonEmptyStringSchema, eventId: nonEmptyStringSchema }).strict().optional(),
   linkedEpf: z.object({ accountId: nonEmptyStringSchema, eventId: nonEmptyStringSchema }).strict().optional(),
+  linkedDistributionId: nonEmptyStringSchema.optional(),
   notes: z.string().optional(),
   // V1-V3 entries did not persist a purpose. The current migration supplies it.
   purpose: z
@@ -197,6 +199,7 @@ const cashEntrySchema = z.object({
       "saleProceeds",
       "futuresTransfer",
       "epfTransfer",
+      "distribution",
       "withdrawal",
     ])
     .optional(),
@@ -522,7 +525,26 @@ const schemaVersionSchema = z.union([
   z.literal(14),
   z.literal(15),
   z.literal(16),
+  z.literal(17),
 ]);
+
+const distributionSchema = z.object({
+  assetId: nonEmptyStringSchema,
+  grossAmount: finiteNumberSchema,
+  id: nonEmptyStringSchema,
+  linkedCashEntryId: nonEmptyStringSchema.optional(),
+  linkedTradeId: nonEmptyStringSchema.optional(),
+  notes: z.string().optional(),
+  paidOn: calendarDateSchema,
+  recordedAt: nonEmptyStringSchema,
+  taxWithheld: finiteNumberSchema,
+  treatment: z.enum(["paidToCash", "paidOutside", "reinvested"]),
+}).strict();
+const distributionCoverageSchema = z.object({
+  assetId: nonEmptyStringSchema,
+  confirmedAt: nonEmptyStringSchema,
+  from: calendarDateSchema,
+}).strict();
 
 const nativeFuturesAmountSchema = z.string().regex(/^-?\d+(?:\.\d{1,8})?$/);
 const nonnegativeFuturesAmountSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);
@@ -595,6 +617,8 @@ const persistedPortfolioSchema = z
     epf: epfStateSchema.optional(),
     assets: z.array(assetSchema).optional(),
     cashEntries: z.array(cashEntrySchema).optional(),
+    distributionCoverage: z.array(distributionCoverageSchema).optional(),
+    distributions: z.array(distributionSchema).optional(),
     futuresAccounts: z.array(futuresAccountSchema).max(10).optional(),
     monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
     openingPositions: z.array(openingPositionSchema).optional(),
@@ -622,8 +646,25 @@ const persistedPortfolioSchema = z
         }
       });
     }
-    if ((portfolio.schemaVersion === 16) !== (portfolio.epf !== undefined)) {
-      context.addIssue({ code: "custom", message: "EPF state is required only for V16.", path: ["epf"] });
+    if ((portfolio.schemaVersion >= 16) !== (portfolio.epf !== undefined)) {
+      context.addIssue({ code: "custom", message: "EPF state is required from V16.", path: ["epf"] });
+    }
+    const hasPayouts = portfolio.distributions !== undefined && portfolio.distributionCoverage !== undefined;
+    if ((portfolio.schemaVersion >= 17) !== hasPayouts || (portfolio.schemaVersion < 17 && (portfolio.distributions !== undefined || portfolio.distributionCoverage !== undefined))) {
+      context.addIssue({ code: "custom", message: "Payout records are required from V17.", path: ["distributions"] });
+    }
+    if (portfolio.schemaVersion < 17 && (portfolio.cashEntries ?? []).some((entry) => entry.purpose === "distribution" || entry.linkedDistributionId)) {
+      context.addIssue({ code: "custom", message: "Payout Cash entries require V17.", path: ["cashEntries"] });
+    }
+    const payoutProblems = distributionGraphProblems({
+      assets: (portfolio.assets ?? []) as Asset[],
+      cashEntries: (portfolio.cashEntries ?? []) as CashEntry[],
+      trades: (portfolio.trades ?? []) as Trade[],
+      distributions: (portfolio.distributions ?? []) as Distribution[],
+      distributionCoverage: (portfolio.distributionCoverage ?? []) as DistributionCoverage[],
+    });
+    if (payoutProblems.length) {
+      context.addIssue({ code: "custom", message: "Payout records or their links are invalid.", path: ["distributions"] });
     }
     try {
       validateEpfState(portfolio.epf ?? emptyEpfState(), (portfolio.cashEntries ?? []) as CashEntry[]);
@@ -820,7 +861,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

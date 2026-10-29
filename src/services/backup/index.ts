@@ -116,7 +116,10 @@ export function createBackupService(runtime: BackupRuntime) {
           })), ...([ ["accounts", "EPF accounts"], ["events", "EPF entries"],
             ["cashLinks", "EPF Cash links"], ["audit", "EPF edit history"] ] as const)
             .filter(([key]) => current.epf[key].length || decoded.payload.portfolio.epf[key].length)
-            .map(([key, label]) => ({ label, current: current.epf[key].length, backup: decoded.payload.portfolio.epf[key].length }))],
+            .map(([key, label]) => ({ label, current: current.epf[key].length, backup: decoded.payload.portfolio.epf[key].length })),
+          ...([["distributions", "Dividends and payouts"], ["distributionCoverage", "Payout confirmations"]] as const)
+            .filter(([key]) => current[key].length || decoded.payload.portfolio[key].length)
+            .map(([key, label]) => ({ label, current: current[key].length, backup: decoded.payload.portfolio[key].length }))],
         },
       };
       prepared.set(result, { payload: decoded.payload, revision, epoch: current.restoreEpoch });

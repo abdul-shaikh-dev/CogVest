@@ -7,6 +7,7 @@ export type {
   SectorType,
 } from "./asset";
 export type { DemergerLink } from "./demerger";
+export type { Distribution, DistributionCoverage, DistributionTreatment } from "./distribution";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding, HoldingValuation } from "./holding";
 export type { StockSplitEvent } from "./stockSplit";

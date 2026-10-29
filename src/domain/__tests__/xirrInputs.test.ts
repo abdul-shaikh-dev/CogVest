@@ -1,5 +1,5 @@
 import { buildAssetXirrInput, buildInvestmentsXirrInput, type AssetXirrInput, type InvestmentsXirrInput } from "../xirrInputs";
-import type { Asset, BuyTrade, ImportedTransactionProvenance, Quote, SellTrade } from "@/src/types";
+import type { Asset, BuyTrade, Distribution, ImportedTransactionProvenance, Quote, SellTrade } from "@/src/types";
 
 const btc: Asset = { id: "btc", name: "Bitcoin", symbol: "BTC", ticker: "bitcoin", currency: "INR", assetClass: "crypto" };
 const eth: Asset = { ...btc, id: "eth", name: "Ether", symbol: "ETH", ticker: "ethereum" };
@@ -15,13 +15,13 @@ const imported = (overrides: Partial<ImportedTransactionProvenance> = {}): Impor
 function assetInput(overrides: Partial<AssetXirrInput> = {}): AssetXirrInput {
   return {
     asset: btc, assetId: "btc", assets: [btc, eth, stock], trades: [buy, sell], openingPositions: [],
-    quote: quote(), endDate: "2026-01-01", ...overrides,
+    quote: quote(), distributions: [], coverage: undefined, endDate: "2026-01-01", ...overrides,
   };
 }
 function investmentsInput(overrides: Partial<InvestmentsXirrInput> = {}): InvestmentsXirrInput {
   return {
     assets: [btc, eth, stock], trades: [buy, sell], openingPositions: [], quotes: { btc: quote() },
-    hasPpfAccounts: false, hasEpfAccounts: false, hasFuturesAccounts: false, endDate: "2026-01-01", ...overrides,
+    distributions: [], distributionCoverage: [], hasPpfAccounts: false, hasEpfAccounts: false, hasFuturesAccounts: false, endDate: "2026-01-01", ...overrides,
   };
 }
 const reasons = (result: ReturnType<typeof buildAssetXirrInput>) =>
@@ -66,6 +66,48 @@ describe("per-asset XIRR input", () => {
   it("blocks assets that can pay distributions until distributions are recorded (D1)", () => {
     const result = buildAssetXirrInput(assetInput({ asset: stock, assetId: "stock", trades: [{ ...buy, assetId: "stock" }], quote: quote({ assetId: "stock" }) }));
     expect(reasons(result)).toEqual(["distributions-not-recorded"]);
+  });
+
+  describe("payouts (D1-D3)", () => {
+    const stockBuy: BuyTrade = { ...buy, id: "stock-buy", assetId: "stock" };
+    const stockInput = (overrides: Partial<AssetXirrInput> = {}) => assetInput({
+      asset: stock, assetId: "stock", trades: [stockBuy], quote: quote({ assetId: "stock" }),
+      coverage: { assetId: "stock", from: "2025-01-02", confirmedAt: "2025-12-31T00:00:00Z" }, ...overrides,
+    });
+    const payout = (overrides: Partial<Distribution> = {}): Distribution => ({
+      id: "div", assetId: "stock", paidOn: "2025-08-01", grossAmount: 50, taxWithheld: 5,
+      treatment: "paidOutside", recordedAt: "2025-08-02T00:00:00Z", ...overrides,
+    });
+
+    it("needs ongoing coverage from the first purchase, even when none were paid", () => {
+      expect(buildAssetXirrInput(stockInput())).toMatchObject({ status: "ready" });
+      expect(reasons(buildAssetXirrInput(stockInput({ coverage: undefined })))).toEqual(["distributions-not-recorded"]);
+      expect(reasons(buildAssetXirrInput(stockInput({ coverage: { assetId: "stock", from: "2025-01-03", confirmedAt: "x" } }))))
+        .toEqual(["distributions-not-recorded"]);
+    });
+
+    it.each(["paidToCash", "paidOutside", "reinvested"] as const)("counts a %s payout once, net of tax, on its date", (treatment) => {
+      const result = buildAssetXirrInput(stockInput({ distributions: [payout({ treatment }), payout({ id: "other", assetId: "btc" })] }));
+      expect(result.status === "ready" && result.flows.map(({ id, amountInr, source }) => [id, amountInr, source])).toEqual([
+        ["stock-buy", "-1010", "trade"], ["div", "45", "distribution"], ["stock", "1800", "terminal"],
+      ]);
+    });
+
+    it("ignores payouts after the end date and rejects one before any purchase", () => {
+      expect(buildAssetXirrInput(stockInput({ distributions: [payout({ paidOn: "2026-02-01" })] }))).toMatchObject({ status: "ready" });
+      expect(buildAssetXirrInput(stockInput({ distributions: [payout({ paidOn: "2024-12-01" })] })))
+        .toEqual({ status: "unavailable", reasons: [{ assetId: "stock", reason: "payout-before-purchase", recordId: "div" }] });
+    });
+
+    it("includes payouts in the Investments series", () => {
+      const result = buildInvestmentsXirrInput(investmentsInput({
+        trades: [buy, sell, stockBuy], quotes: { btc: quote(), stock: quote({ assetId: "stock" }) },
+        distributions: [payout()], distributionCoverage: [{ assetId: "stock", from: "2024-01-01", confirmedAt: "x" }],
+      }));
+      expect(result.status === "ready" && result.flows.map(({ id, amountInr }) => [id, amountInr])).toEqual([
+        ["buy", "-1010"], ["stock-buy", "-1010"], ["sell", "695"], ["div", "45"], ["portfolio", "2700"],
+      ]);
+    });
   });
 
   it("blocks unknown opening history, valueless transfers and demerger members", () => {
@@ -156,6 +198,7 @@ describe("Investments XIRR input", () => {
       trades: [buy, sell, { ...buy, id: "stock-buy", assetId: "stock" }],
       quotes: { btc: quote(), stock: quote({ assetId: "stock" }) },
     }));
+    // Without payout coverage the stock is blocked, and so is the whole series.
     expect(result).toEqual({ status: "unavailable", reasons: [{ assetId: "stock", reason: "distributions-not-recorded" }] });
   });
 

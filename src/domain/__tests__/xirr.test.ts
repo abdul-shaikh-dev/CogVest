@@ -131,8 +131,8 @@ describe("XIRR from built inputs", () => {
   const endDate = "2026-01-01";
 
   it("calculates per-asset rates for a held and a fully sold asset", () => {
-    const held = buildAssetXirrInput({ asset: btc, assetId: "btc", assets: [btc, eth], trades, openingPositions: [], quote: quote("btc", 1210), endDate });
-    const sold = buildAssetXirrInput({ asset: eth, assetId: "eth", assets: [btc, eth], trades, openingPositions: [], quote: undefined, endDate });
+    const held = buildAssetXirrInput({ asset: btc, assetId: "btc", assets: [btc, eth], trades, openingPositions: [], quote: quote("btc", 1210), distributions: [], coverage: undefined, endDate });
+    const sold = buildAssetXirrInput({ asset: eth, assetId: "eth", assets: [btc, eth], trades, openingPositions: [], quote: undefined, distributions: [], coverage: undefined, endDate });
     expect(held.status === "ready" && rateOf(held.flows)).toBeCloseTo(0.21, 10);
     expect(sold.status === "ready" && calculateXirr(sold.flows)).toMatchObject({ status: "rate", shortPeriod: true, days: 181 });
   });
@@ -140,7 +140,7 @@ describe("XIRR from built inputs", () => {
   it("calculates the portfolio rate from combined flows, not an average of asset rates", () => {
     const quotes = { btc: quote("btc", 1210) };
     const portfolio = buildInvestmentsXirrInput({
-      assets: [btc, eth], trades, openingPositions: [], quotes,
+      assets: [btc, eth], trades, openingPositions: [], quotes, distributions: [], distributionCoverage: [],
       hasPpfAccounts: false, hasEpfAccounts: false, hasFuturesAccounts: false, endDate,
     });
     if (portfolio.status !== "ready") throw new Error("expected ready input");

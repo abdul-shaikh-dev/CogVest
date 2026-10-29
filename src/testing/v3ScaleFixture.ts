@@ -160,6 +160,8 @@ export function createV3ScaleFixture(): V3ScaleFixture {
     epf: { accounts: [], events: [], cashLinks: [], audit: [] },
     assets,
     cashEntries: [],
+    distributionCoverage: [],
+    distributions: [],
     futuresAccounts: [],
     monthlySnapshots: snapshots(),
     openingPositions,

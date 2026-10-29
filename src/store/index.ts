@@ -4,6 +4,7 @@ import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domain/investingCashMigration";
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
+import { distributionGraphProblems, planDistributionChange, validateDistributionGraph, type DistributionInput } from "@/src/domain/distributions";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { projectDemergers, demergerCatalog } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
@@ -81,6 +82,8 @@ import type {
   CashEntry,
   CashEntryPurpose,
   Currency,
+  Distribution,
+  DistributionCoverage,
   HistoricalQuote,
   HistoricalQuoteCache,
   ImportedTransactionProvenance,
@@ -118,7 +121,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 16;
+export const portfolioSchemaVersion = 17;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -127,6 +130,8 @@ export type RawPortfolioSnapshot = {
   epf: EpfState;
   assets: Asset[];
   cashEntries: CashEntry[];
+  distributionCoverage: DistributionCoverage[];
+  distributions: Distribution[];
   futuresAccounts: UsdmFuturesAccount[];
   monthlySnapshots: MonthlySnapshot[];
   openingPositions: OpeningPosition[];
@@ -157,6 +162,11 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   }) => { status: "applied" | "alreadyApplied" } | { status: "rejected"; reason: string };
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
+  /** Creates or corrects one payout (D2); a payout to Cash owns its Cash addition. */
+  saveDistribution: (input: DistributionInput) => DistributionMutationResult;
+  deleteDistribution: (distributionId: string) => DistributionMutationResult;
+  /** Ongoing "every payout since this date is recorded" statement (D3); null removes it. */
+  setDistributionCoverage: (assetId: string, from: string | null) => DistributionCoverageResult;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
   saveFuturesCashTransfer: (input: FuturesCashTransferInput) => void;
   deleteFuturesCashTransfer: (accountId: string, eventId: string) => void;
@@ -343,7 +353,7 @@ export type AssetCorrectionResult =
       status: "applied";
     })
   | {
-      reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "notFound";
+      reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "linkedPayout" | "notFound";
       status: "rejected";
     };
 
@@ -362,7 +372,7 @@ export type AssetDeletionResult =
       impact: AssetDeletionImpact;
       status: "applied";
     })
-  | { reason: "insufficientCash" | "notFound" | "linkedDemerger" | "linkedEpf"; status: "rejected" };
+  | { reason: "insufficientCash" | "notFound" | "linkedDemerger" | "linkedEpf" | "linkedPayout"; status: "rejected" };
 
 export type ManualCashDeletionResult =
   | { entry: CashEntry; status: "applied" }
@@ -402,8 +412,17 @@ export type OpeningPositionDeletionResult =
     }
   | { reason: "notFound"; status: "rejected" };
 
+export type DistributionMutationResult =
+  | { status: "applied"; distribution?: Distribution }
+  | { status: "rejected"; reason: "notFound" | "invalidEntry" | "insufficientCash" };
+
+export type DistributionCoverageResult =
+  | { status: "applied" }
+  | { status: "rejected"; reason: "notFound" | "invalidEntry" };
+
 type TradeMutationRejectionReason =
   | "assetMismatch"
+  | "linkedPayout"
   | "inconsistentLink"
   | "insufficientCash"
   | "invalidEntry"
@@ -437,6 +456,7 @@ export type TradeDeletionImpact = {
 
 type TradeDeletionRejectionReason =
   | "corporateActionDependency"
+  | "linkedPayout"
   | "emptySelection"
   | "inconsistentLink"
   | "insufficientCash"
@@ -522,6 +542,8 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
     epf: emptyEpfState(),
     assets: [],
     cashEntries: [],
+    distributionCoverage: [],
+    distributions: [],
     futuresAccounts: [],
     monthlySnapshots: [],
     openingPositions: [],
@@ -633,6 +655,9 @@ function migratePortfolioSnapshot(
     assets,
     epf: stored.epf ?? emptyEpfState(),
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
+    // V17 adds payouts; older portfolios start with none and no coverage (D12).
+    distributionCoverage: stored.distributionCoverage ?? [],
+    distributions: stored.distributions ?? [],
     futuresAccounts: stored.futuresAccounts ?? [],
     monthlySnapshots: (stored.monthlySnapshots ?? []).map(
       normalizeMonthlySnapshot,
@@ -767,6 +792,8 @@ function selectRawSnapshot(
     epf: state.epf,
     assets: state.assets,
     cashEntries: state.cashEntries,
+    distributionCoverage: state.distributionCoverage,
+    distributions: state.distributions,
     futuresAccounts: state.futuresAccounts,
     monthlySnapshots: state.monthlySnapshots,
     openingPositions: state.openingPositions,
@@ -783,6 +810,7 @@ function persistPortfolio(
   state: PortfolioStoreState,
 ) {
   validateSplitInventory(state);
+  validateDistributionGraph(state);
   storage.setItem(portfolioStorageKey, selectRawSnapshot(state) as JsonValue);
 }
 
@@ -795,6 +823,7 @@ function persistPortfolioTransition(
   validateEpfState(transition.epf ?? state.epf, transition.cashEntries ?? state.cashEntries);
   validateEpfLegacyLinks((transition.epf ?? state.epf).accounts, transition.assets ?? state.assets);
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
+  validateDistributionGraph({ ...selectRawSnapshot(state), ...transition });
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
     ...transition,
@@ -820,6 +849,8 @@ function isLinkedCashEntry(entry: CashEntry) {
     Boolean(entry.linkedTradeId) ||
     Boolean(entry.linkedFutures) ||
     Boolean(entry.linkedEpf) ||
+    Boolean(entry.linkedDistributionId) ||
+    entry.purpose === "distribution" ||
     entry.purpose === "epfTransfer" ||
     entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||
@@ -1315,6 +1346,8 @@ function persistAssetGraphTransition({
   storage: JsonStorage;
 }) {
   validateSplitInventory(portfolio);
+  // Payout links must stay valid; fail before any write rather than store a graph that would be quarantined.
+  validateDistributionGraph(portfolio);
   const previous = {
     historical: storage.getRawItem(historicalQuoteCacheStorageKey),
     portfolio: storage.getRawItem(portfolioStorageKey),
@@ -1643,6 +1676,9 @@ function prepareTradeDeletion(
 
   const selectedTrades = state.trades.filter((trade) => selectedIds.has(trade.id));
   if (selectedTrades.length !== selectedIds.size) return { reason: "notFound", status: "rejected" };
+  if (state.distributions.some((item) => selectedIds.has(item.linkedTradeId ?? ""))) {
+    return { reason: "linkedPayout", status: "rejected" };
+  }
 
   const linkedEntries: CashEntry[] = [];
   for (const trade of selectedTrades) {
@@ -2468,6 +2504,10 @@ export function createPortfolioStore({
       } catch {
         return { reason: "linkedEpf", status: "rejected" };
       }
+      // Payouts are INR and need a non-Cash asset; a correction must not strand them.
+      if (distributionGraphProblems({ ...selectRawSnapshot(state), assets: state.assets.map((item) => (item.id === asset.id ? asset : item)) }).length > 0) {
+        return { reason: "linkedPayout", status: "rejected" };
+      }
       if (!hasValidAssetIdentity(asset)) {
         return { reason: "invalidAsset", status: "rejected" };
       }
@@ -2556,6 +2596,11 @@ export function createPortfolioStore({
       const trade = deriveTrade(input);
       if (!isValidTradeRecord(trade, currentDate)) {
         return { reason: "invalidEntry", status: "rejected" };
+      }
+      // A reinvested payout must not end up dated after the buy it funded.
+      if (state.distributions.some((item) => item.linkedTradeId === trade.id &&
+        (getCalendarDatePart(trade.date) ?? "") < item.paidOn)) {
+        return { reason: "linkedPayout", status: "rejected" };
       }
 
       const linkedEntries = linkedCashEntriesForTrade(state, trade.id);
@@ -2750,12 +2795,49 @@ export function createPortfolioStore({
 
       return { entry: existingEntry, status: "applied" };
     },
+    saveDistribution: (input) => {
+      const state = get();
+      const plan = planDistributionChange({ ...state, id: input.id, input,
+        recordedAt: now().toISOString(), today: formatLocalCalendarDate(now()) });
+      if (plan.status === "rejected") return plan;
+      if (!hasNonnegativeCashTimeline(plan.cashEntries)) return { reason: "insufficientCash", status: "rejected" };
+      const transition = { distributions: plan.distributions, cashEntries: plan.cashEntries };
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
+      return { distribution: plan.distribution, status: "applied" };
+    },
+    deleteDistribution: (distributionId) => {
+      const state = get();
+      const plan = planDistributionChange({ ...state, id: distributionId, input: null,
+        recordedAt: now().toISOString(), today: formatLocalCalendarDate(now()) });
+      if (plan.status === "rejected") return plan;
+      // Removing payout Cash must not leave later Cash spending unfunded.
+      if (!hasNonnegativeCashTimeline(plan.cashEntries)) return { reason: "insufficientCash", status: "rejected" };
+      const transition = { distributions: plan.distributions, cashEntries: plan.cashEntries };
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
+      return { status: "applied" };
+    },
+    setDistributionCoverage: (assetId, from) => {
+      const state = get();
+      if (!state.assets.some((asset) => asset.id === assetId)) return { reason: "notFound", status: "rejected" };
+      if (from !== null && (getCalendarDatePart(from) !== from || isFutureCalendarDate(from, now()))) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+      const others = state.distributionCoverage.filter((item) => item.assetId !== assetId);
+      const distributionCoverage = from === null ? others
+        : [...others, { assetId, confirmedAt: now().toISOString(), from }];
+      persistPortfolioTransition(storage, state, { distributionCoverage });
+      set({ distributionCoverage });
+      return { status: "applied" };
+    },
     deleteAsset: (assetId) => {
       const state = get();
       const asset = state.assets.find((item) => item.id === assetId);
       if (!asset) return { reason: "notFound", status: "rejected" };
       if (asset.demerger || state.assets.some((item) => item.demerger?.childAssetId === assetId)) return { reason: "linkedDemerger", status: "rejected" };
       if (state.epf.accounts.some((account) => account.legacyAssetId === assetId)) return { reason: "linkedEpf", status: "rejected" };
+      if (state.distributions.some((item) => item.assetId === assetId)) return { reason: "linkedPayout", status: "rejected" };
 
       const removedTrades = state.trades.filter(
         (trade) => trade.assetId === assetId,
