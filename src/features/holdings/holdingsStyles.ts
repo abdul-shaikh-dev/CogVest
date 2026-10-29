@@ -302,6 +302,9 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     justifyContent: "flex-end",
     paddingHorizontal: spacing.md,
   },
+  addOptionGroup: {
+    gap: spacing.xs,
+  },
   panelContent: {
     gap: spacing.md,
     paddingBottom: spacing.md,

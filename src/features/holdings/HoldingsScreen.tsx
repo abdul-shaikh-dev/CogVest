@@ -141,6 +141,7 @@ export function HoldingsScreen({
     assets,
     displayMode,
     failed,
+    hasCash,
     holdings,
     isRefreshing,
     maskWealthValues,
@@ -652,6 +653,7 @@ export function HoldingsScreen({
         <HoldingsPanelSheet activePanel={activePanel} setActivePanel={setActivePanel}>
           {activePanel === "add" ? (
             <AddHoldingsPanel
+              hasCash={hasCash}
               onAddEpfAccount={onAddEpfAccount}
               onAddPpfAccount={onAddPpfAccount}
               onAddTrade={onAddTrade}
