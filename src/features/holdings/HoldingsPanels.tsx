@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppButton, AppText, GroupedListRow, PremiumCard } from "@/src/components/common";
+import { AppButton, AppText, GroupedListRow, PremiumCard, SectionHeader } from "@/src/components/common";
 import { useReducedMotionPreference } from "@/src/hooks";
 import { formatPercentage } from "@/src/domain/formatters";
 import { spacing } from "@/src/theme";
@@ -88,8 +88,14 @@ export function HoldingsPanelSheet({
   );
 }
 
-/** Ways to add holdings: record activity, add what you own, or import. */
+type AddOption = { meta: string; onPress: () => void; testID: string; title: string };
+
+/**
+ * Ways to add holdings: one primary action (Record purchase once Cash exists,
+ * else Add existing holding), then quiet rows grouped into accounts and imports.
+ */
 export function AddHoldingsPanel({
+  hasCash,
   onAddEpfAccount,
   onAddPpfAccount,
   onAddTrade,
@@ -101,6 +107,7 @@ export function AddHoldingsPanel({
   onRecordPurchase,
   quickSetupSavedCount,
 }: {
+  hasCash: boolean;
   onAddEpfAccount?: () => void;
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onAddTrade?: () => void;
@@ -112,91 +119,67 @@ export function AddHoldingsPanel({
   onRecordPurchase?: (assetId?: string) => void;
   quickSetupSavedCount: number;
 }) {
+  const option = (
+    action: (() => void) | undefined,
+    title: string,
+    meta: string,
+    testID: string,
+  ): AddOption[] =>
+    action ? [{ meta, onPress: () => { onClose(); action(); }, testID, title }] : [];
+  const recordPurchase = option(
+    onRecordPurchase && (() => onRecordPurchase()),
+    "Record purchase",
+    "Buy more, funded from Cash",
+    "record-purchase-option",
+  );
+  const addExisting = option(onAddTrade, "Add existing holding", "One position you already own", "add-one-holding-option");
+  const [primary, ...firstRows] = hasCash && recordPurchase.length
+    ? [...recordPurchase, ...addExisting]
+    : [...addExisting, ...recordPurchase];
+  const quickSetup = option(
+    onQuickSetup,
+    quickSetupSavedCount > 0 ? `Continue setup (${quickSetupSavedCount} saved)` : "Add multiple holdings",
+    "Set up several at once",
+    "add-multiple-holdings-option",
+  );
+  const groups = [
+    { rows: [...firstRows, ...quickSetup] },
+    {
+      rows: [
+        ...option(onAddPpfAccount && (() => onAddPpfAccount()), "PPF account", "Public Provident Fund balance", "add-ppf-account"),
+        ...option(onAddEpfAccount, "EPF account", "Employees' Provident Fund", "add-epf-account-option"),
+        ...option(onOpenFutures, "Futures wallet", "Manual USDT positions · separate from holdings", "holdings-open-futures"),
+      ],
+      title: "Add an account",
+    },
+    {
+      rows: [
+        ...option(onImportHoldings, "Holdings CSV", "Current positions from a spreadsheet", "import-holdings-csv-option"),
+        ...option(onImportTransactions, "Transaction history", "Zerodha tradebook, CAS or CSV", "import-transactions-csv-option"),
+      ],
+      title: "Import",
+    },
+  ];
+
+  const styles = useStyles();
   return (
     <>
-      <AppText color="secondary" variant="caption">
-        Record new activity or add investments you already own.
-      </AppText>
-      {onRecordPurchase ? <AppButton title="Record purchase" testID="record-purchase-option"
-        onPress={() => { onClose(); onRecordPurchase(); }} /> : null}
-      {onAddTrade ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onAddTrade();
-          }}
-          testID="add-one-holding-option"
-          title="Add existing holding"
-          variant="secondary"
-        />
-      ) : null}
-      {onQuickSetup ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onQuickSetup();
-          }}
-          testID="add-multiple-holdings-option"
-          title={
-            quickSetupSavedCount > 0
-              ? `Continue setup (${quickSetupSavedCount} saved)`
-              : "Add multiple holdings"
-          }
-        />
-      ) : null}
-      {onAddPpfAccount ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onAddPpfAccount();
-          }}
-          testID="add-ppf-account"
-          title="Add PPF account"
-          variant="secondary"
-        />
-      ) : null}
-      {onAddEpfAccount ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onAddEpfAccount();
-          }}
-          testID="add-epf-account-option"
-          title="Add EPF account"
-          variant="secondary"
-        />
-      ) : null}
-      {onImportHoldings ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onImportHoldings();
-          }}
-          testID="import-holdings-csv-option"
-          title="Import holdings CSV"
-          variant="secondary"
-        />
-      ) : null}
-      {onOpenFutures ? (
-        <GroupedListRow
-          title="Futures wallet"
-          meta="Manual USDT positions · separate from holdings"
-          value="›"
-          testID="holdings-open-futures"
-          onPress={() => { onClose(); onOpenFutures(); }}
-        />
-      ) : null}
-      {onImportTransactions ? (
-        <AppButton
-          onPress={() => {
-            onClose();
-            onImportTransactions();
-          }}
-          testID="import-transactions-csv-option"
-          title="Import transaction history"
-          variant="secondary"
-        />
-      ) : null}
+      {primary ? <AppButton onPress={primary.onPress} testID={primary.testID} title={primary.title} /> : null}
+      {groups.map((group) => group.rows.length ? (
+        <View key={group.title ?? "start"} style={styles.addOptionGroup}>
+          {group.title ? <SectionHeader title={group.title} /> : null}
+          {group.rows.map((row) => (
+            <GroupedListRow
+              key={row.testID}
+              meta={row.meta}
+              onPress={row.onPress}
+              showChevron
+              testID={row.testID}
+              title={row.title}
+            />
+          ))}
+        </View>
+      ) : null)}
     </>
   );
 }

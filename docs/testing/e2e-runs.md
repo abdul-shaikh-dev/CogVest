@@ -4,6 +4,18 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-29: Add holdings sheet (#562), smoke 12 passed plus 4 sheet flows
+
+- Commit: main plus the #562 Add holdings sheet regrouping. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK, Metro stopped.
+- Smoke tier: 12 passed, 0 failed, 10m 31s.
+- Flows that open the sheet, by path: funded-buy-cash 1m 31s, asset-correction
+  2m 20s, holdings-list-first 1m 34s, workflow-exit-navigation 0m 29s. All
+  passed.
+- Screenshots with and without Cash, light, dark and font scale 1.3:
+  `docs/reviews/artifacts/2026-10-29-add-holdings-sheet/`.
+
 ## 2026-10-29: E2E build variant (#560), full tier 60 passed against the E2E APK, debug smoke 12 passed
 
 - Commit: main plus the #560 E2E build variant. AVD CogVest_UX_Proof, API 36,
