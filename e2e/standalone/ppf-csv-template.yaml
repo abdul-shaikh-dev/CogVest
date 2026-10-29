@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Run after ppf-csv-import.yaml. Provision Download/CogVestPpfTemplate first.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn: "CSV PPF"
 - assertVisible: "₹14,350.00"
 - scrollUntilVisible:

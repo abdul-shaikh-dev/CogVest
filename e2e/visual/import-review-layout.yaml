@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic QA portfolio and transactions-import-v1.csv in Downloads.
 # Preview only. Do not confirm the import or clear portfolio data.
@@ -9,7 +9,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-cogvestCsvV1
 - scrollUntilVisible:

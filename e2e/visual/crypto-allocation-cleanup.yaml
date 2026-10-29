@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       text: "4000 USDT"

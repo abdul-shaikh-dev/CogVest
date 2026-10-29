@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Destructive synthetic-data test; run only on a disposable emulator.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - tapOn:
     id: ppf-nickname-input
 - eraseText
@@ -48,7 +48,7 @@ appId: com.abdulshaikh.cogvest
     id: save-ppf-account
 - assertVisible:
     id: ppf-confirmed-balance-card
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - tapOn:
     id: toggle-manual-asset-entry
 - tapOn:
@@ -101,7 +101,7 @@ appId: com.abdulshaikh.cogvest
     id: save-holding-button
 - assertVisible:
     id: holding-save-complete
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: ppf-excluded-chart-notice

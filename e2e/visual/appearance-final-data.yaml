@@ -1,10 +1,10 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 5"
 - assertVisible: "Opening position count: 4"
 - assertVisible: "Trade count: 0"

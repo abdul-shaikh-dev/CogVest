@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow:
     when:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           id: close-cash-entry-button
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: settings-screen
 - scrollUntilVisible:
@@ -28,13 +28,13 @@ appId: com.abdulshaikh.cogvest
     id: holding-row-visual-qa-asset-bitcoin
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-fixes/${STAGE}
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holding-row-visual-qa-asset-bitcoin
 - takeScreenshot: .expo/appearance-fixes/${STAGE}-deeplink
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 5"
 - assertVisible: "Opening position count: 4"
 - assertVisible: "Trade count: 0"

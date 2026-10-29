@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic audit portfolio; no financial writes.
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-${MODE}
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible: "Monthly Progress"
 - takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}
 - tapOn:

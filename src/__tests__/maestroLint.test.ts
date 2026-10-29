@@ -43,7 +43,7 @@ function compare(findingsByFlow: Record<string, Finding[]>, baseline: Record<str
 describe("Maestro selector policy lint", () => {
   it("reports display-text taps and scrolls but not testID selectors", () => {
     const findings = lint([
-      "appId: com.abdulshaikh.cogvest",
+      "appId: ${APP_ID}",
       "---",
       '- tapOn: "Back to Holdings"',
       "- tapOn:",
@@ -97,6 +97,22 @@ describe("Maestro selector policy lint", () => {
     expect(lint('- inputText: "Current account"')).toEqual([
       { line: 1, rule: "typed-rr", detail: "Current account" },
     ]);
+  });
+
+  it("reports a fixed app ID or link scheme so flows can target the debug or E2E build", () => {
+    expect(lint([
+      "appId: com.abdulshaikh.cogvest",
+      "---",
+      '- openLink: "cogvest:///add-holding"',
+      "- openLink:",
+      "    link: cogvest:///progress",
+      '- openLink: "${SCHEME}:///add-holding"',
+    ].join("\n"))).toEqual([
+      { line: 1, rule: "fixed-app-id", detail: "com.abdulshaikh.cogvest" },
+      { line: 3, rule: "fixed-scheme", detail: "cogvest" },
+      { line: 5, rule: "fixed-scheme", detail: "cogvest" },
+    ]);
+    expect(lint('appId: ${APP_ID}\n---\n- openLink: "${SCHEME}:///add-holding"')).toEqual([]);
   });
 
   it("fails new violations and asks for the baseline to shrink, never grow", () => {

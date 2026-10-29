@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Replaces portfolio data. Only run on a disposable test installation.
 # Push e2e/fixtures/font-scale-history.json into this device's Downloads first.

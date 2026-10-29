@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: e2e-evidence-screen

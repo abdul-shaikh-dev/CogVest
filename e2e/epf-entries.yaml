@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Records optional EPF entries through the real screens on an isolated synthetic
 # database, re-reads the persisted ledger exactly, then clears that database.
@@ -8,15 +8,15 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
 - tapOn:
     id: epf-accounts-qa-cleanup
 - assertVisible: "PASS: synthetic database cleared"
-- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-entries"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-entries"
 - tapOn:
     id: epf-accounts-qa-seed-entries
 - assertVisible: "PASS: seeded Acme 140000 and Beta 0"
-- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa"
 - assertVisible:
     id: epf-account-total
     text: "₹1,40,000.00"
@@ -149,7 +149,7 @@ appId: com.abdulshaikh.cogvest
     id: epf-activity-toggle
 - takeScreenshot: .expo/epf-546-entries/activity
 
-- openLink: "cogvest:///epf-accounts-qa?token=cogvest-local-visual-qa&page=check-entries"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=check-entries"
 - tapOn:
     id: epf-accounts-qa-check-entries
 - assertVisible: "PASS: EPF 142567; Acme 92567; Beta 0; 50000 moving; Cash unchanged"

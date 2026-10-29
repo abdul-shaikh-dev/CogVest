@@ -1,5 +1,5 @@
 # Opt-in, non-destructive check using a populated synthetic release dataset.
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp
 - extendedWaitUntil:

@@ -68,7 +68,7 @@ function EnabledAccountingQa() {
 
 export default function AccountingQaRoute() {
   const { run, token } = useLocalSearchParams<{ run?: string; token?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) return <AppText testID="accounting-qa-blocked">Accounting QA is unavailable.</AppText>;
+  if (!canUseVisualQaHarness({ token })) return <AppText testID="accounting-qa-blocked">Accounting QA is unavailable.</AppText>;
   if (run === "missing-linked-cash") return <MissingLinkedCashQa />;
   return <EnabledAccountingQa />;
 }

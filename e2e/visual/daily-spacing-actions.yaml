@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-header-mask-toggle
 - assertNotVisible: ".*₹[0-9].*"
@@ -47,5 +47,5 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible: "₹11,00,000.00"
 - back
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"

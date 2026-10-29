@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow: appearance-configure.yaml
 - stopApp
@@ -12,7 +12,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 10000
 - assertVisible: "Dashboard"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/cold-dashboard
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: appearance-${APPEARANCE}

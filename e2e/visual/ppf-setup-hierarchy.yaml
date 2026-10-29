@@ -1,13 +1,13 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-${MODE}
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - assertVisible:
     id: ppf-account-form-screen
 - takeScreenshot: .expo/ppf-setup-hierarchy/${PHASE}/${SIZE}/${MODE}-entry

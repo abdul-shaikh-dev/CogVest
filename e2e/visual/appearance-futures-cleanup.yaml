@@ -1,9 +1,9 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 env:
   EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
 ---
 # Remove only the synthetic wallet created by futures-refinement-setup.yaml.
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "999 USDT"
 - scrollUntilVisible:
     element:
@@ -13,7 +13,7 @@ env:
     id: futures-delete-account
 - tapOn:
     id: futures-confirm-delete
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "${EXPECTED_CASH}"

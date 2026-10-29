@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic audit portfolio; no financial writes.
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-${MODE}
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - assertVisible: "Recent cash ledger"
 - takeScreenshot: .expo/cash-spacing/${PHASE}/${SIZE}/${MODE}

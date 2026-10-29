@@ -29,7 +29,7 @@ export default function E2eEvidenceScreen() {
   );
 
   if (
-    !canUseVisualQaHarness({ isDevelopment: __DEV__, token: params.token })
+    !canUseVisualQaHarness({ token: params.token })
   ) {
     return (
       <ScreenContainer testID="e2e-evidence-unavailable">

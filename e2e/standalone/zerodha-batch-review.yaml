@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Disposable synthetic emulator. Requires Yahoo lookup, not private broker data.
 # Push fixtures/zerodha-tradebook-2024.csv and zerodha-series-2025.csv to Downloads.
@@ -8,7 +8,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -102,7 +102,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:

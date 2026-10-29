@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Unsaved synthetic draft. Does not clear or change existing portfolio records.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - tapOn:
     id: toggle-manual-asset-entry
 - tapOn:

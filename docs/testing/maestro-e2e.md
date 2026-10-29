@@ -16,7 +16,8 @@ not part of default GitHub PR CI.
 - `JAVA_HOME` points to the Java installation.
 - Android Studio and a running Android Emulator.
 - `adb devices` shows an emulator in `device` state.
-- CogVest package `com.abdulshaikh.cogvest` is installed on the emulator.
+- CogVest package `com.abdulshaikh.cogvest` (debug, with Metro) or
+  `com.abdulshaikh.cogvest.e2e` (E2E build) is installed on the emulator.
 - Maestro CLI is installed and available on `PATH`.
 
 Official install docs:
@@ -69,6 +70,27 @@ npm run maestro:test -- e2e/smoke-launch.yaml
 Every run ends with a summary listing each flow's result, its duration and,
 for a failure, the failing step. A failing flow does not stop the run; the
 command still exits non-zero when any flow fails.
+
+Flows declare `appId: ${APP_ID}` and open links as `${SCHEME}://`. Run them
+through `scripts/maestro-run.mjs` (the commands above, or
+`node scripts/maestro-run.mjs <flow>` for flows outside `e2e/`), which passes
+both values. `npm run maestro:lint` rejects a hardcoded app ID or scheme.
+
+### Against the E2E build, without Metro
+
+The E2E build (`com.abdulshaikh.cogvest.e2e`, launcher name "CogVest E2E")
+bundles release-mode JavaScript with the QA harness enabled. It installs
+alongside the debug app and uses its own `cogvest-e2e://` scheme. See
+[`e2e-build-variant.md`](e2e-build-variant.md).
+
+```powershell
+npm run android:e2e
+adb install -r android/app/build/outputs/apk/e2e/app-e2e.apk
+$env:COGVEST_APP_ID = "com.abdulshaikh.cogvest.e2e"; npm run maestro:test
+```
+
+`android:e2e` builds for the x86_64 emulator. Rebuild the APK after any change
+to `app/` or `src/`, since it does not load JavaScript from Metro.
 
 ## Run Cadence
 
@@ -177,6 +199,7 @@ checks and Android smoke checks should still work.
   exempts `com.abdulshaikh.cogvest` with
   `adb shell dumpsys deviceidle whitelist +com.abdulshaikh.cogvest`; rerun that
   after reinstalling the app if you run flows with `maestro test` directly.
+  The E2E build has no Metro socket, so it needs no exemption.
 - Typed labels change (for example "contribution" becomes "contributions"):
   turn off Gboard auto-correction, spell check and the suggestion strip under
   Gboard settings > Corrections & suggestions. Also turn off stylus
@@ -203,9 +226,11 @@ That route projects the actual persisted store into stable evidence for asset
 identity, classification, market/currency, quote source and price, opening
 positions, PPF balances, aggregate invested/current values, valuation
 completeness, allocation, and canonical-identity conflicts. It does not seed or
-mutate data. The harness is available only in development builds with the
-matching local token. Release builds cannot opt into test routes through public
-environment variables.
+mutate data. The harness needs the matching local token, and is available only
+in development builds and the E2E build (`com.abdulshaikh.cogvest.e2e` with the
+build-time harness flag). The Play and private release builds cannot enable it;
+see [`e2e-build-variant.md`](e2e-build-variant.md). On the E2E build the route
+opens as `cogvest-e2e:///e2e-evidence?...`.
 
 Run these flows only against a freshly built and installed local APK when using
 their output as PR evidence. A passing flow against an older installed build is

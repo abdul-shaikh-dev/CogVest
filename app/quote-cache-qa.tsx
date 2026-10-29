@@ -49,7 +49,6 @@ export default function QuoteCacheQaRoute() {
   const styles = useStyles();
   const params = useLocalSearchParams<{ token?: string }>();
   const enabled = canUseVisualQaHarness({
-    isDevelopment: __DEV__,
     token: params.token,
   });
   const storageRef = useRef<JsonStorage | null>(null);

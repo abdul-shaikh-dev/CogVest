@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # UX PPF Review after ppf-import-review.yaml; large-text display configured externally.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
@@ -111,10 +111,10 @@ appId: com.abdulshaikh.cogvest
     element: "₹1,00,450.00"
     direction: UP
 - assertVisible: "₹1,00,450.00"
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - tapOn:
     id: dashboard-mask-toggle
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
@@ -129,7 +129,7 @@ appId: com.abdulshaikh.cogvest
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ppf-screens/large/account-form
 - pressKey: BACK
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Show values"
 - tapOn:
     id: dashboard-mask-toggle

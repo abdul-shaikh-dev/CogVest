@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -12,12 +12,12 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           point: "94%,93%"
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&history=${HISTORY}"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa&history=${HISTORY}"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - scrollUntilVisible:
     element:
       id: progress-summary-month

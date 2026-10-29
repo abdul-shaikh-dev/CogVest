@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: "futures-screen"
 - tapOn:
@@ -107,7 +107,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
     timeout: 60000
 - assertVisible: "Qty 1.*Entry 120 USDT.*"
-- openLink: "cogvest:///backup?mode=export"
+- openLink: "${SCHEME}:///backup?mode=export"
 - assertVisible: "This backup contains sensitive financial information and is not encrypted."
 - tapOn:
     id: choose-backup-location
@@ -123,7 +123,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 15000
 - copyTextFrom: ".*saved. Keep this unencrypted file somewhere you trust."
 - evalScript: ${output.backupName = maestro.copiedText.split(' saved.')[0]}
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-delete-account
@@ -159,10 +159,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Delete Futures wallet?"
 - tapOn:
     id: futures-confirm-delete
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-save-account
-- openLink: "cogvest:///backup?mode=restore"
+- openLink: "${SCHEME}:///backup?mode=restore"
 - tapOn:
     id: choose-backup-file
 # selector: the exported file's name in the Android document picker
@@ -192,7 +192,7 @@ appId: com.abdulshaikh.cogvest
     timeout: 30000
 - tapOn:
     id: backup-restore-done
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-screen
 # selector: the wallet balance is the value under test

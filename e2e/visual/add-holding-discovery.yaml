@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Deterministic synthetic discovery; no records are saved. Pass SHOT for captures.
 - launchApp
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 60000
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: asset-lookup-input
@@ -39,7 +39,7 @@ appId: com.abdulshaikh.cogvest
     id: asset-lookup-input
 - takeScreenshot: .expo/${SHOT}-keyboard
 - hideKeyboard
-- openLink: "cogvest:///asset-search-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///asset-search-qa?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: asset-search-qa-screen

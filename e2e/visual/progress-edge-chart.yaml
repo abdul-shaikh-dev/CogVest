@@ -1,10 +1,10 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
 - extendedWaitUntil:
     visible: "No portfolio history yet"
     timeout: 30000
-- openLink: "cogvest:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=${SCENARIO}&mode=${MODE}"
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=${SCENARIO}&mode=${MODE}"
 - extendedWaitUntil:
     visible:
       id: open-monthly-history

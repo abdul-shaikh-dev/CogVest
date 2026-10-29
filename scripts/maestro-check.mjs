@@ -2,7 +2,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-const packageName = "com.abdulshaikh.cogvest";
+// Same target as scripts/maestro-run.mjs: the debug app, or the E2E build when
+// COGVEST_APP_ID names it.
+const packageName = process.env.COGVEST_APP_ID ?? "com.abdulshaikh.cogvest";
 let hardFailure = false;
 
 function candidateNames(command) {
@@ -154,7 +156,9 @@ if (adbPath) {
       packageName,
     ]);
 
-    if (packageResult.stdout.includes(`package:${packageName}`)) {
+    // Match whole lines: the debug package name is a prefix of the E2E one.
+    const packages = packageResult.stdout.split(/\r?\n/).map((line) => line.trim());
+    if (packages.includes(`package:${packageName}`)) {
       pass(`app package found: ${packageName}`);
     } else {
       fail(`app package not installed: ${packageName}`);

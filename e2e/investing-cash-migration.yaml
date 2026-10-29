@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: false
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - tapOn:
     id: qa-stage-legacy
 - tapOn: "Stage legacy data"
@@ -18,7 +18,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - assertVisible: "PASS: full payload preserved; schema 16"
 - assertVisible: "Futures: 1 linked transfer"
 - takeScreenshot: investing-cash-migration-payload
@@ -29,9 +29,9 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - assertVisible: "PASS: full payload preserved; schema 16"
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=cash"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa&page=cash"
 - assertVisible:
     id: cash-screen
 - assertNotVisible: "Income"
@@ -43,7 +43,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: investing-cash-deposit
 - tapOn:
     id: close-cash-entry-button
-- openLink: "cogvest:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
+- openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa&page=snapshot"
 - assertVisible:
     id: review-snapshot-screen
 - scrollUntilVisible:

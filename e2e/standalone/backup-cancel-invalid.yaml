@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Opt-in, synthetic visual-QA portfolio. Push the invalid fixture into the
 # currently selected Documents/CogVest-QA folder before running this flow.
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 60000
-- openLink: "cogvest:///backup?mode=export"
+- openLink: "${SCHEME}:///backup?mode=export"
 - tapOn:
     id: choose-backup-location
 - repeat:
@@ -23,7 +23,7 @@ appId: com.abdulshaikh.cogvest
     id: backup-export-warning
 - assertNotVisible:
     id: backup-status
-- openLink: "cogvest:///backup?mode=restore"
+- openLink: "${SCHEME}:///backup?mode=restore"
 - tapOn:
     id: choose-backup-file
 - repeat:
@@ -64,7 +64,7 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/backup-invalid
 - tapOn:
     id: backup-back
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-search-input
 - inputText: HDFC

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Disposable synthetic emulator. SHOT names the display configuration.
 - launchApp:
@@ -8,21 +8,21 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 60000
 - takeScreenshot: .expo/ux-final/${SHOT}/empty-dashboard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holdings-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/empty-holdings
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible: "No portfolio history yet"
 - takeScreenshot: .expo/ux-final/${SHOT}/empty-progress
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "No cash movement yet"
 - takeScreenshot: .expo/ux-final/${SHOT}/empty-cash
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: settings-screen
 - takeScreenshot: .expo/ux-final/${SHOT}/empty-settings
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
     timeout: 15000
@@ -30,22 +30,22 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 15000
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible:
     id: dashboard-portfolio-hero
 - takeScreenshot: .expo/ux-final/${SHOT}/populated-dashboard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible: "4 market positions"
 - takeScreenshot: .expo/ux-final/${SHOT}/populated-holdings
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: open-monthly-history
 - takeScreenshot: .expo/ux-final/${SHOT}/populated-progress
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "Deposit"
 - assertVisible: "Withdraw"
 - takeScreenshot: .expo/ux-final/${SHOT}/populated-cash
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: value-mask-toggle
 - takeScreenshot: .expo/ux-final/${SHOT}/populated-settings
@@ -55,28 +55,28 @@ appId: com.abdulshaikh.cogvest
     id: value-mask-toggle
     checked: true
 - takeScreenshot: .expo/ux-final/${SHOT}/masked-settings
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible:
     id: dashboard-screen
 - assertVisible: "₹••••"
 - takeScreenshot: .expo/ux-final/${SHOT}/masked-dashboard
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holdings-screen
 - assertVisible: "₹••••"
 - assertVisible: "+26.40%"
 - takeScreenshot: .expo/ux-final/${SHOT}/masked-holdings
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
 - assertNotVisible: "₹19.87L"
 - takeScreenshot: .expo/ux-final/${SHOT}/masked-progress
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible:
     id: cash-screen
 - assertVisible: "₹••••"
 - takeScreenshot: .expo/ux-final/${SHOT}/masked-cash
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: value-mask-toggle
 - assertVisible:

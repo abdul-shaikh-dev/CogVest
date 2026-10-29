@@ -1,13 +1,13 @@
 # Opt-in visual evidence; preserve the synthetic long-history release dataset.
 # Run at normal size and 360dp / font_scale 1.3, restoring overrides afterward.
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - extendedWaitUntil:
     visible:
       id: progress-screen

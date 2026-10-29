@@ -1,17 +1,17 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow: appearance-configure.yaml
-- openLink: "cogvest:///asset?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///asset?assetId=visual-qa-asset-hdfc"
 - assertVisible:
     id: asset-name-input
     text: "HDFC Bank"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/asset-editor
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - assertVisible:
     id: opening-correction-quantity-input
     text: "25"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/opening-editor
-- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- openLink: "${SCHEME}:///cash-entry?entryId=visual-qa-cash-emergency"
 - assertVisible:
     id: cash-correction-amount-input
     text: "10000"
@@ -28,7 +28,7 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - takeScreenshot: .expo/appearance-completion/${SHOT}/cash-delete
 - tapOn: "Keep entry"
-- openLink: "cogvest:///review-snapshot"
+- openLink: "${SCHEME}:///review-snapshot"
 - tapOn:
     id: snapshot-portfolio-input
 - eraseText: 20
@@ -50,8 +50,8 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - tapOn:
     id: cancel-snapshot-review-button
-- openLink: "cogvest:///insight?kind=missing"
+- openLink: "${SCHEME}:///insight?kind=missing"
 - assertVisible: "Insight unavailable"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/unavailable
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"

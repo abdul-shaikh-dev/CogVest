@@ -1,23 +1,23 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - assertVisible:
     id: ppf-account-form-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${STAGE}/ppf
 - back
-- openLink: "cogvest:///review-snapshot"
+- openLink: "${SCHEME}:///review-snapshot"
 - assertVisible:
     id: review-snapshot-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${STAGE}/snapshot-form
 - back
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible:
     id: manage-assets-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/appearance-537/${STAGE}/manage-assets
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holding-row-visual-qa-asset-bitcoin
 - tapOn: "Hide values"

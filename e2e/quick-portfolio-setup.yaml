@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -10,7 +10,7 @@ appId: com.abdulshaikh.cogvest
     path: quick-setup-empty-launch
 
 # Add a provider-backed holding after explicit result selection.
-- openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///quick-portfolio-setup?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "quick-setup-source-choice"
@@ -166,7 +166,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "3 holdings saved"
 
 # Prove the dedicated account contributes to Debt allocation without a synthetic asset.
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 2"
 - assertVisible: "Opening position count: 2"
 - assertVisible: "PPF account count: 1"
@@ -185,7 +185,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "PPF balance: ₹1,00,000.00 | synthetic asset none"
 
 # Exercise provider failure, explicit manual fallback, unknown date, and pending valuation.
-- openLink: "cogvest:///quick-portfolio-setup?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///quick-portfolio-setup?visualQaState=lookup-failure&token=cogvest-local-visual-qa"
 - assertVisible: "3 holdings saved"
 - tapOn:
     id: "asset-lookup-input"
@@ -253,7 +253,7 @@ appId: com.abdulshaikh.cogvest
     path: quick-setup-populated-dashboard
 
 # Assert persisted records and financial derivations, not success copy alone.
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 3"
 - assertVisible: "Opening position count: 3"
 - assertVisible: "Trade count: 0"

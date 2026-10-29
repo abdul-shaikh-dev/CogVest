@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Remove only the temporary UX PPF Review account after the review flows.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
@@ -48,11 +48,11 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: confirm-delete-ppf-account
 - assertNotVisible: "UX PPF Review"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
-- openLink: "cogvest:///manage-assets"
+- openLink: "${SCHEME}:///manage-assets"
 - assertVisible: "5 assets"
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - assertVisible:
     id: opening-correction-quantity-input
     text: "25"

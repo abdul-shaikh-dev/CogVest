@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Disposable synthetic portfolio; restores Minimal mode and unmasked amounts.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: display-mode-standard
 - assertVisible:
@@ -32,7 +32,7 @@ appId: com.abdulshaikh.cogvest
       id: dashboard-screen
     timeout: 30000
 - assertNotVisible: ".*₹[0-9].*"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: display-mode-minimal
     checked: true

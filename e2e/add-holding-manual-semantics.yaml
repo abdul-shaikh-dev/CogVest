@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - extendedWaitUntil:
     visible:
       id: "add-holding-phase-asset"
@@ -66,7 +66,7 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 1"
 - assertVisible: "Duplicate identity count: 0"
 - assertVisible: "Identity: RELIANCE | RELIANCE.NS"

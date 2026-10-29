@@ -1,10 +1,10 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
 - assertVisible:
     id: "dashboard-screen"
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - assertVisible:
     id: "ppf-account-form-screen"
 - scrollUntilVisible:

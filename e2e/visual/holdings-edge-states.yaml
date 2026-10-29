@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&mode=${MODE}"
+- openLink: "${SCHEME}:///holdings-edge-qa?token=cogvest-local-visual-qa&mode=${MODE}"
 - extendedWaitUntil:
     visible:
       id: holding-row-edge-long
@@ -32,7 +32,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "₹9,44,97,18,533.76"
 - tapOn:
     id: holding-detail-back
-- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=pending&mode=${MODE}"
+- openLink: "${SCHEME}:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=pending&mode=${MODE}"
 - extendedWaitUntil:
     visible:
       id: holdings-pending-valuations
@@ -48,6 +48,6 @@ appId: com.abdulshaikh.cogvest
 - takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-failed-refresh
 - tapOn:
     id: holdings-panel-close
-- openLink: "cogvest:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
+- openLink: "${SCHEME}:///holdings-edge-qa?token=cogvest-local-visual-qa&scenario=empty&mode=${MODE}"
 - assertVisible: "No holdings yet"
 - takeScreenshot: .expo/holdings-edge/${SIZE}/${MODE}-empty

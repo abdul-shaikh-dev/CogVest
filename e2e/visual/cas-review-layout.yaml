@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Synthetic repository PDF only; preview without saving transactions.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - tapOn:
     id: transaction-import-source-camsKfinCasPdfV1
 - scrollUntilVisible:

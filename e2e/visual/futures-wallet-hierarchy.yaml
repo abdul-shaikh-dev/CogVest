@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Synthetic visual-QA portfolio with no Futures wallet.
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: display-mode-${MODE}
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
 - takeScreenshot: .expo/futures-wallet-hierarchy/${PHASE}/${SIZE}/${MODE}-entry
 - tapOn:

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,12 +6,12 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - tapOn: Replace with visual QA data
 - extendedWaitUntil:
     visible: Visual QA portfolio seeded.
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-add-button
 - assertVisible: Add existing holding
@@ -58,7 +58,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: tab-cash
 - assertVisible: "₹49,795.00"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Trade count: 1"
 - assertVisible: "Cash entry count: 5"
 # selector: stored e2e-evidence values are under test

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic opening position. Never save or remove it.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - runFlow:
     when:
       visible:
@@ -59,7 +59,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible:
     id: confirm-delete-opening-position-button
 - back
-- openLink: "cogvest:///opening-position?openingPositionId=visual-qa-opening-hdfc"
+- openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"
 - runFlow:
     when:
       visible:

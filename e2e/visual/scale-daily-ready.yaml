@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - stopApp
 - launchApp
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
       id: holdings-screen

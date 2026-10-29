@@ -10,7 +10,7 @@ import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 export default function ScaleQaRoute() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [result, setResult] = useState("Ready");
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) {
+  if (!canUseVisualQaHarness({ token })) {
     return <AppText testID="scale-qa-blocked">Scale QA is unavailable.</AppText>;
   }
   function seed() {

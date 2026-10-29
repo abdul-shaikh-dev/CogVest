@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow:
     when:
@@ -14,7 +14,7 @@ appId: com.abdulshaikh.cogvest
     commands:
       - tapOn:
           id: holding-discard-exit
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - extendedWaitUntil:
     visible:
       id: settings-screen
@@ -25,7 +25,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - assertVisible:
     id: asset-lookup-input
 - takeScreenshot: .expo/add-holding-search-hierarchy/${PHASE}/${SIZE}/${MODE}-search

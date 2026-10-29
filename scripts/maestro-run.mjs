@@ -131,6 +131,19 @@ if (!maestroPath) {
   process.exit(1);
 }
 
+// Flows declare `appId: ${APP_ID}` and open `${SCHEME}://` links. COGVEST_APP_ID
+// picks the debug app served by Metro (default) or the local E2E build, which has
+// its own scheme so both can be installed; see docs/testing/e2e-build-variant.md.
+const debugAppId = "com.abdulshaikh.cogvest";
+const e2eAppId = "com.abdulshaikh.cogvest.e2e";
+const appId = process.env.COGVEST_APP_ID ?? debugAppId;
+if (appId !== debugAppId && appId !== e2eAppId) {
+  console.log(`FAIL COGVEST_APP_ID must be ${debugAppId} or ${e2eAppId}, not ${appId}`);
+  process.exit(1);
+}
+const scheme = appId === e2eAppId ? "cogvest-e2e" : "cogvest";
+console.log(`Target app: ${appId} (${scheme}://)`);
+
 const isSmoke = process.argv.includes("--smoke");
 const requestedFlows = process.argv.slice(2).filter((arg) => arg !== "--smoke");
 const flows = requestedFlows.length > 0 ? requestedFlows : isSmoke ? smokeFlows : defaultFlows;
@@ -176,15 +189,16 @@ for (const flow of flows) {
 // system file picker. A debug build then loses its Metro Fast Refresh socket and
 // shows a warning banner over bottom-of-screen actions. Allowlisting the app
 // from background network restrictions keeps that socket open; it does not
-// change app behaviour under test and is reset by reinstalling the app.
-const allowlistAdbPath = findExecutable("adb");
+// change app behaviour under test and is reset by reinstalling the app. The E2E
+// build bundles its JavaScript, so it has no socket and is not allowlisted.
+const allowlistAdbPath = appId === debugAppId ? findExecutable("adb") : null;
 if (allowlistAdbPath) {
   const allowlist = run(allowlistAdbPath, [
     "shell",
     "dumpsys",
     "deviceidle",
     "whitelist",
-    "+com.abdulshaikh.cogvest",
+    `+${debugAppId}`,
   ]);
   if (allowlist.status !== 0) {
     console.log("WARN unable to exempt CogVest from background network restrictions");
@@ -229,7 +243,7 @@ function runMaestro(flow) {
     : [];
   return new Promise((resolve) => {
     let output = "";
-    const child = spawn(maestroPath, ["test", flow, ...outputArgs], {
+    const child = spawn(maestroPath, ["test", "-e", `APP_ID=${appId}`, "-e", `SCHEME=${scheme}`, flow, ...outputArgs], {
       shell: process.platform === "win32" && /\.(cmd|bat)$/iu.test(maestroPath),
       stdio: ["inherit", "pipe", "pipe"],
     });

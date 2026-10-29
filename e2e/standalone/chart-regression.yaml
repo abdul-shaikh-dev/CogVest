@@ -1,17 +1,17 @@
 # Opt-in only; supply LATEST_MONTH/PREVIOUS_MONTH from observed release state.
 # Requires the 60-month QA dataset prepared in a development build,
 # then retained by a same-key release upgrade. Never clear state or seed here.
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa&history=long"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa&history=long"
 - assertVisible:
     id: visual-qa-seed-blocked
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - assertVisible:
     id: progress-screen
 - scrollUntilVisible:
@@ -132,13 +132,13 @@ appId: com.abdulshaikh.cogvest
 - back
 - assertVisible:
     id: progress-screen
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: holdings-screen
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible:
     id: cash-screen
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertVisible:
     id: settings-screen
 - stopApp

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Existing synthetic cash entry. Never save or confirm deletion.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- openLink: "${SCHEME}:///cash-entry?entryId=visual-qa-cash-emergency"
 - assertVisible:
     id: cash-correction-amount-input
     text: "10000"
@@ -57,7 +57,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible:
     id: confirm-delete-cash-entry-button
 - back
-- openLink: "cogvest:///cash-entry?entryId=visual-qa-cash-emergency"
+- openLink: "${SCHEME}:///cash-entry?entryId=visual-qa-cash-emergency"
 - assertVisible:
     id: cash-correction-amount-input
     text: "10000"

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - stopApp
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 30000
-- openLink: "cogvest:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=lookup&token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible:
       id: "add-holding-phase-asset"

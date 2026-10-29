@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Task-owned wallet after review; existing Cash is INR 50000.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "1006 USDT"
 - scrollUntilVisible:
     element:
@@ -62,10 +62,10 @@ appId: com.abdulshaikh.cogvest
     element: "1106 USDT"
     direction: UP
 - assertVisible: "1106 USDT"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹41,000.00"
 - assertVisible: "-₹9,000.00"
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-delete-account
@@ -84,6 +84,6 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "1106 USDT"
 - stopApp

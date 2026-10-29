@@ -33,6 +33,17 @@ Routine local testing must use the debug APK command above. A standalone local
 release APK requires the owner-controlled private signing credentials described
 under Signing Strategy.
 
+Before any release build, run the QA harness check in the same shell:
+
+```powershell
+npm run release:check-harness
+```
+
+It bundles the production JavaScript with that shell's environment and `.env`
+files, and fails if the E2E harness flag `EXPO_PUBLIC_COGVEST_QA_HARNESS` was
+inlined. The release Gradle tasks also refuse to run while that flag is set.
+See `docs/testing/e2e-build-variant.md`.
+
 Private local release command:
 
 ```powershell

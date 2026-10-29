@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Requires synthetic portfolio with no wallet. Only the temporary wallet is removed.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
       id: holdings-add-button
@@ -33,7 +33,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: futures-save-account
 - assertVisible: "1000 USDT"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
       id: holdings-add-button
@@ -56,8 +56,8 @@ appId: com.abdulshaikh.cogvest
     id: futures-delete-account
 - tapOn:
     id: futures-confirm-delete
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "Create futures wallet"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "\u20b950,000.00"
 - stopApp

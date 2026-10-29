@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
     timeout: 30000
@@ -14,7 +14,7 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - scrollUntilVisible:
     element:
       id: "holdings-insights-button"
@@ -41,14 +41,14 @@ appId: com.abdulshaikh.cogvest
     id: "duration-back"
 - assertVisible:
     id: "holdings-screen"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-minimal"
-- openLink: "cogvest:///holding-duration"
+- openLink: "${SCHEME}:///holding-duration"
 - assertVisible: "Optional analysis is paused"
 - assertNotVisible: "HDFC Bank"
 - tapOn:
     id: "holding-duration-paused-done"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-standard"

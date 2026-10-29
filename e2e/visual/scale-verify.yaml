@@ -1,14 +1,14 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///scale-qa?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///scale-qa?token=cogvest-local-visual-qa"
 - assertVisible:
     id: scale-qa-blocked
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
       id: holdings-screen
@@ -40,7 +40,7 @@ appId: com.abdulshaikh.cogvest
 - assertNotVisible:
     id: asset-history-empty
 - takeScreenshot: .expo/performance/scale-daily-chart
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 - extendedWaitUntil:
     visible:
       id: progress-screen

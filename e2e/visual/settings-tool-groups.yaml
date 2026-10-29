@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - extendedWaitUntil:
     visible:
       id: settings-screen

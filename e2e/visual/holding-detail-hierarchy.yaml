@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - extendedWaitUntil:
     visible:
       id: settings-screen
@@ -11,7 +11,7 @@ appId: com.abdulshaikh.cogvest
     direction: UP
 - tapOn:
     id: display-mode-${MODE}
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - scrollUntilVisible:
     element:
       id: holding-row-visual-qa-asset-hdfc

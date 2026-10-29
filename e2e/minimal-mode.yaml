@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,18 +6,18 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - assertVisible: "Replace local developer data?"
 - tapOn: "Replace with visual QA data"
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-minimal"
 - assertVisible:
     id: "display-mode-minimal"
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Portfolio value"
 - assertNotVisible: "Holdings P&L"
 - tapOn:
@@ -25,7 +25,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Holdings P&L"
 - assertNotVisible: "This Month"
 - assertNotVisible: "Investment patterns"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - assertVisible:
     id: "holdings-search-input"
 - assertNotVisible:
@@ -41,12 +41,12 @@ appId: com.abdulshaikh.cogvest
 - back
 - assertNotVisible: "Dominant position"
 - assertNotVisible: "Best return"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "Cash Ledger"
 - assertVisible: "Deposit"
 - assertVisible: "Withdraw"
 - assertNotVisible: "This month"
-- openLink: "cogvest:///progress"
+- openLink: "${SCHEME}:///progress"
 # selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element: "Portfolio Growth"
@@ -70,10 +70,10 @@ appId: com.abdulshaikh.cogvest
 - assertVisible:
     id: "month-end-snapshot-status-card"
 - assertNotVisible: "What changed this month?"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-standard"
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: dashboard-monthly-context
@@ -86,10 +86,10 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - assertVisible:
     id: dashboard-insights
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-minimal"
-- openLink: "cogvest:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"
 # selector: the section Minimal Mode keeps is the content under test
 - scrollUntilVisible:
     element:

@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Copy review on a fresh APK. Does not create or remove portfolio records.
 - launchApp:
@@ -7,26 +7,26 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///quick-portfolio-setup"
+- openLink: "${SCHEME}:///quick-portfolio-setup"
 - assertVisible: "Import a statement or add holdings manually"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/setup
-- openLink: "cogvest:///import-holdings"
+- openLink: "${SCHEME}:///import-holdings"
 - assertVisible: ".*Import starting quantities and average costs.*"
 - assertVisible: ".*not transaction history.*"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/holdings-import
-- openLink: "cogvest:///import-transactions"
+- openLink: "${SCHEME}:///import-transactions"
 - assertVisible:
     id: transaction-import-screen
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/transaction-import
-- openLink: "cogvest:///backup?mode=export"
+- openLink: "${SCHEME}:///backup?mode=export"
 - assertVisible: ".*sensitive financial information and is not encrypted.*"
 - assertVisible: ".*document provider may sync the file.*"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/backup
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - scrollUntilVisible:
     element:
       id: privacy-details-toggle
@@ -39,8 +39,8 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: ".*CogVest does not add its own encryption.*"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/privacy
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - assertVisible: "Start with a confirmed balance"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/ppf
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"

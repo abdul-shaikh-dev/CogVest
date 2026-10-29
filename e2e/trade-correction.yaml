@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -33,7 +33,7 @@ appId: com.abdulshaikh.cogvest
 - tapOn:
     id: "save-cash-entry-button"
 # Manual holding first, then a Cash-funded purchase of 2 x 100 to correct.
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - tapOn:
     id: "toggle-manual-asset-entry"
 - tapOn:
@@ -76,7 +76,7 @@ appId: com.abdulshaikh.cogvest
     retryTapIfNoChange: true
 - assertVisible:
     id: "holding-save-complete"
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-add-button
 - tapOn:

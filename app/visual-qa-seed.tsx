@@ -18,7 +18,6 @@ export default function VisualQaSeedRoute() {
     token?: string;
   }>();
   const canSeed = canUseVisualQaHarness({
-    isDevelopment: __DEV__,
     token: params.token,
   });
   const [seeded, setSeeded] = useState(false);

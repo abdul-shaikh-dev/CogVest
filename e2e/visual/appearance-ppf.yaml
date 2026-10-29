@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 env:
   EXPECTED_CASH: "${typeof EMPTY_PORTFOLIO !== 'undefined' && EMPTY_PORTFOLIO === 'true' ? '₹0.00' : '₹50,000.00'}"
 ---
@@ -7,7 +7,7 @@ env:
 # Pass EMPTY_PORTFOLIO=true for the isolated signed-preview fixture.
 # The earlier debug provider-input failure is retained in the October 5 report.
 - runFlow: appearance-configure.yaml
-- openLink: "cogvest:///ppf-account"
+- openLink: "${SCHEME}:///ppf-account"
 - waitForAnimationToEnd
 - tapOn:
     id: ppf-provider-input
@@ -50,7 +50,7 @@ env:
     when:
       true: ${typeof ALLOCATION_PROOF !== 'undefined' && ALLOCATION_PROOF === 'true'}
     commands:
-      - openLink: "cogvest:///dashboard"
+      - openLink: "${SCHEME}:///dashboard"
       - scrollUntilVisible:
           element:
             id: dashboard-allocation-debt
@@ -98,5 +98,5 @@ env:
 - takeScreenshot: .expo/appearance-completion/${SHOT}/ppf-delete
 - tapOn:
     id: confirm-delete-ppf-account
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "${EXPECTED_CASH}"

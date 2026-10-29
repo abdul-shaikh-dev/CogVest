@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Replaces only a developer test portfolio, with the existing confirmation gate.
 - launchApp:
@@ -7,7 +7,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///visual-qa-seed?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:
     visible: "Replace local developer data?"
     timeout: 30000
@@ -15,20 +15,20 @@ appId: com.abdulshaikh.cogvest
 - extendedWaitUntil:
     visible: "Visual QA portfolio seeded."
     timeout: 30000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: "nudge-minimal"
 - assertVisible:
     id: "display-mode-minimal"
 - takeScreenshot: .expo/issue21-settings
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible:
     id: "nudge-insights"
 - takeScreenshot: .expo/issue21-insights
 - tapOn:
     id: "dismiss-nudge-insights"
 - assertVisible: "Conviction pattern"
-- openLink: "cogvest:///add-holding"
+- openLink: "${SCHEME}:///add-holding"
 - assertNotVisible:
     id: "nudge-metadata"
 - tapOn:
@@ -109,7 +109,7 @@ appId: com.abdulshaikh.cogvest
     id: "save-holding-button"
 - assertVisible:
     id: "holding-save-complete"
-- openLink: "cogvest:///e2e-evidence?token=cogvest-local-visual-qa"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 # selector: stored e2e-evidence values are under test
 - scrollUntilVisible:
     element:
@@ -123,22 +123,22 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: "dashboard-screen"
     timeout: 120000
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: "nudge-minimal"
 - tapOn:
     id: "display-mode-minimal"
 - takeScreenshot: .expo/issue21-minimal
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Insights are paused"
 - assertNotVisible:
     id: "nudge-insights"
 - tapOn:
     id: "insight-paused-done"
-- openLink: "cogvest:///settings"
+- openLink: "${SCHEME}:///settings"
 - tapOn:
     id: "display-mode-standard"
-- openLink: "cogvest:///insight?kind=conviction"
+- openLink: "${SCHEME}:///insight?kind=conviction"
 - assertVisible: "Conviction pattern"
 - assertNotVisible:
     id: "nudge-insights"

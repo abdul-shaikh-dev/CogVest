@@ -17,7 +17,7 @@ function EnabledProgressEdgeQa({ scenario, minimal }: { scenario: string; minima
 
 export default function ProgressEdgeQaRoute() {
   const { token, scenario = "single", mode } = useLocalSearchParams<{ token?: string; scenario?: string; mode?: string }>();
-  if (!canUseVisualQaHarness({ isDevelopment: __DEV__, token })) {
+  if (!canUseVisualQaHarness({ token })) {
     return <AppText testID="progress-edge-qa-blocked">Progress QA is unavailable.</AppText>;
   }
   return <EnabledProgressEdgeQa key={`${scenario}-${mode}`} scenario={scenario} minimal={mode === "minimal"} />;

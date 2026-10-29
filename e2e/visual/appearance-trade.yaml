@@ -1,7 +1,7 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - runFlow: appearance-configure.yaml
-- openLink: "cogvest:///holding-transactions?assetId=visual-qa-asset-hdfc"
+- openLink: "${SCHEME}:///holding-transactions?assetId=visual-qa-asset-hdfc"
 - tapOn:
     id: "review-trade-.*"
 - assertVisible:
@@ -38,5 +38,5 @@ appId: com.abdulshaikh.cogvest
     direction: DOWN
 - takeScreenshot: .expo/appearance-completion/${SHOT}/trade-delete
 - tapOn: "Keep transaction"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹49,795.00"

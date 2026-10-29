@@ -66,7 +66,6 @@ export default function ImportHoldingsRoute() {
     visualQaState?: string;
   }>();
   const visualQaState = canUseVisualQaHarness({
-    isDevelopment: __DEV__,
     token: params.token,
   })
     ? params.visualQaState

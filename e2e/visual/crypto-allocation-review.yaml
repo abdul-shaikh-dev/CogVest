@@ -1,6 +1,6 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
-- openLink: "cogvest:///dashboard"
+- openLink: "${SCHEME}:///dashboard"
 - scrollUntilVisible:
     element:
       id: dashboard-crypto-breakdown

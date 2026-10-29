@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 # Begin in the native CSV picker for UX PPF Review, with the staged synthetic CSVs.
 - tapOn: "ppf-invalid.csv"
@@ -97,11 +97,11 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 30000
-- openLink: "cogvest:///holdings"
+- openLink: "${SCHEME}:///holdings"
 - tapOn:
     id: holdings-ppf-tab
 - tapOn: "UX PPF Review"
 - assertVisible: "₹1,00,450.00"
-- openLink: "cogvest:///cash"
+- openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - stopApp

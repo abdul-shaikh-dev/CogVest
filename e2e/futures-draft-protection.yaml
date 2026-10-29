@@ -1,4 +1,4 @@
-appId: com.abdulshaikh.cogvest
+appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
@@ -6,7 +6,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-screen
 - tapOn:
@@ -24,7 +24,7 @@ appId: com.abdulshaikh.cogvest
 - assertVisible: "Discard unsaved changes?"
 - tapOn:
     id: futures-discard
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-save-account
 - tapOn:
@@ -60,7 +60,7 @@ appId: com.abdulshaikh.cogvest
     id: futures-back
 - tapOn:
     id: futures-discard
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-add-cash-funding
@@ -91,7 +91,7 @@ appId: com.abdulshaikh.cogvest
     id: futures-back
 - tapOn:
     id: futures-discard
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - scrollUntilVisible:
     element:
       id: futures-observed-wallet
@@ -136,7 +136,7 @@ appId: com.abdulshaikh.cogvest
     visible:
       id: dashboard-screen
     timeout: 120000
-- openLink: "cogvest:///futures"
+- openLink: "${SCHEME}:///futures"
 - assertVisible: "0 USDT"
 - assertNotVisible: "BUY BTCUSDT"
 - scrollUntilVisible:
