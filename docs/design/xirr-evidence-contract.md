@@ -96,8 +96,11 @@ recorded:**
 - distributions satisfy D1;
 - a terminal value exists (D7), or the position is fully sold.
 
-Flows: buy = −(total + fees); sell = +(total − fees); distribution per D2;
-terminal value = +units × end price. Splits, bonuses and demergers add no flow;
+Flows: a manual trade's `totalValue` already includes its fee (buy = gross + fee,
+sell = gross − fee), so buy = −total and sell = +total. An imported trade stores
+the gross amount in `totalValue` and its fees and taxes only in import
+provenance, so buy = −(total + fees + taxes) and sell = +(total − fees − taxes).
+Distribution per D2; terminal value = +units × end price. Splits, bonuses and demergers add no flow;
 a demerger parent and child are measured together as one unit from the
 demerger date (D5).
 
