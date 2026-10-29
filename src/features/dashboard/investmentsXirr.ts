@@ -1,12 +1,15 @@
 import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { formatDate } from "@/src/domain/formatters";
 import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import { getLinkedLegacyPpfAssetIds } from "@/src/domain/ppf";
-import { buildInvestmentsXirrInput } from "@/src/domain/xirrInputs";
+import { buildWholePortfolioXirrInput } from "@/src/domain/wholePortfolioXirr";
+import { buildInvestmentsXirrInput, type InvestmentsXirrInput } from "@/src/domain/xirrInputs";
 import { summariseXirr } from "@/src/domain/xirrSummary";
 import type { PortfolioStoreState } from "@/src/store";
 
 type XirrState = Pick<PortfolioStoreState, "assets" | "cashEntries" | "distributionCoverage" | "distributions" | "epf"
   | "futuresAccounts" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "quoteCache" | "trades">;
+type WholeState = XirrState & Pick<PortfolioStoreState, "measurementBasis">;
 
 /** Which accounts the Investments return covers, for its scope line. */
 export function investmentsScope(state: XirrState) {
@@ -20,12 +23,20 @@ export function investmentsScope(state: XirrState) {
   return `Covers ${list}. Cash is excluded.`;
 }
 
-/** Investments XIRR (D8) measured to now, from stored records only; never persisted. */
-export function investmentsXirrSummary(state: XirrState, now: Date) {
+/** What the whole-portfolio return covers and where it starts. */
+export function wholePortfolioScope(state: Pick<PortfolioStoreState, "measurementBasis">) {
+  const basis = state.measurementBasis;
+  if (!basis) return "Covers everything CogVest tracks, Cash included, from a start you set.";
+  return basis.kind === "inception"
+    ? `Covers everything CogVest tracks, Cash included, since ${formatDate(basis.startDate)}.`
+    : `Covers everything CogVest tracks, Cash included, from its value at the end of ${formatDate(basis.startDate)}.`;
+}
+
+/** Records behind both returns, with legacy holdings that a PPF or EPF account replaces left out. */
+function xirrRecords(state: XirrState, now: Date): InvestmentsXirrInput {
   const today = formatLocalCalendarDate(now);
-  // Legacy holdings linked to a PPF or EPF account are replaced by that account's records.
   const replaced = new Set([...getLinkedLegacyPpfAssetIds(state.ppfAccounts, today), ...getLinkedLegacyEpfAssetIds(state.epf.accounts, today)]);
-  return summariseXirr(buildInvestmentsXirrInput({
+  return {
     assets: state.assets,
     trades: state.trades.filter((trade) => !replaced.has(trade.assetId)),
     openingPositions: state.openingPositions.filter((position) => !replaced.has(position.assetId)),
@@ -40,5 +51,19 @@ export function investmentsXirrSummary(state: XirrState, now: Date) {
     endDate: today,
     today,
     valuationTime: now.toISOString(),
+  };
+}
+
+/** Investments XIRR (D8) measured to now, from stored records only; never persisted. */
+export function investmentsXirrSummary(state: XirrState, now: Date) {
+  return summariseXirr(buildInvestmentsXirrInput(xirrRecords(state, now)));
+}
+
+/** Whole-portfolio XIRR (D9-D11) from the measurement basis to now; never persisted. */
+export function wholePortfolioXirrSummary(state: WholeState, now: Date) {
+  return summariseXirr(buildWholePortfolioXirrInput({
+    ...xirrRecords(state, now), basis: state.measurementBasis,
+    // The store fingerprints every record, including legacy holdings left out of the flows.
+    evidence: state,
   }));
 }

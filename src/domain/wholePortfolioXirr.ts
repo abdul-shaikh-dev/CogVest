@@ -21,9 +21,13 @@ export type WholePortfolioReason =
   | "no-measurement-basis" | "basis-needs-reconfirming" | "records-before-start" | "opening-after-start"
   | "cash-uncategorized" | "trade-funding-unknown" | "ppf-funding-unknown" | "epf-withdrawal-destination";
 
-export type WholePortfolioXirrInput = InvestmentsXirrInput & { basis: MeasurementBasis | null };
+export type WholePortfolioXirrInput = InvestmentsXirrInput & {
+  basis: MeasurementBasis | null;
+  /** Every stored record, for the fingerprint, when the flows above leave some out. Defaults to the input itself. */
+  evidence?: DigestRecords;
+};
 
-type DigestRecords = Pick<InvestmentsXirrInput,
+export type DigestRecords = Pick<InvestmentsXirrInput,
   "trades" | "openingPositions" | "cashEntries" | "ppfAccounts" | "ppfLedgerEntries" | "epf" | "futuresAccounts" | "distributions">;
 
 type DatedRecord = { key: string; date: string | null; record: unknown; holdsValue: boolean };
@@ -129,7 +133,7 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
 
   if (inception) {
     if (records.some((item) => item.holdsValue && (item.date === null || item.date < start))) issue(portfolio, "records-before-start");
-  } else if (basis.evidenceDigest !== measurementEvidenceDigest(input, start)) {
+  } else if (basis.evidenceDigest !== measurementEvidenceDigest(input.evidence ?? input, start)) {
     issue(portfolio, "basis-needs-reconfirming");
   }
   if (!inception && basis.openingValueInr !== null && basis.openingValueInr > 0) {

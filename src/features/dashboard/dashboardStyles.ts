@@ -9,6 +9,9 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
+  xirrMeasure: { borderRadius: radii.pill, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md },
+  xirrMeasureSelected: { backgroundColor: colors.surface.elevated },
+  xirrMeasures: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, paddingTop: spacing.sm },
   xirrLabel: {
     flex: 1,
     minWidth: 160,

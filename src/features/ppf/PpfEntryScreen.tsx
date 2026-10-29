@@ -32,7 +32,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getFinancialYearStart, validatePpfLedgerEntry } from "@/src/domain/ppf";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, createThemedStyles } from "@/src/theme";
-import type { PpfLedgerEntry } from "@/src/types";
+import type { FundingSource, PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
 
 type EntryType = PpfLedgerEntry["type"];
@@ -77,6 +77,9 @@ export function PpfEntryScreen({
   const [areContributionRulesExpanded, setAreContributionRulesExpanded] =
     useState(false);
   const [reason, setReason] = useState(existing?.type === "reconciliation" ? existing.reason : "");
+  const initialFunding: FundingChoice = existing && (existing.type === "contribution" || existing.type === "withdrawal")
+    ? existing.fundingSource ?? "unset" : "unset";
+  const [funding, setFunding] = useState<FundingChoice>(initialFunding);
   const [reviewEntry, setReviewEntry] = useState<PpfLedgerEntry>();
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<EntryField, string>>>({});
@@ -102,7 +105,8 @@ export function PpfEntryScreen({
     amount !== initialAmount ||
     date !== initialDate ||
     notes !== (existing?.notes ?? "") ||
-    reason !== initialReason;
+    reason !== initialReason ||
+    funding !== initialFunding;
 
   function requestBack() {
     if (reviewEntry) {
@@ -170,7 +174,7 @@ export function PpfEntryScreen({
         ? { ...base, confirmedBalance: parsedAmount, reason: reason.trim(), type }
         : type === "interestCredit"
           ? { ...base, amount: parsedAmount, financialYearStart: getFinancialYearStart(date), type }
-          : { ...base, amount: parsedAmount, type };
+          : { ...base, amount: parsedAmount, type, ...(funding !== "unset" ? { fundingSource: funding } : {}) };
     const validation = validatePpfLedgerEntry(entry, now);
     if (!validation.isValid) {
       const nextFieldErrors: Partial<Record<EntryField, string>> = {};
@@ -234,6 +238,10 @@ export function PpfEntryScreen({
               value={formatINR(reviewEntry.type === "reconciliation" ? reviewEntry.confirmedBalance : reviewEntry.amount)}
             />
             {reviewEntry.type === "reconciliation" ? <ReviewRow label="Reason" value={reviewEntry.reason} /> : null}
+            {reviewEntry.type === "contribution" || reviewEntry.type === "withdrawal" ? (
+              <ReviewRow label={reviewEntry.type === "contribution" ? "Paid from" : "Paid into"}
+                value={fundingLabel(reviewEntry.type, reviewEntry.fundingSource ?? "unset")} />
+            ) : null}
           </PremiumCard>
           {reviewEntry.type === "interestCredit" ? (
             <AppText color="secondary" variant="caption">
@@ -248,7 +256,9 @@ export function PpfEntryScreen({
                   ? store.getState().correctPpfLedgerEntry(reviewEntry)
                   : store.getState().addPpfLedgerEntry(reviewEntry);
                 if (result.status === "applied" || result.status === "alreadyApplied") onComplete();
-                else setError("This entry would make the PPF ledger inconsistent. Review the amount and date.");
+                else if (result.status === "rejected" && result.reason === "insufficientCash") {
+                  setError("Cash doesn't cover this deposit on that date. Record the Cash deposit first, or choose From outside CogVest.");
+                } else setError("This entry would make the PPF ledger inconsistent. Review the amount and date.");
               }}
               testID="save-ppf-entry"
               title="Save entry"
@@ -300,6 +310,18 @@ export function PpfEntryScreen({
           <View onLayout={(event) => { fieldY.current.date = event.nativeEvent.layout.y; }}>
             <DatePickerField error={fieldErrors.date} fieldRef={dateRef} label={type === "reconciliation" ? "Balance confirmed on" : "Entry date"} onChange={(value) => { setDate(value); setFieldErrors((current) => ({ ...current, date: undefined })); }} testID="ppf-entry-date" value={date} />
           </View>
+          {type === "contribution" || type === "withdrawal" ? (
+            <SelectionField
+              helperText={funding === "cash"
+                ? type === "contribution" ? "A matching Cash withdrawal is recorded with it." : "A matching Cash addition is recorded with it."
+                : "Needed for the whole-portfolio return."}
+              label={type === "contribution" ? "Paid from" : "Paid into"}
+              onChange={setFunding}
+              options={(["unset", "cash", "external"] as const).map((value) => ({ label: fundingLabel(type, value), value }))}
+              testIDPrefix="ppf-entry-funding"
+              value={funding}
+            />
+          ) : null}
           {type === "reconciliation" ? (
             <View onLayout={(event) => { fieldY.current.reason = event.nativeEvent.layout.y; }}>
               <FormTextField error={fieldErrors.reason} inputRef={reasonRef} label="Why are you correcting the balance?" multiline onChangeText={(value) => { setReason(value); setFieldErrors((current) => ({ ...current, reason: undefined })); }} placeholder="Matched India Post passbook" testID="ppf-entry-reason" value={reason} />
@@ -373,7 +395,9 @@ export function PpfEntryScreen({
                 onPress={() => {
                   const result = store.getState().deletePpfLedgerEntry(existing.id);
                   if (result.status === "applied") onComplete();
-                  else setError("This entry cannot be removed without making the later balance inconsistent.");
+                  else setError(result.status === "rejected" && result.reason === "insufficientCash"
+                    ? "Removing its Cash leg would leave later Cash spending unfunded."
+                    : "This entry cannot be removed without making the later balance inconsistent.");
                 }}
                 testID="confirm-delete-ppf-entry"
                 title="Delete entry"
@@ -395,6 +419,14 @@ function entryLabel(type: EntryType) {
   if (type === "interestCredit") return "Official interest credit";
   if (type === "reconciliation") return "Balance correction";
   return type === "contribution" ? "Contribution" : "Withdrawal";
+}
+
+type FundingChoice = FundingSource | "unset";
+
+function fundingLabel(type: "contribution" | "withdrawal", value: FundingChoice) {
+  if (value === "unset") return "Not set yet";
+  if (value === "cash") return type === "contribution" ? "From Cash" : "Into Cash";
+  return "Outside CogVest";
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {

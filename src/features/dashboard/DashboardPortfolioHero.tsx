@@ -28,6 +28,7 @@ type DashboardPortfolioHeroProps = {
   dashboard: DashboardState;
   hasCompleteValuation: boolean;
   isMinimalMode: boolean;
+  onSetBasis?: () => void;
   pendingFuturesCount: number;
   setShowPerformance: Dispatch<SetStateAction<boolean>>;
   setShowPriceDetails: Dispatch<SetStateAction<boolean>>;
@@ -40,6 +41,7 @@ export function DashboardPortfolioHero({
   dashboard,
   hasCompleteValuation,
   isMinimalMode,
+  onSetBasis,
   pendingFuturesCount,
   setShowPerformance,
   setShowPriceDetails,
@@ -174,7 +176,12 @@ export function DashboardPortfolioHero({
         </View>
       </View> : null}
       {!isMinimalMode || showPerformance ? (
-        <DashboardXirr masked={dashboard.maskWealthValues} scope={dashboard.investmentsXirrScope} summary={dashboard.investmentsXirr} />
+        <DashboardXirr
+          investments={{ scope: dashboard.investmentsXirrScope, summary: dashboard.investmentsXirr }}
+          masked={dashboard.maskWealthValues}
+          onSetBasis={onSetBasis}
+          whole={{ scope: dashboard.wholePortfolioXirrScope, summary: dashboard.wholePortfolioXirr }}
+        />
       ) : null}
       <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
         <Pressable
