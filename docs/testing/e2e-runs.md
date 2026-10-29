@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-30: Payout records UI (#533), smoke 12 passed plus 1 fixed
+
+- Commit: main (8ed13d6, PR #599) plus the #533 payout UI. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly built E2E APK, Metro
+  stopped.
+- Smoke tier (now 13 flows with the new payouts flow): 12 passed, 1 failed,
+  11m 14s. payouts 0m 42s.
+- trade-correction failed at its quantity assertion: the new "Dividends and
+  payouts" row in holding details moved the restored scroll offset past the
+  quantity. Task-caused. The flow now scrolls back to the quantity first and
+  passed on rerun.
+- payouts also ran in dark mode and at font scale 1.3. The large-text run first
+  failed because the holding row started below the fold; the flow now scrolls
+  to it, and passed.
+- Screenshots, light, dark and font scale 1.3:
+  `docs/reviews/artifacts/2026-10-30-payouts/`.
+
 ## 2026-10-29: Copy budget (#562), smoke 12 passed plus 6 copy flows
 
 - Commit: main plus the #562 copy-budget change. AVD CogVest_UX_Proof, API 36,

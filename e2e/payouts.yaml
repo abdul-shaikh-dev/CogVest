@@ -1,0 +1,101 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+- openLink: "${SCHEME}:///holdings"
+- scrollUntilVisible:
+    element:
+      id: holding-row-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-row-visual-qa-asset-hdfc
+- scrollUntilVisible:
+    element:
+      id: holding-payouts-visual-qa-asset-hdfc
+    direction: DOWN
+- tapOn:
+    id: holding-payouts-visual-qa-asset-hdfc
+- extendedWaitUntil:
+    visible:
+      id: payouts-screen
+    timeout: 15000
+# selector: the completeness status text is under test
+- assertVisible:
+    id: payouts-coverage-status
+    text: "Not confirmed complete"
+- takeScreenshot: .expo/payouts-${SHOT}-empty
+- tapOn:
+    id: payouts-coverage-edit
+- scrollUntilVisible:
+    element:
+      id: payouts-coverage-save
+    direction: DOWN
+- tapOn:
+    id: payouts-coverage-save
+# selector: the confirmed start date defaults to the first recorded purchase
+- assertVisible:
+    id: payouts-coverage-status
+    text: "All payouts since 15 Apr 2024 are recorded"
+- scrollUntilVisible:
+    element:
+      id: payouts-add
+    direction: DOWN
+- tapOn:
+    id: payouts-add
+- extendedWaitUntil:
+    visible:
+      id: payout-gross-input
+    timeout: 15000
+- tapOn:
+    id: payout-gross-input
+- inputText: "500"
+- hideKeyboard
+- tapOn:
+    id: payout-tax-input
+- inputText: "50"
+- hideKeyboard
+# selector: the derived after-tax amount is under test
+- assertVisible:
+    id: payout-net
+    text: "After tax: ₹450.00"
+- takeScreenshot: .expo/payouts-${SHOT}-entry
+- scrollUntilVisible:
+    element:
+      id: save-payout
+    direction: DOWN
+- tapOn:
+    id: save-payout
+- extendedWaitUntil:
+    visible:
+      id: payouts-screen
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "payout-row-.*"
+    direction: DOWN
+# selector: the stored net amount is under test
+- assertVisible:
+    id: "payout-row-.*"
+    text: ".*₹450.00.*"
+- takeScreenshot: .expo/payouts-${SHOT}-recorded
+- openLink: "${SCHEME}:///cash"
+# selector: the linked Cash addition raises the stored balance
+- assertVisible: "₹50,450.00"
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Cash entry count: 5"
+- assertVisible: "Payout count: 1 · confirmed complete: 1"

@@ -79,6 +79,9 @@ export default function HoldingsScreen() {
       onImportTransactions={() => {
         router.push("/import-transactions");
       }}
+      onReviewPayouts={(assetId) => {
+        router.push({ pathname: "/payouts", params: { assetId } });
+      }}
       onSellRedeem={(assetId) => {
         router.push({ pathname: "/sell-redeem", params: { assetId } });
       }}
