@@ -141,6 +141,10 @@ appId: ${APP_ID}
     id: "save-trade-correction-button"
 # Saving a correction returns to the open holding's details: 1 opening + 3 bought.
 - assertVisible: "Transaction saved. Portfolio and cash records updated."
+- scrollUntilVisible:
+    element:
+      id: "holding-quantity-.*"
+    direction: UP
 - assertVisible: "4"
 - tapOn:
     id: "holding-detail-back"

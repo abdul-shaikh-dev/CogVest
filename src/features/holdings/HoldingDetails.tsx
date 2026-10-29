@@ -16,7 +16,8 @@ import { useReducedMotionPreference } from "@/src/hooks";
 import { instrumentTypeLabel } from "@/src/domain/assets";
 import { formatCompactINR, formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { getHoldingQuoteContext } from "@/src/services/quotes";
-import type { Asset, OpeningPosition, Trade } from "@/src/types";
+import { canRecordPayouts, payoutsSummary } from "@/src/features/payouts/payoutForm";
+import type { Asset, Distribution, DistributionCoverage, OpeningPosition, Trade } from "@/src/types";
 
 import { AssetHistoryPanel } from "./AssetHistoryPanel";
 import { getFirstRecordedPurchase, type HoldingReviewItem } from "./holdingsReview";
@@ -31,6 +32,8 @@ export type HoldingDetailsProps = {
   minimal: boolean;
   now: Date;
   openingPositions: OpeningPosition[];
+  /** Dividends and other payouts, shown for holdings that can pay them. */
+  payouts?: { coverage: readonly DistributionCoverage[]; distributions: readonly Distribution[] };
   recordsVisible: boolean;
   trades: Trade[];
   onToggleRecords: () => void;
@@ -38,6 +41,7 @@ export type HoldingDetailsProps = {
   onReviewTrades?: (id: string) => void;
   onSellRedeem?: (id: string) => void;
   onRecordPurchase?: (assetId?: string) => void;
+  onReviewPayouts?: (assetId: string) => void;
 };
 
 type HoldingDetailModalProps = Omit<HoldingDetailsProps, "item" | "recordsVisible" | "onToggleRecords"> & {
@@ -63,9 +67,11 @@ export function HoldingDetailModal({
   now: observedAt,
   onRecordPurchase,
   onReviewOpeningPosition,
+  onReviewPayouts,
   onReviewTrades,
   onSellRedeem,
   openingPositions,
+  payouts,
   selectedItem,
   selectedRecordsVisible,
   setSelectedRecordsVisible,
@@ -147,6 +153,7 @@ export function HoldingDetailModal({
             minimal={isMinimalMode}
             now={observedAt}
             openingPositions={openingPositions}
+            payouts={payouts}
             recordsVisible={selectedRecordsVisible}
             trades={trades}
             onToggleRecords={() =>
@@ -168,6 +175,7 @@ export function HoldingDetailModal({
                 : undefined
             }
             onRecordPurchase={onRecordPurchase}
+            onReviewPayouts={onReviewPayouts}
           />
         </ScrollView>
       </View>
@@ -183,8 +191,10 @@ export function HoldingDetails({
   minimal,
   now,
   openingPositions,
+  payouts,
   recordsVisible,
   onReviewOpeningPosition,
+  onReviewPayouts,
   onReviewTrades,
   onSellRedeem,
   onRecordPurchase,
@@ -322,6 +332,19 @@ export function HoldingDetails({
         ) : null}
         {onRecordPurchase ? <GroupedListRow title="Record purchase" meta="Add units funded from Cash" value="›"
           testID={`holding-record-purchase-${holding.asset.id}`} onPress={() => onRecordPurchase(holding.asset.id)} /> : null}
+        {onReviewPayouts && payouts && canRecordPayouts(holding.asset) ? (
+          <GroupedListRow
+            title="Dividends and payouts"
+            meta={payoutsSummary(
+              payouts.distributions,
+              payouts.coverage.find((item) => item.assetId === holding.asset.id),
+              holding.asset.id,
+            )}
+            value="›"
+            testID={`holding-payouts-${holding.asset.id}`}
+            onPress={() => onReviewPayouts(holding.asset.id)}
+          />
+        ) : null}
         {onSellRedeem ? (
           <GroupedListRow
             title="Sell / redeem"

@@ -26,6 +26,8 @@ export type E2ePortfolioEvidence = {
   assets: E2eAssetEvidence[];
   assetCount: number;
   cashEntryCount: number;
+  distributionCount: number;
+  distributionCoverageCount: number;
   duplicateIdentityCount: number;
   openingPositionCount: number;
   importedTransactionCount: number;
@@ -93,6 +95,8 @@ export function buildE2ePortfolioEvidence(
       hasCanonicalAssetConflict(state.assets, asset),
     ).length,
     cashEntryCount: state.cashEntries.length,
+    distributionCount: state.distributions.length,
+    distributionCoverageCount: state.distributionCoverage.length,
     importedTransactionCount: state.trades.filter(
       (trade) => trade.importProvenance !== undefined,
     ).length,

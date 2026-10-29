@@ -63,6 +63,9 @@ export default function E2eEvidenceScreen() {
         <EvidenceText testID="e2e-cash-entry-count">
           Cash entry count: {evidence.cashEntryCount}
         </EvidenceText>
+        <EvidenceText testID="e2e-payout-count">
+          Payout count: {evidence.distributionCount} · confirmed complete: {evidence.distributionCoverageCount}
+        </EvidenceText>
         <EvidenceText testID="e2e-ppf-count">
           PPF account count: {evidence.ppfCount}
         </EvidenceText>

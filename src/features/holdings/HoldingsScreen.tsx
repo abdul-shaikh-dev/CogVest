@@ -84,6 +84,7 @@ type HoldingsScreenProps = {
   onReviewEpfAccount?: (accountId: string) => void;
   onReviewTrades?: (assetId: string) => void;
   onSellRedeem?: (assetId: string) => void;
+  onReviewPayouts?: (assetId: string) => void;
   onQuickSetup?: () => void;
   quickSetupSavedCount?: number;
   statusMessage?: string;
@@ -112,6 +113,7 @@ export function HoldingsScreen({
   onReviewEpfAccount,
   onReviewTrades,
   onSellRedeem,
+  onReviewPayouts,
   onQuickSetup,
   quickSetupSavedCount = 0,
   refreshQuotes,
@@ -182,6 +184,9 @@ export function HoldingsScreen({
   const hasMarketHoldings = marketHoldings.length > 0;
   const hasPpfDestination =
     ppfSummary.accounts.length > 0 || legacyPpfHoldings.length > 0;
+  const distributions = useSyncExternalStore(store.subscribe, () => store.getState().distributions, () => store.getState().distributions);
+  const distributionCoverage = useSyncExternalStore(store.subscribe, () => store.getState().distributionCoverage,
+    () => store.getState().distributionCoverage);
   const epfState = useSyncExternalStore(store.subscribe, () => store.getState().epf, () => store.getState().epf);
   const epfAsOf = formatLocalCalendarDate(observedAt);
   const epfSummary = useMemo(() => summarizeEpfForReporting(epfState, epfAsOf), [epfState, epfAsOf]);
@@ -640,7 +645,9 @@ export function HoldingsScreen({
             onReviewOpeningPosition={onReviewOpeningPosition}
             onReviewTrades={onReviewTrades}
             onSellRedeem={onSellRedeem}
+            onReviewPayouts={onReviewPayouts}
             openingPositions={openingPositions}
+            payouts={{ coverage: distributionCoverage, distributions }}
             selectedItem={selectedItem}
             selectedRecordsVisible={selectedRecordsVisible}
             setSelectedRecordsVisible={setSelectedRecordsVisible}
