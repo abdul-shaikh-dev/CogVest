@@ -41,6 +41,7 @@ describe("EPF durable account records", () => {
     delete legacy.epf;
     delete legacy.distributions;
     delete legacy.distributionCoverage;
+    delete legacy.measurementBasis;
     legacy.schemaVersion = 15;
     const backupTarget = harness();
     backupTarget.store.getState().replaceFromBackup({ ...original, portfolio: legacy }, backupTarget.store.getState().getBackupRevision());
@@ -226,7 +227,7 @@ describe("EPF durable account records", () => {
     apply({ type: "eventPut", event: withdrawal, cash: { id: "cash", label: "From EPF" } });
     const payload = JSON.parse(JSON.stringify(store.getState().captureBackup().payload));
     if (kind === "missing") delete payload.portfolio.epf;
-    if (kind === "future") payload.portfolio.schemaVersion = 18;
+    if (kind === "future") payload.portfolio.schemaVersion = 19;
     if (kind === "dangling") payload.portfolio.epf.cashLinks[0].eventId = "missing";
     if (kind === "amount") payload.portfolio.cashEntries[0].amount += 1;
     if (kind === "audit") payload.portfolio.epf.audit.push(payload.portfolio.epf.audit[0]);

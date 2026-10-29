@@ -2476,6 +2476,7 @@ describe("portfolio store", () => {
       distributionCoverage: [],
       distributions: [],
       futuresAccounts: [],
+      measurementBasis: null,
       monthlySnapshots: [monthlySnapshot],
       openingPositions: [openingPosition],
       ppfAccounts: [],

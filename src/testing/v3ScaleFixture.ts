@@ -163,6 +163,7 @@ export function createV3ScaleFixture(): V3ScaleFixture {
     distributionCoverage: [],
     distributions: [],
     futuresAccounts: [],
+    measurementBasis: null,
     monthlySnapshots: snapshots(),
     openingPositions,
     ppfAccounts: [],

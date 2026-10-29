@@ -25,6 +25,9 @@ const NO_RATE = "A return can't be calculated from these flows.";
 
 // Structural gaps first: fixing a later reason is pointless while an earlier one remains.
 const inputMessages: Array<[XirrUnavailableReason, string]> = [
+  ["no-measurement-basis", "Set a start date and opening value to measure the whole portfolio."],
+  ["basis-needs-reconfirming", "Records on or before the start date changed. Confirm the opening value again."],
+  ["records-before-start", "Records exist before the start date. Choose an opening value or an earlier start."],
   ["missing-asset", "This holding's record is missing."],
   ["cash-asset", "Cash has no return of its own."],
   ["foreign-currency", "Returns are only measured for INR holdings."],
@@ -51,6 +54,11 @@ const inputMessages: Array<[XirrUnavailableReason, string]> = [
   ["futures-not-valued", "Futures needs a reconciled wallet valuation."],
   ["futures-stale-valuation", "The Futures valuation is older than 7 days."],
   ["futures-rates-missing", "A Futures transfer needs its INR rate on the transfer date."],
+  ["opening-after-start", "An opening position is dated after the start date. Record it as a purchase."],
+  ["cash-uncategorized", "A Cash entry after the start date needs a purpose: deposit or withdrawal."],
+  ["trade-funding-unknown", "Link this trade to Cash or mark its funding as external."],
+  ["ppf-funding-unknown", "Say whether this PPF deposit came from Cash."],
+  ["epf-withdrawal-destination", "Say where an EPF withdrawal went."],
   ["no-assets", "No investments are recorded."],
 ];
 

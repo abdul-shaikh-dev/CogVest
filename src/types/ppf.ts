@@ -1,3 +1,5 @@
+import type { FundingSource } from "./measurementBasis";
+
 export type PpfAccountStatus =
   | "active"
   | "discontinued"
@@ -45,6 +47,8 @@ type PpfLedgerEntryBase = {
 
 export type PpfContributionEntry = PpfLedgerEntryBase & {
   amount: number;
+  /** "cash" owns a linked Cash withdrawal; unset blocks whole-portfolio XIRR (D11). */
+  fundingSource?: FundingSource;
   type: "contribution";
 };
 
@@ -56,6 +60,8 @@ export type PpfInterestCreditEntry = PpfLedgerEntryBase & {
 
 export type PpfWithdrawalEntry = PpfLedgerEntryBase & {
   amount: number;
+  /** "cash" owns a linked Cash addition; unset blocks whole-portfolio XIRR (D11). */
+  fundingSource?: FundingSource;
   type: "withdrawal";
 };
 

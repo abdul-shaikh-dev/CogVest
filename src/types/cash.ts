@@ -8,6 +8,7 @@ export type CashEntryPurpose =
   | "futuresTransfer"
   | "epfTransfer"
   | "distribution"
+  | "ppfTransfer"
   | "withdrawal";
 
 export type CashEntry = {
@@ -21,6 +22,8 @@ export type CashEntry = {
   linkedEpf?: { accountId: string; eventId: string };
   /** Set on the Cash addition that received a payout paid to Cash. */
   linkedDistributionId?: string;
+  /** Set on the Cash leg owned by a PPF entry paid from or into Cash. */
+  linkedPpf?: { accountId: string; entryId: string };
   notes?: string;
   purpose: CashEntryPurpose;
   type: CashEntryType;
