@@ -44,6 +44,8 @@ export type UseHoldingsResult = {
   assets: Asset[];
   displayMode: DisplayMode;
   failed: QuoteRefreshFailure[];
+  /** Any Cash entry is recorded, so a funded purchase is the natural next step. */
+  hasCash: boolean;
   holdings: HoldingWithQuoteMetadata[];
   isRefreshing: boolean;
   maskWealthValues: boolean;
@@ -193,6 +195,7 @@ export function useHoldings({
     assets: snapshot.assets,
     displayMode: snapshot.preferences.displayMode,
     failed,
+    hasCash: snapshot.cashEntries.length > 0,
     holdings,
     isRefreshing,
     maskWealthValues: snapshot.preferences.maskWealthValues,

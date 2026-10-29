@@ -16,7 +16,8 @@ appId: ${APP_ID}
 - tapOn:
     id: quick-setup-button
 - assertVisible: "Add holdings"
-- assertVisible: "Import transaction history"
+- assertVisible:
+    id: "import-transactions-csv-option"
 - tapOn: "Close"
 - openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
 - extendedWaitUntil:

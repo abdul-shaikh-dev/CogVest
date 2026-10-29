@@ -1279,6 +1279,47 @@ describe("HoldingsScreen", () => {
     expect(onImportTransactions).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["with recorded Cash", true, ["record-purchase-option", "add-one-holding-option"]],
+    ["without Cash", false, ["add-one-holding-option", "record-purchase-option"]],
+  ] as const)("leads the Add sheet with one primary action %s and keeps every destination", (_, withCash, lead) => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    if (withCash) {
+      store.getState().addCashEntry({ id: "deposit", date: "2026-08-01", amount: 1000,
+        label: "Deposit", purpose: "capitalContribution", type: "addition" });
+    }
+    const handlers = {
+      onAddEpfAccount: jest.fn(), onAddPpfAccount: jest.fn(), onAddTrade: jest.fn(),
+      onImportHoldings: jest.fn(), onImportTransactions: jest.fn(), onOpenFutures: jest.fn(),
+      onQuickSetup: jest.fn(), onRecordPurchase: jest.fn(),
+    };
+    const screen = render(<HoldingsScreen store={store} {...handlers} />);
+    fireEvent.press(screen.getByTestId("holdings-add-button"));
+
+    const options = [
+      ...lead,
+      "add-multiple-holdings-option",
+      "add-ppf-account",
+      "add-epf-account-option",
+      "holdings-open-futures",
+      "import-holdings-csv-option",
+      "import-transactions-csv-option",
+    ];
+    const order = testIdOrder(screen.toJSON()).filter((id) => options.includes(id));
+    expect(order).toEqual(options);
+    // The primary action is a filled button; every other option is a quiet row with a description.
+    expect(screen.getByTestId(lead[0]).props.accessibilityLabel).not.toMatch(/, /u);
+    expect(screen.getByTestId(lead[1]).props.accessibilityLabel).toMatch(/, /u);
+    expect(screen.getByText("Add an account")).toBeTruthy();
+    expect(screen.getByText("Import")).toBeTruthy();
+
+    for (const id of options) {
+      fireEvent.press(screen.getByTestId("holdings-add-button"));
+      fireEvent.press(screen.getByTestId(id));
+    }
+    for (const handler of Object.values(handlers)) expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it("opens the Add menu from a requested route signal and acknowledges it", () => {
     const onAddMenuOpened = jest.fn();
     const { getByText } = render(
