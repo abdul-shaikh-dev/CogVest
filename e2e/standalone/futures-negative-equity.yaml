@@ -10,6 +10,9 @@ appId: ${APP_ID}
 - openLink: "${SCHEME}:///futures"
 - assertVisible:
     id: futures-screen
+# Exact timestamps sit behind each field's "Exact timestamp" toggle.
+- tapOn:
+    id: futures-opening-at-exact-toggle
 - tapOn:
     id: futures-opening-at
 - eraseText: 50
@@ -28,6 +31,12 @@ appId: ${APP_ID}
     id: futures-opening-rate
 - inputText: "90"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: futures-opening-rate-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-opening-rate-at-exact-toggle
 - scrollUntilVisible:
     element:
       id: futures-opening-rate-at
@@ -56,6 +65,12 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: futures-add-event
+- scrollUntilVisible:
+    element:
+      id: futures-event-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-event-at-exact-toggle
 - scrollUntilVisible:
     element:
       id: futures-event-at
@@ -97,6 +112,12 @@ appId: ${APP_ID}
     id: futures-save-event
 - scrollUntilVisible:
     element:
+      id: futures-valuation-at-exact-toggle
+    direction: DOWN
+- tapOn:
+    id: futures-valuation-at-exact-toggle
+- scrollUntilVisible:
+    element:
       id: futures-valuation-at
     direction: DOWN
 - tapOn:
@@ -112,14 +133,7 @@ appId: ${APP_ID}
     id: futures-observed-wallet
 - inputText: "10"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-observed-wallet-at
-    direction: DOWN
-- tapOn:
-    id: futures-observed-wallet-at
-- inputText: ${output.valuationAt}
-- hideKeyboard
+# The wallet, marks and rate share the valuation time above.
 - scrollUntilVisible:
     element:
       id: futures-wallet-source
@@ -146,27 +160,11 @@ appId: ${APP_ID}
 - hideKeyboard
 - scrollUntilVisible:
     element:
-      id: futures-mark-at
-    direction: DOWN
-- tapOn:
-    id: futures-mark-at
-- inputText: ${output.valuationAt}
-- hideKeyboard
-- scrollUntilVisible:
-    element:
       id: futures-current-rate
     direction: DOWN
 - tapOn:
     id: futures-current-rate
 - inputText: "90"
-- hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-current-rate-at
-    direction: DOWN
-- tapOn:
-    id: futures-current-rate-at
-- inputText: ${output.valuationAt}
 - hideKeyboard
 - scrollUntilVisible:
     element:

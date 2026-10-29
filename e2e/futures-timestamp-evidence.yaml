@@ -175,13 +175,7 @@ appId: ${APP_ID}
     id: futures-observed-wallet
 - inputText: "999"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-observed-wallet-at-use-time
-    direction: DOWN
-    timeout: 60000
-- tapOn:
-    id: futures-observed-wallet-at-use-time
+# The wallet, marks and rate share the valuation time unless "Different times for each" is on.
 - scrollUntilVisible:
     element:
       id: futures-wallet-source
@@ -211,13 +205,6 @@ appId: ${APP_ID}
 - hideKeyboard
 - scrollUntilVisible:
     element:
-      id: futures-mark-at-use-time
-    direction: DOWN
-    timeout: 60000
-- tapOn:
-    id: futures-mark-at-use-time
-- scrollUntilVisible:
-    element:
       id: futures-current-rate
     direction: DOWN
     timeout: 60000
@@ -225,13 +212,6 @@ appId: ${APP_ID}
     id: futures-current-rate
 - inputText: "90"
 - hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: futures-current-rate-at-use-time
-    direction: DOWN
-    timeout: 60000
-- tapOn:
-    id: futures-current-rate-at-use-time
 - scrollUntilVisible:
     element:
       id: futures-current-rate-source
