@@ -42,7 +42,9 @@ test.each(["standard", "minimal"] as const)("shows EPF evidence, unknown basis a
   expect(screen.getByText("EPF · as of 01 Jan 2026 · later activity unconfirmed")).toBeTruthy();
   if (displayMode === "minimal") fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
   expect(screen.getByText("Unknown")).toBeTruthy();
-  expect(screen.getAllByText("Unavailable")).toHaveLength(2);
+  // P&L, P&L % and the Investments return, led by its most structural gap.
+  expect(screen.getAllByText("Unavailable")).toHaveLength(3);
+  expect(within(screen.getByTestId("dashboard-xirr")).getByText("Purchase history before the opening position isn't recorded.")).toBeTruthy();
   fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
   expect(screen.getByTestId("dashboard-epf-value").props.accessibilityLabel).toBe("Amount hidden");
 });

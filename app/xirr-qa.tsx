@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createMMKV } from "react-native-mmkv";
 
 import { AppButton, AppText, ScreenContainer } from "@/src/components/common";
+import { DashboardScreen } from "@/src/features/dashboard";
 import { HoldingsScreen } from "@/src/features/holdings";
 import { PayoutsScreen } from "@/src/features/payouts";
 import type { RefreshQuotesInput } from "@/src/services/quotes";
@@ -34,6 +35,7 @@ function EnabledQa({ page }: { page?: string }) {
     return <HoldingsScreen isActive now={now} onReviewPayouts={(assetId) => open("payouts", assetId)}
       onReviewTrades={() => undefined} refreshQuotes={noRefresh} store={store} />;
   }
+  if (page === "dashboard") return <DashboardScreen now={now} refreshQuotes={noRefresh} store={store} />;
   if (page === "payouts") {
     return <PayoutsScreen assetId="xirr-qa-stock" now={now} onAddPayout={() => undefined}
       onBack={() => router.back()} onReviewPayout={() => undefined} store={store} />;
@@ -55,6 +57,7 @@ function EnabledQa({ page }: { page?: string }) {
       <AppText testID="xirr-qa-status">{ready ? "Fixture ready" : "Isolated synthetic fixture"}</AppText>
       <AppButton testID="xirr-qa-reset" title="Reset fixture" onPress={reset} />
       <AppButton testID="xirr-qa-open-holdings" title="Open holdings" onPress={() => open("holdings")} />
+      <AppButton testID="xirr-qa-open-dashboard" title="Open dashboard" onPress={() => open("dashboard")} />
     </ScreenContainer>
   );
 }

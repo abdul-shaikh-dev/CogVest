@@ -4,6 +4,18 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-30: Dashboard Investments XIRR (#535), smoke 14 passed
+
+- Commit: main (PR #602 merged) plus the #535 Dashboard XIRR change. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK, Metro stopped.
+- Smoke tier: 14 passed, 0 failed, 12m 31s. xirr-holding 0m 36s.
+- xirr-holding now also opens the `xirr-qa` Dashboard page and asserts the
+  Investments rate (+10.00% a year), Put in ₹10,000.00 and Current value
+  ₹11,000.00 from the breakdown.
+- xirr-holding passed in dark mode and at font scale 1.3. Dashboard
+  screenshots: `docs/reviews/artifacts/2026-10-30-holding-xirr/xirr-*-dashboard.png`.
+
 ## 2026-10-30: Holding XIRR (#535), smoke 14 passed
 
 - Commit: main (PR #600 merged) plus the #535 holding XIRR change. AVD
