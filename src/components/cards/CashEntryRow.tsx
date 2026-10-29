@@ -41,6 +41,8 @@ function getCashEntryMovement(entry: CashEntry) {
       return entry.type === "withdrawal" ? "To EPF" : "From EPF";
     case "distribution":
       return "Dividend or payout";
+    case "ppfTransfer":
+      return entry.type === "withdrawal" ? "To PPF" : "From PPF";
     case "withdrawal":
       return "Cash withdrawal";
     case "legacyUncategorized":

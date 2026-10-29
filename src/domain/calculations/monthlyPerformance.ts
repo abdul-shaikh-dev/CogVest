@@ -86,7 +86,8 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
   if (
     (entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
     (entry.type === "addition" && entry.purpose === "saleProceeds") ||
-    (entry.type === "addition" && entry.purpose === "distribution" && entry.linkedDistributionId)
+    (entry.type === "addition" && entry.purpose === "distribution" && entry.linkedDistributionId) ||
+    (entry.purpose === "ppfTransfer" && entry.linkedPpf)
   ) {
     return null;
   }
@@ -144,7 +145,8 @@ export function buildMonthlyPerformanceBasis({
   }
 
   for (const entry of monthPpfEntries) {
-    if (entry.type === "contribution" || entry.type === "withdrawal") {
+    // A PPF entry paid from or into Cash moved money inside this boundary.
+    if ((entry.type === "contribution" || entry.type === "withdrawal") && entry.fundingSource !== "cash") {
       externalFlows.push({
         amount:
           entry.type === "contribution"

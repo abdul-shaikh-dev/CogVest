@@ -2,7 +2,9 @@ import { z } from "zod";
 import { emptyEpfState, epfStateSchema, validateEpfState } from "@/src/domain/epf/persistence";
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
-import type { Asset, CashEntry, Distribution, DistributionCoverage, Trade } from "@/src/types";
+import { ppfCashLinkProblems } from "@/src/domain/ppfCashLinks";
+import { decimal } from "@/src/domain/precision";
+import type { Asset, CashEntry, Distribution, DistributionCoverage, PpfLedgerEntry, Trade } from "@/src/types";
 
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
@@ -188,6 +190,7 @@ const cashEntrySchema = z.object({
   linkedFutures: z.object({ accountId: nonEmptyStringSchema, eventId: nonEmptyStringSchema }).strict().optional(),
   linkedEpf: z.object({ accountId: nonEmptyStringSchema, eventId: nonEmptyStringSchema }).strict().optional(),
   linkedDistributionId: nonEmptyStringSchema.optional(),
+  linkedPpf: z.object({ accountId: nonEmptyStringSchema, entryId: nonEmptyStringSchema }).strict().optional(),
   notes: z.string().optional(),
   // V1-V3 entries did not persist a purpose. The current migration supplies it.
   purpose: z
@@ -200,6 +203,7 @@ const cashEntrySchema = z.object({
       "futuresTransfer",
       "epfTransfer",
       "distribution",
+      "ppfTransfer",
       "withdrawal",
     ])
     .optional(),
@@ -333,12 +337,14 @@ const tradeBaseSchema = z.object({
 const tradeSchema = z.discriminatedUnion("type", [
   tradeBaseSchema.extend({
     fees: finiteNumberSchema.optional(),
+    fundingSource: z.literal("external").optional(),
     pricePerUnit: finiteNumberSchema,
     totalValue: finiteNumberSchema,
     type: z.literal("buy"),
   }),
   tradeBaseSchema.extend({
     fees: finiteNumberSchema.optional(),
+    fundingSource: z.literal("external").optional(),
     pricePerUnit: finiteNumberSchema,
     totalValue: finiteNumberSchema,
     type: z.literal("sell"),
@@ -468,9 +474,11 @@ const ppfLedgerBaseSchema = z.object({
   recordedAt: z.string().datetime({ offset: true }),
 });
 
+const fundingSourceSchema = z.enum(["cash", "external"]);
+
 const ppfLedgerEntrySchema = z.discriminatedUnion("type", [
   ppfLedgerBaseSchema
-    .extend({ amount: finiteNumberSchema.positive(), type: z.literal("contribution") })
+    .extend({ amount: finiteNumberSchema.positive(), fundingSource: fundingSourceSchema.optional(), type: z.literal("contribution") })
     .strict(),
   ppfLedgerBaseSchema
     .extend({
@@ -480,7 +488,7 @@ const ppfLedgerEntrySchema = z.discriminatedUnion("type", [
     })
     .strict(),
   ppfLedgerBaseSchema
-    .extend({ amount: finiteNumberSchema.positive(), type: z.literal("withdrawal") })
+    .extend({ amount: finiteNumberSchema.positive(), fundingSource: fundingSourceSchema.optional(), type: z.literal("withdrawal") })
     .strict(),
   ppfLedgerBaseSchema
     .extend({
@@ -526,7 +534,24 @@ const schemaVersionSchema = z.union([
   z.literal(15),
   z.literal(16),
   z.literal(17),
+  z.literal(18),
 ]);
+
+// D9: inception has no opening value or fingerprint; an opening value is the sum of its lines.
+const measurementBasisSchema = z.object({
+  confirmedAt: z.string().datetime({ offset: true }),
+  evidenceDigest: z.string().regex(/^[0-9a-f]{16}$/).nullable(),
+  kind: z.enum(["inception", "openingValue"]),
+  openingBreakdown: z.array(z.object({ label: nonEmptyStringSchema, valueInr: finiteNumberSchema.nonnegative() }).strict()).max(100),
+  openingValueInr: finiteNumberSchema.nonnegative().nullable(),
+  startDate: calendarDateSchema,
+}).strict().superRefine((basis, context) => {
+  const valid = basis.kind === "inception"
+    ? basis.openingValueInr === null && basis.openingBreakdown.length === 0 && basis.evidenceDigest === null
+    : basis.openingValueInr !== null && basis.openingBreakdown.length > 0 && basis.evidenceDigest !== null &&
+      basis.openingBreakdown.reduce((sum, line) => sum.plus(line.valueInr), decimal(0)).equals(basis.openingValueInr);
+  if (!valid) context.addIssue({ code: "custom", message: "Measurement basis is inconsistent." });
+});
 
 const distributionSchema = z.object({
   assetId: nonEmptyStringSchema,
@@ -620,6 +645,7 @@ const persistedPortfolioSchema = z
     distributionCoverage: z.array(distributionCoverageSchema).optional(),
     distributions: z.array(distributionSchema).optional(),
     futuresAccounts: z.array(futuresAccountSchema).max(10).optional(),
+    measurementBasis: measurementBasisSchema.nullable().optional(),
     monthlySnapshots: z.array(monthlySnapshotSchema).optional(),
     openingPositions: z.array(openingPositionSchema).optional(),
     ppfAccounts: z.array(ppfAccountSchema).optional(),
@@ -655,6 +681,18 @@ const persistedPortfolioSchema = z
     }
     if (portfolio.schemaVersion < 17 && (portfolio.cashEntries ?? []).some((entry) => entry.purpose === "distribution" || entry.linkedDistributionId)) {
       context.addIssue({ code: "custom", message: "Payout Cash entries require V17.", path: ["cashEntries"] });
+    }
+    if ((portfolio.schemaVersion >= 18) !== (portfolio.measurementBasis !== undefined)) {
+      context.addIssue({ code: "custom", message: "The measurement basis is required from V18.", path: ["measurementBasis"] });
+    }
+    if (portfolio.schemaVersion < 18 && (
+      (portfolio.cashEntries ?? []).some((entry) => entry.purpose === "ppfTransfer" || entry.linkedPpf) ||
+      (portfolio.ppfLedgerEntries ?? []).some((entry) => "fundingSource" in entry && entry.fundingSource !== undefined) ||
+      (portfolio.trades ?? []).some((trade) => "fundingSource" in trade && trade.fundingSource !== undefined))) {
+      context.addIssue({ code: "custom", message: "Funding sources require V18.", path: ["ppfLedgerEntries"] });
+    }
+    if (ppfCashLinkProblems((portfolio.ppfLedgerEntries ?? []) as PpfLedgerEntry[], (portfolio.cashEntries ?? []) as CashEntry[]).length) {
+      context.addIssue({ code: "custom", message: "PPF Cash links are invalid.", path: ["cashEntries"] });
     }
     const payoutProblems = distributionGraphProblems({
       assets: (portfolio.assets ?? []) as Asset[],
@@ -861,7 +899,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

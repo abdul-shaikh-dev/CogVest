@@ -33,7 +33,9 @@ export function isLinkedCashEntry(entry: CashEntry) {
     Boolean(entry.linkedFutures) ||
     Boolean(entry.linkedEpf) ||
     Boolean(entry.linkedDistributionId) ||
+    Boolean(entry.linkedPpf) ||
     entry.purpose === "distribution" ||
+    entry.purpose === "ppfTransfer" ||
     entry.purpose === "epfTransfer" ||
     entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||

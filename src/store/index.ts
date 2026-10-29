@@ -5,6 +5,8 @@ import { migrateInvestingCashEntry, migrateInvestingSnapshot } from "@/src/domai
 import { validateUsdmFuturesAccount, type UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { distributionGraphProblems, planDistributionChange, validateDistributionGraph, type DistributionInput } from "@/src/domain/distributions";
+import { cashEntriesWithPpfLeg, isCashFundedPpfEntry, validatePpfCashLinks } from "@/src/domain/ppfCashLinks";
+import { measurementBasisProblems, measurementEvidenceDigest } from "@/src/domain/wholePortfolioXirr";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { projectDemergers, demergerCatalog } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
@@ -85,6 +87,8 @@ import type {
   Distribution,
   DistributionCoverage,
   HistoricalQuote,
+  MeasurementBasis,
+  MeasurementBasisLine,
   HistoricalQuoteCache,
   ImportedTransactionProvenance,
   MonthlySnapshot,
@@ -121,7 +125,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 17;
+export const portfolioSchemaVersion = 18;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 export { historicalQuoteCacheKey };
@@ -133,6 +137,8 @@ export type RawPortfolioSnapshot = {
   distributionCoverage: DistributionCoverage[];
   distributions: Distribution[];
   futuresAccounts: UsdmFuturesAccount[];
+  /** Where whole-portfolio XIRR starts (D9); null until the user sets it. */
+  measurementBasis: MeasurementBasis | null;
   monthlySnapshots: MonthlySnapshot[];
   openingPositions: OpeningPosition[];
   ppfAccounts: PpfAccount[];
@@ -167,6 +173,10 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deleteDistribution: (distributionId: string) => DistributionMutationResult;
   /** Ongoing "every payout since this date is recorded" statement (D3); null removes it. */
   setDistributionCoverage: (assetId: string, from: string | null) => DistributionCoverageResult;
+  /** Confirms where whole-portfolio XIRR starts (D9); null removes it. Never changes other records. */
+  setMeasurementBasis: (input: MeasurementBasisInput | null) => MeasurementBasisResult;
+  /** Marks trades without a Cash leg as paid from (or into) money outside CogVest (D10); null clears it. */
+  setTradeFundingSource: (tradeIds: string[], source: "external" | null) => TradeFundingResult;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
   saveFuturesCashTransfer: (input: FuturesCashTransferInput) => void;
   deleteFuturesCashTransfer: (accountId: string, eventId: string) => void;
@@ -319,7 +329,15 @@ export type PpfAccountMutationResult =
 
 export type PpfAccountDeletionResult =
   | { account: PpfAccount; deletedEntries: number; status: "applied" }
-  | { reason: "notFound"; status: "rejected" };
+  | { reason: "notFound" | "insufficientCash"; status: "rejected" };
+
+export type MeasurementBasisInput = Pick<MeasurementBasis, "startDate" | "kind"> & { openingBreakdown: MeasurementBasisLine[] };
+export type MeasurementBasisResult =
+  | { status: "applied"; basis: MeasurementBasis | null }
+  | { status: "rejected"; reason: "invalidEntry"; problems: string[] };
+export type TradeFundingResult =
+  | { status: "applied" }
+  | { status: "rejected"; reason: "notFound" | "linkedCash" | "invalidEntry" };
 
 export type PpfLedgerMutationResult =
   | { entry: PpfLedgerEntry; status: "alreadyApplied" | "applied" }
@@ -327,6 +345,7 @@ export type PpfLedgerMutationResult =
       reason:
         | "accountMismatch"
         | "accountNotFound"
+        | "insufficientCash"
         | "invalidEntry"
         | "invalidTimeline"
         | "notFound";
@@ -545,6 +564,7 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
     distributionCoverage: [],
     distributions: [],
     futuresAccounts: [],
+    measurementBasis: null,
     monthlySnapshots: [],
     openingPositions: [],
     ppfAccounts: [],
@@ -659,6 +679,8 @@ function migratePortfolioSnapshot(
     distributionCoverage: stored.distributionCoverage ?? [],
     distributions: stored.distributions ?? [],
     futuresAccounts: stored.futuresAccounts ?? [],
+    // V18 adds the measurement basis; older portfolios start without one (D12).
+    measurementBasis: stored.measurementBasis ?? null,
     monthlySnapshots: (stored.monthlySnapshots ?? []).map(
       normalizeMonthlySnapshot,
     ),
@@ -795,6 +817,7 @@ function selectRawSnapshot(
     distributionCoverage: state.distributionCoverage,
     distributions: state.distributions,
     futuresAccounts: state.futuresAccounts,
+    measurementBasis: state.measurementBasis,
     monthlySnapshots: state.monthlySnapshots,
     openingPositions: state.openingPositions,
     ppfAccounts: state.ppfAccounts,
@@ -811,6 +834,7 @@ function persistPortfolio(
 ) {
   validateSplitInventory(state);
   validateDistributionGraph(state);
+  validatePpfCashLinks(state.ppfLedgerEntries, state.cashEntries);
   storage.setItem(portfolioStorageKey, selectRawSnapshot(state) as JsonValue);
 }
 
@@ -824,6 +848,7 @@ function persistPortfolioTransition(
   validateEpfLegacyLinks((transition.epf ?? state.epf).accounts, transition.assets ?? state.assets);
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   validateDistributionGraph({ ...selectRawSnapshot(state), ...transition });
+  validatePpfCashLinks(transition.ppfLedgerEntries ?? state.ppfLedgerEntries, transition.cashEntries ?? state.cashEntries);
   storage.setItem(portfolioStorageKey, {
     ...selectRawSnapshot(state),
     ...transition,
@@ -850,7 +875,9 @@ function isLinkedCashEntry(entry: CashEntry) {
     Boolean(entry.linkedFutures) ||
     Boolean(entry.linkedEpf) ||
     Boolean(entry.linkedDistributionId) ||
+    Boolean(entry.linkedPpf) ||
     entry.purpose === "distribution" ||
+    entry.purpose === "ppfTransfer" ||
     entry.purpose === "epfTransfer" ||
     entry.purpose === "futuresTransfer" ||
     entry.purpose === "purchaseFunding" ||
@@ -1346,8 +1373,9 @@ function persistAssetGraphTransition({
   storage: JsonStorage;
 }) {
   validateSplitInventory(portfolio);
-  // Payout links must stay valid; fail before any write rather than store a graph that would be quarantined.
+  // Payout and PPF Cash links must stay valid; fail before any write rather than store a graph that would be quarantined.
   validateDistributionGraph(portfolio);
+  validatePpfCashLinks(portfolio.ppfLedgerEntries, portfolio.cashEntries);
   const previous = {
     historical: storage.getRawItem(historicalQuoteCacheStorageKey),
     portfolio: storage.getRawItem(portfolioStorageKey),
@@ -2247,6 +2275,9 @@ export function createPortfolioStore({
       if (expectedState !== plan.expectedState) return { status: "rejected", reason: "This account changed. Generate a fresh preview before saving." };
       if (plan.requiresReplacement && confirmReplacement !== true) return { status: "rejected", reason: "Confirm replacement of this account's checkpoint and history." };
       if (plan.duplicateRows > 0 && confirmDuplicateRows !== true) return { status: "rejected", reason: "Confirm that the repeated rows represent separate transactions." };
+      if (state.ppfLedgerEntries.some((entry) => entry.accountId === input.accountId && isCashFundedPpfEntry(entry))) {
+        return { status: "rejected", reason: "Some entries on this account are paid from or into Cash. Delete them before replacing its history." };
+      }
       const previous = state.ppfAccounts.find((account) => account.id === input.accountId)!;
       const ppfAccounts = state.ppfAccounts.map((account) => account.id === input.accountId ? plan.account! : account);
       const ppfLedgerEntries = [...state.ppfLedgerEntries.filter((entry) => entry.accountId !== input.accountId), ...plan.entries];
@@ -2303,18 +2334,25 @@ export function createPortfolioStore({
         };
       }
 
+      // A deposit paid from Cash owns its Cash withdrawal (D11).
+      const cashEntries = cashEntriesWithPpfLeg(state.cashEntries, null, entry, account.nickname);
+      if (isCashFundedPpfEntry(entry) && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
       const ppfLedgerEntries = [...state.ppfLedgerEntries, entry];
       const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        cashEntries,
         earliestAffectedMonth: entry.date.slice(0, 7),
         now: currentDate,
         ppfLedgerEntries,
         state,
       });
       persistPortfolioTransition(storage, state, {
+        cashEntries,
         monthlySnapshots,
         ppfLedgerEntries,
       });
-      set({ monthlySnapshots, ppfLedgerEntries });
+      set({ cashEntries, monthlySnapshots, ppfLedgerEntries });
       return { entry, status: "applied" };
     },
     addTrade: (trade) => {
@@ -2397,10 +2435,15 @@ export function createPortfolioStore({
         return { reason: "invalidTimeline", status: "rejected" };
       }
 
+      const cashEntries = cashEntriesWithPpfLeg(state.cashEntries, existing.id, entry, account.nickname);
+      if ((isCashFundedPpfEntry(existing) || isCashFundedPpfEntry(entry)) && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
       const ppfLedgerEntries = state.ppfLedgerEntries.map((item) =>
         item.id === entry.id ? entry : item,
       );
       const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        cashEntries,
         earliestAffectedMonth: [existing.date, entry.date]
           .sort()[0]
           .slice(0, 7),
@@ -2409,10 +2452,11 @@ export function createPortfolioStore({
         state,
       });
       persistPortfolioTransition(storage, state, {
+        cashEntries,
         monthlySnapshots,
         ppfLedgerEntries,
       });
-      set({ monthlySnapshots, ppfLedgerEntries });
+      set({ cashEntries, monthlySnapshots, ppfLedgerEntries });
       return { entry, status: "applied" };
     },
     deletePpfAccount: (accountId) => {
@@ -2428,6 +2472,11 @@ export function createPortfolioStore({
       const ppfLedgerEntries = state.ppfLedgerEntries.filter(
         (entry) => entry.accountId !== accountId,
       );
+      // The account's Cash legs go with it; removing a withdrawal into Cash must not overdraw later spending.
+      const cashEntries = state.cashEntries.filter((cash) => cash.linkedPpf?.accountId !== accountId);
+      if (cashEntries.length !== state.cashEntries.length && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
       const earliestDate = [
         account.balanceAsOf,
         ...state.ppfLedgerEntries
@@ -2435,6 +2484,7 @@ export function createPortfolioStore({
           .map((entry) => entry.date),
       ].sort()[0];
       const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        cashEntries,
         earliestAffectedMonth: earliestDate.slice(0, 7),
         now: currentDate,
         ppfAccounts,
@@ -2442,11 +2492,12 @@ export function createPortfolioStore({
         state,
       });
       persistPortfolioTransition(storage, state, {
+        cashEntries,
         monthlySnapshots,
         ppfAccounts,
         ppfLedgerEntries,
       });
-      set({ monthlySnapshots, ppfAccounts, ppfLedgerEntries });
+      set({ cashEntries, monthlySnapshots, ppfAccounts, ppfLedgerEntries });
       return { account, deletedEntries, status: "applied" };
     },
     deletePpfLedgerEntry: (entryId) => {
@@ -2464,20 +2515,26 @@ export function createPortfolioStore({
         return { reason: "invalidTimeline", status: "rejected" };
       }
 
+      const cashEntries = cashEntriesWithPpfLeg(state.cashEntries, entry.id, null, account.nickname);
+      if (isCashFundedPpfEntry(entry) && !hasNonnegativeCashTimeline(cashEntries)) {
+        return { reason: "insufficientCash", status: "rejected" };
+      }
       const ppfLedgerEntries = state.ppfLedgerEntries.filter(
         (item) => item.id !== entry.id,
       );
       const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        cashEntries,
         earliestAffectedMonth: entry.date.slice(0, 7),
         now: currentDate,
         ppfLedgerEntries,
         state,
       });
       persistPortfolioTransition(storage, state, {
+        cashEntries,
         monthlySnapshots,
         ppfLedgerEntries,
       });
-      set({ monthlySnapshots, ppfLedgerEntries });
+      set({ cashEntries, monthlySnapshots, ppfLedgerEntries });
       return { entry, status: "applied" };
     },
     correctAsset: (input) => {
@@ -2593,7 +2650,9 @@ export function createPortfolioStore({
         return { reason: "invalidEntry", status: "rejected" };
       }
       const currentDate = now();
-      const trade = deriveTrade(input);
+      // A correction keeps an external-funding marking unless it sets one itself.
+      const trade = deriveTrade(input.fundingSource === undefined && existingTrade.fundingSource
+        ? { ...input, fundingSource: existingTrade.fundingSource } : input);
       if (!isValidTradeRecord(trade, currentDate)) {
         return { reason: "invalidEntry", status: "rejected" };
       }
@@ -2816,6 +2875,51 @@ export function createPortfolioStore({
       const transition = { distributions: plan.distributions, cashEntries: plan.cashEntries };
       persistPortfolioTransition(storage, state, transition);
       set(transition);
+      return { status: "applied" };
+    },
+    setMeasurementBasis: (input) => {
+      const state = get();
+      if (input === null) {
+        persistPortfolioTransition(storage, state, { measurementBasis: null });
+        set({ measurementBasis: null });
+        return { basis: null, status: "applied" };
+      }
+      const problems = measurementBasisProblems(input, formatLocalCalendarDate(now()));
+      if (problems.length) return { problems, reason: "invalidEntry", status: "rejected" };
+      const openingBreakdown = input.openingBreakdown.map((line) => ({ label: line.label.trim(), valueInr: line.valueInr }));
+      const opening = input.kind === "openingValue";
+      const measurementBasis: MeasurementBasis = {
+        confirmedAt: now().toISOString(),
+        evidenceDigest: opening ? measurementEvidenceDigest(state, input.startDate) : null,
+        kind: input.kind,
+        openingBreakdown,
+        openingValueInr: opening
+          ? openingBreakdown.reduce((sum, line) => sum.plus(line.valueInr), decimal(0)).toNumber() : null,
+        startDate: input.startDate,
+      };
+      persistPortfolioTransition(storage, state, { measurementBasis });
+      set({ measurementBasis });
+      return { basis: measurementBasis, status: "applied" };
+    },
+    setTradeFundingSource: (tradeIds, source) => {
+      const state = get();
+      const selected = new Set(tradeIds);
+      if (!selected.size) return { reason: "invalidEntry", status: "rejected" };
+      const trades = state.trades.filter((trade) => selected.has(trade.id));
+      if (trades.length !== selected.size) return { reason: "notFound", status: "rejected" };
+      if (trades.some((trade) => trade.type !== "buy" && trade.type !== "sell")) return { reason: "invalidEntry", status: "rejected" };
+      // A trade with a Cash leg, or bought with a reinvested payout, already says where its money moved.
+      if (state.cashEntries.some((cash) => cash.linkedTradeId && selected.has(cash.linkedTradeId)) ||
+        state.distributions.some((item) => item.linkedTradeId && selected.has(item.linkedTradeId))) {
+        return { reason: "linkedCash", status: "rejected" };
+      }
+      const nextTrades = state.trades.map((trade) => {
+        if (!selected.has(trade.id) || (trade.type !== "buy" && trade.type !== "sell")) return trade;
+        const { fundingSource: _previous, ...rest } = trade;
+        return source === null ? rest : { ...rest, fundingSource: source };
+      });
+      persistPortfolioTransition(storage, state, { trades: nextTrades });
+      set({ trades: nextTrades });
       return { status: "applied" };
     },
     setDistributionCoverage: (assetId, from) => {

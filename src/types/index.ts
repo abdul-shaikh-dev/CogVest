@@ -10,6 +10,7 @@ export type { DemergerLink } from "./demerger";
 export type { Distribution, DistributionCoverage, DistributionTreatment } from "./distribution";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding, HoldingValuation } from "./holding";
+export type { FundingSource, MeasurementBasis, MeasurementBasisLine } from "./measurementBasis";
 export type { StockSplitEvent } from "./stockSplit";
 export type {
   MonthlyPerformanceBasis,

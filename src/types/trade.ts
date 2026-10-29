@@ -40,6 +40,11 @@ type TradeBase = {
 
 export type BuyTrade = TradeBase & {
   fees?: number;
+  /**
+   * "external": paid from money outside CogVest Cash. A sale's proceeds went
+   * outside. Only for trades without a Cash leg (D10).
+   */
+  fundingSource?: "external";
   pricePerUnit: number;
   totalValue: number;
   type: "buy";
@@ -47,6 +52,7 @@ export type BuyTrade = TradeBase & {
 
 export type SellTrade = TradeBase & {
   fees?: number;
+  fundingSource?: "external";
   pricePerUnit: number;
   totalValue: number;
   type: "sell";

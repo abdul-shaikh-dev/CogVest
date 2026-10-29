@@ -167,7 +167,7 @@ judgement):
 
 ### Whole-portfolio XIRR
 
-**D9. A persisted measurement basis** (schema 17), one per user:
+**D9. A persisted measurement basis** (schema 18), one per user:
 
 | Field | Meaning |
 | --- | --- |
@@ -194,17 +194,59 @@ contributions with no recorded source make the result unavailable. Each comes
 with a fix: link it, or reclassify it as an external contribution or withdrawal.
 
 **D11. PPF needs a source for each contribution and withdrawal**: tracked Cash
-(internal) or outside (external). Schema 17 adds an optional `fundingSource`
+(internal) or outside (external). Schema 18 adds an optional `fundingSource`
 on PPF contribution and withdrawal entries. Legacy entries start unknown and
 block until classified. They are never auto-classified on migration.
+
+**D9–D11 implementation choices** (30 October 2026, owner delegated the
+judgement):
+
+- The opening value is the value at the end of the start date. An
+  `openingValue` period counts flows strictly after the start date; an
+  `inception` period counts flows from the start date and needs no record
+  holding value before it.
+- "Editing a record on or before the start clears `confirmedAt`" is
+  derived, not stored. The basis keeps a fingerprint of every record dated on
+  or before the start, with keys sorted so a restore doesn't change it. A
+  different fingerprint now makes the result unavailable until the user
+  confirms again. No other store action has to remember to clear it.
+- **PPF from Cash owns a Cash leg.** A PPF deposit doesn't move Cash, so a
+  label alone can't make it internal. Either the Cash balance stays overstated
+  or the user records a Cash withdrawal, which D10 counts as money leaving.
+  So `fundingSource: "cash"` creates a linked Cash withdrawal (a deposit) or
+  addition (a withdrawal) with purpose `ppfTransfer`. It is created,
+  corrected and deleted with its entry and can't be edited on its own, as a
+  payout to Cash is. Monthly performance treats both legs as internal. A PPF
+  account delete removes its legs. A PPF CSV replacement is refused while the
+  account has legs.
+- **Trades can be marked as paid from outside.** `fundingSource:
+  "external"` on a buy or sell without a Cash leg is the "mark its funding as
+  external" fix. For a sale it means the proceeds went outside. It can be set
+  on many trades at once (imports have no Cash leg) and survives a trade
+  correction.
+- **EPF correction to D10:** every EPF contribution not paid from Cash is
+  money entering, employee or employer, because salary deductions never pass
+  through Cash. Cash-linked EPF events, and reversals of them, are internal. A
+  withdrawal with destination `unknown` blocks.
+- A `purchaseFunding` or `saleProceeds` Cash entry without its trade is
+  ambiguous and blocks like `legacyUncategorized`. Reinvested payouts and
+  the buys they fund are internal. Transfers of holdings after the start
+  block, because they have no value on the transfer date.
+- The end value is market holdings valued as the Dashboard values them, plus
+  PPF, EPF and Futures as in D8, plus the Cash balance. Held assets need a
+  price no more than 7 days old. Assets that can pay out need payout coverage
+  from the later of the start date and their first purchase.
 
 ### Cross-cutting
 
 **D12. Migration, backup and invalidation.**
 - Schema 16 → 17 adds empty `distributions` and `distributionCoverage`
   collections and the Cash purpose `distribution` (batch 2). No existing record
-  changes and nothing is auto-confirmed. The measurement basis and PPF funding
-  source arrive with batch 3 in a later schema version.
+  changes and nothing is auto-confirmed.
+- Schema 17 → 18 adds a null measurement basis, the optional `fundingSource`
+  on PPF contributions, withdrawals, buys and sells, and the Cash purpose
+  `ppfTransfer` (batch 3). No existing record changes and nothing is
+  classified for the user.
 - Backup and restore include the new collections, with validation. Restoring an
   older backup yields an unconfirmed state.
 - A payout to Cash owns its Cash addition: they are created, corrected and
@@ -219,7 +261,7 @@ block until classified. They are never auto-classified on migration.
 | --- | --- | --- |
 | 1 | Pure per-asset and Investments input builders (D4–D8). Every dividend-capable asset is unavailable until batch 2 | None |
 | 2 | Distributions and no-distribution confirmations: records, entry UI, backup (D1–D3, D12) | 17 |
-| 3 | Measurement basis and PPF funding source; whole-portfolio builder (D9–D11) | 17 (same release as batch 2, or 18) |
+| 3 | Measurement basis and PPF funding source; whole-portfolio builder (D9–D11) | 18 |
 | #534 | Solver with oracle fixtures, after batch 1 | None |
 | #535 | Presentation in holding detail and a compact Dashboard selector | None |
 
@@ -239,6 +281,10 @@ review and full verification.
 | Unlinked trade (whole-portfolio) | "Link this trade to Cash or mark its funding as external." |
 | PPF funding unknown | "Say whether this PPF deposit came from Cash." |
 | No measurement basis | "Set a start date and opening value to measure the whole portfolio." |
+| Basis evidence changed | "Records on or before the start date changed. Confirm the opening value again." |
+| Lifetime start after earlier records | "Records exist before the start date. Choose an opening value or an earlier start." |
+| Uncategorised Cash (whole-portfolio) | "A Cash entry after the start date needs a purpose: deposit or withdrawal." |
+| EPF withdrawal destination unknown | "Say where an EPF withdrawal went." |
 | No sign change / no unique rate | "A return can't be calculated from these flows." (from #534) |
 
 ## Not in scope

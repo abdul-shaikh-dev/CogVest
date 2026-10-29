@@ -8,6 +8,7 @@ import {
   epfXirrFlows, futuresXirrFlows, ppfXirrFlows,
   type AccountXirrLimitation, type AccountXirrOutcome, type AccountXirrReason,
 } from "./xirrAccountFlows";
+import type { WholePortfolioReason } from "./wholePortfolioXirr";
 import type { Asset, CashEntry, Distribution, DistributionCoverage, OpeningPosition, PpfAccount, PpfLedgerEntry, Quote, Trade } from "@/src/types";
 
 /**
@@ -19,7 +20,8 @@ import type { Asset, CashEntry, Distribution, DistributionCoverage, OpeningPosit
 /** D7: the newest usable price may be at most this many calendar days before the end date. */
 export const XIRR_MAX_QUOTE_AGE_DAYS = 7;
 
-export type XirrFlowSource = "trade" | "distribution" | "account" | "terminal";
+/** "cash" and "opening" appear only in whole-portfolio flows. */
+export type XirrFlowSource = "trade" | "distribution" | "account" | "cash" | "opening" | "terminal";
 export type XirrFlow = { date: string; amountInr: string; source: XirrFlowSource; id: string };
 
 export type XirrUnavailableReason =
@@ -27,7 +29,7 @@ export type XirrUnavailableReason =
   | "distributions-not-recorded" | "payout-before-purchase" | "opening-history" | "transfer-without-value"
   | "demerger" | "split-needs-review" | "invalid-trade" | "duplicate-trade" | "no-purchases"
   | "units-mismatch" | "missing-quote" | "stale-quote" | "quote-after-end" | "quote-currency"
-  | "no-assets" | AccountXirrReason;
+  | "no-assets" | AccountXirrReason | WholePortfolioReason;
 
 export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirrLimitation;
 
@@ -65,7 +67,7 @@ function cannotDistribute(asset: Asset) {
   return asset.assetClass === "crypto";
 }
 
-function daysBetween(from: string, to: string) {
+export function daysBetween(from: string, to: string) {
   const [a, b] = [from, to].map((value) => {
     const [y, m, d] = value.split("-").map(Number);
     return Date.UTC(y, m - 1, d);
@@ -78,7 +80,7 @@ function isDemergerMember(asset: Asset, assets: readonly Asset[]) {
 }
 
 /** D4: manual totals include the fee; imported totals are gross with fees and taxes in provenance. */
-function tradeFlow(trade: Trade & { type: "buy" | "sell" }) {
+export function tradeFlow(trade: Trade & { type: "buy" | "sell" }) {
   const provenance = trade.importProvenance;
   const charges = provenance ? decimal(provenance.fees ?? 0).plus(provenance.taxes ?? 0) : decimal(0);
   const net = trade.type === "buy" ? decimal(trade.totalValue).plus(charges) : decimal(trade.totalValue).minus(charges);
@@ -177,15 +179,12 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
   let valueAsOf: string | null = null;
   if (units.greaterThan(0)) {
     const quote = input.quote;
-    const quoteDate = quote ? getCalendarDatePart(quote.asOf) : null;
-    if (!quote || !quoteDate || !Number.isFinite(quote.price) || quote.price <= 0) issue("missing-quote");
-    else if (quote.currency !== "INR") issue("quote-currency");
-    else if (quoteDate > endDate) issue("quote-after-end");
-    else if (daysBetween(quoteDate, endDate) > XIRR_MAX_QUOTE_AGE_DAYS) issue("stale-quote");
-    else {
+    const quoteIssue = terminalQuoteIssue(quote, endDate);
+    if (quoteIssue) issue(quoteIssue);
+    else if (quote) {
       if (quote.source === "manual") limitations.push({ assetId, limitation: "manual-price" });
       terminal = { date: endDate, amountInr: units.times(quote.price).toString(), source: "terminal", id: assetId };
-      valueAsOf = quoteDate;
+      valueAsOf = getCalendarDatePart(quote.asOf);
     }
   }
 
@@ -193,7 +192,17 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
   return { ok: true, flows, terminal, valueAsOf, limitations };
 }
 
-function compareFlows(a: XirrFlow, b: XirrFlow) {
+/** D7: why a price can't value a holding on the end date, or null when it can. */
+export function terminalQuoteIssue(quote: Quote | undefined, endDate: string): XirrUnavailableReason | null {
+  const quoteDate = quote ? getCalendarDatePart(quote.asOf) : null;
+  if (!quote || !quoteDate || !Number.isFinite(quote.price) || quote.price <= 0) return "missing-quote";
+  if (quote.currency !== "INR") return "quote-currency";
+  if (quoteDate > endDate) return "quote-after-end";
+  if (daysBetween(quoteDate, endDate) > XIRR_MAX_QUOTE_AGE_DAYS) return "stale-quote";
+  return null;
+}
+
+export function compareFlows(a: XirrFlow, b: XirrFlow) {
   if ((a.source === "terminal") !== (b.source === "terminal")) return a.source === "terminal" ? 1 : -1;
   return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
 }
