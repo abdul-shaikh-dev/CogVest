@@ -141,7 +141,8 @@ describe("XIRR from built inputs", () => {
     const quotes = { btc: quote("btc", 1210) };
     const portfolio = buildInvestmentsXirrInput({
       assets: [btc, eth], trades, openingPositions: [], quotes, distributions: [], distributionCoverage: [],
-      hasPpfAccounts: false, hasEpfAccounts: false, hasFuturesAccounts: false, endDate,
+      ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
+      endDate, today: endDate, valuationTime: `${endDate}T12:00:00Z`,
     });
     if (portfolio.status !== "ready") throw new Error("expected ready input");
     const combined = rateOf(portfolio.flows);

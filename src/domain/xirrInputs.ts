@@ -1,8 +1,14 @@
 import { getCalendarDatePart, parseCalendarDate } from "./dates";
 import { decimal, sumFinancialValues } from "./precision";
 import { distributionNetAmount } from "./distributions";
+import type { EpfLedger } from "./epf/model";
 import { positionEvents, splitQuantity } from "./stockSplits";
-import type { Asset, Distribution, DistributionCoverage, OpeningPosition, Quote, Trade } from "@/src/types";
+import type { UsdmFuturesAccount } from "./usdmFutures";
+import {
+  epfXirrFlows, futuresXirrFlows, ppfXirrFlows,
+  type AccountXirrLimitation, type AccountXirrOutcome, type AccountXirrReason,
+} from "./xirrAccountFlows";
+import type { Asset, CashEntry, Distribution, DistributionCoverage, OpeningPosition, PpfAccount, PpfLedgerEntry, Quote, Trade } from "@/src/types";
 
 /**
  * Per-asset and Investments XIRR inputs from existing records.
@@ -13,7 +19,7 @@ import type { Asset, Distribution, DistributionCoverage, OpeningPosition, Quote,
 /** D7: the newest usable price may be at most this many calendar days before the end date. */
 export const XIRR_MAX_QUOTE_AGE_DAYS = 7;
 
-export type XirrFlowSource = "trade" | "distribution" | "terminal";
+export type XirrFlowSource = "trade" | "distribution" | "account" | "terminal";
 export type XirrFlow = { date: string; amountInr: string; source: XirrFlowSource; id: string };
 
 export type XirrUnavailableReason =
@@ -21,9 +27,9 @@ export type XirrUnavailableReason =
   | "distributions-not-recorded" | "payout-before-purchase" | "opening-history" | "transfer-without-value"
   | "demerger" | "split-needs-review" | "invalid-trade" | "duplicate-trade" | "no-purchases"
   | "units-mismatch" | "missing-quote" | "stale-quote" | "quote-after-end" | "quote-currency"
-  | "ppf-not-supported" | "epf-not-supported" | "futures-not-supported" | "no-assets";
+  | "no-assets" | AccountXirrReason;
 
-export type XirrLimitation = "fees-not-in-source" | "manual-price";
+export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirrLimitation;
 
 export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string };
 
@@ -222,17 +228,23 @@ export type InvestmentsXirrInput = {
   quotes: Readonly<Record<string, Quote>>;
   distributions: readonly Distribution[];
   distributionCoverage: readonly DistributionCoverage[];
-  hasPpfAccounts: boolean;
-  hasEpfAccounts: boolean;
-  hasFuturesAccounts: boolean;
+  ppfAccounts: readonly PpfAccount[];
+  ppfLedgerEntries: readonly PpfLedgerEntry[];
+  epf: Pick<EpfLedger, "accounts" | "events">;
+  futuresAccounts: readonly UsdmFuturesAccount[];
+  /** Futures transfers inside the boundary use their linked Cash amount. */
+  cashEntries: readonly CashEntry[];
   endDate: string;
+  /** Today's date and the current time, for EPF validation and the Futures valuation. */
+  today: string;
+  valuationTime: string;
 };
 
 /**
- * Investments XIRR input (D8): every market asset with history, Cash excluded.
- * Buys and sells cross the boundary whether or not a Cash leg is linked.
- * PPF, EPF and Futures are inside the boundary but not yet supported here, so
- * their presence makes the result unavailable rather than silently partial.
+ * Investments XIRR input (D8): market assets, PPF, EPF and Futures net
+ * equity; Cash is outside. Buys and sells cross the boundary whether or not a
+ * Cash leg is linked. Every account's starting balance must sit on the period
+ * start, so no account's earlier history is silently missing.
  */
 export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInputResult {
   const portfolio = "portfolio";
@@ -240,20 +252,18 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
     return { status: "unavailable", reasons: [{ assetId: portfolio, reason: "invalid-end-date" }] };
   }
   const reasons: XirrAssetIssue[] = [];
-  if (input.hasPpfAccounts) reasons.push({ assetId: portfolio, reason: "ppf-not-supported" });
-  if (input.hasEpfAccounts) reasons.push({ assetId: portfolio, reason: "epf-not-supported" });
-  if (input.hasFuturesAccounts) reasons.push({ assetId: portfolio, reason: "futures-not-supported" });
 
   // Assets whose only activity is after the end date are outside the period.
   const inPeriod = (trade: Trade) => {
     const date = getCalendarDatePart(trade.date);
     return !date || date <= input.endDate;
   };
+  const assets = new Map(input.assets.map((asset) => [asset.id, asset]));
+  // Cash is outside the Investments boundary (D8).
   const assetIds = [...new Set([
     ...input.trades.filter(inPeriod).map((trade) => trade.assetId),
     ...input.openingPositions.map((opening) => opening.assetId),
-  ])].sort();
-  const assets = new Map(input.assets.map((asset) => [asset.id, asset]));
+  ])].filter((assetId) => assets.get(assetId)?.assetClass !== "cash").sort();
   const flows: XirrFlow[] = [];
   const terminals: XirrFlow[] = [];
   const limitations: Array<{ assetId: string; limitation: XirrLimitation; recordId?: string }> = [];
@@ -274,12 +284,35 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
     if (outcome.valueAsOf) valueDates.push(outcome.valueAsOf);
     limitations.push(...outcome.limitations);
   }
-  if (!assetIds.length) reasons.push({ assetId: portfolio, reason: "no-assets" });
+  const accounts: AccountXirrOutcome[] = [
+    ppfXirrFlows(input.ppfAccounts, input.ppfLedgerEntries, input.endDate),
+    epfXirrFlows(input.epf, input.endDate, input.today),
+    futuresXirrFlows(input.futuresAccounts, input.cashEntries, input.endDate, input.valuationTime),
+  ];
+  const openings: Array<{ date: string; id: string }> = [];
+  for (const account of accounts) {
+    reasons.push(...account.reasons);
+    limitations.push(...account.limitations);
+    for (const flow of account.flows) {
+      flows.push({ date: flow.date, amountInr: flow.amountInr, source: "account", id: flow.id });
+      if (flow.opening) openings.push({ date: flow.date, id: flow.id });
+    }
+    for (const terminal of account.terminals) {
+      terminals.push({ date: input.endDate, amountInr: terminal.amountInr, source: "terminal", id: terminal.id });
+      valueDates.push(terminal.valueAsOf);
+    }
+  }
+  if (!assetIds.length && !input.ppfAccounts.length && !input.epf.accounts.length && !input.futuresAccounts.length) reasons.push({ assetId: portfolio, reason: "no-assets" });
+  // An account that starts with a balance after the period start has unknown earlier history.
+  const start = flows.map((flow) => flow.date).sort()[0];
+  for (const opening of openings) {
+    if (start && opening.date > start) reasons.push({ assetId: opening.id, reason: "account-history-after-start" });
+  }
   if (reasons.length) return { status: "unavailable", reasons };
 
   flows.sort(compareFlows);
   const terminalValue = sumFinancialValues(terminals.map((flow) => flow.amountInr));
-  const allFlows = terminalValue.greaterThan(0)
+  const allFlows = !terminalValue.isZero()
     ? [...flows, { date: input.endDate, amountInr: terminalValue.toString(), source: "terminal" as const, id: portfolio }]
     : flows;
   return {
@@ -289,6 +322,7 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
     endDate: input.endDate,
     valueAsOf: valueDates.length ? valueDates.sort()[0] : null,
     limitations,
-    includedAssetIds: assetIds,
+    includedAssetIds: [...assetIds, ...new Set(accounts.flatMap((account) =>
+      [...account.flows.filter((flow) => flow.opening).map((flow) => flow.id), ...account.terminals.map((item) => item.id)]))],
   };
 }

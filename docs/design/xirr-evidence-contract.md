@@ -145,6 +145,26 @@ account has history covering the period. A PPF/EPF account whose history starts
 after the period start needs a confirmed balance on the period start date.
 Futures needs a verified wallet valuation at both ends.
 
+**D8 implementation choices** (30 October 2026, owner delegated the
+judgement):
+
+- A PPF or EPF starting balance, and a Futures starting wallet at its recorded
+  rate, is an opening flow (−) on its date. It must fall on the period start,
+  which is the earliest flow overall. Otherwise the earlier history is unknown,
+  and the result is unavailable.
+- PPF ends at its confirmed balance. Interest accrued since the last credit is
+  left out and shown as a note, never estimated.
+- An unexplained PPF reconciliation or EPF balance update blocks the result.
+  It changes value without saying what moved.
+- EPF interest is return. A provider reversal undoes its original flow on the
+  reversal date. A year summary's contributions are dated at its end, with a
+  note.
+- EPF needs `historyCompleteThrough` on or after the end date.
+- Futures needs the reconciled valuation that the Dashboard already uses, no
+  more than 7 days old. Negative equity is a negative terminal flow, never
+  dropped.
+- Cash-class holdings are outside the boundary and are skipped, not blocking.
+
 ### Whole-portfolio XIRR
 
 **D9. A persisted measurement basis** (schema 17), one per user:
