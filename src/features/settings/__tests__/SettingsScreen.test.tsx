@@ -107,7 +107,7 @@ describe("SettingsScreen", () => {
     expect(mockPush).toHaveBeenNthCalledWith(3, "/futures");
 
     fireEvent.press(getByTestId("privacy-details-toggle"));
-    expect(getByText("Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.")).toBeTruthy();
+    expect(getByText("Backups are not encrypted: save them only somewhere you trust.")).toBeTruthy();
   });
 
   it("shows collapsed privacy settings and toggles value masking", () => {
@@ -153,7 +153,7 @@ describe("SettingsScreen", () => {
     ).toBeTruthy();
     expect(
       getByText(
-        "Protected by Android app-private storage and device security. CogVest does not add its own encryption.",
+        "Records stay in app-private Android storage, protected by device security; CogVest adds no encryption of its own.",
       ),
     ).toBeTruthy();
     expect(getByText("Account")).toBeTruthy();

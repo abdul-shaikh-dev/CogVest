@@ -70,9 +70,9 @@ appId: ${APP_ID}
     id: privacy-details-toggle
 - scrollUntilVisible:
     element:
-      text: ".*CogVest does not add its own encryption.*"
+      text: ".*CogVest adds no encryption of its own.*"
     direction: DOWN
-- assertVisible: ".*CogVest does not add its own encryption.*"
+- assertVisible: ".*CogVest adds no encryption of its own.*"
 - takeScreenshot: .expo/settings-layout/${SHOT}/privacy
 - scrollUntilVisible:
     element:

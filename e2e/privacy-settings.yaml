@@ -17,9 +17,9 @@ appId: ${APP_ID}
     id: "privacy-details-toggle"
 # selector: the encryption disclosure is the copy under test
 - scrollUntilVisible:
-    element: ".*CogVest does not add its own encryption.*"
+    element: ".*CogVest adds no encryption of its own.*"
     direction: DOWN
-- assertVisible: ".*CogVest does not add its own encryption.*"
+- assertVisible: ".*CogVest adds no encryption of its own.*"
 - takeScreenshot: .expo/ux14-privacy
 - scrollUntilVisible:
     element:

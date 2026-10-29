@@ -218,6 +218,10 @@ describe("TransactionImportScreen", () => {
     fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
     fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-identity-conflicts")).toBeTruthy());
+    expect(screen.getByText(/can't be combined safely yet; don't delete rows to get past this./u)).toBeTruthy();
+    expect(screen.queryByTestId("transaction-import-identity-conflict-details")).toBeNull();
+    fireEvent.press(screen.getByTestId("transaction-import-identity-conflict-details-toggle"));
+    expect(screen.getByTestId("transaction-import-identity-conflict-details")).toHaveTextContent("Combining them needs corporate-action import support.");
     expect(screen.queryByTestId("transaction-import-accept-matches")).toBeNull();
     expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
     expect(screen.getByTestId("transaction-import-row-accounting")).toHaveTextContent(/2 parsed rows/u);

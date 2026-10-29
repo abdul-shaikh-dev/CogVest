@@ -4,6 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-10-29: Copy budget (#562), smoke 12 passed plus 6 copy flows
+
+- Commit: main plus the #562 copy-budget change. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, freshly built E2E APK, Metro stopped.
+- Smoke tier: 12 passed, 0 failed, 10m 36s.
+- Flows asserting the changed copy, by path: privacy-settings 0m 18s,
+  visual/app-copy 0m 29s, visual/settings-choice-controls 0m 30s,
+  visual/settings-layout 0m 42s, visual/settings-tool-groups-controls 0m 34s,
+  futures-timestamp-evidence 3m 30s. All passed.
+- visual/settings-layout first failed at its persisted value-mask assertion,
+  a step before any changed line, and passed unchanged on rerun. Flaky.
+- Screenshots, light, dark and font scale 1.3:
+  `docs/reviews/artifacts/2026-10-29-copy-budget/`.
+
 ## 2026-10-29: Futures shared observation time (#562), 5 Futures flows passed
 
 - Commit: main plus the #562 Futures valuation change. AVD CogVest_UX_Proof,

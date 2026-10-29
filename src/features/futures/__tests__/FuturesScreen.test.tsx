@@ -76,6 +76,24 @@ describe("manual Futures screen", () => {
     expect(store.getState().cashEntries[0]).toMatchObject({ id: "cash-opening", amount: 10000 });
   });
 
+  it("keeps one visible sentence per card and every limitation behind Details", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
+    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const details = {
+      "futures-margin-details": ["Indicative only: not Binance maintenance margin or liquidation risk.", "It is already part of wallet funds and never added to equity."],
+      "futures-activity-details": ["Add every fill with its fee, plus funding and transfers.", "For money from recorded INR Cash, use Move Cash and USDT. An unlinked Binance Spot movement stays outside portfolio totals."],
+      "futures-cash-details": ["Record a transfer you already made between Cash and the Futures wallet; CogVest moves no money.", "It opens no trade on Binance. Enter executions under Activity."],
+    };
+    for (const [testID, [summary, detail]] of Object.entries(details)) {
+      expect(screen.getByText(summary)).toBeTruthy();
+      expect(screen.queryByTestId(testID)).toBeNull();
+      fireEvent.press(screen.getByTestId(`${testID}-toggle`));
+      expect(screen.getByTestId(testID)).toHaveTextContent(detail);
+    }
+  });
+
   it("separates wallet equity, empty positions and correction without fabricating INR values", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = render(<FuturesScreen onBack={() => {}} store={store} />);

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 
 import {
@@ -69,7 +70,7 @@ export function ImportPreflightCard({ controller }: { controller: TransactionImp
     </> : <>
       <SectionHeader title="How should this file be applied?" />
       <AppText color="secondary">
-        Existing investment records were found. Keeping opening balances is the safer default unless this file contains complete history for the affected holdings.
+        Existing records found: keep opening balances unless this file has the full history for these holdings.
       </AppText>
       <View style={styles.modeRow}>
         <ModeButton
@@ -217,6 +218,7 @@ export function HoldingMatchCard({
   showMatched: boolean;
 }) {
   const styles = useStyles();
+  const [showConflictDetails, setShowConflictDetails] = useState(false);
   const { identityConflicts, matched, suggested, unresolved } = matchGroups;
   const isCas = controller.sourceId === "camsKfinCasPdfV1";
 
@@ -239,8 +241,19 @@ export function HoldingMatchCard({
         {identityConflicts.length} historical identities need corporate-action review
       </AppText>
       <AppText color="secondary">
-        Different ISINs point to the same current listing. Their quantities cannot safely be combined yet. Keep the original rows; do not delete transactions to bypass this check. Corporate-action import support is needed before these histories can be combined.
+        These ISINs point to the same listing and can't be combined safely yet; don't delete rows to get past this.
       </AppText>
+      <ReviewDisclosure
+        expanded={showConflictDetails}
+        onPress={() => setShowConflictDetails(!showConflictDetails)}
+        testID="transaction-import-identity-conflict-details-toggle"
+        title="Details"
+      />
+      {showConflictDetails ? (
+        <AppText color="secondary" testID="transaction-import-identity-conflict-details">
+          Combining them needs corporate-action import support.
+        </AppText>
+      ) : null}
       {identityConflicts.map((group) => (
         <HoldingMatch key={group.key} group={group} onSelect={controller.selectCandidate} />
       ))}
@@ -269,7 +282,7 @@ export function HoldingMatchCard({
     ) : null}
     {suggested.length > 0 ? <>
       <AppText color="secondary" variant="caption">
-        All {suggested.length} suggestions match the file's symbol, exchange and currency. You can inspect each match before accepting them together; no transactions are saved yet.
+        All {suggested.length} suggestions match the file's symbol, exchange and currency; nothing is saved yet.
       </AppText>
       <AppButton
         disabled={controller.isResolving}
