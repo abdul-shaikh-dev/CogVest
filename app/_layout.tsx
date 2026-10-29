@@ -208,6 +208,7 @@ function RootContents() {
               <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen name="investing-cash-qa" options={{ headerShown: false }} />
+              <Stack.Screen name="xirr-qa" options={{ headerShown: false }} />
               <Stack.Screen
                 name="opening-position"
                 options={{ headerShown: false }}

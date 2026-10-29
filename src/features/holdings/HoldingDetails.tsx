@@ -19,7 +19,10 @@ import { getHoldingQuoteContext } from "@/src/services/quotes";
 import { canRecordPayouts, payoutsSummary } from "@/src/features/payouts/payoutForm";
 import type { Asset, Distribution, DistributionCoverage, OpeningPosition, Trade } from "@/src/types";
 
+import type { XirrSummary } from "@/src/domain/xirrSummary";
+
 import { AssetHistoryPanel } from "./AssetHistoryPanel";
+import { HoldingXirrPanel } from "./HoldingXirrPanel";
 import { getFirstRecordedPurchase, type HoldingReviewItem } from "./holdingsReview";
 import { useStyles } from "./holdingsStyles";
 import { formatClassification, formatQuantity, formatSignedCompactINR } from "./holdingsViewModel";
@@ -36,6 +39,8 @@ export type HoldingDetailsProps = {
   payouts?: { coverage: readonly DistributionCoverage[]; distributions: readonly Distribution[] };
   recordsVisible: boolean;
   trades: Trade[];
+  /** Annualised return; Minimal mode keeps it behind the records disclosure. */
+  xirr?: XirrSummary;
   onToggleRecords: () => void;
   onReviewOpeningPosition?: (id: string) => void;
   onReviewTrades?: (id: string) => void;
@@ -44,7 +49,7 @@ export type HoldingDetailsProps = {
   onReviewPayouts?: (assetId: string) => void;
 };
 
-type HoldingDetailModalProps = Omit<HoldingDetailsProps, "item" | "recordsVisible" | "onToggleRecords"> & {
+type HoldingDetailModalProps = Omit<HoldingDetailsProps, "item" | "recordsVisible" | "onToggleRecords" | "xirr"> & {
   closeDetail: () => void;
   detailScrollOffset: { current: number };
   isActive: boolean;
@@ -53,6 +58,7 @@ type HoldingDetailModalProps = Omit<HoldingDetailsProps, "item" | "recordsVisibl
   setSelectedRecordsVisible: (update: (visible: boolean) => boolean) => void;
   statusMessage?: string;
   toggleMaskWealthValues: () => void;
+  xirrFor?: (assetId: string) => XirrSummary;
 };
 
 /** The full-screen detail for one holding, opened from a Holdings row. */
@@ -78,6 +84,7 @@ export function HoldingDetailModal({
   statusMessage,
   toggleMaskWealthValues,
   trades,
+  xirrFor,
 }: HoldingDetailModalProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -156,6 +163,7 @@ export function HoldingDetailModal({
             payouts={payouts}
             recordsVisible={selectedRecordsVisible}
             trades={trades}
+            xirr={xirrFor?.(selectedItem.holding.asset.id)}
             onToggleRecords={() =>
               setSelectedRecordsVisible((visible) => !visible)
             }
@@ -200,6 +208,7 @@ export function HoldingDetails({
   onRecordPurchase,
   onToggleRecords,
   trades,
+  xirr,
 }: HoldingDetailsProps) {
   const styles = useStyles();
   const { holding } = item;
@@ -288,6 +297,9 @@ export function HoldingDetails({
           />
         </View>
       </View>
+      {xirr && (!minimal || recordsVisible) && holding.asset.assetClass !== "cash" && holding.asset.instrumentType !== "ppf" ? (
+        <HoldingXirrPanel assetId={holding.asset.id} masked={masked} summary={xirr} />
+      ) : null}
       <View style={styles.detailPosition} testID="holding-detail-position">
         <SectionHeader title="Your position" />
         <View style={styles.detailGrid}>

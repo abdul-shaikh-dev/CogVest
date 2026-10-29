@@ -30,6 +30,7 @@ import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quot
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useTheme } from "@/src/theme";
 
+import { assetXirrSummary } from "./assetXirr";
 import { HoldingDetailModal } from "./HoldingDetails";
 import { HoldingRow } from "./HoldingRow";
 import { EpfAccountsSection, PpfAccountsSection } from "./HoldingsAccountSections";
@@ -654,6 +655,7 @@ export function HoldingsScreen({
             statusMessage={statusMessage}
             toggleMaskWealthValues={toggleMaskWealthValues}
             trades={trades}
+            xirrFor={(assetId) => assetXirrSummary(store.getState(), assetId, observedAt)}
           />
         ) : null}
 

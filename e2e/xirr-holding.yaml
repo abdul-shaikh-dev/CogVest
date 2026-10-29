@@ -1,0 +1,68 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///xirr-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: xirr-qa-reset
+- assertVisible:
+    id: xirr-qa-status
+    text: "Fixture ready"
+- tapOn:
+    id: xirr-qa-open-holdings
+- scrollUntilVisible:
+    element:
+      id: holding-row-xirr-qa-stock
+    direction: DOWN
+- tapOn:
+    id: holding-row-xirr-qa-stock
+# selector: the unavailable reason is the text under test
+- assertVisible:
+    id: holding-xirr-unavailable
+- assertVisible: "Dividends or payouts aren't recorded for this period."
+- takeScreenshot: .expo/xirr-${SHOT}-unavailable
+- scrollUntilVisible:
+    element:
+      id: holding-payouts-xirr-qa-stock
+    direction: DOWN
+- tapOn:
+    id: holding-payouts-xirr-qa-stock
+- tapOn:
+    id: payouts-coverage-edit
+- scrollUntilVisible:
+    element:
+      id: payouts-coverage-save
+    direction: DOWN
+- tapOn:
+    id: payouts-coverage-save
+- assertVisible:
+    id: payouts-coverage-status
+    text: "All payouts since 01 Jan 2025 are recorded"
+- tapOn:
+    id: payouts-back
+- scrollUntilVisible:
+    element:
+      id: holding-xirr-rate
+    direction: UP
+# selector: the computed rate and its period are the values under test
+- assertVisible:
+    id: holding-xirr-rate
+    text: "\\+10.00% a year"
+- assertVisible:
+    id: holding-xirr-period
+    text: "01 Jan 2025 to 01 Jan 2026 · INR · price as of 01 Jan 2026"
+- takeScreenshot: .expo/xirr-${SHOT}-rate
+- tapOn:
+    id: holding-xirr-flows-toggle
+- scrollUntilVisible:
+    element:
+      id: holding-xirr-flows
+    direction: DOWN
+# selector: the audited flow amounts are under test
+- assertVisible: "-₹10,000.00"
+- assertVisible: "₹11,000.00"
+- takeScreenshot: .expo/xirr-${SHOT}-flows
