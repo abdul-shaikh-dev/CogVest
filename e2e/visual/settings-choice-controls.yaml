@@ -24,9 +24,9 @@ appId: ${APP_ID}
     id: privacy-details-toggle
 - scrollUntilVisible:
     element:
-      text: "Manual portfolio backups are available.*"
+      text: "Backups are not encrypted.*"
     direction: DOWN
-- assertVisible: "Manual portfolio backups are available.*"
+- assertVisible: "Backups are not encrypted.*"
 - takeScreenshot: .expo/${SHOT}-privacy
 - scrollUntilVisible:
     element:

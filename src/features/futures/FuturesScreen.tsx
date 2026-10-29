@@ -1,11 +1,9 @@
-import { createContext, useContext, useRef, useState, useSyncExternalStore, type ComponentProps } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from "react-native";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { AppButton, AppText, DisclosureButton, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
 import { useDraftExit } from "./useDraftExit";
-import { DateTimeField, FormTextField } from "@/src/components/forms";
 import { futuresEntryErrors, type FuturesEntryField } from "@/src/domain/futuresEntry";
 import { decimal } from "@/src/domain/precision";
 import {
@@ -17,28 +15,12 @@ import {
   type UsdmMark,
 } from "@/src/domain/usdmFutures";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { spacing, useTheme, createThemedStyles } from "@/src/theme";
+import { Choice, EntryErrors, EntryField, Explainer, Money, TimeField, displayTime, type EntryTarget } from "./FuturesFields";
+import { useStyles } from "./futuresStyles";
+import { spacing } from "@/src/theme";
 import { createId } from "@/src/utils";
 
 type EventKind = "execution" | "funding" | "transfer";
-type EntryTarget = { layout: View | null; input?: TextInput | null };
-const EntryErrors = createContext<{ errors: Record<string, string>; refs: Record<string, EntryTarget>; clear: (id: string) => void }>({ errors: {}, refs: {}, clear: () => {} });
-function EntryField(props: ComponentProps<typeof FormTextField>) {
-  const { errors, refs, clear } = useContext(EntryErrors);
-  const target = useRef<EntryTarget>({ layout: null, input: null });
-  return <View collapsable={false} ref={(node) => {
-    target.current.layout = node;
-    if (props.testID) refs[props.testID] = target.current;
-  }}><FormTextField {...props} error={props.testID ? errors[props.testID] : undefined}
-    inputRef={(node) => { target.current.input = node; }}
-    onChangeText={(value) => { if (props.testID) clear(props.testID); props.onChangeText(value); }} /></View>;
-}
-function TimeField(props: ComponentProps<typeof DateTimeField>) {
-  const { errors, refs, clear } = useContext(EntryErrors);
-  return <DateTimeField {...props} error={errors[props.testID]}
-    fieldRef={(node) => { refs[props.testID] = { layout: node }; }}
-    onChange={(value) => { clear(props.testID); props.onChange(value); }} />;
-}
 type EventDraft = {
   id: string;
   type: EventKind;
@@ -83,22 +65,6 @@ const blankEvent = (): EventDraft => ({
   transferBoundary: "external", inrPerUsdt: "", rateObservedAt: "", rateSource: "",
 });
 
-function Choice({ label, selected, onPress, testID, checkbox = false }: { label: string; selected: boolean; onPress: () => void; testID?: string; checkbox?: boolean }) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return <Pressable accessibilityRole={checkbox ? "checkbox" : "radio"} accessibilityLabel={label} accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.choice, checkbox && styles.checkbox, selected && styles.selected]} testID={testID}>
-    {checkbox ? <Ionicons name={selected ? "checkbox" : "square-outline"} size={22} color={selected ? colors.primary : colors.text.secondary} accessible={false} /> : null}
-    <AppText weight={selected ? "bold" : "regular"} style={checkbox ? styles.choiceLabel : undefined}>{label}</AppText>
-  </Pressable>;
-}
-
-function Money({ value, masked, prominent = false }: { value: string; masked: boolean; prominent?: boolean }) {
-  return <AppText variant={prominent ? "title" : "body"} weight="bold">{masked ? "••••" : value}</AppText>;
-}
-
-function displayTime(value: string) {
-  return new Date(value).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
 
 const valuationLabels: Record<ReturnType<typeof replayUsdmFutures>["valuationStatus"], string> = {
   ready: "Verified at the saved observation time",
@@ -457,11 +423,11 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               {position.reportedMarginUsdt !== null ? <AppText>Binance-reported position margin: {masked ? "••••" : `${position.reportedMarginUsdt} USDT`}</AppText> : null}
               <AppText>Unrealized: {masked ? "••••" : `${position.unrealizedPnlUsdt ?? "mark needed"} USDT`}</AppText>
             </View>)}
-            <AppText color="secondary">Indicative margin is not Binance maintenance margin or liquidation risk. It is already part of wallet funds, never added to equity.</AppText>
+            <Explainer summary="Indicative only: not Binance maintenance margin or liquidation risk." details="It is already part of wallet funds and never added to equity." testID="futures-margin-details" />
           </PremiumCard>
           <PremiumCard section>
             <SectionHeader title="Activity" />
-            <AppText color="secondary">Add every fill and its fee. Enter funding and transfers separately. Use the linked Cash form below for recorded INR Cash; an unlinked Binance Spot movement remains outside portfolio totals.</AppText>
+            <Explainer summary="Add every fill with its fee, plus funding and transfers." details="For money from recorded INR Cash, use Move Cash and USDT. An unlinked Binance Spot movement stays outside portfolio totals." testID="futures-activity-details" />
             {account.events.map((event) => <View key={event.id} style={styles.row}>
               <AppText weight="bold">{event.type === "execution" ? `${event.side.toUpperCase()} ${event.contract}` : event.type === "funding" ? `Funding ${event.contract}` : event.linkedCashEntryId ? "Linked Cash transfer" : event.transferBoundary === "internal" ? "Unlinked Spot transfer" : "External transfer"}</AppText>
               <AppText color="secondary">{displayTime(event.at)} · {masked ? "••••" : event.type === "execution" ? `${event.quantity} @ ${event.price} USDT` : `${event.amountUsdt} USDT`}</AppText>
@@ -502,7 +468,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           </PremiumCard>
           <PremiumCard section testID="futures-cash-funding">
             <SectionHeader title="Move Cash and USDT" />
-            <AppText color="secondary">Record a movement you already made between recorded INR Cash and your Binance USDT Futures wallet. This does not transfer funds or open a trade on Binance. Enter executions separately.</AppText>
+            <Explainer summary="Record a transfer you already made between Cash and the Futures wallet; CogVest moves no money." details="It opens no trade on Binance. Enter executions under Activity." testID="futures-cash-details" />
             {!editingCashFunding ? <AppButton title="Record Cash funding or withdrawal" variant="secondary" onPress={() => startCash(blankCashFunding())} testID="futures-add-cash-funding" /> : <>
               <View style={styles.choices} accessibilityRole="radiogroup">
                 <Choice label="Cash to Futures" selected={cashFunding.direction === "toFutures"} onPress={() => setCashFunding((current) => ({ ...current, direction: "toFutures" }))} />
@@ -578,21 +544,3 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
     </Modal>
   </KeyboardAvoidingView></EntryErrors.Provider>;
 }
-
-const useStyles = createThemedStyles((colors) => StyleSheet.create({
-  conversionGroup: { gap: spacing.md, paddingTop: spacing.sm },
-  fill: { flex: 1 },
-  modal: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.background },
-  breakdown: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },
-  metric: { gap: spacing.xs, paddingVertical: spacing.xs },
-  deleteAction: { alignSelf: "center", minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
-  eventDelete: { minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },
-  content: { gap: spacing.cardGap, paddingTop: spacing.md, paddingBottom: spacing.xl },
-  row: { borderTopColor: colors.border.subtle, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.md },
-  choices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  choice: { minHeight: 48, justifyContent: "center", borderColor: colors.border.strong, borderWidth: 1, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  selected: { borderColor: colors.primary, backgroundColor: colors.surface.elevated },
-  checkbox: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  choiceLabel: { flex: 1 },
-  error: { color: colors.loss },
-}));

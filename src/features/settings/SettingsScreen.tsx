@@ -247,14 +247,10 @@ export function SettingsScreen({
             {isPrivacyDetailsExpanded ? (
               <View style={styles.privacyDetails} testID="privacy-storage-details">
                 <AppText color="secondary" variant="caption">
-                  Records stay in CogVest's app-private Android storage.
+                  Records stay in app-private Android storage, protected by device security; CogVest adds no encryption of its own.
                 </AppText>
                 <AppText color="secondary" variant="caption">
-                  Protected by Android app-private storage and device security.
-                  CogVest does not add its own encryption.
-                </AppText>
-                <AppText color="secondary" variant="caption">
-                  Manual portfolio backups are available. They are not encrypted, so save them only somewhere you trust.
+                  Backups are not encrypted: save them only somewhere you trust.
                 </AppText>
                 <GroupedListRow
                   icon="cloud-offline-outline"

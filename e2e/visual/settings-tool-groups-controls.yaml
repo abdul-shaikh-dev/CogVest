@@ -38,7 +38,7 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: privacy-details-toggle
-- assertVisible: "Records stay in CogVest's app-private Android storage."
+- assertVisible: "Records stay in app-private Android storage.*"
 - tapOn:
     id: privacy-details-toggle
 - scrollUntilVisible:

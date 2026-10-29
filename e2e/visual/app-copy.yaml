@@ -34,9 +34,9 @@ appId: ${APP_ID}
 - tapOn:
     id: privacy-details-toggle
 - scrollUntilVisible:
-    element: ".*CogVest does not add its own encryption.*"
+    element: ".*CogVest adds no encryption of its own.*"
     direction: DOWN
-- assertVisible: ".*CogVest does not add its own encryption.*"
+- assertVisible: ".*CogVest adds no encryption of its own.*"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/app-copy/${SHOT}/privacy
 - openLink: "${SCHEME}:///ppf-account"
