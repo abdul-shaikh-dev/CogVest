@@ -289,6 +289,8 @@ describe("DashboardScreen", () => {
     const toggle = screen.getByTestId("dashboard-price-details-toggle");
 
     expect(toggle.props.accessibilityLabel).toBe("Price details. Prices up to date");
+    // Compact row, but the touch target stays 48dp tall.
+    expect(toggle.props.style.minHeight + toggle.props.hitSlop.top + toggle.props.hitSlop.bottom).toBe(48);
     expect(toggle.props.accessibilityState).toEqual({ expanded: false });
     expect(screen.getByText("Prices up to date")).toBeTruthy();
     expect(screen.getByText("Details")).toBeTruthy();
