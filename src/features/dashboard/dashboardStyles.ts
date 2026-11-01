@@ -24,6 +24,18 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
+  // Last row of the borderless hero card. A wrapping row ignores alignItems for
+  // its line, so without alignContent the text sat at the top of a 48dp row
+  // over a blank band. hitSlop keeps the 48dp touch target.
+  priceStatusRow: {
+    minHeight: 32,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignContent: "center",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
   priceDisclosureLabel: {
     flexShrink: 1,
   },

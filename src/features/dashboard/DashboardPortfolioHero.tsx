@@ -23,6 +23,8 @@ import {
 } from "./dashboardViewModel";
 import type { DashboardState } from "./useDashboard";
 
+const PRICE_ROW_HIT_SLOP = { bottom: 8, top: 8 };
+
 type DashboardPortfolioHeroProps = {
   adaptiveLayoutMode: AdaptiveLayoutMode;
   dashboard: DashboardState;
@@ -192,8 +194,9 @@ export function DashboardPortfolioHero({
           accessibilityRole="button"
           accessibilityLabel={`Price details. ${quoteStatus.title}`}
           accessibilityState={{ expanded: showPriceDetails }}
+          hitSlop={PRICE_ROW_HIT_SLOP}
           onPress={() => setShowPriceDetails((visible) => !visible)}
-          style={styles.priceDisclosure}
+          style={styles.priceStatusRow}
           testID="dashboard-price-details-toggle"
         >
           <AppText color="secondary" style={[styles.priceDisclosureLabel, quoteStatus.prominent && styles.warningText]} variant="caption">
