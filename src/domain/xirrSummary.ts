@@ -19,7 +19,28 @@ export type XirrSummary =
     flows: XirrFlow[];
     notes: string[];
   }
-  | { status: "unavailable"; messages: string[] };
+  | { status: "unavailable"; messages: string[]; blockers: XirrBlocker[] };
+
+/**
+ * One reason a return is unavailable, with what it applies to. `count` is the
+ * number of records for record-level reasons (`unit` says which kind) and of
+ * holdings or accounts otherwise. `assetIds` leaves out the portfolio itself.
+ */
+export type XirrBlocker = {
+  reason: XirrUnavailableReason | "calculation";
+  message: string;
+  unit: "holdings" | "trades" | "cashEntries" | "ppfEntries" | null;
+  count: number;
+  assetIds: string[];
+};
+
+// Reasons raised once per record; the rest are counted by holding or account.
+const recordUnits: Partial<Record<XirrUnavailableReason, XirrBlocker["unit"]>> = {
+  "trade-funding-unknown": "trades",
+  "cash-uncategorized": "cashEntries",
+  "ppf-funding-unknown": "ppfEntries",
+};
+const PORTFOLIO_ID = "portfolio";
 
 const NO_RATE = "A return can't be calculated from these flows.";
 
@@ -79,18 +100,30 @@ const solverMessages: Record<XirrUnavailable, string> = {
   undetermined: NO_RATE,
 };
 
+function noRate(message: string): XirrSummary {
+  return { status: "unavailable", messages: [message], blockers: [{ reason: "calculation", message, unit: null, count: 0, assetIds: [] }] };
+}
+
 export function summariseXirr(input: XirrInputResult): XirrSummary {
   if (input.status === "unavailable") {
-    const present = new Set(input.reasons.map((item) => item.reason));
-    const messages = inputMessages.filter(([reason]) => present.has(reason)).map(([, message]) => message);
-    return { status: "unavailable", messages: messages.length ? messages : [NO_RATE] };
+    const blockers = inputMessages.flatMap(([reason, message]): XirrBlocker[] => {
+      const issues = input.reasons.filter((item) => item.reason === reason);
+      if (!issues.length) return [];
+      const assetIds = [...new Set(issues.map((item) => item.assetId))].filter((id) => id !== PORTFOLIO_ID);
+      const unit = recordUnits[reason] ?? (assetIds.length ? "holdings" : null);
+      const count = recordUnits[reason]
+        ? new Set(issues.map((item) => item.recordId ?? item.assetId)).size
+        : assetIds.length;
+      return [{ reason, message, unit, count, assetIds }];
+    });
+    return blockers.length ? { status: "unavailable", messages: blockers.map((item) => item.message), blockers } : noRate(NO_RATE);
   }
   // Same-day flows net out before solving, so say why directly rather than "no rate".
   if (new Set(input.flows.map((flow) => flow.date)).size < 2) {
-    return { status: "unavailable", messages: [solverMessages["single-date"]] };
+    return noRate(solverMessages["single-date"]);
   }
   const result = calculateXirr(input.flows);
-  if (result.status === "unavailable") return { status: "unavailable", messages: [solverMessages[result.reason]] };
+  if (result.status === "unavailable") return noRate(solverMessages[result.reason]);
   const notes = [...new Set(input.limitations.map((item) => limitationNotes[item.limitation]))];
   return {
     status: "rate",

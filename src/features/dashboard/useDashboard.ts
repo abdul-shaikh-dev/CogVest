@@ -44,7 +44,7 @@ import {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
-import { investmentsScope, investmentsXirrSummary, wholePortfolioScope, wholePortfolioXirrSummary } from "./investmentsXirr";
+import { investmentsScope, investmentsXirrSummary, wholePortfolioScope, wholePortfolioXirrSummary, xirrNames } from "./investmentsXirr";
 import type { DisplayMode, Holding } from "@/src/types";
 import {
   getCalendarDatePart,
@@ -86,6 +86,7 @@ export type DashboardState = {
   investmentsXirrScope: string;
   wholePortfolioXirr: XirrSummary;
   wholePortfolioXirrScope: string;
+  xirrNames: Record<string, string>;
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
@@ -364,6 +365,7 @@ export function useDashboard({
     investmentsXirrScope: investmentsScope(snapshot),
     wholePortfolioXirr,
     wholePortfolioXirrScope: wholePortfolioScope(snapshot),
+    xirrNames: xirrNames(snapshot),
     ppfConfirmedBalance: ppfSummary.confirmedBalance,
     allocation: calculateAllocation({
       cashBalance,

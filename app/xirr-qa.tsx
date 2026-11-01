@@ -37,7 +37,8 @@ function EnabledQa({ page }: { page?: string }) {
       onReviewTrades={() => undefined} refreshQuotes={noRefresh} store={store} />;
   }
   if (page === "dashboard") {
-    return <DashboardScreen now={now} onSetBasis={() => open("basis")} refreshQuotes={noRefresh} store={store} />;
+    return <DashboardScreen now={now} onReviewPayouts={(assetId) => open("payouts", assetId)} onSetBasis={() => open("basis")}
+      refreshQuotes={noRefresh} store={store} />;
   }
   if (page === "basis") return <MeasurementBasisScreen now={now} onBack={() => router.back()} store={store} />;
   if (page === "payouts") {

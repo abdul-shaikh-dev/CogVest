@@ -77,4 +77,30 @@ describe("Dashboard Investments XIRR", () => {
     fireEvent.press(screen.getByTestId("dashboard-xirr-measure-investments"));
     expect(screen.getByText("Covers market holdings. Cash is excluded.")).toBeTruthy();
   });
+
+  it("lists every blocker with its holdings and where to fix it", () => {
+    const store = seed();
+    store.getState().addAsset({ id: "fund", name: "Synthetic Income Fund", symbol: "SIF", ticker: "SIF.NS", currency: "INR", assetClass: "stock", exchange: "NSE" });
+    store.getState().addTrade({ id: "buy-fund", assetId: "fund", type: "buy", date: "2025-03-01", quantity: 10, pricePerUnit: 100, totalValue: 1000 });
+    store.getState().upsertQuote({ asOf: "2026-01-01T10:00:00.000Z", assetId: "fund", currency: "INR", price: 100, source: "yahoo" });
+    store.getState().setMeasurementBasis({ startDate: "2025-01-01", kind: "inception", openingBreakdown: [] });
+    const onReviewPayouts = jest.fn();
+    const onSetBasis = jest.fn();
+    const screen = render(<DashboardScreen now={now} onReviewPayouts={onReviewPayouts} onSetBasis={onSetBasis} store={store} />);
+    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-whole"));
+    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Dividends or payouts aren't recorded for this period.");
+    expect(screen.getByTestId("dashboard-xirr-more")).toHaveTextContent("1 more to fix. Open Breakdown for the full list.");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByTestId("dashboard-xirr-blocker-distributions-not-recorded-extent")).toHaveTextContent("1 holding");
+    expect(screen.getByTestId("dashboard-xirr-blocker-trade-funding-unknown-extent")).toHaveTextContent("2 trades across 2 holdings");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-payouts-fund"));
+    expect(onReviewPayouts).toHaveBeenCalledWith("fund");
+    expect(screen.getByLabelText("Review payouts for Synthetic Income Fund")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("dashboard-xirr-fix-trade-funding-unknown"));
+    expect(onSetBasis).toHaveBeenCalledTimes(1);
+    // Investments has no start, so its blockers never offer the start screen.
+    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-investments"));
+    expect(screen.queryByTestId("dashboard-xirr-fix-trade-funding-unknown")).toBeNull();
+    expect(screen.getByTestId("dashboard-xirr-payouts-fund")).toBeTruthy();
+  });
 });

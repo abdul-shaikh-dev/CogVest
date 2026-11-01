@@ -1,8 +1,9 @@
 import { formatLocalCalendarDate, getCalendarDatePart } from "@/src/domain/dates";
+import { formatCompactINR } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 import { measurementEvidenceDigest } from "@/src/domain/wholePortfolioXirr";
 import type { MeasurementBasisInput, PortfolioStoreState } from "@/src/store";
-import type { MeasurementBasis } from "@/src/types";
+import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
 
 type BasisState = Pick<PortfolioStoreState, "cashEntries" | "distributions" | "epf" | "futuresAccounts" | "measurementBasis"
   | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "trades">;
@@ -69,6 +70,37 @@ export function buildBasisInput(draft: BasisDraft): { ok: true; input: Measureme
     openingBreakdown.push({ label: line.label.trim(), valueInr });
   }
   return { ok: true, input: { kind: "openingValue", startDate: draft.startDate, openingBreakdown } };
+}
+
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export type SnapshotStart = { id: string; label: string; startDate: string; lines: BasisLineDraft[] };
+
+/**
+ * Stored month-end snapshots that can start an opening-value period (#607):
+ * months that have ended, newest first. Lines come from the snapshot's class
+ * values; when those don't add up to its portfolio value, or Cash is negative,
+ * one Portfolio value line keeps the total exact. The user still confirms.
+ */
+export function snapshotStarts(snapshots: MonthlySnapshot[], today: string): SnapshotStart[] {
+  return snapshots.flatMap((snapshot): SnapshotStart[] => {
+    const match = /^(\d{4})-(\d{2})$/.exec(snapshot.month);
+    if (!match || !(snapshot.portfolioValue >= 0)) return [];
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const startDate = `${snapshot.month}-${String(lastDay).padStart(2, "0")}`;
+    if (startDate >= today) return [];
+    const classes: Array<[string, number]> = [
+      ["Equity", snapshot.equityValue], ["Debt", snapshot.debtValue], ["Crypto", snapshot.cryptoValue], ["Cash", snapshot.cashValue],
+    ];
+    const total = classes.reduce((sum, [, value]) => sum.plus(value), decimal(0));
+    const exact = classes.every(([, value]) => value >= 0) && total.minus(snapshot.portfolioValue).abs().lessThan(0.005);
+    const values = exact ? classes.filter(([, value]) => value !== 0) : [["Portfolio value", snapshot.portfolioValue] as [string, number]];
+    const lines = (values.length ? values : [["Portfolio value", 0] as [string, number]])
+      .map(([label, value], index) => ({ key: `snapshot-${index}`, label, value: decimal(value).toFixed(2) }));
+    return [{ id: snapshot.id, label: `${monthNames[month - 1]} ${year} · ${formatCompactINR(snapshot.portfolioValue)}`, startDate, lines }];
+  }).sort((a, b) => b.startDate.localeCompare(a.startDate));
 }
 
 /** Whether the saved basis still stands on the records it was confirmed against. */

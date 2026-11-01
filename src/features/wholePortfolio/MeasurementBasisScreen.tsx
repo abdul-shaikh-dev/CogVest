@@ -13,6 +13,7 @@ import {
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
@@ -23,6 +24,7 @@ import {
   buildBasisInput,
   draftTotal,
   initialBasisDraft,
+  snapshotStarts,
   tradesWithoutCash,
   type BasisDraft,
 } from "./measurementBasisForm";
@@ -40,6 +42,9 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [confirmMark, setConfirmMark] = useState(false);
+  const [snapshotId, setSnapshotId] = useState("none");
+  const snapshots = snapshotStarts(snapshot.monthlySnapshots, formatLocalCalendarDate(now));
+  const snapshotOptions = [{ label: "Enter values myself", value: "none" }, ...snapshots.map((item) => ({ label: item.label, value: item.id }))];
   const basis = snapshot.measurementBasis;
   const status = basisStatus(snapshot);
   const trades = tradesWithoutCash(snapshot, draft.startDate, draft.kind);
@@ -50,8 +55,15 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
     setError("");
     setMessage("");
   };
-  const updateLine = (key: string, field: "label" | "value", value: string) =>
+  const updateLine = (key: string, field: "label" | "value", value: string) => {
+    setSnapshotId("none");
     update({ lines: draft.lines.map((line) => (line.key === key ? { ...line, [field]: value } : line)) });
+  };
+  const fillFromSnapshot = (id: string) => {
+    setSnapshotId(id);
+    const chosen = snapshots.find((item) => item.id === id);
+    if (chosen) update({ startDate: chosen.startDate, lines: chosen.lines });
+  };
 
   function save() {
     const built = buildBasisInput(draft);
@@ -115,7 +127,7 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
               testIDPrefix="basis-kind"
               value={draft.kind}
             />
-            <DatePickerField label="Start date" maximumDate={now} onChange={(startDate) => update({ startDate })}
+            <DatePickerField label="Start date" maximumDate={now} onChange={(startDate) => { setSnapshotId("none"); update({ startDate }); }}
               testID="basis-start-date" value={draft.startDate} />
           </PremiumCard>
           {draft.kind === "openingValue" ? (
@@ -124,6 +136,18 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
               <AppText color="secondary" variant="caption">
                 Include every account CogVest tracks: holdings, Cash, PPF, EPF and Futures.
               </AppText>
+              {snapshots.length ? (
+                <SelectionField
+                  helperText={snapshotId === "none"
+                    ? "A stored month-end value can start the period at that month's last day."
+                    : "Filled from the stored month-end value. Check it covers every account before confirming."}
+                  label="Fill from a month-end snapshot"
+                  onChange={fillFromSnapshot}
+                  options={snapshotOptions}
+                  testIDPrefix="basis-snapshot"
+                  value={snapshotId}
+                />
+              ) : null}
               {draft.lines.map((line, index) => (
                 <View key={line.key} style={styles.line}>
                   <FormTextField label="Account or holding" onChangeText={(value) => updateLine(line.key, "label", value)}
@@ -131,7 +155,7 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
                   <FormTextField keyboardType="decimal-pad" label="Value (INR)" onChangeText={(value) => updateLine(line.key, "value", value)}
                     testID={`basis-line-value-${index}`} value={line.value} />
                   {draft.lines.length > 1 ? (
-                    <AppButton onPress={() => update({ lines: draft.lines.filter((item) => item.key !== line.key) })}
+                    <AppButton onPress={() => { setSnapshotId("none"); update({ lines: draft.lines.filter((item) => item.key !== line.key) }); }}
                       title="Remove line" variant="ghost" />
                   ) : null}
                 </View>
