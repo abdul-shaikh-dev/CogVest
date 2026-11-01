@@ -23,6 +23,16 @@ export function investmentsScope(state: XirrState) {
   return `Covers ${list}. Cash is excluded.`;
 }
 
+/** Display names for the holdings and accounts a blocking reason can name. */
+export function xirrNames(state: Pick<XirrState, "assets" | "epf" | "futuresAccounts" | "ppfAccounts">) {
+  const names: Record<string, string> = {};
+  for (const asset of state.assets) names[asset.id] = asset.name;
+  for (const account of state.ppfAccounts) names[account.id] = `PPF · ${account.nickname}`;
+  for (const account of state.epf.accounts) names[account.id] = `EPF · ${account.nickname}`;
+  for (const account of state.futuresAccounts) names[account.id] = "Futures";
+  return names;
+}
+
 /** What the whole-portfolio return covers and where it starts. */
 export function wholePortfolioScope(state: Pick<PortfolioStoreState, "measurementBasis">) {
   const basis = state.measurementBasis;

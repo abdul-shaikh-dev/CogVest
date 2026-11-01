@@ -28,6 +28,7 @@ type DashboardPortfolioHeroProps = {
   dashboard: DashboardState;
   hasCompleteValuation: boolean;
   isMinimalMode: boolean;
+  onReviewPayouts?: (assetId: string) => void;
   onSetBasis?: () => void;
   pendingFuturesCount: number;
   setShowPerformance: Dispatch<SetStateAction<boolean>>;
@@ -41,6 +42,7 @@ export function DashboardPortfolioHero({
   dashboard,
   hasCompleteValuation,
   isMinimalMode,
+  onReviewPayouts,
   onSetBasis,
   pendingFuturesCount,
   setShowPerformance,
@@ -179,6 +181,8 @@ export function DashboardPortfolioHero({
         <DashboardXirr
           investments={{ scope: dashboard.investmentsXirrScope, summary: dashboard.investmentsXirr }}
           masked={dashboard.maskWealthValues}
+          names={dashboard.xirrNames}
+          onReviewPayouts={onReviewPayouts}
           onSetBasis={onSetBasis}
           whole={{ scope: dashboard.wholePortfolioXirrScope, summary: dashboard.wholePortfolioXirr }}
         />

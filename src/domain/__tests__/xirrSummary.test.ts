@@ -35,15 +35,33 @@ describe("XIRR summary", () => {
 
   it("explains missing payout coverage and a stale price, structural gaps first", () => {
     expect(assetXirrSummary(state({ distributionCoverage: [], quoteCache: { stock: quote(110, "2025-12-01T00:00:00Z") } }), "stock", today))
-      .toEqual({ status: "unavailable", messages: ["Dividends or payouts aren't recorded for this period.", "Price is older than 7 days."] });
+      .toMatchObject({ status: "unavailable", messages: ["Dividends or payouts aren't recorded for this period.", "Price is older than 7 days."] });
     expect(assetXirrSummary(state({ openingPositions: [{ id: "o", assetId: "stock", quantity: 1, averageCostPrice: 1, date: null }] }), "stock", today))
       .toMatchObject({ status: "unavailable", messages: ["Purchase history before the opening position isn't recorded."] });
+  });
+
+  it("groups every reason with what it applies to, counting trades by record and the rest by holding", () => {
+    const summary = summariseXirr({ status: "unavailable", reasons: [
+      { assetId: "b", reason: "distributions-not-recorded" },
+      { assetId: "portfolio", reason: "no-measurement-basis" },
+      { assetId: "a", reason: "trade-funding-unknown", recordId: "t1" },
+      { assetId: "a", reason: "trade-funding-unknown", recordId: "t2" },
+      { assetId: "b", reason: "trade-funding-unknown", recordId: "t3" },
+      { assetId: "a", reason: "distributions-not-recorded" },
+      { assetId: "a", reason: "distributions-not-recorded" },
+    ] });
+    expect(summary.status === "unavailable" && summary.blockers).toEqual([
+      { reason: "no-measurement-basis", message: "Set a start date and opening value to measure the whole portfolio.", unit: null, count: 0, assetIds: [] },
+      { reason: "distributions-not-recorded", message: "Dividends or payouts aren't recorded for this period.", unit: "holdings", count: 2, assetIds: ["b", "a"] },
+      { reason: "trade-funding-unknown", message: "Link this trade to Cash or mark its funding as external.", unit: "trades", count: 3, assetIds: ["a", "b"] },
+    ]);
   });
 
   it("reports solver failures in one sentence and passes limitations through as notes", () => {
     expect(summariseXirr({ status: "ready", flows: [{ date: "2025-01-01", amountInr: "-1", source: "trade", id: "a" }, { date: "2025-01-01", amountInr: "2", source: "terminal", id: "a" }],
       startDate: "2025-01-01", endDate: "2025-01-01", valueAsOf: null, limitations: [], includedAssetIds: ["a"] }))
-      .toEqual({ status: "unavailable", messages: ["All activity is on one day, so there is no period to annualise."] });
+      .toMatchObject({ status: "unavailable", messages: ["All activity is on one day, so there is no period to annualise."],
+        blockers: [{ reason: "calculation", unit: null, count: 0, assetIds: [] }] });
     const summary = assetXirrSummary(state({ quoteCache: { stock: { ...quote(110), source: "manual" } } }), "stock", today);
     expect(summary.status === "rate" && summary.notes).toEqual(["Uses a manually entered price."]);
   });

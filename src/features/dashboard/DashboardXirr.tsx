@@ -7,6 +7,7 @@ import { decimal } from "@/src/domain/precision";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
 
 import { useStyles } from "./dashboardStyles";
+import { DashboardXirrBlockers } from "./DashboardXirrBlockers";
 
 /** Totals of the flows behind the rate, so the result can be checked without listing every trade. */
 function flowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
@@ -31,9 +32,12 @@ const measureLabel: Record<Measure, string> = { investments: "Investments", whol
  * Annualised return (#535) inside the Invested & returns area: Investments
  * (D8) or the whole portfolio, Cash included, from the user's start (D9).
  */
-export function DashboardXirr({ investments, masked, onSetBasis, whole }: {
+export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts, onSetBasis, whole }: {
   investments: XirrView;
   masked: boolean;
+  /** Holding and account names for the blocker checklist. */
+  names?: Record<string, string>;
+  onReviewPayouts?: (assetId: string) => void;
   onSetBasis?: () => void;
   whole: XirrView;
 }) {
@@ -88,17 +92,29 @@ export function DashboardXirr({ investments, masked, onSetBasis, whole }: {
         </AppText>
       ) : null}
       {summary.status === "unavailable" && !expanded ? (
-        <AppText color="secondary" testID="dashboard-xirr-reason" variant="caption">{summary.messages[0]}</AppText>
+        <>
+          <AppText color="secondary" testID="dashboard-xirr-reason" variant="caption">{summary.messages[0]}</AppText>
+          {summary.blockers.length > 1 ? (
+            <AppText color="secondary" testID="dashboard-xirr-more" variant="caption">
+              {summary.blockers.length - 1} more to fix. Open Breakdown for the full list.
+            </AppText>
+          ) : null}
+        </>
       ) : null}
       {measure === "whole" && onSetBasis ? (
-        <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Whole-portfolio start" variant="ghost" />
+        <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Whole-portfolio start" variant="secondary" />
       ) : null}
       {expanded ? (
         <View style={styles.priceDetails} testID="dashboard-xirr-details">
           <AppText color="secondary" variant="caption">{scope}</AppText>
-          {summary.status === "unavailable" ? summary.messages.map((message) => (
-            <AppText color="secondary" key={message} variant="caption">{message}</AppText>
-          )) : (
+          {summary.status === "unavailable" ? (
+            <DashboardXirrBlockers
+              blockers={summary.blockers}
+              names={names}
+              onReviewPayouts={onReviewPayouts}
+              onSetBasis={measure === "whole" ? onSetBasis : undefined}
+            />
+          ) : (
             <XirrRateDetails masked={masked} summary={summary} />
           )}
           <AppText color="secondary" variant="caption">

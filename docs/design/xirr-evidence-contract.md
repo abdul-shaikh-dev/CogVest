@@ -272,6 +272,13 @@ and a funding choice on PPF entries. The fingerprint covers every stored record,
 including legacy holdings that a PPF or EPF account replaces, so the Dashboard
 and the start screen agree on when the user must confirm again.
 
+After testing on a real portfolio (#607), an unavailable return lists every
+blocking reason with its count and the holdings it applies to, each linked to
+where it is fixed: the start screen, or a holding's payouts. The start screen
+can fill an opening-value start from a stored month-end snapshot, dated at
+that month's last day, so a recent period needs no typed values. The
+eligibility rules above are unchanged.
+
 Batch 1 can start once D4–D8 are approved. Batches 2 and 3 are critical changes
 (persistence and migration). Each needs failure-path tests, an adversarial diff
 review and full verification.

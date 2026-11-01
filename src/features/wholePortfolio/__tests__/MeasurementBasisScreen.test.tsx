@@ -53,4 +53,31 @@ describe("MeasurementBasisScreen", () => {
     fireEvent.press(screen.getByTestId("remove-basis"));
     expect(store.getState().measurementBasis).toBeNull();
   });
+
+  it("fills the start and opening values from a stored month-end snapshot", () => {
+    const store = seed();
+    store.setState({ monthlySnapshots: [
+      { id: "s-nov", month: "2025-11", portfolioValue: 10750.5, equityValue: 10000, debtValue: 0, cryptoValue: 0, cashValue: 750.5, investedValue: 10000, monthlyInvestment: 0 },
+      // Today is 1 Jan 2026: December has ended, so it is offered; January has not.
+      { id: "s-dec", month: "2025-12", portfolioValue: 11000, equityValue: 10500, debtValue: 0, cryptoValue: 0, cashValue: 0, investedValue: 10000, monthlyInvestment: 0 },
+      { id: "s-jan", month: "2026-01", portfolioValue: 11100, equityValue: 11100, debtValue: 0, cryptoValue: 0, cashValue: 0, investedValue: 10000, monthlyInvestment: 0 },
+    ] });
+    const screen = screenFor(store);
+    fireEvent.press(screen.getByTestId("basis-kind-picker"));
+    fireEvent.press(screen.getByTestId("basis-kind-openingValue"));
+    fireEvent.press(screen.getByTestId("basis-snapshot-picker"));
+    expect(screen.queryByTestId("basis-snapshot-s-jan")).toBeNull();
+    fireEvent.press(screen.getByTestId("basis-snapshot-s-nov"));
+    expect(screen.getByTestId("basis-line-label-0").props.value).toBe("Equity");
+    expect(screen.getByTestId("basis-line-value-1").props.value).toBe("750.50");
+    expect(screen.getByTestId("basis-total")).toHaveTextContent("Total: ₹10,750.50");
+    fireEvent.press(screen.getByTestId("save-basis"));
+    expect(store.getState().measurementBasis).toMatchObject({ kind: "openingValue", startDate: "2025-11-30", openingValueInr: 10750.5,
+      openingBreakdown: [{ label: "Equity", valueInr: 10000 }, { label: "Cash", valueInr: 750.5 }] });
+    // December's classes don't add up to its total, so one exact line is used.
+    fireEvent.press(screen.getByTestId("basis-snapshot-picker"));
+    fireEvent.press(screen.getByTestId("basis-snapshot-s-dec"));
+    expect(screen.getByTestId("basis-line-label-0").props.value).toBe("Portfolio value");
+    expect(screen.getByTestId("basis-total")).toHaveTextContent("Total: ₹11,000.00");
+  });
 });
