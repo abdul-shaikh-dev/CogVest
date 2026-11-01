@@ -40,13 +40,14 @@ describe("holding XIRR", () => {
       expect(screen.getByTestId("holding-xirr-period")).toHaveTextContent("01 Jan 2025 to 01 Jan 2026 · INR · price as of 01 Jan 2026");
     });
 
-  it("explains why it is unavailable until payouts are confirmed, then updates", () => {
+  it("shows the rate without confirmed payouts, noting the gap until they are confirmed", () => {
     const store = seed({ coverage: false });
     const screen = openDetail(store);
-    expect(within(screen.getByTestId("holding-xirr-stock")).getByText("Dividends or payouts aren't recorded for this period.")).toBeTruthy();
-    expect(screen.queryByTestId("holding-xirr-rate")).toBeNull();
-    act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
+    const note = "Dividends aren't recorded for 1 holding, so the return may be understated.";
     expect(screen.getByTestId("holding-xirr-rate")).toHaveTextContent("+10.00% a year");
+    expect(within(screen.getByTestId("holding-xirr-stock")).getByText(note)).toBeTruthy();
+    act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
+    expect(within(screen.getByTestId("holding-xirr-stock")).queryByText(note)).toBeNull();
   });
 
   it("lists the cash flows behind the rate and masks their amounts", () => {

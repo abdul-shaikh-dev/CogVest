@@ -110,18 +110,3 @@ export function basisStatus(state: BasisState): "none" | "current" | "needsConfi
   if (basis.kind === "openingValue" && basis.evidenceDigest !== measurementEvidenceDigest(state, basis.startDate)) return "needsConfirming";
   return "current";
 }
-
-/** Purchases and sales in the period with no Cash leg, split by whether they're marked as paid from outside. */
-export function tradesWithoutCash(state: BasisState, startDate: string, kind: MeasurementBasis["kind"]) {
-  const linked = new Set(state.cashEntries.map((cash) => cash.linkedTradeId).filter(Boolean));
-  const reinvested = new Set(state.distributions.map((item) => item.linkedTradeId).filter(Boolean));
-  const inPeriod = state.trades.filter((trade) => {
-    const date = getCalendarDatePart(trade.date);
-    return (trade.type === "buy" || trade.type === "sell") && date !== null && (kind === "inception" ? date >= startDate : date > startDate)
-      && !linked.has(trade.id) && !reinvested.has(trade.id);
-  });
-  return {
-    unmarked: inPeriod.filter((trade) => !("fundingSource" in trade) || trade.fundingSource !== "external").map((trade) => trade.id),
-    marked: inPeriod.filter((trade) => "fundingSource" in trade && trade.fundingSource === "external").map((trade) => trade.id),
-  };
-}

@@ -5,7 +5,7 @@ import type { XirrBlocker } from "@/src/domain/xirrSummary";
 
 import { useStyles } from "./dashboardStyles";
 
-/** Reasons fixed on the whole-portfolio start screen. */
+/** Reasons fixed on the return start screen. */
 const startReasons = new Set<XirrBlocker["reason"]>([
   "no-measurement-basis", "basis-needs-reconfirming", "records-before-start", "opening-after-start", "trade-funding-unknown",
 ]);
@@ -82,7 +82,7 @@ export function DashboardXirrBlockers({ blockers, names, onReviewPayouts, onSetB
                 style={styles.xirrBlockerAction}
                 testID={`dashboard-xirr-fix-${blocker.reason}`}
               >
-                <AppText style={styles.brandText} variant="caption" weight="bold">Open whole-portfolio start</AppText>
+                <AppText style={styles.brandText} variant="caption" weight="bold">Open return start</AppText>
               </Pressable>
             ) : null}
           </View>

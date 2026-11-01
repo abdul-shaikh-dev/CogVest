@@ -16,20 +16,20 @@ function seed() {
 const screenFor = (store: ReturnType<typeof seed>) => render(<MeasurementBasisScreen now={now} onBack={jest.fn()} store={store} />);
 
 describe("MeasurementBasisScreen", () => {
-  it("starts a lifetime measure at the first record and marks unlinked trades only after confirmation", () => {
+  it("shows the automatic start, sets a lifetime start, and goes back to automatic", () => {
     const store = seed();
+    store.setState({ monthlySnapshots: [{ id: "dec", month: "2024-12", portfolioValue: 9000, equityValue: 9000, debtValue: 0, cryptoValue: 0,
+      cashValue: 0, investedValue: 9000, monthlyInvestment: 0 }] });
     const screen = screenFor(store);
+    expect(screen.getByTestId("measurement-basis-start")).toHaveTextContent("Automatic: from 31 Dec 2024 · ₹9,000.00");
+    expect(screen.queryByTestId("basis-trade-funding")).toBeNull();
     fireEvent.press(screen.getByTestId("save-basis"));
     expect(store.getState().measurementBasis).toMatchObject({ kind: "inception", startDate: "2025-01-01" });
     expect(screen.getByTestId("measurement-basis-start")).toHaveTextContent("Since 01 Jan 2025");
-    expect(screen.getByTestId("basis-trade-funding-count")).toHaveTextContent(/2 in this period aren't linked to Cash./);
-    fireEvent.press(screen.getByTestId("basis-mark-external"));
-    expect(store.getState().trades.some((trade) => "fundingSource" in trade && trade.fundingSource)).toBe(false);
-    fireEvent.press(screen.getByTestId("basis-confirm-mark-external"));
-    expect(store.getState().trades.every((trade) => "fundingSource" in trade && trade.fundingSource === "external")).toBe(true);
-    expect(screen.getByTestId("basis-trade-funding-count")).toHaveTextContent("2 marked as paid from outside CogVest.");
-    fireEvent.press(screen.getByTestId("basis-clear-external"));
-    expect(store.getState().trades.some((trade) => "fundingSource" in trade && trade.fundingSource)).toBe(false);
+    fireEvent.press(screen.getByTestId("remove-basis"));
+    expect(store.getState().measurementBasis).toBeNull();
+    expect(screen.getByTestId("basis-message")).toHaveTextContent("Using the automatic start.");
+    expect(screen.getByTestId("measurement-basis-start")).toHaveTextContent(/^Automatic: from 31 Dec 2024/);
   });
 
   it("totals opening values, rejects an unnamed line, and flags changed evidence", () => {

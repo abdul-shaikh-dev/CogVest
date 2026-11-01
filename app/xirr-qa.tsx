@@ -13,7 +13,9 @@ import { createPortfolioStore } from "@/src/store";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 
 // Fixed clock and price so the expected rate is the independently verified
-// one-year case: -10,000 on 1 Jan 2025 and +11,000 on 1 Jan 2026 is 10%.
+// one-year case: -10,000 on 1 Jan 2025 and +11,000 on 1 Jan 2026 is 10%. A
+// December 2024 snapshot worth nothing gives the portfolio return its
+// automatic start (#610) without adding a flow.
 const now = new Date("2026-01-01T12:00:00");
 const token = "cogvest-local-visual-qa";
 const noRefresh = async ({ cachedQuotes }: RefreshQuotesInput) => ({ failed: [], quoteCache: cachedQuotes ?? {}, timedOut: [], updated: [] });
@@ -48,7 +50,8 @@ function EnabledQa({ page }: { page?: string }) {
   function reset(payoutsConfirmed = false) {
     const state = store.getState();
     store.setState({ assets: [], cashEntries: [], distributionCoverage: [], distributions: [], measurementBasis: null,
-      monthlySnapshots: [], openingPositions: [], trades: [] });
+      monthlySnapshots: [{ id: "xirr-qa-dec", month: "2024-12", portfolioValue: 0, equityValue: 0, debtValue: 0, cryptoValue: 0,
+        cashValue: 0, investedValue: 0, monthlyInvestment: 0 }], openingPositions: [], trades: [] });
     state.clearQuoteCache();
     state.updatePreferences({ hasCompletedOnboarding: true, maskWealthValues: false, displayMode: "standard" });
     state.addAsset({ id: "xirr-qa-stock", name: "Synthetic Return Co", symbol: "SYNRET", ticker: "SYNRET.NS",

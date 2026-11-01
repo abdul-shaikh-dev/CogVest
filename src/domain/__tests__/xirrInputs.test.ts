@@ -64,9 +64,9 @@ describe("per-asset XIRR input", () => {
     expect(result.status === "ready" && result.flows.map(({ id, amountInr }) => [id, amountInr])).toEqual([["buy", "-1010"], ["btc", "1800"]]);
   });
 
-  it("blocks assets that can pay distributions until distributions are recorded (D1)", () => {
+  it("notes, without blocking, that an asset able to pay out has no payouts recorded (#610)", () => {
     const result = buildAssetXirrInput(assetInput({ asset: stock, assetId: "stock", trades: [{ ...buy, assetId: "stock" }], quote: quote({ assetId: "stock" }) }));
-    expect(reasons(result)).toEqual(["distributions-not-recorded"]);
+    expect(result.status === "ready" && result.limitations).toContainEqual({ assetId: "stock", limitation: "payouts-not-recorded" });
   });
 
   describe("payouts (D1-D3)", () => {
@@ -80,11 +80,12 @@ describe("per-asset XIRR input", () => {
       treatment: "paidOutside", recordedAt: "2025-08-02T00:00:00Z", ...overrides,
     });
 
-    it("needs ongoing coverage from the first purchase, even when none were paid", () => {
-      expect(buildAssetXirrInput(stockInput())).toMatchObject({ status: "ready" });
-      expect(reasons(buildAssetXirrInput(stockInput({ coverage: undefined })))).toEqual(["distributions-not-recorded"]);
-      expect(reasons(buildAssetXirrInput(stockInput({ coverage: { assetId: "stock", from: "2025-01-03", confirmedAt: "x" } }))))
-        .toEqual(["distributions-not-recorded"]);
+    it("notes missing coverage from the first purchase, even when none were paid", () => {
+      const noted = (result: ReturnType<typeof buildAssetXirrInput>) =>
+        result.status === "ready" && result.limitations.some((item) => item.limitation === "payouts-not-recorded");
+      expect(noted(buildAssetXirrInput(stockInput()))).toBe(false);
+      expect(noted(buildAssetXirrInput(stockInput({ coverage: undefined })))).toBe(true);
+      expect(noted(buildAssetXirrInput(stockInput({ coverage: { assetId: "stock", from: "2025-01-03", confirmedAt: "x" } })))).toBe(true);
     });
 
     it.each(["paidToCash", "paidOutside", "reinvested"] as const)("counts a %s payout once, net of tax, on its date", (treatment) => {
@@ -154,7 +155,7 @@ describe("per-asset XIRR input", () => {
 
   it("blocks foreign, Cash and missing assets and an invalid end date", () => {
     expect(reasons(buildAssetXirrInput(assetInput({ asset: { ...btc, currency: "USD" } })))).toEqual(["foreign-currency"]);
-    expect(reasons(buildAssetXirrInput(assetInput({ asset: { ...btc, assetClass: "cash" } })))).toEqual(["cash-asset", "distributions-not-recorded"]);
+    expect(reasons(buildAssetXirrInput(assetInput({ asset: { ...btc, assetClass: "cash" } })))).toEqual(["cash-asset"]);
     expect(reasons(buildAssetXirrInput(assetInput({ asset: undefined })))).toEqual(["missing-asset"]);
     expect(reasons(buildAssetXirrInput(assetInput({ endDate: "2026-1-1" })))).toEqual(["invalid-end-date"]);
   });
@@ -197,10 +198,10 @@ describe("Investments XIRR input", () => {
   it("is unavailable when any asset is, and never drops it silently", () => {
     const result = buildInvestmentsXirrInput(investmentsInput({
       trades: [buy, sell, { ...buy, id: "stock-buy", assetId: "stock" }],
-      quotes: { btc: quote(), stock: quote({ assetId: "stock" }) },
+      quotes: { btc: quote(), stock: { ...quote({ assetId: "stock" }), currency: "USD" } },
     }));
-    // Without payout coverage the stock is blocked, and so is the whole series.
-    expect(result).toEqual({ status: "unavailable", reasons: [{ assetId: "stock", reason: "distributions-not-recorded" }] });
+    // The stock can't be valued in INR, so it blocks, and so does the whole series.
+    expect(result).toEqual({ status: "unavailable", reasons: [{ assetId: "stock", reason: "quote-currency" }] });
   });
 
   it("blocks an empty portfolio (PPF, EPF and Futures are covered in xirrAccountFlows.test.ts)", () => {

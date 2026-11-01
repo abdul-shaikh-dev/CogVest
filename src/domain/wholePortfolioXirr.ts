@@ -7,7 +7,7 @@ import {
   compareFlows, terminalQuoteIssue, tradeFlow,
   type InvestmentsXirrInput, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
 } from "./xirrInputs";
-import type { MeasurementBasis } from "@/src/types";
+import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
 
 /**
  * Whole-portfolio XIRR input (D9-D11 in docs/design/xirr-evidence-contract.md):
@@ -16,6 +16,11 @@ import type { MeasurementBasis } from "@/src/types";
  * deposits and withdrawals, payouts paid outside, trades and PPF entries paid
  * from outside, EPF contributions not paid from Cash, and external Futures
  * transfers. Anything linked to Cash moved inside the portfolio and is skipped.
+ *
+ * #610 (owner decision, 1 November 2026): gaps no longer block. A trade or PPF
+ * entry with no Cash link is money from outside, missing payouts and stale or
+ * missing prices are calculated around, and each assumption is returned as a
+ * limitation for the user to see. Data that can't be valued at all still blocks.
  */
 export type WholePortfolioReason =
   | "no-measurement-basis" | "basis-needs-reconfirming" | "records-before-start" | "opening-after-start"
@@ -23,6 +28,8 @@ export type WholePortfolioReason =
 
 export type WholePortfolioXirrInput = InvestmentsXirrInput & {
   basis: MeasurementBasis | null;
+  /** True for the automatic start from the earliest snapshot, which has no confirmation to check. */
+  automaticBasis?: boolean;
   /** Every stored record, for the fingerprint, when the flows above leave some out. Defaults to the input itself. */
   evidence?: DigestRecords;
 };
@@ -106,6 +113,24 @@ export function measurementBasisProblems(basis: Pick<MeasurementBasis, "startDat
   return [...new Set(problems)];
 }
 
+/**
+ * The automatic start (#610): the earliest stored month-end snapshot whose
+ * month has ended, at that month's last day and value. Null without one.
+ */
+export function automaticMeasurementBasis(snapshots: readonly MonthlySnapshot[], today: string): MeasurementBasis | null {
+  const starts = snapshots.flatMap((snapshot) => {
+    const match = /^(\d{4})-(\d{2})$/.exec(snapshot.month);
+    if (!match || !Number.isFinite(snapshot.portfolioValue) || snapshot.portfolioValue < 0) return [];
+    const lastDay = new Date(Date.UTC(Number(match[1]), Number(match[2]), 0)).getUTCDate();
+    const startDate = `${snapshot.month}-${String(lastDay).padStart(2, "0")}`;
+    return startDate < today ? [{ startDate, value: decimal(snapshot.portfolioValue).toDecimalPlaces(2).toNumber() }] : [];
+  }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const first = starts[0];
+  if (!first) return null;
+  return { startDate: first.startDate, kind: "openingValue", openingValueInr: first.value,
+    openingBreakdown: [{ label: "Month-end snapshot", valueInr: first.value }], confirmedAt: "", evidenceDigest: null };
+}
+
 export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): XirrInputResult {
   const portfolio = "portfolio";
   const basis = input.basis;
@@ -133,8 +158,8 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
 
   if (inception) {
     if (records.some((item) => item.holdsValue && (item.date === null || item.date < start))) issue(portfolio, "records-before-start");
-  } else if (basis.evidenceDigest !== measurementEvidenceDigest(input.evidence ?? input, start)) {
-    issue(portfolio, "basis-needs-reconfirming");
+  } else if (!input.automaticBasis && basis.evidenceDigest !== measurementEvidenceDigest(input.evidence ?? input, start)) {
+    limitations.push({ assetId: portfolio, limitation: "basis-records-changed" });
   }
   if (!inception && basis.openingValueInr !== null && basis.openingValueInr > 0) {
     flows.push({ date: start, amountInr: decimal(basis.openingValueInr).negated().toString(), source: "opening", id: portfolio });
@@ -150,7 +175,11 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
       flows.push({ date: date!, amountInr: decimal(cash.amount).toString(), source: "cash", id: cash.id });
     } else if (cash.purpose === "legacyUncategorized" ||
       ((cash.purpose === "purchaseFunding" || cash.purpose === "saleProceeds") && !cash.linkedTradeId)) {
-      issue("cash", "cash-uncategorized", cash.id);
+      // Unclear entries count as money crossing the edge. An unlinked purchase payment leaving Cash
+      // then cancels its unlinked trade, which counts as money from outside, so nothing is doubled.
+      const amount = decimal(cash.amount);
+      flows.push({ date: date!, amountInr: (cash.type === "addition" ? amount.negated() : amount).toString(), source: "cash", id: cash.id });
+      limitations.push({ assetId: "cash", limitation: "cash-purpose-assumed", recordId: cash.id });
     }
   }
 
@@ -167,8 +196,8 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     else if (trade.type === "transferIn" || trade.type === "transferOut") issue(trade.assetId, "transfer-without-value", trade.id);
     else if (!Number.isFinite(trade.totalValue) || trade.totalValue <= 0) issue(trade.assetId, "invalid-trade", trade.id);
     else if (cashLinkedTrades.has(trade.id) || reinvestedBuys.has(trade.id)) continue;
-    else if (trade.fundingSource !== "external") issue(trade.assetId, "trade-funding-unknown", trade.id);
     else {
+      if (trade.fundingSource !== "external") limitations.push({ assetId: trade.assetId, limitation: "funding-assumed-external", recordId: trade.id });
       const provenance = trade.importProvenance;
       if (provenance && provenance.fees === undefined && provenance.taxes === undefined) {
         limitations.push({ assetId: trade.assetId, limitation: "fees-not-in-source", recordId: trade.id });
@@ -178,7 +207,11 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   }
   for (const opening of input.openingPositions) {
     const date = opening.date === null ? null : getCalendarDatePart(opening.date);
-    if (date !== null && (inception ? date >= start : date > start)) issue(opening.assetId, "opening-after-start", opening.id);
+    if (date === null || date > end || !(inception ? date >= start : date > start)) continue;
+    // Added after the start: counted as bought at its average cost on its date.
+    const cost = decimal(opening.quantity).times(opening.averageCostPrice);
+    if (!cost.isZero()) flows.push({ date, amountInr: cost.negated().toString(), source: "trade", id: opening.id });
+    limitations.push({ assetId: opening.assetId, limitation: "opening-after-start-at-cost", recordId: opening.id });
   }
 
   // Payouts: only those paid outside leave the portfolio. Reinvested and Cash payouts stay inside.
@@ -203,12 +236,20 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     }
     const quote = input.quotes[asset.id];
     const quoteIssue = terminalQuoteIssue(quote, end);
-    if (quoteIssue || !quote) {
-      issue(asset.id, quoteIssue ?? "missing-quote");
+    const units = decimal(holding.calculationBasis?.totalUnits ?? holding.totalUnits);
+    if (quoteIssue === "missing-quote" || !quote) {
+      // No usable price: valued at what was paid, so it neither adds nor hides a gain.
+      terminals.push(decimal(holding.calculationBasis?.totalInvested ?? holding.totalInvested).toString());
+      limitations.push({ assetId: asset.id, limitation: "price-missing-at-cost" });
       continue;
     }
+    if (quoteIssue && quoteIssue !== "stale-quote") {
+      issue(asset.id, quoteIssue);
+      continue;
+    }
+    if (quoteIssue === "stale-quote") limitations.push({ assetId: asset.id, limitation: "stale-price" });
     if (quote.source === "manual") limitations.push({ assetId: asset.id, limitation: "manual-price" });
-    terminals.push(decimal(holding.calculationBasis?.totalUnits ?? holding.totalUnits).times(quote.price).toString());
+    terminals.push(units.times(quote.price).toString());
     valueDates.push(getCalendarDatePart(quote.asOf)!);
   }
   // Every asset that can pay out and was held in the period needs payouts recorded from then on.
@@ -223,7 +264,7 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
       : [...tradeDates, ...openings.map((item) => getCalendarDatePart(item.date!) ?? start)].sort()[0] ?? null;
     const required = earliest === null || earliest < start ? start : earliest;
     const coverage = input.distributionCoverage.find((item) => item.assetId === asset.id);
-    if (!coverage || coverage.from > required) issue(asset.id, "distributions-not-recorded");
+    if (!coverage || coverage.from > required) limitations.push({ assetId: asset.id, limitation: "payouts-not-recorded" });
   }
 
   // Accounts: their own flows, reclassified by where the money came from or went.
@@ -240,15 +281,19 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   for (const account of accounts) {
     // A problem tied to a record before the period is covered by the opening value.
     for (const item of account.reasons) {
-      if (!item.recordId || inWindow(recordDates.get(item.recordId) ?? null)) reasons.push(item);
+      if (item.reason === "epf-history-incomplete") limitations.push({ assetId: item.assetId, limitation: "epf-history-incomplete" });
+      else if (!item.recordId || inWindow(recordDates.get(item.recordId) ?? null)) reasons.push(item);
     }
     for (const item of account.limitations) {
       if (!item.recordId || inWindow(recordDates.get(item.recordId) ?? null)) limitations.push(item);
     }
     for (const flow of account.flows) {
       if (flow.opening) {
-        if (flow.date > start) issue(flow.id, "account-history-after-start");
-        else if (inception && flow.date === start) flows.push({ date: flow.date, amountInr: flow.amountInr, source: "account", id: flow.id });
+        if (flow.date > start && flow.date <= end) {
+          // Opened after the start: its starting balance is money put in on that date.
+          flows.push({ date: flow.date, amountInr: flow.amountInr, source: "account", id: flow.id });
+          limitations.push({ assetId: flow.id, limitation: "account-opened-after-start" });
+        } else if (inception && flow.date === start) flows.push({ date: flow.date, amountInr: flow.amountInr, source: "account", id: flow.id });
         continue;
       }
       if (!inWindow(flow.date)) continue;
@@ -256,16 +301,12 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
       const epf = epfEvents.get(flow.id);
       if (ppf && (ppf.type === "contribution" || ppf.type === "withdrawal")) {
         if (ppf.fundingSource === "cash") continue;
-        if (ppf.fundingSource !== "external") {
-          issue(`ppf:${ppf.accountId}`, "ppf-funding-unknown", ppf.id);
-          continue;
-        }
+        if (ppf.fundingSource !== "external") limitations.push({ assetId: `ppf:${ppf.accountId}`, limitation: "ppf-funding-assumed", recordId: ppf.id });
       } else if (epf) {
         const original = epf.type === "reversal" ? epfEvents.get(epf.reversesId) : undefined;
         if (cashLinkedEpf.has(epf.id) || (original && cashLinkedEpf.has(original.id))) continue;
         if (epf.type === "withdrawal" && epf.destination === "unknown") {
-          issue(`epf:${epf.accountId}`, "epf-withdrawal-destination", epf.id);
-          continue;
+          limitations.push({ assetId: `epf:${epf.accountId}`, limitation: "epf-withdrawal-assumed", recordId: epf.id });
         }
       } else if (futuresInternal.has(flow.id)) {
         continue;

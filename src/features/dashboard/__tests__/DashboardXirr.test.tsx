@@ -1,32 +1,40 @@
 import { act, fireEvent, render, within } from "@testing-library/react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
+import { summariseXirr } from "@/src/domain/xirrSummary";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
 import { DashboardScreen } from "../DashboardScreen";
+import { DashboardXirrBlockers } from "../DashboardXirrBlockers";
 
 const now = new Date("2026-01-01T12:00:00");
+const tradeNote = "1 trade without a Cash record is counted as paid from outside CogVest.";
 
-function seed({ price = 110, buyDate = "2025-01-01" } = {}) {
+// One stock bought for 10,000 on the start date and worth 11,000 now: 10% a year.
+// The buy has no Cash record, so it counts as money from outside (#610).
+function seed({ price = 110, buyDate = "2025-01-01", basis = true } = {}) {
   const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
   store.getState().addAsset({ id: "stock", name: "Synthetic", symbol: "SYN", ticker: "SYN.NS", currency: "INR", assetClass: "stock", exchange: "NSE" });
   store.getState().addTrade({ id: "buy", assetId: "stock", type: "buy", date: buyDate, quantity: 100, pricePerUnit: 100, totalValue: 10000 });
   store.getState().upsertQuote({ asOf: "2026-01-01T10:00:00.000Z", assetId: "stock", currency: "INR", price, source: "yahoo" });
   store.getState().setDistributionCoverage("stock", buyDate);
+  if (basis) store.getState().setMeasurementBasis({ startDate: buyDate, kind: "inception", openingBreakdown: [] });
   return store;
 }
 const screenFor = (store: ReturnType<typeof seed>) => render(<DashboardScreen now={now} store={store} />);
 
-describe("Dashboard Investments XIRR", () => {
+describe("Dashboard portfolio XIRR", () => {
   it.each([[110, "+10.00% a year"], [100, "0.00% a year"], [90, "-10.00% a year"]])("shows %d as %s with its period and totals", (price, text) => {
     const screen = screenFor(seed({ price }));
+    expect(screen.getByText("Portfolio return (XIRR)")).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-xirr-measure-investments")).toBeNull();
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent(text);
     fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
     expect(screen.getByTestId("dashboard-xirr-period")).toHaveTextContent("01 Jan 2025 to 01 Jan 2026 · INR · values as of 01 Jan 2026");
     expect(screen.getByTestId("dashboard-xirr-paid-in")).toHaveTextContent("₹10,000.00");
     expect(screen.getByTestId("dashboard-xirr-current")).toHaveTextContent(`₹${(price * 100).toLocaleString("en-IN")}.00`);
-    expect(screen.getByText("Covers market holdings. Cash is excluded.")).toBeTruthy();
+    expect(screen.getByText("Covers everything CogVest tracks, Cash included, since 01 Jan 2025.")).toBeTruthy();
   });
 
   it("masks the breakdown amounts but not the rate", () => {
@@ -47,60 +55,62 @@ describe("Dashboard Investments XIRR", () => {
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
   });
 
-  it("labels a short period and explains an unavailable result, then updates", () => {
-    const short = screenFor(seed({ buyDate: "2025-10-01" }));
-    expect(short.getByTestId("dashboard-xirr-short")).toHaveTextContent("Annualised over 92 days, not the gain for the period.");
+  it("labels a short period", () => {
+    const screen = screenFor(seed({ buyDate: "2025-10-01" }));
+    expect(screen.getByTestId("dashboard-xirr-short")).toHaveTextContent("Annualised over 92 days, not the gain for the period.");
+  });
+
+  it("names its assumptions instead of blocking on missing payouts", () => {
     const store = seed();
     act(() => { store.getState().setDistributionCoverage("stock", null); });
     const screen = screenFor(store);
-    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("Unavailable");
-    expect(screen.getByText("Dividends or payouts aren't recorded for this period.")).toBeTruthy();
-    act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
+    expect(screen.getByTestId("dashboard-xirr-assumptions")).toHaveTextContent("Estimate with 2 assumptions. Open Breakdown to see them.");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByText("Dividends aren't recorded for 1 holding, so the return may be understated.")).toBeTruthy();
+    expect(screen.getByText(tradeNote)).toBeTruthy();
+    act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
+    expect(screen.queryByText("Dividends aren't recorded for 1 holding, so the return may be understated.")).toBeNull();
   });
 
-  it("switches to the whole portfolio, which asks for a start until one is set", () => {
-    const store = seed();
+  it("starts automatically from the earliest month-end snapshot", () => {
+    const store = seed({ basis: false, buyDate: "2024-06-01" });
+    const screen = screenFor(store);
+    expect(screen.getByTestId("dashboard-xirr-reason"))
+      .toHaveTextContent("Save a month-end snapshot in Progress, or set a start date, to measure the return.");
+    // Worth 10,000 at the end of December 2024, 11,000 now (366 days later).
+    act(() => {
+      store.setState({ monthlySnapshots: [{ id: "dec", month: "2024-12", portfolioValue: 10000, equityValue: 10000, debtValue: 0,
+        cryptoValue: 0, cashValue: 0, investedValue: 10000, monthlyInvestment: 0 }] });
+    });
+    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+9.97% a year");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByText("Covers everything CogVest tracks, Cash included, from your earliest month-end snapshot (31 Dec 2024).")).toBeTruthy();
+  });
+
+  it("lists what still blocks it, with holdings and where to fix it", () => {
+    const store = seed({ basis: false });
+    store.getState().addAsset({ id: "fund", name: "Synthetic Income Fund", symbol: "SIF", ticker: "SIF.NS", currency: "INR", assetClass: "stock", exchange: "NSE" });
+    store.getState().addTrade({ id: "in", assetId: "fund", type: "transferIn", date: "2025-03-01", quantity: 10 });
+    store.getState().setMeasurementBasis({ startDate: "2025-02-01", kind: "inception", openingBreakdown: [] });
     const onSetBasis = jest.fn();
     const screen = render(<DashboardScreen now={now} onSetBasis={onSetBasis} store={store} />);
-    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-whole"));
-    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("Unavailable");
-    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Set a start date and opening value to measure the whole portfolio.");
-    fireEvent.press(screen.getByTestId("dashboard-xirr-set-basis"));
-    expect(onSetBasis).toHaveBeenCalledTimes(1);
-    act(() => { store.getState().setMeasurementBasis({ startDate: "2025-01-01", kind: "inception", openingBreakdown: [] }); });
-    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Link this trade to Cash or mark its funding as external.");
-    act(() => { store.getState().setTradeFundingSource(["buy"], "external"); });
-    expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
-    fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
-    expect(screen.getByText("Covers everything CogVest tracks, Cash included, since 01 Jan 2025.")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-investments"));
-    expect(screen.getByText("Covers market holdings. Cash is excluded.")).toBeTruthy();
-  });
-
-  it("lists every blocker with its holdings and where to fix it", () => {
-    const store = seed();
-    store.getState().addAsset({ id: "fund", name: "Synthetic Income Fund", symbol: "SIF", ticker: "SIF.NS", currency: "INR", assetClass: "stock", exchange: "NSE" });
-    store.getState().addTrade({ id: "buy-fund", assetId: "fund", type: "buy", date: "2025-03-01", quantity: 10, pricePerUnit: 100, totalValue: 1000 });
-    store.getState().upsertQuote({ asOf: "2026-01-01T10:00:00.000Z", assetId: "fund", currency: "INR", price: 100, source: "yahoo" });
-    store.getState().setMeasurementBasis({ startDate: "2025-01-01", kind: "inception", openingBreakdown: [] });
-    const onReviewPayouts = jest.fn();
-    const onSetBasis = jest.fn();
-    const screen = render(<DashboardScreen now={now} onReviewPayouts={onReviewPayouts} onSetBasis={onSetBasis} store={store} />);
-    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-whole"));
-    expect(screen.getByTestId("dashboard-xirr-reason")).toHaveTextContent("Dividends or payouts aren't recorded for this period.");
+    expect(screen.getByTestId("dashboard-xirr-reason"))
+      .toHaveTextContent("Records exist before your start date. Use the automatic start, or choose an earlier date.");
     expect(screen.getByTestId("dashboard-xirr-more")).toHaveTextContent("1 more to fix. Open Breakdown for the full list.");
     fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
-    expect(screen.getByTestId("dashboard-xirr-blocker-distributions-not-recorded-extent")).toHaveTextContent("1 holding");
-    expect(screen.getByTestId("dashboard-xirr-blocker-trade-funding-unknown-extent")).toHaveTextContent("2 trades across 2 holdings");
-    fireEvent.press(screen.getByTestId("dashboard-xirr-payouts-fund"));
+    expect(screen.getByTestId("dashboard-xirr-blocker-transfer-without-value-extent")).toHaveTextContent("1 holding: Synthetic Income Fund");
+    fireEvent.press(screen.getByTestId("dashboard-xirr-fix-records-before-start"));
+    fireEvent.press(screen.getByTestId("dashboard-xirr-set-basis"));
+    expect(onSetBasis).toHaveBeenCalledTimes(2);
+  });
+
+  it("links payout blockers to each holding's payouts", () => {
+    const summary = summariseXirr({ status: "unavailable", reasons: [{ assetId: "fund", reason: "payout-before-purchase", recordId: "d1" }] });
+    const onReviewPayouts = jest.fn();
+    const screen = render(<DashboardXirrBlockers blockers={summary.status === "unavailable" ? summary.blockers : []}
+      names={{ fund: "Synthetic Income Fund" }} onReviewPayouts={onReviewPayouts} />);
+    fireEvent.press(screen.getByLabelText("Review payouts for Synthetic Income Fund"));
     expect(onReviewPayouts).toHaveBeenCalledWith("fund");
-    expect(screen.getByLabelText("Review payouts for Synthetic Income Fund")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("dashboard-xirr-fix-trade-funding-unknown"));
-    expect(onSetBasis).toHaveBeenCalledTimes(1);
-    // Investments has no start, so its blockers never offer the start screen.
-    fireEvent.press(screen.getByTestId("dashboard-xirr-measure-investments"));
-    expect(screen.queryByTestId("dashboard-xirr-fix-trade-funding-unknown")).toBeNull();
-    expect(screen.getByTestId("dashboard-xirr-payouts-fund")).toBeTruthy();
   });
 });

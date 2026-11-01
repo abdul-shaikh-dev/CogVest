@@ -20,11 +20,12 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: holding-row-xirr-qa-stock
-# selector: the unavailable reason is the text under test
+# selector: the rate and the unrecorded-payouts note are under test (#610: noted, not blocking)
 - assertVisible:
-    id: holding-xirr-unavailable
-- assertVisible: "Dividends or payouts aren't recorded for this period."
-- takeScreenshot: .expo/xirr-${SHOT}-unavailable
+    id: holding-xirr-rate
+    text: "\\+10.00% a year"
+- assertVisible: "Dividends aren't recorded for 1 holding, so the return may be understated."
+- takeScreenshot: .expo/xirr-${SHOT}-payouts-note
 - scrollUntilVisible:
     element:
       id: holding-payouts-xirr-qa-stock
@@ -48,10 +49,11 @@ appId: ${APP_ID}
     element:
       id: holding-xirr-rate
     direction: UP
-# selector: the computed rate and its period are the values under test
+# selector: the computed rate and its period are the values under test, and the payouts note is gone
 - assertVisible:
     id: holding-xirr-rate
     text: "\\+10.00% a year"
+- assertNotVisible: "Dividends aren't recorded for 1 holding, so the return may be understated."
 - assertVisible:
     id: holding-xirr-period
     text: "01 Jan 2025 to 01 Jan 2026 · INR · price as of 01 Jan 2026"
@@ -71,7 +73,7 @@ appId: ${APP_ID}
     visible:
       id: dashboard-xirr-rate
     timeout: 15000
-# selector: the Investments rate and breakdown totals are the values under test
+# selector: the portfolio rate and breakdown totals are the values under test
 - assertVisible:
     id: dashboard-xirr-rate
     text: "\\+10.00% a year"

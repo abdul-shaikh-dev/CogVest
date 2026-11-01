@@ -179,12 +179,12 @@ export function DashboardPortfolioHero({
       </View> : null}
       {!isMinimalMode || showPerformance ? (
         <DashboardXirr
-          investments={{ scope: dashboard.investmentsXirrScope, summary: dashboard.investmentsXirr }}
           masked={dashboard.maskWealthValues}
           names={dashboard.xirrNames}
           onReviewPayouts={onReviewPayouts}
           onSetBasis={onSetBasis}
-          whole={{ scope: dashboard.wholePortfolioXirrScope, summary: dashboard.wholePortfolioXirr }}
+          scope={dashboard.wholePortfolioXirrScope}
+          summary={dashboard.wholePortfolioXirr}
         />
       ) : null}
       <View testID="dashboard-quote-card" accessibilityLiveRegion="polite">
