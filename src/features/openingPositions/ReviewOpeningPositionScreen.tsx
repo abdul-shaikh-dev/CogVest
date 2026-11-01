@@ -17,7 +17,7 @@ import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
-import type { ConvictionScore, OpeningPosition } from "@/src/types";
+import type { ConvictionScore } from "@/src/types";
 
 import {
   type OpeningPositionFormValues,

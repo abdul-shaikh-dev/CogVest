@@ -407,6 +407,7 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
   store: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the empty draft's date is fixed when the form opens.
   const initial = useMemo(() => (account ? draftFromEpfAccount(account) : emptyEpfAccountDraft(now)), [account]);
   const [draft, setDraft] = useState<EpfAccountDraft>(initial);
   const [errors, setErrors] = useState<EpfFieldErrors<EpfAccountField>>({});
@@ -432,6 +433,7 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
       return true;
     });
     return () => subscription.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
   }, [confirmExit, isDirty, review]);
 
   function update<Key extends keyof EpfAccountDraft>(key: Key, value: EpfAccountDraft[Key]) {

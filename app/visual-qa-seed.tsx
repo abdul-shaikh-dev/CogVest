@@ -63,6 +63,7 @@ export default function VisualQaSeedRoute() {
       ],
       { cancelable: false },
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- QA route: prompt once per enablement, with the params it was opened with.
   }, [canSeed]);
 
   if (!canSeed) {

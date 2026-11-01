@@ -170,7 +170,7 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <DashboardScreen store={store} onAddTrade={onAddTrade} />,
     );
 

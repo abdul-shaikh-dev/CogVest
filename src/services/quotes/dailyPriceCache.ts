@@ -37,7 +37,6 @@ type EnvelopeMemo = {
   envelope: Envelope;
   raw: string;
 };
-type InvalidReason = "invalid" | "corrupt" | "incompatible" | "unavailable";
 
 export type DailyPriceReadResult =
   | { coverage: "complete" | "partial"; entry: DailyPriceEntry; freshness: "current" | "stale"; status: "hit" }

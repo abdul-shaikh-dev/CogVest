@@ -226,6 +226,7 @@ export function useDashboard({
   );
   const asOf = formatLocalCalendarDate(now);
   // Recomputed when any record or the day changes; the solver is bounded but not free.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the calendar day (asOf), not the per-render Date.
   const wholePortfolioXirr = useMemo(() => wholePortfolioXirrSummary(snapshot, now), [snapshot, asOf]);
   // EPF-linked legacy holdings are replaced by the account value included below.
   const linkedLegacyAssetIds = new Set([

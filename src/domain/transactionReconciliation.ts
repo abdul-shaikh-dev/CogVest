@@ -6,7 +6,6 @@ import {
   quantityQuantum,
 } from "@/src/domain/precision";
 import {
-  compareTransactionsChronologically,
   getTradeCostBasisAcquisition,
   getTradeQuantityDelta,
   hasUnresolvedTransferCostBasis,

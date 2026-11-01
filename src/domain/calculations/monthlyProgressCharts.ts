@@ -84,14 +84,6 @@ function formatShortMonth(month: string) {
   }).format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
 }
 
-function safePercentage(numerator: number, denominator: number) {
-  return denominator === 0
-    ? 0
-    : normalizePercentage(
-        decimal(numerator).dividedBy(denominator).times(100),
-      );
-}
-
 function getRangeLimit(range: MonthlyChartRange) {
   switch (range) {
     case "3M":

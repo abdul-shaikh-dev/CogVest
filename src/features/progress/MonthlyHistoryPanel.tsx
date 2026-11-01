@@ -88,12 +88,6 @@ function formatSignedValue(value: number) {
   return amount;
 }
 
-function formatComparison(change: number | null, previousMonth?: string) {
-  if (!previousMonth) return "No prior stored month";
-  if (change === null) return "Percentage unavailable · prior value was zero";
-  return `${formatPercentage(change)} vs ${formatMonth(previousMonth)}`;
-}
-
 function getAssetAllocation(summary: MonthlyProgressSummary, assetClass: AssetClass) {
   return summary.assetSnapshot.find((item) => item.assetClass === assetClass)
     ?.percentage;

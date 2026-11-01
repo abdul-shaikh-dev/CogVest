@@ -3,7 +3,7 @@ import {
   normalizeAssetMetadata,
   normalizeIsin,
 } from "@/src/domain/assets";
-import { getCalendarDatePart, isFutureCalendarDate, parseCalendarDate } from "@/src/domain/dates";
+import { formatLocalCalendarDate, getCalendarDatePart, isFutureCalendarDate, parseCalendarDate } from "@/src/domain/dates";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { decimal } from "@/src/domain/precision";
 import {
@@ -20,7 +20,6 @@ import type {
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 import { conflictingHistoricalRows, hasValidSplitSourceDate } from "./transactionImportMatching";
 import { splitCanonicalIsin, withVerifiedStockSplits } from "@/src/domain/stockSplitCatalog";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { projectDemergers, proposeDemergers } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 

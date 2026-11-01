@@ -82,9 +82,10 @@ This runs TypeScript, Jest, and Expo doctor.
 
 ```powershell
 npm run typecheck       # TypeScript only
+npm run lint            # ESLint, no warnings allowed
 npm test                # Jest / React Native Testing Library
 npm run doctor          # Expo doctor
-npm run test:verify     # typecheck + tests + doctor
+npm run test:verify     # typecheck + lint + tests + doctor
 npm run start:clear     # start Metro with a clean cache
 npm run android         # local native Android build/install
 npm run android:doctor  # PC Android tooling readiness check

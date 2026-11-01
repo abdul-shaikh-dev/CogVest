@@ -183,6 +183,7 @@ export function AddOpeningPositionForm({
       notes.trim() || intendedHoldDays.trim() || conviction || date || dateUnknown,
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the back effect below re-registers each render on purpose.
   function requestExit() {
     if (isSaving) return;
     if (hasUnfinishedDraft) {
@@ -198,6 +199,7 @@ export function AddOpeningPositionForm({
     setAreReviewDetailsExpanded(false);
   }, [currentPhase]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the back effect below re-registers each render on purpose.
   function goBack() {
     if (isSaving) return;
     if (!savedAssetId && currentPhase !== "asset") {

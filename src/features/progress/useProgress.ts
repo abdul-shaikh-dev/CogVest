@@ -135,6 +135,7 @@ export function useProgress({
       quoteCache: snapshot.quoteCache,
       trades: snapshot.trades,
     }, now, asOf),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the calendar day (asOf), not the per-render Date.
     [snapshot.assets, snapshot.openingPositions, snapshot.trades, snapshot.quoteCache,
       snapshot.cashEntries, snapshot.ppfAccounts, snapshot.ppfLedgerEntries, asOf],
   );

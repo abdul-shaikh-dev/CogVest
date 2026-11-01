@@ -101,7 +101,7 @@ export function ProgressScreen({
     if (hasInvalidSnapshot) return;
     hasRunAutomationRef.current = true;
     void progress.ensureMonthEndSnapshot({ retryProvisional: false });
-  }, [progress]);
+  }, [hasInvalidSnapshot, progress]);
 
   function reviewSnapshot() {
     onReviewSnapshot?.();

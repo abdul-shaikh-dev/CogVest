@@ -13,9 +13,8 @@ import type {
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { isV1CompatibleQuote, isV1SupportedAsset } from "@/src/domain/portfolioCurrency";
-import { getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
+import { formatLocalCalendarDate, getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
 import {
   decimal,
   type FinancialDecimalInstance,
@@ -32,7 +31,6 @@ import {
   isOpeningPositionEffective,
 } from "@/src/domain/openingPositions";
 import {
-  compareTransactionsChronologically,
   getTradeCostBasisAcquisition,
   getTradeQuantityDelta,
   isTradeCashPurchase,
@@ -143,10 +141,6 @@ const defaultConvictionTradeCount = 5;
 
 function round(value: number, decimals = 2) {
   return roundHalfUp(value, decimals);
-}
-
-function sortTradesByDate(trades: Trade[]) {
-  return [...trades].sort(compareTransactionsChronologically);
 }
 
 /** Shared moving-average replay; derived values are never persisted as tax lots. */

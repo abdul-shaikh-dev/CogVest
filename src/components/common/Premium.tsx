@@ -11,7 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { interaction, radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
+import { radii, spacing, useTheme, createThemedStyles, type ThemeColors } from "@/src/theme";
 import type { AssetClass } from "@/src/types";
 
 import { AppText } from "./AppText";

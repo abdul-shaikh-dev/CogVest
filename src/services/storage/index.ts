@@ -52,6 +52,7 @@ type MmkvLikeStorage = {
 };
 
 function createDefaultMmkvStorage(): MmkvLikeStorage {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy native load keeps tests and web free of MMKV.
   const { createMMKV } = require(
     "react-native-mmkv",
   ) as typeof import("react-native-mmkv");

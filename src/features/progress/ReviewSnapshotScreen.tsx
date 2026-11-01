@@ -60,7 +60,7 @@ export function ReviewSnapshotScreen({
 
     hasRunAutomationRef.current = true;
     void progress.ensureMonthEndSnapshot({ retryProvisional: false });
-  }, [progress]);
+  }, [invalidSnapshot, progress]);
 
   useEffect(() => {
     if (hasPrefilledFormRef.current) {
@@ -77,7 +77,7 @@ export function ReviewSnapshotScreen({
     setSnapshotFormFields({ progress, snapshot });
     reviewedSnapshotId.current = snapshot.id;
     hasPrefilledFormRef.current = true;
-  }, [progress]);
+  }, [invalidSnapshot, progress]);
 
   function saveSnapshotChanges() {
     if (progress.saveSnapshot(reviewedSnapshotId.current)) {

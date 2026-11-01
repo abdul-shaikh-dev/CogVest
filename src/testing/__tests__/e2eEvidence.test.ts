@@ -104,7 +104,6 @@ describe("buildE2ePortfolioEvidence", () => {
 
   it("reports every stored asset that conflicts with a canonical identity", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const state = store.getState();
     const baseAsset = {
       assetClass: "stock" as const,
       currency: "INR" as const,
