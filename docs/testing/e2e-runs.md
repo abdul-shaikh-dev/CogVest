@@ -4,6 +4,20 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-01: Simplified portfolio XIRR (#610), smoke 14 passed
+
+- Commit: main 8831291 (PRs #611 and #612 merged), version 1.0.29. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK, Metro stopped.
+- Smoke tier: 14 passed, 0 failed, 11m 37s. xirr-holding 0m 33s.
+- xirr-holding now asserts the +10.00% holding rate with the unrecorded-payouts
+  note, and that the note goes once payouts are confirmed. xirr-whole (full
+  tier) asserts the automatic start from the zero-value December 2024
+  snapshot: +10.00% a year, "Estimate with 1 assumption", Put in ₹10,000.00,
+  Current value ₹11,000.00, the trade assumption note and the start screen.
+- Both passed in light, dark and font scale 1.3. Screenshots:
+  `docs/reviews/artifacts/2026-11-01-simple-portfolio-xirr/`.
+
 ## 2026-10-30: Whole-portfolio XIRR (#533, #535), smoke 13 passed plus 1 rerun
 
 - Commit: main (PR #604 merged) plus the whole-portfolio UI change. AVD
