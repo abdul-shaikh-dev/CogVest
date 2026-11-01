@@ -20,8 +20,8 @@ import type {
   PpfLedgerEntry,
   Quote,
   Trade,
+  MonthlySnapshot,
 } from "@/src/types";
-import type { MonthlySnapshot } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",

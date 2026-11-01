@@ -14,8 +14,7 @@ import {
   daysHeld,
   getConvictionReadiness,
 } from "@/src/domain/calculations";
-import type { Asset, CashEntry, OpeningPosition, Quote, Trade } from "@/src/types";
-import type { MonthlySnapshot } from "@/src/types";
+import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition, Quote, Trade } from "@/src/types";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 
 const reliance: Asset = {

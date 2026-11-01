@@ -137,6 +137,7 @@ export function PpfAccountForm({
       return true;
     });
     return () => subscription.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
   }, [confirmExit, isDirty, reviewAccount]);
 
   function clearFieldError(field: PpfAccountField) {

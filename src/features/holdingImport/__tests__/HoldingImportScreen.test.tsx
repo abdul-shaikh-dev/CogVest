@@ -125,7 +125,7 @@ describe("HoldingImportScreen", () => {
   it("requires explicit selection for a non-exact provider result", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const candidate = { ...lookup, id: "yahoo:HDFC.NS", ticker: "HDFC.NS" };
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}

@@ -114,6 +114,7 @@ export const DiscoveryResults = memo(function DiscoveryResults(
     return () => {
       if (timer !== undefined) clearTimeout(timer);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- batching restarts only when the items change; render state is read as the starting point.
   }, [items]);
 
   useLayoutEffect(() => {

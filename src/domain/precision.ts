@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-named-as-default -- the default and named exports are the same class.
 import Decimal from "decimal.js-light";
 
 export const financialPrecision = {

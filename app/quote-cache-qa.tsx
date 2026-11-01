@@ -18,6 +18,7 @@ import { spacing, createThemedStyles } from "@/src/theme";
 const qaMmkvId = "cogvest-daily-price-qa";
 
 function createQaStorage(): JsonStorage {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy native load, QA route only.
   const { createMMKV } = require("react-native-mmkv") as typeof import("react-native-mmkv");
 
   return createMmkvJsonStorage(createMMKV({ id: qaMmkvId }));

@@ -66,6 +66,7 @@ export function PayoutEntryScreen({ assetId, distributionId, now = new Date(), o
       return true;
     });
     return () => subscription.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
   }, [confirm, isDirty]);
 
   if (!asset || !canRecordPayouts(asset) || (distributionId && !existing)) {

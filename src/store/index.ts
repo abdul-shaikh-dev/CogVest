@@ -58,7 +58,6 @@ import {
   normalizeMoney,
   normalizeQuantity,
   quantityQuantum,
-  sumFinancialValues,
 } from "@/src/domain/precision";
 import {
   calculatePpfConfirmedBalance,

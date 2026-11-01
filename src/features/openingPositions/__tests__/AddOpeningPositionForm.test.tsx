@@ -720,7 +720,7 @@ describe("AddOpeningPositionForm", () => {
 
   it("allows returning to completed phases before saving", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -747,7 +747,7 @@ describe("AddOpeningPositionForm", () => {
   it("creates a manual asset and persists a reviewed opening position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode: "minimal" });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText } = render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -1712,7 +1712,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1782,7 +1782,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText } = render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}

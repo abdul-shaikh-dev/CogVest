@@ -54,6 +54,7 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
   useFocusEffect(useCallback(() => {
     const listener = BackHandler.addEventListener("hardwareBackPress", () => { back(); return true; });
     return () => listener.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- back reads only flow.phase and dirty, like the other back handlers.
   }, [flow.phase, dirty]));
   useEffect(() => { if (exitAllowed) onCancel(); }, [exitAllowed, onCancel]);
   useEffect(() => { if (flow.saved) onSaved(); }, [flow.saved, onSaved]);
