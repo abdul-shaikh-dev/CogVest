@@ -1,10 +1,10 @@
 import type { EpfAccount, EpfEvent } from "@/src/domain/epf";
 import { ppfCashLeg } from "@/src/domain/ppfCashLinks";
 import {
-  buildWholePortfolioXirrInput, measurementBasisProblems, measurementEvidenceDigest, type WholePortfolioXirrInput,
+  automaticMeasurementBasis, buildWholePortfolioXirrInput, measurementBasisProblems, measurementEvidenceDigest, type WholePortfolioXirrInput,
 } from "@/src/domain/wholePortfolioXirr";
 import { summariseXirr } from "@/src/domain/xirrSummary";
-import type { Asset, BuyTrade, CashEntry, Distribution, MeasurementBasis, PpfAccount, PpfLedgerEntry } from "@/src/types";
+import type { Asset, BuyTrade, CashEntry, Distribution, MeasurementBasis, MonthlySnapshot, PpfAccount, PpfLedgerEntry } from "@/src/types";
 
 // Every scenario turns 10,000 put in on 1 Jan 2025 into 11,000 on 1 Jan 2026: exactly 10% a year.
 const endDate = "2026-01-01";
@@ -61,11 +61,12 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     expect(summary.flows[0]).toMatchObject({ source: "opening", date: "2025-01-01", amountInr: "-10000" });
   });
 
-  it("asks for the opening value again when a record on or before the start changes", () => {
+  it("notes, without blocking, that a record on or before a confirmed start changed", () => {
     const earlyBuy: BuyTrade = { ...buy, id: "early", date: "2024-06-01" };
     const records = { assets: [stock], trades: [earlyBuy], quotes: { stock: quote }, distributionCoverage: market.distributionCoverage };
     const basis = openingBasis(records);
-    expect(reasons({ ...records, trades: [{ ...earlyBuy, quantity: 101 }], basis })).toEqual(["basis-needs-reconfirming"]);
+    expect(rate({ ...records, trades: [{ ...earlyBuy, quantity: 101 }], basis }).notes).toContain("Records before your start date changed after you confirmed it.");
+    expect(rate({ ...records, basis }).notes).not.toContain("Records before your start date changed after you confirmed it.");
     // A later record doesn't touch the evidence; field order (say, after a restore) doesn't either.
     const reordered = Object.fromEntries(Object.entries(earlyBuy).reverse()) as BuyTrade;
     expect(measurementEvidenceDigest(input({ trades: [reordered, { ...buy, id: "later", date: "2025-02-01" }] }), "2025-01-01"))
@@ -75,13 +76,48 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
   it.each<[string, Partial<WholePortfolioXirrInput>, string]>([
     ["no basis", { ...market, basis: null }, "no-measurement-basis"],
     ["a lifetime start after earlier records", { ...market, basis: { ...inception, startDate: "2025-02-01" } }, "records-before-start"],
-    ["an uncategorised Cash entry", { ...market, cashEntries: [deposit, funding, { ...deposit, id: "old", purpose: "legacyUncategorized" }] }, "cash-uncategorized"],
-    ["a trade with no Cash link or funding source", { ...market, cashEntries: [deposit] }, "trade-funding-unknown"],
     ["a transfer of holdings", { ...market, trades: [buy, { id: "in", assetId: "stock", type: "transferIn", date: "2025-03-01", quantity: 1 }] }, "transfer-without-value"],
-    ["payouts not recorded", { ...market, distributionCoverage: [] }, "distributions-not-recorded"],
-    ["a stale price", { ...market, quotes: { stock: { ...quote, asOf: "2025-12-01T10:00:00.000Z" } } }, "stale-quote"],
   ])("blocks %s", (_name, overrides, reason) => {
     expect(reasons(overrides)).toContain(reason);
+  });
+
+  // #610: gaps are calculated around and named, never silently dropped.
+  it.each<[string, Partial<WholePortfolioXirrInput>, number, string]>([
+    ["payouts not recorded", { ...market, distributionCoverage: [] }, 0.1, "Dividends aren't recorded for 1 holding, so the return may be understated."],
+    ["a stale price", { ...market, quotes: { stock: { ...quote, asOf: "2025-12-01T10:00:00.000Z" } } }, 0.1, "1 holding uses a price older than 7 days."],
+    // No price: valued at the 10,000 paid, so no gain.
+    ["a missing price", { ...market, quotes: {} }, 0, "1 holding has no price and is valued at what was paid."],
+    // The unlinked buy is 10,000 more from outside, beside the 10,000 deposit still in Cash: 20,000 in, 21,000 now.
+    ["a trade with no Cash link", { ...market, cashEntries: [deposit] }, 0.05, "1 trade without a Cash record is counted as paid from outside CogVest."],
+    // An unclear Cash addition is money in: 20,000 in, 21,000 now.
+    ["an uncategorised Cash entry", { ...market, cashEntries: [deposit, funding, { ...deposit, id: "old", purpose: "legacyUncategorized" }] }, 0.05,
+      "1 Cash entry without a clear purpose is counted as money in or out."],
+  ])("calculates around %s and notes it", (_name, overrides, expected, note) => {
+    const summary = rate(overrides);
+    expect(summary.rate).toBeCloseTo(expected, 9);
+    expect(summary.notes).toContain(note);
+  });
+
+  it("cancels an unlinked purchase payment against its unlinked trade", () => {
+    const summary = rate({ ...market, cashEntries: [deposit, { ...funding, linkedTradeId: undefined }] });
+    expect(summary.rate).toBeCloseTo(0.1, 9);
+    expect(summary.notes).toEqual([
+      "1 trade without a Cash record is counted as paid from outside CogVest.",
+      "1 Cash entry without a clear purpose is counted as money in or out.",
+    ]);
+  });
+
+  it("starts automatically from the earliest month-end snapshot that has ended", () => {
+    const snap = (month: string, portfolioValue: number): MonthlySnapshot => ({ id: month, month, portfolioValue, equityValue: portfolioValue,
+      debtValue: 0, cryptoValue: 0, cashValue: 0, investedValue: 0, monthlyInvestment: 0 });
+    expect(automaticMeasurementBasis([snap("2026-01", 1), snap("2024-12", 10000.004), snap("2025-06", 5)], endDate))
+      .toMatchObject({ startDate: "2024-12-31", kind: "openingValue", openingValueInr: 10000, evidenceDigest: null });
+    expect(automaticMeasurementBasis([snap("2025-12", 1)], "2025-12-31")).toBeNull();
+    const basis = automaticMeasurementBasis([snap("2024-12", 10000)], endDate);
+    const summary = rate({ ...market, trades: [{ ...buy, date: "2024-06-01" }], cashEntries: [], basis, automaticBasis: true });
+    // 31 Dec 2024 to 1 Jan 2026 is 366 days, so slightly under 10% a year.
+    expect(summary.rate).toBeCloseTo(0.0997, 4);
+    expect(summary.notes).not.toContain("Records before your start date changed after you confirmed it.");
   });
 
   it("fingerprints every stored record when the flows leave some out", () => {
@@ -90,8 +126,8 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     const records = { assets: [stock], trades: [earlyBuy], quotes: { stock: quote }, distributionCoverage: market.distributionCoverage };
     const evidence = input({ ...records, trades: [earlyBuy, replaced] });
     const basis = openingBasis({ ...records, trades: [earlyBuy, replaced] });
-    expect(reasons({ ...records, basis })).toEqual(["basis-needs-reconfirming"]);
-    expect(rate({ ...records, basis, evidence }).rate).toBeCloseTo(0.1, 9);
+    expect(rate({ ...records, basis }).notes).toContain("Records before your start date changed after you confirmed it.");
+    expect(rate({ ...records, basis, evidence }).notes).not.toContain("Records before your start date changed after you confirmed it.");
   });
 
   it("counts a trade paid from outside CogVest at its own amount", () => {
@@ -119,8 +155,10 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     const contribution = (fundingSource?: "cash" | "external"): PpfLedgerEntry =>
       ({ id: "ppf-dep", accountId: "ppf", date: "2025-01-01", recordedAt: "x", type: "contribution", amount: 10000, ...(fundingSource ? { fundingSource } : {}) });
 
-    it("blocks a deposit until its source is known", () => {
-      expect(reasons({ ppfAccounts: [ppf], ppfLedgerEntries: [contribution(), interest] })).toEqual(["ppf-funding-unknown"]);
+    it("counts a deposit with no source as money from outside, and says so", () => {
+      const summary = rate({ ppfAccounts: [ppf], ppfLedgerEntries: [contribution(), interest] });
+      expect(summary.rate).toBeCloseTo(0.1, 9);
+      expect(summary.notes).toContain("1 PPF entry is counted as paid from outside CogVest.");
     });
 
     it("treats a deposit from Cash and its Cash leg as moving inside the portfolio", () => {
@@ -151,10 +189,12 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
       expect(rate({ epf: { accounts: [account], events } }).rate).toBeCloseTo(0.1, 9);
     });
 
-    it("blocks a withdrawal whose destination is unknown", () => {
+    it("counts a withdrawal with an unknown destination as money taken out", () => {
       const withdrawal: EpfEvent = { ...base("out", "2025-12-31"), type: "withdrawal", amount: { total: 100, components: { employee: 100, employer: 0 } },
         capitalReduction: null, destination: "unknown" };
-      expect(reasons({ epf: { accounts: [account], events: [...events, withdrawal] } })).toEqual(["epf-withdrawal-destination"]);
+      const summary = rate({ epf: { accounts: [account], events: [...events, withdrawal] } });
+      expect(summary.flows.some((flow) => flow.id === "out" && flow.amountInr === "100")).toBe(true);
+      expect(summary.notes).toContain("1 EPF withdrawal is counted as money taken out.");
     });
   });
 

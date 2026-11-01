@@ -15,6 +15,7 @@ import {
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate, formatINR } from "@/src/domain/formatters";
+import { automaticMeasurementBasis } from "@/src/domain/wholePortfolioXirr";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 
@@ -25,11 +26,10 @@ import {
   draftTotal,
   initialBasisDraft,
   snapshotStarts,
-  tradesWithoutCash,
   type BasisDraft,
 } from "./measurementBasisForm";
 
-/** Where the whole-portfolio return starts (D9), and the trade funding it needs (D10). */
+/** Where the portfolio return starts (D9): the user's choice, or automatically the earliest snapshot (#610). */
 export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPortfolioStore() }: {
   now?: Date;
   onBack: () => void;
@@ -41,13 +41,12 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
   const [draft, setDraft] = useState<BasisDraft>(() => initialBasisDraft(snapshot, now));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [confirmMark, setConfirmMark] = useState(false);
   const [snapshotId, setSnapshotId] = useState("none");
   const snapshots = snapshotStarts(snapshot.monthlySnapshots, formatLocalCalendarDate(now));
   const snapshotOptions = [{ label: "Enter values myself", value: "none" }, ...snapshots.map((item) => ({ label: item.label, value: item.id }))];
   const basis = snapshot.measurementBasis;
   const status = basisStatus(snapshot);
-  const trades = tradesWithoutCash(snapshot, draft.startDate, draft.kind);
+  const automatic = basis ? null : automaticMeasurementBasis(snapshot.monthlySnapshots, formatLocalCalendarDate(now));
   const total = draftTotal(draft);
 
   const update = (next: Partial<BasisDraft>) => {
@@ -73,18 +72,11 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
     setMessage("Start confirmed.");
   }
 
-  function markTrades() {
-    const result = store.getState().setTradeFundingSource(trades.unmarked, "external");
-    setConfirmMark(false);
-    if (result.status === "rejected") { setError("Some of these trades changed. Reopen this screen and try again."); return; }
-    setMessage(`${trades.unmarked.length} ${trades.unmarked.length === 1 ? "trade" : "trades"} marked as paid from outside CogVest.`);
-  }
-
   if (!isRevealed) {
     return (
       <ScreenContainer testID="measurement-basis-screen">
         <View style={styles.content}>
-          <ScreenHeader title="Whole-portfolio start" subtitle="Values masked" />
+          <ScreenHeader title="Return start" subtitle="Values masked" />
           <PremiumCard><SensitiveValueReveal onReveal={reveal} testID="reveal-measurement-basis" /></PremiumCard>
           <AppButton onPress={onBack} title="Back" variant="secondary" />
         </View>
@@ -98,8 +90,8 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
         <View style={styles.content}>
           <ScreenHeader
             leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={onBack} />}
-            subtitle="Where the whole-portfolio return is measured from"
-            title="Whole-portfolio start"
+            subtitle="Where the portfolio return is measured from"
+            title="Return start"
           />
           {basis ? (
             <PremiumCard testID="measurement-basis-current">
@@ -115,7 +107,20 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
                   : `Confirmed ${formatDate(basis.confirmedAt.slice(0, 10))}.`}
               </AppText>
             </PremiumCard>
-          ) : null}
+          ) : (
+            <PremiumCard testID="measurement-basis-automatic">
+              <AppText testID="measurement-basis-start" weight="bold">
+                {automatic
+                  ? `Automatic: from ${formatDate(automatic.startDate)} · ${formatINR(automatic.openingValueInr ?? 0)}`
+                  : "Automatic: no month-end snapshot yet"}
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                {automatic
+                  ? "Your earliest month-end snapshot. Set a start below only to measure from somewhere else."
+                  : "Save a month-end snapshot in Progress, or set a start below."}
+              </AppText>
+            </PremiumCard>
+          )}
           <PremiumCard section style={styles.formSection}>
             <SelectionField
               helperText={draft.kind === "inception"
@@ -167,35 +172,10 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
           ) : null}
           {error ? <AppText selectable style={styles.error} testID="basis-error">{error}</AppText> : null}
           {message ? <AppText testID="basis-message">{message}</AppText> : null}
-          <AppButton onPress={save} testID="save-basis" title={basis ? "Confirm again" : "Confirm start"} />
-          <PremiumCard section testID="basis-trade-funding">
-            <AppText weight="bold">Trades without a Cash record</AppText>
-            <AppText color="secondary" testID="basis-trade-funding-count" variant="caption">
-              {trades.unmarked.length === 0
-                ? trades.marked.length ? `${trades.marked.length} marked as paid from outside CogVest.` : "None in this period."
-                : `${trades.unmarked.length} in this period ${trades.unmarked.length === 1 ? "isn't" : "aren't"} linked to Cash. If they were paid from a bank or broker account outside CogVest, mark them so.`}
-            </AppText>
-            {trades.unmarked.length ? (
-              confirmMark ? (
-                <View style={styles.actions}>
-                  <AppText variant="caption">
-                    Only mark them if the money didn't come from, or go to, CogVest Cash. Otherwise it is counted twice.
-                  </AppText>
-                  <AppButton onPress={markTrades} testID="basis-confirm-mark-external" title="Mark as paid from outside" />
-                  <AppButton onPress={() => setConfirmMark(false)} title="Cancel" variant="secondary" />
-                </View>
-              ) : (
-                <AppButton onPress={() => setConfirmMark(true)} testID="basis-mark-external" title="Mark as paid from outside" variant="secondary" />
-              )
-            ) : null}
-            {trades.marked.length ? (
-              <AppButton onPress={() => { store.getState().setTradeFundingSource(trades.marked, null); setMessage("Marks cleared."); }}
-                testID="basis-clear-external" title="Clear marks" variant="ghost" />
-            ) : null}
-          </PremiumCard>
+          <AppButton onPress={save} testID="save-basis" title={basis ? "Confirm again" : "Use this start"} />
           {basis ? (
-            <AppButton onPress={() => { store.getState().setMeasurementBasis(null); setMessage("Start removed."); }}
-              testID="remove-basis" title="Remove start" variant="ghost" />
+            <AppButton onPress={() => { store.getState().setMeasurementBasis(null); setMessage("Using the automatic start."); }}
+              testID="remove-basis" title="Use automatic start" variant="secondary" />
           ) : null}
         </View>
       </ScreenContainer>
@@ -204,7 +184,6 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
 }
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
-  actions: { gap: spacing.sm },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
   flex: { flex: 1 },

@@ -24,48 +24,27 @@ function flowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
     paidIn: paidIn.toNumber(), returned: returned.toNumber(), current: current.toNumber() };
 }
 
-type XirrView = { scope: string; summary: XirrSummary };
-type Measure = "investments" | "whole";
-const measureLabel: Record<Measure, string> = { investments: "Investments", whole: "Whole portfolio" };
-
 /**
- * Annualised return (#535) inside the Invested & returns area: Investments
- * (D8) or the whole portfolio, Cash included, from the user's start (D9).
+ * Annualised portfolio return (#535, simplified in #610) inside the Invested &
+ * returns area: everything CogVest tracks, Cash included, from the user's start
+ * or the earliest month-end snapshot. Assumptions are listed, not blocking.
  */
-export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts, onSetBasis, whole }: {
-  investments: XirrView;
+export function DashboardXirr({ masked, names = {}, onReviewPayouts, onSetBasis, scope, summary }: {
   masked: boolean;
   /** Holding and account names for the blocker checklist. */
   names?: Record<string, string>;
   onReviewPayouts?: (assetId: string) => void;
   onSetBasis?: () => void;
-  whole: XirrView;
+  scope: string;
+  summary: XirrSummary;
 }) {
   const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
-  const [measure, setMeasure] = useState<Measure>("investments");
-  const { scope, summary } = measure === "investments" ? investments : whole;
   const rateText = summary.status === "rate" ? `${formatPercentage(summary.rate * 100)} a year` : "Unavailable";
   return (
     <View testID="dashboard-xirr">
-      <View accessibilityRole="radiogroup" style={styles.xirrMeasures}>
-        {(["investments", "whole"] as const).map((item) => (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: measure === item }}
-            key={item}
-            onPress={() => setMeasure(item)}
-            style={[styles.xirrMeasure, measure === item && styles.xirrMeasureSelected]}
-            testID={`dashboard-xirr-measure-${item}`}
-          >
-            <AppText color={measure === item ? undefined : "secondary"} variant="caption" weight={measure === item ? "bold" : undefined}>
-              {measureLabel[item]}
-            </AppText>
-          </Pressable>
-        ))}
-      </View>
       <Pressable
-        accessibilityLabel={`${measureLabel[measure]} return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
+        accessibilityLabel={`Portfolio return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((value) => !value)}
@@ -73,7 +52,7 @@ export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts
         testID="dashboard-xirr-toggle"
       >
         <View style={styles.xirrLabel}>
-          <AppText color="secondary" variant="caption">{measureLabel[measure]} return (XIRR)</AppText>
+          <AppText color="secondary" variant="caption">Portfolio return (XIRR)</AppText>
           <AppText
             color={summary.status === "rate" ? undefined : "secondary"}
             style={summary.status !== "rate" || summary.rate === 0 ? undefined
@@ -86,6 +65,11 @@ export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts
         </View>
         <AppText color="secondary" variant="caption">{expanded ? "Hide breakdown" : "Breakdown"}</AppText>
       </Pressable>
+      {summary.status === "rate" && summary.notes.length && !expanded ? (
+        <AppText color="secondary" testID="dashboard-xirr-assumptions" variant="caption">
+          Estimate with {summary.notes.length} {summary.notes.length === 1 ? "assumption" : "assumptions"}. Open Breakdown to see {summary.notes.length === 1 ? "it" : "them"}.
+        </AppText>
+      ) : null}
       {summary.status === "rate" && summary.shortPeriod ? (
         <AppText color="secondary" testID="dashboard-xirr-short" variant="caption">
           Annualised over {summary.days} days, not the gain for the period.
@@ -101,9 +85,6 @@ export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts
           ) : null}
         </>
       ) : null}
-      {measure === "whole" && onSetBasis ? (
-        <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Whole-portfolio start" variant="secondary" />
-      ) : null}
       {expanded ? (
         <View style={styles.priceDetails} testID="dashboard-xirr-details">
           <AppText color="secondary" variant="caption">{scope}</AppText>
@@ -112,7 +93,7 @@ export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts
               blockers={summary.blockers}
               names={names}
               onReviewPayouts={onReviewPayouts}
-              onSetBasis={measure === "whole" ? onSetBasis : undefined}
+              onSetBasis={onSetBasis}
             />
           ) : (
             <XirrRateDetails masked={masked} summary={summary} />
@@ -120,6 +101,9 @@ export function DashboardXirr({ investments, masked, names = {}, onReviewPayouts
           <AppText color="secondary" variant="caption">
             XIRR weighs each amount by when it moved. It differs from P&amp;L, which compares value with what you invested.
           </AppText>
+          {onSetBasis ? (
+            <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Change start" variant="secondary" />
+          ) : null}
         </View>
       ) : null}
     </View>

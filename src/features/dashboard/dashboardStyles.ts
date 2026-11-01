@@ -12,9 +12,6 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   xirrBlocker: { gap: spacing.xs },
   xirrBlockerAction: { alignSelf: "flex-start", justifyContent: "center", minHeight: 48 },
   xirrBlockers: { gap: spacing.md },
-  xirrMeasure: { borderRadius: radii.pill, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md },
-  xirrMeasureSelected: { backgroundColor: colors.surface.elevated },
-  xirrMeasures: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, paddingTop: spacing.sm },
   xirrLabel: {
     flex: 1,
     minWidth: 160,

@@ -46,9 +46,9 @@ const NO_RATE = "A return can't be calculated from these flows.";
 
 // Structural gaps first: fixing a later reason is pointless while an earlier one remains.
 const inputMessages: Array<[XirrUnavailableReason, string]> = [
-  ["no-measurement-basis", "Set a start date and opening value to measure the whole portfolio."],
+  ["no-measurement-basis", "Save a month-end snapshot in Progress, or set a start date, to measure the return."],
   ["basis-needs-reconfirming", "Records on or before the start date changed. Confirm the opening value again."],
-  ["records-before-start", "Records exist before the start date. Choose an opening value or an earlier start."],
+  ["records-before-start", "Records exist before your start date. Use the automatic start, or choose an earlier date."],
   ["missing-asset", "This holding's record is missing."],
   ["cash-asset", "Cash has no return of its own."],
   ["foreign-currency", "Returns are only measured for INR holdings."],
@@ -83,12 +83,34 @@ const inputMessages: Array<[XirrUnavailableReason, string]> = [
   ["no-assets", "No investments are recorded."],
 ];
 
-const limitationNotes: Record<XirrLimitation, string> = {
-  "fees-not-in-source": "Some imported trades didn't include fees, so they aren't counted.",
-  "manual-price": "Uses a manually entered price.",
-  "ppf-interest-accrual": "PPF uses its confirmed balance, without interest earned since the last credit.",
-  "epf-summarised-year": "Some EPF contributions come from a yearly passbook summary and are dated at its end.",
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** What each assumption means, by how many records or holdings it covers. Most consequential first. */
+const limitationNotes: Record<XirrLimitation, (n: number) => string> = {
+  "payouts-not-recorded": (n) => `Dividends aren't recorded for ${count(n, "holding", "holdings")}, so the return may be understated.`,
+  "funding-assumed-external": (n) => `${count(n, "trade", "trades")} without a Cash record ${n === 1 ? "is" : "are"} counted as paid from outside CogVest.`,
+  "price-missing-at-cost": (n) => `${count(n, "holding has", "holdings have")} no price and ${n === 1 ? "is" : "are"} valued at what was paid.`,
+  "stale-price": (n) => `${count(n, "holding uses", "holdings use")} a price older than 7 days.`,
+  "cash-purpose-assumed": (n) => `${count(n, "Cash entry", "Cash entries")} without a clear purpose ${n === 1 ? "is" : "are"} counted as money in or out.`,
+  "ppf-funding-assumed": (n) => `${count(n, "PPF entry is", "PPF entries are")} counted as paid from outside CogVest.`,
+  "epf-withdrawal-assumed": (n) => `${count(n, "EPF withdrawal is", "EPF withdrawals are")} counted as money taken out.`,
+  "opening-after-start-at-cost": (n) => `${count(n, "opening position", "opening positions")} after the start ${n === 1 ? "is" : "are"} counted as bought at average cost.`,
+  "account-opened-after-start": (n) => `${count(n, "account", "accounts")} opened after the start count their starting balance as money put in.`,
+  "basis-records-changed": () => "Records before your start date changed after you confirmed it.",
+  "epf-history-incomplete": () => "EPF history isn't confirmed complete, so EPF may be missing contributions.",
+  "fees-not-in-source": (n) => `${count(n, "imported trade", "imported trades")} didn't include fees, so they aren't counted.`,
+  "manual-price": (n) => `${count(n, "holding uses", "holdings use")} a manually entered price.`,
+  "ppf-interest-accrual": () => "PPF uses its confirmed balance, without interest earned since the last credit.",
+  "epf-summarised-year": () => "Some EPF contributions come from a yearly passbook summary and are dated at its end.",
 };
+
+/** One note per kind of assumption, counting distinct records (or holdings when there is no record). */
+function limitationSummary(limitations: Array<{ assetId: string; limitation: XirrLimitation; recordId?: string }>) {
+  return (Object.keys(limitationNotes) as XirrLimitation[]).flatMap((kind) => {
+    const items = limitations.filter((item) => item.limitation === kind);
+    return items.length ? [limitationNotes[kind](new Set(items.map((item) => item.recordId ?? item.assetId)).size)] : [];
+  });
+}
 
 const solverMessages: Record<XirrUnavailable, string> = {
   "invalid-flow": NO_RATE,
@@ -124,7 +146,7 @@ export function summariseXirr(input: XirrInputResult): XirrSummary {
   }
   const result = calculateXirr(input.flows);
   if (result.status === "unavailable") return noRate(solverMessages[result.reason]);
-  const notes = [...new Set(input.limitations.map((item) => limitationNotes[item.limitation]))];
+  const notes = limitationSummary(input.limitations);
   return {
     status: "rate",
     rate: result.rate,

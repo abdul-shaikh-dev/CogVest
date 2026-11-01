@@ -237,6 +237,37 @@ judgement):
   price no more than 7 days old. Assets that can pay out need payout coverage
   from the later of the start date and their first purchase.
 
+### Simplified portfolio return (#610)
+
+Owner decision, 1 November 2026, after D1–D3 and D9–D11 proved unusable on a
+real portfolio (26 holdings, 441 imported trades): calculate from what is
+recorded and name every assumption, instead of blocking until each gap is
+filled. This supersedes the blocking rules above where they conflict.
+
+- **One measure.** The Dashboard shows one Portfolio return (XIRR), Cash
+  included. Investments XIRR is no longer shown. Per-holding returns stay.
+- **Automatic start.** Without a saved start, the return starts at the last
+  day of the earliest stored month-end snapshot whose month has ended, with
+  that snapshot's portfolio value as the opening value. A saved start still
+  wins. With neither, the return is unavailable.
+- **Notes, not blockers.** Each of these is calculated around and shown as a
+  counted note under the rate:
+  - payouts not recorded (per holding and portfolio): recorded payouts count,
+    and the note says the return may be understated;
+  - a buy or sell without a Cash link: money from or to outside CogVest;
+  - an unclear Cash entry (legacy, or an unlinked purchase payment or sale
+    proceeds): money in or out, which cancels an unlinked trade it paid for;
+  - a PPF entry with no source: from outside; an EPF withdrawal with an
+    unknown destination: money taken out;
+  - a price older than 7 days: used as is; no price: valued at what was paid;
+  - an opening position dated after the start: bought at its average cost;
+  - an account opened after the start: its starting balance is money put in;
+  - records before a confirmed start changed, and incomplete EPF history.
+- **Still blocking:** no start at all, records before a lifetime start,
+  transfers of holdings, invalid or duplicate trades, foreign-currency
+  holdings or prices, and PPF/EPF/Futures data that can't be valued. Each is
+  listed with its holdings and a link to where it is fixed.
+
 ### Cross-cutting
 
 **D12. Migration, backup and invalidation.**

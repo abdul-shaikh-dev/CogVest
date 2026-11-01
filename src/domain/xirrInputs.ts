@@ -31,7 +31,14 @@ export type XirrUnavailableReason =
   | "units-mismatch" | "missing-quote" | "stale-quote" | "quote-after-end" | "quote-currency"
   | "no-assets" | AccountXirrReason | WholePortfolioReason;
 
-export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirrLimitation;
+/**
+ * Gaps a result is calculated around rather than blocked by (#610): each is
+ * shown as a note with its count, so the user sees what the number assumes.
+ */
+export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirrLimitation
+  | "payouts-not-recorded" | "funding-assumed-external" | "cash-purpose-assumed" | "stale-price" | "price-missing-at-cost"
+  | "ppf-funding-assumed" | "epf-withdrawal-assumed" | "opening-after-start-at-cost" | "account-opened-after-start"
+  | "basis-records-changed" | "epf-history-incomplete";
 
 export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string };
 
@@ -149,8 +156,9 @@ function assetOutcome(input: AssetXirrInput): AssetOutcome {
   // separate purchase). Assets that can pay out need ongoing coverage from the
   // first purchase.
   const firstFlow = flows.map((flow) => flow.date).sort()[0];
+  // #610: unrecorded payouts no longer block. Recorded ones count; the rest can only make the true return higher.
   if (!cannotDistribute(asset) && (!input.coverage || !firstFlow || input.coverage.from > firstFlow)) {
-    issue("distributions-not-recorded");
+    limitations.push({ assetId, limitation: "payouts-not-recorded" });
   }
   for (const payout of input.distributions) {
     if (payout.assetId !== assetId || payout.paidOn > endDate) continue;

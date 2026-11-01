@@ -33,9 +33,11 @@ describe("XIRR summary", () => {
     expect(summary.status === "rate" && summary.flows.map((flow) => flow.source)).toEqual(["trade", "distribution", "terminal"]);
   });
 
-  it("explains missing payout coverage and a stale price, structural gaps first", () => {
+  it("blocks on a stale holding price but only notes missing payouts", () => {
     expect(assetXirrSummary(state({ distributionCoverage: [], quoteCache: { stock: quote(110, "2025-12-01T00:00:00Z") } }), "stock", today))
-      .toMatchObject({ status: "unavailable", messages: ["Dividends or payouts aren't recorded for this period.", "Price is older than 7 days."] });
+      .toMatchObject({ status: "unavailable", messages: ["Price is older than 7 days."] });
+    const noPayouts = assetXirrSummary(state({ distributionCoverage: [] }), "stock", today);
+    expect(noPayouts.status === "rate" && noPayouts.notes).toEqual(["Dividends aren't recorded for 1 holding, so the return may be understated."]);
     expect(assetXirrSummary(state({ openingPositions: [{ id: "o", assetId: "stock", quantity: 1, averageCostPrice: 1, date: null }] }), "stock", today))
       .toMatchObject({ status: "unavailable", messages: ["Purchase history before the opening position isn't recorded."] });
   });
@@ -51,7 +53,7 @@ describe("XIRR summary", () => {
       { assetId: "a", reason: "distributions-not-recorded" },
     ] });
     expect(summary.status === "unavailable" && summary.blockers).toEqual([
-      { reason: "no-measurement-basis", message: "Set a start date and opening value to measure the whole portfolio.", unit: null, count: 0, assetIds: [] },
+      { reason: "no-measurement-basis", message: "Save a month-end snapshot in Progress, or set a start date, to measure the return.", unit: null, count: 0, assetIds: [] },
       { reason: "distributions-not-recorded", message: "Dividends or payouts aren't recorded for this period.", unit: "holdings", count: 2, assetIds: ["b", "a"] },
       { reason: "trade-funding-unknown", message: "Link this trade to Cash or mark its funding as external.", unit: "trades", count: 3, assetIds: ["a", "b"] },
     ]);
@@ -63,6 +65,6 @@ describe("XIRR summary", () => {
       .toMatchObject({ status: "unavailable", messages: ["All activity is on one day, so there is no period to annualise."],
         blockers: [{ reason: "calculation", unit: null, count: 0, assetIds: [] }] });
     const summary = assetXirrSummary(state({ quoteCache: { stock: { ...quote(110), source: "manual" } } }), "stock", today);
-    expect(summary.status === "rate" && summary.notes).toEqual(["Uses a manually entered price."]);
+    expect(summary.status === "rate" && summary.notes).toEqual(["1 holding uses a manually entered price."]);
   });
 });
