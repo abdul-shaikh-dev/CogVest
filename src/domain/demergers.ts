@@ -18,7 +18,7 @@ export const demergerCatalog = [{
   evidenceUrl: "https://nsearchives.nseindia.com/corporate/TATAMOTORSSJS_12112025224654_NSEBSECOAFINAL.pdf",
 }] as const;
 
-export type DemergerPortfolio = { assets: Asset[]; openingPositions: OpeningPosition[]; trades: Trade[] };
+export type DemergerPortfolio = { assets: readonly Asset[]; openingPositions: readonly OpeningPosition[]; trades: readonly Trade[] };
 function fail(id: string, message: string): never { throw new StockSplitError(id, message); }
 
 function eligibleSource(portfolio: DemergerPortfolio, parent: Asset, event: typeof demergerCatalog[number]) {

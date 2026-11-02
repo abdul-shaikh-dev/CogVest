@@ -52,11 +52,11 @@ type CalculateHoldingInput = {
 };
 
 type CalculateHoldingsInput = {
-  assets: Asset[];
+  assets: readonly Asset[];
   now?: Date;
-  openingPositions?: OpeningPosition[];
+  openingPositions?: readonly OpeningPosition[];
   quoteCache: QuoteCache;
-  trades: Trade[];
+  trades: readonly Trade[];
 };
 
 export type AllocationItem = {
@@ -340,9 +340,9 @@ export function calculateHolding({
 }
 
 type CachedHoldings = {
-  assets: Asset[];
+  assets: readonly Asset[];
   holdings: ReturnType<typeof replayHoldings>;
-  openingPositions: OpeningPosition[];
+  openingPositions: readonly OpeningPosition[];
   quoteCache: QuoteCache;
 };
 
@@ -351,7 +351,7 @@ type CachedHoldings = {
 // (#138). The result depends only on these inputs and the local calendar day,
 // and the store replaces collections rather than mutating them, so identity is
 // a safe key. Keyed weakly by trades so replaced records are collected.
-const holdingsCache = new WeakMap<Trade[], Map<string, CachedHoldings>>();
+const holdingsCache = new WeakMap<readonly Trade[], Map<string, CachedHoldings>>();
 
 export function calculateHoldings({
   assets,

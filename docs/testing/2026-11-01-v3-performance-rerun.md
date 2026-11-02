@@ -2,8 +2,8 @@
 
 Recorded 1 November 2026 for #138. This is a partial result, not a claim that
 the #138 performance gates have passed. The JavaScript-stall gate failed on the
-first open of Holdings and Progress. See the 2 November section below: those are
-fixed, and the launch window still fails.
+first open of Holdings and Progress. See the 2 November sections below: those
+and the launch window are now under 500 ms on this fixture.
 
 ## Identity And Environment
 
@@ -158,7 +158,33 @@ fixture; the gate still fails on the launch window**, which stays at 521–697 m
 Removing the root Progress view did not move it, so the remaining cost is
 elsewhere in startup, for example store hydration or the first Dashboard render.
 
+## Launch Window Fix (2 November 2026)
+
+Timing marks in a probe build traced the launch window to the first Dashboard
+render, not store hydration. Loading and validating the store took about 60 ms.
+`useDashboard` took 430–470 ms, and the whole-portfolio XIRR used 284–294 ms of
+that. The XIRR ran its own holdings replay on copied and refiltered arrays, so
+it never shared the Dashboard replay. It now passes the records themselves when
+nothing is filtered out, and the replay is reused. The XIRR result is unchanged.
+
+APK `778b45c79ed73d87d8fd7c439dcfb65b572cd63a94a638aceda4baf9481efddb`, same
+AVD, fixture and method. Maximum delay in ms, pass 1 / pass 2:
+
+| Action | Run 1 | Run 2 |
+| --- | --- | --- |
+| First Holdings open | 122 / 38 | 121 / 20 |
+| First Progress open | 398 / 28 | 398 / 19 |
+| Range All | 405 / 409 | 414 / 387 |
+| Tab Holdings revisit | 38 / 53 | 21 / 22 |
+| Tab Progress revisit | 37 / 24 | 49 / 36 |
+| Launch window | 478 | 470 |
+
+**Result: no window over 500 ms in either run** (0 of 70 each). Margins are
+modest: the launch window, first Progress open and Range All sit at 387–478 ms
+on this emulator. No ANR, `FATAL EXCEPTION` or crash entries.
+
 ## Next
 
-Trace the launch window to find the remaining startup cost, then re-run this
-method. Range All (up to 495 ms) is the next closest to the limit.
+Frame smoothness (#299) and the schema-crossing upgrade proof remain open for
+#138. If the stall margins need widening, the XIRR input build is the largest
+remaining launch cost.

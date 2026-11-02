@@ -44,8 +44,11 @@ function xirrRecords(state: XirrState, now: Date): InvestmentsXirrInput {
   const replaced = new Set([...getLinkedLegacyPpfAssetIds(state.ppfAccounts, today), ...getLinkedLegacyEpfAssetIds(state.epf.accounts, today)]);
   return {
     assets: state.assets,
-    trades: state.trades.filter((trade) => !replaced.has(trade.assetId)),
-    openingPositions: state.openingPositions.filter((position) => !replaced.has(position.assetId)),
+    // Unfiltered records keep their identity, so the holdings replay is shared (#138).
+    trades: replaced.size ? state.trades.filter((trade) => !replaced.has(trade.assetId)) : state.trades,
+    openingPositions: replaced.size
+      ? state.openingPositions.filter((position) => !replaced.has(position.assetId))
+      : state.openingPositions,
     quotes: state.quoteCache,
     distributions: state.distributions,
     distributionCoverage: state.distributionCoverage,

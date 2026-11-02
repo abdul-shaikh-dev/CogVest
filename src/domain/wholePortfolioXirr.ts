@@ -221,10 +221,14 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     }
   }
 
-  // Market holdings at the end date, valued as the Dashboard values them.
+  // Market holdings at the end date, valued as the Dashboard values them. Pass the
+  // records themselves, not copies: calculateHoldings reuses the Dashboard replay
+  // only for identical inputs (#138).
+  const tradesToEnd = input.trades.filter((trade) => (getCalendarDatePart(trade.date) ?? "") <= end);
   const holdings = calculateHoldings({
-    assets: [...input.assets], openingPositions: [...input.openingPositions], quoteCache: { ...input.quotes },
-    trades: input.trades.filter((trade) => (getCalendarDatePart(trade.date) ?? "") <= end), now: calendarDateToLocalDate(end) ?? new Date(end),
+    assets: input.assets, openingPositions: input.openingPositions, quoteCache: input.quotes,
+    trades: tradesToEnd.length === input.trades.length ? input.trades : tradesToEnd,
+    now: calendarDateToLocalDate(end) ?? new Date(end),
   });
   const terminals: string[] = [];
   const valueDates: string[] = [];
