@@ -4,8 +4,11 @@ import type { StoreApi } from "zustand/vanilla";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 
-import { useProgress } from "./useProgress";
+import { ensureMonthEndSnapshotForStore } from "./useProgress";
 
+// Runs once at app start. It deliberately skips useProgress: building the
+// Progress view at the root replayed the portfolio on launch and on every
+// store change (#138).
 export function useMonthEndSnapshotAutomation({
   enabled = true,
   historicalPriceFetcher = resolveHistoricalPrice,
@@ -18,8 +21,6 @@ export function useMonthEndSnapshotAutomation({
   store?: StoreApi<PortfolioStoreState>;
 } = {}) {
   const hasRunRef = useRef(false);
-  const progress = useProgress({ historicalPriceFetcher, now, store });
-  const ensureMonthEndSnapshot = progress.ensureMonthEndSnapshot;
 
   useEffect(() => {
     if (!enabled || hasRunRef.current) {
@@ -27,8 +28,11 @@ export function useMonthEndSnapshotAutomation({
     }
 
     hasRunRef.current = true;
-    void ensureMonthEndSnapshot({ retryProvisional: false });
-  }, [enabled, ensureMonthEndSnapshot]);
-
-  return progress.snapshotAutomationStatus;
+    void ensureMonthEndSnapshotForStore({
+      historicalPriceFetcher,
+      now,
+      retryProvisional: false,
+      store,
+    });
+  }, [enabled, historicalPriceFetcher, now, store]);
 }

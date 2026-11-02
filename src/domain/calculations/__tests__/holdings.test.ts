@@ -14,7 +14,7 @@ import {
   daysHeld,
   getConvictionReadiness,
 } from "@/src/domain/calculations";
-import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition, Quote, Trade } from "@/src/types";
+import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition, Quote, QuoteCache, Trade } from "@/src/types";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 
 const reliance: Asset = {
@@ -88,6 +88,48 @@ function openingPosition(
     ...overrides,
   };
 }
+
+describe("calculateHoldings reuse (#138)", () => {
+  const quote = (price: number): QuoteCache => ({
+    [reliance.id]: { asOf: "2026-08-09T10:00:00.000Z", assetId: reliance.id, currency: "INR", price, source: "yahoo" },
+  });
+  const records = () => ({
+    assets: [reliance],
+    openingPositions: [openingPosition({ quantity: 10, averageCostPrice: 100 })],
+    quoteCache: quote(150),
+    trades: [trade({ date: "2026-05-01T00:00:00.000Z", quantity: 5, totalValue: 500 })],
+  });
+  const day = new Date("2026-08-10T09:00:00");
+
+  it("returns the same frozen result for the same records on the same day", () => {
+    const input = records();
+    const first = calculateHoldings({ ...input, now: day });
+    const later = calculateHoldings({ ...input, now: new Date("2026-08-10T21:30:00") });
+
+    expect(later).toBe(first);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(() => (first as unknown as unknown[]).push({})).toThrow();
+    expect(first[0]).toMatchObject({ totalUnits: 15, currentValue: 2250 });
+  });
+
+  it("recomputes when a quote, a record collection or the day changes", () => {
+    const input = records();
+    const first = calculateHoldings({ ...input, now: day });
+
+    const repriced = calculateHoldings({ ...input, quoteCache: quote(200), now: day });
+    expect(repriced).not.toBe(first);
+    expect(repriced[0].currentValue).toBe(3000);
+
+    const moreTrades = [...input.trades, trade({ date: "2026-06-01T00:00:00.000Z", quantity: 5, totalValue: 500 })];
+    expect(calculateHoldings({ ...input, trades: moreTrades, now: day })[0].totalUnits).toBe(20);
+
+    const lateTrade = [trade({ date: "2026-08-11T00:00:00.000Z", quantity: 5, totalValue: 500 })];
+    const beforeTrade = calculateHoldings({ ...input, trades: lateTrade, now: day });
+    const afterTrade = calculateHoldings({ ...input, trades: lateTrade, now: new Date("2026-08-11T09:00:00") });
+    expect(beforeTrade[0].totalUnits).toBe(10);
+    expect(afterTrade[0].totalUnits).toBe(15);
+  });
+});
 
 describe("holding calculations", () => {
   it("keeps ownership and invested value explicit while valuation is pending", () => {
