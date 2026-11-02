@@ -339,6 +339,20 @@ export function calculateHolding({
   };
 }
 
+type CachedHoldings = {
+  assets: Asset[];
+  holdings: ReturnType<typeof replayHoldings>;
+  openingPositions: OpeningPosition[];
+  quoteCache: QuoteCache;
+};
+
+// Dashboard, Holdings and Progress replay the same records, and on Android each
+// replay of a large portfolio blocks the JS thread for hundreds of milliseconds
+// (#138). The result depends only on these inputs and the local calendar day,
+// and the store replaces collections rather than mutating them, so identity is
+// a safe key. Keyed weakly by trades so replaced records are collected.
+const holdingsCache = new WeakMap<Trade[], Map<string, CachedHoldings>>();
+
 export function calculateHoldings({
   assets,
   now = new Date(),
@@ -347,6 +361,28 @@ export function calculateHoldings({
   trades,
 }: CalculateHoldingsInput) {
   const through = formatLocalCalendarDate(now);
+  const byDay = holdingsCache.get(trades) ?? new Map<string, CachedHoldings>();
+  const cached = byDay.get(through);
+  if (cached && cached.assets === assets && cached.openingPositions === openingPositions && cached.quoteCache === quoteCache) {
+    return cached.holdings;
+  }
+  // Shared between callers, so freeze it: an in-place sort or push must fail.
+  const holdings = Object.freeze(replayHoldings({ assets, openingPositions, quoteCache, trades, through })) as ReturnType<typeof replayHoldings>;
+  byDay.clear();
+  byDay.set(through, { assets, holdings, openingPositions, quoteCache });
+  holdingsCache.set(trades, byDay);
+  return holdings;
+}
+
+function replayHoldings({
+  assets,
+  openingPositions,
+  quoteCache,
+  through,
+  trades,
+}: Required<Omit<CalculateHoldingsInput, "now">> & { through: string }) {
+  // Only the calendar day matters below; local noon keeps it on that day.
+  const now = new Date(`${through}T12:00:00`);
   const demergerAdjustments = projectDemergers({ assets, openingPositions, trades }, through);
   return assets
     .map((asset) => {

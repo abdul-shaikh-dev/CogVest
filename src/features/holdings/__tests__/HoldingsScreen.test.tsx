@@ -246,7 +246,7 @@ describe("HoldingsScreen", () => {
     jest.restoreAllMocks();
   });
 
-  it("renders four and thirty holding fixtures with directly visible search", () => {
+  it("renders four and thirty holding fixtures with directly visible search", async () => {
     const fourScreen = render(<HoldingsScreen store={seedListHoldings(4)} />);
 
     expect(fourScreen.getAllByTestId(/^holding-row-/)).toHaveLength(4);
@@ -262,6 +262,11 @@ describe("HoldingsScreen", () => {
     const thirtyScreen = render(
       <HoldingsScreen store={seedListHoldings(30)} />,
     );
+    // The first commit renders one batch; the rest arrive in the next task (#138).
+    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(24);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
     fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),

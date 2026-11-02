@@ -1,8 +1,9 @@
 # V3 Performance Re-run on 1.0.30
 
 Recorded 1 November 2026 for #138. This is a partial result, not a claim that
-the #138 performance gates have passed. The JavaScript-stall gate still fails
-on the first open of Holdings and Progress.
+the #138 performance gates have passed. The JavaScript-stall gate failed on the
+first open of Holdings and Progress. See the 2 November section below: those are
+fixed, and the launch window still fails.
 
 ## Identity And Environment
 
@@ -113,8 +114,51 @@ under 50 ms. Logcat had no ANR, `FATAL EXCEPTION` or crash entries in any run.
     17 and 18, with the app working afterwards. This is a real-world pass, not a
     payload-equality proof.
 
+## After The First-Mount Fixes (2 November 2026)
+
+Same AVD, fixture and raw `adb input` method, on the branch
+`perf/138-first-mount-stalls`. Probe e2e builds only.
+
+Changes:
+
+- Holdings renders its rows in batches of 24, one task at a time, instead of
+  all 250 in one commit.
+- Holdings rows are memoized with stable derived lists and a stable select
+  handler, so a tab focus change no longer re-renders every row.
+- `calculateHoldings` reuses its frozen result for the same records, quotes
+  and calendar day. Dashboard, Holdings and Progress no longer each replay the
+  same trades.
+- Progress applies the month-end status update in a transition, so it no
+  longer lands in the first-render task.
+- The app-start month-end check no longer builds the Progress view at the root.
+
+Maximum delay in ms, pass 1 / pass 2. Runs A and B used APK
+`e27f06cd48dadb19cd9c2f4c455bed850063df65cf600bbc4233f7577cf57448`
+(all but the last change). Run C used
+`08a3c5cfc0088125ebba28b4d7590a031772e75502d0131a2d00b9dca81ba192` (all
+changes) on a freshly booted emulator with the fixture re-seeded.
+
+| Action | Before (two runs) | A | B | C |
+| --- | --- | --- | --- | --- |
+| First Holdings open | 761–809 | 143 | 128–154 | 131–142 |
+| First Progress open | 774–786 | 333 / 784 | 351–385 | 398–405 |
+| Range All | 431–487 | 420–495 | 401–478 | 385–431 |
+| Tab Holdings revisit | 247–307 | 25–69 | — | 19–52 |
+| Tab Progress revisit | 268–389 | 39–57 | — | 24–28 |
+| Launch window | 664–685 | 548–590 | 521–550 | 575–697 |
+
+Each column is two runs. For B, only these rows were recorded, so the revisit
+rows are blank.
+One A run had a 784 ms first Progress open, and the five other runs on these
+fixes stayed at 333–405 ms; treat it as an unexplained outlier, not a pass.
+Scrolling stayed under 50 ms. No ANR, `FATAL EXCEPTION` or crash entries.
+
+**Result: first-mount stalls on Holdings and Progress are fixed on this
+fixture; the gate still fails on the launch window**, which stays at 521–697 ms.
+Removing the root Progress view did not move it, so the remaining cost is
+elsewhere in startup, for example store hydration or the first Dashboard render.
+
 ## Next
 
-Reduce the startup and first-mount cost of Holdings and Progress below 500 ms
-on this fixture, then re-run this method. Likely candidates to check with a trace before
-changing code: the initial row batch size and derived view computation on mount.
+Trace the launch window to find the remaining startup cost, then re-run this
+method. Range All (up to 495 ms) is the next closest to the limit.

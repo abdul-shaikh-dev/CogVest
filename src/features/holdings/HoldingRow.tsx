@@ -1,3 +1,4 @@
+import { memo, type ComponentProps } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 
 import {
@@ -162,3 +163,15 @@ export function HoldingRow({
     </Pressable>
   );
 }
+
+/**
+ * A row that re-renders only when its own props change. Holdings re-renders on
+ * every tab focus change, and re-rendering 250 rows each time cost ~0.3 s of
+ * JS thread on Android (#138). `onSelect` must be stable.
+ */
+export const SelectableHoldingRow = memo(function SelectableHoldingRow({
+  onSelect,
+  ...props
+}: Omit<ComponentProps<typeof HoldingRow>, "onPress"> & { onSelect: (assetId: string) => void }) {
+  return <HoldingRow {...props} onPress={() => onSelect(props.item.holding.asset.id)} />;
+});

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -26,13 +26,14 @@ import {
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
+import { useProgressiveCount } from "@/src/hooks";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useTheme } from "@/src/theme";
 
 import { assetXirrSummary } from "./assetXirr";
 import { HoldingDetailModal } from "./HoldingDetails";
-import { HoldingRow } from "./HoldingRow";
+import { SelectableHoldingRow } from "./HoldingRow";
 import { EpfAccountsSection, PpfAccountsSection } from "./HoldingsAccountSections";
 import { DestinationTab, FilterRow } from "./HoldingsFilters";
 import {
@@ -167,20 +168,27 @@ export function HoldingsScreen({
   const [selectedAssetId, setSelectedAssetId] = useState<string>();
   const [selectedRecordsVisible, setSelectedRecordsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const reviewItems = createHoldingReviewItems(holdings, rollupRows);
-  const marketHoldings = holdings.filter(
-    (holding) => holding.asset.instrumentType !== "ppf",
-  );
-  const allocationHoldings = marketHoldings.filter(
-    (holding) => holding.asset.assetClass !== "cash",
-  );
-  const marketReviewItems = createHoldingReviewItems(
-    marketHoldings,
-    calculateConsolidatedHoldingRows(allocationHoldings),
-  );
-  const legacyPpfHoldings = holdings.filter(
-    (holding) => holding.asset.instrumentType === "ppf",
-  );
+  // Stable item objects let memoized rows skip focus-only re-renders (#138).
+  const { allocationHoldings, legacyPpfHoldings, marketHoldings, marketReviewItems, reviewItems } = useMemo(() => {
+    const marketHoldings = holdings.filter(
+      (holding) => holding.asset.instrumentType !== "ppf",
+    );
+    const allocationHoldings = marketHoldings.filter(
+      (holding) => holding.asset.assetClass !== "cash",
+    );
+    return {
+      allocationHoldings,
+      legacyPpfHoldings: holdings.filter(
+        (holding) => holding.asset.instrumentType === "ppf",
+      ),
+      marketHoldings,
+      marketReviewItems: createHoldingReviewItems(
+        marketHoldings,
+        calculateConsolidatedHoldingRows(allocationHoldings),
+      ),
+      reviewItems: createHoldingReviewItems(holdings, rollupRows),
+    };
+  }, [holdings, rollupRows]);
   const ppfRecordCount = ppfSummary.accounts.length + legacyPpfHoldings.length;
   const hasMarketHoldings = marketHoldings.length > 0;
   const hasPpfDestination =
@@ -244,6 +252,8 @@ export function HoldingsScreen({
     effectiveFilter,
     searchQuery,
   );
+  // 250 rows in one commit blocked the JS thread for ~0.8 s on first open (#138).
+  const renderedRowCount = useProgressiveCount(visibleItems.length);
   const allocationItems = marketReviewItems.filter(
     (item) => item.holding.asset.assetClass !== "cash",
   );
@@ -299,9 +309,16 @@ export function HoldingsScreen({
     return () => subscription.remove();
   }, [isActive, selectedAssetId]);
 
+  const selectHolding = useCallback((assetId: string) => {
+    Keyboard.dismiss();
+    detailScrollOffset.current = 0;
+    setSelectedRecordsVisible(false);
+    setSelectedAssetId(assetId);
+  }, []);
+
   function renderHoldingRow(item: HoldingReviewItem) {
     return (
-      <HoldingRow
+      <SelectableHoldingRow
         allocationAvailable={
           allocationAvailable &&
           item.holding.asset.instrumentType !== "ppf" &&
@@ -311,12 +328,7 @@ export function HoldingsScreen({
         key={item.holding.asset.id}
         masked={maskWealthValues}
         minimal={isMinimalMode}
-        onPress={() => {
-          Keyboard.dismiss();
-          detailScrollOffset.current = 0;
-          setSelectedRecordsVisible(false);
-          setSelectedAssetId(item.holding.asset.id);
-        }}
+        onSelect={selectHolding}
       />
     );
   }
@@ -619,7 +631,7 @@ export function HoldingsScreen({
               />
             ) : (
               <View style={styles.holdingsList} testID="holdings-list">
-                {visibleItems.map(renderHoldingRow)}
+                {visibleItems.slice(0, renderedRowCount).map(renderHoldingRow)}
               </View>
             )}
             {!isMinimalMode ? <AppText color="secondary" variant="caption">

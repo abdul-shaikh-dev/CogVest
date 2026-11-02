@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { startTransition, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { buildPpfExcludedChartHistory } from "@/src/domain/calculations/ppfExcludedChartHistory";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -217,94 +217,18 @@ export function useProgress({
     return true;
   }
 
-  async function ensureMonthEndSnapshot(
+  function ensureMonthEndSnapshot(
     { retryProvisional = true }: { retryProvisional?: boolean } = {},
   ) {
-    const restoreEpoch = store.getState().restoreEpoch;
-    if (snapshotAutomationEpochs.get(store) !== restoreEpoch) {
-      inFlightSnapshotAutomationRuns.delete(store);
-      snapshotAutomationEpochs.set(store, restoreEpoch);
-    }
-    const requestedLastCompletedMonth = getPreviousCompletedMonth(now);
-
-    while (true) {
-      let run = inFlightSnapshotAutomationRuns.get(store);
-
-      if (!run) {
-        const state = store.getState();
-        const targetMonths = getSnapshotAutomationTargetMonths({
-          now,
-          retryProvisional,
-          state,
-        });
-
-        if (targetMonths.length === 0) {
-          const {
-            hasCompletedPortfolioRecord,
-            latestCompletedSnapshot,
-            provisionalMonths,
-          } = getCompletedMonthState(state, requestedLastCompletedMonth);
-          const result: MonthEndSnapshotAutomationRunResult = {
-            createdCount: 0,
-            lastCompletedMonth: requestedLastCompletedMonth,
-            pendingMonths: [],
-            provisionalCount: provisionalMonths.length,
-            provisionalMonths,
-            refreshedCount: 0,
-            snapshot: latestCompletedSnapshot,
-            status: hasCompletedPortfolioRecord
-              ? "already-exists"
-              : "insufficient-data",
-            targetMonths,
-            warnings: [],
-          };
-
-          setSnapshotAutomationStatus(automationStatusFromResult(result));
-
-          return result;
-        }
-
-        run = runMonthEndSnapshotAutomation({
-          historicalPriceFetcher,
-          now,
-          store,
-          targetMonths,
-        });
-        inFlightSnapshotAutomationRuns.set(store, run);
-        const startedRun = run;
-        void startedRun
-          .finally(() => {
-            if (inFlightSnapshotAutomationRuns.get(store) === startedRun) {
-              inFlightSnapshotAutomationRuns.delete(store);
-            }
-          })
-          .catch(() => undefined);
-      }
-
-      let result: MonthEndSnapshotAutomationRunResult;
-      try {
-        result = await run;
-      } catch (error) {
-        publishSnapshotAutomationProgress(store, null);
-        throw error;
-      }
-      if (store.getState().restoreEpoch !== restoreEpoch) {
-        publishSnapshotAutomationProgress(store, null);
-        return result;
-      }
-
-      if (result.lastCompletedMonth !== requestedLastCompletedMonth) {
-        if (inFlightSnapshotAutomationRuns.get(store) === run) {
-          inFlightSnapshotAutomationRuns.delete(store);
-        }
-        continue;
-      }
-
-      setSnapshotAutomationStatus(automationStatusFromResult(result));
-      publishSnapshotAutomationProgress(store, null);
-
-      return result;
-    }
+    return ensureMonthEndSnapshotForStore({
+      historicalPriceFetcher,
+      now,
+      // The no-op check lands in the same task as the first render; let it yield (#138).
+      onSettled: (result) => startTransition(() =>
+        setSnapshotAutomationStatus(automationStatusFromResult(result))),
+      retryProvisional,
+      store,
+    });
   }
 
   const progressSnapshotAutomationStatus = presentSnapshotAutomationStatus({
@@ -346,4 +270,106 @@ export function useProgress({
     snapshotAutomationStatus: progressSnapshotAutomationStatus,
     totalInvested,
   };
+}
+
+/**
+ * Creates any missing completed-month snapshots, sharing one in-flight run per
+ * store. `onSettled` receives the result unless a restore superseded the run.
+ * App startup calls this directly so it does not build the Progress view (#138).
+ */
+export async function ensureMonthEndSnapshotForStore({
+  historicalPriceFetcher = resolveHistoricalPrice,
+  now = new Date(),
+  onSettled,
+  retryProvisional = true,
+  store = getPortfolioStore(),
+}: UseProgressInput & {
+  onSettled?: (result: MonthEndSnapshotAutomationRunResult) => void;
+  retryProvisional?: boolean;
+} = {}): Promise<MonthEndSnapshotAutomationRunResult> {
+  const restoreEpoch = store.getState().restoreEpoch;
+  if (snapshotAutomationEpochs.get(store) !== restoreEpoch) {
+    inFlightSnapshotAutomationRuns.delete(store);
+    snapshotAutomationEpochs.set(store, restoreEpoch);
+  }
+  const requestedLastCompletedMonth = getPreviousCompletedMonth(now);
+
+  while (true) {
+    let run = inFlightSnapshotAutomationRuns.get(store);
+
+    if (!run) {
+      const state = store.getState();
+      const targetMonths = getSnapshotAutomationTargetMonths({
+        now,
+        retryProvisional,
+        state,
+      });
+
+      if (targetMonths.length === 0) {
+        const {
+          hasCompletedPortfolioRecord,
+          latestCompletedSnapshot,
+          provisionalMonths,
+        } = getCompletedMonthState(state, requestedLastCompletedMonth);
+        const result: MonthEndSnapshotAutomationRunResult = {
+          createdCount: 0,
+          lastCompletedMonth: requestedLastCompletedMonth,
+          pendingMonths: [],
+          provisionalCount: provisionalMonths.length,
+          provisionalMonths,
+          refreshedCount: 0,
+          snapshot: latestCompletedSnapshot,
+          status: hasCompletedPortfolioRecord
+            ? "already-exists"
+            : "insufficient-data",
+          targetMonths,
+          warnings: [],
+        };
+
+        onSettled?.(result);
+
+        return result;
+      }
+
+      run = runMonthEndSnapshotAutomation({
+        historicalPriceFetcher,
+        now,
+        store,
+        targetMonths,
+      });
+      inFlightSnapshotAutomationRuns.set(store, run);
+      const startedRun = run;
+      void startedRun
+        .finally(() => {
+          if (inFlightSnapshotAutomationRuns.get(store) === startedRun) {
+            inFlightSnapshotAutomationRuns.delete(store);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    let result: MonthEndSnapshotAutomationRunResult;
+    try {
+      result = await run;
+    } catch (error) {
+      publishSnapshotAutomationProgress(store, null);
+      throw error;
+    }
+    if (store.getState().restoreEpoch !== restoreEpoch) {
+      publishSnapshotAutomationProgress(store, null);
+      return result;
+    }
+
+    if (result.lastCompletedMonth !== requestedLastCompletedMonth) {
+      if (inFlightSnapshotAutomationRuns.get(store) === run) {
+        inFlightSnapshotAutomationRuns.delete(store);
+      }
+      continue;
+    }
+
+    onSettled?.(result);
+    publishSnapshotAutomationProgress(store, null);
+
+    return result;
+  }
 }
