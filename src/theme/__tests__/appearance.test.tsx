@@ -64,7 +64,7 @@ describe("appearance", () => {
     expect(view.getByText("dark")).toBeTruthy();
     expect(Appearance.setColorScheme).toHaveBeenLastCalledWith("dark");
     view.rerender(<ThemeProvider preference="system"><Draft /></ThemeProvider>);
-    expect(Appearance.setColorScheme).toHaveBeenLastCalledWith(null);
+    expect(Appearance.setColorScheme).toHaveBeenLastCalledWith("unspecified");
     expect(view.getByText("light")).toBeTruthy();
     expect(view.getByTestId("draft").props.value).toBe("unsaved amount");
     expect(mounted).toHaveBeenCalledTimes(1);
