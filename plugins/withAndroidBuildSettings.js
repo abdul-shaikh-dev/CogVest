@@ -1,4 +1,4 @@
-const { withGradleProperties, withProjectBuildGradle } = require("expo/config-plugins");
+const { withAppBuildGradle, withGradleProperties } = require("expo/config-plugins");
 
 // SDK 58 turns R8 on for release builds. R8 rejects pdfbox-android (used by
 // expo-pdf-text-extract for statement imports) and can strip classes it loads
@@ -12,20 +12,16 @@ function keepReleaseMinifyOff(properties) {
 }
 
 // Gesture Handler 3 codegen paths pass Windows' 260-character limit, which the
-// SDK's ninja 1.10 cannot handle. A local build may point COGVEST_NINJA (or the
-// cogvestNinja Gradle property) at a long-path-aware ninja 1.12+. Unset, nothing changes.
+// SDK's ninja 1.10 cannot handle in the app module. A local build may point
+// COGVEST_NINJA (or the cogvestNinja Gradle property) at a long-path-aware
+// ninja 1.12+. Unset, nothing changes. It is set while the app module is
+// evaluated: a root-project hook runs after AGP has already read the DSL.
 const ninjaMarker = "// CogVest: optional long-path-aware ninja for Windows native builds.";
 const ninjaBlock = `
 ${ninjaMarker}
 def cogvestNinja = System.getenv("COGVEST_NINJA") ?: findProperty("cogvestNinja")
 if (cogvestNinja) {
-    subprojects { sub ->
-        ["com.android.application", "com.android.library"].each { id ->
-            sub.plugins.withId(id) {
-                sub.android.defaultConfig.externalNativeBuild.cmake.arguments("-DCMAKE_MAKE_PROGRAM=\${cogvestNinja}")
-            }
-        }
-    }
+    android.defaultConfig.externalNativeBuild.cmake.arguments("-DCMAKE_MAKE_PROGRAM=\${cogvestNinja}")
 }
 `;
 
@@ -39,7 +35,7 @@ function withAndroidBuildSettings(config) {
     mod.modResults = keepReleaseMinifyOff(mod.modResults);
     return mod;
   });
-  return withProjectBuildGradle(config, (mod) => {
+  return withAppBuildGradle(config, (mod) => {
     mod.modResults.contents = addOptionalNinja(mod.modResults.contents);
     return mod;
   });

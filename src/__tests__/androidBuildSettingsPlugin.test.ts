@@ -22,7 +22,7 @@ describe("Android build settings plugin", () => {
     const patched = addOptionalNinja("allprojects {\n}\n");
     expect(patched).toContain('System.getenv("COGVEST_NINJA") ?: findProperty("cogvestNinja")');
     expect(patched).toContain("if (cogvestNinja) {");
-    expect(patched).toContain('"-DCMAKE_MAKE_PROGRAM=${cogvestNinja}"');
+    expect(patched).toContain('android.defaultConfig.externalNativeBuild.cmake.arguments("-DCMAKE_MAKE_PROGRAM=${cogvestNinja}")');
     expect(addOptionalNinja(patched)).toBe(patched);
   });
 });
