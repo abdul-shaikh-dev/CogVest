@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard, KeyboardAvoidingView, Modal, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useFocusEffect, usePreventRemove } from "@react-navigation/native";
+import { useFocusEffect, usePreventRemove } from "expo-router/react-navigation";
 import type { StoreApi } from "zustand/vanilla";
 import { AppButton, AppText, IconButton, MaskedValue, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, getAdaptiveLayoutMode } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";

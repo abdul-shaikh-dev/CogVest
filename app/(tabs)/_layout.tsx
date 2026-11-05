@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { type ColorValue, StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { AppText, getAdaptiveLayoutMode } from "@/src/components/common";
 import { useTheme, createThemedStyles } from "@/src/theme";
@@ -29,7 +29,7 @@ function TabIcon({
   size,
 }: {
   routeName: string;
-  color: string;
+  color: ColorValue;
   size: number;
 }) {
   return (
@@ -44,7 +44,7 @@ function TabIcon({
   );
 }
 
-function TabLabel({ color, routeName }: { color: string; routeName: string }) {
+function TabLabel({ color, routeName }: { color: ColorValue; routeName: string }) {
   const styles = useStyles();
   return (
     <AppText

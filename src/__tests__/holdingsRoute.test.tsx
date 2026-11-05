@@ -6,7 +6,7 @@ const mockHoldingsProps = jest.fn();
 let mockFocused = false;
 let mockBlurListener: (() => void) | undefined;
 
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   useIsFocused: () => mockFocused,
 }));
 

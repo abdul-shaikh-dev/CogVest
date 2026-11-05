@@ -3,7 +3,7 @@ const mockBack = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
 const mockIsFocused = jest.fn(() => true);
 
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   useIsFocused: mockIsFocused,
 }));
 

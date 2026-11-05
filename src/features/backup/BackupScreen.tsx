@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useFocusEffect, usePreventRemove } from "@react-navigation/native";
+import { useFocusEffect, usePreventRemove } from "expo-router/react-navigation";
 
 import {
   AppButton,

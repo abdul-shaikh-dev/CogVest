@@ -1,6 +1,6 @@
 import appConfig from "../../../app.json";
 
-const { patchStartupWindow } = require("../../../plugins/withStartupWindow");
+const { patchStartupWindow, splashBackground } = require("../../../plugins/withStartupWindow");
 
 describe("Android post-splash window", () => {
   const createStyles = () => ({ resources: { style: [
@@ -16,7 +16,7 @@ describe("Android post-splash window", () => {
   it("uses the existing splash color instead of the system light window", () => {
     const styles = createStyles();
     const splash = JSON.stringify(styles.resources.style[1]);
-    const result = patchStartupWindow(styles, appConfig.expo.splash.backgroundColor);
+    const result = patchStartupWindow(styles, splashBackground(appConfig.expo));
     expect(result.resources.style[0].item).toEqual([
       { $: { name: "colorPrimary" }, _: "@color/colorPrimary" },
       { $: { name: "android:windowBackground" }, _: "#11181C" },
@@ -25,6 +25,7 @@ describe("Android post-splash window", () => {
     const once = JSON.stringify(result);
     expect(JSON.stringify(patchStartupWindow(result, "#11181C"))).toBe(once);
     expect(appConfig.expo.plugins).toContain("./plugins/withStartupWindow");
+    expect(splashBackground({ plugins: ["expo-router"] })).toBeUndefined();
   });
 
   it("fails closed if the generated theme or configured color changes", () => {

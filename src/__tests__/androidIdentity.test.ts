@@ -65,8 +65,14 @@ describe("Android app identity", () => {
 
   it("configures Android icon and splash assets", () => {
     expect(expo.icon).toBe("./assets/brand/icon.png");
-    expect(expo.splash.image).toBe("./assets/brand/splash-icon.png");
-    expect(expo.splash.backgroundColor).toBe("#11181C");
+    expect(expo.plugins).toContainEqual([
+      "expo-splash-screen",
+      {
+        image: "./assets/brand/splash-icon.png",
+        resizeMode: "contain",
+        backgroundColor: "#11181C",
+      },
+    ]);
     expect(expo.android.icon).toBe("./assets/brand/icon.png");
     expect(expo.android.adaptiveIcon.foregroundImage).toBe(
       "./assets/brand/adaptive-icon-foreground.png",

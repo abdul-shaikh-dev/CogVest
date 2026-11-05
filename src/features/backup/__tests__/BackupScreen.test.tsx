@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
 import * as ReactNative from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { usePreventRemove } from "@react-navigation/native";
+import { usePreventRemove } from "expo-router/react-navigation";
 
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   usePreventRemove: jest.fn(),
   useFocusEffect: (effect: () => void) => require("react").useEffect(effect, [effect]),
 }));
