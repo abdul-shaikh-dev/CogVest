@@ -7,9 +7,7 @@ import { AppButton } from "@/src/components/common";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
-const mockDispatch = jest.fn();
 jest.mock("expo-router/react-navigation", () => ({
-  useNavigation: () => ({ dispatch: mockDispatch }),
   usePreventRemove: jest.fn(),
   useFocusEffect: (effect: () => void) => require("react").useEffect(effect, [effect]),
 }));
@@ -155,10 +153,11 @@ describe("manual Futures screen", () => {
     fireEvent.press(screen.getByTestId("futures-keep-editing"));
     const guard = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(guard[0]).toBe(true);
-    const action = { type: "POP" };
-    act(() => guard[1]({ data: { action } } as never));
+    const repeat = jest.fn();
+    act(() => guard[1]!({ data: { action: { type: "POP" } }, repeat }));
+    expect(repeat).not.toHaveBeenCalled();
     fireEvent.press(screen.getByTestId("futures-discard"));
-    expect(mockDispatch).toHaveBeenCalledWith(action);
+    expect(repeat).toHaveBeenCalledTimes(1);
     expect(store.getState().futuresAccounts).toEqual([]);
     listener.mockRestore();
   });

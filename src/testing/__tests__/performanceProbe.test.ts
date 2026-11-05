@@ -8,8 +8,12 @@ it("reports local timer delay and cancels both timers", () => {
   const stop = startPerformanceProbe();
   jest.advanceTimersByTime(5000);
   expect(log).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(log.mock.calls[0][1])).toEqual({ samples: 100,
-    windowMs: 5000, maximumDelayMs: 0 });
+  // The 100th heartbeat and the report are due at the same instant; Jest 30's
+  // fake clock may run the report first, so that heartbeat lands in the next window.
+  const report = JSON.parse(log.mock.calls[0][1]);
+  expect(report).toEqual({ samples: expect.any(Number), windowMs: 5000, maximumDelayMs: 0 });
+  expect(report.samples).toBeGreaterThanOrEqual(99);
+  expect(report.samples).toBeLessThanOrEqual(100);
   stop();
   jest.advanceTimersByTime(5000);
   expect(log).toHaveBeenCalledTimes(1);

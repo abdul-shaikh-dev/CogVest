@@ -1,9 +1,10 @@
 import type { ReactElement, ReactNode, Ref } from "react";
 import {
+  type RefreshControlProps,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   View,
-  type RefreshControlProps,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -13,7 +14,7 @@ type ScreenContainerProps = {
   children: ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
   scroll?: boolean;
-  scrollRef?: Ref<ScrollView>;
+  scrollRef?: Ref<ScrollViewInstance>;
   testID?: string;
 };
 

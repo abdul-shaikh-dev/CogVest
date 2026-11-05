@@ -37,7 +37,8 @@ function TabIcon({
       <Ionicons
         accessible={false}
         name={tabIcons[routeName] ?? "ellipse-outline"}
-        color={color}
+        // The tab tints are theme hex strings; Ionicons' types do not accept every ColorValue.
+        color={color as string}
         size={size}
       />
     </View>

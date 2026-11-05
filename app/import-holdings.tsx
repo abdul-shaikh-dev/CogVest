@@ -51,7 +51,7 @@ async function saveCsvTemplate() {
   try {
     const directory = await Directory.pickDirectoryAsync();
     const file = directory.createFile(holdingsCsvTemplateFileName, "text/csv");
-    file.write(holdingsCsvTemplate);
+    await file.write(holdingsCsvTemplate);
     return holdingsCsvTemplateFileName;
   } catch (error) {
     const message = error instanceof Error ? error.message : "";

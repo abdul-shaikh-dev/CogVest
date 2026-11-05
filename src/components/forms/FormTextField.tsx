@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import type { KeyboardTypeOptions, ReturnKeyTypeOptions } from "react-native";
+import type { KeyboardTypeOptions, ReturnKeyTypeOptions, TextInputInstance } from "react-native";
 import { StyleSheet, TextInput, View } from "react-native";
 
 import { AppText } from "@/src/components/common";
@@ -7,7 +7,7 @@ import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 type FormTextFieldProps = {
   error?: string;
-  inputRef?: Ref<TextInput>;
+  inputRef?: Ref<TextInputInstance>;
   keyboardType?: KeyboardTypeOptions;
   label: string;
   multiline?: boolean;

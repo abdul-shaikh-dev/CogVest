@@ -1,5 +1,14 @@
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  type ScrollViewInstance,
+  View,
+  type ViewInstance,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import { AppButton, AppText, DisclosureButton, IconButton, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader } from "@/src/components/common";
@@ -81,8 +90,8 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const styles = useStyles();
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const account = state.futuresAccounts.find((item) => item.id === ACCOUNT_ID);
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
   const fieldRefs = useRef<Record<string, EntryTarget>>({});
   const registerField = (id: string, target: EntryTarget) => { fieldRefs.current[id] = target; };
   const masked = state.preferences.maskWealthValues;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, ScrollView } from "react-native";
+import { Keyboard, KeyboardAvoidingView, type ScrollViewInstance } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -51,7 +51,7 @@ type TransactionImportScreenProps = {
 export function TransactionImportScreen(props: TransactionImportScreenProps) {
   const styles = useStyles();
   const controller = useTransactionImport(props);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const sourceCardYRef = useRef<number | undefined>(undefined);
   const passwordFieldYRef = useRef<number | undefined>(undefined);
   const [statementReviewY, setStatementReviewY] = useState<number>();

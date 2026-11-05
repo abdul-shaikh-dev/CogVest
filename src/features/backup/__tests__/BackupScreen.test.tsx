@@ -73,7 +73,7 @@ describe("BackupScreen", () => {
     fireEvent.press(view.getByTestId("continue-restore-confirmation"));
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(view.getByTestId("backup-restore-preview")).toBeTruthy();
     fireEvent.press(view.getByTestId("backup-back"));
     expect(view.getByTestId("backup-restore-warning")).toBeTruthy();
@@ -92,7 +92,7 @@ describe("BackupScreen", () => {
     fireEvent.press(view.getByTestId("backup-back"));
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(onBack).not.toHaveBeenCalled();
     await act(async () => reject(new Error("Could not save backup.")));
     expect(view.getByText("Could not save backup.").props.accessibilityLiveRegion).toBe("polite");
@@ -130,7 +130,7 @@ describe("BackupScreen", () => {
     expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(true);
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back({ data: { action: { type: "GO_BACK" } } }));
+    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(onBack).not.toHaveBeenCalled();
     expect(restorePortfolioBackup).toHaveBeenCalledTimes(1);
     await act(async () => finish());

@@ -1,13 +1,13 @@
 import { createContext, useContext, useRef, useState, type ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, View, type TextInput } from "react-native";
+import { Pressable, type TextInputInstance, View, type ViewInstance } from "react-native";
 
 import { AppText, DisclosureButton } from "@/src/components/common";
 import { DateTimeField, FormTextField } from "@/src/components/forms";
 import { useTheme } from "@/src/theme";
 import { useStyles } from "./futuresStyles";
 
-export type EntryTarget = { layout: View | null; input?: TextInput | null };
+export type EntryTarget = { layout: ViewInstance | null; input?: TextInputInstance | null };
 export const EntryErrors = createContext<{ errors: Record<string, string>; register: (id: string, target: EntryTarget) => void; clear: (id: string) => void }>({ errors: {}, register: () => {}, clear: () => {} });
 export function EntryField(props: ComponentProps<typeof FormTextField>) {
   const { errors, register, clear } = useContext(EntryErrors);

@@ -36,7 +36,7 @@ async function saveCsvTemplate() {
   try {
     const directory = await Directory.pickDirectoryAsync();
     const file = directory.createFile(transactionCsvTemplateFileName, "text/csv");
-    file.write(transactionCsvTemplate);
+    await file.write(transactionCsvTemplate);
     return transactionCsvTemplateFileName;
   } catch (error) {
     if (/cancelled|canceled/iu.test(error instanceof Error ? error.message : "")) return undefined;
