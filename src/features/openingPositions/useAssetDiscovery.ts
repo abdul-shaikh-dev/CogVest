@@ -71,11 +71,13 @@ export function useAssetDiscovery({
     () => filteredSavedAssets.slice(0, visibleSavedCount),
     [filteredSavedAssets, visibleSavedCount],
   );
-  useEffect(() => {
+  const [pagedSearch, setPagedSearch] = useState({ discoveryFilter, lookupQuery });
+  if (pagedSearch.lookupQuery !== lookupQuery || pagedSearch.discoveryFilter !== discoveryFilter) {
+    setPagedSearch({ discoveryFilter, lookupQuery });
     setVisibleResultCount(20);
     setVisibleSavedCount(lookupQuery.trim() ? 20 : 6);
-  }, [lookupQuery, discoveryFilter]);
-  useEffect(() => { setLookupResults([]); }, [lookupQuery]);
+    if (pagedSearch.lookupQuery !== lookupQuery) setLookupResults([]);
+  }
 
   function loadMoreLookupResults() {
     setVisibleResultCount((count) => Math.min(count + 20, filteredLookupResults.length, 100));
@@ -99,6 +101,9 @@ export function useAssetDiscovery({
     const trimmedQuery = lookupQuery.trim();
 
     if (trimmedQuery.length === 0) {
+      // The debounced provider lookup below owns lookup status; each query change
+      // cancels the previous request and publishes the new request's status here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronises with the provider lookup.
       setLookupResults([]);
       setLookupStatus("");
       setIsLookupSearching(false);

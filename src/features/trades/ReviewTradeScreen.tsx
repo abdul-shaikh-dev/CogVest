@@ -60,8 +60,7 @@ export function ReviewTradeScreen({
   const styles = useStyles();
   const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const currentTrade = snapshot.trades.find((item) => item.id === tradeId);
-  const initialTradeRef = useRef(currentTrade);
-  const trade = initialTradeRef.current;
+  const [trade] = useState(currentTrade);
   const editableTrade = trade && isManualTrade(trade) ? trade : undefined;
   const asset = trade ? snapshot.assets.find((item) => item.id === trade.assetId) : undefined;
   const [quantity, setQuantity] = useState(() => editableTrade ? String(editableTrade.quantity) : "");

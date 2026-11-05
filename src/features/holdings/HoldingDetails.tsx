@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
 import { Modal, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -51,7 +51,7 @@ export type HoldingDetailsProps = {
 
 type HoldingDetailModalProps = Omit<HoldingDetailsProps, "item" | "recordsVisible" | "onToggleRecords" | "xirr"> & {
   closeDetail: () => void;
-  detailScrollOffset: { current: number };
+  detailScrollOffsetRef: RefObject<number>;
   isActive: boolean;
   selectedItem: HoldingReviewItem;
   selectedRecordsVisible: boolean;
@@ -66,7 +66,7 @@ export function HoldingDetailModal({
   allocationAvailable,
   assets,
   closeDetail,
-  detailScrollOffset,
+  detailScrollOffsetRef,
   isActive,
   masked: maskWealthValues,
   minimal: isMinimalMode,
@@ -98,7 +98,7 @@ export function HoldingDetailModal({
       onShow={() =>
         detailScrollRef.current?.scrollTo({
           animated: false,
-          y: detailScrollOffset.current,
+          y: detailScrollOffsetRef.current,
         })
       }
       testID="holding-detail-modal"
@@ -145,7 +145,7 @@ export function HoldingDetailModal({
         <ScrollView
           contentContainerStyle={styles.detailContent}
           onScroll={(event) => {
-            detailScrollOffset.current = event.nativeEvent.contentOffset.y;
+            detailScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
           }}
           ref={detailScrollRef}
           scrollEventThrottle={16}

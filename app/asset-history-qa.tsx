@@ -10,7 +10,7 @@ import type { Asset, BuyTrade } from "@/src/types";
 const asset: Asset = { id: "history-qa", name: "History QA", symbol: "QA", ticker: "HISTORY-QA.NS", currency: "INR", assetClass: "stock" };
 
 function EnabledHistoryQa() {
-  const started = useRef(performance.now());
+  const [started] = useState(() => performance.now());
   const reported = useRef(false);
   const [masked, setMasked] = useState(false);
   const [fixture] = useState(() => {
@@ -29,7 +29,7 @@ function EnabledHistoryQa() {
     <AssetHistoryPanel asset={asset} openingPositions={[fixture.opening]} trades={[fixture.trade]} masked={masked} minimal={false} historyCache={fixture.cache} onChartLayout={() => {
       if (!reported.current) {
         reported.current = true;
-        console.info("[asset-history-qa] readyMs", performance.now() - started.current);
+        console.info("[asset-history-qa] readyMs", performance.now() - started);
       }
     }} />
   </ScreenContainer>;

@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { startTransition, useMemo, useState, useSyncExternalStore } from "react";
 import { buildPpfExcludedChartHistory } from "@/src/domain/calculations/ppfExcludedChartHistory";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -114,14 +114,16 @@ export function useProgress({
       getDefaultCustomChartRange(chartSnapshots),
     );
 
-  useEffect(() => {
+  const [customRangeSnapshots, setCustomRangeSnapshots] = useState(chartSnapshots);
+  if (customRangeSnapshots !== chartSnapshots) {
+    setCustomRangeSnapshots(chartSnapshots);
     setPortfolioChartCustomRange((current) =>
       normalizeCustomChartRange(current, chartSnapshots),
     );
     setAssetChartCustomRange((current) =>
       normalizeCustomChartRange(current, chartSnapshots),
     );
-  }, [chartSnapshots]);
+  }
   const asOf = formatLocalCalendarDate(now);
   // Range selection must not replay the entire portfolio. These calculations
   // use calendar-day cutovers; financial records, quotes or a new day invalidate.

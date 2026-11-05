@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { spacing } from "@/src/theme";
@@ -9,10 +9,13 @@ import { SectionHeader } from "./Premium";
 
 export function useSensitiveValueReveal(maskingEnabled: boolean) {
   const [isRevealed, setIsRevealed] = useState(() => !maskingEnabled);
+  const [revealMaskingEnabled, setRevealMaskingEnabled] = useState(maskingEnabled);
 
-  useLayoutEffect(() => {
+  // Any masking change starts from the masking default again.
+  if (revealMaskingEnabled !== maskingEnabled) {
+    setRevealMaskingEnabled(maskingEnabled);
     setIsRevealed(!maskingEnabled);
-  }, [maskingEnabled]);
+  }
 
   return {
     isRevealed: !maskingEnabled || isRevealed,

@@ -88,7 +88,7 @@ export function useTransactionImport({
     store.getState,
     store.getState,
   );
-  const batchIdRef = useRef(createId("transactions-csv"));
+  const [batchId, setBatchId] = useState(() => createId("transactions-csv"));
   const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const analysisIdRef = useRef(0);
   const selectedAssetsRef = useRef(new Map<string, Asset>());
@@ -164,7 +164,7 @@ export function useTransactionImport({
     setScreenError(undefined);
     clearAnalysis();
     setFileSummaries({});
-    batchIdRef.current = createId("transactions-csv");
+    setBatchId(createId("transactions-csv"));
     if (nextFiles.length === 0) {
       setIsResolving(false);
       return;
@@ -215,7 +215,7 @@ export function useTransactionImport({
     const analysisId = ++analysisIdRef.current;
     setScreenError(undefined);
     clearAnalysis();
-    batchIdRef.current = createId("transactions-cas");
+    setBatchId(createId("transactions-cas"));
     setIsResolving(true);
     try {
       const review = await readCasStatement({
@@ -372,7 +372,7 @@ export function useTransactionImport({
 
   const currentDate = now();
   const plan = buildTransactionImportPlan({
-    batchId: batchIdRef.current,
+    batchId,
     casOpeningEvidence: sourceId === "camsKfinCasPdfV1" && casReview
       ? { coverageFrom: casReview.normalization.coverage?.from, schemes: casReview.normalization.schemes }
       : undefined,

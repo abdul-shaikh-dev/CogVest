@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 
@@ -388,7 +388,11 @@ export function TrendChart({
   const { fontScale } = useWindowDimensions();
   const [surfaceWidth, setSurfaceWidth] = useState(0);
   const [focusedSeries, setFocusedSeries] = useState<string | null>(null);
-  useEffect(() => { setFocusedSeries(null); }, [summaryOnly]);
+  const [focusSummaryOnly, setFocusSummaryOnly] = useState(summaryOnly);
+  if (focusSummaryOnly !== summaryOnly) {
+    setFocusSummaryOnly(summaryOnly);
+    setFocusedSeries(null);
+  }
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
   const visibleSeries = isPortfolioChart
     ? summaryOnly ? series.filter(item => item.label !== "Invested") : series

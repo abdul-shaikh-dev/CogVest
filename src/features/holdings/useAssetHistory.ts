@@ -27,6 +27,9 @@ export function useAssetHistory(asset: Asset, from: string, to: string, supplied
   useEffect(() => {
     let active = true;
     if (!request) {
+      // This effect reads the external price cache and starts a refresh for the same key;
+      // its state is the cache read and request status, set where that work happens.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronises with the price cache.
       setState({ key, loading: false, message: "Market history is not available for this asset. Your saved records are unchanged." });
       return;
     }

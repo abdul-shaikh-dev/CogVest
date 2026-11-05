@@ -43,8 +43,13 @@ export default function AssetSearchQaRoute() {
   const enabled = canUseVisualQaHarness({
     token: params.token,
   });
-  const storeRef = useRef<ReturnType<typeof createPortfolioStore> | null>(null);
-  const recentSearchStorageRef = useRef<ReturnType<typeof createMemoryJsonStorage> | null>(null);
+  // Built once, and only when the QA token is valid, so the blocked route stays cheap.
+  const [qaFixture] = useState(() => {
+    if (!enabled) return null;
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    seedAssetSearchQaStore(store);
+    return { store, recentSearchStorage: createMemoryJsonStorage() };
+  });
   const pendingSearchAtRef = useRef<number | null>(null);
   const pendingActionRef = useRef<{
     kind: "query" | "filter" | "saved-page" | "provider-page";
@@ -145,17 +150,10 @@ export default function AssetSearchQaRoute() {
     );
   }
 
-  if (!storeRef.current) {
-    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    seedAssetSearchQaStore(store);
-    storeRef.current = store;
-    recentSearchStorageRef.current = createMemoryJsonStorage();
-  }
-  const recentSearchStorage = recentSearchStorageRef.current;
-
-  if (!recentSearchStorage) {
+  if (!qaFixture) {
     throw new Error("Asset-search QA memory storage was not initialized.");
   }
+  const { recentSearchStorage, store: qaStore } = qaFixture;
 
   function handleRender(
     _id: string,
@@ -244,7 +242,7 @@ export default function AssetSearchQaRoute() {
       asOf: new Date().toISOString(),
     } })}
     searchAssetLookupResults={searchAssetLookupResults}
-    store={storeRef.current}
+    store={qaStore}
   />;
 
   return (
@@ -261,7 +259,7 @@ export default function AssetSearchQaRoute() {
         </View>
         <View style={styles.report} testID="asset-search-qa-report">
           <AppText variant="caption" testID="asset-search-qa-record-counts">
-            Assets: {storeRef.current.getState().assets.length}; openings: {storeRef.current.getState().openingPositions.length}
+            Assets: {qaStore.getState().assets.length}; openings: {qaStore.getState().openingPositions.length}
           </AppText>
           <AppText color="secondary" variant="caption">
             {"Render <= "}{renderTargetMs}ms; sampled lag limit {eventLoopStallThresholdMs}ms. Capture ends and exports the window. Reset starts a new one. Debug observations only.

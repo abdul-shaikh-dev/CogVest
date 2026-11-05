@@ -18,12 +18,15 @@ export default function HoldingsScreen() {
       return;
     }
 
+    // A one-shot route param is consumed into state and then cleared from the router.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consume and clear in one step.
     setStatusMessage(params.statusMessage);
     router.setParams({ statusMessage: undefined });
   }, [isFocused, params.statusMessage]);
 
   useEffect(() => {
     if (!isFocused || params.destination !== "epf") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot route param, consumed then cleared.
     setDestinationRequest({ destination: "epf" });
     router.setParams({ destination: undefined });
   }, [isFocused, params.destination]);

@@ -69,8 +69,7 @@ export function ReviewOpeningPositionScreen({
   const currentPosition = snapshot.openingPositions.find(
     (position) => position.id === openingPositionId,
   );
-  const initialPositionRef = useRef(currentPosition);
-  const initialPosition = initialPositionRef.current;
+  const [initialPosition] = useState(currentPosition);
   const asset = initialPosition
     ? snapshot.assets.find((item) => item.id === initialPosition.assetId)
     : undefined;

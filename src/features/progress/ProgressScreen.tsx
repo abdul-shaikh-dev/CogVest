@@ -89,7 +89,11 @@ export function ProgressScreen({
   const hasRunAutomationRef = useRef(false);
   const [summaryMonth, setSummaryMonth] = useState("");
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  useEffect(() => { setDetailsExpanded(false); }, [isMinimalMode]);
+  const [detailsMinimalMode, setDetailsMinimalMode] = useState(isMinimalMode);
+  if (detailsMinimalMode !== isMinimalMode) {
+    setDetailsMinimalMode(isMinimalMode);
+    setDetailsExpanded(false);
+  }
   const showDetails = !isMinimalMode || detailsExpanded;
   const selectedSummary = progress.monthlySummaries.find(item => item.snapshot.month === summaryMonth) ?? progress.latestSummary;
 

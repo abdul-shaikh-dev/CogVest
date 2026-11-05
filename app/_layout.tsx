@@ -104,7 +104,6 @@ function RootContents() {
   useEffect(() => {
     let active = true;
 
-    setFontState("loading");
     loadRequiredFonts().then(
       () => {
         if (active) setFontState("ready");
@@ -156,9 +155,10 @@ function RootContents() {
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() =>
-                    setFontLoadAttempt((attempt) => attempt + 1)
-                  }
+                  onPress={() => {
+                    setFontState("loading");
+                    setFontLoadAttempt((attempt) => attempt + 1);
+                  }}
                   style={styles.assetGateButton}
                   testID="retry-app-assets"
                 >

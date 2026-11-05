@@ -8,21 +8,21 @@ import { useTheme } from "@/src/theme";
 import { useStyles } from "./futuresStyles";
 
 export type EntryTarget = { layout: View | null; input?: TextInput | null };
-export const EntryErrors = createContext<{ errors: Record<string, string>; refs: Record<string, EntryTarget>; clear: (id: string) => void }>({ errors: {}, refs: {}, clear: () => {} });
+export const EntryErrors = createContext<{ errors: Record<string, string>; register: (id: string, target: EntryTarget) => void; clear: (id: string) => void }>({ errors: {}, register: () => {}, clear: () => {} });
 export function EntryField(props: ComponentProps<typeof FormTextField>) {
-  const { errors, refs, clear } = useContext(EntryErrors);
+  const { errors, register, clear } = useContext(EntryErrors);
   const target = useRef<EntryTarget>({ layout: null, input: null });
   return <View collapsable={false} ref={(node) => {
     target.current.layout = node;
-    if (props.testID) refs[props.testID] = target.current;
+    if (props.testID) register(props.testID, target.current);
   }}><FormTextField {...props} error={props.testID ? errors[props.testID] : undefined}
     inputRef={(node) => { target.current.input = node; }}
     onChangeText={(value) => { if (props.testID) clear(props.testID); props.onChangeText(value); }} /></View>;
 }
 export function TimeField(props: ComponentProps<typeof DateTimeField>) {
-  const { errors, refs, clear } = useContext(EntryErrors);
+  const { errors, register, clear } = useContext(EntryErrors);
   return <DateTimeField {...props} error={errors[props.testID]}
-    fieldRef={(node) => { refs[props.testID] = { layout: node }; }}
+    fieldRef={(node) => { register(props.testID, { layout: node }); }}
     onChange={(value) => { clear(props.testID); props.onChange(value); }} />;
 }
 

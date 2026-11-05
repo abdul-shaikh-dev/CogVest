@@ -167,8 +167,7 @@ export function ReviewAssetScreen({
   const { fontScale, width } = useWindowDimensions();
   const stackActions = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const currentAsset = snapshot.assets.find((asset) => asset.id === assetId);
-  const initialAssetRef = useRef(currentAsset);
-  const initialAsset = initialAssetRef.current;
+  const [initialAsset] = useState(currentAsset);
   const [name, setName] = useState(() => initialAsset?.name ?? "");
   const [symbol, setSymbol] = useState(() => initialAsset?.symbol ?? "");
   const [ticker, setTicker] = useState(() => initialAsset?.ticker ?? "");
