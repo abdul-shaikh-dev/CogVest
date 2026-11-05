@@ -19,7 +19,7 @@ describe("Android build settings plugin", () => {
   });
 
   it("adds an opt-in ninja override only once and only behind the local setting", () => {
-    const patched = addOptionalNinja("allprojects {\n}\n");
+    const patched = addOptionalNinja("android {\n}\n");
     expect(patched).toContain('System.getenv("COGVEST_NINJA") ?: findProperty("cogvestNinja")');
     expect(patched).toContain("if (cogvestNinja) {");
     expect(patched).toContain('android.defaultConfig.externalNativeBuild.cmake.arguments("-DCMAKE_MAKE_PROGRAM=${cogvestNinja}")');
