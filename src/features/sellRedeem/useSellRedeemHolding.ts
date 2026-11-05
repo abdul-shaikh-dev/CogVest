@@ -104,7 +104,7 @@ export function useSellRedeemHolding({
   const suggestedPriceAppliedRef = useRef(false);
   const isSavingRef = useRef(false);
   const savedResultRef = useRef<SaveResult | null>(null);
-  const tradeIdRef = useRef(createId("trade"));
+  const [tradeId] = useState(() => createId("trade"));
 
   const holdingsResult = useMemo(
     () => {
@@ -132,7 +132,10 @@ export function useSellRedeemHolding({
     },
     [assetId, snapshot.assets, snapshot.openingPositions, snapshot.quoteCache, snapshot.trades, now],
   );
-  const holding = holdingsResult.holdings.find((candidate) => candidate.asset.id === assetId) ?? null;
+  const holding = useMemo(
+    () => holdingsResult.holdings.find((candidate) => candidate.asset.id === assetId) ?? null,
+    [assetId, holdingsResult.holdings],
+  );
   const quoteContext = holding
     ? getHoldingQuoteContext(holding, snapshot.quoteCache[assetId], now)
     : null;
@@ -167,7 +170,7 @@ export function useSellRedeemHolding({
         return "Sale date must be after the opening balance date.";
       }
       const candidate: Trade = {
-        id: tradeIdRef.current,
+        id: tradeId,
         assetId,
         date,
         type: "sell",
@@ -193,6 +196,7 @@ export function useSellRedeemHolding({
     return undefined;
   }, [
     assetId,
+    tradeId,
     holding,
     holdingsResult.demergerAdjustments,
     holdingsResult.splitUnavailable,
@@ -322,7 +326,7 @@ export function useSellRedeemHolding({
       assetId,
       date: date.trim(),
       fees: normalizeMoney(feeValue) || undefined,
-      id: tradeIdRef.current,
+      id: tradeId,
       notes: trimmedNotes || undefined,
       pricePerUnit: normalizeUnitPrice(sellPriceValue),
       quantity: normalizeQuantity(quantityValue),

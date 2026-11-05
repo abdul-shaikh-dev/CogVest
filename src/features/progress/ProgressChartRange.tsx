@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -208,11 +208,16 @@ export function CustomMonthRangeControls({
     (month) => !startMonth || month > startMonth,
   );
 
-  useEffect(() => {
+  const [draftAppliedRange, setDraftAppliedRange] = useState(appliedRange);
+  if (
+    draftAppliedRange.startMonth !== appliedRange.startMonth ||
+    draftAppliedRange.endMonth !== appliedRange.endMonth
+  ) {
+    setDraftAppliedRange(appliedRange);
     setStartMonth(appliedRange.startMonth);
     setEndMonth(appliedRange.endMonth);
     setError(null);
-  }, [appliedRange.endMonth, appliedRange.startMonth]);
+  }
 
   function changeStartMonth(nextStartMonth: string) {
     setStartMonth(nextStartMonth);

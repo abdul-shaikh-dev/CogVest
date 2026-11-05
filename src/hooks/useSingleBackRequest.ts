@@ -1,5 +1,7 @@
 import { useCallback, useRef } from "react";
 
+import { useLatestCallback } from "./useLatestCallback";
+
 /**
  * Requests closer together than this are one Android back press. A person
  * cannot press back twice this quickly; the duplicate below arrives in tens of
@@ -17,8 +19,7 @@ export const DUPLICATE_BACK_REQUEST_MS = 300;
  * of returning from a month to the overview.
  */
 export function useSingleBackRequest(handler: () => void) {
-  const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  const latestHandler = useLatestCallback(handler);
   const lastRequestRef = useRef<number | null>(null);
 
   return useCallback(() => {
@@ -30,6 +31,6 @@ export function useSingleBackRequest(handler: () => void) {
       return;
     }
     lastRequestRef.current = requestedAt;
-    handlerRef.current();
-  }, []);
+    latestHandler();
+  }, [latestHandler]);
 }

@@ -18,6 +18,7 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
+import { useLatestCallback } from "@/src/hooks";
 import type { Asset } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -139,18 +140,16 @@ export function AddOpeningPositionForm({
     : selectedAssetId
       ? "Existing asset"
       : "";
-  const lookupSelectionRef = useRef(selectLookupResult);
-  lookupSelectionRef.current = selectLookupResult;
+  const latestSelectLookupResult = useLatestCallback(selectLookupResult);
   const selectDiscoveryResult = useCallback((result: AssetLookupResult) => {
     setIsManualEntryExpanded(false);
-    void lookupSelectionRef.current(result);
-  }, []);
-  const savedSelectionRef = useRef(selectAsset);
-  savedSelectionRef.current = selectAsset;
+    void latestSelectLookupResult(result);
+  }, [latestSelectLookupResult]);
+  const latestSelectAsset = useLatestCallback(selectAsset);
   const selectSavedResult = useCallback((asset: Asset) => {
     setIsManualEntryExpanded(false);
-    savedSelectionRef.current(asset);
-  }, []);
+    latestSelectAsset(asset);
+  }, [latestSelectAsset]);
   const savedResultsSettled = useCallback(() => onDiscoverySettled?.("saved"), [onDiscoverySettled]);
   const providerResultsSettled = useCallback(() => onDiscoverySettled?.("provider"), [onDiscoverySettled]);
   useLayoutEffect(() => {
@@ -193,10 +192,15 @@ export function AddOpeningPositionForm({
     }
   }
 
+  const [reviewDetailsPhase, setReviewDetailsPhase] = useState(currentPhase);
+  if (reviewDetailsPhase !== currentPhase) {
+    setReviewDetailsPhase(currentPhase);
+    setAreReviewDetailsExpanded(false);
+  }
+
   useEffect(() => {
     Keyboard.dismiss();
     scrollRef.current?.scrollTo({ y: 0, animated: false });
-    setAreReviewDetailsExpanded(false);
   }, [currentPhase]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the back effect below re-registers each render on purpose.

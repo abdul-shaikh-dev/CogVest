@@ -126,16 +126,10 @@ export function MonthlyHistoryPanel({
   const showValueBars = !maskWealthValues && largestYearValue > 0 &&
     overviewSummaries.every((summary) => summary.snapshot.portfolioValue >= 0);
 
-  useEffect(() => {
-    if (!years.length) {
-      setSelectedYear("");
-      return;
-    }
-
-    if (!years.includes(selectedYear)) {
-      setSelectedYear(years[0]);
-    }
-  }, [selectedYear, years]);
+  const normalizedYear = !years.length
+    ? ""
+    : years.includes(selectedYear) ? selectedYear : years[0];
+  if (normalizedYear !== selectedYear) setSelectedYear(normalizedYear);
 
   useEffect(() => {
     if (!isVisible) return;

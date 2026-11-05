@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -26,7 +26,7 @@ import {
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
-import { useProgressiveCount } from "@/src/hooks";
+import { useLatestCallback, useProgressiveCount } from "@/src/hooks";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useTheme } from "@/src/theme";
@@ -129,14 +129,17 @@ export function HoldingsScreen({
   const [activePanel, setActivePanel] = useState<HoldingsPanel>();
   const [selectedDestination, setSelectedDestination] =
     useState<HoldingsDestination>(destinationRequest?.destination ?? "market");
-  useEffect(() => {
+  const [appliedDestinationRequest, setAppliedDestinationRequest] = useState(destinationRequest);
+  if (appliedDestinationRequest !== destinationRequest) {
+    setAppliedDestinationRequest(destinationRequest);
     if (destinationRequest) setSelectedDestination(destinationRequest.destination);
-  }, [destinationRequest]);
+  }
   const scrollRef = useRef<ScrollView>(null);
-  const detailScrollOffset = useRef(0);
+  const detailScrollOffsetRef = useRef(0);
   const verticalGesture = useRef(false);
   useEffect(() => {
     if (openAddMenu) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot route param, consumed then cleared by onAddMenuOpened.
       setActivePanel("add");
       onAddMenuOpened?.();
     }
@@ -212,6 +215,8 @@ export function HoldingsScreen({
     setSelectedDestination(destination);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }
+  // PanResponder.create only stores these handlers; they read the ref on touch, never during render.
+  // eslint-disable-next-line react-hooks/refs
   const destinationGesture = PanResponder.create({
     onStartShouldSetPanResponderCapture: (_, gesture) => {
       verticalGesture.current = gesture.numberActiveTouches !== 1;
@@ -283,16 +288,15 @@ export function HoldingsScreen({
     marketReviewItems.find(
       (item) => item.holding.asset.id === selectedAssetId,
     ) ?? reviewItems.find((item) => item.holding.asset.id === selectedAssetId);
-  useEffect(() => {
-    if (selectedAssetId && !selectedItem) {
-      detailScrollOffset.current = 0;
-      setSelectedRecordsVisible(false);
-      setSelectedAssetId(undefined);
-    }
-  }, [selectedAssetId, selectedItem]);
+  // The selected holding disappeared (for example, its last record was removed).
+  // selectHolding resets detailScrollOffsetRef before any later selection.
+  if (selectedAssetId && !selectedItem) {
+    setSelectedRecordsVisible(false);
+    setSelectedAssetId(undefined);
+  }
 
   function closeDetail() {
-    detailScrollOffset.current = 0;
+    detailScrollOffsetRef.current = 0;
     setSelectedRecordsVisible(false);
     setSelectedAssetId(undefined);
   }
@@ -309,12 +313,12 @@ export function HoldingsScreen({
     return () => subscription.remove();
   }, [isActive, selectedAssetId]);
 
-  const selectHolding = useCallback((assetId: string) => {
+  const selectHolding = useLatestCallback((assetId: string) => {
     Keyboard.dismiss();
-    detailScrollOffset.current = 0;
+    detailScrollOffsetRef.current = 0;
     setSelectedRecordsVisible(false);
     setSelectedAssetId(assetId);
-  }, []);
+  });
 
   function renderHoldingRow(item: HoldingReviewItem) {
     return (
@@ -649,7 +653,7 @@ export function HoldingsScreen({
             }
             assets={assets}
             closeDetail={closeDetail}
-            detailScrollOffset={detailScrollOffset}
+            detailScrollOffsetRef={detailScrollOffsetRef}
             isActive={isActive}
             masked={maskWealthValues}
             minimal={isMinimalMode}

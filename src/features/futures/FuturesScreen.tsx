@@ -84,6 +84,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
   const scrollRef = useRef<ScrollView>(null);
   const contentRef = useRef<View>(null);
   const fieldRefs = useRef<Record<string, EntryTarget>>({});
+  const registerField = (id: string, target: EntryTarget) => { fieldRefs.current[id] = target; };
   const masked = state.preferences.maskWealthValues;
   const [openingAt, setOpeningAt] = useState(account?.openingAt ?? isoNow());
   const [openingWallet, setOpeningWallet] = useState(account?.openingWalletUsdt ?? "0");
@@ -140,16 +141,16 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
 
   const walletSnapshot = JSON.stringify([openingAt, openingWallet, openingRate, openingRateAt, openingRateSource]);
   const valuationSnapshot = JSON.stringify([valuationAt, observedWallet, walletObservedAt, walletSource, rate, rateObservedAt, rateSource, markPrices, markMargins, markSource, marksObservedAt, positionsConfirmed, eventsConfirmed, boundaryConfirmed]);
-  const walletBaseline = useRef(walletSnapshot);
-  const valuationBaseline = useRef(valuationSnapshot);
-  const eventBaseline = useRef(JSON.stringify(draft));
-  const cashBaseline = useRef(JSON.stringify(cashFunding));
-  const eventDirty = editingEvent && JSON.stringify(draft) !== eventBaseline.current;
-  const cashDirty = editingCashFunding && JSON.stringify(cashFunding) !== cashBaseline.current;
-  const dirty = (editingAccount && walletSnapshot !== walletBaseline.current) || eventDirty || cashDirty || (Boolean(account) && valuationSnapshot !== valuationBaseline.current);
+  const [walletBaseline, setWalletBaseline] = useState(walletSnapshot);
+  const [valuationBaseline, setValuationBaseline] = useState(valuationSnapshot);
+  const [eventBaseline, setEventBaseline] = useState(() => JSON.stringify(draft));
+  const [cashBaseline, setCashBaseline] = useState(() => JSON.stringify(cashFunding));
+  const eventDirty = editingEvent && JSON.stringify(draft) !== eventBaseline;
+  const cashDirty = editingCashFunding && JSON.stringify(cashFunding) !== cashBaseline;
+  const dirty = (editingAccount && walletSnapshot !== walletBaseline) || eventDirty || cashDirty || (Boolean(account) && valuationSnapshot !== valuationBaseline);
   const exit = useDraftExit(dirty, onBack);
-  const startEvent = (next: EventDraft) => { eventBaseline.current = JSON.stringify(next); setDraft(next); setEditingEvent(true); };
-  const startCash = (next: CashFundingDraft) => { cashBaseline.current = JSON.stringify(next); setCashFunding(next); setEditingCashFunding(true); };
+  const startEvent = (next: EventDraft) => { setEventBaseline(JSON.stringify(next)); setDraft(next); setEditingEvent(true); };
+  const startCash = (next: CashFundingDraft) => { setCashBaseline(JSON.stringify(next)); setCashFunding(next); setEditingCashFunding(true); };
 
   const setField = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
   const report = (cause: unknown) => {
@@ -344,7 +345,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           allOpenPositionsConfirmed: positionsConfirmed, allWalletEventsConfirmed: eventsConfirmed,
           portfolioBoundaryConfirmed: boundaryConfirmed },
       } });
-      valuationBaseline.current = valuationSnapshot;
+      setValuationBaseline(valuationSnapshot);
       setError("");
     } catch (cause) { report(cause); }
   };
@@ -369,7 +370,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
           {account && !editingAccount ? <>
             <AppText color="secondary">{displayTime(account.openingAt)}</AppText>
             <Money value={`${account.openingWalletUsdt} USDT`} masked={masked} />
-            <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { walletBaseline.current = walletSnapshot; setEditingAccount(true); }} />
+            <AppButton title="Correct starting wallet" variant="secondary" onPress={() => { setWalletBaseline(walletSnapshot); setEditingAccount(true); }} />
           </> : <>
             <EntryField label="Observed starting wallet (USDT)" keyboardType="decimal-pad" secureTextEntry={masked} value={openingWallet} onChangeText={setOpeningWallet} testID="futures-opening-wallet" />
             <TimeField label="Starting wallet time" value={openingAt} onChange={setOpeningAt} error={fieldErrors["futures-opening-at"]} testID="futures-opening-at" />
@@ -384,7 +385,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
         </PremiumCard>
   );
 
-  return <EntryErrors.Provider value={{ errors: fieldErrors, refs: fieldRefs.current, clear: clearFieldError }}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.fill}>
+  return <EntryErrors.Provider value={{ errors: fieldErrors, register: registerField, clear: clearFieldError }}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.fill}>
     <ScreenContainer scroll scrollRef={scrollRef} testID="futures-screen">
       <View ref={contentRef} collapsable={false} style={styles.content}>
         <ScreenHeader title="USDT Futures" subtitle="Manual · Binance · Cross · One-way" leading={<IconButton accessibilityLabel="Back to Settings" icon="arrow-back" onPress={exit.back} testID="futures-back" />} />

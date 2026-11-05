@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -74,7 +74,12 @@ export function DashboardScreen({
   const adaptiveLayoutMode = getAdaptiveLayoutMode(fontScale);
   const dashboard = useDashboard({ now: currentDate, refreshQuotes, store });
   const isMinimalMode = dashboard.displayMode === "minimal";
-  useEffect(() => { setShowPerformance(false); setShowCryptoBreakdown(false); }, [isMinimalMode]);
+  const [disclosureMinimalMode, setDisclosureMinimalMode] = useState(isMinimalMode);
+  if (disclosureMinimalMode !== isMinimalMode) {
+    setDisclosureMinimalMode(isMinimalMode);
+    setShowPerformance(false);
+    setShowCryptoBreakdown(false);
+  }
   const pendingFuturesCount = dashboard.futuresContributions.filter((item) => item.status === "pending").length;
   const hasCompleteValuation =
     dashboard.rollupTotals.valuationCoverage.status === "complete";

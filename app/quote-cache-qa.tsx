@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AppButton, AppText, ScreenContainer } from "@/src/components/common";
@@ -52,8 +52,15 @@ export default function QuoteCacheQaRoute() {
   const enabled = canUseVisualQaHarness({
     token: params.token,
   });
-  const storageRef = useRef<JsonStorage | null>(null);
-  const storageFailureRef = useRef<string | null>(null);
+  // Opened once, and only when the QA token is valid.
+  const [qaStorage] = useState<{ storage: JsonStorage | null; failure: string | null }>(() => {
+    if (!enabled) return { storage: null, failure: null };
+    try {
+      return { storage: createQaStorage(), failure: null };
+    } catch {
+      return { storage: null, failure: "Synthetic QA storage could not be opened on this device." };
+    }
+  });
   const [result, setResult] = useState<DailyPriceCacheBenchmarkResult | null>(
     null,
   );
@@ -70,19 +77,11 @@ export default function QuoteCacheQaRoute() {
     );
   }
 
-  if (!storageRef.current && !storageFailureRef.current) {
-    try {
-      storageRef.current = createQaStorage();
-    } catch {
-      storageFailureRef.current = "Synthetic QA storage could not be opened on this device.";
-    }
-  }
-
   function runBenchmark() {
-    const storage = storageRef.current;
+    const storage = qaStorage.storage;
 
-    if (!storage || storageFailureRef.current) {
-      setError(storageFailureRef.current ?? "Synthetic QA storage is unavailable.");
+    if (!storage || qaStorage.failure) {
+      setError(qaStorage.failure ?? "Synthetic QA storage is unavailable.");
       return;
     }
 

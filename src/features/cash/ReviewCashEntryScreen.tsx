@@ -79,8 +79,7 @@ export function ReviewCashEntryScreen({
   const styles = useStyles();
   const snapshot = usePortfolioSnapshot(store);
   const entry = snapshot.cashEntries.find((item) => item.id === entryId);
-  const initialEntryRef = useRef(entry);
-  const initialEntry = initialEntryRef.current;
+  const [initialEntry] = useState(entry);
   const [amount, setAmount] = useState(() =>
     initialEntry ? String(initialEntry.amount) : "",
   );

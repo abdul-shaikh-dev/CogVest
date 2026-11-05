@@ -89,7 +89,7 @@ export function useHoldingImport({
     store.getState,
     store.getState,
   );
-  const batchIdRef = useRef(createId("holdings-csv"));
+  const [batchId, setBatchId] = useState(() => createId("holdings-csv"));
   const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const selectionGenerationRef = useRef(0);
   const [fileName, setFileName] = useState<string>();
@@ -135,7 +135,7 @@ export function useHoldingImport({
       setFileName(file.name);
       setParseErrors([]);
       setResolutions([]);
-      batchIdRef.current = createId("holdings-csv");
+      setBatchId(createId("holdings-csv"));
       if (file.size > holdingsCsvMaxBytes || file.text.length > holdingsCsvMaxBytes) {
         setParseErrors([
           {
@@ -239,7 +239,7 @@ export function useHoldingImport({
   }
 
   const plan = buildHoldingsCsvImportPlan({
-    batchId: batchIdRef.current,
+    batchId,
     now: now(),
     resolutions,
     state: snapshot,
