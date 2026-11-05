@@ -6,6 +6,8 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { PpfAccount, PpfLedgerEntry } from "@/src/types";
 
+const backPress = { type: "hardwareBackPress", timeStamp: 0 };
+
 const now = new Date("2026-08-15T10:00:00.000Z");
 
 const account: PpfAccount = {
@@ -147,7 +149,7 @@ describe("PpfAccountScreen", () => {
   it("returns from account review to populated fields and protects dirty exit", () => {
     let hardwareBack: (() => boolean) | undefined;
     const backSpy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
-      hardwareBack = () => handler() === true;
+      hardwareBack = () => handler(backPress) === true;
       return { remove: jest.fn() };
     });
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });

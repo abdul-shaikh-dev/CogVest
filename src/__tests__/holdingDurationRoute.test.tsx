@@ -1,5 +1,8 @@
 import { render } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
+
+const backPress = { type: "hardwareBackPress", timeStamp: 0 };
+
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
@@ -25,7 +28,7 @@ it("returns to the caller, safely handles direct launch and cleans up hardware B
   mockClose();
   expect(mockBack).toHaveBeenCalledTimes(1);
   mockCanGoBack.mockReturnValue(false);
-  expect(listener.mock.calls[0][1]()).toBe(true);
+  expect(listener.mock.calls[0][1](backPress)).toBe(true);
   expect(mockReplace).toHaveBeenCalledWith("/(tabs)/holdings");
   screen.unmount();
   expect(remove).toHaveBeenCalledTimes(1);
