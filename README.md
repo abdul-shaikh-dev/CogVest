@@ -62,6 +62,18 @@ Add these folders to `PATH`:
 %USERPROFILE%\.maestro\bin
 ```
 
+Native Android builds on Windows also need a long-path-aware ninja (1.12 or
+newer) with Windows long paths enabled. The Android SDK's CMake 3.22.1 ships
+ninja 1.10.2, which fails on Gesture Handler's codegen paths. Visual Studio 2022
+Build Tools includes a suitable ninja; point the build at it:
+
+```powershell
+$env:COGVEST_NINJA = "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"
+```
+
+`cogvestNinja` in `~/.gradle/gradle.properties` works too. Even then, keep the
+checkout path short: a deep worktree path can still fail.
+
 ## Setup
 
 Install dependencies:
