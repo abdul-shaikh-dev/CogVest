@@ -36,7 +36,7 @@ app storage; there is no automatic backup or cloud recovery. Details:
 
 ## Required Tools
 
-- Node.js and npm.
+- Node.js 22.13 or newer (Expo SDK 58) and npm.
 - Git.
 - Android Studio.
 - Android SDK and Platform Tools.

@@ -15,7 +15,7 @@ export type BackupReview = {
 };
 export type PreparedRestore = { review: BackupReview };
 
-type WritableBackupFile = { write: (text: string) => void; text: () => Promise<string>; delete: () => void };
+type WritableBackupFile = { write: (text: string) => Promise<void>; text: () => Promise<string>; delete: () => void };
 type BackupRuntime = {
   store: StoreApi<PortfolioStoreState>;
   digest: (text: string) => Promise<string>;
@@ -70,7 +70,8 @@ export function createBackupService(runtime: BackupRuntime) {
       }
       const filename = `CogVest-backup-${now.toISOString().slice(0, 10)}-${runtime.uniqueId()}.json`;
       file = directory.createFile(filename, "application/json");
-      file.write(contents);
+      // SDK 58 writes asynchronously; verify and report only after the write settles.
+      await file.write(contents);
       if (await file.text() !== contents) throw new Error("Backup file verification failed.");
       assertActive(signal, epoch);
       writeCompleted = true;

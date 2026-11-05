@@ -3,9 +3,9 @@ import {
   BackHandler,
   Keyboard,
   KeyboardAvoidingView,
+  type ScrollViewInstance,
   useWindowDimensions,
   View,
-  type ScrollView,
 } from "react-native";
 
 import {
@@ -125,7 +125,7 @@ export function AddOpeningPositionForm({
     useState(false);
   const [arePositionOptionsExpanded, setArePositionOptionsExpanded] = useState(false);
   const [areReviewDetailsExpanded, setAreReviewDetailsExpanded] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const showPositionOptions = arePositionOptionsExpanded || Boolean(
     errors.conviction || errors.intendedHoldDays,
   );

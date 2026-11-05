@@ -1,5 +1,5 @@
 import { useRef, type RefObject } from "react";
-import { Modal, ScrollView, View } from "react-native";
+import { Modal, ScrollView, type ScrollViewInstance, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -89,7 +89,7 @@ export function HoldingDetailModal({
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const isReducedMotionEnabled = useReducedMotionPreference();
-  const detailScrollRef = useRef<ScrollView>(null);
+  const detailScrollRef = useRef<ScrollViewInstance>(null);
   return (
     <Modal
       animationType={isReducedMotionEnabled ? "none" : "fade"}

@@ -6,10 +6,10 @@ import {
   PanResponder,
   Pressable,
   RefreshControl,
-  ScrollView,
+  type ScrollViewInstance,
   TextInput,
-  View,
   useWindowDimensions,
+  View,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -134,7 +134,7 @@ export function HoldingsScreen({
     setAppliedDestinationRequest(destinationRequest);
     if (destinationRequest) setSelectedDestination(destinationRequest.destination);
   }
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const detailScrollOffsetRef = useRef(0);
   const verticalGesture = useRef(false);
   useEffect(() => {
@@ -346,7 +346,9 @@ export function HoldingsScreen({
           <RefreshControl
             refreshing={isRefreshing}
             tintColor={colors.primary}
-            onRefresh={() => refresh()}
+            onRefresh={async () => {
+              await refresh();
+            }}
           />
         ) : undefined
       }

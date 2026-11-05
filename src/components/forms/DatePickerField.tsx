@@ -3,7 +3,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import type { Ref } from "react";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 
 import { AppText } from "@/src/components/common";
 import {
@@ -14,7 +14,7 @@ import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 
 type DatePickerFieldProps = {
   error?: string;
-  fieldRef?: Ref<View>;
+  fieldRef?: Ref<ViewInstance>;
   label: string;
   maximumDate?: Date;
   onChange: (value: string) => void;

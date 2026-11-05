@@ -1,13 +1,13 @@
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useState, type Ref } from "react";
-import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 import { AppButton, AppText, DisclosureButton } from "@/src/components/common";
 import { futuresEntryDate, futuresTimeZone, replaceFuturesTimePart } from "@/src/domain/futuresEntry";
 import { radii, spacing, createThemedStyles } from "@/src/theme";
 import { FormTextField } from "./FormTextField";
 
 type Props = { value: string; label: string; onChange: (value: string) => void; testID: string;
-  error?: string; suggestedAt?: string; suggestedLabel?: string; now?: Date; fieldRef?: Ref<View> };
+  error?: string; suggestedAt?: string; suggestedLabel?: string; now?: Date; fieldRef?: Ref<ViewInstance> };
 
 export function DateTimeField({ value, label, onChange, testID, error, suggestedAt, suggestedLabel = "Use event time", now = new Date(), fieldRef }: Props) {
   const styles = useStyles();

@@ -5,8 +5,10 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   View,
+  type ViewInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -103,10 +105,10 @@ export function MonthlyHistoryPanel({
   const [isVisible, setIsVisible] = useState(false);
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const overviewScrollOffsetRef = useRef(0);
   const isRestoringOverviewRef = useRef(false);
-  const rowRefs = useRef<Record<string, View | null>>({});
+  const rowRefs = useRef<Record<string, ViewInstance | null>>({});
   const originMonthRef = useRef<string | null>(null);
 
   const summariesByMonth = new Map(

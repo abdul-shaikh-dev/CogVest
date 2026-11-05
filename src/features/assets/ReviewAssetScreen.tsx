@@ -8,6 +8,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { StoreApi } from "zustand/vanilla";
@@ -180,8 +181,8 @@ export function ReviewAssetScreen({
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const deleteReviewButtonRef = useRef<View>(null);
-  const keepAssetButtonRef = useRef<View>(null);
+  const deleteReviewButtonRef = useRef<ViewInstance>(null);
+  const keepAssetButtonRef = useRef<ViewInstance>(null);
   const actionInFlightRef = useRef(false);
 
   useEffect(() => {

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard } from "react-native";
-import { useFocusEffect, useNavigation, usePreventRemove } from "expo-router/react-navigation";
+import { useFocusEffect, usePreventRemove } from "expo-router/react-navigation";
 
 export function useDraftExit(dirty: boolean, onBack: () => void) {
-  const navigation = useNavigation();
   const [prompt, setPrompt] = useState(false);
   const [exitAllowed, setExitAllowed] = useState(false);
   const pending = useRef<{ run: () => void; leave: boolean } | undefined>(undefined);
@@ -18,7 +17,8 @@ export function useDraftExit(dirty: boolean, onBack: () => void) {
     } else run();
   }, [dirty]);
   const back = useCallback(() => request(onBack, true), [onBack, request]);
-  usePreventRemove(dirty && !exitAllowed, ({ data }) => request(() => navigation.dispatch(data.action), true));
+  // repeat() runs the blocked action once exitAllowed has turned prevention off.
+  usePreventRemove(dirty && !exitAllowed, ({ repeat }) => request(repeat, true));
   useFocusEffect(useCallback(() => {
     const listener = BackHandler.addEventListener("hardwareBackPress", () => { back(); return true; });
     return () => listener.remove();

@@ -463,7 +463,11 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    await waitFor(() => expect(getAllByRole("button", { name: /^Use Saved Asset/u })).toHaveLength(6));
+    // Saved rows render in batches; run the batch timer directly instead of polling with waitFor.
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(getAllByRole("button", { name: /^Use Saved Asset/u })).toHaveLength(6);
 
     fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
     await act(async () => {

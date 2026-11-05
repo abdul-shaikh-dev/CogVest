@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { BackHandler, KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
+import {
+  BackHandler,
+  KeyboardAvoidingView,
+  StyleSheet,
+  type TextInputInstance,
+  View,
+  type ViewInstance,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -121,7 +128,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
   const [review, setReview] = useState<{ plan: EpfEntryPlan; commandId: string; revision: string }>();
   const [confirmExit, setConfirmExit] = useState(false);
   const [ids] = useState(() => ({ event: createId("epf-entry"), cash: createId("cash") }));
-  const inputRefs = useRef<Partial<Record<EpfEntryField, TextInput | View | null>>>({});
+  const inputRefs = useRef<Partial<Record<EpfEntryField, TextInputInstance | ViewInstance | null>>>({});
   const isDirty = JSON.stringify(draft) !== JSON.stringify(initial);
 
   function requestBack() {

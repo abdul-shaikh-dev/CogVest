@@ -3,11 +3,12 @@ import {
   BackHandler,
   KeyboardAvoidingView,
   Linking,
-  ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
-  TextInput,
+  type TextInputInstance,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -415,8 +416,8 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
   const [review, setReview] = useState<{ account: EpfAccount; commandId: string; revision: string }>();
   const [confirmExit, setConfirmExit] = useState(false);
   const [newId] = useState(() => createId("epf"));
-  const scrollRef = useRef<ScrollView>(null);
-  const inputRefs = useRef<Partial<Record<EpfAccountField, TextInput | View | null>>>({});
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const inputRefs = useRef<Partial<Record<EpfAccountField, TextInputInstance | ViewInstance | null>>>({});
   const isDirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const total = draftTotal(draft);
 

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { BackHandler, KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
+import {
+  BackHandler,
+  KeyboardAvoidingView,
+  StyleSheet,
+  type TextInputInstance,
+  View,
+  type ViewInstance,
+} from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -58,7 +65,7 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
   const [review, setReview] = useState<{ update: EpfBalanceUpdate; commandId: string; revision: string }>();
   const [confirmExit, setConfirmExit] = useState(false);
   const [eventId] = useState(() => createId("epf-balance"));
-  const inputRefs = useRef<Partial<Record<Field, TextInput | View | null>>>({});
+  const inputRefs = useRef<Partial<Record<Field, TextInputInstance | ViewInstance | null>>>({});
   const isDirty = draft.employee !== "" || draft.employer !== "" || historyComplete;
 
   function requestBack() {

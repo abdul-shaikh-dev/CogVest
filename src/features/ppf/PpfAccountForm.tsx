@@ -4,9 +4,10 @@ import {
   BackHandler,
   findNodeHandle,
   KeyboardAvoidingView,
-  ScrollView,
-  TextInput,
+  type ScrollViewInstance,
+  type TextInputInstance,
   View,
+  type ViewInstance,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -96,9 +97,9 @@ export function PpfAccountForm({
   const [error, setError] = useState("");
   const [confirmExit, setConfirmExit] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<PpfAccountField, string>>>({});
-  const scrollRef = useRef<ScrollView>(null);
-  const inputRefs = useRef<Partial<Record<PpfAccountField, TextInput | null>>>({});
-  const controlRefs = useRef<Partial<Record<PpfAccountField, View | null>>>({});
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const inputRefs = useRef<Partial<Record<PpfAccountField, TextInputInstance | null>>>({});
+  const controlRefs = useRef<Partial<Record<PpfAccountField, ViewInstance | null>>>({});
   const sectionY = useRef<Partial<Record<PpfFormSection, number>>>({});
   const fieldLayout = useRef<Partial<Record<PpfAccountField, { section: PpfFormSection; y: number }>>>({});
 

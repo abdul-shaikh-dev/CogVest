@@ -15,7 +15,7 @@ function harness() {
   const store = createPortfolioStore({ storage, now });
   store.getState().addCashEntry({ id: "cash", type: "addition", purpose: "capitalContribution", label: "Synthetic cash", date: "2026-01-01", amount: 100 });
   let written = "";
-  const file = { write: jest.fn((text: string) => { written = text; }), text: jest.fn(async () => written), delete: jest.fn() };
+  const file = { write: jest.fn(async (text: string) => { written = text; }), text: jest.fn(async () => written), delete: jest.fn() };
   const runtime = {
     store, digest, now, appVersion: "1.0.1", uniqueId: () => "unique",
     selectFile: jest.fn(async (): Promise<{ size: number; text: () => Promise<string> } | undefined> => ({ size: 1000, text: file.text })),
@@ -34,7 +34,7 @@ describe("backup file service", () => {
           source: "trustStatement", recordedAt: "2026-01-02T00:00:00Z" }, historyCompleteThrough: null },
     } }, store.getState().getBackupRevision());
     const saved = store.getState().captureBackup().payload;
-    file.write(await createPortfolioBackup(saved, meta, digest));
+    await file.write(await createPortfolioBackup(saved, meta, digest));
     store.getState().applyEpfCommand({ commandId: "epf-delete", reason: "Remove test account", change: { type: "accountRemove", id: "epf" } }, store.getState().getBackupRevision());
     const before = store.getState();
     const prepared = (await service.selectPortfolioBackup())!;
@@ -66,7 +66,7 @@ describe("backup file service", () => {
   it("previews, preserves current data before confirmation, then replaces exactly once", async () => {
     const { service, store, file, runtime } = harness();
     const exported = store.getState().captureBackup();
-    file.write(await createPortfolioBackup(exported.payload, meta, digest));
+    await file.write(await createPortfolioBackup(exported.payload, meta, digest));
     store.getState().addCashEntry({ id: "extra", type: "addition", purpose: "capitalContribution", label: "Other", date: "2026-01-02", amount: 200 });
     const prepared = (await service.selectPortfolioBackup())!;
     expect(prepared.review.counts.find((count) => count.label === "Cash entries")).toEqual({ label: "Cash entries", current: 2, backup: 1 });
@@ -81,7 +81,7 @@ describe("backup file service", () => {
 
   it("does not trust a forged review token or accept changes after preview", async () => {
     const { service, store, file } = harness();
-    file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
+    await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
     const prepared = (await service.selectPortfolioBackup())!;
     await expect(service.restorePortfolioBackup({ ...prepared })).rejects.toThrow("Select the backup again");
     store.getState().updatePreferences({ displayMode: "minimal" });
@@ -92,7 +92,7 @@ describe("backup file service", () => {
   it("can replace a destination that cannot itself be exported", async () => {
     const { service, store, file } = harness();
     const original = store.getState().captureBackup().payload;
-    file.write(await createPortfolioBackup(original, meta, digest));
+    await file.write(await createPortfolioBackup(original, meta, digest));
     store.setState({ cashEntries: [...store.getState().cashEntries, {
       id: "inconsistent", type: "addition", purpose: "saleProceeds", linkedTradeId: "missing",
       label: "Inconsistent legacy entry", date: "2026-01-02", amount: 200,
@@ -147,9 +147,34 @@ describe("backup file service", () => {
 
   it("reports incomplete-file cleanup failure", async () => {
     const { service, file } = harness();
-    file.write.mockImplementation(() => { throw new Error("Full"); });
+    file.write.mockRejectedValue(new Error("Full"));
     file.delete.mockImplementation(() => { throw new Error("Access revoked"); });
     await expect(service.exportPortfolioBackup()).rejects.toThrow("Remove the incomplete new backup file");
+  });
+
+  it("verifies the file only after an asynchronous write settles", async () => {
+    const { service, file } = harness();
+    const write = file.write.getMockImplementation()!;
+    let finish!: () => void;
+    file.write.mockImplementation((text: string) => new Promise<void>((resolve) => {
+      finish = () => { void write(text).then(resolve); };
+    }));
+    const exported = service.exportPortfolioBackup();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(file.write).toHaveBeenCalledTimes(1);
+    expect(file.text).not.toHaveBeenCalled();
+    finish();
+    expect(await exported).toBe("CogVest-backup-2026-09-10-unique.json");
+    expect(file.text).toHaveBeenCalledTimes(1);
+    expect(file.delete).not.toHaveBeenCalled();
+  });
+
+  it("deletes the new file and reports failure when the asynchronous write rejects", async () => {
+    const { service, file } = harness();
+    file.write.mockRejectedValue(new Error("No space left on device"));
+    await expect(service.exportPortfolioBackup()).rejects.toThrow("Backup could not be saved");
+    expect(file.text).not.toHaveBeenCalled();
+    expect(file.delete).toHaveBeenCalledTimes(1);
   });
 
   it("removes the newly written file if canceled while readback is pending", async () => {
@@ -176,7 +201,7 @@ describe("backup file service", () => {
 
   it("a canceled confirmation cannot mutate current data", async () => {
     const { service, store, file } = harness();
-    file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
+    await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
     const prepared = (await service.selectPortfolioBackup())!;
     const controller = new AbortController();
     controller.abort();

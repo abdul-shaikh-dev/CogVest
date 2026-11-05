@@ -5,11 +5,12 @@ import {
   findNodeHandle,
   KeyboardAvoidingView,
   Pressable,
-  ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
-  TextInput,
+  type TextInputInstance,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -85,10 +86,10 @@ export function PpfEntryScreen({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<EntryField, string>>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const amountRef = useRef<TextInput>(null);
-  const dateRef = useRef<View>(null);
-  const reasonRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const amountRef = useRef<TextInputInstance>(null);
+  const dateRef = useRef<ViewInstance>(null);
+  const reasonRef = useRef<TextInputInstance>(null);
   const fieldY = useRef<Partial<Record<EntryField, number>>>({});
   const { isRevealed, reveal } = useSensitiveValueReveal(
     snapshot.preferences.maskWealthValues,

@@ -1,10 +1,10 @@
 import type { ComponentProps, Ref } from "react";
 import {
   Pressable,
-  StyleSheet,
   type PressableProps,
   type StyleProp,
-  type View,
+  StyleSheet,
+  type ViewInstance,
   type ViewStyle,
 } from "react-native";
 
@@ -20,7 +20,7 @@ import {
 type ButtonVariant = "destructive" | "primary" | "secondary" | "ghost";
 
 type AppButtonProps = Omit<PressableProps, "children" | "style"> & {
-  buttonRef?: Ref<View>;
+  buttonRef?: Ref<ViewInstance>;
   style?: StyleProp<ViewStyle>;
   textColor?: ComponentProps<typeof AppText>["color"];
   title: string;
