@@ -10,11 +10,6 @@
     "icon": "./assets/brand/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "cogvest",
-    "splash": {
-      "image": "./assets/brand/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#11181C"
-    },
     "android": {
       "package": "com.abdulshaikh.cogvest",
       "versionCode": 31,
@@ -36,8 +31,17 @@
       "./plugins/withLeastPrivilegeAndroidPermissions",
       "./plugins/withBoundedDocumentRead",
       "./plugins/withModalAppearance",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#11181C"
+        }
+      ],
       "./plugins/withStartupWindow",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-status-bar"
     ],
     "extra": {
       "router": {},

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard } from "react-native";
-import { useFocusEffect, useNavigation, usePreventRemove } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, usePreventRemove } from "expo-router/react-navigation";
 
 export function useDraftExit(dirty: boolean, onBack: () => void) {
   const navigation = useNavigation();

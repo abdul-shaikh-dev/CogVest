@@ -1,12 +1,12 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { usePreventRemove } from "@react-navigation/native";
+import { usePreventRemove } from "expo-router/react-navigation";
 import { RecordPurchaseScreen } from "../RecordPurchaseScreen";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
 import type { Asset } from "@/src/types";
 import { mapYahooQuoteToLookupResult } from "@/src/services/assetLookup";
 
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   usePreventRemove: jest.fn(),
   useFocusEffect: (effect: () => void) => require("react").useEffect(effect, [effect]),
 }));

@@ -13,6 +13,13 @@ module.exports = defineConfig([
       "@typescript-eslint/array-type": "off",
       // Apostrophes in JSX copy are intended; still catch stray > and }.
       "react/no-unescaped-entities": ["error", { forbid: [">", "}"] }],
+      // React Compiler rules new in eslint-config-expo 56. They flag existing ref
+      // and effect patterns, not the SDK upgrade; re-enable them in their own change.
+      "react-hooks/immutability": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
     },
   },
   {

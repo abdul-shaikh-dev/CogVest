@@ -12,8 +12,17 @@ function patchStartupWindow(styles, background) {
   return styles;
 }
 
+// SDK 56 configures the splash only through the expo-splash-screen plugin entry.
+function splashBackground(config) {
+  const entry = (config.plugins ?? []).find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen",
+  );
+  return entry?.[1]?.backgroundColor;
+}
+
 module.exports = (config) => withAndroidStyles(config, (mod) => {
-  mod.modResults = patchStartupWindow(mod.modResults, config.splash?.backgroundColor);
+  mod.modResults = patchStartupWindow(mod.modResults, splashBackground(config));
   return mod;
 });
 module.exports.patchStartupWindow = patchStartupWindow;
+module.exports.splashBackground = splashBackground;

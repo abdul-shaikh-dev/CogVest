@@ -1,6 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
-import { usePreventRemove } from "@react-navigation/native";
+import { usePreventRemove } from "expo-router/react-navigation";
 
 import { FuturesScreen } from "@/src/features/futures/FuturesScreen";
 import { AppButton } from "@/src/components/common";
@@ -8,7 +8,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
 const mockDispatch = jest.fn();
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   useNavigation: () => ({ dispatch: mockDispatch }),
   usePreventRemove: jest.fn(),
   useFocusEffect: (effect: () => void) => require("react").useEffect(effect, [effect]),
