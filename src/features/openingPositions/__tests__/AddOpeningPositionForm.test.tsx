@@ -19,6 +19,8 @@ import {
 } from "@/src/testing/assetSearchFixture";
 import { saveRecentAssetSearch } from "../recentAssetSearches";
 
+const backPress = { type: "hardwareBackPress", timeStamp: 0 };
+
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
   NotificationFeedbackType: {
@@ -286,7 +288,7 @@ describe("AddOpeningPositionForm", () => {
       const onCancel = jest.fn();
       let hardwareBack: (() => boolean | null | undefined) | undefined;
       const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
-        hardwareBack = handler;
+        hardwareBack = () => handler(backPress);
         return { remove: jest.fn() };
       });
       const ui = render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
@@ -1072,7 +1074,7 @@ describe("AddOpeningPositionForm", () => {
     const backHandlerSpy = jest
       .spyOn(BackHandler, "addEventListener")
       .mockImplementation((_event, handler) => {
-        hardwareBack = handler;
+        hardwareBack = () => handler(backPress);
         return { remove: jest.fn() };
       });
     const { getByLabelText, getByTestId, getByText } = render(
@@ -1294,7 +1296,7 @@ describe("AddOpeningPositionForm", () => {
     const onCancel = jest.fn();
     let hardwareBack: (() => boolean | null | undefined) | undefined;
     const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
-      hardwareBack = handler;
+      hardwareBack = () => handler(backPress);
       return { remove: jest.fn() };
     });
     let finishHaptics: (() => void) | undefined;

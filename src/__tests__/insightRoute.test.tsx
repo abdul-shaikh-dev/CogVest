@@ -1,6 +1,8 @@
 import { render } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
 
+const backPress = { type: "hardwareBackPress", timeStamp: 0 };
+
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
@@ -43,7 +45,7 @@ describe("Insight route", () => {
       .mockReturnValue({ remove });
     const screen = render(<InsightRoute />);
     expect(listener.mock.calls[0][0]).toBe("hardwareBackPress");
-    expect(listener.mock.calls[0][1]()).toBe(true);
+    expect(listener.mock.calls[0][1](backPress)).toBe(true);
     expect(mockBack).toHaveBeenCalledTimes(1);
     screen.unmount();
     expect(remove).toHaveBeenCalledTimes(1);
