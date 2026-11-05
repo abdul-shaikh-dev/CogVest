@@ -4,7 +4,10 @@ import { Appearance, AppState, type ColorSchemeName } from "react-native";
 import type { AppearancePreference } from "@/src/types/preferences";
 import { darkColors, lightColors, type ThemeColors } from "./palettes";
 
-export function resolveAppearance(preference: AppearancePreference, system: ColorSchemeName) {
+export function resolveAppearance(
+  preference: AppearancePreference,
+  system: ColorSchemeName | null | undefined,
+) {
   return preference === "system" ? (system === "light" ? "light" : "dark") : preference;
 }
 
@@ -26,7 +29,8 @@ export function ThemeProvider({ preference, children }: {
       if (state === "active") refresh();
     });
     // Also theme native dialogs. Android handles uiMode without recreating React navigation.
-    Appearance.setColorScheme(preference === "system" ? null : preference);
+    // React Native 0.83 follows the system with "unspecified" instead of null.
+    Appearance.setColorScheme(preference === "system" ? "unspecified" : preference);
     refresh();
     return () => { appearance.remove(); appState.remove(); };
   }, [preference]);
