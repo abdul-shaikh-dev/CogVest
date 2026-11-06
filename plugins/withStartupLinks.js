@@ -53,7 +53,7 @@ function patchStartupLinks(source) {
       source.slice(end + endMarker.length);
   }
   const anchor = "class MainActivity : ReactActivity() {";
-  if (!source.includes(anchor) || /override fun onNewIntent\(/.test(source)) {
+  if (!source.includes(anchor) || /override fun (onNewIntent|onPostCreate)\(|companion object/.test(source)) {
     throw new Error("MainActivity lifecycle changed; review startup link integration.");
   }
   return source.replace(anchor, `${anchor}\n${implementation}`);
