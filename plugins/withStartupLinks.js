@@ -1,34 +1,46 @@
 const { withMainActivity } = require("expo/config-plugins");
 
 // React Native drops a link that reaches a running app before its React
-// context exists ("Tried to access onNewIntent while context is not ready").
-// Hold that one intent and hand it to React once the context is ready; the
-// JS entry captures it until the router can open it. Nothing is stored after
+// instance is ready: with no context it raises a soft exception, and while the
+// instance is still being created the event module is missing. Hold the latest
+// such intent and hand it to React once the instance listeners run; the JS
+// entry captures it until the router can open it. Nothing is kept after
 // delivery, so a recreated Activity does not replay an old link.
-const marker = "// CogVest: hand early links to React once its context is ready.";
+//
+// Readiness is process-wide: the listener is registered in onPostCreate, which
+// runs on the UI thread before React can run its instance listeners there.
+const marker = "// CogVest: hand early links to React once its instance is ready.";
 const endMarker = "// End CogVest startup links.";
 const implementation = `
   ${marker}
-  private var pendingStartupLink: android.content.Intent? = null
+  override fun onPostCreate(savedInstanceState: android.os.Bundle?) {
+    super.onPostCreate(savedInstanceState)
+    if (reactInstanceReady || listeningForReactInstance) return
+    val host = (application as com.facebook.react.ReactApplication).reactHost ?: return
+    listeningForReactInstance = true
+    host.addReactInstanceEventListener(object : com.facebook.react.ReactInstanceEventListener {
+      override fun onReactContextInitialized(context: com.facebook.react.bridge.ReactContext) {
+        host.removeReactInstanceEventListener(this)
+        reactInstanceReady = true
+        val pending = pendingStartupLink ?: return
+        pendingStartupLink = null
+        host.onNewIntent(pending)
+      }
+    })
+  }
 
   override fun onNewIntent(intent: android.content.Intent) {
-    val host = (application as com.facebook.react.ReactApplication).reactHost
-    if (host != null && host.currentReactContext == null && intent.data != null) {
-      val waiting = pendingStartupLink != null
+    if (!reactInstanceReady && listeningForReactInstance && intent.data != null) {
       pendingStartupLink = intent
-      if (!waiting) {
-        host.addReactInstanceEventListener(object : com.facebook.react.ReactInstanceEventListener {
-          override fun onReactContextInitialized(context: com.facebook.react.bridge.ReactContext) {
-            host.removeReactInstanceEventListener(this)
-            val pending = pendingStartupLink ?: return
-            pendingStartupLink = null
-            host.onNewIntent(pending)
-          }
-        })
-      }
       return
     }
     super.onNewIntent(intent)
+  }
+
+  private companion object {
+    @Volatile private var reactInstanceReady = false
+    @Volatile private var listeningForReactInstance = false
+    @Volatile private var pendingStartupLink: android.content.Intent? = null
   }
   ${endMarker}
 `;

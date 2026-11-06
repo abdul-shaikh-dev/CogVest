@@ -15,13 +15,14 @@ describe("startup links plugin", () => {
     expect(require("../../app.json").expo.plugins).toContain("./plugins/withStartupLinks");
   });
 
-  it("holds a link only while the React context is missing and hands it over once", () => {
+  it("holds a link only until the React instance is ready and hands it over once", () => {
     const patched = patchStartupLinks(generatedMainActivity);
 
-    expect(patched).toContain("override fun onNewIntent(intent: android.content.Intent)");
-    expect(patched).toContain("host.currentReactContext == null && intent.data != null");
-    expect(patched).toContain("host.removeReactInstanceEventListener(this)");
-    expect(patched).toContain("pendingStartupLink = null\n            host.onNewIntent(pending)");
+    expect(patched).toContain("override fun onPostCreate(savedInstanceState: android.os.Bundle?)");
+    expect(patched).toContain("if (reactInstanceReady || listeningForReactInstance) return");
+    expect(patched).toContain("host.removeReactInstanceEventListener(this)\n        reactInstanceReady = true");
+    expect(patched).toContain("pendingStartupLink = null\n        host.onNewIntent(pending)");
+    expect(patched).toContain("if (!reactInstanceReady && listeningForReactInstance && intent.data != null)");
     // Every other link takes React Native's normal path.
     expect(patched).toContain("super.onNewIntent(intent)");
   });
@@ -40,6 +41,10 @@ describe("startup links plugin", () => {
     expect(() => patchStartupLinks(generatedMainActivity.replace(
       "override fun getMainComponentName",
       "override fun onNewIntent(intent: android.content.Intent) {}\n  override fun getMainComponentName",
+    ))).toThrow("MainActivity lifecycle changed");
+    expect(() => patchStartupLinks(generatedMainActivity.replace(
+      "override fun getMainComponentName",
+      "companion object {}\n  override fun getMainComponentName",
     ))).toThrow("MainActivity lifecycle changed");
   });
 });
