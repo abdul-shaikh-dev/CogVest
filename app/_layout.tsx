@@ -28,14 +28,18 @@ function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
 }
 
 // Opens a link that reached the app before the navigator could handle it.
+// It waits until the launch route ("/") has redirected to the Dashboard, so
+// that redirect cannot replace the linked screen.
 function StartupLinkReplay() {
   const rootKey = useRootNavigationState()?.key;
+  const pathname = usePathname();
+  const launchSettled = Boolean(rootKey) && pathname !== "/";
 
   useEffect(() => {
-    if (!rootKey) return;
+    if (!launchSettled) return;
     const path = takeStartupLinkPath();
     if (path) router.navigate(path as Href);
-  }, [rootKey]);
+  }, [launchSettled]);
 
   return null;
 }

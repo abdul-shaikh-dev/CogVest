@@ -113,6 +113,22 @@ describe("RootLayout storage recovery boundary", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it("keeps a startup link until the launch route has redirected", async () => {
+    mockPathname = "/";
+    mockTakeStartupLinkPath.mockReturnValue("/settings");
+
+    const { getByTestId, rerender } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
+
+    mockPathname = "/dashboard";
+    rerender(<RootLayout />);
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/settings"));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
   it("does not open a startup link while storage recovery blocks routes", async () => {
     mockRecoveryState = { incidents: [{ displayName: "Portfolio records", preserved: true }] };
     mockTakeStartupLinkPath.mockReturnValue("/settings");
