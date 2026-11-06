@@ -35,6 +35,18 @@ appId: ${APP_ID}
     direction: DOWN
 - doubleTapOn:
     id: "save-cash-entry-button"
+# The first tap saves and returns to Cash. When that return is fast, the
+# second tap lands on the saved entry and opens its review; go back so the
+# single-save checks below run on the Cash list.
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "review-cash-entry-screen"
+    commands:
+      - back
+- assertVisible:
+    id: "cash-screen"
 - assertVisible: "Broker cash"
 - assertVisible: "+₹1,000.00"
 - assertNotVisible: "₹2,000.00"

@@ -16,8 +16,21 @@ jest.mock("expo-router", () => {
     React.createElement(View, { testID: "app-stack" }, children);
   Stack.Screen = () => null;
 
-  return { Stack, usePathname: () => mockPathname };
+  return {
+    Stack,
+    router: { navigate: (path: string) => mockNavigate(path) },
+    usePathname: () => mockPathname,
+    useRootNavigationState: () => mockRootState,
+  };
 });
+
+const mockNavigate = jest.fn();
+const mockTakeStartupLinkPath = jest.fn<string | undefined, []>();
+let mockRootState: { key: string } | undefined = { key: "root" };
+
+jest.mock("@/src/services/linking", () => ({
+  takeStartupLinkPath: () => mockTakeStartupLinkPath(),
+}));
 
 jest.mock("react-native-gesture-handler", () => {
   const React = require("react");
@@ -65,6 +78,68 @@ describe("RootLayout storage recovery boundary", () => {
     Ionicons.loadFont.mockResolvedValue(undefined);
     mockRecoveryState = undefined;
     mockPathname = "/dashboard";
+    mockRootState = { key: "root" };
+    mockTakeStartupLinkPath.mockReturnValue(undefined);
+  });
+
+  it("opens a link that arrived before the navigator mounted", async () => {
+    mockTakeStartupLinkPath.mockReturnValue("/settings?section=privacy");
+
+    const { getByTestId } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/settings?section=privacy"),
+    );
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not navigate when no startup link arrived", async () => {
+    const { getByTestId } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(mockTakeStartupLinkPath).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a startup link until the root navigator is ready", async () => {
+    mockRootState = undefined;
+    mockTakeStartupLinkPath.mockReturnValue("/settings");
+
+    const { getByTestId } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a startup link until the launch route has redirected", async () => {
+    mockPathname = "/";
+    mockTakeStartupLinkPath.mockReturnValue("/settings");
+
+    const { getByTestId, rerender } = render(<RootLayout />);
+
+    await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+    expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
+
+    mockPathname = "/dashboard";
+    rerender(<RootLayout />);
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/settings"));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open a startup link while storage recovery blocks routes", async () => {
+    mockRecoveryState = { incidents: [{ displayName: "Portfolio records", preserved: true }] };
+    mockTakeStartupLinkPath.mockReturnValue("/settings");
+
+    const { getByTestId } = render(<RootLayout />);
+
+    await waitFor(() =>
+      expect(getByTestId("storage-recovery-screen")).toBeTruthy(),
+    );
+    expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("loads required assets before rendering normal routes", async () => {

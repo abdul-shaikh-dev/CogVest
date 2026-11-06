@@ -76,7 +76,14 @@ function EnabledQa({ page }: { page?: string }) {
     <AppText testID="epf-qa-status">{status}</AppText>
     <AppButton testID="epf-qa-stage" title="Stage legacy fixture" disabled={busy} onPress={() => {
       native.clearAll();
-      const { epf: _epf, ...legacy } = createEmptyPortfolioSnapshot();
+      // A real V15 record predates EPF (V16), payouts (V17) and the measurement basis (V18).
+      const {
+        epf: _epf,
+        distributions: _distributions,
+        distributionCoverage: _distributionCoverage,
+        measurementBasis: _measurementBasis,
+        ...legacy
+      } = createEmptyPortfolioSnapshot();
       storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...legacy, schemaVersion: 15,
         cashEntries: [{ id: "opening", amount: 2000, date: "2026-01-01", type: "addition", purpose: "capitalContribution", label: "Synthetic Cash" }] }));
       setStatus("Legacy staged; restart required");
