@@ -57,6 +57,11 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: "conviction-4"
+# The open optional details push Review below the fold.
+- scrollUntilVisible:
+    element:
+      id: "review-holding-button"
+    direction: DOWN
 - tapOn:
     id: "review-holding-button"
 - assertVisible:

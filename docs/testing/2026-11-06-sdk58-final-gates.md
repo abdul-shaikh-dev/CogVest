@@ -90,21 +90,25 @@ Screenshots (unedited): [`2026-11-06-sdk58-font-scale/`](../reviews/artifacts/20
 | Cash at 100% before the change | `cash-100.png` |
 | Same task after live 130%: reset to Dashboard | `cash-130-live.png` |
 
-## Full Maestro tier: fails
+## Full Maestro tier: failed on 6 November, passed after #631
 
 46 passed, 17 failed, against a fresh E2E APK of `29fad29`. Details and
 per-flow classification are logged in [`e2e-runs.md`](e2e-runs.md):
 
-- **Startup deep-link race (likely SDK 58):** 14 flows. A link received while
-  the app is still starting is sometimes dropped, and the app stays on the
-  Dashboard. Reproduced with adb alone (2 of 8 cold launches). This must be
-  fixed or explained before SDK 58 is release-ready.
+- **Startup deep-link race (pre-existing, not SDK 58):** 14 flows. A link
+  received while the app is still starting is sometimes dropped, and the app
+  stays on the Dashboard. Reproduced with adb alone (2 of 8 cold launches).
+  Later probes showed the race predates SDK 58: SDK 54 release dropped 4 of 16
+  early links and SDK 58 release 1 of 16. Fixed in #631.
 - **Stale QA fixtures (existing, not SDK):** epf-persistence and
   investing-cash-migration. Their "legacy" fixtures still carry the schema
   17/18 fields, so storage rejects them. Reproduced in Jest; user migration is
-  unaffected.
+  unaffected. Fixed in #631.
 - **Flow timing (not product):** cash's double-tap Save now lands the second
-  tap on the saved entry. Only one entry was saved.
+  tap on the saved entry. Only one entry was saved. Fixed in #631.
+
+On 7 November the full tier passed 63 of 63 on a fresh E2E APK of #631's
+`f886dd4`, after an emulator cold boot. See [`e2e-runs.md`](e2e-runs.md).
 
 ## Gate summary
 
@@ -113,7 +117,7 @@ per-flow classification are logged in [`e2e-runs.md`](e2e-runs.md):
 | Signed upgrade proof (SDK 54 → 58) | Pass, `payloadsMatch: true` |
 | `npm run test:v1:pc` | Pass |
 | #529 font-scale retest | Clipping fixed; navigation reset still reproduces |
-| Full Maestro tier | **Fail**, 46 passed and 17 failed |
+| Full Maestro tier | Failed 46/17 on `29fad29`; **passed 63/63** with #631 (`f886dd4`) |
 
-SDK 58 is not release-ready until the startup deep-link race is resolved and
-the full tier passes again.
+With #631 merged, the startup-link race is fixed and the full tier passes, so
+the SDK 58 gates are met. The #529 navigation reset remains open separately.
