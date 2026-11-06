@@ -4,6 +4,24 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-07: SDK 58 startup links (#618), full tier 63 passed after a cold boot
+
+- Commit: fix/618-startup-links f886dd4 (Expo SDK 58, React Native 0.88.1),
+  version 1.0.30. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font
+  scale 1.0, E2E APK freshly built from f886dd4, Metro stopped.
+- First pass: 10 passed, 53 failed, 101m 04s. The emulator had been up for 6
+  hours (load average about 34). From the eleventh flow on, the Maestro
+  Android driver timed out on start and launches with clear state failed, so
+  most failures took 4 seconds. Environmental.
+- After a cold boot, the 53 failed flows ran again unchanged: 53 passed, 0
+  failed, 63m 37s. Combined, all 63 flows passed on the same APK.
+- add-holding-pending-valuation also failed in the first pass before the
+  driver timeouts began, while scrolling to the manual-price entry. It passed
+  on the rerun; watch it for flakiness.
+- The 14 flows that the startup-link race broke in the SDK 58 gate all
+  passed, as did the fixed epf-persistence, investing-cash-migration, cash
+  and add-trade flows.
+
 ## 2026-11-01: Simplified portfolio XIRR (#610), smoke 14 passed
 
 - Commit: main 8831291 (PRs #611 and #612 merged), version 1.0.29. AVD
