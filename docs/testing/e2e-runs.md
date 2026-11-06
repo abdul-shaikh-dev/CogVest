@@ -22,6 +22,45 @@ the run cadence.
   passed, as did the fixed epf-persistence, investing-cash-migration, cash
   and add-trade flows.
 
+## 2026-11-06: Expo SDK 58 final gate (#618), full tier 46 passed, 17 failed
+
+- Commit: main 29fad29 (PR #629 merged), version 1.0.30. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, freshly
+  built E2E APK (`com.abdulshaikh.cogvest.e2e`), Metro stopped.
+- Full tier: 46 passed, 17 failed, 61m 31s. **The gate fails.** All 17 flows
+  were rerun one at a time; 9 passed on rerun and 6 failed again.
+- **Startup deep-link race (pre-existing, fixed in #631, 14 flows).** A link
+  that arrives while the app is still starting is sometimes dropped, and the
+  app stays on the Dashboard. Reproduced without Maestro: an adb `VIEW` link
+  sent 0.6 to 1.0 s after a cold launch was dropped 2 times in 8. Later
+  investigation showed the race predates SDK 58 (SDK 54 release dropped 4 of
+  16 early links, SDK 58 release 1 of 16). React Native drops a link that
+  arrives before its instance is ready, and the launch `<Redirect>` in
+  `app/index.tsx` can override one that arrives at the same moment. #631
+  holds and replays such links; see the 2026-11-07 entry.
+  - Failed, then passed on rerun: add-holding-lookup, add-holding-pending-
+    valuation, add-holding-unknown-date, sell-quote-context,
+    cas-native-fresh-portfolio, futures-manual-wallet,
+    futures-timestamp-evidence, opening-position-correction,
+    bulk-transaction-delete.
+  - Failed again at a link step: holdings, privacy-settings, and
+    dashboard-valuation-basis (3 of 5 isolated runs).
+  - add-trade and cas-native-import failed again at later steps, after the
+    seed link had worked. add-trade's Review button was below the fold
+    (flow fixed in #631); cas-native-import passed in the 2026-11-07 run.
+- **Stale QA fixtures (existing harness bug, not SDK; fixed in #631).**
+  epf-persistence and investing-cash-migration stage "legacy" data from today's full snapshot,
+  which still carries the schema 17/18 fields. Storage rejects it as
+  `invalid-shape` and preserves it for recovery, so the legacy Cash is
+  missing. Reproduced in Jest on main; removing those fields lets the
+  migration pass. This has been broken since schema 17/18 (30 Oct). Real
+  stored data never has those fields.
+- **Double-tap save timing (flow, not product; fixed in #631).** cash
+  double-taps Save to prove one save. On SDK 58 the return to the Cash list is fast enough that
+  the second tap opens the new entry's review screen. That screen shows a
+  single ₹1,000.00 Broker cash entry.
+- Evidence: [`2026-11-06-sdk58-final-gates.md`](2026-11-06-sdk58-final-gates.md).
+
 ## 2026-11-01: Simplified portfolio XIRR (#610), smoke 14 passed
 
 - Commit: main 8831291 (PRs #611 and #612 merged), version 1.0.29. AVD
