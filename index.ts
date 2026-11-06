@@ -1,4 +1,7 @@
 import "react-native-gesture-handler";
+import { startStartupLinkCapture } from "./src/services/linking";
+// Keep a link that reaches the running app before the router can handle it.
+startStartupLinkCapture();
 // Opt-in local QA APK only; ordinary preview/production builds do not start it.
 if (process.env.EXPO_PUBLIC_COGVEST_PERFORMANCE_PROBE === "1") {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- loaded only in the opt-in probe build.

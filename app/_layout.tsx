@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, usePathname, router } from "expo-router";
+import { Stack, usePathname, router, useRootNavigationState, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -17,11 +17,25 @@ import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
 import { getPortfolioStore } from "@/src/store";
+import { takeStartupLinkPath } from "@/src/services/linking";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
 
 function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
   useMonthEndSnapshotAutomation({ enabled });
+
+  return null;
+}
+
+// Opens a link that reached the app before the navigator could handle it.
+function StartupLinkReplay() {
+  const rootKey = useRootNavigationState()?.key;
+
+  useEffect(() => {
+    if (!rootKey) return;
+    const path = takeStartupLinkPath();
+    if (path) router.navigate(path as Href);
+  }, [rootKey]);
 
   return null;
 }
@@ -169,6 +183,7 @@ function RootContents() {
           </View>
         ) : (
           <Fragment key={restoreEpoch}>
+            <StartupLinkReplay />
             <MonthEndSnapshotAutomation
               enabled={
                 pathname !== "/visual-qa-seed" &&
