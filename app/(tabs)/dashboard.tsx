@@ -10,6 +10,7 @@ export default function DashboardScreen() {
     <DashboardFeatureScreen
       onOpenInsight={(kind) => router.push({ pathname: "/insight", params: { kind } })}
       onReviewPayouts={(assetId) => router.push({ pathname: "/payouts", params: { assetId } })}
+      onConfirmPayouts={() => router.push("/payout-coverage")}
       onSetBasis={() => router.push("/measurement-basis")}
       onAddTrade={() => {
         router.push("/add-holding");

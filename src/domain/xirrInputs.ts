@@ -43,6 +43,9 @@ export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirr
 
 export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string };
 
+/** A holding counted in the return whose payouts aren't confirmed recorded from the date it needs. */
+export type PayoutCoverageGap = { assetId: string; requiredFrom: string };
+
 export type XirrInputResult =
   | {
     status: "ready";
@@ -54,6 +57,8 @@ export type XirrInputResult =
     valueAsOf: string | null;
     limitations: Array<{ assetId: string; limitation: XirrLimitation; recordId?: string }>;
     includedAssetIds: string[];
+    /** Whole portfolio only: holdings whose payouts must be confirmed from `requiredFrom` (#619). */
+    payoutCoverageGaps?: PayoutCoverageGap[];
   }
   | { status: "unavailable"; reasons: XirrAssetIssue[] };
 

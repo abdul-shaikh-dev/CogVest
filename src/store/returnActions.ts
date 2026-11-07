@@ -20,6 +20,7 @@ type ReturnActions = Pick<PortfolioStoreState,
   | "saveDistribution"
   | "deleteDistribution"
   | "setDistributionCoverage"
+  | "confirmDistributionCoverage"
   | "setMeasurementBasis">;
 
 export function createReturnActions({ get, now, set, storage }: StoreContext): ReturnActions {
@@ -56,6 +57,25 @@ export function createReturnActions({ get, now, set, storage }: StoreContext): R
       const others = state.distributionCoverage.filter((item) => item.assetId !== assetId);
       const distributionCoverage = from === null ? others
         : [...others, { assetId, confirmedAt: now().toISOString(), from }];
+      persistPortfolioTransition(storage, state, { distributionCoverage });
+      set({ distributionCoverage });
+      return { status: "applied" };
+    },
+    confirmDistributionCoverage: (entries) => {
+      const state = get();
+      const assetIds = new Set(entries.map((entry) => entry.assetId));
+      if (!entries.length || assetIds.size !== entries.length) return { reason: "invalidEntry", status: "rejected" };
+      if (entries.some((entry) => !state.assets.some((asset) => asset.id === entry.assetId))) {
+        return { reason: "notFound", status: "rejected" };
+      }
+      if (entries.some((entry) => getCalendarDatePart(entry.from) !== entry.from || isFutureCalendarDate(entry.from, now()))) {
+        return { reason: "invalidEntry", status: "rejected" };
+      }
+      const confirmedAt = now().toISOString();
+      const distributionCoverage = [
+        ...state.distributionCoverage.filter((item) => !assetIds.has(item.assetId)),
+        ...entries.map((entry) => ({ assetId: entry.assetId, confirmedAt, from: entry.from })),
+      ];
       persistPortfolioTransition(storage, state, { distributionCoverage });
       set({ distributionCoverage });
       return { status: "applied" };

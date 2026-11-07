@@ -29,10 +29,12 @@ function flowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
  * returns area: everything CogVest tracks, Cash included, from the user's start
  * or the earliest month-end snapshot. Assumptions are listed, not blocking.
  */
-export function DashboardXirr({ masked, names = {}, onReviewPayouts, onSetBasis, scope, summary }: {
+export function DashboardXirr({ masked, names = {}, onConfirmPayouts, onReviewPayouts, onSetBasis, scope, summary }: {
   masked: boolean;
   /** Holding and account names for the blocker checklist. */
   names?: Record<string, string>;
+  /** Opens bulk payout confirmation for the holdings behind the payouts note (#619). */
+  onConfirmPayouts?: () => void;
   onReviewPayouts?: (assetId: string) => void;
   onSetBasis?: () => void;
   scope: string;
@@ -98,6 +100,9 @@ export function DashboardXirr({ masked, names = {}, onReviewPayouts, onSetBasis,
           ) : (
             <XirrRateDetails masked={masked} summary={summary} />
           )}
+          {summary.status === "rate" && (summary.payoutGapAssetIds?.length ?? 0) > 0 && onConfirmPayouts ? (
+            <AppButton onPress={onConfirmPayouts} testID="dashboard-xirr-confirm-payouts" title="Confirm payouts" variant="secondary" />
+          ) : null}
           <AppText color="secondary" variant="caption">
             XIRR weighs each amount by when it moved. It differs from P&amp;L, which compares value with what you invested.
           </AppText>

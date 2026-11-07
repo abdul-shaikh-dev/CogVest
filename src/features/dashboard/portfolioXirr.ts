@@ -3,7 +3,7 @@ import { formatDate } from "@/src/domain/formatters";
 import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import { getLinkedLegacyPpfAssetIds } from "@/src/domain/ppf";
 import { automaticMeasurementBasis, buildWholePortfolioXirrInput } from "@/src/domain/wholePortfolioXirr";
-import type { InvestmentsXirrInput } from "@/src/domain/xirrInputs";
+import type { InvestmentsXirrInput, PayoutCoverageGap } from "@/src/domain/xirrInputs";
 import { summariseXirr } from "@/src/domain/xirrSummary";
 import type { PortfolioStoreState } from "@/src/store";
 
@@ -63,12 +63,22 @@ function xirrRecords(state: XirrState, now: Date): InvestmentsXirrInput {
   };
 }
 
-/** Whole-portfolio XIRR (D9-D11) from the measurement basis to now; never persisted. */
-export function wholePortfolioXirrSummary(state: WholeState, now: Date) {
+function wholePortfolioXirrInput(state: WholeState, now: Date) {
   const { basis, automatic } = portfolioBasis(state, now);
-  return summariseXirr(buildWholePortfolioXirrInput({
+  return buildWholePortfolioXirrInput({
     ...xirrRecords(state, now), basis, automaticBasis: automatic,
     // The store fingerprints every record, including legacy holdings left out of the flows.
     evidence: state,
-  }));
+  });
+}
+
+/** Whole-portfolio XIRR (D9-D11) from the measurement basis to now; never persisted. */
+export function wholePortfolioXirrSummary(state: WholeState, now: Date) {
+  return summariseXirr(wholePortfolioXirrInput(state, now));
+}
+
+/** Holdings behind the portfolio return's "Dividends aren't recorded" note, and the date each needs (#619). */
+export function wholePortfolioPayoutGaps(state: WholeState, now: Date): PayoutCoverageGap[] {
+  const input = wholePortfolioXirrInput(state, now);
+  return input.status === "ready" ? input.payoutCoverageGaps ?? [] : [];
 }

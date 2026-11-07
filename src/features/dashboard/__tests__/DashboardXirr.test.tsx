@@ -73,6 +73,20 @@ describe("Dashboard portfolio XIRR", () => {
     expect(screen.queryByText("Dividends aren't recorded for 1 holding, so the return may be understated.")).toBeNull();
   });
 
+  it("offers bulk payout confirmation only while the payouts note is shown (#619)", async () => {
+    const store = seed();
+    const onConfirmPayouts = jest.fn();
+    const screen = await render(<DashboardScreen now={now} onConfirmPayouts={onConfirmPayouts} store={store} />);
+    await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.queryByTestId("dashboard-xirr-confirm-payouts")).toBeNull();
+    await act(() => { store.getState().setDistributionCoverage("stock", null); });
+    await fireEvent.press(screen.getByTestId("dashboard-xirr-confirm-payouts"));
+    expect(onConfirmPayouts).toHaveBeenCalledTimes(1);
+    await act(() => { store.getState().confirmDistributionCoverage([{ assetId: "stock", from: "2025-01-01" }]); });
+    expect(screen.queryByTestId("dashboard-xirr-confirm-payouts")).toBeNull();
+    expect(screen.queryByText("Dividends aren't recorded for 1 holding, so the return may be understated.")).toBeNull();
+  });
+
   it("starts automatically from the earliest month-end snapshot", async () => {
     const store = seed({ basis: false, buyDate: "2024-06-01" });
     const screen = await screenFor(store);

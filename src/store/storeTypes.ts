@@ -84,6 +84,12 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   deleteDistribution: (distributionId: string) => DistributionMutationResult;
   /** Ongoing "every payout since this date is recorded" statement (D3); null removes it. */
   setDistributionCoverage: (assetId: string, from: string | null) => DistributionCoverageResult;
+  /**
+   * Confirms several holdings' payouts as recorded in one save (#619). Writes the
+   * same records as setDistributionCoverage; rejects the whole batch if any entry
+   * is invalid or names a holding twice.
+   */
+  confirmDistributionCoverage: (entries: ReadonlyArray<{ assetId: string; from: string }>) => DistributionCoverageResult;
   /** Confirms where whole-portfolio XIRR starts (D9); null removes it. Never changes other records. */
   setMeasurementBasis: (input: MeasurementBasisInput | null) => MeasurementBasisResult;
   /** Marks trades without a Cash leg as paid from (or into) money outside CogVest (D10); null clears it. */
