@@ -188,3 +188,8 @@ on this emulator. No ANR, `FATAL EXCEPTION` or crash entries.
 Frame smoothness (#299) and the schema-crossing upgrade proof remain open for
 #138. If the stall margins need widening, the XIRR input build is the largest
 remaining launch cost.
+
+Update, 8 November: on SDK 58 the whole workload passes with wider margins
+(worst 324 ms), and the signed 1.0.26 → main upgrade across schema 16 → 18
+matches payloads. See
+[2026-11-08-v3-perf-and-upgrade.md](2026-11-08-v3-perf-and-upgrade.md).
