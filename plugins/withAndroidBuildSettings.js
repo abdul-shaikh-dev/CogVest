@@ -1,14 +1,30 @@
-const { withAppBuildGradle, withGradleProperties } = require("expo/config-plugins");
+const fs = require("fs");
+const path = require("path");
+const { withAppBuildGradle, withDangerousMod, withGradleProperties } = require("expo/config-plugins");
 
-// SDK 58 turns R8 on for release builds. R8 rejects pdfbox-android (used by
-// expo-pdf-text-extract for statement imports) and can strip classes it loads
-// by reflection, so keep SDK 57 behaviour until R8 is enabled with PDF-import
-// proof of its own (#618).
+// R8 shrinks release (and E2E) builds, as SDK 58 does by default. Set it
+// explicitly so a template change cannot turn it off unnoticed (#618).
 const minifyProperty = "android.enableMinifyInReleaseBuilds";
 
-function keepReleaseMinifyOff(properties) {
+function enableReleaseMinify(properties) {
   const rest = properties.filter((item) => !(item.type === "property" && item.key === minifyProperty));
-  return [...rest, { type: "property", key: minifyProperty, value: "false" }];
+  return [...rest, { type: "property", key: minifyProperty, value: "true" }];
+}
+
+// pdfbox-android backs expo-pdf-text-extract for statement imports. Its JPEG
+// 2000 codec (com.gemalto.jp2) is an optional dependency that is not bundled, and it loads
+// fonts, glyph lists and CMaps as resources relative to its own classes, so
+// R8 must not rename or strip them.
+const pdfboxMarker = "# CogVest: pdfbox-android rules for statement imports.";
+const pdfboxRules = `
+${pdfboxMarker}
+-dontwarn com.gemalto.jp2.**
+-keep class com.tom_roush.** { *; }
+`;
+
+function addPdfboxKeepRules(rules) {
+  if (rules.includes(pdfboxMarker)) return rules;
+  return `${rules.trimEnd()}\n${pdfboxRules}`;
 }
 
 // Gesture Handler 3 codegen paths pass Windows' 260-character limit, which the
@@ -32,9 +48,18 @@ function addOptionalNinja(buildGradle) {
 
 function withAndroidBuildSettings(config) {
   config = withGradleProperties(config, (mod) => {
-    mod.modResults = keepReleaseMinifyOff(mod.modResults);
+    mod.modResults = enableReleaseMinify(mod.modResults);
     return mod;
   });
+  config = withDangerousMod(config, [
+    "android",
+    (mod) => {
+      const rulesPath = path.join(mod.modRequest.platformProjectRoot, "app", "proguard-rules.pro");
+      const current = fs.existsSync(rulesPath) ? fs.readFileSync(rulesPath, "utf8") : "";
+      fs.writeFileSync(rulesPath, addPdfboxKeepRules(current));
+      return mod;
+    },
+  ]);
   return withAppBuildGradle(config, (mod) => {
     mod.modResults.contents = addOptionalNinja(mod.modResults.contents);
     return mod;
@@ -43,4 +68,5 @@ function withAndroidBuildSettings(config) {
 
 module.exports = withAndroidBuildSettings;
 module.exports.addOptionalNinja = addOptionalNinja;
-module.exports.keepReleaseMinifyOff = keepReleaseMinifyOff;
+module.exports.addPdfboxKeepRules = addPdfboxKeepRules;
+module.exports.enableReleaseMinify = enableReleaseMinify;

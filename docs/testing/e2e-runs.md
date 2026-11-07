@@ -4,6 +4,21 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-07: R8 release shrinking (#618), full tier 63 passed with one rerun
+
+- Commit: build/618-enable-r8 69ea519 (R8 on, pdfbox keep rules), version
+  1.0.30. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  E2E APK (minified, as it inherits from release) freshly built from 69ea519,
+  Metro stopped. The E2E APK shrank from 53.3 MB to 45.8 MB.
+- Full tier: 62 passed, 1 failed, 73m 05s. holdings-csv-import could not
+  save its template: the emulator's Documents folder already held
+  `cogvest-holdings-v1.csv` and copies (1) to (32) from earlier runs, and
+  Android stops numbering after 32. Environmental; the runner's cleanup had
+  targeted an unused folder. 75ee271 removes the saved copies before the
+  flow, and the flow then passed on a fresh R8 build of 75ee271.
+- cas-native-import and cas-native-fresh-portfolio also passed on their own
+  before the tier, so pdfbox still parses the synthetic CAS PDF under R8.
+
 ## 2026-11-07: expo/fetch as the global fetch (#618), smoke 14 passed
 
 - Commit: fix/618-expo-fetch 569ad87 (`EXPO_PUBLIC_USE_RN_FETCH` removed),
