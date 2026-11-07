@@ -4,6 +4,17 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-08: Bulk payout confirmation (#619), smoke 14 passed
+
+- Commit: feat/619-bulk-payout-confirmation da16a9d, version 1.0.30. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, cold boot,
+  E2E APK (R8 on) freshly built from da16a9d, Metro stopped.
+- Smoke tier: 14 passed, 0 failed, 11m 44s.
+- The new payout-coverage flow (added to the full tier) passed with payouts,
+  xirr-whole and xirr-holding: 4 passed, 2m 07s. It confirms two of three
+  holdings and asserts the stored coverage records, the holding with a
+  recorded payout left unoffered, and the note falling from 3 holdings to 1.
+
 ## 2026-11-07: Code-unit ordering for dates and ids (#138), full tier 63 passed with one rerun
 
 - Commit: perf/138-ordinal-compare 041a7db, version 1.0.30. AVD
