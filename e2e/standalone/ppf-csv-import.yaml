@@ -46,8 +46,7 @@ appId: ${APP_ID}
     id: ppf-import-csv
 - tapOn:
     id: ppf-import-choose-csv
-- tapOn: "Show roots"
-- tapOn: "Downloads"
+- runFlow: helpers/open-downloads.yaml
 - tapOn: "ppf-import.csv"
 - assertVisible: "Selected:.*"
 - assertVisible:
@@ -138,6 +137,7 @@ appId: ${APP_ID}
     id: ppf-import-csv
 - tapOn:
     id: ppf-import-choose-csv
+- runFlow: helpers/open-downloads.yaml
 - tapOn: "ppf-import.csv"
 - assertVisible: "Selected:.*"
 - scrollUntilVisible:

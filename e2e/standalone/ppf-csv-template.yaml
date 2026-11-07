@@ -24,19 +24,20 @@ appId: ${APP_ID}
 - assertNotVisible: "Selected:.*"
 - assertNotVisible:
     id: ppf-import-file-error
+# The system picker remembers its last folder and view; start it fresh.
+- clearState: com.google.android.documentsui
 - tapOn:
     id: ppf-import-save-template
-- tapOn: "Show roots"
+# A fresh folder picker opens at storage root, where saving is not allowed.
+- extendedWaitUntil:
+    visible: "Download"
+    timeout: 10000
 - tapOn:
-    id: "android:id/title"
-    childOf:
-      id: ".*:id/roots_list"
-    index: 0
-- scrollUntilVisible:
-    element:
-      text: "Download"
-    direction: DOWN
-- tapOn: "Download"
+    text: "Download"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "CogVestPpfTemplate"
+    timeout: 10000
 - tapOn: "CogVestPpfTemplate"
 - tapOn: "Use this folder"
 - runFlow:
