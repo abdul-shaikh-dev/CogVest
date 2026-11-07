@@ -5,15 +5,16 @@ import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
+import { getAllByComponentType, getPressHandler, queryByComponentType } from "@/src/testing/componentQueries";
 
-function selectDate(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function selectDate(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
   value: string,
 ) {
   const [year, month, day] = value.split("-").map(Number);
 
-  fireEvent.press(getByTestId("cash-date-input"));
-  fireEvent(
+  await fireEvent.press(getByTestId("cash-date-input"));
+  await fireEvent(
     getByTestId("cash-date-input-picker"),
     "onChange",
     { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
@@ -21,21 +22,21 @@ function selectDate(
 }
 
 describe("CashScreen", () => {
-  it("lets the Android modal resize without a second keyboard height owner", () => {
+  it("lets the Android modal resize without a second keyboard height owner", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<CashScreen store={store} />);
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    const screen = await render(<CashScreen store={store} />);
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     expect(screen.getByTestId("cash-entry-root")).toHaveStyle({ flex: 1 });
-    expect(screen.UNSAFE_queryByType(KeyboardAvoidingView)).toBeNull();
+    expect(queryByComponentType(screen, KeyboardAvoidingView)).toBeNull();
   });
-  it.each(["standard", "minimal"] as const)("compacts zero metrics without implying no withdrawals in %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("compacts zero metrics without implying no withdrawals in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
     store.getState().addCashEntry({ id: "prior", date: "2026-08-01", amount: 1000,
       label: "Prior deposit", purpose: "capitalContribution", type: "addition" });
     store.getState().addCashEntry({ id: "out", date: "2026-09-01", amount: 100,
       label: "Withdrawal", purpose: "withdrawal", type: "withdrawal" });
-    const screen = render(<CashScreen store={store} now={new Date(2026, 8, 2, 12)} />);
+    const screen = await render(<CashScreen store={store} now={new Date(2026, 8, 2, 12)} />);
     expect(screen.getByTestId("cash-zero-activity")).toHaveStyle({ flexWrap: "wrap" });
     expect(screen.getByText("Cash added ₹0")).toBeTruthy();
     expect(screen.getByText("Invested ₹0")).toBeTruthy();
@@ -43,13 +44,13 @@ describe("CashScreen", () => {
     expect(screen.getByText("₹900.00")).toBeTruthy();
     expect(screen.queryByText(/No cash movement/)).toBeNull();
     expect(screen.getByTestId("cash-month-2026-09")).toHaveStyle({ paddingTop: 12 });
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     expect(screen.queryByTestId("cash-zero-activity")).toBeNull();
     expect(screen.queryByText("Cash added ₹0")).toBeNull();
     expect(screen.getByText("Cash added")).toBeTruthy();
     expect(screen.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
   });
-  it("groups history by calendar month while preserving dates, signed amounts and review targets", () => {
+  it("groups history by calendar month while preserving dates, signed amounts and review targets", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCorrectEntry = jest.fn();
     for (const [id, date, type] of [
@@ -60,7 +61,7 @@ describe("CashScreen", () => {
       store.getState().addCashEntry({ id, date, type, label: id, amount: 100,
         purpose: type === "addition" ? "capitalContribution" : "withdrawal" });
     }
-    const screen = render(<CashScreen now={new Date(2026, 0, 10)} store={store} onCorrectEntry={onCorrectEntry} />);
+    const screen = await render(<CashScreen now={new Date(2026, 0, 10)} store={store} onCorrectEntry={onCorrectEntry} />);
     expect(screen.getAllByTestId(/^cash-month-/).map((node) => node.props.testID)).toEqual([
       "cash-month-2026-01", "cash-month-2025-12",
     ]);
@@ -68,21 +69,21 @@ describe("CashScreen", () => {
     expect(screen.getByText("December 2025")).toBeTruthy();
     expect(screen.getByLabelText("08 Jan 2026")).toBeTruthy();
     expect(screen.getByText("-₹100.00")).toBeTruthy();
-    fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal."));
+    await fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal."));
     expect(onCorrectEntry).toHaveBeenCalledWith("jan-late");
   });
   it("uses a neutral label when the optional label is blank", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<CashScreen store={store} />);
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(screen.getByLabelText("Amount"), "1000");
-    fireEvent.press(screen.getByTestId("save-cash-entry-button"));
+    const screen = await render(<CashScreen store={store} />);
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(screen.getByLabelText("Amount"), "1000");
+    await fireEvent.press(screen.getByTestId("save-cash-entry-button"));
     await waitFor(() => expect(store.getState().cashEntries[0]).toMatchObject({ amount: 1000, label: "Cash added", purpose: "capitalContribution" }));
   });
-  it("shows an empty cash state with zero balance", () => {
+  it("shows an empty cash state with zero balance", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
-    const { getAllByText, getByTestId, getByText, queryByTestId } = render(<CashScreen store={store} />);
+    const { getAllByText, getByTestId, getByText, queryByTestId } = await render(<CashScreen store={store} />);
 
     expect(getByTestId("cash-screen")).toBeTruthy();
     expect(getByTestId("cash-entry-deposit")).toBeTruthy();
@@ -95,13 +96,13 @@ describe("CashScreen", () => {
 
   it("adds and withdraws cash and shows history rows", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getAllByText, getByLabelText, getByTestId, getByText } = render(<CashScreen store={store} />);
+    const { getAllByText, getByLabelText, getByTestId, getByText } = await render(<CashScreen store={store} />);
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "Broker cash");
-    selectDate(getByTestId, "2026-04-20");
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "Broker cash");
+    await selectDate(getByTestId, "2026-04-20");
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(getAllByText("₹1,000.00").length).toBeGreaterThan(0);
@@ -118,11 +119,11 @@ describe("CashScreen", () => {
     });
     expect(() => getByTestId("cash-entry-form")).toThrow();
 
-    fireEvent.press(getByText("Withdraw"));
-    fireEvent.changeText(getByLabelText("Amount"), "250");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "Emergency withdrawal");
-    selectDate(getByTestId, "2026-04-21");
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByText("Withdraw"));
+    await fireEvent.changeText(getByLabelText("Amount"), "250");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "Emergency withdrawal");
+    await selectDate(getByTestId, "2026-04-21");
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(getAllByText("₹750.00").length).toBeGreaterThan(0);
@@ -144,9 +145,9 @@ describe("CashScreen", () => {
     });
   });
 
-  it("changes the cash entry form copy when switching between deposit and withdraw", () => {
+  it("changes the cash entry form copy when switching between deposit and withdraw", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <CashScreen store={store} />,
     );
 
@@ -156,7 +157,7 @@ describe("CashScreen", () => {
     expect(queryByText("Deposit cash")).toBeNull();
     expect(queryByText("Save deposit")).toBeNull();
 
-    fireEvent.press(getByText("Deposit"));
+    await fireEvent.press(getByText("Deposit"));
 
     expect(getByText("Deposit cash")).toBeTruthy();
     expect(getByText("Add money that is available for future investment.")).toBeTruthy();
@@ -164,8 +165,8 @@ describe("CashScreen", () => {
     expect(getByText("Save deposit")).toBeTruthy();
     expect(queryByText("Save Cash Entry")).toBeNull();
 
-    fireEvent.press(getByTestId("close-cash-entry-button"));
-    fireEvent.press(getByText("Withdraw"));
+    await fireEvent.press(getByTestId("close-cash-entry-button"));
+    await fireEvent.press(getByText("Withdraw"));
 
     expect(getByText("Withdraw cash")).toBeTruthy();
     expect(getByText("Record money leaving the portfolio cash pool.")).toBeTruthy();
@@ -174,28 +175,28 @@ describe("CashScreen", () => {
     expect(queryByText("Deposit cash")).toBeNull();
   });
 
-  it("resumes a same-type investing Cash draft with its date and fields", () => {
+  it("resumes a same-type investing Cash draft with its date and fields", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <CashScreen now={new Date(2026, 3, 22, 12)} store={store} />,
     );
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "1250");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "April salary");
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "1250");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "April salary");
     expect(getByTestId("cash-notes-toggle").props.accessibilityState).toEqual({
       expanded: false,
     });
     expect(queryByTestId("cash-notes-input")).toBeNull();
-    fireEvent.press(getByTestId("cash-notes-toggle"));
-    fireEvent.changeText(getByLabelText("Note (optional)"), "Keep for the next buy");
-    selectDate(getByTestId, "2026-04-20");
-    fireEvent.press(getByTestId("close-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-notes-toggle"));
+    await fireEvent.changeText(getByLabelText("Note (optional)"), "Keep for the next buy");
+    await selectDate(getByTestId, "2026-04-20");
+    await fireEvent.press(getByTestId("close-cash-entry-button"));
 
     expect(queryByTestId("cash-entry-modal")).toBeNull();
     expect(store.getState().cashEntries).toEqual([]);
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
 
     expect(getByTestId("cash-entry-modal")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1250");
@@ -208,33 +209,33 @@ describe("CashScreen", () => {
     expect(queryByTestId("cash-purpose-income")).toBeNull();
   });
 
-  it("requires explicit discard before switching a nonempty draft type", () => {
+  it("requires explicit discard before switching a nonempty draft type", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByText } = render(
+    const { getByLabelText, getByTestId, getByText, queryByText } = await render(
       <CashScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "Do not reinterpret");
-    fireEvent.press(getByTestId("close-cash-entry-button"));
-    fireEvent.press(getByTestId("cash-entry-withdraw"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "Do not reinterpret");
+    await fireEvent.press(getByTestId("close-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-withdraw"));
 
     expect(getByTestId("cash-discard-draft-button")).toBeTruthy();
     expect(getByTestId("cash-keep-draft-button")).toBeTruthy();
 
-    fireEvent.press(getByTestId("cash-keep-draft-button"));
+    await fireEvent.press(getByTestId("cash-keep-draft-button"));
     expect(queryByText("Deposit cash")).toBeNull();
     expect(queryByText("Withdraw cash")).toBeNull();
     expect(store.getState().cashEntries).toEqual([]);
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
     expect(getByText("Deposit cash")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "1000");
     expect(getByLabelText("Label (optional)")).toHaveProp("value", "Do not reinterpret");
-    fireEvent.press(getByTestId("close-cash-entry-button"));
-    fireEvent.press(getByTestId("cash-entry-withdraw"));
-    fireEvent.press(getByTestId("cash-discard-draft-button"));
+    await fireEvent.press(getByTestId("close-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-withdraw"));
+    await fireEvent.press(getByTestId("cash-discard-draft-button"));
 
     expect(getByText("Withdraw cash")).toBeTruthy();
     expect(getByLabelText("Amount")).toHaveProp("value", "");
@@ -242,27 +243,27 @@ describe("CashScreen", () => {
     expect(store.getState().cashEntries).toEqual([]);
   });
 
-  it("closes from Android back without saving and retains the draft", () => {
+  it("closes from Android back without saving and retains the draft", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<CashScreen store={store} />);
+    const screen = await render(<CashScreen store={store} />);
 
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(screen.getByLabelText("Amount"), "900");
-    fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Back draft");
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+    await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Back draft");
 
-    act(() => {
-      screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+    await act(() => {
+      getAllByComponentType(screen, Modal)[0].props.onRequestClose();
     });
 
     expect(screen.queryByTestId("cash-entry-modal")).toBeNull();
     expect(store.getState().cashEntries).toEqual([]);
 
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
     expect(screen.getByLabelText("Label (optional)")).toHaveProp("value", "Back draft");
   });
 
-  it("dismisses the visible keyboard before closing the modal on Android back", () => {
+  it("dismisses the visible keyboard before closing the modal on Android back", async () => {
     const keyboardVisibility = jest
       .spyOn(Keyboard, "isVisible")
       .mockReturnValue(true);
@@ -274,14 +275,14 @@ describe("CashScreen", () => {
 
     try {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-      const screen = render(<CashScreen store={store} />);
+      const screen = await render(<CashScreen store={store} />);
 
-      fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-      fireEvent.changeText(screen.getByLabelText("Amount"), "900");
-      fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Keyboard draft");
+      await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+      await fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+      await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Keyboard draft");
 
-      act(() => {
-        screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+      await act(() => {
+        getAllByComponentType(screen, Modal)[0].props.onRequestClose();
       });
 
       expect(keyboardVisibility).toHaveBeenCalled();
@@ -298,8 +299,8 @@ describe("CashScreen", () => {
       keyboardDismiss.mockClear();
       keyboardVisibility.mockReturnValue(false);
       clock.mockReturnValue(2_000);
-      act(() => {
-        screen.UNSAFE_getAllByType(Modal)[0].props.onRequestClose();
+      await act(() => {
+        getAllByComponentType(screen, Modal)[0].props.onRequestClose();
       });
 
       expect(keyboardVisibility).toHaveBeenCalled();
@@ -313,11 +314,11 @@ describe("CashScreen", () => {
     }
   });
 
-  it("keeps the entry panel modal to accessibility services", () => {
+  it("keeps the entry panel modal to accessibility services", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<CashScreen store={store} />);
+    const screen = await render(<CashScreen store={store} />);
 
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
 
     expect(screen.getByTestId("cash-entry-modal")).toBeTruthy();
     expect(screen.getByTestId("cash-entry-form")).toHaveProp(
@@ -328,13 +329,13 @@ describe("CashScreen", () => {
 
   it("records deposits as investing contributions", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
+    const { getByLabelText, getByTestId } = await render(<CashScreen store={store} />);
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "50000");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "Salary");
-    selectDate(getByTestId, "2026-05-01");
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "50000");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "Salary");
+    await selectDate(getByTestId, "2026-05-01");
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(store.getState().cashEntries).toEqual([
@@ -350,13 +351,17 @@ describe("CashScreen", () => {
 
   it("ignores rapid repeated cash save presses", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId } = render(<CashScreen store={store} />);
+    const screen = await render(<CashScreen store={store} />);
+    const { getByLabelText, getByTestId } = screen;
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "One deposit");
-    fireEvent.press(getByTestId("save-cash-entry-button"));
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "One deposit");
+    const save = getPressHandler(screen, "save-cash-entry-button");
+    await act(() => {
+      save();
+      save();
+    });
 
     await waitFor(() => {
       expect(store.getState().cashEntries).toHaveLength(1);
@@ -371,7 +376,7 @@ describe("CashScreen", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
     const originalSetItem = storage.setItem;
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <CashScreen store={store} />,
     );
 
@@ -382,10 +387,10 @@ describe("CashScreen", () => {
 
       originalSetItem(key, value);
     };
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.changeText(getByLabelText("Amount"), "1000");
-    fireEvent.changeText(getByLabelText("Label (optional)"), "Retry deposit");
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Label (optional)"), "Retry deposit");
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(
@@ -399,7 +404,7 @@ describe("CashScreen", () => {
     expect(getByLabelText("Amount")).toHaveProp("value", "1000");
 
     storage.setItem = originalSetItem;
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(store.getState().cashEntries).toEqual([
@@ -413,7 +418,7 @@ describe("CashScreen", () => {
     expect(queryByTestId("cash-entry-modal")).toBeNull();
   });
 
-  it("shows invested as derived evidence without exposing a manual Invest action", () => {
+  it("shows invested as derived evidence without exposing a manual Invest action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -444,7 +449,7 @@ describe("CashScreen", () => {
       },
     });
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <CashScreen
         now={new Date("2026-05-16T00:00:00.000Z")}
         store={store}
@@ -463,7 +468,7 @@ describe("CashScreen", () => {
     expect(queryByText("Invested / income")).toBeNull();
   });
 
-  it("keeps cash metrics and actions while hiding monthly commentary in Minimal mode", () => {
+  it("keeps cash metrics and actions while hiding monthly commentary in Minimal mode", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 50000,
@@ -475,7 +480,7 @@ describe("CashScreen", () => {
     });
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <CashScreen now={new Date("2026-05-16T00:00:00.000Z")} store={store} />,
     );
 
@@ -486,7 +491,7 @@ describe("CashScreen", () => {
     expect(queryByText("This month")).toBeNull();
   });
 
-  it("does not show monthly commentary when there is no invested movement", () => {
+  it("does not show monthly commentary when there is no invested movement", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 50000,
@@ -497,14 +502,14 @@ describe("CashScreen", () => {
       type: "addition",
     });
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <CashScreen now={new Date("2026-05-16T00:00:00.000Z")} store={store} />,
     );
 
     expect(queryByText("This month")).toBeNull();
   });
 
-  it("shows asset exit proceeds as linked cash movement", () => {
+  it("shows asset exit proceeds as linked cash movement", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 8400,
@@ -515,14 +520,14 @@ describe("CashScreen", () => {
       type: "addition",
     });
 
-    const { getByText } = render(<CashScreen store={store} />);
+    const { getByText } = await render(<CashScreen store={store} />);
 
     expect(getByText("HDFC Bank redemption proceeds")).toBeTruthy();
     expect(getByText("Sale proceeds")).toBeTruthy();
     expect(getByText("+₹8,400.00")).toBeTruthy();
   });
 
-  it("opens manual and linked entries through their safe review routes", () => {
+  it("opens manual and linked entries through their safe review routes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCorrectEntry = jest.fn();
     store.getState().addCashEntry({
@@ -543,7 +548,7 @@ describe("CashScreen", () => {
       type: "withdrawal",
     });
 
-    const { getByLabelText, getByText, queryByText } = render(
+    const { getByLabelText, getByText, queryByText } = await render(
       <CashScreen onCorrectEntry={onCorrectEntry} store={store} />,
     );
 
@@ -551,14 +556,14 @@ describe("CashScreen", () => {
     expect(
       getByText("Linked investment"),
     ).toBeTruthy();
-    fireEvent.press(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit."));
-    fireEvent.press(getByLabelText("Review Investment purchase. 02 May 2026. Investment purchase."));
+    await fireEvent.press(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit."));
+    await fireEvent.press(getByLabelText("Review Investment purchase. 02 May 2026. Investment purchase."));
 
     expect(onCorrectEntry).toHaveBeenNthCalledWith(1, "cash-manual");
     expect(onCorrectEntry).toHaveBeenNthCalledWith(2, "cash-linked");
   });
 
-  it("keeps unclassified legacy Cash without household-income prompts", () => {
+  it("keeps unclassified legacy Cash without household-income prompts", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 50000,
@@ -577,7 +582,7 @@ describe("CashScreen", () => {
       type: "addition",
     });
 
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <CashScreen
         now={new Date("2026-05-16T00:00:00.000Z")}
         store={store}
@@ -590,21 +595,21 @@ describe("CashScreen", () => {
     expect(queryByText("Not enough data")).toBeNull();
   });
 
-  it("shows validation errors for invalid cash entries", () => {
+  it("shows validation errors for invalid cash entries", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <CashScreen now={new Date(2026, 6, 22, 12)} store={store} />,
     );
 
-    fireEvent.press(getByTestId("cash-entry-deposit"));
-    fireEvent.press(getByTestId("save-cash-entry-button"));
+    await fireEvent.press(getByTestId("cash-entry-deposit"));
+    await fireEvent.press(getByTestId("save-cash-entry-button"));
 
     expect(getByText("Amount must be a valid number.")).toBeTruthy();
     expect(getByText("Label (optional)")).toBeTruthy();
     expect(getByText("22 Jul 2026")).toBeTruthy();
   });
 
-  it("masks cash wealth values when value masking is enabled", () => {
+  it("masks cash wealth values when value masking is enabled", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addCashEntry({
@@ -625,7 +630,7 @@ describe("CashScreen", () => {
       type: "withdrawal",
     });
 
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <CashScreen now={new Date(2026, 8, 22, 12)} store={store} />,
     );
 
@@ -642,7 +647,7 @@ describe("CashScreen", () => {
 
   it("adds investing cash without asking for its household source", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <CashScreen
         now={new Date(2026, 8, 20, 12)}
         store={store}
@@ -650,11 +655,11 @@ describe("CashScreen", () => {
     );
 
     expect(screen.queryByTestId("cash-record-income")).toBeNull();
-    fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     expect(screen.queryByTestId("cash-purpose-income")).toBeNull();
-    fireEvent.changeText(screen.getByLabelText("Amount"), "50000");
-    fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Salary");
-    fireEvent.press(screen.getByTestId("save-cash-entry-button"));
+    await fireEvent.changeText(screen.getByLabelText("Amount"), "50000");
+    await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Salary");
+    await fireEvent.press(screen.getByTestId("save-cash-entry-button"));
 
     await waitFor(() => {
       expect(store.getState().cashEntries).toHaveLength(1);

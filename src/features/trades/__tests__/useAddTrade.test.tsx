@@ -16,9 +16,9 @@ describe("useAddTrade", () => {
       purpose: "capitalContribution",
       type: "addition",
     });
-    const { result } = renderHook(() => useAddTrade({ store }));
+    const { result } = await renderHook(() => useAddTrade({ store }));
 
-    act(() => {
+    await act(() => {
       result.current.setAssetName("Reliance Industries");
       result.current.setSymbol("RELIANCE");
       result.current.setTicker("RELIANCE.NS");
@@ -27,7 +27,7 @@ describe("useAddTrade", () => {
       result.current.setIntendedHoldDays("365");
     });
 
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
 

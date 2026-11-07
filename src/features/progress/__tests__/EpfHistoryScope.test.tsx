@@ -14,75 +14,75 @@ const account = (id: string, date: string, total: number, historyCompleteThrough
 function setup() {
   const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
   let sequence = 0;
-  const apply = (change: EpfChange) => act(() => store.getState().applyEpfCommand(
+  const apply = async (change: EpfChange) => await act(() => store.getState().applyEpfCommand(
     { commandId: `c${++sequence}`, reason: "Statement", change }, store.getState().getBackupRevision()));
   return { store, apply };
 }
 
-test("renders nothing without EPF accounts", () => {
+test("renders nothing without EPF accounts", async () => {
   const { store } = setup();
-  expect(render(<EpfHistoryScope maskWealthValues={false} now={now} store={store} />).toJSON()).toBeNull();
+  expect((await render(<EpfHistoryScope maskWealthValues={false} now={now} store={store} />)).toJSON()).toBeNull();
 });
 
-test("follows the selected month and separates contributions, interest and reconciliation", () => {
+test("follows the selected month and separates contributions, interest and reconciliation", async () => {
   const { store, apply } = setup();
-  apply({ type: "accountPut", account: account("a", "2026-03-15", 140000, "2026-07-01") });
+  await apply({ type: "accountPut", account: account("a", "2026-03-15", 140000, "2026-07-01") });
   const base = { accountId: "a", postedDate: "2026-04-30", recordedAt: "2026-05-01T00:00:00Z", evidence: "Passbook" };
-  apply({ type: "eventPut", cash: null, event: { ...base, id: "employer", type: "contribution", party: "employer", amount: 367, effectiveDate: "2026-04-05" } });
-  apply({ type: "eventPut", cash: null, event: { ...base, id: "interest", type: "interest", amount: { total: 1000, components: null }, effectiveDate: "2026-04-30" } });
-  apply({ type: "eventPut", cash: null, event: { ...base, id: "fix", type: "reconciliation", balance: { total: 141500, components: null },
+  await apply({ type: "eventPut", cash: null, event: { ...base, id: "employer", type: "contribution", party: "employer", amount: 367, effectiveDate: "2026-04-05" } });
+  await apply({ type: "eventPut", cash: null, event: { ...base, id: "interest", type: "interest", amount: { total: 1000, components: null }, effectiveDate: "2026-04-30" } });
+  await apply({ type: "eventPut", cash: null, event: { ...base, id: "fix", type: "reconciliation", balance: { total: 141500, components: null },
     capital: null, reason: "Annual statement", effectiveDate: "2026-05-31", postedDate: "2026-05-31" } });
-  const view = render(<EpfHistoryScope maskWealthValues={false} month="2026-04" now={now} store={store} />);
+  const view = await render(<EpfHistoryScope maskWealthValues={false} month="2026-04" now={now} store={store} />);
   expect(view.getByText("EPF at end of April 2026")).toBeTruthy();
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,41,367.00");
   expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent("Confirmed month-end balance.");
   expect(view.getByTestId("progress-epf-month-contributions").props.accessibilityLabel).toBe("₹367.00");
   expect(view.getByTestId("progress-epf-month-interest").props.accessibilityLabel).toBe("₹1,000.00");
-  view.rerender(<EpfHistoryScope maskWealthValues month="2026-05" now={now} store={store} />);
+  await view.rerender(<EpfHistoryScope maskWealthValues month="2026-05" now={now} store={store} />);
   expect(view.getByText(/not a contribution or return/)).toBeTruthy();
   expect(view.queryByTestId("progress-epf-month-contributions")).toBeNull();
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("Amount hidden");
 });
 
-test("an account without a balance for the month shows unavailable, not a partial total", () => {
+test("an account without a balance for the month shows unavailable, not a partial total", async () => {
   const { store, apply } = setup();
-  apply({ type: "accountPut", account: account("a", "2026-03-15", 140000) });
-  apply({ type: "accountPut", account: account("b", "2026-06-10", 60000) });
-  const view = render(<EpfHistoryScope maskWealthValues={false} month="2026-04" now={now} store={store} />);
+  await apply({ type: "accountPut", account: account("a", "2026-03-15", 140000) });
+  await apply({ type: "accountPut", account: account("b", "2026-06-10", 60000) });
+  const view = await render(<EpfHistoryScope maskWealthValues={false} month="2026-04" now={now} store={store} />);
   expect(view.getByTestId("progress-epf-month-value")).toHaveTextContent("Unavailable");
   expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent(/1 of 2 accounts recorded./);
-  view.rerender(<EpfHistoryScope maskWealthValues={false} month="2026-01" now={now} store={store} />);
+  await view.rerender(<EpfHistoryScope maskWealthValues={false} month="2026-01" now={now} store={store} />);
   expect(view.getByText("EPF at end of January 2026")).toBeTruthy();
   expect(view.getByTestId("progress-epf-month-value")).toHaveTextContent("Unavailable");
   expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent(/not counted as zero/);
-  view.rerender(<EpfHistoryScope maskWealthValues={false} now={now} store={store} />);
+  await view.rerender(<EpfHistoryScope maskWealthValues={false} now={now} store={store} />);
   expect(view.getByText("EPF at end of June 2026")).toBeTruthy();
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹2,00,000.00");
 });
 
-test("discloses money moving between tracked accounts without changing combined value", () => {
+test("discloses money moving between tracked accounts without changing combined value", async () => {
   const { store, apply } = setup();
-  apply({ type: "accountPut", account: account("a", "2026-03-15", 140000) });
-  apply({ type: "accountPut", account: account("b", "2026-03-15", 0) });
-  apply({ type: "eventPut", cash: null, event: { id: "move", type: "transfer", sourceId: "a", destinationId: "b",
+  await apply({ type: "accountPut", account: account("a", "2026-03-15", 140000) });
+  await apply({ type: "accountPut", account: account("b", "2026-03-15", 0) });
+  await apply({ type: "eventPut", cash: null, event: { id: "move", type: "transfer", sourceId: "a", destinationId: "b",
     status: "inTransit", amount: { total: 50000, components: null }, capital: null, creditDate: null,
     effectiveDate: "2026-05-20", postedDate: "2026-05-20", recordedAt: "2026-05-21T00:00:00Z", evidence: "Claim" } });
-  const view = render(<EpfHistoryScope maskWealthValues={false} month="2026-06" now={now} store={store} />);
+  const view = await render(<EpfHistoryScope maskWealthValues={false} month="2026-06" now={now} store={store} />);
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,40,000.00");
   expect(view.getByTestId("progress-epf-month-transit").props.accessibilityLabel).toBe("₹50,000.00");
 });
 
-test("months inside a financial-year summary are unavailable; its end month shows the year's totals", () => {
+test("months inside a financial-year summary are unavailable; its end month shows the year's totals", async () => {
   const { store, apply } = setup();
-  apply({ type: "accountPut", account: account("a", "2025-03-31", 140000, "2026-07-01") });
-  apply({ type: "eventPut", cash: null, event: { id: "fy25", accountId: "a", type: "yearSummary", periodStart: "2025-04-01",
+  await apply({ type: "accountPut", account: account("a", "2025-03-31", 140000, "2026-07-01") });
+  await apply({ type: "eventPut", cash: null, event: { id: "fy25", accountId: "a", type: "yearSummary", periodStart: "2025-04-01",
     effectiveDate: "2026-03-31", postedDate: "2026-03-31", recordedAt: "2026-05-01T00:00:00Z", evidence: "EPFO passbook",
     contributions: { employee: 21600, employer: 6600 }, interest: { employee: 9500, employer: 3800 },
     closing: { employee: 120000, employer: 61500 } } });
-  const view = render(<EpfHistoryScope maskWealthValues={false} month="2025-10" now={now} store={store} />);
+  const view = await render(<EpfHistoryScope maskWealthValues={false} month="2025-10" now={now} store={store} />);
   expect(view.getByTestId("progress-epf-month-value")).toHaveTextContent("Unavailable");
   expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent(/Inside a financial-year summary/);
-  view.rerender(<EpfHistoryScope maskWealthValues={false} month="2026-03" now={now} store={store} />);
+  await view.rerender(<EpfHistoryScope maskWealthValues={false} month="2026-03" now={now} store={store} />);
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,81,500.00");
   expect(view.getByTestId("progress-epf-month-contributions").props.accessibilityLabel).toBe("₹28,200.00");
   expect(view.getByTestId("progress-epf-month-interest").props.accessibilityLabel).toBe("₹13,300.00");

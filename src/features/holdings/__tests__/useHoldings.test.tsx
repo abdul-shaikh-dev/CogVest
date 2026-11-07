@@ -34,7 +34,7 @@ const buyTrade: Trade = {
 };
 
 describe("useHoldings", () => {
-  it.each(["parent", "child"] as const)("keeps the full demerger graph when the %s is fully sold", (soldSide) => {
+  it.each(["parent", "child"] as const)("keeps the full demerger graph when the %s is fully sold", async (soldSide) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const parent: Asset = {
       ...asset,
@@ -49,7 +49,7 @@ describe("useHoldings", () => {
       : { ...parentBuy, id: "jio-sale", assetId: child.id, date: "2023-09-01", type: "sell" };
     store.setState({ assets: [parent, child], trades: [parentBuy, sale] });
 
-    const { result } = renderHook(() => useHoldings({ store, now: new Date("2024-11-03T12:00:00Z") }));
+    const { result } = await renderHook(() => useHoldings({ store, now: new Date("2024-11-03T12:00:00Z") }));
 
     expect(result.current.assets.map((item) => item.id)).toEqual(["ril", "jio"]);
     expect(result.current.holdings.map((holding) => holding.asset.id)).toEqual([
@@ -57,7 +57,7 @@ describe("useHoldings", () => {
     ]);
   });
 
-  it("derives holdings from raw trades and cached quotes", () => {
+  it("derives holdings from raw trades and cached quotes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(rawAsset);
     store.getState().addTrade(buyTrade);
@@ -70,7 +70,7 @@ describe("useHoldings", () => {
       source: "yahoo",
     });
 
-    const { result } = renderHook(() => useHoldings({ store }));
+    const { result } = await renderHook(() => useHoldings({ store }));
 
     expect(result.current.holdings).toHaveLength(1);
     expect(result.current.holdings[0]).toMatchObject({
@@ -136,7 +136,7 @@ describe("useHoldings", () => {
         updated: [asset.id],
       });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useHoldings({ refreshQuotes, store }),
     );
 
@@ -170,7 +170,7 @@ describe("useHoldings", () => {
     });
   });
 
-  it("exposes quote status metadata and value-mask toggle", () => {
+  it("exposes quote status metadata and value-mask toggle", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const cashAsset: Asset = {
       assetClass: "cash",
@@ -200,7 +200,7 @@ describe("useHoldings", () => {
       source: "manual",
     });
 
-    const { result } = renderHook(() => useHoldings({ store }));
+    const { result } = await renderHook(() => useHoldings({ store }));
 
     expect(result.current.quoteFreshness).toEqual({
       current: 0,
@@ -212,7 +212,7 @@ describe("useHoldings", () => {
     });
     expect(result.current.maskWealthValues).toBe(false);
 
-    act(() => {
+    await act(() => {
       result.current.toggleMaskWealthValues();
     });
 

@@ -44,8 +44,8 @@ describe("visual QA seed deep link", () => {
     mockHoldings = undefined;
   });
 
-  it("does not replace local data until the developer confirms", () => {
-    const { getByTestId, getByText } = render(<VisualQaSeedRoute />);
+  it("does not replace local data until the developer confirms", async () => {
+    const { getByTestId, getByText } = await render(<VisualQaSeedRoute />);
 
     expect(getByTestId("visual-qa-seed-confirmation")).toBeTruthy();
     expect(getByText("Visual QA confirmation required")).toBeTruthy();
@@ -58,37 +58,37 @@ describe("visual QA seed deep link", () => {
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
 
     const actions = alertSpy.mock.calls.at(-1)?.[2];
-    act(() => actions?.[1].onPress?.());
+    await act(() => actions?.[1].onPress?.());
 
     expect(mockSeedVisualQaPortfolio).toHaveBeenCalledTimes(1);
     expect(getByText("Visual QA portfolio seeded.")).toBeTruthy();
   });
 
-  it("blocks an invalid deep-link token without mutating data", () => {
+  it("blocks an invalid deep-link token without mutating data", async () => {
     mockToken = "invalid";
 
-    const { getByTestId } = render(<VisualQaSeedRoute />);
+    const { getByTestId } = await render(<VisualQaSeedRoute />);
 
     expect(getByTestId("visual-qa-seed-blocked")).toBeTruthy();
     expect(alertSpy).not.toHaveBeenCalled();
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
   });
 
-  it("requires confirmation before preparing the optional long history", () => {
+  it("requires confirmation before preparing the optional long history", async () => {
     mockHistory = "long";
-    render(<VisualQaSeedRoute />);
+    await render(<VisualQaSeedRoute />);
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
-    act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
+    await act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
     expect(mockSeedVisualQaPortfolio).toHaveBeenCalledWith(
       mockGetPortfolioStore.mock.results.at(-1)?.value,
       { longHistory: true, sparseHistory: false },
     );
   });
 
-  it("lets the developer cancel without mutating data", () => {
-    render(<VisualQaSeedRoute />);
+  it("lets the developer cancel without mutating data", async () => {
+    await render(<VisualQaSeedRoute />);
     const actions = alertSpy.mock.calls.at(-1)?.[2];
-    act(() => actions?.[0].onPress?.());
+    await act(() => actions?.[0].onPress?.());
 
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
     const { router } = jest.requireMock("expo-router") as {
@@ -97,11 +97,11 @@ describe("visual QA seed deep link", () => {
     expect(router.replace).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("requires confirmation before preparing thirty holdings", () => {
+  it("requires confirmation before preparing thirty holdings", async () => {
     mockHoldings = "30";
-    render(<VisualQaSeedRoute />);
+    await render(<VisualQaSeedRoute />);
     expect(mockSeedVisualQaPortfolio).not.toHaveBeenCalled();
-    act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
+    await act(() => alertSpy.mock.calls.at(-1)?.[2]?.[1].onPress?.());
     expect(mockSeedVisualQaPortfolio).toHaveBeenCalledWith(
       mockGetPortfolioStore.mock.results.at(-1)?.value,
       expect.objectContaining({ holdingCount: 30 }),

@@ -33,8 +33,8 @@ import { createMMKV } from "react-native-mmkv";
 import QuoteCacheQaRoute from "@/app/quote-cache-qa";
 
 describe("quote-cache QA route gate", () => {
-  it("does not initialize its MMKV instance when the QA gate blocks the route", () => {
-    const screen = render(<QuoteCacheQaRoute />);
+  it("does not initialize its MMKV instance when the QA gate blocks the route", async () => {
+    const screen = await render(<QuoteCacheQaRoute />);
 
     expect(screen.getByTestId("quote-cache-qa-blocked")).toBeTruthy();
     expect(createMMKV).not.toHaveBeenCalled();

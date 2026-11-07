@@ -46,7 +46,7 @@ describe("useAddOpeningPosition", () => {
   it("keeps manual pricing available when a quote promise rejects", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const resolveQuote = jest.fn().mockRejectedValue(new Error("offline"));
-    const { result } = renderHook(() => useAddOpeningPosition({ store, resolveQuote }));
+    const { result } = await renderHook(() => useAddOpeningPosition({ store, resolveQuote }));
     await act(async () => { await result.current.selectLookupResult(hdfcLookupResult); });
     expect(result.current.quoteStatus).toBe("Live price unavailable. Enter current price manually.");
     expect(result.current.currentPrice).toBe("");
@@ -59,21 +59,21 @@ describe("useAddOpeningPosition", () => {
     const search = jest.fn().mockResolvedValue({ failures: [], results: Array.from({ length: 100 }, (_, i) => ({
       ...hdfcLookupResult, id: `provider-${i}`, quoteSourceId: `STOCK${i}.NS`, ticker: `STOCK${i}.NS`, exchange: i % 2 ? "BSE" : "NSE",
     })) });
-    const { result, unmount } = renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
-    act(() => result.current.setLookupQuery("stock"));
+    const { result, unmount } = await renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
+    await act(() => result.current.setLookupQuery("stock"));
     await act(async () => { jest.advanceTimersByTime(400); });
     expect(result.current.lookupResults).toHaveLength(20);
     expect(result.current.selectedLookupResult).toBeUndefined();
-    act(() => result.current.loadMoreLookupResults());
-    act(() => { jest.advanceTimersByTime(100); });
+    await act(() => result.current.loadMoreLookupResults());
+    await act(() => { jest.advanceTimersByTime(100); });
     expect(result.current.lookupResults).toHaveLength(40);
-    act(() => result.current.loadMoreLookupResults());
-    act(() => result.current.setDiscoveryFilter("BSE"));
-    act(() => { jest.advanceTimersByTime(100); });
+    await act(() => result.current.loadMoreLookupResults());
+    await act(() => result.current.setDiscoveryFilter("BSE"));
+    await act(() => { jest.advanceTimersByTime(100); });
     expect(result.current.lookupResults).toHaveLength(20);
     expect(result.current.lookupResults.every((asset) => asset.exchange === "BSE")).toBe(true);
     expect(search).toHaveBeenCalledTimes(1);
-    unmount();
+    await unmount();
     jest.useRealTimers();
   });
 
@@ -82,18 +82,18 @@ describe("useAddOpeningPosition", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const pending = deferred<{ failures: string[]; results: AssetLookupResult[] }>();
     const search = jest.fn().mockResolvedValueOnce({ failures: [], results: [hdfcLookupResult] }).mockReturnValueOnce(pending.promise);
-    const { result, unmount } = renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
-    act(() => result.current.setLookupQuery("hdfc"));
+    const { result, unmount } = await renderHook(() => useAddOpeningPosition({ store, searchAssetLookupResults: search }));
+    await act(() => result.current.setLookupQuery("hdfc"));
     await act(async () => { jest.advanceTimersByTime(400); });
     expect(result.current.lookupResults).toHaveLength(1);
-    act(() => result.current.setLookupQuery("reliance"));
+    await act(() => result.current.setLookupQuery("reliance"));
     expect(result.current.lookupResults).toEqual([]);
     expect(search.mock.calls[0][0].signal.aborted).toBe(true);
     await act(async () => { jest.advanceTimersByTime(400); });
-    act(() => result.current.setLookupQuery(""));
+    await act(() => result.current.setLookupQuery(""));
     await act(async () => { pending.resolve({ failures: [], results: [hdfcLookupResult] }); });
     expect(result.current.lookupResults).toEqual([]);
-    unmount();
+    await unmount();
     jest.useRealTimers();
   });
 
@@ -101,14 +101,14 @@ describe("useAddOpeningPosition", () => {
     jest.clearAllMocks();
   });
 
-  it("does not invent a first-purchase date", () => {
+  it("does not invent a first-purchase date", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-21T19:15:00.000Z");
     jest.spyOn(now, "getFullYear").mockReturnValue(2026);
     jest.spyOn(now, "getMonth").mockReturnValue(6);
     jest.spyOn(now, "getDate").mockReturnValue(22);
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ now, store }),
     );
 
@@ -119,11 +119,11 @@ describe("useAddOpeningPosition", () => {
   it("reviews and confirms a manual opening position through the feature controller", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ onComplete, store }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setAssetName("Reliance Industries");
       result.current.setSymbol("RELIANCE");
       result.current.setTicker("RELIANCE.NS");
@@ -134,7 +134,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setIntendedHoldDays("730");
     });
 
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
 
@@ -169,7 +169,7 @@ describe("useAddOpeningPosition", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(result.current.savedAssetId).toBe(store.getState().assets[0].id);
 
-    act(() => {
+    await act(() => {
       result.current.viewSavedHolding();
     });
 
@@ -178,14 +178,14 @@ describe("useAddOpeningPosition", () => {
 
   it("saves ownership with pending valuation when no current price is available", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({
         now: new Date("2026-08-09T10:00:00.000Z"),
         store,
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setAssetName("Reliance Industries");
       result.current.setSymbol("RELIANCE");
       result.current.setTicker("RELIANCE.NS");
@@ -193,7 +193,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setAverageCostPrice("100");
       result.current.setDateUnknown(true);
     });
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
 
@@ -224,14 +224,14 @@ describe("useAddOpeningPosition", () => {
         source: "yahoo",
       },
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ resolveQuote, store }),
     );
 
     await act(async () => {
       await result.current.selectLookupResult(hdfcLookupResult);
     });
-    act(() => {
+    await act(() => {
       result.current.updateAssetClass("crypto");
     });
 
@@ -240,7 +240,7 @@ describe("useAddOpeningPosition", () => {
     expect(result.current.ticker).toBe("");
     expect(result.current.quoteSourceId).toBe("");
 
-    act(() => {
+    await act(() => {
       result.current.setTicker("hdfc-token");
       result.current.setQuoteSourceId("hdfc-token");
       result.current.setQuantity("1");
@@ -248,7 +248,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setCurrentPrice("120");
       result.current.setDate("2026-07-20");
     });
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
 
@@ -262,14 +262,14 @@ describe("useAddOpeningPosition", () => {
   it("completes after persistence when haptic feedback is unavailable", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ onComplete, store }),
     );
     (Haptics.notificationAsync as jest.Mock).mockRejectedValueOnce(
       new Error("Haptics unavailable"),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setAssetName("Reliance Industries");
       result.current.setSymbol("RELIANCE");
       result.current.setTicker("RELIANCE.NS");
@@ -279,7 +279,7 @@ describe("useAddOpeningPosition", () => {
       result.current.setDate("2026-07-20");
     });
 
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
 
@@ -300,7 +300,7 @@ describe("useAddOpeningPosition", () => {
       .fn()
       .mockReturnValueOnce(firstQuote.promise)
       .mockReturnValueOnce(secondQuote.promise);
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ resolveQuote, store }),
     );
     const secondResult: AssetLookupResult = {
@@ -314,7 +314,7 @@ describe("useAddOpeningPosition", () => {
 
     let firstSelection!: Promise<void>;
     let secondSelection!: Promise<void>;
-    act(() => {
+    await act(() => {
       firstSelection = result.current.selectLookupResult(hdfcLookupResult);
       secondSelection = result.current.selectLookupResult(secondResult);
     });
@@ -357,7 +357,7 @@ describe("useAddOpeningPosition", () => {
       .fn()
       .mockReturnValueOnce(firstQuote.promise)
       .mockReturnValueOnce(secondQuote.promise);
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ resolveQuote, store }),
     );
     const secondResult: AssetLookupResult = {
@@ -371,7 +371,7 @@ describe("useAddOpeningPosition", () => {
 
     let firstSelection!: Promise<void>;
     let secondSelection!: Promise<void>;
-    act(() => {
+    await act(() => {
       firstSelection = result.current.selectLookupResult(hdfcLookupResult);
       secondSelection = result.current.selectLookupResult(secondResult);
     });
@@ -412,7 +412,7 @@ describe("useAddOpeningPosition", () => {
   it("ignores a lookup quote after the user edits quote identity", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const pendingQuote = deferred<QuoteResult>();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({
         resolveQuote: () => pendingQuote.promise,
         store,
@@ -420,10 +420,10 @@ describe("useAddOpeningPosition", () => {
     );
 
     let selection!: Promise<void>;
-    act(() => {
+    await act(() => {
       selection = result.current.selectLookupResult(hdfcLookupResult);
     });
-    act(() => {
+    await act(() => {
       result.current.updateTicker("HDFCBANK-MANUAL.NS");
     });
     await act(async () => {
@@ -471,7 +471,7 @@ describe("useAddOpeningPosition", () => {
         source: "yahoo",
       },
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ resolveQuote, store }),
     );
 
@@ -480,12 +480,12 @@ describe("useAddOpeningPosition", () => {
     });
     expect(result.current.selectedAssetId).toBe("asset-hdfc");
 
-    act(() => {
+    await act(() => {
       result.current.setQuantity("25");
       result.current.setAverageCostPrice("1450");
       result.current.setDate("2026-07-20");
     });
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
     await act(async () => {
@@ -515,14 +515,14 @@ describe("useAddOpeningPosition", () => {
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({
         now: new Date("2026-07-20T12:00:00.000Z"),
         store,
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setQuantity("25");
       result.current.setAverageCostPrice("1450");
       result.current.setCurrentPrice("1678");
@@ -546,11 +546,11 @@ describe("useAddOpeningPosition", () => {
 
   it("resets deterministically when adding another holding", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAddOpeningPosition({ store }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setAssetName("Reliance Industries");
       result.current.setSymbol("RELIANCE");
       result.current.setTicker("RELIANCE.NS");
@@ -561,13 +561,13 @@ describe("useAddOpeningPosition", () => {
       result.current.setConviction("5");
       result.current.setNotes("Reset me");
     });
-    act(() => {
+    await act(() => {
       result.current.handleReview();
     });
     await act(async () => {
       await result.current.handleConfirm();
     });
-    act(() => {
+    await act(() => {
       result.current.startAnotherHolding();
     });
 

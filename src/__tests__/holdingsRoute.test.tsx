@@ -48,9 +48,9 @@ describe("Holdings route", () => {
     mockHoldingsProps.mockClear();
   });
 
-  it("waits until focus returns before consuming correction feedback", () => {
+  it("waits until focus returns before consuming correction feedback", async () => {
     mockParams.statusMessage = "Portfolio history updated.";
-    const screen = render(<HoldingsRoute />);
+    const screen = await render(<HoldingsRoute />);
 
     expect(mockHoldingsProps.mock.lastCall?.[0]).toMatchObject({
       isActive: false,
@@ -59,7 +59,7 @@ describe("Holdings route", () => {
     expect(mockSetParams).not.toHaveBeenCalled();
 
     mockFocused = true;
-    screen.rerender(<HoldingsRoute />);
+    await screen.rerender(<HoldingsRoute />);
 
     expect(mockHoldingsProps.mock.lastCall?.[0]).toMatchObject({
       isActive: true,
@@ -67,7 +67,7 @@ describe("Holdings route", () => {
     });
     expect(mockSetParams).toHaveBeenCalledWith({ statusMessage: undefined });
 
-    act(() => mockBlurListener?.());
+    await act(() => mockBlurListener?.());
     expect(mockHoldingsProps.mock.lastCall?.[0]).toMatchObject({
       statusMessage: undefined,
     });

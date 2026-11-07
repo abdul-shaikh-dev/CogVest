@@ -18,6 +18,7 @@ import {
   assetSearchQaProviderCandidates,
 } from "@/src/testing/assetSearchFixture";
 import { saveRecentAssetSearch } from "../recentAssetSearches";
+import { getPressHandler } from "@/src/testing/componentQueries";
 
 const backPress = { type: "hardwareBackPress", timeStamp: 0 };
 
@@ -28,59 +29,59 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
-function selectDate(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function selectDate(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
   testID: string,
   value: string,
 ) {
   const [year, month, day] = value.split("-").map(Number);
 
-  fireEvent.press(getByTestId(testID));
-  fireEvent(
+  await fireEvent.press(getByTestId(testID));
+  await fireEvent(
     getByTestId(`${testID}-picker`),
     "onChange",
     { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
   );
 }
 
-function selectOption(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function selectOption(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
   prefix: string,
   value: string,
 ) {
-  fireEvent.press(getByTestId(`${prefix}-picker`));
-  fireEvent.press(getByTestId(`${prefix}-${value}`));
+  await fireEvent.press(getByTestId(`${prefix}-picker`));
+  await fireEvent.press(getByTestId(`${prefix}-${value}`));
 }
 
-function openManualAssetEntry(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function openManualAssetEntry(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
 ) {
-  fireEvent.press(getByTestId("toggle-manual-asset-entry"));
+  await fireEvent.press(getByTestId("toggle-manual-asset-entry"));
 }
 
-function openManualConfirmDetails(
-  getByLabelText: ReturnType<typeof render>["getByLabelText"],
-  getByTestId: ReturnType<typeof render>["getByTestId"],
-  getByText: ReturnType<typeof render>["getByText"],
+async function openManualConfirmDetails(
+  getByLabelText: Awaited<ReturnType<typeof render>>["getByLabelText"],
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
+  getByText: Awaited<ReturnType<typeof render>>["getByText"],
 ) {
-  openManualAssetEntry(getByTestId);
-  fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-  fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-  fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-  fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-  fireEvent.press(getByText("Continue to confirm details"));
+  await openManualAssetEntry(getByTestId);
+  await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+  await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+  await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+  await fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+  await fireEvent.press(getByText("Continue to confirm details"));
 }
 
-function togglePositionOptions(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function togglePositionOptions(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
 ) {
-  fireEvent.press(getByTestId("toggle-position-options"));
+  await fireEvent.press(getByTestId("toggle-position-options"));
 }
 
-function toggleReviewDetails(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function toggleReviewDetails(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
 ) {
-  fireEvent.press(getByTestId("toggle-review-details"));
+  await fireEvent.press(getByTestId("toggle-review-details"));
 }
 
 describe("AddOpeningPositionForm", () => {
@@ -88,38 +89,38 @@ describe("AddOpeningPositionForm", () => {
     { width: 400, fontScale: 1, direction: "row" as const, displayMode: "standard" as const },
     { width: 340, fontScale: 1, direction: "column" as const, displayMode: "minimal" as const },
     { width: 400, fontScale: 1.3, direction: "column" as const, displayMode: "standard" as const },
-  ])("keeps manual labels and values at $width dp and $fontScale text scale", ({ width, fontScale, direction, displayMode }) => {
+  ])("keeps manual labels and values at $width dp and $fontScale text scale", async ({ width, fontScale, direction, displayMode }) => {
     const original = Dimensions.get("window");
-    act(() => Dimensions.set({ window: { width, height: 800, scale: 3, fontScale } }));
+    await act(() => Dimensions.set({ window: { width, height: 800, scale: 3, fontScale } }));
     try {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       store.getState().updatePreferences({ displayMode });
-      const view = render(<AddOpeningPositionForm store={store} />);
+      const view = await render(<AddOpeningPositionForm store={store} />);
       expect(view.getByTestId("add-holding-phase-asset")).toHaveStyle({ backgroundColor: "transparent" });
-      fireEvent.press(view.getByTestId("toggle-manual-asset-entry"));
+      await fireEvent.press(view.getByTestId("toggle-manual-asset-entry"));
       expect(view.getByTestId("manual-asset-identifiers")).toHaveStyle({ flexDirection: direction });
-      fireEvent.changeText(view.getByLabelText("Symbol"), "SYNTHETIC");
-      fireEvent.changeText(view.getByLabelText("Ticker"), "SYNTHETIC.NS");
+      await fireEvent.changeText(view.getByLabelText("Symbol"), "SYNTHETIC");
+      await fireEvent.changeText(view.getByLabelText("Ticker"), "SYNTHETIC.NS");
       expect(view.getByLabelText("Symbol")).toHaveProp("value", "SYNTHETIC");
       expect(view.getByLabelText("Ticker")).toHaveProp("value", "SYNTHETIC.NS");
       expect(view.getByLabelText("Quote source ID")).toBeTruthy();
       expect(view.getByRole("button", { name: "Use asset search instead" })).toBeTruthy();
       expect(store.getState().openingPositions).toEqual([]);
     } finally {
-      act(() => Dimensions.set({ window: original }));
+      await act(() => Dimensions.set({ window: original }));
     }
   });
 
-  it("keeps asset context on position entry and groups review gains", () => {
+  it("keeps asset context on position entry and groups review gains", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<AddOpeningPositionForm initialVisualQaState="review" store={store} />);
+    const screen = await render(<AddOpeningPositionForm initialVisualQaState="review" store={store} />);
     expect(within(screen.getByTestId("review-pnl-summary")).getByText("Percentage unavailable")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("review-edit-position"));
+    await fireEvent.press(screen.getByTestId("review-edit-position"));
     expect(within(screen.getByTestId("position-asset-context")).getByText("HDFC Bank")).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId("quantity-input"), "2");
-    fireEvent.changeText(screen.getByTestId("average-cost-input"), "100");
-    fireEvent.changeText(screen.getByTestId("price-input"), "125");
-    fireEvent.press(screen.getByTestId("review-holding-button"));
+    await fireEvent.changeText(screen.getByTestId("quantity-input"), "2");
+    await fireEvent.changeText(screen.getByTestId("average-cost-input"), "100");
+    await fireEvent.changeText(screen.getByTestId("price-input"), "125");
+    await fireEvent.press(screen.getByTestId("review-holding-button"));
     const summary = within(screen.getByTestId("review-pnl-summary"));
     expect(summary.getByTestId("derived-preview-pnl")).toHaveTextContent(/50\.00/);
     expect(summary.getByTestId("derived-preview-pnl-percent")).toHaveTextContent("+25.00%");
@@ -136,8 +137,8 @@ describe("AddOpeningPositionForm", () => {
     const results = [assetSearchQaProviderCandidates[0], assetSearchQaProviderCandidates[4], assetSearchQaProviderCandidates[1]];
     const searchAssetLookupResults = jest.fn().mockResolvedValue({ failures: [], results });
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<AddOpeningPositionForm store={store} searchAssetLookupResults={searchAssetLookupResults} />);
-    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "synthetic");
+    const screen = await render(<AddOpeningPositionForm store={store} searchAssetLookupResults={searchAssetLookupResults} />);
+    await fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "synthetic");
     await act(async () => { jest.advanceTimersByTime(400); });
     const rows = screen.getAllByRole("button").filter((row) => String(row.props.testID).startsWith("asset-lookup-result-"));
     expect(rows.map((row) => row.props.testID)).toEqual(results.map((result) => `asset-lookup-result-${result.id}`));
@@ -150,7 +151,7 @@ describe("AddOpeningPositionForm", () => {
       results: assetSearchQaMixedNameCandidates,
     });
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <AddOpeningPositionForm
         resolveQuote={jest.fn().mockResolvedValue({ ok: false, error: "No quote." })}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -161,7 +162,7 @@ describe("AddOpeningPositionForm", () => {
     expect(screen.getByTestId("asset-discovery-filter-picker")).toHaveProp("accessibilityValue", { text: "All assets" });
     expect(screen.getAllByText("All assets")).toHaveLength(1);
     expect(screen.queryByText("Showing: All assets")).toBeNull();
-    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
+    await fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
     await act(async () => { jest.advanceTimersByTime(400); });
 
     await waitFor(() => {
@@ -175,7 +176,7 @@ describe("AddOpeningPositionForm", () => {
     expect(store.getState().openingPositions).toEqual([]);
 
     const selected = assetSearchQaMixedNameCandidates.find((result) => result.ticker === "HDFCBANK.BO")!;
-    fireEvent.press(screen.getByTestId(`asset-lookup-result-${selected.id}`));
+    await fireEvent.press(screen.getByTestId(`asset-lookup-result-${selected.id}`));
 
     await waitFor(() => expect(screen.getByTestId("selected-asset-summary")).toBeTruthy());
     expect(screen.getByText("HDFCBANK • HDFCBANK.BO • Yahoo Finance suggestion")).toBeTruthy();
@@ -189,15 +190,15 @@ describe("AddOpeningPositionForm", () => {
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce({ failures: [], results: [assetSearchQaMixedNameCandidates[0]] });
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <AddOpeningPositionForm searchAssetLookupResults={searchAssetLookupResults} store={store} />,
     );
 
-    fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
+    await fireEvent.changeText(screen.getByTestId("asset-lookup-input"), "HDFC");
     await act(async () => { jest.advanceTimersByTime(400); });
     await waitFor(() => expect(screen.getByTestId("asset-lookup-retry")).toBeTruthy());
 
-    fireEvent.press(screen.getByTestId("asset-lookup-retry"));
+    await fireEvent.press(screen.getByTestId("asset-lookup-retry"));
     await act(async () => { jest.advanceTimersByTime(400); });
 
     await waitFor(() => {
@@ -217,23 +218,23 @@ describe("AddOpeningPositionForm", () => {
     jest.useRealTimers();
   });
 
-  it("exits without saving an opening position", () => {
+  it("exits without saving an opening position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCancel = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <AddOpeningPositionForm onCancel={onCancel} store={store} />,
     );
 
-    fireEvent.press(getByLabelText("Back"));
+    await fireEvent.press(getByLabelText("Back"));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().assets).toEqual([]);
     expect(store.getState().openingPositions).toEqual([]);
   });
 
-  it("starts on the Asset phase and hides later phase fields", () => {
+  it("starts on the Asset phase and hides later phase fields", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
@@ -253,11 +254,11 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("quantity-input")).toBeNull();
   });
 
-  it("keeps recent searches behind a disclosure while manual entry stays visible", () => {
+  it("keeps recent searches behind a disclosure while manual entry stays visible", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const recentSearchStorage = createMemoryJsonStorage();
     saveRecentAssetSearch("Nippon India ETF Nifty IT", recentSearchStorage);
-    const screen = render(
+    const screen = await render(
       <AddOpeningPositionForm
         recentSearchStorage={recentSearchStorage}
         store={store}
@@ -271,7 +272,7 @@ describe("AddOpeningPositionForm", () => {
         .accessibilityState,
     ).toEqual({ expanded: false });
 
-    fireEvent.press(screen.getByTestId("toggle-recent-asset-searches"));
+    await fireEvent.press(screen.getByTestId("toggle-recent-asset-searches"));
 
     expect(screen.getByTestId("recent-asset-searches")).toBeTruthy();
     expect(screen.getByText("Nippon India ETF Nifty IT")).toBeTruthy();
@@ -283,7 +284,7 @@ describe("AddOpeningPositionForm", () => {
 
   it.each(["hardware", "toolbar", "footer"])(
     "retains a single-holding draft through every phase using %s Back",
-    (entryPoint) => {
+    async (entryPoint) => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       const onCancel = jest.fn();
       let hardwareBack: (() => boolean | null | undefined) | undefined;
@@ -291,86 +292,86 @@ describe("AddOpeningPositionForm", () => {
         hardwareBack = () => handler(backPress);
         return { remove: jest.fn() };
       });
-      const ui = render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
-      openManualAssetEntry(ui.getByTestId);
-      fireEvent.changeText(ui.getByLabelText("Asset name"), "Draft asset");
-      fireEvent.changeText(ui.getByLabelText("Symbol"), "DRAFT");
-      fireEvent.changeText(ui.getByLabelText("Ticker"), "DRAFT.NS");
-      fireEvent.press(ui.getByTestId("continue-class-button"));
-      fireEvent.press(ui.getByTestId("continue-position-button"));
-      togglePositionOptions(ui.getByTestId);
-      fireEvent.changeText(ui.getByLabelText("Quantity"), "2");
-      fireEvent.changeText(ui.getByLabelText("Average cost"), "100");
-      fireEvent.press(ui.getByLabelText("First purchase date unknown"));
-      fireEvent.press(ui.getByTestId("review-holding-button"));
+      const ui = await render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
+      await openManualAssetEntry(ui.getByTestId);
+      await fireEvent.changeText(ui.getByLabelText("Asset name"), "Draft asset");
+      await fireEvent.changeText(ui.getByLabelText("Symbol"), "DRAFT");
+      await fireEvent.changeText(ui.getByLabelText("Ticker"), "DRAFT.NS");
+      await fireEvent.press(ui.getByTestId("continue-class-button"));
+      await fireEvent.press(ui.getByTestId("continue-position-button"));
+      await togglePositionOptions(ui.getByTestId);
+      await fireEvent.changeText(ui.getByLabelText("Quantity"), "2");
+      await fireEvent.changeText(ui.getByLabelText("Average cost"), "100");
+      await fireEvent.press(ui.getByLabelText("First purchase date unknown"));
+      await fireEvent.press(ui.getByTestId("review-holding-button"));
       expect(ui.getByTestId("add-holding-phase-review")).toBeTruthy();
-      const back = () => {
-        if (entryPoint === "hardware") act(() => { expect(hardwareBack?.()).toBe(true); });
-        else fireEvent.press(ui.getByTestId(entryPoint === "toolbar" ? "add-holding-exit" : "back-button"));
+      const back = async () => {
+        if (entryPoint === "hardware") await act(() => { expect(hardwareBack?.()).toBe(true); });
+        else await fireEvent.press(ui.getByTestId(entryPoint === "toolbar" ? "add-holding-exit" : "back-button"));
       };
-      back();
+      await back();
       expect(ui.getByTestId("add-holding-phase-position")).toBeTruthy();
-      fireEvent.changeText(ui.getByLabelText("Quantity"), "17");
-      fireEvent.changeText(ui.getByLabelText("Average cost"), "1200");
-      fireEvent.changeText(ui.getByTestId("notes-input"), "Keep this draft");
-      back();
+      await fireEvent.changeText(ui.getByLabelText("Quantity"), "17");
+      await fireEvent.changeText(ui.getByLabelText("Average cost"), "1200");
+      await fireEvent.changeText(ui.getByTestId("notes-input"), "Keep this draft");
+      await back();
       expect(ui.getByTestId("add-holding-phase-class")).toBeTruthy();
-      back();
+      await back();
       expect(ui.getByTestId("add-holding-phase-asset")).toBeTruthy();
-      fireEvent.press(ui.getByTestId("continue-class-button"));
-      fireEvent.press(ui.getByTestId("continue-position-button"));
+      await fireEvent.press(ui.getByTestId("continue-class-button"));
+      await fireEvent.press(ui.getByTestId("continue-position-button"));
       expect(ui.getByLabelText("Quantity")).toHaveProp("value", "17");
       expect(ui.getByLabelText("Average cost")).toHaveProp("value", "1200");
       expect(ui.getByTestId("notes-input")).toHaveProp("value", "Keep this draft");
       expect(onCancel).not.toHaveBeenCalled();
       expect(store.getState().openingPositions).toHaveLength(0);
-      ui.unmount();
+      await ui.unmount();
       spy.mockRestore();
     },
   );
 
-  it("keeps unfinished input when exit is cancelled or dismissed and only discards explicitly", () => {
+  it("keeps unfinished input when exit is cancelled or dismissed and only discards explicitly", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCancel = jest.fn();
-    const ui = render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
-    openManualAssetEntry(ui.getByTestId);
-    fireEvent.changeText(ui.getByLabelText("Asset name"), "My draft");
-    fireEvent.press(ui.getByTestId("add-holding-exit"));
+    const ui = await render(<AddOpeningPositionForm onCancel={onCancel} store={store} />);
+    await openManualAssetEntry(ui.getByTestId);
+    await fireEvent.changeText(ui.getByLabelText("Asset name"), "My draft");
+    await fireEvent.press(ui.getByTestId("add-holding-exit"));
     expect(ui.getByText("Discard unfinished holding?")).toBeTruthy();
-    fireEvent.press(ui.getByTestId("holding-keep-editing"));
+    await fireEvent.press(ui.getByTestId("holding-keep-editing"));
     expect(ui.getByLabelText("Asset name")).toHaveProp("value", "My draft");
-    fireEvent.press(ui.getByTestId("add-holding-exit"));
-    fireEvent(ui.getByTestId("holding-exit-confirmation"), "requestClose");
+    await fireEvent.press(ui.getByTestId("add-holding-exit"));
+    await fireEvent(ui.getByTestId("holding-exit-confirmation"), "requestClose");
     expect(ui.getByLabelText("Asset name")).toHaveProp("value", "My draft");
     expect(onCancel).not.toHaveBeenCalled();
-    fireEvent.press(ui.getByTestId("add-holding-exit"));
-    fireEvent.press(ui.getByTestId("holding-discard-exit"));
+    await fireEvent.press(ui.getByTestId("add-holding-exit"));
+    await fireEvent.press(ui.getByTestId("holding-discard-exit"));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().openingPositions).toHaveLength(0);
   });
 
-  it("unregisters the single-holding back handler when the route loses focus", () => {
+  it("unregisters the single-holding back handler when the route loses focus", async () => {
     const remove = jest.fn();
     const spy = jest.spyOn(BackHandler, "addEventListener").mockReturnValue({ remove });
     const props = { onCancel: jest.fn(), store: createPortfolioStore({ storage: createMemoryJsonStorage() }) };
-    const ui = render(<AddOpeningPositionForm {...props} />);
+    const ui = await render(<AddOpeningPositionForm {...props} />);
     expect(spy).toHaveBeenCalled();
     spy.mockClear();
-    ui.rerender(<AddOpeningPositionForm {...props} hardwareBackEnabled={false} />);
+    await ui.rerender(<AddOpeningPositionForm {...props} hardwareBackEnabled={false} />);
     expect(remove).toHaveBeenCalled();
     expect(spy).not.toHaveBeenCalled();
-    ui.unmount();
+    await ui.unmount();
     spy.mockRestore();
   });
 
-  it("validates the Asset phase before continuing", () => {
+  it("validates the Asset phase before continuing", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.press(getByText("Continue to confirm details"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.press(getByText("Continue to confirm details"));
 
     expect(queryByTestId("add-holding-phase-class")).toBeNull();
     expect(getByText("Asset name is required.")).toBeTruthy();
@@ -378,12 +379,12 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("Ticker is required.")).toBeTruthy();
   });
 
-  it("shows distinct Confirm details labels and selected state for every asset class", () => {
-    const { getByLabelText, getByTestId, getByText } = render(
+  it("shows distinct Confirm details labels and selected state for every asset class", async () => {
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
 
     for (const [assetClass, label] of [
       ["stock", "Stocks"],
@@ -401,29 +402,29 @@ describe("AddOpeningPositionForm", () => {
     }
   });
 
-  it("resets incompatible metadata and exposes only valid stock and ETF instruments", () => {
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+  it("resets incompatible metadata and exposes only valid stock and ETF instruments", async () => {
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-    selectOption(getByTestId, "sector-type", "energy");
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await selectOption(getByTestId, "sector-type", "energy");
     expect(within(getByTestId("sector-type-picker")).getByText("Energy")).toBeTruthy();
 
-    fireEvent.press(getByTestId("asset-class-etf"));
+    await fireEvent.press(getByTestId("asset-class-etf"));
     expect(within(getByTestId("instrument-type-picker")).getByText("ETF")).toBeTruthy();
     expect(queryByTestId("sector-type-picker")).toBeNull();
     expect(getByTestId("sector-not-applicable")).toBeTruthy();
 
-    fireEvent.press(getByTestId("instrument-type-picker"));
+    await fireEvent.press(getByTestId("instrument-type-picker"));
     expect(getByTestId("instrument-type-etf")).toBeTruthy();
     expect(queryByTestId("instrument-type-stock")).toBeNull();
-    fireEvent.press(getByTestId("instrument-type-etf"));
+    await fireEvent.press(getByTestId("instrument-type-etf"));
 
-    fireEvent.press(getByTestId("asset-class-stock"));
+    await fireEvent.press(getByTestId("asset-class-stock"));
     expect(within(getByTestId("instrument-type-picker")).getByText("Stock")).toBeTruthy();
     expect(within(getByTestId("sector-type-picker")).getByText("Unknown")).toBeTruthy();
-    fireEvent.press(getByTestId("instrument-type-picker"));
+    await fireEvent.press(getByTestId("instrument-type-picker"));
     expect(getByTestId("instrument-type-stock")).toBeTruthy();
     expect(queryByTestId("instrument-type-etf")).toBeNull();
   });
@@ -456,7 +457,7 @@ describe("AddOpeningPositionForm", () => {
       getByLabelText,
       getByTestId,
       queryByTestId,
-    } = render(
+    } = await render(
       <AddOpeningPositionForm
         searchAssetLookupResults={searchAssetLookupResults}
         store={store}
@@ -469,7 +470,7 @@ describe("AddOpeningPositionForm", () => {
     });
     expect(getAllByRole("button", { name: /^Use Saved Asset/u })).toHaveLength(6);
 
-    fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
+    await fireEvent.changeText(getByLabelText("Search asset"), "Saved Asset 7");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -514,14 +515,14 @@ describe("AddOpeningPositionForm", () => {
       failures: [],
       results: [duplicateResult],
     });
-    const { getByLabelText, getByTestId, queryByTestId } = render(
+    const { getByLabelText, getByTestId, queryByTestId } = await render(
       <AddOpeningPositionForm
         searchAssetLookupResults={searchAssetLookupResults}
         store={store}
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "HDFC Bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "HDFC Bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -534,36 +535,36 @@ describe("AddOpeningPositionForm", () => {
     });
   });
 
-  it("moves through Asset, Confirm details, Position, and Review phases", () => {
+  it("moves through Asset, Confirm details, Position, and Review phases", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const {
       getByLabelText,
       getByTestId,
       getByText,
       queryByTestId,
-    } = render(
+    } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to confirm details"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to confirm details"));
 
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     expect(queryByTestId("add-holding-phase-asset")).toBeNull();
 
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByTestId("add-holding-phase-position")).toBeTruthy();
 
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    selectDate(getByTestId, "date-input", "2026-04-15");
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
+    await fireEvent.press(getByText("Review and save"));
 
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
     expect(getByText("Review holding")).toBeTruthy();
@@ -579,7 +580,7 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("review-identity")).toBeNull();
     expect(queryByTestId("review-classification")).toBeNull();
 
-    toggleReviewDetails(getByTestId);
+    await toggleReviewDetails(getByTestId);
     expect(getByTestId("toggle-review-details").props.accessibilityState).toEqual({
       expanded: true,
     });
@@ -587,20 +588,20 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("review-classification")).toBeTruthy();
     expect(getByTestId("review-edit-asset")).toBeTruthy();
 
-    fireEvent.press(getByTestId("review-edit-classification"));
+    await fireEvent.press(getByTestId("review-edit-classification"));
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Quantity")).toHaveProp("value", "25");
   });
 
-  it("hides optional position fields by default and retains them through collapse and reopen", () => {
+  it("hides optional position fields by default and retains them through collapse and reopen", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-    fireEvent.press(getByText("Continue to position"));
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await fireEvent.press(getByText("Continue to position"));
 
     expect(getByTestId("date-input")).toBeTruthy();
     expect(getByTestId("toggle-position-options").props.accessibilityState).toEqual({
@@ -610,18 +611,18 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("intended-hold-days-input")).toBeNull();
     expect(queryByTestId("notes-input")).toBeNull();
 
-    togglePositionOptions(getByTestId);
-    fireEvent.press(getByTestId("conviction-4"));
-    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "730");
-    fireEvent.changeText(getByLabelText("Note"), "Long-term plan");
+    await togglePositionOptions(getByTestId);
+    await fireEvent.press(getByTestId("conviction-4"));
+    await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "730");
+    await fireEvent.changeText(getByLabelText("Note"), "Long-term plan");
     expect(getByTestId("date-input")).toBeTruthy();
 
-    togglePositionOptions(getByTestId);
+    await togglePositionOptions(getByTestId);
     expect(queryByTestId("conviction-4")).toBeNull();
     expect(queryByTestId("intended-hold-days-input")).toBeNull();
     expect(queryByTestId("notes-input")).toBeNull();
 
-    togglePositionOptions(getByTestId);
+    await togglePositionOptions(getByTestId);
     expect(getByTestId("conviction-4").props.accessibilityState).toEqual({
       selected: true,
     });
@@ -631,22 +632,22 @@ describe("AddOpeningPositionForm", () => {
 
   it("reveals optional fields for invalid optional values and saves corrected optional data", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    togglePositionOptions(getByTestId);
-    fireEvent.press(getByTestId("conviction-4"));
-    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "0");
-    fireEvent.changeText(getByLabelText("Note"), "Corrected after review");
-    togglePositionOptions(getByTestId);
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await togglePositionOptions(getByTestId);
+    await fireEvent.press(getByTestId("conviction-4"));
+    await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "0");
+    await fireEvent.changeText(getByLabelText("Note"), "Corrected after review");
+    await togglePositionOptions(getByTestId);
 
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Review and save"));
 
     expect(getByTestId("add-holding-phase-position")).toBeTruthy();
     expect(getByTestId("toggle-position-options").props.accessibilityState).toEqual({
@@ -655,16 +656,16 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("intended-hold-days-input")).toBeTruthy();
     expect(getByText("Planned holding period must be whole days.")).toBeTruthy();
 
-    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "365");
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "365");
+    await fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
-    toggleReviewDetails(getByTestId);
+    await toggleReviewDetails(getByTestId);
     expect(getByTestId("review-optional-details")).toBeTruthy();
     expect(getByText("Corrected after review")).toBeTruthy();
     expect(getByText("4 of 5")).toBeTruthy();
     expect(getByText("365 days")).toBeTruthy();
 
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -679,44 +680,44 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("save-holding-button")).toBeNull();
   });
 
-  it("omits the optional review section when every optional value is empty", () => {
+  it("omits the optional review section when every optional value is empty", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Average cost"), "100");
-    fireEvent.changeText(getByLabelText("Current price"), "120");
-    fireEvent.press(getByText("I don't know"));
-    fireEvent.press(getByText("Review and save"));
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Average cost"), "100");
+    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await fireEvent.press(getByText("I don't know"));
+    await fireEvent.press(getByText("Review and save"));
 
-    toggleReviewDetails(getByTestId);
+    await toggleReviewDetails(getByTestId);
     expect(queryByTestId("review-optional-details")).toBeNull();
   });
 
-  it("shows nonempty date and optional details in the review disclosure", () => {
+  it("shows nonempty date and optional details in the review disclosure", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Average cost"), "100");
-    fireEvent.changeText(getByLabelText("Current price"), "120");
-    togglePositionOptions(getByTestId);
-    fireEvent.press(getByTestId("conviction-3"));
-    fireEvent.changeText(getByLabelText("Planned holding period (days)"), "180");
-    fireEvent.changeText(getByLabelText("Note"), "Review note");
-    selectDate(getByTestId, "date-input", "2026-04-15");
-    fireEvent.press(getByText("Review and save"));
+    await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Average cost"), "100");
+    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await togglePositionOptions(getByTestId);
+    await fireEvent.press(getByTestId("conviction-3"));
+    await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "180");
+    await fireEvent.changeText(getByLabelText("Note"), "Review note");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
+    await fireEvent.press(getByText("Review and save"));
 
     expect(queryByTestId("review-identity")).toBeNull();
-    toggleReviewDetails(getByTestId);
+    await toggleReviewDetails(getByTestId);
     expect(getByTestId("review-optional-details")).toBeTruthy();
     expect(getByText("2026-04-15")).toBeTruthy();
     expect(getByText("Review note")).toBeTruthy();
@@ -724,24 +725,24 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("180 days")).toBeTruthy();
   });
 
-  it("allows returning to completed phases before saving", () => {
+  it("allows returning to completed phases before saving", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.press(getByText("Back"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Back"));
 
     expect(getByTestId("add-holding-phase-class")).toBeTruthy();
 
-    fireEvent.press(getByTestId("add-holding-step-asset"));
+    await fireEvent.press(getByTestId("add-holding-step-asset"));
 
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
     expect(getByLabelText("Asset name")).toHaveProp(
@@ -753,28 +754,28 @@ describe("AddOpeningPositionForm", () => {
   it("creates a manual asset and persists a reviewed opening position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode: "minimal" });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
     expect(getByTestId("add-holding-screen")).toBeTruthy();
-    openManualAssetEntry(getByTestId);
+    await openManualAssetEntry(getByTestId);
     expect(getByTestId("asset-input")).toBeTruthy();
     expect(getByTestId("symbol-input")).toBeTruthy();
     expect(getByTestId("ticker-input")).toBeTruthy();
     expect(getByTestId("quote-source-id-input")).toBeTruthy();
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to confirm details"));
 
     expect(getByTestId("asset-class-stock")).toBeTruthy();
     expect(getByTestId("instrument-type-picker")).toBeTruthy();
     expect(getByTestId("sector-type-picker")).toBeTruthy();
 
-    selectOption(getByTestId, "sector-type", "energy");
-    fireEvent.press(getByText("Continue to position"));
+    await selectOption(getByTestId, "sector-type", "energy");
+    await fireEvent.press(getByText("Continue to position"));
 
     expect(getByTestId("quantity-input")).toBeTruthy();
     expect(getByTestId("average-cost-input")).toBeTruthy();
@@ -782,15 +783,15 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("date-input")).toBeTruthy();
     expect(getByTestId("review-holding-button")).toBeTruthy();
 
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    selectDate(getByTestId, "date-input", "2026-04-15");
-    togglePositionOptions(getByTestId);
-    fireEvent.press(getByTestId("conviction-4"));
-    fireEvent.changeText(getByLabelText("Note"), "Excel opening position");
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
+    await togglePositionOptions(getByTestId);
+    await fireEvent.press(getByTestId("conviction-4"));
+    await fireEvent.changeText(getByLabelText("Note"), "Excel opening position");
 
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
     expect(getByText("₹36,250.00")).toBeTruthy();
     expect(getByText("₹41,956.25")).toBeTruthy();
@@ -815,7 +816,7 @@ describe("AddOpeningPositionForm", () => {
     ).toBeTruthy();
     expect(getByTestId("save-holding-button")).toBeTruthy();
 
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().assets).toHaveLength(1);
@@ -867,23 +868,23 @@ describe("AddOpeningPositionForm", () => {
     "persists the $assetClass class, instrument, and financial records",
     async ({ assetClass, expectedSectorType, instrumentType }) => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-      const { getByLabelText, getByTestId, getByText } = render(
+      const { getByLabelText, getByTestId, getByText } = await render(
         <AddOpeningPositionForm store={store} />,
       );
 
-      openManualConfirmDetails(getByLabelText, getByTestId, getByText);
-      fireEvent.press(getByTestId(`asset-class-${assetClass}`));
-      selectOption(getByTestId, "instrument-type", instrumentType);
+      await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
+      await fireEvent.press(getByTestId(`asset-class-${assetClass}`));
+      await selectOption(getByTestId, "instrument-type", instrumentType);
       if (assetClass === "stock") {
-        selectOption(getByTestId, "sector-type", "energy");
+        await selectOption(getByTestId, "sector-type", "energy");
       }
-      fireEvent.press(getByText("Continue to position"));
-      fireEvent.changeText(getByLabelText("Quantity"), "25");
-      fireEvent.changeText(getByLabelText("Average cost"), "1450");
-      fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-      selectDate(getByTestId, "date-input", "2026-04-15");
-      fireEvent.press(getByText("Review and save"));
-      fireEvent.press(getByText("Save Holding"));
+      await fireEvent.press(getByText("Continue to position"));
+      await fireEvent.changeText(getByLabelText("Quantity"), "25");
+      await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+      await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+      await selectDate(getByTestId, "date-input", "2026-04-15");
+      await fireEvent.press(getByText("Review and save"));
+      await fireEvent.press(getByText("Save Holding"));
 
       await waitFor(() => {
         expect(store.getState().assets).toHaveLength(1);
@@ -930,24 +931,24 @@ describe("AddOpeningPositionForm", () => {
       symbol: "HDFCBANK",
       ticker: "HDFCBANK.NS",
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    fireEvent.press(getByTestId(`existing-asset-${savedAssetId}`));
+    await fireEvent.press(getByTestId(`existing-asset-${savedAssetId}`));
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
 
-    fireEvent.press(getByText("Continue to confirm details"));
-    selectOption(getByTestId, "sector-type", "technology");
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    selectDate(getByTestId, "date-input", "2026-04-15");
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await selectOption(getByTestId, "sector-type", "technology");
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
 
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -975,22 +976,22 @@ describe("AddOpeningPositionForm", () => {
   it("offers explicit completion actions after saving", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm onComplete={onComplete} store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Average cost"), "100");
-    fireEvent.changeText(getByLabelText("Current price"), "120");
-    fireEvent.press(getByLabelText("First purchase date unknown"));
-    fireEvent.press(getByText("Review and save"));
-    fireEvent.press(getByText("Save Holding"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Average cost"), "100");
+    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await fireEvent.press(getByLabelText("First purchase date unknown"));
+    await fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(getByTestId("holding-save-complete")).toBeTruthy();
@@ -998,10 +999,10 @@ describe("AddOpeningPositionForm", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(queryByTestId("save-holding-button")).toBeNull();
 
-    fireEvent.press(getByTestId("view-holding-button"));
+    await fireEvent.press(getByTestId("view-holding-button"));
     expect(onComplete).toHaveBeenCalledWith(store.getState().assets[0].id);
 
-    fireEvent.press(getByTestId("add-another-holding-button"));
+    await fireEvent.press(getByTestId("add-another-holding-button"));
 
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
     expect(queryByTestId("manual-asset-fields")).toBeNull();
@@ -1011,7 +1012,7 @@ describe("AddOpeningPositionForm", () => {
   it("uses the simplified quick-setup flow and saves immediately for the chosen action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onQuickSetupItemSaved = jest.fn();
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm
         onQuickSetupItemSaved={onQuickSetupItemSaved}
         quickSetup
@@ -1021,20 +1022,20 @@ describe("AddOpeningPositionForm", () => {
 
     expect(getByText("Set up portfolio")).toBeTruthy();
     expect(queryByTestId("add-holding-step-class")).toBeNull();
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to position"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to position"));
 
     expect(getByTestId("add-holding-phase-position")).toBeTruthy();
     expect(queryByTestId("conviction-1")).toBeNull();
     expect(queryByTestId("notes-input")).toBeNull();
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Average cost"), "100");
-    fireEvent.press(getByLabelText("First purchase date unknown"));
-    fireEvent.press(getByText("Review and save"));
-    fireEvent.press(getByTestId("quick-setup-save-add-next"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Average cost"), "100");
+    await fireEvent.press(getByLabelText("First purchase date unknown"));
+    await fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByTestId("quick-setup-save-add-next"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -1046,16 +1047,16 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-phase-asset")).toBeTruthy();
   });
 
-  it("explains that only unfinished quick-setup input is discarded on exit", () => {
+  it("explains that only unfinished quick-setup input is discarded on exit", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCancel = jest.fn();
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm onCancel={onCancel} quickSetup store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
-    fireEvent.press(getByLabelText("Exit portfolio setup"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
+    await fireEvent.press(getByLabelText("Exit portfolio setup"));
 
     expect(getByText("Leave portfolio setup?")).toBeTruthy();
     expect(
@@ -1065,13 +1066,13 @@ describe("AddOpeningPositionForm", () => {
     ).toBeTruthy();
     expect(onCancel).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId("quick-setup-confirm-exit"));
+    await fireEvent.press(getByTestId("quick-setup-confirm-exit"));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().assets).toHaveLength(0);
     expect(store.getState().openingPositions).toHaveLength(0);
   });
 
-  it("guards an unfinished quick-setup draft from Android system back", () => {
+  it("guards an unfinished quick-setup draft from Android system back", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onCancel = jest.fn();
     let hardwareBack: (() => boolean | null | undefined) | undefined;
@@ -1081,13 +1082,13 @@ describe("AddOpeningPositionForm", () => {
         hardwareBack = () => handler(backPress);
         return { remove: jest.fn() };
       });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm onCancel={onCancel} quickSetup store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
-    act(() => {
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Draft holding");
+    await act(() => {
       expect(hardwareBack?.()).toBe(true);
     });
 
@@ -1096,10 +1097,10 @@ describe("AddOpeningPositionForm", () => {
     backHandlerSpy.mockRestore();
   });
 
-  it("does not register the setup back guard while its route is unfocused", () => {
+  it("does not register the setup back guard while its route is unfocused", async () => {
     const backHandlerSpy = jest.spyOn(BackHandler, "addEventListener");
 
-    render(
+    await render(
       <AddOpeningPositionForm
         hardwareBackEnabled={false}
         onCancel={jest.fn()}
@@ -1138,17 +1139,17 @@ describe("AddOpeningPositionForm", () => {
       notes: "Long-term opening position",
       quantity: 2,
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm quickSetup store={store} />,
     );
 
-    fireEvent.press(getByTestId(`existing-asset-${assetId}`));
+    await fireEvent.press(getByTestId(`existing-asset-${assetId}`));
     expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Quantity").props.value).toBe("2");
-    fireEvent.changeText(getByLabelText("Quantity"), "3");
-    fireEvent.press(getByText("Review and save"));
-    fireEvent.press(getByTestId("quick-setup-save-finish"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "3");
+    await fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByTestId("quick-setup-save-finish"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -1163,7 +1164,7 @@ describe("AddOpeningPositionForm", () => {
     });
   });
 
-  it("rechecks manual identity and prefills a safe existing aggregate", () => {
+  it("rechecks manual identity and prefills a safe existing aggregate", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -1183,19 +1184,19 @@ describe("AddOpeningPositionForm", () => {
       id: "opening-manual-existing",
       quantity: 2,
     });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm quickSetup store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.press(getByText("Continue to position"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.press(getByText("Continue to position"));
 
     expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
     expect(queryByTestId("add-holding-phase-position")).toBeNull();
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Quantity").props.value).toBe("2");
   });
 
@@ -1223,7 +1224,7 @@ describe("AddOpeningPositionForm", () => {
       failures: [],
       results: [result],
     });
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <AddOpeningPositionForm
         quickSetup
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1231,14 +1232,14 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
     await waitFor(() => {
       expect(getByTestId(`asset-lookup-result-${result.id}`)).toBeTruthy();
     });
-    act(() => {
+    await act(() => {
       store.getState().addAsset({
         assetClass: "stock",
         currency: "INR",
@@ -1258,12 +1259,12 @@ describe("AddOpeningPositionForm", () => {
         quantity: 2,
       });
     });
-    fireEvent.press(getByTestId("existing-asset-asset-race-hdfc"));
+    await fireEvent.press(getByTestId("existing-asset-asset-race-hdfc"));
 
     expect(getByTestId("quick-setup-duplicate-update")).toBeTruthy();
   });
 
-  it("blocks quick-setup overwrite when an asset has transaction history", () => {
+  it("blocks quick-setup overwrite when an asset has transaction history", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const assetId = "asset-history";
     store.getState().addAsset({
@@ -1284,14 +1285,14 @@ describe("AddOpeningPositionForm", () => {
       totalValue: 100,
       type: "buy",
     });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm quickSetup store={store} />,
     );
 
-    fireEvent.press(getByTestId(`existing-asset-${assetId}`));
+    await fireEvent.press(getByTestId(`existing-asset-${assetId}`));
 
     expect(getByTestId("quick-setup-duplicate-blocked")).toBeTruthy();
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(queryByTestId("add-holding-phase-position")).toBeNull();
   });
 
@@ -1310,22 +1311,26 @@ describe("AddOpeningPositionForm", () => {
         finishHaptics = resolve;
       }),
     );
-    const { getByTestId, getByText } = render(
+    const screen = await render(
       <AddOpeningPositionForm
         initialVisualQaState="review"
         onCancel={onCancel}
         store={store}
       />,
     );
+    const { getByTestId, getByText } = screen;
 
-    fireEvent.press(getByTestId("save-holding-button"));
-    fireEvent.press(getByTestId("save-holding-button"));
+    const save = getPressHandler(screen, "save-holding-button");
+    await act(() => {
+      save();
+      save();
+    });
 
     expect(store.getState().assets).toHaveLength(1);
     expect(store.getState().openingPositions).toHaveLength(1);
     expect(getByText("Saving...")).toBeTruthy();
-    act(() => { expect(hardwareBack?.()).toBe(true); });
-    fireEvent.press(getByTestId("add-holding-exit"));
+    await act(() => { expect(hardwareBack?.()).toBe(true); });
+    await fireEvent.press(getByTestId("add-holding-exit"));
     expect(getByTestId("add-holding-phase-review")).toBeTruthy();
     expect(onCancel).not.toHaveBeenCalled();
 
@@ -1335,7 +1340,7 @@ describe("AddOpeningPositionForm", () => {
       expect(getByText("Opening position saved.")).toBeTruthy();
     });
     expect(store.getState().openingPositions).toHaveLength(1);
-    act(() => { expect(hardwareBack?.()).toBe(true); });
+    await act(() => { expect(hardwareBack?.()).toBe(true); });
     expect(onCancel).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
@@ -1352,14 +1357,14 @@ describe("AddOpeningPositionForm", () => {
 
       originalSetItem(key, value);
     };
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <AddOpeningPositionForm
         initialVisualQaState="review"
         store={store}
       />,
     );
 
-    fireEvent.press(getByTestId("save-holding-button"));
+    await fireEvent.press(getByTestId("save-holding-button"));
 
     await waitFor(() => {
       expect(
@@ -1372,28 +1377,28 @@ describe("AddOpeningPositionForm", () => {
 
   it("creates a non-PPF debt opening position without trade records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Sovereign Gold Bond");
-    fireEvent.changeText(getByLabelText("Symbol"), "SGB");
-    fireEvent.changeText(getByLabelText("Ticker"), "SGB");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "SGB");
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByTestId("asset-class-debt"));
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Sovereign Gold Bond");
+    await fireEvent.changeText(getByLabelText("Symbol"), "SGB");
+    await fireEvent.changeText(getByLabelText("Ticker"), "SGB");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "SGB");
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByTestId("asset-class-debt"));
     expect(queryByTestId("sector-type-picker")).toBeNull();
     expect(getByTestId("sector-not-applicable")).toBeTruthy();
-    selectOption(getByTestId, "instrument-type", "bond");
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "10");
-    fireEvent.changeText(getByLabelText("Average cost"), "5300");
-    fireEvent.changeText(getByLabelText("Current price"), "5711");
-    selectDate(getByTestId, "date-input", "2026-04-15");
+    await selectOption(getByTestId, "instrument-type", "bond");
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "10");
+    await fireEvent.changeText(getByLabelText("Average cost"), "5300");
+    await fireEvent.changeText(getByLabelText("Current price"), "5711");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
 
-    fireEvent.press(getByText("Review and save"));
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -1407,25 +1412,25 @@ describe("AddOpeningPositionForm", () => {
 
   it("creates a crypto opening position with a case-sensitive quote source", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    openManualAssetEntry(getByTestId);
-    fireEvent.changeText(getByLabelText("Asset name"), "Bitcoin");
-    fireEvent.changeText(getByLabelText("Symbol"), "BTC");
-    fireEvent.changeText(getByLabelText("Ticker"), "bitcoin");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "bitcoin");
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByTestId("asset-class-crypto"));
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "0.05");
-    fireEvent.changeText(getByLabelText("Average cost"), "5000000");
-    fireEvent.changeText(getByLabelText("Current price"), "5800000");
-    selectDate(getByTestId, "date-input", "2026-04-15");
+    await openManualAssetEntry(getByTestId);
+    await fireEvent.changeText(getByLabelText("Asset name"), "Bitcoin");
+    await fireEvent.changeText(getByLabelText("Symbol"), "BTC");
+    await fireEvent.changeText(getByLabelText("Ticker"), "bitcoin");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "bitcoin");
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByTestId("asset-class-crypto"));
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "0.05");
+    await fireEvent.changeText(getByLabelText("Average cost"), "5000000");
+    await fireEvent.changeText(getByLabelText("Current price"), "5800000");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
 
-    fireEvent.press(getByText("Review and save"));
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions).toHaveLength(1);
@@ -1482,7 +1487,7 @@ describe("AddOpeningPositionForm", () => {
       getByTestId,
       getByText,
       queryByTestId,
-    } = render(
+    } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1490,7 +1495,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -1500,7 +1505,7 @@ describe("AddOpeningPositionForm", () => {
     });
     expect(getByTestId("asset-lookup-results")).toBeTruthy();
 
-    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
 
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
@@ -1512,16 +1517,16 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("asset-lookup-results")).toBeNull();
     expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(getByText("Live price autofilled from Yahoo Finance.")).toBeTruthy();
-    fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to confirm details"));
     expect(getByTestId("add-holding-step-class")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1700");
-    selectDate(getByTestId, "date-input", "2026-04-15");
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1700");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
+    await fireEvent.press(getByText("Review and save"));
 
     expect(
       getByText("Manual price • Yahoo Finance identity"),
@@ -1533,7 +1538,7 @@ describe("AddOpeningPositionForm", () => {
     ["manual", "Saved manual price"],
   ] as const)(
     "shows %s provenance for a saved asset quote",
-    (source, expectedLabel) => {
+    async (source, expectedLabel) => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       const asset = {
         assetClass: "stock" as const,
@@ -1556,23 +1561,23 @@ describe("AddOpeningPositionForm", () => {
         price: 1678.25,
         source,
       });
-      const { getByLabelText, getByTestId, getByText } = render(
+      const { getByLabelText, getByTestId, getByText } = await render(
         <AddOpeningPositionForm store={store} />,
       );
 
-      fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
-      fireEvent.press(getByText("Continue to confirm details"));
-      fireEvent.press(getByText("Continue to position"));
-      fireEvent.changeText(getByLabelText("Quantity"), "25");
-      fireEvent.changeText(getByLabelText("Average cost"), "1450");
-      selectDate(getByTestId, "date-input", "2026-04-15");
-      fireEvent.press(getByText("Review and save"));
+      await fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
+      await fireEvent.press(getByText("Continue to confirm details"));
+      await fireEvent.press(getByText("Continue to position"));
+      await fireEvent.changeText(getByLabelText("Quantity"), "25");
+      await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+      await selectDate(getByTestId, "date-input", "2026-04-15");
+      await fireEvent.press(getByText("Review and save"));
 
       expect(getByText(expectedLabel)).toBeTruthy();
     },
   );
 
-  it("shows the cached Yahoo quote as Current price for a saved asset review", () => {
+  it("shows the cached Yahoo quote as Current price for a saved asset review", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const asset = {
       assetClass: "stock" as const,
@@ -1596,16 +1601,16 @@ describe("AddOpeningPositionForm", () => {
       source: "yahoo",
     });
 
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm store={store} />,
     );
 
-    fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByTestId(`existing-asset-${asset.id}`));
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.press(getByText("Review and save"));
 
     const reviewPosition = getByTestId("review-position");
     expect(within(reviewPosition).getByText("₹1,678.25")).toBeTruthy();
@@ -1646,7 +1651,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, queryByTestId } = render(
+    const { getByLabelText, getByTestId, queryByTestId } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1654,7 +1659,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -1663,7 +1668,7 @@ describe("AddOpeningPositionForm", () => {
       expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
 
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
@@ -1677,7 +1682,7 @@ describe("AddOpeningPositionForm", () => {
       "Change selected asset",
     );
 
-    fireEvent.press(getByTestId("selected-asset-change"));
+    await fireEvent.press(getByTestId("selected-asset-change"));
 
     expect(queryByTestId("selected-asset-summary")).toBeNull();
     expect(getByTestId("asset-lookup-input")).toBeTruthy();
@@ -1718,7 +1723,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1726,19 +1731,19 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
     await waitFor(() => {
       expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
     });
-    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to confirm details"));
 
     expect(
       getByText("Suggested details. Confirm anything marked for review."),
@@ -1788,7 +1793,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1796,21 +1801,21 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
     await waitFor(() => {
       expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
     });
-    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to confirm details"));
-    selectOption(getByTestId, "sector-type", "financialServices");
-    fireEvent.press(getByText("Asset"));
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await selectOption(getByTestId, "sector-type", "financialServices");
+    await fireEvent.press(getByText("Asset"));
 
     expect(getByTestId("selected-asset-summary")).toBeTruthy();
   });
@@ -1849,7 +1854,7 @@ describe("AddOpeningPositionForm", () => {
         source: "yahoo",
       },
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1857,30 +1862,30 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
+    await fireEvent.changeText(getByLabelText("Search asset"), "hdfc bank");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
     await waitFor(() => {
       expect(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS")).toBeTruthy();
     });
-    fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("asset-lookup-result-yahoo:HDFCBANK.NS"));
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
     });
 
-    fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to confirm details"));
     expect(getByText("Unknown")).toBeTruthy();
-    selectOption(getByTestId, "sector-type", "financialServices");
-    fireEvent.press(getByText("Continue to position"));
-    fireEvent.changeText(getByLabelText("Quantity"), "25");
-    fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    fireEvent.changeText(getByLabelText("Current price"), "1678.25");
-    selectDate(getByTestId, "date-input", "2026-04-15");
+    await selectOption(getByTestId, "sector-type", "financialServices");
+    await fireEvent.press(getByText("Continue to position"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "25");
+    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await selectDate(getByTestId, "date-input", "2026-04-15");
 
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().assets).toHaveLength(1);
@@ -1935,7 +1940,7 @@ describe("AddOpeningPositionForm", () => {
         source: "coingecko",
       },
     });
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -1943,7 +1948,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
+    await fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -1955,12 +1960,12 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(resolveQuote).not.toHaveBeenCalled();
 
-    fireEvent(getByLabelText("Search asset"), "submitEditing");
+    await fireEvent(getByLabelText("Search asset"), "submitEditing");
 
     expect(queryByTestId("manual-asset-fields")).toBeNull();
     expect(resolveQuote).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId("asset-lookup-result-coingecko:bitcoin"));
+    await fireEvent.press(getByTestId("asset-lookup-result-coingecko:bitcoin"));
 
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
@@ -2003,7 +2008,7 @@ describe("AddOpeningPositionForm", () => {
       getByTestId,
       getByText,
       queryByTestId,
-    } = render(
+    } = await render(
       <AddOpeningPositionForm
         resolveQuote={resolveQuote}
         searchAssetLookupResults={searchAssetLookupResults}
@@ -2011,7 +2016,7 @@ describe("AddOpeningPositionForm", () => {
       />,
     );
 
-    fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
+    await fireEvent.changeText(getByLabelText("Search asset"), "bitcoin");
     await act(async () => {
       jest.advanceTimersByTime(400);
     });
@@ -2021,7 +2026,7 @@ describe("AddOpeningPositionForm", () => {
     });
     expect(queryByTestId("manual-asset-fields")).toBeNull();
 
-    fireEvent.press(getByText("Bitcoin"));
+    await fireEvent.press(getByText("Bitcoin"));
 
     await waitFor(() => {
       expect(getByTestId("selected-asset-summary")).toBeTruthy();
@@ -2030,13 +2035,13 @@ describe("AddOpeningPositionForm", () => {
       ).toBeTruthy();
     });
     expect(getByText("BTC • bitcoin • CoinGecko suggestion")).toBeTruthy();
-    fireEvent.press(getByText("Continue to confirm details"));
-    fireEvent.press(getByText("Continue to position"));
+    await fireEvent.press(getByText("Continue to confirm details"));
+    await fireEvent.press(getByText("Continue to position"));
     expect(getByLabelText("Current price")).toHaveProp("value", "");
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Average cost"), "5000000");
-    fireEvent.press(getByText("I don't know"));
-    fireEvent.press(getByText("Review and save"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Average cost"), "5000000");
+    await fireEvent.press(getByText("I don't know"));
+    await fireEvent.press(getByText("Review and save"));
     expect(getAllByText("Valuation pending").length).toBeGreaterThan(1);
   });
 });

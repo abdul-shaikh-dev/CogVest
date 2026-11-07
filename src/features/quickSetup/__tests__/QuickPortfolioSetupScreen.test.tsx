@@ -8,10 +8,10 @@ import { QuickPortfolioSetupScreen } from "../QuickPortfolioSetupScreen";
 import { createQuickSetupSessionStore } from "../quickSetupSession";
 
 describe("QuickPortfolioSetupScreen", () => {
-  it("starts a new portfolio with import, manual, and PPF choices", () => {
+  it("starts a new portfolio with import, manual, and PPF choices", async () => {
     const onImportTransactions = jest.fn();
     const onAddPpfAccount = jest.fn();
-    const screen = render(
+    const screen = await render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={onAddPpfAccount}
         onComplete={jest.fn()}
@@ -23,15 +23,15 @@ describe("QuickPortfolioSetupScreen", () => {
     );
 
     expect(screen.getByTestId("quick-setup-source-choice")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("quick-setup-import-history"));
+    await fireEvent.press(screen.getByTestId("quick-setup-import-history"));
     expect(onImportTransactions).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByTestId("quick-setup-add-ppf-from-choice"));
+    await fireEvent.press(screen.getByTestId("quick-setup-add-ppf-from-choice"));
     expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByTestId("quick-setup-add-manually"));
+    await fireEvent.press(screen.getByTestId("quick-setup-add-manually"));
     expect(screen.queryByTestId("quick-setup-source-choice")).toBeNull();
   });
 
-  it("restores confirmed progress and completes from the aggregate review", () => {
+  it("restores confirmed progress and completes from the aggregate review", async () => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),
     });
@@ -64,7 +64,7 @@ describe("QuickPortfolioSetupScreen", () => {
     });
     sessionStore.getState().showReview();
     const onComplete = jest.fn();
-    const { getByRole, getByTestId, getByText } = render(
+    const { getByRole, getByTestId, getByText } = await render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={onComplete}
@@ -79,14 +79,14 @@ describe("QuickPortfolioSetupScreen", () => {
     expect(getByText(/1 current price is still needed/u)).toBeTruthy();
     expect(getByRole("button", { name: "Add another holding" })).toBeTruthy();
     expect(getByRole("button", { name: "Open Dashboard" })).toBeTruthy();
-    fireEvent.press(getByTestId("quick-setup-complete"));
+    await fireEvent.press(getByTestId("quick-setup-complete"));
 
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(sessionStore.getState().session).toBeNull();
     expect(portfolioStore.getState().openingPositions).toHaveLength(1);
   });
 
-  it("keeps confirmed items when the entry screen is exited", () => {
+  it("keeps confirmed items when the entry screen is exited", async () => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),
     });
@@ -100,7 +100,7 @@ describe("QuickPortfolioSetupScreen", () => {
       recordId: "opening-1",
     });
     const onExit = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={jest.fn()}
@@ -110,13 +110,13 @@ describe("QuickPortfolioSetupScreen", () => {
       />,
     );
 
-    fireEvent.press(getByLabelText("Exit portfolio setup"));
+    await fireEvent.press(getByLabelText("Exit portfolio setup"));
 
     expect(onExit).toHaveBeenCalledTimes(1);
     expect(sessionStore.getState().session?.items).toHaveLength(1);
   });
 
-  it("blocks completion until a stale confirmed reference is removed", () => {
+  it("blocks completion until a stale confirmed reference is removed", async () => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),
     });
@@ -131,7 +131,7 @@ describe("QuickPortfolioSetupScreen", () => {
     });
     sessionStore.getState().showReview();
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={onComplete}
@@ -142,14 +142,14 @@ describe("QuickPortfolioSetupScreen", () => {
     );
 
     expect(getByTestId("quick-setup-missing-records")).toBeTruthy();
-    fireEvent.press(getByTestId("quick-setup-complete"));
+    await fireEvent.press(getByTestId("quick-setup-complete"));
     expect(onComplete).not.toHaveBeenCalled();
 
-    fireEvent.press(getByText("Remove"));
+    await fireEvent.press(getByText("Remove"));
     expect(sessionStore.getState().session?.items).toEqual([]);
   });
 
-  it.each([true, false])("masks only wealth values in review (priced: %s)", (hasPrice) => {
+  it.each([true, false])("masks only wealth values in review (priced: %s)", async (hasPrice) => {
     const portfolioStore = createPortfolioStore({
       storage: createMemoryJsonStorage(),
     });
@@ -186,7 +186,7 @@ describe("QuickPortfolioSetupScreen", () => {
       quantity: 2,
     });
     sessionStore.getState().showReview();
-    const { getAllByText, getByText } = render(
+    const { getAllByText, getByText } = await render(
       <QuickPortfolioSetupScreen
         onAddPpfAccount={jest.fn()}
         onComplete={jest.fn()}

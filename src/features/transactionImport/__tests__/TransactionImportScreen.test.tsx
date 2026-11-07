@@ -29,10 +29,10 @@ const lookup: AssetLookupResult = {
 };
 
 describe("TransactionImportScreen", () => {
-  it.each(["standard", "minimal"] as const)("keeps source-specific limits and safety notes visible in %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("keeps source-specific limits and safety notes visible in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
     const limits = () => within(screen.getByTestId("transaction-import-limits"));
     expect(limits().getByText("Per CSV: up to 500 rows, 1 MB.")).toBeTruthy();
     expect(limits().getByText("Up to 10 Tradebooks; Console allows 365 days per file.")).toBeTruthy();
@@ -40,34 +40,34 @@ describe("TransactionImportScreen", () => {
     expect(limits().getByText("Unsupported events stay visible and are never guessed.")).toBeTruthy();
     expect(screen.queryByTestId("transaction-import-source-guide-details")).toBeNull();
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
     expect(limits().getByText("Detailed CAS PDF: up to 250 pages, 10 MB.")).toBeTruthy();
     expect(limits().queryByText(/Tradebooks/u)).toBeNull();
     expect(screen.getByText("Read on this device. Password never saved.")).toBeTruthy();
     expect(screen.getByTestId("cas-statement-password").props.secureTextEntry).toBe(true);
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
     expect(limits().getByText("Per CSV: up to 500 rows, 1 MB.")).toBeTruthy();
     expect(limits().queryByText(/Detailed CAS|Tradebooks/u)).toBeNull();
     expect(screen.getByTestId("save-transaction-csv-template")).toBeTruthy();
     expect(store.getState().trades).toEqual([]);
   });
 
-  it("distinguishes source selection from the PPF destination", () => {
+  it("distinguishes source selection from the PPF destination", async () => {
     const onAddPpfAccount = jest.fn();
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<TransactionImportScreen onAddPpfAccount={onAddPpfAccount} onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
+    const screen = await render(<TransactionImportScreen onAddPpfAccount={onAddPpfAccount} onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={jest.fn()} store={store} />);
     expect(screen.getByTestId("transaction-import-sources").props.accessibilityRole).toBe("radiogroup");
     expect(screen.getByTestId("transaction-import-sources").props.accessibilityLabel).toBe("Import source");
     const zerodha = screen.getByRole("radio", { name: "Zerodha Tradebook" });
     const cas = screen.getByRole("radio", { name: "CAMS + KFintech CAS" });
     expect(zerodha.props.accessibilityState.checked).toBe(true);
-    fireEvent.press(cas);
+    await fireEvent.press(cas);
     expect(cas.props.accessibilityState.checked).toBe(true);
     expect(zerodha.props.accessibilityState.checked).toBe(false);
     expect(screen.getByTestId("select-cas-statement")).toHaveTextContent("Choose CAS PDF");
     expect(screen.getByTestId("transaction-import-source-ppf").props.accessibilityRole).toBe("button");
-    fireEvent.press(screen.getByTestId("transaction-import-source-ppf"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-ppf"));
     expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
     expect(store.getState().trades).toEqual([]);
   });
@@ -75,18 +75,18 @@ describe("TransactionImportScreen", () => {
   it("keeps repeat file selection immediate while retaining expandable acquisition guidance", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const openExternalUrl = jest.fn().mockRejectedValue(new Error("offline"));
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} openExternalUrl={openExternalUrl} pickCsvFile={jest.fn()} store={store} />);
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} openExternalUrl={openExternalUrl} pickCsvFile={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
     expect(screen.getByTestId("select-transaction-csv")).toHaveTextContent("Choose Tradebook CSV");
     expect(screen.queryByText("Get your Tradebook CSV")).toBeNull();
-    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: false });
-    fireEvent.press(screen.getByTestId("transaction-import-toggle-source-guide"));
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toBeCollapsed();
+    await fireEvent.press(screen.getByTestId("transaction-import-toggle-source-guide"));
     expect(screen.getByText("Get your Tradebook CSV")).toBeTruthy();
     expect(screen.getByText(/no more than 365 days/u)).toBeTruthy();
-    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: true });
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toBeExpanded();
     expect(screen.queryByTestId("transaction-import-mode-full-history")).toBeNull();
-    fireEvent.press(screen.getByTestId("open-import-source-website"));
+    await fireEvent.press(screen.getByTestId("open-import-source-website"));
     await waitFor(() => expect(screen.getByTestId("import-source-link-fallback")).toHaveTextContent(/support\.zerodha\.com/u));
     expect(openExternalUrl).toHaveBeenCalledWith(expect.stringContaining("support.zerodha.com"));
   });
@@ -95,9 +95,9 @@ describe("TransactionImportScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({ amount: 1000, date: "2026-01-01", id: "cash", label: "Cash", purpose: "capitalContribution", type: "addition" });
     const text = `${zerodhaHeader}\nHDFCBANK,INE040A01034,2025-01-02,NSE,EQ,EQ,buy,false,1,100,trade-1,order-1,2025-01-02T10:00:00`;
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "tradebook.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "tradebook.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
 
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-preflight")).toBeTruthy());
     expect(screen.getByTestId("transaction-import-detected-source")).toHaveTextContent("Zerodha Tradebook");
     expect(screen.getByTestId("transaction-import-detected-coverage")).toHaveTextContent("2025-01-02 to 2025-01-02");
@@ -108,9 +108,9 @@ describe("TransactionImportScreen", () => {
   });
 
   it("keeps a wrong document error beside file selection without claiming detection", async () => {
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "holdings.csv", size: 20, text: "symbol,quantity\nABC,1" })} store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />);
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "holdings.csv", size: 20, text: "symbol,quantity\nABC,1" })} store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />);
 
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByText(/Unsupported Zerodha Tradebook CSV header/u)).toBeTruthy());
     expect(screen.queryByTestId("transaction-import-preflight")).toBeNull();
   });
@@ -118,7 +118,7 @@ describe("TransactionImportScreen", () => {
   it("explains missing pre-statement holdings before matching or confirmation", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onImported = jest.fn();
-    const screen = render(<TransactionImportScreen
+    const screen = await render(<TransactionImportScreen
       onCancel={jest.fn()}
       onImported={onImported}
       pickCsvFile={jest.fn()}
@@ -131,18 +131,18 @@ describe("TransactionImportScreen", () => {
       searchAssetLookupResults={jest.fn()}
       store={store}
     />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
-    fireEvent.press(screen.getByTestId("select-cas-statement"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent.press(screen.getByTestId("select-cas-statement"));
     await waitFor(() => expect(screen.getByTestId("cas-opening-history-error")).toBeTruthy());
     expect(screen.getByText("Earlier holdings need a starting balance")).toBeTruthy();
     expect(screen.getByTestId("confirm-transaction-import")).toBeDisabled();
-    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
     expect(onImported).not.toHaveBeenCalled();
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().openingPositions).toEqual([]);
   });
 
-  it("scrolls to the password's content position after the keyboard opens", () => {
+  it("scrolls to the password's content position after the keyboard opens", async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
     const metrics = jest.spyOn(Keyboard, "metrics").mockReturnValue({ screenX: 0, screenY: 500, width: 360, height: 300 });
     let onKeyboardDidShow: (() => void) | undefined;
@@ -151,7 +151,7 @@ describe("TransactionImportScreen", () => {
       return { remove: jest.fn() } as unknown as ReturnType<typeof Keyboard.addListener>;
     });
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -160,10 +160,10 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
-    fireEvent(screen.getByTestId("transaction-import-source-card"), "layout", { nativeEvent: { layout: { y: 120 } } });
-    fireEvent(screen.getByTestId("cas-statement-password-field"), "layout", { nativeEvent: { layout: { y: 240 } } });
-    fireEvent(screen.getByTestId("cas-statement-password"), "focus");
+    await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent(screen.getByTestId("transaction-import-source-card"), "layout", { nativeEvent: { layout: { y: 120 } } });
+    await fireEvent(screen.getByTestId("cas-statement-password-field"), "layout", { nativeEvent: { layout: { y: 240 } } });
+    await fireEvent(screen.getByTestId("cas-statement-password"), "focus");
     scrollTo.mockClear();
     onKeyboardDidShow?.();
 
@@ -173,10 +173,10 @@ describe("TransactionImportScreen", () => {
     scrollTo.mockRestore();
   });
 
-  it("resets the import scroll position when the source changes", () => {
+  it("resets the import scroll position when the source changes", async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -185,7 +185,7 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
 
     expect(scrollTo).toHaveBeenCalledWith({ animated: false, y: 0 });
     scrollTo.mockRestore();
@@ -200,12 +200,12 @@ describe("TransactionImportScreen", () => {
     const initial = buildTransactionImportPlan({ batchId: "legacy", mode: "supplemental", state: store.getState(), resolutions: parsed.rows.map((row) => ({ row, asset, status: "ready" as const })) });
     store.getState().addTrade(initial.command!.transactions[0]);
     const onImported = jest.fn();
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={async () => ({ name: "saved.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={async () => ({ name: "saved.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
+    await fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByText("Apply share adjustments")).toBeTruthy());
     expect(screen.getByText(/Your transactions are already saved/)).toBeTruthy();
-    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().trades).toHaveLength(1);
     expect(store.getState().assets[0].stockSplits).toHaveLength(1);
@@ -214,13 +214,13 @@ describe("TransactionImportScreen", () => {
   it("surfaces historical collisions before accepting matches or offering import", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const text = `${zerodhaHeader}\nHDFCBANK,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000002,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={async () => ({ failures: [], results: [lookup] })} store={store} />);
+    await fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-identity-conflicts")).toBeTruthy());
     expect(screen.getByText(/can't be combined safely yet; don't delete rows to get past this./u)).toBeTruthy();
     expect(screen.queryByTestId("transaction-import-identity-conflict-details")).toBeNull();
-    fireEvent.press(screen.getByTestId("transaction-import-identity-conflict-details-toggle"));
+    await fireEvent.press(screen.getByTestId("transaction-import-identity-conflict-details-toggle"));
     expect(screen.getByTestId("transaction-import-identity-conflict-details")).toHaveTextContent("Combining them needs corporate-action import support.");
     expect(screen.queryByTestId("transaction-import-accept-matches")).toBeNull();
     expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
@@ -232,9 +232,9 @@ describe("TransactionImportScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const text = `${zerodhaHeader}\nOLDNAME,INE000000001,2024-01-02,NSE,EQ,EQ,buy,false,1,100,one,one,2024-01-02T10:00:00\nHDFCBANK,INE000000001,2025-01-02,NSE,EQ,EQ,buy,false,1,100,two,two,2025-01-02T10:00:00`;
     const search = jest.fn(async ({ query }: { query: string }) => ({ failures: [], results: query === "HDFCBANK" ? [lookup] : [] }));
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={search} store={store} />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={async () => ({ name: "history.csv", size: text.length, text })} searchAssetLookupResults={search} store={store} />);
+    await fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
     expect(search).toHaveBeenCalledWith({ query: "OLDNAME" });
     expect(search).toHaveBeenCalledWith({ query: "HDFCBANK" });
@@ -247,11 +247,11 @@ describe("TransactionImportScreen", () => {
     const second = first.replace(",INR,", ",USD,");
     const picker = jest.fn().mockResolvedValueOnce({ name: "first.csv", size: first.length, text: first }).mockResolvedValueOnce({ name: "second.csv", size: second.length, text: second });
     const search = jest.fn().mockResolvedValueOnce({ failures: [], results: [lookup] }).mockResolvedValueOnce({ failures: [], results: [] });
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
+    await fireEvent.press(screen.getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
     expect(screen.queryByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeNull();
     expect(store.getState().trades).toHaveLength(0);
@@ -265,23 +265,23 @@ describe("TransactionImportScreen", () => {
     const search = jest.fn(async ({ query }: { query: string }) => ({ failures: [], results: query === "HDFCBANK" ? [lookup] : [] }));
     const picker = jest.fn().mockResolvedValueOnce({ name: "first.csv", size: first.length, text: first })
       .mockResolvedValueOnce({ name: "second.csv", size: second.length, text: second });
-    const screen = render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
-    fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    const screen = await render(<TransactionImportScreen onCancel={jest.fn()} onImported={onImported} pickCsvFile={picker} searchAssetLookupResults={search} store={store} />);
+    await fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-accept-matches")).toBeTruthy());
     expect(store.getState().trades).toHaveLength(0);
-    fireEvent.press(screen.getByTestId("transaction-import-accept-matches"));
+    await fireEvent.press(screen.getByTestId("transaction-import-accept-matches"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary")).toHaveTextContent(/1 matched • 0 to confirm/u));
     expect(screen.queryByTestId("transaction-import-asset-isin:INE000000001-candidate-yahoo:HDFCBANK.NS")).toBeNull();
-    fireEvent.press(screen.getByTestId("select-transaction-csv"));
+    await fireEvent.press(screen.getByTestId("select-transaction-csv"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-summary-additions")).toHaveTextContent("2"));
     expect(screen.getByTestId("transaction-import-match-summary")).toHaveTextContent(/1 matched • 0 to confirm/u);
     expect(search).toHaveBeenCalledTimes(2);
-    fireEvent.press(screen.getByTestId("transaction-import-file-1-up"));
+    await fireEvent.press(screen.getByTestId("transaction-import-file-1-up"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-summary-additions")).toHaveTextContent("2"));
     expect(search).toHaveBeenCalledTimes(2);
-    fireEvent.press(screen.getByTestId("transaction-import-no-external-activity"));
-    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await fireEvent.press(screen.getByTestId("transaction-import-no-external-activity"));
+    await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().trades).toHaveLength(2);
     expect(store.getState().assets).toHaveLength(1);
@@ -354,7 +354,7 @@ describe("TransactionImportScreen", () => {
         pageCount: 8,
       });
     const onImported = jest.fn();
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={onImported}
@@ -369,20 +369,20 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-camsKfinCasPdfV1"));
-    fireEvent.press(getByTestId("select-cas-statement"));
+    await fireEvent.press(getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent.press(getByTestId("select-cas-statement"));
     await waitFor(() =>
       expect(getByText("This statement requires its PDF password.")).toBeTruthy(),
     );
     expect(queryByText(/private-statement/iu)).toBeNull();
 
-    fireEvent.changeText(getByTestId("cas-statement-password"), "transient-password");
-    fireEvent.press(getByTestId("read-cas-statement"));
+    await fireEvent.changeText(getByTestId("cas-statement-password"), "transient-password");
+    await fireEvent.press(getByTestId("read-cas-statement"));
     await waitFor(() => expect(getByTestId("cas-statement-review")).toBeTruthy());
     expect(getByText("Statement selected")).toBeTruthy();
     expect(getByTestId("cas-statement-summary")).toHaveTextContent(/1 scheme • 1 transaction ready/u);
     expect(queryByText("Folio 1 • CAMS • INF000000001")).toBeNull();
-    fireEvent.press(getByTestId("cas-toggle-scheme-details"));
+    await fireEvent.press(getByTestId("cas-toggle-scheme-details"));
     expect(getByTestId("cas-toggle-scheme-details").props.accessibilityState.expanded).toBe(true);
     expect(getByTestId("cas-opening-Folio 1-INF000000001")).toHaveTextContent("0");
     expect(getByTestId("cas-closing-Folio 1-INF000000001")).toHaveTextContent("8");
@@ -403,12 +403,12 @@ describe("TransactionImportScreen", () => {
     });
     expect(getByTestId("cas-statement-password")).toHaveProp("value", "");
 
-    fireEvent.press(getByTestId("transaction-import-show-balances"));
+    await fireEvent.press(getByTestId("transaction-import-show-balances"));
     expect(getByTestId("transaction-import-show-balances").props.accessibilityState.expanded).toBe(true);
     expect(getByTestId("transaction-import-units-asset-sample-fund")).toHaveTextContent("8");
     expect(getByTestId("transaction-import-cost-asset-sample-fund")).toHaveTextContent(/125\.00/);
 
-    fireEvent.press(getByTestId("confirm-transaction-import"));
+    await fireEvent.press(getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().trades).toHaveLength(1);
     expect(store.getState().assets).toHaveLength(1);
@@ -432,7 +432,7 @@ describe("TransactionImportScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const searchAssetLookupResults = jest.fn();
     const onImported = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={onImported}
@@ -524,10 +524,10 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(
+    await fireEvent.press(
       screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"),
     );
-    fireEvent.press(screen.getByTestId("select-cas-statement"));
+    await fireEvent.press(screen.getByTestId("select-cas-statement"));
 
     await waitFor(() =>
       expect(screen.getByTestId("transaction-import-match-summary"))
@@ -536,10 +536,10 @@ describe("TransactionImportScreen", () => {
     expect(searchAssetLookupResults).not.toHaveBeenCalled();
     expect(screen.queryByText(/No matching listing was found/u)).toBeNull();
     expect(screen.queryByText(/undefined/u)).toBeNull();
-    fireEvent.press(screen.getByTestId("transaction-import-show-matched"));
+    await fireEvent.press(screen.getByTestId("transaction-import-show-matched"));
     expect(screen.getByText("INF000000001 • From statement")).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
 
     expect(store.getState().assets).toEqual([
@@ -567,7 +567,7 @@ describe("TransactionImportScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onImported = jest.fn();
     const searchAssetLookupResults = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TransactionImportScreen
         lookupAmfiSchemeClassifications={async () => ({
           classifications: {
@@ -613,18 +613,18 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
-    fireEvent.press(screen.getByTestId("select-cas-statement"));
+    await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+    await fireEvent.press(screen.getByTestId("select-cas-statement"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary"))
       .toHaveTextContent(/0 classified • 1 need classification/u));
     expect(screen.getByText(/Fund identity is verified from the statement/u)).toBeTruthy();
     expect(searchAssetLookupResults).not.toHaveBeenCalled();
     expect(screen.queryByTestId("confirm-transaction-import")).toBeNull();
 
-    fireEvent.press(screen.getByText("Classify as Equity"));
+    await fireEvent.press(screen.getByText("Classify as Equity"));
     await waitFor(() => expect(screen.getByTestId("transaction-import-match-summary"))
       .toHaveTextContent(/1 classified • 0 need classification/u));
-    fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+    await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().assets).toEqual([expect.objectContaining({
       assetClass: "stock",
@@ -653,7 +653,7 @@ describe("TransactionImportScreen", () => {
       .fn()
       .mockResolvedValueOnce({ name: "year-one.csv", size: firstText.length, text: firstText })
       .mockResolvedValueOnce({ name: "year-two.csv", size: secondText.length, text: secondText });
-    const { getByTestId, queryByText } = render(
+    const { getByTestId, queryByText } = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -663,17 +663,17 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() => expect(queryByText("1. year-one.csv")).toBeTruthy());
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() => expect(queryByText("2. year-two.csv")).toBeTruthy());
 
-    fireEvent.press(getByTestId("transaction-import-file-1-up"));
+    await fireEvent.press(getByTestId("transaction-import-file-1-up"));
     await waitFor(() =>
       expect(within(getByTestId("transaction-import-file-0")).getByText("1. year-two.csv")).toBeTruthy(),
     );
-    fireEvent.press(getByTestId("transaction-import-file-0-remove"));
+    await fireEvent.press(getByTestId("transaction-import-file-0-remove"));
     await waitFor(() => expect(queryByText("year-two.csv")).toBeNull());
     expect(queryByText("1. year-one.csv")).toBeTruthy();
   });
@@ -703,7 +703,7 @@ describe("TransactionImportScreen", () => {
       .fn()
       .mockResolvedValueOnce({ name: "tradebook.csv", size: text.length, text })
       .mockResolvedValueOnce({ name: "tradebook-2.csv", size: text.length, text });
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -713,14 +713,14 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() => expect(getByTestId("transaction-import-preflight")).toBeTruthy());
-    fireEvent.press(getByTestId("transaction-import-mode-full-history"));
+    await fireEvent.press(getByTestId("transaction-import-mode-full-history"));
     await waitFor(() => expect(getByTestId("transaction-import-source-coverage")).toBeTruthy());
     expect(getByTestId("confirm-transaction-import").props.accessibilityState?.disabled).toBe(true);
 
-    fireEvent.press(getByTestId("transaction-import-no-external-activity"));
+    await fireEvent.press(getByTestId("transaction-import-no-external-activity"));
     await waitFor(() =>
       expect(getByTestId("confirm-transaction-import").props.accessibilityState?.disabled).not.toBe(true),
     );
@@ -728,7 +728,7 @@ describe("TransactionImportScreen", () => {
       /1 of 1 opening balance will be replaced after confirmation/u,
     );
 
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() =>
       expect(getByTestId("confirm-transaction-import").props.accessibilityState?.disabled).toBe(true),
     );
@@ -738,7 +738,7 @@ describe("TransactionImportScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onImported = jest.fn();
     const text = `${header}\n1,buy,2025-04-01,,NSE,HDFCBANK,INR,2,100,,,order-1,broker,0,0,HDFC purchase,`;
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={onImported}
@@ -748,8 +748,8 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() =>
       expect(
         getByTestId("transaction-import-asset-symbol:NSE:HDFCBANK-candidate-yahoo:HDFCBANK.NS"),
@@ -758,7 +758,7 @@ describe("TransactionImportScreen", () => {
     expect(queryByTestId("confirm-transaction-import")).toBeNull();
     expect(store.getState().trades).toEqual([]);
 
-    fireEvent.press(
+    await fireEvent.press(
       getByTestId("transaction-import-asset-symbol:NSE:HDFCBANK-candidate-yahoo:HDFCBANK.NS"),
     );
     await waitFor(() =>
@@ -766,7 +766,7 @@ describe("TransactionImportScreen", () => {
     );
     expect(store.getState().trades).toEqual([]);
 
-    fireEvent.press(getByTestId("confirm-transaction-import"));
+    await fireEvent.press(getByTestId("confirm-transaction-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().cashEntries).toEqual([]);
     expect(store.getState().trades).toHaveLength(1);
@@ -794,7 +794,7 @@ describe("TransactionImportScreen", () => {
       quantity: 2,
     });
     const text = `${header}\n1,buy,2025-04-01,INE040A01034,NSE,HDFCBANK,INR,1,120,,,order-1,broker,0,0,HDFC purchase,`;
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TransactionImportScreen
         now={() => new Date("2026-08-23T00:00:00.000Z")}
         onCancel={jest.fn()}
@@ -805,10 +805,10 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
     await waitFor(() => expect(getByTestId("transaction-import-asset-isin:INE040A01034-candidate-yahoo:HDFCBANK.NS")).toBeTruthy());
-    fireEvent.press(getByTestId("transaction-import-asset-isin:INE040A01034-candidate-yahoo:HDFCBANK.NS"));
+    await fireEvent.press(getByTestId("transaction-import-asset-isin:INE040A01034-candidate-yahoo:HDFCBANK.NS"));
     await waitFor(() =>
       expect(getByTestId("transaction-import-shared-cutover")).toBeTruthy(),
     );
@@ -817,8 +817,8 @@ describe("TransactionImportScreen", () => {
         ?.disabled,
     ).toBe(true);
 
-    fireEvent.press(getByTestId("transaction-import-shared-cutover"));
-    fireEvent(
+    await fireEvent.press(getByTestId("transaction-import-shared-cutover"));
+    await fireEvent(
       getByTestId("transaction-import-shared-cutover-picker"),
       "onChange",
       {
@@ -838,7 +838,7 @@ describe("TransactionImportScreen", () => {
   it("keeps an unsupported-only file visible for review", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const text = `${header}\n1,ipo`;
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <TransactionImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -848,8 +848,8 @@ describe("TransactionImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
-    fireEvent.press(getByTestId("select-transaction-csv"));
+    await fireEvent.press(getByTestId("transaction-import-source-cogvestCsvV1"));
+    await fireEvent.press(getByTestId("select-transaction-csv"));
 
     await waitFor(() =>
       expect(getByTestId("transaction-import-dry-run")).toBeTruthy(),

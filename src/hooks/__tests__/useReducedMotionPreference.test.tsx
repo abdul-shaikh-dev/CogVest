@@ -16,13 +16,18 @@ describe("useReducedMotionPreference", () => {
       remove: jest.fn(),
     } as never);
 
-    const { result } = renderHook(() => useReducedMotionPreference());
-
-    expect(result.current).toBe(false);
+    // RNTL 14 awaits the OS answer during render, so record every value.
+    const seen: boolean[] = [];
+    const { result } = await renderHook(() => {
+      const value = useReducedMotionPreference();
+      seen.push(value);
+      return value;
+    });
 
     await waitFor(() => {
       expect(result.current).toBe(true);
     });
+    expect(seen[0]).toBe(false);
   });
 
   it("updates when the OS reduced-motion preference changes", async () => {
@@ -39,20 +44,20 @@ describe("useReducedMotionPreference", () => {
         return { remove: jest.fn() } as never;
       });
 
-    const { result } = renderHook(() => useReducedMotionPreference());
+    const { result } = await renderHook(() => useReducedMotionPreference());
 
     await waitFor(() => {
       expect(result.current).toBe(false);
     });
 
-    act(() => {
+    await act(() => {
       listener(true);
     });
 
     expect(result.current).toBe(true);
   });
 
-  it("removes the reduced-motion listener on unmount", () => {
+  it("removes the reduced-motion listener on unmount", async () => {
     const remove = jest.fn();
 
     jest
@@ -62,9 +67,9 @@ describe("useReducedMotionPreference", () => {
       remove,
     } as never);
 
-    const { unmount } = renderHook(() => useReducedMotionPreference());
+    const { unmount } = await renderHook(() => useReducedMotionPreference());
 
-    unmount();
+    await unmount();
 
     expect(remove).toHaveBeenCalledTimes(1);
   });

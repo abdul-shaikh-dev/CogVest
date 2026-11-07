@@ -6,6 +6,7 @@ import { MonthlyHistoryPanel } from "@/src/features/progress/MonthlyHistoryPanel
 import type { MonthlyProgressSummary } from "@/src/domain/calculations";
 import { colors } from "@/src/theme";
 import type { MonthlySnapshot } from "@/src/types";
+import { getByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ bottom: 0, top: 0 }),
@@ -62,55 +63,55 @@ function createSummary(
 }
 
 describe("MonthlyHistoryPanel", () => {
-  it("uses the selected month's remaining basis and shows exact non-cash detail", () => {
-    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
+  it("uses the selected month's remaining basis and shows exact non-cash detail", async () => {
+    const screen = await render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
       createSummary("2026-01", { portfolioValue: 170000, cashValue: 50000, investedValue: 100000 }),
       createSummary("2026-02", { portfolioValue: 400000, cashValue: 200000, investedValue: 300000 }),
     ]} />);
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     expect(screen.getByTestId("snapshot-invested-comparison-2026-01")).toHaveTextContent("+20.00%");
     expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("-33.33%");
-    fireEvent.press(screen.getByTestId("snapshot-month-2026-01"));
+    await fireEvent.press(screen.getByTestId("snapshot-month-2026-01"));
     expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("+20.00%");
     expect(screen.getByText("₹1,20,000.00")).toBeTruthy();
     expect(screen.getByText("₹1,00,000.00")).toBeTruthy();
     expect(screen.getByText("+₹20,000.00")).toBeTruthy();
   });
 
-  it("uses neutral zero and unavailable states, and hides comparison signs/colors when masked", () => {
+  it("uses neutral zero and unavailable states, and hides comparison signs/colors when masked", async () => {
     const summaries = [
       createSummary("2026-01", { portfolioValue: 100000, cashValue: 25000 }),
       createSummary("2026-02", { investedValue: 0 }),
       createSummary("2026-03", { investedValue: 200000 }),
     ];
-    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />);
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    const screen = await render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />);
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     const zero = screen.getByTestId("snapshot-invested-comparison-2026-01");
     expect(zero).toHaveTextContent("0.00%");
     expect(zero).not.toHaveStyle({ color: colors.profit });
     expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("—");
-    screen.rerender(<MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />);
+    await screen.rerender(<MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />);
     expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).not.toHaveStyle({ color: colors.loss });
     expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveTextContent("••••");
-    fireEvent.press(screen.getByTestId("snapshot-month-2026-03"));
+    await fireEvent.press(screen.getByTestId("snapshot-month-2026-03"));
     expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("••••");
     expect(screen.queryByText("-55.00%")).toBeNull();
   });
 
-  it("scales portfolio value bars within the selected year independently of the invested comparison", () => {
-    const screen = render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
+  it("scales portfolio value bars within the selected year independently of the invested comparison", async () => {
+    const screen = await render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[
       createSummary("2025-12", { portfolioValue: 400_000 }),
       createSummary("2026-01", { portfolioValue: 100_000 }),
       createSummary("2026-02", { portfolioValue: 200_000 }),
       createSummary("2026-03", { portfolioValue: 0 }),
     ]} />);
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     expect(screen.getByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toHaveStyle({ width: "50%" });
     expect(screen.getByTestId("history-bar-scale")).toHaveTextContent("Bars: portfolio value relative to 2026's highest month");
     expect(screen.getByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
     expect(screen.getByTestId("snapshot-value-bar-2026-03", { includeHiddenElements: true })).toHaveStyle({ width: "0%" });
     expect(screen.getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain("+20.00%");
-    fireEvent.press(screen.getByText("2025"));
+    await fireEvent.press(screen.getByText("2025"));
     expect(screen.getByTestId("history-bar-scale")).toHaveTextContent("Bars: portfolio value relative to 2025's highest month");
     expect(screen.getByTestId("snapshot-value-bar-2025-12", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
   });
@@ -119,11 +120,11 @@ describe("MonthlyHistoryPanel", () => {
     { masked: true, values: [100_000, 200_000] },
     { masked: false, values: [-100, 200_000] },
     { masked: false, values: [0, 0] },
-  ])("omits value bars for masked, signed or zero-only histories: %j", ({ masked, values }) => {
-    const screen = render(<MonthlyHistoryPanel maskWealthValues={masked} minimal={false} summaries={
+  ])("omits value bars for masked, signed or zero-only histories: %j", async ({ masked, values }) => {
+    const screen = await render(<MonthlyHistoryPanel maskWealthValues={masked} minimal={false} summaries={
       values.map((portfolioValue, index) => createSummary(`2026-0${index + 1}`, { portfolioValue }))
     } />);
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     expect(screen.queryByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId("history-bar-scale")).toBeNull();
     expect(screen.queryByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toBeNull();
@@ -137,8 +138,8 @@ describe("MonthlyHistoryPanel", () => {
     createSummary("2026-05", { portfolioValue: -20_000 }),
   ];
 
-  it("keeps signed invested comparisons semantic in Minimal mode", () => {
-    const { getByTestId, getByText } = render(
+  it("keeps signed invested comparisons semantic in Minimal mode", async () => {
+    const { getByTestId, getByText } = await render(
       <MonthlyHistoryPanel
         maskWealthValues={false}
         minimal
@@ -146,7 +147,7 @@ describe("MonthlyHistoryPanel", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
 
     expect(getByText("+33.33%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain(
@@ -156,61 +157,83 @@ describe("MonthlyHistoryPanel", () => {
 
   describe("animation frame ownership", () => {
     beforeEach(() => jest.useFakeTimers());
+    // RNTL 14 keeps timers of its own pending, so count only the panel's frames.
+    function trackFrames() {
+      const pending = new Set<number>();
+      const request = global.requestAnimationFrame;
+      const cancel = global.cancelAnimationFrame;
+      jest.spyOn(global, "requestAnimationFrame").mockImplementation((callback) => {
+        const id = request((time) => {
+          pending.delete(id);
+          callback(time);
+        });
+        pending.add(id);
+        return id;
+      });
+      jest.spyOn(global, "cancelAnimationFrame").mockImplementation((id) => {
+        if (id == null) return;
+        pending.delete(id);
+        cancel(id);
+      });
+      return pending;
+    }
     afterEach(() => {
       cleanup();
       jest.useRealTimers();
       jest.restoreAllMocks();
     });
 
-    it.each(["close", "unmount"])("cancels the detail scroll on %s", (action) => {
-      const { getByTestId, unmount } = render(
+    it.each(["close", "unmount"])("cancels the detail scroll on %s", async (action) => {
+      const frames = trackFrames();
+      const { getByTestId, unmount } = await render(
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
-      fireEvent.press(getByTestId("open-monthly-history"));
-      fireEvent.press(getByTestId("snapshot-month-2026-04"));
-      expect(jest.getTimerCount()).toBe(1);
+      await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      expect(frames.size).toBe(1);
 
-      if (action === "close") fireEvent.press(getByTestId("close-monthly-history"));
-      else unmount();
+      if (action === "close") await fireEvent.press(getByTestId("close-monthly-history"));
+      else await unmount();
 
-      expect(jest.getTimerCount()).toBe(0);
+      expect(frames.size).toBe(0);
     });
 
     it.each([
       ["close", 0], ["close", 1], ["close", 2],
       ["unmount", 0], ["unmount", 1], ["unmount", 2],
-    ] as const)("cancels overview restoration on %s after %i frames", (action, frames) => {
-      const { getByTestId, unmount } = render(
+    ] as const)("cancels overview restoration on %s after %i frames", async (action, elapsed) => {
+      const frames = trackFrames();
+      const { getByTestId, unmount } = await render(
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
-      fireEvent.press(getByTestId("open-monthly-history"));
-      fireEvent.press(getByTestId("snapshot-month-2026-04"));
-      act(() => jest.runAllTimers());
-      fireEvent.press(getByTestId("history-back"));
-      for (let index = 0; index < frames; index += 1) {
-        act(() => jest.advanceTimersToNextTimer());
+      await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      await act(() => jest.runAllTimers());
+      await fireEvent.press(getByTestId("history-back"));
+      for (let index = 0; index < elapsed; index += 1) {
+        await act(() => jest.advanceTimersToNextTimer());
       }
-      expect(jest.getTimerCount()).toBe(1);
-      if (action === "close") fireEvent.press(getByTestId("close-monthly-history"));
-      else unmount();
-      expect(jest.getTimerCount()).toBe(0);
+      expect(frames.size).toBe(1);
+      if (action === "close") await fireEvent.press(getByTestId("close-monthly-history"));
+      else await unmount();
+      expect(frames.size).toBe(0);
     });
 
-    it("does not restore an old overview offset after reopening a month", () => {
+    it("does not restore an old overview offset after reopening a month", async () => {
       const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
-      fireEvent.press(getByTestId("open-monthly-history"));
-      fireEvent.scroll(getByTestId("monthly-history-scroll"), {
+      await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.scroll(getByTestId("monthly-history-scroll"), {
         nativeEvent: { contentOffset: { x: 0, y: 300 } },
       });
-      fireEvent.press(getByTestId("snapshot-month-2026-04"));
-      act(() => jest.runAllTimers());
-      fireEvent.press(getByTestId("history-back"));
-      fireEvent.press(getByTestId("snapshot-month-2026-05"));
+      await fireEvent.press(getByTestId("snapshot-month-2026-04"));
+      await act(() => jest.runAllTimers());
+      await fireEvent.press(getByTestId("history-back"));
+      await fireEvent.press(getByTestId("snapshot-month-2026-05"));
       scrollTo.mockClear();
-      act(() => jest.runAllTimers());
+      await act(() => jest.runAllTimers());
 
       expect(scrollTo).toHaveBeenCalledTimes(1);
       expect(scrollTo).toHaveBeenCalledWith({ animated: false, y: 0 });
@@ -220,44 +243,44 @@ describe("MonthlyHistoryPanel", () => {
   describe("Android back", () => {
     afterEach(() => jest.restoreAllMocks());
 
-    function pressBack(screen: ReturnType<typeof render>) {
-      act(() => {
-        screen.UNSAFE_getByType(Modal).props.onRequestClose();
+    async function pressBack(screen: Awaited<ReturnType<typeof render>>) {
+      await act(() => {
+        getByComponentType(screen, Modal).props.onRequestClose();
       });
     }
 
     // React Native 0.81 can deliver one back press to onRequestClose twice: once
     // from the dialog's back dispatcher and again from its key listener, after
     // the first has already re-rendered the overview.
-    it("treats one back press delivered twice as a single step back from a month", () => {
+    it("treats one back press delivered twice as a single step back from a month", async () => {
       const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
-      const screen = render(
+      const screen = await render(
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
-      fireEvent.press(screen.getByTestId("open-monthly-history"));
-      fireEvent.press(screen.getByTestId("snapshot-month-2026-04"));
+      await fireEvent.press(screen.getByTestId("open-monthly-history"));
+      await fireEvent.press(screen.getByTestId("snapshot-month-2026-04"));
       expect(screen.getByTestId("selected-snapshot-summary")).toBeTruthy();
 
-      pressBack(screen);
+      await pressBack(screen);
       clock.mockReturnValue(1_041);
-      pressBack(screen);
+      await pressBack(screen);
 
-      expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(true);
+      expect(getByComponentType(screen, Modal).props.visible).toBe(true);
       expect(screen.queryByTestId("selected-snapshot-summary")).toBeNull();
       expect(screen.getByTestId("snapshot-month-2026-04")).toBeTruthy();
 
       clock.mockReturnValue(2_000);
-      pressBack(screen);
-      expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(false);
+      await pressBack(screen);
+      expect(getByComponentType(screen, Modal).props.visible).toBe(false);
     });
   });
 
-  it("opens newest year first and lists only stored months newest first", () => {
-    const { getByTestId, getByText } = render(
+  it("opens newest year first and lists only stored months newest first", async () => {
+    const { getByTestId, getByText } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
 
     expect(getByTestId("history-year-2026").props.accessibilityState).toEqual({ selected: true });
     expect(getByText("May")).toBeTruthy();
@@ -267,22 +290,22 @@ describe("MonthlyHistoryPanel", () => {
     expect(getByText("Vs invested excludes cash")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-02")).toThrow();
 
-    fireEvent.press(getByTestId("history-year-2025"));
+    await fireEvent.press(getByTestId("history-year-2025"));
     expect(getByTestId("snapshot-month-2025-12")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-05")).toThrow();
   });
 
-  it("lists all twelve stored months in reverse calendar order", () => {
+  it("lists all twelve stored months in reverse calendar order", async () => {
     const completeYear = Array.from({ length: 12 }, (_, index) =>
       createSummary(`2026-${String(index + 1).padStart(2, "0")}`, {
         portfolioValue: 100_000 + index,
       }),
     );
-    const { getAllByTestId, getByTestId } = render(
+    const { getAllByTestId, getByTestId } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={completeYear} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
 
     expect(
       getAllByTestId(/^snapshot-month-2026-/).map((row) => row.props.testID),
@@ -302,29 +325,29 @@ describe("MonthlyHistoryPanel", () => {
     ]);
   });
 
-  it("keeps eleven years on one scrollable selector and selects an older year", () => {
+  it("keeps eleven years on one scrollable selector and selects an older year", async () => {
     const longHistory = Array.from({ length: 11 }, (_, index) =>
       createSummary(`${2016 + index}-01`),
     );
-    const screen = render(
+    const screen = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={longHistory} />,
     );
 
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
 
     expect(screen.getByTestId("history-year-scroll").props.horizontal).toBe(true);
     expect(screen.getByTestId("history-year-2026").props.accessibilityState).toEqual({ selected: true });
-    fireEvent.press(screen.getByTestId("history-year-2016"));
+    await fireEvent.press(screen.getByTestId("history-year-2016"));
     expect(screen.getByTestId("history-year-2016").props.accessibilityState).toEqual({ selected: true });
     expect(screen.getByTestId("snapshot-month-2016-01")).toBeTruthy();
   });
 
-  it("compares each month's own basis independently of prior months or gaps", () => {
-    const screen = render(
+  it("compares each month's own basis independently of prior months or gaps", async () => {
+    const screen = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
 
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText("+33.33%")).toBeTruthy();
@@ -334,12 +357,12 @@ describe("MonthlyHistoryPanel", () => {
     const may = screen.getByTestId("snapshot-month-2026-05");
     expect(within(may).getByText("—")).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId("history-year-2025"));
+    await fireEvent.press(screen.getByTestId("history-year-2025"));
     const first = screen.getByTestId("snapshot-month-2025-12");
     expect(within(first).getByText("+20.00%")).toBeTruthy();
   });
 
-  it("marks estimated comparisons and keeps full context in details", () => {
+  it("marks estimated comparisons and keeps full context in details", async () => {
     const april = createSummary("2026-04", { portfolioValue: 100_000 });
     april.snapshot.generated = {
       confidence: "provisional",
@@ -349,25 +372,25 @@ describe("MonthlyHistoryPanel", () => {
       warnings: [],
     };
     const may = createSummary("2026-05", { portfolioValue: 110_000 });
-    const screen = render(
+    const screen = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={[april, may]} />,
     );
 
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     const mayRow = screen.getByTestId("snapshot-month-2026-05");
     expect(within(mayRow).queryByText("Estimated")).toBeNull();
     expect(within(screen.getByTestId("snapshot-month-2026-04")).getByText("Estimated")).toBeTruthy();
-    fireEvent.press(mayRow);
+    await fireEvent.press(mayRow);
     expect(screen.getByText("This comparison uses estimated prices.")).toBeTruthy();
     expect(screen.getByText("Portfolio change includes deposits and withdrawals; it is not investment return.")).toBeTruthy();
   });
 
-  it("masks the invested percentage and its accessibility label along with the portfolio", () => {
-    const screen = render(
+  it("masks the invested percentage and its accessibility label along with the portfolio", async () => {
+    const screen = await render(
       <MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText(MASKED_INR_VALUE)).toBeTruthy();
     expect(within(january).getByText("••••")).toBeTruthy();
@@ -377,30 +400,30 @@ describe("MonthlyHistoryPanel", () => {
     expect(january.props.accessibilityLabel).not.toContain("₹1,10,000.00");
   });
 
-  it("opens a dedicated month page and compares only with the immediate calendar month", () => {
-    const { getByTestId, getByText, queryByText } = render(
+  it("opens a dedicated month page and compares only with the immediate calendar month", async () => {
+    const { getByTestId, getByText, queryByText } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
 
-    fireEvent.press(getByTestId("snapshot-month-2026-03"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-03"));
     expect(getByText("Previous month unavailable portfolio value change")).toBeTruthy();
-    fireEvent.press(getByTestId("history-back"));
-    fireEvent.press(getByTestId("snapshot-month-2026-01"));
+    await fireEvent.press(getByTestId("history-back"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-01"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByText("January 2026")).toBeTruthy();
     expect(getByText("+10.00% portfolio value change")).toBeTruthy();
     expect(getByText("Dec 2025")).toBeTruthy();
     expect(getByText("Jan 2026")).toBeTruthy();
 
-    fireEvent.press(getByTestId("history-back"));
-    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    await fireEvent.press(getByTestId("history-back"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByText("Percentage unavailable · prior value was zero portfolio value change")).toBeTruthy();
     expect(queryByText("Financial note for 2026-05: ₹-20000")).toBeTruthy();
   });
 
-  it("withholds non-null performance movement when the prior calendar month is missing", () => {
+  it("withholds non-null performance movement when the prior calendar month is missing", async () => {
     const gapSummaries = [
       createSummary("2026-01", { portfolioValue: 100_000 }),
       createSummary("2026-03", {
@@ -408,19 +431,19 @@ describe("MonthlyHistoryPanel", () => {
         portfolioValue: 120_000,
       }),
     ];
-    const { getAllByText, getByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, queryByText } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={gapSummaries} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-03"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-03"));
 
     expect(getAllByText("Unavailable")).toHaveLength(2);
     expect(queryByText("+₹9K")).toBeNull();
     expect(queryByText("+₹4K")).toBeNull();
   });
 
-  it("restores the captured overview scroll offset after detail scrolling", () => {
+  it("restores the captured overview scroll offset after detail scrolling", async () => {
     const scrollToSpy = jest.spyOn(ScrollView.prototype, "scrollTo");
     const animationFrameSpy = jest
       .spyOn(global, "requestAnimationFrame")
@@ -428,52 +451,52 @@ describe("MonthlyHistoryPanel", () => {
         callback(0);
         return 0;
       });
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.scroll(getByTestId("monthly-history-scroll"), {
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.scroll(getByTestId("monthly-history-scroll"), {
       nativeEvent: { contentOffset: { x: 0, y: 300 } },
     });
-    fireEvent.press(getByTestId("snapshot-month-2026-04"));
-    fireEvent.scroll(getByTestId("monthly-history-scroll"), {
+    await fireEvent.press(getByTestId("snapshot-month-2026-04"));
+    await fireEvent.scroll(getByTestId("monthly-history-scroll"), {
       nativeEvent: { contentOffset: { x: 0, y: 900 } },
     });
     scrollToSpy.mockClear();
 
-    fireEvent.press(getByTestId("history-back"));
+    await fireEvent.press(getByTestId("history-back"));
 
     expect(scrollToSpy).toHaveBeenCalledWith({ animated: false, y: 300 });
     animationFrameSpy.mockRestore();
     scrollToSpy.mockRestore();
   });
 
-  it("uses the modal Android back path to return from details before closing", () => {
+  it("uses the modal Android back path to return from details before closing", async () => {
     // Two separate presses, far enough apart not to be one press delivered twice.
     const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
-    const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
+    const { getByTestId, queryByTestId, container } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-04"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-04"));
     expect(queryByTestId("selected-snapshot-summary")).toBeTruthy();
 
-    act(() => {
-      UNSAFE_getByType(Modal).props.onRequestClose();
+    await act(() => {
+      getByComponentType({ container }, Modal).props.onRequestClose();
     });
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
     clock.mockReturnValue(2_000);
-    act(() => {
-      UNSAFE_getByType(Modal).props.onRequestClose();
+    await act(() => {
+      getByComponentType({ container }, Modal).props.onRequestClose();
     });
-    expect(UNSAFE_getByType(Modal).props.visible).toBe(false);
+    expect(getByComponentType({ container }, Modal).props.visible).toBe(false);
     clock.mockRestore();
   });
 
-  it("masks financial amounts while retaining percentages and unavailable states", () => {
+  it("masks financial amounts while retaining percentages and unavailable states", async () => {
     const unavailableSummary = createSummary("2026-06", {
       performance: {
         marketMovement: null,
@@ -483,7 +506,7 @@ describe("MonthlyHistoryPanel", () => {
       },
       portfolioValue: 123_456,
     });
-    const { getAllByText, getByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, queryByText } = await render(
       <MonthlyHistoryPanel
         maskWealthValues
         minimal
@@ -491,8 +514,8 @@ describe("MonthlyHistoryPanel", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-06"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(1);
     expect(getAllByText("+717.28% portfolio value change")).toHaveLength(1);
@@ -504,7 +527,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(getAllByText("Unavailable").length).toBeGreaterThan(1);
   });
 
-  it("labels nullable snapshot and performance values as unavailable when unmasked", () => {
+  it("labels nullable snapshot and performance values as unavailable when unmasked", async () => {
     const unavailableSummary = createSummary("2026-06", {
       performance: {
         marketMovement: null,
@@ -513,12 +536,12 @@ describe("MonthlyHistoryPanel", () => {
         totalValueChange: null,
       },
     });
-    const { getAllByText, getByTestId } = render(
+    const { getAllByText, getByTestId } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal summaries={[...summaries, unavailableSummary]} />,
     );
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-06"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
     expect(getAllByText("Unavailable").length).toBeGreaterThanOrEqual(3);
   });

@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 
 import RootLayout from "../../app/_layout";
+import { getByComponentType } from "@/src/testing/componentQueries";
 
 const mockResetAffectedStorage = jest.fn();
 let mockRestoreEpoch = 0;
@@ -79,31 +80,31 @@ describe("RootLayout", () => {
   });
 
   it("keeps readable restore completion outside the remounted navigation tree", async () => {
-    const view = render(<RootLayout />);
+    const view = await render(<RootLayout />);
     await waitFor(() => expect(view.getByTestId("stack-screen-(tabs)")).toBeTruthy());
     expect(view.queryByTestId("backup-restore-done")).toBeNull();
     mockRestoreEpoch = 1;
-    view.rerender(<RootLayout />);
+    await view.rerender(<RootLayout />);
     await waitFor(() => expect(view.getByTestId("backup-restore-done")).toBeTruthy());
     expect(view.getByText("Portfolio restored").props.accessibilityLiveRegion).toBe("polite");
     expect(mockDismissAll).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith("/");
-    fireEvent.press(view.getByTestId("backup-restore-done"));
+    await fireEvent.press(view.getByTestId("backup-restore-done"));
     expect(view.queryByTestId("backup-restore-done")).toBeNull();
-    view.rerender(<RootLayout />);
+    await view.rerender(<RootLayout />);
     expect(view.queryByTestId("backup-restore-done")).toBeNull();
   });
 
   it("wraps navigation with the gesture handler root required by native navigation", async () => {
-    const { getByTestId, UNSAFE_getByType } = render(<RootLayout />);
-    const layout = UNSAFE_getByType(GestureHandlerRootView);
+    const { getByTestId, container } = await render(<RootLayout />);
+    const layout = getByComponentType({ container }, GestureHandlerRootView);
 
     expect(layout.props.style).toEqual({ flex: 1, backgroundColor: "#181A1B" });
     await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
   });
 
   it("registers the add holding route used by dashboard and holdings actions", async () => {
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
     expect(getByTestId("stack-screen-settings")).toBeTruthy();
@@ -112,7 +113,7 @@ describe("RootLayout", () => {
   });
 
   it("lets app screens own their premium headers", async () => {
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("stack-screen-(tabs)")).toBeTruthy());
     expect(getByTestId("stack-screen-index").props.options).toEqual({
@@ -128,7 +129,7 @@ describe("RootLayout", () => {
   });
 
   it("runs month-end snapshot automation on app launch", async () => {
-    render(<RootLayout />);
+    await render(<RootLayout />);
 
     await waitFor(() =>
       expect(useMonthEndSnapshotAutomation).toHaveBeenCalledTimes(1),

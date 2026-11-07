@@ -208,7 +208,7 @@ describe("useProgress", () => {
       createdAt: "2026-09-10T00:00:00Z",
     });
     const historicalPriceFetcher = jest.fn().mockResolvedValue({ ok: false });
-    const { result } = renderHook(() => useProgress({
+    const { result } = await renderHook(() => useProgress({
       store, now: new Date("2026-09-11T12:00:00Z"), historicalPriceFetcher,
     }));
     await act(async () => { await result.current.ensureMonthEndSnapshot(); });
@@ -227,7 +227,7 @@ describe("useProgress", () => {
       kind: "reconstructed-history",
     });
     expect(result.current.snapshotAutomationStatus.pendingMonths.length).toBeGreaterThan(0);
-    act(() => { result.current.setPortfolioChartRange("Custom");
+    await act(() => { result.current.setPortfolioChartRange("Custom");
       result.current.setPortfolioChartCustomRange({ startMonth: "2025-01", endMonth: "2025-06" }); });
     expect(result.current.portfolioChartData.monthLabels).toHaveLength(6);
   });
@@ -244,7 +244,7 @@ describe("useProgress", () => {
       provider: "HDFC",
       status: "active",
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         now: new Date("2026-09-11T12:00:00Z"),
         store,
@@ -279,13 +279,13 @@ describe("useProgress", () => {
     ]);
   });
 
-  it("shares investing activity with Cash without double-counting a funded buy", () => {
+  it("shares investing activity with Cash without double-counting a funded buy", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-20T00:00:00.000Z");
     seedMonthlyInvestmentMetrics(store);
 
-    const { result: cash } = renderHook(() => useCash({ now, store }));
-    const { result: progress } = renderHook(() => useProgress({ now, store }));
+    const { result: cash } = await renderHook(() => useCash({ now, store }));
+    const { result: progress } = await renderHook(() => useProgress({ now, store }));
 
     expect(progress.current).not.toHaveProperty("monthlyIncome");
     expect(progress.current.monthlyInvestment).toBe(10000);
@@ -295,19 +295,19 @@ describe("useProgress", () => {
     );
   });
 
-  it("shows investing activity without an income dependency", () => {
+  it("shows investing activity without an income dependency", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-07-20T00:00:00.000Z");
     seedMonthlyInvestmentMetrics(store, { includeIncome: false });
 
-    const { result } = renderHook(() => useProgress({ now, store }));
+    const { result } = await renderHook(() => useProgress({ now, store }));
 
     expect(result.current).not.toHaveProperty("monthlyIncome");
     expect(result.current.monthlyInvestment).toBe(10000);
     expect(result.current).not.toHaveProperty("investmentRate");
   });
 
-  it("excludes linked legacy PPF activity from current-month investment", () => {
+  it("excludes linked legacy PPF activity from current-month investment", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const now = new Date("2026-08-15T10:00:00.000Z");
     const legacyPpf: Asset = {
@@ -351,16 +351,16 @@ describe("useProgress", () => {
       type: "contribution",
     });
 
-    const { result } = renderHook(() => useProgress({ now, store }));
+    const { result } = await renderHook(() => useProgress({ now, store }));
 
     expect(result.current.monthlyInvestment).toBe(5_000);
   });
 
-  it("saves and updates monthly snapshots through the feature controller", () => {
+  it("saves and updates monthly snapshots through the feature controller", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() => useProgress({ store }));
+    const { result } = await renderHook(() => useProgress({ store }));
 
-    act(() => {
+    await act(() => {
       result.current.setField("month", "2026-05");
       result.current.setField("portfolioValue", "1385000");
       result.current.setField("investedValue", "1060000");
@@ -370,7 +370,7 @@ describe("useProgress", () => {
       result.current.setField("cashValue", "140000");
       result.current.setField("monthlyInvestment", "60000");
     });
-    act(() => {
+    await act(() => {
       result.current.saveSnapshot();
     });
 
@@ -380,7 +380,7 @@ describe("useProgress", () => {
       portfolioValue: 1385000,
     });
 
-    act(() => {
+    await act(() => {
       result.current.setField("month", "2026-05");
       result.current.setField("portfolioValue", "1400000");
       result.current.setField("investedValue", "1070000");
@@ -390,7 +390,7 @@ describe("useProgress", () => {
       result.current.setField("cashValue", "140000");
       result.current.setField("monthlyInvestment", "70000");
     });
-    act(() => {
+    await act(() => {
       result.current.saveSnapshot();
     });
 
@@ -401,11 +401,11 @@ describe("useProgress", () => {
     });
   });
 
-  it("saves a reviewed snapshot without inventing unknown income", () => {
+  it("saves a reviewed snapshot without inventing unknown income", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() => useProgress({ store }));
+    const { result } = await renderHook(() => useProgress({ store }));
 
-    act(() => {
+    await act(() => {
       result.current.setField("month", "2026-05");
       result.current.setField("portfolioValue", "1000");
       result.current.setField("investedValue", "800");
@@ -415,7 +415,7 @@ describe("useProgress", () => {
       result.current.setField("cashValue", "200");
       result.current.setField("monthlyInvestment", "100");
     });
-    act(() => {
+    await act(() => {
       result.current.saveSnapshot();
     });
 
@@ -427,7 +427,7 @@ describe("useProgress", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         now: new Date("2026-08-02T10:00:00.000Z"),
         store,
@@ -488,7 +488,7 @@ describe("useProgress", () => {
         trades: store.getState().trades,
       }),
     ).toEqual(["2026-07"]);
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -533,7 +533,7 @@ describe("useProgress", () => {
       purpose: "capitalContribution",
       type: "addition",
     });
-    const { result } = renderHook(() => useProgress({ now, store }));
+    const { result } = await renderHook(() => useProgress({ now, store }));
 
     await act(async () => {
       await result.current.ensureMonthEndSnapshot();
@@ -541,7 +541,7 @@ describe("useProgress", () => {
     expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("salary");
     const originalSnapshot = store.getState().monthlySnapshots[0];
 
-    act(() => {
+    await act(() => {
       store.getState().addCashEntry({
         amount: 100000,
         date: "2026-07-06",
@@ -581,7 +581,7 @@ describe("useProgress", () => {
         };
       },
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-05-10T10:00:00.000Z"),
@@ -638,7 +638,7 @@ describe("useProgress", () => {
       error: "Historical price is temporarily unavailable.",
       ok: false,
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-05-10T10:00:00.000Z"),
@@ -681,14 +681,14 @@ describe("useProgress", () => {
           }));
         }),
     );
-    const rootAutomation = renderHook(() =>
+    const rootAutomation = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-03-10T10:00:00.000Z"),
         store,
       }),
     );
-    const visibleProgress = renderHook(() =>
+    const visibleProgress = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-03-10T10:00:00.000Z"),
@@ -698,7 +698,7 @@ describe("useProgress", () => {
 
     let automation!: ReturnType<typeof rootAutomation.result.current.ensureMonthEndSnapshot>;
     let visibleAutomation!: ReturnType<typeof visibleProgress.result.current.ensureMonthEndSnapshot>;
-    act(() => {
+    await act(() => {
       automation = rootAutomation.result.current.ensureMonthEndSnapshot();
       visibleAutomation = visibleProgress.result.current.ensureMonthEndSnapshot();
     });
@@ -711,7 +711,7 @@ describe("useProgress", () => {
       });
     });
 
-    act(() => releases[0]?.());
+    await act(() => releases[0]?.());
     await waitFor(() => {
       expect(visibleProgress.result.current.snapshotAutomationStatus.progress).toEqual({
         checkedCount: 1,
@@ -723,7 +723,7 @@ describe("useProgress", () => {
       );
     });
 
-    act(() => releases[1]?.());
+    await act(() => releases[1]?.());
     await act(async () => {
       await Promise.all([automation, visibleAutomation]);
     });
@@ -755,7 +755,7 @@ describe("useProgress", () => {
         },
       }),
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-05-10T10:00:00.000Z"),
@@ -806,7 +806,7 @@ describe("useProgress", () => {
       purpose: "capitalContribution",
       type: "addition",
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         now: new Date("2026-05-10T10:00:00.000Z"),
         store,
@@ -846,7 +846,7 @@ describe("useProgress", () => {
       type: "sell",
     });
     const historicalPriceFetcher = jest.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-05-10T10:00:00.000Z"),
@@ -887,7 +887,7 @@ describe("useProgress", () => {
         };
       },
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-05-10T10:00:00.000Z"),
@@ -930,14 +930,14 @@ describe("useProgress", () => {
         };
       },
     );
-    const beforeMonthEnd = renderHook(() =>
+    const beforeMonthEnd = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date(2026, 5, 30, 23, 59),
         store,
       }),
     );
-    const afterMonthEnd = renderHook(() =>
+    const afterMonthEnd = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date(2026, 6, 1, 0, 1),
@@ -983,7 +983,7 @@ describe("useProgress", () => {
       },
     });
 
-    renderHook(() =>
+    await renderHook(() =>
       useMonthEndSnapshotAutomation({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1020,7 +1020,7 @@ describe("useProgress", () => {
       },
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1045,7 +1045,7 @@ describe("useProgress", () => {
       error: "Historical price is temporarily unavailable.",
       ok: false,
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1076,7 +1076,7 @@ describe("useProgress", () => {
       error: "Historical price is temporarily unavailable.",
       ok: false,
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1111,7 +1111,7 @@ describe("useProgress", () => {
     };
     store.getState().addMonthlySnapshot(legacyCorrection);
     const historicalPriceFetcher = jest.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1147,7 +1147,7 @@ describe("useProgress", () => {
         source: "yahoo",
       },
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1199,7 +1199,7 @@ describe("useProgress", () => {
         source: "yahoo",
       },
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1259,7 +1259,7 @@ describe("useProgress", () => {
         source: "yahoo",
       },
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1328,7 +1328,7 @@ describe("useProgress", () => {
               ok: false as const,
             },
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1383,7 +1383,7 @@ describe("useProgress", () => {
     };
     store.getState().addMonthlySnapshot(confirmed);
     const historicalPriceFetcher = jest.fn();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgress({
         historicalPriceFetcher,
         now: new Date("2026-08-02T10:00:00.000Z"),
@@ -1397,7 +1397,7 @@ describe("useProgress", () => {
 
     expect(historicalPriceFetcher).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       result.current.setField("month", "2026-07");
       result.current.setField("portfolioValue", "86000");
       result.current.setField("investedValue", "14500");
@@ -1407,7 +1407,7 @@ describe("useProgress", () => {
       result.current.setField("cashValue", "70000");
       result.current.setField("monthlyInvestment", "0");
     });
-    act(() => {
+    await act(() => {
       result.current.saveSnapshot();
     });
 

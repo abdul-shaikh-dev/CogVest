@@ -36,14 +36,14 @@ const existingBuy: Trade = {
   type: "buy",
 };
 
-function chooseDate(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function chooseDate(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
   year: number,
   month: number,
   day: number,
 ) {
-  fireEvent.press(getByTestId("trade-date-input"));
-  fireEvent(
+  await fireEvent.press(getByTestId("trade-date-input"));
+  await fireEvent(
     getByTestId("trade-date-input-picker"),
     "onChange",
     { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
@@ -65,7 +65,7 @@ describe("AddTradeForm", () => {
       purpose: "capitalContribution",
       type: "addition",
     });
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddTradeForm store={store} />,
     );
 
@@ -86,24 +86,24 @@ describe("AddTradeForm", () => {
     expect(getByTestId("review-trade-button")).toBeTruthy();
     expect(getByTestId("save-trade-button")).toBeTruthy();
 
-    fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
-    fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
-    fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
-    fireEvent.changeText(getByLabelText("Instrument type"), "stock");
-    fireEvent.changeText(getByLabelText("Sector type"), "energy");
-    fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Price per unit"), "100");
-    fireEvent.changeText(getByLabelText("Fees"), "5");
-    chooseDate(getByTestId, 2026, 4, 20);
-    fireEvent.press(getByTestId("conviction-4"));
-    fireEvent.changeText(getByLabelText("Note"), "Core portfolio add");
+    await fireEvent.changeText(getByLabelText("Asset name"), "Reliance Industries");
+    await fireEvent.changeText(getByLabelText("Symbol"), "RELIANCE");
+    await fireEvent.changeText(getByLabelText("Ticker"), "RELIANCE.NS");
+    await fireEvent.changeText(getByLabelText("Instrument type"), "stock");
+    await fireEvent.changeText(getByLabelText("Sector type"), "energy");
+    await fireEvent.changeText(getByLabelText("Quote source ID"), "RELIANCE.NS");
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Price per unit"), "100");
+    await fireEvent.changeText(getByLabelText("Fees"), "5");
+    await chooseDate(getByTestId, 2026, 4, 20);
+    await fireEvent.press(getByTestId("conviction-4"));
+    await fireEvent.changeText(getByLabelText("Note"), "Core portfolio add");
 
-    fireEvent.press(getByText("Review Holding"));
+    await fireEvent.press(getByText("Review Holding"));
     expect(getByText("Derived preview")).toBeTruthy();
     expect(getByText("Total: ₹205.00")).toBeTruthy();
 
-    fireEvent.press(getByText("Save Holding"));
+    await fireEvent.press(getByText("Save Holding"));
 
     await waitFor(() => {
       expect(store.getState().assets).toHaveLength(1);
@@ -139,27 +139,27 @@ describe("AddTradeForm", () => {
     expect(getByText("Holding saved.")).toBeTruthy();
   });
 
-  it("shows an actionable error for invalid sell quantity", () => {
+  it("shows an actionable error for invalid sell quantity", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(existingAsset);
     store.getState().addTrade(existingBuy);
 
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <AddTradeForm store={store} />,
     );
 
-    fireEvent.press(getByText("Sell"));
-    fireEvent.press(getByText("RELIANCE"));
-    fireEvent.changeText(getByLabelText("Quantity"), "2");
-    fireEvent.changeText(getByLabelText("Price per unit"), "100");
-    chooseDate(getByTestId, 2026, 4, 20);
-    fireEvent.press(getByText("Review Holding"));
+    await fireEvent.press(getByText("Sell"));
+    await fireEvent.press(getByText("RELIANCE"));
+    await fireEvent.changeText(getByLabelText("Quantity"), "2");
+    await fireEvent.changeText(getByLabelText("Price per unit"), "100");
+    await chooseDate(getByTestId, 2026, 4, 20);
+    await fireEvent.press(getByText("Review Holding"));
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(store.getState().trades).toEqual([existingBuy]);
   });
 
-  it("prefills existing asset price from the quote cache", () => {
+  it("prefills existing asset price from the quote cache", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(existingAsset);
     store.getState().upsertQuote({
@@ -170,9 +170,9 @@ describe("AddTradeForm", () => {
       source: "yahoo",
     });
 
-    const { getByDisplayValue, getByText } = render(<AddTradeForm store={store} />);
+    const { getByDisplayValue, getByText } = await render(<AddTradeForm store={store} />);
 
-    fireEvent.press(getByText("RELIANCE"));
+    await fireEvent.press(getByText("RELIANCE"));
 
     expect(getByDisplayValue("123.45")).toBeTruthy();
   });

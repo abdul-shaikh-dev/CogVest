@@ -6,6 +6,7 @@ import { FuturesScreen } from "@/src/features/futures/FuturesScreen";
 import { AppButton } from "@/src/components/common";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
+import { getAllByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("expo-router/react-navigation", () => ({
   usePreventRemove: jest.fn(),
@@ -13,72 +14,72 @@ jest.mock("expo-router/react-navigation", () => ({
 }));
 
 beforeEach(() => jest.clearAllMocks());
-function setTime(screen: ReturnType<typeof render>, id: string, value: string) {
-  if (!screen.queryByTestId(id)) fireEvent.press(screen.getByTestId(`${id}-exact-toggle`));
-  fireEvent.changeText(screen.getByTestId(id), value);
+async function setTime(screen: Awaited<ReturnType<typeof render>>, id: string, value: string) {
+  if (!screen.queryByTestId(id)) await fireEvent.press(screen.getByTestId(`${id}-exact-toggle`));
+  await fireEvent.changeText(screen.getByTestId(id), value);
 }
 
 describe("manual Futures screen", () => {
-  it.each(["standard", "minimal"] as const)("groups wallet amount, time and conversion evidence in %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("groups wallet amount, time and conversion evidence in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
-    const screen = render(<FuturesScreen onBack={jest.fn()} store={store} />);
+    const screen = await render(<FuturesScreen onBack={jest.fn()} store={store} />);
     const tree = JSON.stringify(screen.toJSON());
     expect(tree.indexOf("futures-opening-wallet")).toBeLessThan(tree.indexOf("futures-opening-at-field"));
     expect(tree.indexOf("futures-opening-at-field")).toBeLessThan(tree.indexOf("futures-opening-conversion"));
     expect(screen.getByText("INR conversion")).toBeTruthy();
     expect(screen.queryByTestId("futures-opening-at")).toBeNull();
-    fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
     expect(screen.getByTestId("futures-opening-conversion")).toHaveTextContent(/Rate observed at/);
     expect(screen.getByTestId("futures-opening-conversion")).toHaveTextContent(/Starting rate source/);
     expect(store.getState().futuresAccounts).toEqual([]);
   });
 
-  it("cancels wallet deletion through buttons and Android dismissal, then deletes only once", () => {
+  it("cancels wallet deletion through buttons and Android dismissal, then deletes only once", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
-    const screen = render(<FuturesScreen onBack={onBack} store={store} />);
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={onBack} store={store} />);
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     const before = store.getState().captureBackup().payload;
-    fireEvent.press(screen.getByTestId("futures-delete-account"));
-    fireEvent.press(screen.getByTestId("futures-cancel-delete"));
+    await fireEvent.press(screen.getByTestId("futures-delete-account"));
+    await fireEvent.press(screen.getByTestId("futures-cancel-delete"));
     expect(store.getState().captureBackup().payload).toEqual(before);
-    fireEvent.press(screen.getByTestId("futures-delete-account"));
-    fireEvent(screen.getByTestId("futures-delete-modal"), "requestClose");
+    await fireEvent.press(screen.getByTestId("futures-delete-account"));
+    await fireEvent(screen.getByTestId("futures-delete-modal"), "requestClose");
     expect(store.getState().captureBackup().payload).toEqual(before);
     expect(onBack).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId("futures-delete-account"));
-    const confirm = screen.UNSAFE_getAllByType(AppButton).find((button) => button.props.testID === "futures-confirm-delete")!.props.onPress;
-    act(() => { confirm(); confirm(); });
+    await fireEvent.press(screen.getByTestId("futures-delete-account"));
+    const confirm = getAllByComponentType(screen, AppButton).find((button) => button.props.testID === "futures-confirm-delete")!.props.onPress;
+    await act(() => { confirm(); confirm(); });
     expect(store.getState().futuresAccounts).toEqual([]);
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves linked Cash on cancel, enforces wallet deletion guards and removes both transfer legs", () => {
+  it("preserves linked Cash on cancel, enforces wallet deletion guards and removes both transfer legs", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-01", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
     store.getState().saveFuturesAccount({ id: "binance-usdm-main", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way", openingAt: "2026-09-01T00:00:00Z", openingWalletUsdt: "0", events: [] });
     store.getState().saveFuturesCashTransfer({ accountId: "binance-usdm-main", cashEntryId: "cash-funding", eventId: "funding", at: "2026-09-02T00:00:00Z", amountUsdt: "100", cashAmountInr: 9000, conversionFeeInr: "0", inrPerUsdt: "90", rateObservedAt: "2026-09-02T00:00:00Z", rateSource: "Receipt" });
-    const screen = render(<FuturesScreen onBack={jest.fn()} store={store} />);
+    const screen = await render(<FuturesScreen onBack={jest.fn()} store={store} />);
     const before = store.getState().captureBackup().payload;
-    fireEvent.press(screen.getByTestId("delete-futures-funding"));
-    fireEvent.press(screen.getByTestId("futures-cancel-delete"));
+    await fireEvent.press(screen.getByTestId("delete-futures-funding"));
+    await fireEvent.press(screen.getByTestId("futures-cancel-delete"));
     expect(store.getState().captureBackup().payload).toEqual(before);
-    fireEvent.press(screen.getByTestId("futures-delete-account"));
-    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
+    await fireEvent.press(screen.getByTestId("futures-delete-account"));
+    await fireEvent.press(screen.getByTestId("futures-confirm-delete"));
     expect(store.getState().captureBackup().payload).toEqual(before);
-    fireEvent.press(screen.getByTestId("delete-futures-funding"));
-    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
+    await fireEvent.press(screen.getByTestId("delete-futures-funding"));
+    await fireEvent.press(screen.getByTestId("futures-confirm-delete"));
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
     expect(store.getState().cashEntries).toHaveLength(1);
     expect(store.getState().cashEntries[0]).toMatchObject({ id: "cash-opening", amount: 10000 });
   });
 
-  it("keeps one visible sentence per card and every limitation behind Details", () => {
+  it("keeps one visible sentence per card and every limitation behind Details", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     const details = {
       "futures-margin-details": ["Indicative only: not Binance maintenance margin or liquidation risk.", "It is already part of wallet funds and never added to equity."],
       "futures-activity-details": ["Add every fill with its fee, plus funding and transfers.", "For money from recorded INR Cash, use Move Cash and USDT. An unlinked Binance Spot movement stays outside portfolio totals."],
@@ -87,55 +88,55 @@ describe("manual Futures screen", () => {
     for (const [testID, [summary, detail]] of Object.entries(details)) {
       expect(screen.getByText(summary)).toBeTruthy();
       expect(screen.queryByTestId(testID)).toBeNull();
-      fireEvent.press(screen.getByTestId(`${testID}-toggle`));
+      await fireEvent.press(screen.getByTestId(`${testID}-toggle`));
       expect(screen.getByTestId(testID)).toHaveTextContent(detail);
     }
   });
 
-  it("separates wallet equity, empty positions and correction without fabricating INR values", () => {
+  it("separates wallet equity, empty positions and correction without fabricating INR values", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(screen.getByTestId("futures-position-summary")).toHaveTextContent(/1000 USDT/);
     expect(screen.getByTestId("futures-position-summary")).toHaveTextContent(/Not verified in INR/);
     expect(screen.getByTestId("futures-open-positions")).toHaveTextContent(/No open positions in recorded activity\./);
     expect(screen.getByText("Starting wallet")).toBeTruthy();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     expect(screen.queryByText("1000 USDT")).toBeNull();
     expect(store.getState().futuresAccounts[0].openingWalletUsdt).toBe("1000");
   });
 
-  it("rejects invalid dates and incomplete observation evidence without persisting", () => {
+  it("rejects invalid dates and incomplete observation evidence without persisting", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    setTime(screen, "futures-opening-at", "2026-02-30T10:00:00Z");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await setTime(screen, "futures-opening-at", "2026-02-30T10:00:00Z");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(screen.getByText("Choose a valid date and time with timezone.")).toBeTruthy();
     expect(store.getState().futuresAccounts).toEqual([]);
-    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    await setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(screen.getByText("Enter rate observation time.")).toBeTruthy();
     expect(screen.getByText("Enter rate source.")).toBeTruthy();
     expect(store.getState().futuresAccounts).toEqual([]);
   });
 
-  it("keeps incomplete executions and valuations out of saved records", () => {
+  it("keeps incomplete executions and valuations out of saved records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     const before = JSON.stringify(store.getState().futuresAccounts);
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    fireEvent.press(screen.getByTestId("futures-save-event"));
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(screen.getByText("Enter quantity.")).toBeTruthy();
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
-    fireEvent.press(screen.getByTestId("futures-save-valuation"));
+    await fireEvent.press(screen.getByTestId("futures-save-valuation"));
     expect(screen.getByText("Enter observed wallet balance.")).toBeTruthy();
     expect(JSON.stringify(store.getState().futuresAccounts)).toBe(before);
   });
 
-  it("protects wallet drafts on visible, hardware and route exits without writing data", () => {
+  it("protects wallet drafts on visible, hardware and route exits without writing data", async () => {
     let hardwareBack: (() => boolean) | undefined;
     const listener = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_, callback) => {
       hardwareBack = callback as () => boolean;
@@ -143,108 +144,108 @@ describe("manual Futures screen", () => {
     });
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
-    const screen = render(<FuturesScreen onBack={onBack} store={store} />);
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.press(screen.getByTestId("futures-back"));
+    const screen = await render(<FuturesScreen onBack={onBack} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.press(screen.getByTestId("futures-back"));
     expect(onBack).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId("futures-keep-editing"));
+    await fireEvent.press(screen.getByTestId("futures-keep-editing"));
     expect(screen.getByTestId("futures-opening-wallet").props.value).toBe("1000");
-    act(() => { expect(hardwareBack?.()).toBe(true); });
-    fireEvent.press(screen.getByTestId("futures-keep-editing"));
+    await act(() => { expect(hardwareBack?.()).toBe(true); });
+    await fireEvent.press(screen.getByTestId("futures-keep-editing"));
     const guard = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(guard[0]).toBe(true);
     const repeat = jest.fn();
-    act(() => guard[1]!({ data: { action: { type: "POP" } }, repeat }));
+    await act(() => guard[1]!({ data: { action: { type: "POP" } }, repeat }));
     expect(repeat).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId("futures-discard"));
+    await fireEvent.press(screen.getByTestId("futures-discard"));
     expect(repeat).toHaveBeenCalledTimes(1);
     expect(store.getState().futuresAccounts).toEqual([]);
     listener.mockRestore();
   });
 
-  it("does not protect untouched or committed wallets", () => {
+  it("does not protect untouched or committed wallets", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
-    const screen = render(<FuturesScreen onBack={onBack} store={store} />);
+    const screen = await render(<FuturesScreen onBack={onBack} store={store} />);
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
-    fireEvent.press(screen.getByTestId("futures-back"));
+    await fireEvent.press(screen.getByTestId("futures-back"));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["execution", "cash", "valuation"])("keeps and explicitly discards %s edits without changing stored records", (kind) => {
+  it.each(["execution", "cash", "valuation"])("keeps and explicitly discards %s edits without changing stored records", async (kind) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
-    const screen = render(<FuturesScreen onBack={onBack} store={store} />);
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={onBack} store={store} />);
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     const before = JSON.stringify(store.getState().futuresAccounts);
-    if (kind === "execution") fireEvent.press(screen.getByTestId("futures-add-event"));
-    if (kind === "cash") fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
+    if (kind === "execution") await fireEvent.press(screen.getByTestId("futures-add-event"));
+    if (kind === "cash") await fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
     const field = kind === "execution" ? "futures-quantity" : kind === "cash" ? "futures-cash-usdt" : "futures-observed-wallet";
-    fireEvent.changeText(screen.getByTestId(field), "123");
-    fireEvent.press(screen.getByTestId("futures-back"));
-    fireEvent.press(screen.getByTestId("futures-keep-editing"));
+    await fireEvent.changeText(screen.getByTestId(field), "123");
+    await fireEvent.press(screen.getByTestId("futures-back"));
+    await fireEvent.press(screen.getByTestId("futures-keep-editing"));
     expect(screen.getByTestId(field).props.value).toBe("123");
-    fireEvent.press(screen.getByTestId("futures-back"));
-    fireEvent.press(screen.getByTestId("futures-discard"));
+    await fireEvent.press(screen.getByTestId("futures-back"));
+    await fireEvent.press(screen.getByTestId("futures-discard"));
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(store.getState().futuresAccounts)).toBe(before);
     expect(store.getState().cashEntries).toEqual([]);
   });
 
-  it("uses independent checkboxes and guards local cancellation while keeping unrelated drafts", () => {
+  it("uses independent checkboxes and guards local cancellation while keeping unrelated drafts", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     // Three confirmations plus "Different times for each", which starts off.
     expect(screen.getAllByRole("checkbox")).toHaveLength(4);
     expect(screen.getByTestId("futures-separate-times").props.accessibilityState.checked).toBe(false);
-    fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-events-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-events-confirmed"));
     expect(screen.getByTestId("futures-positions-confirmed").props.accessibilityState.checked).toBe(true);
     expect(screen.getByTestId("futures-events-confirmed").props.accessibilityState.checked).toBe(true);
     expect(screen.getByTestId("futures-boundary-confirmed").props.accessibilityState.checked).toBe(false);
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    fireEvent.changeText(screen.getByTestId("futures-price"), "50");
-    fireEvent.press(screen.getByTestId("futures-cancel-event"));
-    fireEvent.press(screen.getByTestId("futures-keep-editing"));
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await fireEvent.changeText(screen.getByTestId("futures-price"), "50");
+    await fireEvent.press(screen.getByTestId("futures-cancel-event"));
+    await fireEvent.press(screen.getByTestId("futures-keep-editing"));
     expect(screen.getByTestId("futures-price").props.value).toBe("50");
-    fireEvent.press(screen.getByTestId("futures-cancel-event"));
-    fireEvent.press(screen.getByTestId("futures-discard"));
+    await fireEvent.press(screen.getByTestId("futures-cancel-event"));
+    await fireEvent.press(screen.getByTestId("futures-discard"));
     expect(screen.queryByTestId("futures-price")).toBeNull();
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(true);
   });
 
-  it("keeps a new execution draft when another persisted activity is deleted", () => {
+  it("keeps a new execution draft when another persisted activity is deleted", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().saveFuturesAccount({ id: "binance-usdm-main", marginMode: "cross", positionMode: "one-way", settlementAsset: "USDT", openingAt: "2026-09-01T00:00:00Z", openingWalletUsdt: "1000", events: [{ id: "existing", type: "execution", at: "2026-09-02T00:00:00Z", contract: "BTCUSDT", side: "buy", quantity: "1", price: "100", feeUsdt: "0", leverage: "10" }] });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    fireEvent.changeText(screen.getByTestId("futures-quantity"), "2");
-    fireEvent.press(screen.getByTestId("delete-futures-existing"));
-    fireEvent.press(screen.getByTestId("futures-confirm-delete"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await fireEvent.changeText(screen.getByTestId("futures-quantity"), "2");
+    await fireEvent.press(screen.getByTestId("delete-futures-existing"));
+    await fireEvent.press(screen.getByTestId("futures-confirm-delete"));
     expect(store.getState().futuresAccounts[0].events).toEqual([]);
     expect(screen.getByTestId("futures-quantity").props.value).toBe("2");
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(true);
   });
-  it("records a linked Cash funding movement without opening a position", () => {
+  it("records a linked Cash funding movement without opening a position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });
     store.getState().addCashEntry({ id: "cash-opening", amount: 10000, date: "2026-09-01", label: "Opening Cash", purpose: "capitalContribution", type: "addition" });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
-    fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
-    setTime(screen, "futures-cash-at", "2026-09-02T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-cash-usdt"), "100");
-    fireEvent.changeText(screen.getByTestId("futures-cash-inr"), "9010");
-    fireEvent.changeText(screen.getByTestId("futures-cash-fee"), "10");
-    fireEvent.changeText(screen.getByTestId("futures-cash-rate"), "90");
-    setTime(screen, "futures-cash-rate-at", "2026-09-02T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-cash-rate-source"), "Conversion receipt");
-    fireEvent.press(screen.getByTestId("futures-save-cash-funding"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
+    await fireEvent.press(screen.getByTestId("futures-add-cash-funding"));
+    await setTime(screen, "futures-cash-at", "2026-09-02T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-cash-usdt"), "100");
+    await fireEvent.changeText(screen.getByTestId("futures-cash-inr"), "9010");
+    await fireEvent.changeText(screen.getByTestId("futures-cash-fee"), "10");
+    await fireEvent.changeText(screen.getByTestId("futures-cash-rate"), "90");
+    await setTime(screen, "futures-cash-rate-at", "2026-09-02T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-cash-rate-source"), "Conversion receipt");
+    await fireEvent.press(screen.getByTestId("futures-save-cash-funding"));
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
     expect(store.getState().cashEntries[1]).toMatchObject({ amount: 9010, purpose: "futuresTransfer", type: "withdrawal" });
     expect(store.getState().futuresAccounts[0].events).toMatchObject([{ type: "transfer", amountUsdt: "100" }]);
@@ -252,61 +253,61 @@ describe("manual Futures screen", () => {
     expect(screen.queryByText(/BTCUSDT · Long/)).toBeNull();
   });
 
-  it("records and corrects a closed trade with a reconciled USDT wallet", () => {
+  it("records and corrects a closed trade with a reconciled USDT wallet", async () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage, now: () => new Date("2026-09-29T12:00:00Z") });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
-    setTime(screen, "futures-opening-rate-at", "2026-09-01T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-opening-rate-source"), "Dated INR quote");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-rate"), "90");
+    await setTime(screen, "futures-opening-rate-at", "2026-09-01T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-rate-source"), "Dated INR quote");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
     expect(store.getState().futuresAccounts[0].openingWalletUsdt).toBe("1000");
 
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
-    fireEvent.changeText(screen.getByTestId("futures-price"), "100");
-    fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
-    fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
-    setTime(screen, "futures-event-rate-at", "2026-09-02T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
-    fireEvent.press(screen.getByTestId("futures-save-event"));
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
+    await fireEvent.changeText(screen.getByTestId("futures-price"), "100");
+    await fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
+    await fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
+    await fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
+    await setTime(screen, "futures-event-rate-at", "2026-09-02T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
+    await fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(store.getState().futuresAccounts[0].events).toHaveLength(1);
 
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    fireEvent.press(screen.getByTestId("futures-type-execution"));
-    setTime(screen, "futures-event-at", "2026-09-03T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
-    fireEvent.changeText(screen.getByTestId("futures-price"), "110");
-    fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
-    fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
-    setTime(screen, "futures-event-rate-at", "2026-09-03T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
-    fireEvent.press(screen.getByText("Sell"));
-    fireEvent.press(screen.getByTestId("futures-save-event"));
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await fireEvent.press(screen.getByTestId("futures-type-execution"));
+    await setTime(screen, "futures-event-at", "2026-09-03T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
+    await fireEvent.changeText(screen.getByTestId("futures-price"), "110");
+    await fireEvent.changeText(screen.getByTestId("futures-fee"), "1");
+    await fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
+    await fireEvent.changeText(screen.getByTestId("futures-event-rate"), "90");
+    await setTime(screen, "futures-event-rate-at", "2026-09-03T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-event-rate-source"), "Dated INR quote");
+    await fireEvent.press(screen.getByText("Sell"));
+    await fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(store.getState().futuresAccounts[0].events).toHaveLength(2);
     expect(screen.getByText("Closed trades")).toBeTruthy();
     const closingId = store.getState().futuresAccounts[0].events[1].id;
-    fireEvent.press(screen.getByTestId(`edit-futures-${closingId}`));
-    fireEvent.changeText(screen.getByTestId("futures-price"), "120");
-    fireEvent.press(screen.getByTestId("futures-save-event"));
+    await fireEvent.press(screen.getByTestId(`edit-futures-${closingId}`));
+    await fireEvent.changeText(screen.getByTestId("futures-price"), "120");
+    await fireEvent.press(screen.getByTestId("futures-save-event"));
     expect(store.getState().futuresAccounts[0].events.find((event) => event.id === closingId)).toMatchObject({ price: "120" });
 
-    setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1018");
-    fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
-    fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
+    await setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1018");
+    await fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
+    await fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
+    await fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
     // One shared time: the per-field pickers stay hidden until asked for.
     expect(screen.queryByTestId("futures-observed-wallet-at-field")).toBeNull();
-    fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-events-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-save-valuation"));
+    await fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-events-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-save-valuation"));
     expect(store.getState().futuresAccounts[0].valuation).toMatchObject({
       asOf: "2026-09-29T11:00:00Z",
       inrRate: { observedAt: "2026-09-29T11:00:00Z" },
@@ -317,42 +318,42 @@ describe("manual Futures screen", () => {
     expect(restarted.getState().futuresAccounts[0].events).toHaveLength(2);
     expect(restarted.getState().futuresAccounts[0].valuation?.reconciliation.portfolioBoundaryConfirmed).toBe(true);
     expect(screen.getByText(/1 @ 100 USDT/)).toBeTruthy();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     expect(screen.queryByText(/1 @ 100 USDT/)).toBeNull();
     expect(screen.queryByText(/1 @ 120 USDT/)).toBeNull();
   });
 
-  it("stores a separate observation time per field only when asked, and reopens that way", () => {
+  it("stores a separate observation time per field only when asked, and reopens that way", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => new Date("2026-09-29T12:00:00Z") });
-    const screen = render(<FuturesScreen onBack={() => {}} store={store} />);
-    setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
-    fireEvent.press(screen.getByTestId("futures-save-account"));
-    fireEvent.press(screen.getByTestId("futures-add-event"));
-    setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
-    fireEvent.changeText(screen.getByTestId("futures-price"), "100");
-    fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
-    fireEvent.press(screen.getByTestId("futures-save-event"));
+    const screen = await render(<FuturesScreen onBack={() => {}} store={store} />);
+    await setTime(screen, "futures-opening-at", "2026-09-01T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-opening-wallet"), "1000");
+    await fireEvent.press(screen.getByTestId("futures-save-account"));
+    await fireEvent.press(screen.getByTestId("futures-add-event"));
+    await setTime(screen, "futures-event-at", "2026-09-02T00:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-quantity"), "1");
+    await fireEvent.changeText(screen.getByTestId("futures-price"), "100");
+    await fireEvent.changeText(screen.getByTestId("futures-leverage"), "10");
+    await fireEvent.press(screen.getByTestId("futures-save-event"));
 
-    setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1005");
-    fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
-    fireEvent.changeText(screen.getByTestId("futures-mark-BTCUSDT"), "105");
-    fireEvent.changeText(screen.getByTestId("futures-mark-source"), "Binance mark price");
-    fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
-    fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
+    await setTime(screen, "futures-valuation-at", "2026-09-29T11:00:00Z");
+    await fireEvent.changeText(screen.getByTestId("futures-observed-wallet"), "1005");
+    await fireEvent.changeText(screen.getByTestId("futures-wallet-source"), "Binance Futures wallet");
+    await fireEvent.changeText(screen.getByTestId("futures-mark-BTCUSDT"), "105");
+    await fireEvent.changeText(screen.getByTestId("futures-mark-source"), "Binance mark price");
+    await fireEvent.changeText(screen.getByTestId("futures-current-rate"), "90");
+    await fireEvent.changeText(screen.getByTestId("futures-current-rate-source"), "Dated INR quote");
     expect(screen.queryByTestId("futures-mark-at-field")).toBeNull();
 
     // Opening the per-field times starts each one at the shared time.
-    fireEvent.press(screen.getByTestId("futures-separate-times"));
-    fireEvent.press(screen.getByTestId("futures-mark-at-exact-toggle"));
+    await fireEvent.press(screen.getByTestId("futures-separate-times"));
+    await fireEvent.press(screen.getByTestId("futures-mark-at-exact-toggle"));
     expect(screen.getByTestId("futures-mark-at").props.value).toBe("2026-09-29T11:00:00Z");
-    fireEvent.changeText(screen.getByTestId("futures-mark-at"), "2026-09-29T10:58:00Z");
-    fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-events-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
-    fireEvent.press(screen.getByTestId("futures-save-valuation"));
+    await fireEvent.changeText(screen.getByTestId("futures-mark-at"), "2026-09-29T10:58:00Z");
+    await fireEvent.press(screen.getByTestId("futures-positions-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-events-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-boundary-confirmed"));
+    await fireEvent.press(screen.getByTestId("futures-save-valuation"));
     expect(store.getState().futuresAccounts[0].valuation).toMatchObject({
       asOf: "2026-09-29T11:00:00Z",
       inrRate: { observedAt: "2026-09-29T11:00:00Z" },
@@ -361,8 +362,8 @@ describe("manual Futures screen", () => {
     });
     expect(jest.mocked(usePreventRemove).mock.calls.at(-1)?.[0]).toBe(false);
 
-    screen.unmount();
-    const reopened = render(<FuturesScreen onBack={() => {}} store={store} />);
+    await screen.unmount();
+    const reopened = await render(<FuturesScreen onBack={() => {}} store={store} />);
     expect(reopened.getByTestId("futures-separate-times").props.accessibilityState.checked).toBe(true);
     expect(reopened.getByTestId("futures-mark-at-field")).toBeTruthy();
   });

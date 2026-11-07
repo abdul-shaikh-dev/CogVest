@@ -47,7 +47,7 @@ describe("Import transactions route", () => {
   });
 
   it("writes the published transaction template to a selected Android folder", async () => {
-    render(<ImportTransactionsRoute />);
+    await render(<ImportTransactionsRoute />);
 
     await expect(
       (capturedProps?.saveCsvTemplate as () => Promise<unknown>)(),
@@ -69,7 +69,7 @@ describe("Import transactions route", () => {
       text: () => Promise.resolve(text),
       uri: "content://transactions.csv",
     });
-    render(<ImportTransactionsRoute />);
+    await render(<ImportTransactionsRoute />);
 
     await expect(
       (capturedProps?.pickCsvFile as () => Promise<unknown>)(),
@@ -80,7 +80,7 @@ describe("Import transactions route", () => {
     });
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "text/*");
 
-    act(() => {
+    await act(() => {
       (capturedProps?.onImported as (result: unknown) => void)({
         added: 1,
         removedOpeningPositions: 0,
@@ -102,7 +102,7 @@ describe("Import transactions route", () => {
       text,
       uri: "content://too-large.csv",
     });
-    render(<ImportTransactionsRoute />);
+    await render(<ImportTransactionsRoute />);
 
     await expect(
       (capturedProps?.pickCsvFile as () => Promise<unknown>)(),
@@ -120,7 +120,7 @@ describe("Import transactions route", () => {
       size: 4096,
       uri: "content://private-statement.pdf",
     });
-    render(<ImportTransactionsRoute />);
+    await render(<ImportTransactionsRoute />);
 
     await expect(
       (capturedProps?.pickCasStatement as () => Promise<unknown>)(),

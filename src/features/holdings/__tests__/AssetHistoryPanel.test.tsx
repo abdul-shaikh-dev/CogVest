@@ -4,6 +4,7 @@ import { AssetHistoryPanel, getVisiblePriceScale } from "../AssetHistoryPanel";
 import { useAssetHistory } from "../useAssetHistory";
 import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import type { Asset, OpeningPosition } from "@/src/types";
+import { queryAllComponents } from "@/src/testing/componentQueries";
 
 jest.mock("../useAssetHistory", () => ({
   useAssetHistory: jest.fn(),
@@ -66,8 +67,8 @@ function mockHistory(overrides: Partial<ReturnType<typeof useAssetHistory>> = {}
   });
 }
 
-function renderPanel(overrides: Partial<React.ComponentProps<typeof AssetHistoryPanel>> = {}) {
-  return render(
+async function renderPanel(overrides: Partial<React.ComponentProps<typeof AssetHistoryPanel>> = {}) {
+  return await render(
     <AssetHistoryPanel
       asset={asset}
       openingPositions={[opening]}
@@ -85,7 +86,7 @@ describe("AssetHistoryPanel", () => {
     mockHistory();
   });
 
-  it("formats only visible endpoint labels for a ten-year series", () => {
+  it("formats only visible endpoint labels for a ten-year series", async () => {
     const points = Array.from({ length: 3653 }, (_, index) => ({
       date: new Date(Date.UTC(2016, 0, 1 + index)).toISOString().slice(0, 10),
       close: 100 + index,
@@ -93,26 +94,26 @@ describe("AssetHistoryPanel", () => {
     mockHistory({ entry: entry(points) });
     const format = jest.spyOn(Date.prototype, "toLocaleDateString");
     try {
-      const screen = renderPanel();
+      const screen = await renderPanel();
       expect(screen.getByTestId("asset-history-chart", { includeHiddenElements: true })).toBeTruthy();
       expect(format).toHaveBeenCalledTimes(2);
-      fireEvent.press(screen.getByTestId("asset-history-previous"));
+      await fireEvent.press(screen.getByTestId("asset-history-previous"));
       expect(format).toHaveBeenCalledTimes(4);
     } finally { format.mockRestore(); }
   });
 
-  it("switches between price and holding-value history using real transformed values", () => {
-    const screen = renderPanel();
+  it("switches between price and holding-value history using real transformed values", async () => {
+    const screen = await renderPanel();
 
     expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹120.00");
-    fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
+    await fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
     expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹1,200.00");
     expect(screen.getByText(/Includes purchases and disposals; not investment return/u)).toBeTruthy();
     expect(screen.getByTestId("asset-history-mode-holdingValue").props.accessibilityState).toEqual({ selected: true });
   });
 
-  it("hides chart and monetary readout from visual and accessibility output when masked", () => {
-    const screen = renderPanel({ masked: true });
+  it("hides chart and monetary readout from visual and accessibility output when masked", async () => {
+    const screen = await renderPanel({ masked: true });
 
     expect(screen.getByTestId("asset-history-masked")).toHaveTextContent("History values hidden");
     expect(screen.queryByTestId("asset-history-chart")).toBeNull();
@@ -120,25 +121,25 @@ describe("AssetHistoryPanel", () => {
     expect(screen.queryByText(/₹120/u)).toBeNull();
   });
 
-  it("moves across observed dates without inventing intermediate observations", () => {
-    const screen = renderPanel();
+  it("moves across observed dates without inventing intermediate observations", async () => {
+    const screen = await renderPanel();
 
     expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
       "Observed date03 Jan 2026",
     );
     expect(screen.queryByText("3 / 3")).toBeNull();
     expect(screen.getByTestId("asset-history-next").props.accessibilityState?.disabled).toBe(true);
-    fireEvent.press(screen.getByTestId("asset-history-previous"));
+    await fireEvent.press(screen.getByTestId("asset-history-previous"));
     expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
       "Observed date02 Jan 2026",
     );
-    fireEvent.press(screen.getByTestId("asset-history-next"));
+    await fireEvent.press(screen.getByTestId("asset-history-next"));
     expect(screen.getByTestId("asset-history-selected-date")).toHaveTextContent(
       "Observed date03 Jan 2026",
     );
   });
 
-  it("uses a disclosed visible-range scale for price without changing source values", () => {
+  it("uses a disclosed visible-range scale for price without changing source values", async () => {
     mockHistory({
       entry: entry([
         { close: 100, date: "2026-01-01" },
@@ -146,8 +147,8 @@ describe("AssetHistoryPanel", () => {
         { close: 102, date: "2026-01-03" },
       ]),
     });
-    const screen = renderPanel();
-    const chart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+    const screen = await renderPanel();
+    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
 
     expect(chart.props.data.map((point: { value: number }) => point.value)).toEqual([100, 101, 102]);
     expect(chart.props.yAxisOffset).toBeGreaterThan(0);
@@ -158,8 +159,8 @@ describe("AssetHistoryPanel", () => {
       /Axis starts at .*not zero/u,
     );
 
-    fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
-    const holdingChart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+    await fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
+    const holdingChart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
     expect(holdingChart.props.yAxisOffset).toBeUndefined();
     expect(screen.queryByTestId("asset-history-visible-range")).toBeNull();
   });
@@ -173,26 +174,26 @@ describe("AssetHistoryPanel", () => {
     });
   });
 
-  it("leaves missing-date gaps disconnected", () => {
+  it("leaves missing-date gaps disconnected", async () => {
     mockHistory({
       entry: entry([
         { close: 100, date: "2026-01-01" },
         { close: 110, date: "2026-01-10" },
       ]),
     });
-    const screen = renderPanel();
-    const chart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+    const screen = await renderPanel();
+    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
 
     expect(chart.props.lineSegments).toEqual([
       { color: "transparent", endIndex: 1, startIndex: 0 },
     ]);
   });
 
-  it("requests a new date range when a range control changes", () => {
-    const screen = renderPanel();
+  it("requests a new date range when a range control changes", async () => {
+    const screen = await renderPanel();
     const initial = mockUseAssetHistory.mock.calls.at(-1)!;
 
-    fireEvent.press(screen.getByTestId("asset-history-range-1Y"));
+    await fireEvent.press(screen.getByTestId("asset-history-range-1Y"));
     const updated = mockUseAssetHistory.mock.calls.at(-1)!;
 
     expect(updated[0]).toEqual(asset);
@@ -201,9 +202,9 @@ describe("AssetHistoryPanel", () => {
     expect(screen.getByTestId("asset-history-range-1Y").props.accessibilityState).toEqual({ selected: true });
   });
 
-  it("communicates loading, partial cached, and offline states", () => {
+  it("communicates loading, partial cached, and offline states", async () => {
     mockHistory({ loading: true, entry: undefined });
-    const screen = renderPanel();
+    const screen = await renderPanel();
     expect(screen.getByTestId("asset-history-loading")).toHaveTextContent("Loading history…");
 
     mockHistory({
@@ -212,7 +213,7 @@ describe("AssetHistoryPanel", () => {
       loading: false,
       message: "History refresh timed out. Cached observations remain available.",
     });
-    screen.rerender(
+    await screen.rerender(
       <AssetHistoryPanel asset={asset} openingPositions={[opening]} trades={[]} masked={false} minimal={false} />,
     );
     expect(screen.getByTestId("asset-history-message")).toHaveTextContent("History refresh timed out. Cached observations remain available.");
@@ -220,31 +221,31 @@ describe("AssetHistoryPanel", () => {
     expect(screen.getByText(/Partial history/u)).toBeTruthy();
   });
 
-  it("renders honest empty states and never fabricates a zero holding value", () => {
+  it("renders honest empty states and never fabricates a zero holding value", async () => {
     mockHistory({ entry: entry([]), loading: false });
-    const screen = renderPanel();
+    const screen = await renderPanel();
     expect(screen.getByTestId("asset-history-empty")).toHaveTextContent("No price observations in this range.");
 
     mockHistory();
-    screen.rerender(
+    await screen.rerender(
       <AssetHistoryPanel asset={asset} openingPositions={[]} trades={[]} masked={false} minimal={false} />,
     );
-    fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
+    await fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
     expect(screen.getByText("No ownership record is available for this price history.")).toBeTruthy();
     expect(screen.getByTestId("asset-history-empty")).toHaveTextContent("Not enough recorded history to reconstruct your holding value in this range.");
     expect(screen.queryByTestId("asset-history-selected-value")).toBeNull();
     expect(screen.queryByTestId("asset-history-chart")).toBeNull();
   });
 
-  it("renders no more than 500 chart points for long history", () => {
+  it("renders no more than 500 chart points for long history", async () => {
     const points = Array.from({ length: 700 }, (_, index) => ({
       close: 100 + index,
       date: new Date(Date.UTC(2020, 0, index + 1)).toISOString().slice(0, 10),
     }));
     mockHistory({ entry: entry(points) });
-    const screen = renderPanel({ openingPositions: [{ ...opening, date: points[0]!.date }] });
+    const screen = await renderPanel({ openingPositions: [{ ...opening, date: points[0]!.date }] });
 
-    const chart = screen.UNSAFE_getByProps({ testID: "gifted-line-chart" });
+    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
     expect(chart.props.data).toHaveLength(500);
     expect(chart.props.data[0].value).toBe(100);
     expect(chart.props.data.at(-1).value).toBe(799);

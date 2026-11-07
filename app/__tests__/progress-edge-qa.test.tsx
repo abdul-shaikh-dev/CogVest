@@ -18,15 +18,15 @@ jest.mock("@/src/hooks", () => ({ ...jest.requireActual("@/src/hooks"), useReduc
 
 beforeEach(() => { mockParams = { token: "cogvest-local-visual-qa" }; });
 
-it("blocks missing tokens and release access", () => {
+it("blocks missing tokens and release access", async () => {
   mockParams = {};
-  const screen = render(<ProgressEdgeQaRoute />);
+  const screen = await render(<ProgressEdgeQaRoute />);
   expect(screen.getByTestId("progress-edge-qa-blocked")).toBeTruthy();
   const development = __DEV__;
   try {
     Object.assign(globalThis, { __DEV__: false });
     mockParams = { token: "cogvest-local-visual-qa" };
-    screen.rerender(<ProgressEdgeQaRoute />);
+    await screen.rerender(<ProgressEdgeQaRoute />);
     expect(screen.getByTestId("progress-edge-qa-blocked")).toBeTruthy();
   } finally { Object.assign(globalThis, { __DEV__: development }); }
 });
@@ -37,11 +37,11 @@ it.each(["single", "gap", "zero"])("keeps %s fixture records unchanged through c
     scenario === "single" ? [["2026-08", 12000]] : scenario === "zero" ? [["2026-07", 0], ["2026-08", 0]] : [["2026-05", 10000], ["2026-07", 13000], ["2026-08", 12000]],
   );
   const saved = fixture.store.getState().monthlySnapshots;
-  const screen = render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
+  const screen = await render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
   await waitFor(() => expect(screen.queryByTestId("progress-trends-building")).toBeNull());
   expect(screen.queryByText("Waiting for the first month-end")).toBeNull();
-  fireEvent.press(screen.getByTestId("progress-mask-toggle"));
-  fireEvent.press(screen.getByTestId("open-monthly-history"));
+  await fireEvent.press(screen.getByTestId("progress-mask-toggle"));
+  await fireEvent.press(screen.getByTestId("open-monthly-history"));
   expect(screen.queryByTestId("history-bar-scale")).toBeNull();
   expect(fixture.store.getState().monthlySnapshots).toBe(saved);
   expect(getPortfolioStore).not.toHaveBeenCalled();
@@ -49,10 +49,10 @@ it.each(["single", "gap", "zero"])("keeps %s fixture records unchanged through c
 
 it("uses the real pending fetch and resumes to generated snapshots", async () => {
   mockParams.scenario = "building";
-  const screen = render(<ProgressEdgeQaRoute />);
+  const screen = await render(<ProgressEdgeQaRoute />);
   expect(await screen.findByText("Building monthly history")).toBeTruthy();
   expect(screen.getByTestId("progress-trends-building")).toBeTruthy();
-  await act(async () => { fireEvent.press(screen.getByTestId("progress-edge-finish")); });
+  await act(async () => { await fireEvent.press(screen.getByTestId("progress-edge-finish")); });
   await waitFor(() => expect(screen.queryByTestId("progress-trends-building")).toBeNull());
   expect(screen.getAllByText("₹15K").length).toBeGreaterThan(0);
   expect(getPortfolioStore).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ it("still waits for month-end when activity exists only in the current month", a
     id: "current-deposit", date: "2026-09-01", amount: 1000,
     type: "addition", purpose: "capitalContribution", label: "Synthetic deposit",
   });
-  const screen = render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
+  const screen = await render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
   expect(await screen.findByText("Waiting for the first month-end")).toBeTruthy();
   expect(fixture.store.getState().monthlySnapshots).toEqual([]);
 });
@@ -72,13 +72,13 @@ it("still waits for month-end when activity exists only in the current month", a
 it("shows the real historical-price failure and retains retry", async () => {
   const fixture = createProgressEdgeFixture("error", false);
   const saved = fixture.store.getState().monthlySnapshots;
-  const screen = render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
+  const screen = await render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
   expect(await screen.findByText("Historical prices are unavailable")).toBeTruthy();
-  fireEvent.press(screen.getByLabelText("Snapshot status details"));
+  await fireEvent.press(screen.getByLabelText("Snapshot status details"));
   expect(screen.getByLabelText("Retry monthly history")).toBeTruthy();
   expect(screen.getByText(/2 months are waiting/)).toBeTruthy();
   const attempts = fixture.attempts();
-  fireEvent.press(screen.getByLabelText("Retry monthly history"));
+  await fireEvent.press(screen.getByLabelText("Retry monthly history"));
   await waitFor(() => expect(fixture.attempts()).toBeGreaterThan(attempts));
   expect(fixture.store.getState().monthlySnapshots).toBe(saved);
 });
@@ -86,7 +86,7 @@ it("shows the real historical-price failure and retains retry", async () => {
 it("generates exact month-end values in memory without replacing the stored June record", async () => {
   const fixture = createProgressEdgeFixture("building", false);
   const june = fixture.store.getState().monthlySnapshots[0];
-  render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
+  await render(<ProgressScreen store={fixture.store} now={progressEdgeNow} historicalPriceFetcher={fixture.fetcher} />);
   await waitFor(() => expect(fixture.attempts()).toBe(1));
   expect(fixture.store.getState().monthlySnapshots).toEqual([june]);
   await act(async () => { fixture.release(); });

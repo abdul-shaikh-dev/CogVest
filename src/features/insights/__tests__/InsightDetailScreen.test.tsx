@@ -33,10 +33,10 @@ function fixture() {
 }
 
 describe("Insight details", () => {
-  it("stacks evidence labels and values at larger text sizes", () => {
+  it("stacks evidence labels and values at larger text sizes", async () => {
     const dimensions = jest.spyOn(ReactNative, "useWindowDimensions").mockReturnValue({ width: 360, height: 800, scale: 3, fontScale: 1.3 });
     try {
-      const screen = render(<InsightDetailScreen kind="conviction" store={fixture()} now={now} onClose={jest.fn()} />);
+      const screen = await render(<InsightDetailScreen kind="conviction" store={fixture()} now={now} onClose={jest.fn()} />);
       const facts = screen.getAllByTestId(/^insight-fact-/);
       expect(facts.length).toBeGreaterThan(0);
       for (const fact of facts) expect(fact).toHaveStyle({ flexDirection: "column" });
@@ -49,9 +49,9 @@ describe("Insight details", () => {
     ["conviction", "Conviction pattern"],
     ["patience", "Planned holding periods"],
     ["frequency", "Trading frequency"],
-  ])("opens and closes %s with evidence and limitations", (kind, title) => {
+  ])("opens and closes %s with evidence and limitations", async (kind, title) => {
     const onClose = jest.fn();
-    const screen = render(
+    const screen = await render(
       <InsightDetailScreen
         kind={kind}
         store={fixture()}
@@ -62,14 +62,14 @@ describe("Insight details", () => {
     expect(screen.getByText(title)).toBeTruthy();
     expect(screen.getByText("What contributed")).toBeTruthy();
     expect(screen.getByText("How to read this")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("insight-back"));
-    fireEvent.press(screen.getByTestId("insight-done"));
+    await fireEvent.press(screen.getByTestId("insight-back"));
+    await fireEvent.press(screen.getByTestId("insight-done"));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it("reveals supporting records only on request and masks evidence", () => {
+  it("reveals supporting records only on request and masks evidence", async () => {
     const store = fixture();
-    const screen = render(
+    const screen = await render(
       <InsightDetailScreen
         kind="conviction"
         store={store}
@@ -78,19 +78,19 @@ describe("Insight details", () => {
       />,
     );
     expect(screen.queryByText("Example fund")).toBeNull();
-    fireEvent.press(screen.getByTestId("insight-show-records"));
+    await fireEvent.press(screen.getByTestId("insight-show-records"));
     expect(screen.getAllByText("Example fund")).toHaveLength(5);
-    fireEvent.press(screen.getByTestId("insight-mask-toggle"));
+    await fireEvent.press(screen.getByTestId("insight-mask-toggle"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
     expect(screen.queryByTestId("insight-evidence")).toBeNull();
     expect(screen.queryByText("Example fund")).toBeNull();
-    fireEvent.press(screen.getByTestId("insight-mask-toggle"));
+    await fireEvent.press(screen.getByTestId("insight-mask-toggle"));
     expect(screen.getByTestId("insight-evidence")).toBeTruthy();
   });
 
-  it("recomputes after source corrections and deletions", () => {
+  it("recomputes after source corrections and deletions", async () => {
     const store = fixture();
-    const screen = render(
+    const screen = await render(
       <InsightDetailScreen
         kind="conviction"
         store={store}
@@ -98,21 +98,21 @@ describe("Insight details", () => {
         onClose={jest.fn()}
       />,
     );
-    fireEvent.press(screen.getByTestId("insight-show-records"));
-    act(() =>
+    await fireEvent.press(screen.getByTestId("insight-show-records"));
+    await act(() =>
       store.setState({
         assets: [{ ...store.getState().assets[0], name: "Corrected fund" }],
       }),
     );
     expect(screen.queryByText("Example fund")).toBeNull();
     expect(screen.getAllByText("Corrected fund")).toHaveLength(5);
-    act(() => store.setState({ trades: [] }));
+    await act(() => store.setState({ trades: [] }));
     expect(screen.queryByText("Corrected fund")).toBeNull();
     expect(screen.getByText("Not enough data yet")).toBeTruthy();
     expect(screen.queryByTestId("insight-show-records")).toBeNull();
   });
 
-  it("renders an available patience observation and drops it when plans are corrected", () => {
+  it("renders an available patience observation and drops it when plans are corrected", async () => {
     const store = fixture();
     store.setState({
       trades: store
@@ -129,7 +129,7 @@ describe("Insight details", () => {
         pricePerUnit: 120,
         totalValue: 120,
       });
-    const screen = render(
+    const screen = await render(
       <InsightDetailScreen
         kind="patience"
         store={store}
@@ -138,9 +138,9 @@ describe("Insight details", () => {
       />,
     );
     expect(screen.queryByText("Not enough data yet")).toBeNull();
-    fireEvent.press(screen.getByTestId("insight-show-records"));
+    await fireEvent.press(screen.getByTestId("insight-show-records"));
     expect(screen.getAllByText("Sale with planned lots")).toHaveLength(3);
-    act(() =>
+    await act(() =>
       store.setState({
         trades: store
           .getState()
@@ -151,10 +151,10 @@ describe("Insight details", () => {
     expect(screen.queryByText("Sale with planned lots")).toBeNull();
   });
 
-  it("provides a safe exit for an unknown kind and suppresses insights in Minimal Mode", () => {
+  it("provides a safe exit for an unknown kind and suppresses insights in Minimal Mode", async () => {
     const store = fixture();
     const onClose = jest.fn();
-    const screen = render(
+    const screen = await render(
       <InsightDetailScreen
         kind="unknown"
         store={store}
@@ -162,10 +162,10 @@ describe("Insight details", () => {
         onClose={onClose}
       />,
     );
-    fireEvent.press(screen.getByText("Back to Dashboard"));
+    await fireEvent.press(screen.getByText("Back to Dashboard"));
     expect(onClose).toHaveBeenCalledTimes(1);
-    act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
-    screen.rerender(
+    await act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
+    await screen.rerender(
       <InsightDetailScreen
         kind="conviction"
         store={store}
@@ -177,17 +177,17 @@ describe("Insight details", () => {
     expect(screen.queryByTestId("insight-evidence")).toBeNull();
   });
 
-  it("routes each entry by kind and hides the entire entry in Minimal Mode", () => {
+  it("routes each entry by kind and hides the entire entry in Minimal Mode", async () => {
     const store = fixture();
     const onOpen = jest.fn();
-    const screen = render(
+    const screen = await render(
       <InsightCards store={store} now={now} onOpen={onOpen} />,
     );
     for (const kind of ["conviction", "patience", "frequency"]) {
-      fireEvent.press(screen.getByTestId(`open-insight-${kind}`));
+      await fireEvent.press(screen.getByTestId(`open-insight-${kind}`));
       expect(onOpen).toHaveBeenLastCalledWith(kind);
     }
-    act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
+    await act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
     expect(screen.queryByTestId("dashboard-insights")).toBeNull();
   });
 });

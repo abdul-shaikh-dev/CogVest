@@ -16,7 +16,7 @@ it("keeps CAS layout failures distinct from unsupported events and prevents savi
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
   const before = store.getState();
   const onImported = jest.fn();
-  const screen = render(<TransactionImportScreen
+  const screen = await render(<TransactionImportScreen
     onCancel={jest.fn()}
     onImported={onImported}
     pickCsvFile={jest.fn()}
@@ -31,16 +31,16 @@ it("keeps CAS layout failures distinct from unsupported events and prevents savi
     })}
     store={store}
   />);
-  fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
-  fireEvent.press(screen.getByTestId("select-cas-statement"));
+  await fireEvent.press(screen.getByTestId("transaction-import-source-camsKfinCasPdfV1"));
+  await fireEvent.press(screen.getByTestId("select-cas-statement"));
   await waitFor(() => expect(screen.getByTestId("cas-import-problems")).toBeTruthy());
   expect(screen.queryByText("Skipped unsupported events")).toBeNull();
   expect(screen.queryByTestId("transaction-import-demerger-summary")).toBeNull();
   expect(screen.getByTestId("transaction-import-summary-unsupported")).toHaveTextContent("0");
-  expect(screen.getByTestId("confirm-transaction-import")).toHaveAccessibilityState({ disabled: true });
-  fireEvent.press(screen.getByTestId("confirm-transaction-import"));
+  expect(screen.getByTestId("confirm-transaction-import")).toBeDisabled();
+  await fireEvent.press(screen.getByTestId("confirm-transaction-import"));
   expect(onImported).not.toHaveBeenCalled();
   expect(store.getState()).toBe(before);
-  fireEvent.press(screen.getByTestId("cas-import-problems-toggle"));
+  await fireEvent.press(screen.getByTestId("cas-import-problems-toggle"));
   expect(screen.getByText("Extracted row: 12")).toBeTruthy();
 });

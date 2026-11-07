@@ -46,35 +46,35 @@ beforeEach(() => {
 });
 
 it("stages a legacy V15 record that the EPF persistence check accepts", async () => {
-  render(<EpfPersistenceQaRoute />);
+  await render(<EpfPersistenceQaRoute />);
 
-  fireEvent.press(screen.getByTestId("epf-qa-stage"));
+  await fireEvent.press(screen.getByTestId("epf-qa-stage"));
   expect(screen.getByText("Legacy staged; restart required")).toBeTruthy();
 
-  fireEvent.press(screen.getByTestId("epf-qa-run"));
+  await fireEvent.press(screen.getByTestId("epf-qa-run"));
   await waitFor(() =>
     expect(screen.getByTestId("epf-qa-status").props.children)
       .toBe("PASS: EPF 135000; Cash 7000; audit 2; corrupt restore blocked"),
   );
 
-  fireEvent.press(screen.getByTestId("epf-qa-check"));
+  await fireEvent.press(screen.getByTestId("epf-qa-check"));
   expect(screen.getByTestId("epf-qa-status").props.children)
     .toBe("PASS: cold restart preserved exact records");
 });
 
-it("stages a legacy V14 record that migrates to the exact investing-Cash payload", () => {
+it("stages a legacy V14 record that migrates to the exact investing-Cash payload", async () => {
   const alert = jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
     buttons?.find((button) => button.text === "Stage legacy data")?.onPress?.();
   });
-  const first = render(<InvestingCashQaRoute />);
+  const first = await render(<InvestingCashQaRoute />);
 
-  fireEvent.press(screen.getByTestId("qa-stage-legacy"));
+  await fireEvent.press(screen.getByTestId("qa-stage-legacy"));
   expect(screen.getByTestId("qa-migration-result").props.children)
     .toBe("Legacy schema 14 staged; cold restart required");
-  first.unmount();
+  await first.unmount();
 
   // A fresh mount reads the staged record, as a cold restart does.
-  render(<InvestingCashQaRoute />);
+  await render(<InvestingCashQaRoute />);
   expect(screen.getByTestId("qa-migration-result").props.children)
     .toBe("PASS: full payload preserved; schema 16");
   alert.mockRestore();

@@ -43,9 +43,9 @@ describe("DiscoveryResults", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it("initially mounts five provider rows then settles the first 20", () => {
+  it("initially mounts five provider rows then settles the first 20", async () => {
     const onSettled = jest.fn();
-    const { getAllByRole } = render(
+    const { getAllByRole } = await render(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 20 }, (_, index) => providerResult(index))}
@@ -56,13 +56,13 @@ describe("DiscoveryResults", () => {
 
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(5);
 
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
 
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
     expect(onSettled).toHaveBeenLastCalledWith(20);
   });
 
-  it("exposes instrument and venue identity before explicit provider selection", () => {
+  it("exposes instrument and venue identity before explicit provider selection", async () => {
     const onSelect = jest.fn();
     const crypto = {
       ...providerResult(1),
@@ -75,7 +75,7 @@ describe("DiscoveryResults", () => {
       symbol: "HDFCR",
       ticker: "hdfc-bank-rstock",
     };
-    const screen = render(
+    const screen = await render(
       <DiscoveryResults kind="provider" items={[providerResult(0), crypto]} onSelect={onSelect} />,
     );
 
@@ -88,18 +88,18 @@ describe("DiscoveryResults", () => {
     )).toBeTruthy();
     expect(onSelect).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId(`asset-lookup-result-${crypto.id}`));
+    await fireEvent.press(screen.getByTestId(`asset-lookup-result-${crypto.id}`));
     expect(onSelect).toHaveBeenCalledWith(crypto);
   });
 
-  it("labels saved mutual funds without implying an exchange listing", () => {
+  it("labels saved mutual funds without implying an exchange listing", async () => {
     const fund = {
       ...savedAsset(1),
       exchange: undefined,
       instrumentType: "mutualFund" as const,
       name: "HDFC Balanced Advantage Fund - Direct Plan - Growth",
     };
-    const screen = render(
+    const screen = await render(
       <DiscoveryResults kind="saved" items={[fund]} onSelect={jest.fn()} />,
     );
 
@@ -107,21 +107,21 @@ describe("DiscoveryResults", () => {
     expect(screen.getByText("No exchange listing")).toBeTruthy();
   });
 
-  it("keeps long names and complete identity while removing identical ticker repetition", () => {
+  it("keeps long names and complete identity while removing identical ticker repetition", async () => {
     const result = { ...providerResult(1), name: "A deliberately long fund name - Direct Plan - Growth", symbol: "FUND1", ticker: "FUND1" };
     const onSelect = jest.fn();
-    const screen = render(<DiscoveryResults kind="provider" items={[result]} onSelect={onSelect} />);
+    const screen = await render(<DiscoveryResults kind="provider" items={[result]} onSelect={onSelect} />);
     expect(screen.getByText(result.name).props.numberOfLines).toBeUndefined();
     expect(screen.getByText("FUND1 • INR")).toBeTruthy();
     expect(screen.getByText("Yahoo Finance")).toBeTruthy();
     expect(screen.getByText("Company share")).toBeTruthy();
     expect(screen.getByText("NSE listing")).toBeTruthy();
-    fireEvent.press(screen.getByTestId(`asset-lookup-result-${result.id}`));
+    await fireEvent.press(screen.getByTestId(`asset-lookup-result-${result.id}`));
     expect(onSelect).toHaveBeenCalledWith(result);
   });
 
-  it("eventually renders every requested provider row", () => {
-    const { getAllByRole } = render(
+  it("eventually renders every requested provider row", async () => {
+    const { getAllByRole } = await render(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 37 }, (_, index) => providerResult(index))}
@@ -129,13 +129,13 @@ describe("DiscoveryResults", () => {
       />,
     );
 
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
 
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(37);
   });
 
-  it("shows the footer only after the current items have fully rendered", () => {
-    const { getByTestId, queryByTestId } = render(
+  it("shows the footer only after the current items have fully rendered", async () => {
+    const { getByTestId, queryByTestId } = await render(
       <DiscoveryResults
         footer={<Text testID="discovery-footer">Load more</Text>}
         kind="provider"
@@ -145,18 +145,18 @@ describe("DiscoveryResults", () => {
     );
 
     expect(queryByTestId("discovery-footer")).toBeNull();
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
     expect(getByTestId("discovery-footer")).toBeTruthy();
   });
 
-  it("retains mounted rows and appends five rows per commit", () => {
+  it("retains mounted rows and appends five rows per commit", async () => {
     const initial = Array.from({ length: 20 }, (_, index) => providerResult(index));
-    const { getAllByRole, getByTestId, rerender } = render(
+    const { getAllByRole, getByTestId, rerender } = await render(
       <DiscoveryResults kind="provider" items={initial} onSelect={jest.fn()} />,
     );
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
 
-    rerender(
+    await rerender(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 30 }, (_, index) => providerResult(index))}
@@ -166,18 +166,18 @@ describe("DiscoveryResults", () => {
 
     expect(getByTestId("asset-lookup-result-provider-0")).toBeTruthy();
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
-    act(() => jest.advanceTimersByTime(16));
+    await act(() => jest.advanceTimersByTime(16));
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(25);
   });
 
-  it("retains every mounted row when a new array has the same item IDs", () => {
+  it("retains every mounted row when a new array has the same item IDs", async () => {
     const initial = Array.from({ length: 20 }, (_, index) => providerResult(index));
-    const { getAllByRole, rerender } = render(
+    const { getAllByRole, rerender } = await render(
       <DiscoveryResults kind="provider" items={initial} onSelect={jest.fn()} />,
     );
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
 
-    rerender(
+    await rerender(
       <DiscoveryResults
         kind="provider"
         items={initial.map((result) => ({ ...result }))}
@@ -188,17 +188,17 @@ describe("DiscoveryResults", () => {
     expect(getAllByRole("button", { name: /^Select Provider/u })).toHaveLength(20);
   });
 
-  it("replaces a changed query with its new five-row prefix immediately", () => {
-    const { getAllByRole, queryByTestId, rerender } = render(
+  it("replaces a changed query with its new five-row prefix immediately", async () => {
+    const { getAllByRole, queryByTestId, rerender } = await render(
       <DiscoveryResults
         kind="saved"
         items={Array.from({ length: 20 }, (_, index) => savedAsset(index))}
         onSelect={jest.fn()}
       />,
     );
-    act(() => jest.runAllTimers());
+    await act(() => jest.runAllTimers());
 
-    rerender(
+    await rerender(
       <DiscoveryResults
         kind="saved"
         items={Array.from({ length: 20 }, (_, index) => ({
@@ -213,9 +213,9 @@ describe("DiscoveryResults", () => {
     expect(getAllByRole("button", { name: /^Use Saved/u })).toHaveLength(5);
   });
 
-  it("cancels pending batches on unmount", () => {
+  it("cancels pending batches on unmount", async () => {
     const onSettled = jest.fn();
-    const { unmount } = render(
+    const { unmount } = await render(
       <DiscoveryResults
         kind="provider"
         items={Array.from({ length: 20 }, (_, index) => providerResult(index))}
@@ -224,8 +224,8 @@ describe("DiscoveryResults", () => {
       />,
     );
 
-    unmount();
-    act(() => jest.runAllTimers());
+    await unmount();
+    await act(() => jest.runAllTimers());
 
     expect(onSettled).not.toHaveBeenCalled();
   });

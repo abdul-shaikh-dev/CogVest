@@ -4,7 +4,7 @@ import EpfAccountsQa from "@/app/epf-accounts-qa";
 
 jest.mock("expo-router", () => ({ useLocalSearchParams: () => ({ token: "invalid" }) }));
 jest.mock("react-native-mmkv", () => ({ createMMKV: jest.fn() }));
-test("EPF accounts QA database is inaccessible without development authorization", () => {
-  expect(render(<EpfAccountsQa />).getByText("EPF QA unavailable.")).toBeTruthy();
+test("EPF accounts QA database is inaccessible without development authorization", async () => {
+  expect((await render(<EpfAccountsQa />)).getByText("EPF QA unavailable.")).toBeTruthy();
   expect(createMMKV).not.toHaveBeenCalled();
 });

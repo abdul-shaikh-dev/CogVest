@@ -25,12 +25,12 @@ describe("restored portfolio concurrency", () => {
     let finish!: (value: QuoteRefreshResult) => void;
     const response = new Promise<QuoteRefreshResult>((resolve) => { finish = resolve; });
     const refreshQuotes = jest.fn(() => response);
-    const { result } = renderHook(() => screen === "Dashboard"
+    const { result } = await renderHook(() => screen === "Dashboard"
       ? useDashboard({ store, now, refreshQuotes }) : useHoldings({ store, now, refreshQuotes }));
     let running!: Promise<unknown>;
-    act(() => { running = result.current.refresh(); });
+    await act(() => { running = result.current.refresh(); });
     expect(refreshQuotes).toHaveBeenCalledTimes(1);
-    act(() => restoreEmpty(store));
+    await act(() => restoreEmpty(store));
     await act(async () => {
       finish({ quoteCache: { stock: { assetId: "stock", asOf: now.toISOString(), currency: "INR", price: 999, source: "yahoo" } }, failed: [], timedOut: [], updated: ["stock"] });
       await running;
@@ -45,11 +45,11 @@ describe("restored portfolio concurrency", () => {
     let finish!: (value: HistoricalResult) => void;
     const response = new Promise<HistoricalResult>((resolve) => { finish = resolve; });
     const historicalPriceFetcher = jest.fn(() => response);
-    const { result } = renderHook(() => useProgress({ store, now, historicalPriceFetcher }));
+    const { result } = await renderHook(() => useProgress({ store, now, historicalPriceFetcher }));
     let running!: Promise<unknown>;
-    act(() => { running = result.current.ensureMonthEndSnapshot(); });
+    await act(() => { running = result.current.ensureMonthEndSnapshot(); });
     expect(historicalPriceFetcher).toHaveBeenCalledTimes(1);
-    act(() => restoreEmpty(store));
+    await act(() => restoreEmpty(store));
     await act(async () => {
       finish({ ok: true, quote: { assetId: "stock", asOfMonth: "2026-08", basis: "historical-close", currency: "INR", fetchedAt: now.toISOString(), price: 999, source: "yahoo" } });
       await running;

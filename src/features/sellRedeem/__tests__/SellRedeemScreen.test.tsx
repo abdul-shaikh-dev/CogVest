@@ -4,14 +4,14 @@ import { SellRedeemScreen } from "@/src/features/sellRedeem";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
-function selectDate(
-  getByTestId: ReturnType<typeof render>["getByTestId"],
+async function selectDate(
+  getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
   value: string,
 ) {
   const [year, month, day] = value.split("-").map(Number);
 
-  fireEvent.press(getByTestId("sell-redeem-date-input"));
-  fireEvent(
+  await fireEvent.press(getByTestId("sell-redeem-date-input"));
+  await fireEvent(
     getByTestId("sell-redeem-date-input-picker"),
     "onChange",
     { nativeEvent: { timestamp: new Date(year, month - 1, day, 12).getTime() } },
@@ -56,10 +56,10 @@ function seedStore() {
 }
 
 describe("SellRedeemScreen", () => {
-  it("returns to Holdings without recording a sale", () => {
+  it("returns to Holdings without recording a sale", async () => {
     const store = seedStore();
     const onCancel = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <SellRedeemScreen
         assetId={asset.id}
         onCancel={onCancel}
@@ -67,16 +67,16 @@ describe("SellRedeemScreen", () => {
       />,
     );
 
-    fireEvent.press(getByLabelText("Back to Holdings"));
+    await fireEvent.press(getByLabelText("Back to Holdings"));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().trades).toEqual([]);
     expect(store.getState().cashEntries).toEqual([]);
   });
 
-  it("renders the selected holding and waits to show linked cash fields until proceeds are valid", () => {
+  it("renders the selected holding and waits to show linked cash fields until proceeds are valid", async () => {
     const store = seedStore();
-    const { getByPlaceholderText, getByTestId, getByText, queryByTestId } = render(
+    const { getByPlaceholderText, getByTestId, getByText, queryByTestId } = await render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
@@ -107,14 +107,14 @@ describe("SellRedeemScreen", () => {
   it("updates preview and saves the linked proceeds", async () => {
     const store = seedStore();
     const onSaved = jest.fn();
-    const { getAllByText, getByLabelText, getByTestId, getByText } = render(
+    const { getAllByText, getByLabelText, getByTestId, getByText } = await render(
       <SellRedeemScreen assetId={asset.id} store={store} onSaved={onSaved} />,
     );
 
-    fireEvent.changeText(getByLabelText("Quantity"), "5");
-    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
-    fireEvent.changeText(getByLabelText("Fees"), "100");
-    selectDate(getByTestId, "2026-05-20");
+    await fireEvent.changeText(getByLabelText("Quantity"), "5");
+    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
+    await fireEvent.changeText(getByLabelText("Fees"), "100");
+    await selectDate(getByTestId, "2026-05-20");
 
     await waitFor(() => {
       expect(getByText("Net proceeds to Cash")).toBeTruthy();
@@ -124,7 +124,7 @@ describe("SellRedeemScreen", () => {
       expect(getByTestId("sell-redeem-remaining-value")).toHaveTextContent("₹34,000.00");
     });
 
-    fireEvent.press(getByTestId("sell-redeem-save-button"));
+    await fireEvent.press(getByTestId("sell-redeem-save-button"));
 
     expect(store.getState().trades[0]).toMatchObject({
       quantity: 5,
@@ -140,15 +140,15 @@ describe("SellRedeemScreen", () => {
     expect(onSaved).toHaveBeenCalledTimes(1);
   });
 
-  it("shows derived linked proceeds without editable cash fields", () => {
+  it("shows derived linked proceeds without editable cash fields", async () => {
     const store = seedStore();
-    const { getAllByText, getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getAllByText, getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
-    fireEvent.changeText(getByLabelText("Quantity"), "1");
-    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
-    selectDate(getByTestId, "2026-05-20");
+    await fireEvent.changeText(getByLabelText("Quantity"), "1");
+    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
+    await selectDate(getByTestId, "2026-05-20");
 
     expect(getByText("Net proceeds to Cash")).toBeTruthy();
     expect(getAllByText("₹1,700.00")).toHaveLength(2);
@@ -156,14 +156,14 @@ describe("SellRedeemScreen", () => {
     expect(queryByTestId("sell-redeem-link-cash-toggle")).toBeNull();
   });
 
-  it("blocks overselling before save and keeps cash fields hidden", () => {
+  it("blocks overselling before save and keeps cash fields hidden", async () => {
     const store = seedStore();
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = await render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
-    fireEvent.changeText(getByLabelText("Quantity"), "26");
-    fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
+    await fireEvent.changeText(getByLabelText("Quantity"), "26");
+    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
@@ -171,9 +171,9 @@ describe("SellRedeemScreen", () => {
     expect(getByTestId("sell-redeem-save-button")).toBeDisabled();
   });
 
-  it("shows an empty state when the holding is missing", () => {
+  it("shows an empty state when the holding is missing", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText } = render(
+    const { getByText } = await render(
       <SellRedeemScreen assetId={asset.id} store={store} />,
     );
 
@@ -181,7 +181,7 @@ describe("SellRedeemScreen", () => {
     expect(getByText("Open Holdings and choose an active position to sell or redeem.")).toBeTruthy();
   });
 
-  it("keeps an unavailable quote distinct from the required execution price", () => {
+  it("keeps an unavailable quote distinct from the required execution price", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition({
@@ -191,7 +191,7 @@ describe("SellRedeemScreen", () => {
       id: "opening-hdfc",
       quantity: 25,
     });
-    const screen = render(<SellRedeemScreen assetId={asset.id} store={store} />);
+    const screen = await render(<SellRedeemScreen assetId={asset.id} store={store} />);
 
     expect(screen.getByTestId("sell-redeem-quote-context")).toHaveTextContent(
       "Unavailable · no saved quote",
@@ -204,29 +204,29 @@ describe("SellRedeemScreen", () => {
 
   it("masks aggregate values until reveal while keeping units and prices visible", async () => {
     const store = seedStore();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
-    const screen = render(<SellRedeemScreen assetId={asset.id} store={store} />);
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = await render(<SellRedeemScreen assetId={asset.id} store={store} />);
 
     expect(screen.getByText("25")).toBeTruthy();
     expect(screen.getByText("₹1.7K")).toBeTruthy();
     expect(screen.getAllByLabelText("Amount hidden").length).toBeGreaterThan(0);
     expect(screen.queryByText("₹41.95K")).toBeNull();
 
-    fireEvent.changeText(screen.getByLabelText("Quantity"), "5");
-    fireEvent.changeText(screen.getByLabelText("Actual execution price"), "1700");
-    fireEvent.changeText(screen.getByLabelText("Fees"), "100");
-    selectDate(screen.getByTestId, "2026-05-20");
+    await fireEvent.changeText(screen.getByLabelText("Quantity"), "5");
+    await fireEvent.changeText(screen.getByLabelText("Actual execution price"), "1700");
+    await fireEvent.changeText(screen.getByLabelText("Fees"), "100");
+    await selectDate(screen.getByTestId, "2026-05-20");
     expect(screen.queryByText("₹8,400.00")).toBeNull();
     expect(screen.getByTestId("sell-redeem-net-proceeds")).toHaveProp("accessibilityLabel", "Amount hidden");
     expect(screen.getByTestId("sell-redeem-remaining-value")).toHaveProp("accessibilityLabel", "Amount hidden");
     expect(screen.getByText("Remaining units")).toBeTruthy();
     expect(screen.getByText("20")).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId("reveal-sell-redeem-button"));
+    await fireEvent.press(screen.getByTestId("reveal-sell-redeem-button"));
     expect(screen.getAllByText("₹8,400.00")).toHaveLength(1);
 
-    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     await waitFor(() => {
       expect(screen.queryByText("₹8,400.00")).toBeNull();
       expect(screen.getByTestId("reveal-sell-redeem-button")).toBeTruthy();
