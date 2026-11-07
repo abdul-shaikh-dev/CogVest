@@ -4,6 +4,21 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-07: expo/fetch as the global fetch (#618), smoke 14 passed
+
+- Commit: fix/618-expo-fetch 569ad87 (`EXPO_PUBLIC_USE_RN_FETCH` removed),
+  version 1.0.30. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font
+  scale 1.0, E2E APK freshly built from 569ad87, Metro stopped.
+- Smoke tier: 14 passed, 0 failed, 11m 49s. add-holding-lookup makes live
+  provider requests through expo/fetch.
+- A temporary probe build (not committed) compared expo/fetch with React
+  Native's fetch on the same AVD. Aborts before a response, app-level
+  timeouts, error statuses, refused connections and live Yahoo, CoinGecko
+  and AMFI calls behaved the same. The difference: React Native's fetch
+  resolves only after the whole body, while expo/fetch resolves at the
+  headers. Aborting mid-body then resolves `text()` with a partial body
+  (7 of 59 bytes in the probe). The AMFI readers now reject that.
+
 ## 2026-11-07: SDK 58 startup links (#618), full tier 63 passed after a cold boot
 
 - Commit: fix/618-startup-links f886dd4 (Expo SDK 58, React Native 0.88.1),
