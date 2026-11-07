@@ -224,14 +224,14 @@ function prepareFlow(flow) {
   const adbPath = findExecutable("adb");
   if (!adbPath) return "adb not found";
   if (normalized === holdingsCsvFlow) {
-    const directory = run(adbPath, [
+    // The flow saves the template into Documents, and each run adds a numbered
+    // copy. Android stops numbering after 32 copies, so the save then fails.
+    const templates = run(adbPath, [
       "shell",
-      "rm",
-      "-rf",
-      "/sdcard/Documents/CogVestTemplateTest",
+      "rm -f /sdcard/Documents/cogvest-holdings-v1*.csv",
     ]);
-    if (directory.status !== 0) {
-      return "unable to reset the Android CSV template test folder";
+    if (templates.status !== 0) {
+      return "unable to remove earlier CSV templates from Android Documents";
     }
   }
   for (const fixture of fixtures) {
