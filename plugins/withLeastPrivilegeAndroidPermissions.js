@@ -7,6 +7,9 @@ const RELEASE_BLOCKED_PERMISSIONS = [
   "android.permission.READ_EXTERNAL_STORAGE",
   "android.permission.WRITE_EXTERNAL_STORAGE",
   "android.permission.SYSTEM_ALERT_WINDOW",
+  // Merged in by expo-application's Play Install Referrer library. CogVest only
+  // reads the application id from that module and never asks for the referrer.
+  "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
 ];
 
 function applyLeastPrivilegeAndroidPermissions(androidManifest) {

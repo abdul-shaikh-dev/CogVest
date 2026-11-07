@@ -264,3 +264,12 @@ and `SYSTEM_ALERT_WINDOW` from the main/release manifest. Expo debug manifests
 may add `SYSTEM_ALERT_WINDOW` for developer tooling; it must not appear in the
 merged release manifest. V1 release permissions are limited to documented
 runtime needs such as internet access and vibration.
+
+The plugin also removes
+`com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE`, which
+`expo-application`'s Play Install Referrer library merges in. CogVest reads only
+the application id from that module and never requests the install referrer.
+After a dependency change, check the built APK with
+`aapt dump permissions <apk>`. A release should list only
+`android.permission.INTERNET`, `android.permission.VIBRATE`, and the app's own
+`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` signature permission.
