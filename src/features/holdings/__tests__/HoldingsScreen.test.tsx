@@ -23,6 +23,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
 import type { Asset, BuyTrade, PpfAccount } from "@/src/types";
+import { getAllByComponentType, getByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("@/src/hooks/useReducedMotionPreference", () => ({
   useReducedMotionPreference: jest.fn(() => true),
@@ -37,8 +38,8 @@ const testSafeAreaMetrics = {
   insets: { bottom: 0, left: 0, right: 0, top: 0 },
 };
 
-function render(ui: ReactElement) {
-  return renderNative(
+async function render(ui: ReactElement) {
+  return await renderNative(
     <SafeAreaProvider initialMetrics={testSafeAreaMetrics}>
       {ui}
     </SafeAreaProvider>,
@@ -231,14 +232,14 @@ function testIdOrder(node: unknown, ids: string[] = [], seen = new WeakSet<objec
 }
 
 describe("HoldingsScreen", () => {
-  it("distinguishes cash-funded purchases from existing holdings in the Add menu", () => {
+  it("distinguishes cash-funded purchases from existing holdings in the Add menu", async () => {
     const onRecordPurchase = jest.fn();
     const onAddTrade = jest.fn();
-    const ui = render(<HoldingsScreen store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
+    const ui = await render(<HoldingsScreen store={createPortfolioStore({ storage: createMemoryJsonStorage() })}
       onRecordPurchase={onRecordPurchase} onAddTrade={onAddTrade} />);
-    fireEvent.press(ui.getByTestId("holdings-add-button"));
+    await fireEvent.press(ui.getByTestId("holdings-add-button"));
     expect(ui.getByText("Add existing holding")).toBeTruthy();
-    fireEvent.press(ui.getByTestId("record-purchase-option"));
+    await fireEvent.press(ui.getByTestId("record-purchase-option"));
     expect(onRecordPurchase).toHaveBeenCalledTimes(1);
     expect(onAddTrade).not.toHaveBeenCalled();
   });
@@ -247,19 +248,19 @@ describe("HoldingsScreen", () => {
   });
 
   it("renders four and thirty holding fixtures with directly visible search", async () => {
-    const fourScreen = render(<HoldingsScreen store={seedListHoldings(4)} />);
+    const fourScreen = await render(<HoldingsScreen store={seedListHoldings(4)} />);
 
     expect(fourScreen.getAllByTestId(/^holding-row-/)).toHaveLength(4);
     expect(fourScreen.getByTestId("holdings-search-input")).toBeTruthy();
     expect(fourScreen.queryByTestId("holdings-search-toggle")).toBeNull();
-    fireEvent.changeText(
+    await fireEvent.changeText(
       fourScreen.getByTestId("holdings-search-input"),
       "List holding 4",
     );
     expect(fourScreen.getAllByTestId(/^holding-row-/)).toHaveLength(1);
 
-    fourScreen.unmount();
-    const thirtyScreen = render(
+    await fourScreen.unmount();
+    const thirtyScreen = await render(
       <HoldingsScreen store={seedListHoldings(30)} />,
     );
     // The first commit renders one batch; the rest arrive in the next task (#138).
@@ -268,16 +269,16 @@ describe("HoldingsScreen", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
-    fireEvent.changeText(
+    await fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),
       "List holding 30",
     );
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(1);
   });
 
-  it("keeps portfolio insights behind an on-demand action", () => {
+  it("keeps portfolio insights behind an on-demand action", async () => {
     const store = seedMixedHoldings();
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
 
@@ -287,15 +288,15 @@ describe("HoldingsScreen", () => {
     );
     expect(queryByText("Dominant position")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-insights-button"));
+    await fireEvent.press(getByTestId("holdings-insights-button"));
     expect(getByText("Dominant position")).toBeTruthy();
     expect(getByText("Asset mix")).toBeTruthy();
-    fireEvent.press(getByTestId("holdings-panel-close"));
+    await fireEvent.press(getByTestId("holdings-panel-close"));
     expect(queryByText("Dominant position")).toBeNull();
   });
 
-  it("uses counted market and PPF destinations for mixed accounts", () => {
-    const { getByTestId, getByText, queryByText } = render(
+  it("uses counted market and PPF destinations for mixed accounts", async () => {
+    const { getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen store={seedMarketAndPpf()} />,
     );
 
@@ -303,15 +304,15 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("holdings-ppf-tab")).toHaveTextContent("PPF 1");
     expect(getByText("Reliance Industries")).toBeTruthy();
 
-    fireEvent.press(getByTestId("holdings-ppf-tab"));
+    await fireEvent.press(getByTestId("holdings-ppf-tab"));
     expect(getByText("Primary PPF")).toBeTruthy();
     expect(queryByText("Reliance Industries")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-market-tab"));
+    await fireEvent.press(getByTestId("holdings-market-tab"));
     expect(getByText("Reliance Industries")).toBeTruthy();
   });
 
-  it("adds a counted EPF destination with its recorded total, rows and requested opening", () => {
+  it("adds a counted EPF destination with its recorded total, rows and requested opening", async () => {
     const store = seedMarketAndPpf();
     store.getState().applyEpfCommand({ commandId: "epf", reason: "Statement", change: { type: "accountPut", account: {
       id: "acme", nickname: "Acme EPF", provider: "epfo", employerLabel: "Acme Ltd", status: "transferred", currency: "INR",
@@ -319,44 +320,44 @@ describe("HoldingsScreen", () => {
         capital: null, source: "epfoStatement", recordedAt: "2026-04-01T00:00:00Z" } } } }, store.getState().getBackupRevision());
     const onReviewEpfAccount = jest.fn();
     const onAddEpfAccount = jest.fn();
-    const screen = render(<HoldingsScreen onAddEpfAccount={onAddEpfAccount} onReviewEpfAccount={onReviewEpfAccount} store={store} />);
+    const screen = await render(<HoldingsScreen onAddEpfAccount={onAddEpfAccount} onReviewEpfAccount={onReviewEpfAccount} store={store} />);
     expect(screen.getByTestId("holdings-epf-tab")).toHaveTextContent("EPF 1");
     expect(screen.queryByTestId("holdings-epf-section")).toBeNull();
-    fireEvent.press(screen.getByTestId("holdings-epf-tab"));
+    await fireEvent.press(screen.getByTestId("holdings-epf-tab"));
     expect(screen.getByTestId("holdings-epf-total-value").props.accessibilityLabel).toBe("₹1,40,000.00");
     expect(screen.getByTestId("epf-account-acme")).toHaveTextContent(/Acme Ltd · Transferred/);
     expect(screen.queryByText("Reliance Industries")).toBeNull();
-    fireEvent.press(screen.getByTestId("epf-account-acme"));
+    await fireEvent.press(screen.getByTestId("epf-account-acme"));
     expect(onReviewEpfAccount).toHaveBeenCalledWith("acme");
-    fireEvent.press(screen.getByTestId("add-epf-account"));
+    await fireEvent.press(screen.getByTestId("add-epf-account"));
     expect(onAddEpfAccount).toHaveBeenCalledTimes(1);
-    screen.unmount();
+    await screen.unmount();
 
-    const requested = render(<HoldingsScreen destinationRequest={{ destination: "epf" }} store={store} />);
+    const requested = await render(<HoldingsScreen destinationRequest={{ destination: "epf" }} store={store} />);
     expect(requested.getByTestId("holdings-epf-section")).toBeTruthy();
-    requested.unmount();
+    await requested.unmount();
     const onlyEpf = createPortfolioStore({ storage: createMemoryJsonStorage() });
     onlyEpf.getState().applyEpfCommand({ commandId: "epf", reason: "Statement", change: { type: "accountPut",
       account: store.getState().epf.accounts[0] } }, onlyEpf.getState().getBackupRevision());
-    const epfOnly = render(<HoldingsScreen store={onlyEpf} />);
+    const epfOnly = await render(<HoldingsScreen store={onlyEpf} />);
     expect(epfOnly.queryByTestId("holdings-destination-tabs")).toBeNull();
     expect(epfOnly.getByTestId("holdings-epf-section")).toBeTruthy();
     expect(epfOnly.queryByText("No holdings yet")).toBeNull();
   });
 
-  it("keeps Add EPF in the Add menu", () => {
+  it("keeps Add EPF in the Add menu", async () => {
     const onAddEpfAccount = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <HoldingsScreen onAddEpfAccount={onAddEpfAccount} onAddTrade={jest.fn()} onQuickSetup={jest.fn()}
         store={createPortfolioStore({ storage: createMemoryJsonStorage() })} />,
     );
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("add-epf-account-option"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("add-epf-account-option"));
     expect(onAddEpfAccount).toHaveBeenCalledTimes(1);
   });
 
-  it("renders Market and PPF tabs before the market search field", () => {
-    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+  it("renders Market and PPF tabs before the market search field", async () => {
+    const screen = await render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const order = testIdOrder(screen.toJSON());
 
     expect(order.indexOf("holdings-destination-tabs")).toBeLessThan(
@@ -364,9 +365,9 @@ describe("HoldingsScreen", () => {
     );
   });
 
-  it("switches destinations only for intentional left and right responder gestures", () => {
+  it("switches destinations only for intentional left and right responder gestures", async () => {
     const createSpy = jest.spyOn(PanResponder, "create");
-    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const screen = await render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const responder = destinationResponder(createSpy);
 
     startGesture(responder);
@@ -376,7 +377,7 @@ describe("HoldingsScreen", () => {
         gesture(-80, 4),
       ),
     ).toBe(true);
-    act(() =>
+    await act(() =>
       responder.onPanResponderRelease?.(
         {} as GestureResponderEvent,
         gesture(-80, 4),
@@ -392,7 +393,7 @@ describe("HoldingsScreen", () => {
         gesture(80, -4),
       ),
     ).toBe(true);
-    act(() =>
+    await act(() =>
       updatedResponder.onPanResponderRelease?.(
         {} as GestureResponderEvent,
         gesture(80, -4),
@@ -401,9 +402,9 @@ describe("HoldingsScreen", () => {
     expect(screen.getByText("Reliance Industries")).toBeTruthy();
   });
 
-  it("does not switch destinations for vertical, small, or diagonal responder gestures", () => {
+  it("does not switch destinations for vertical, small, or diagonal responder gestures", async () => {
     const createSpy = jest.spyOn(PanResponder, "create");
-    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const screen = await render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const responder = destinationResponder(createSpy);
 
     const gestures: Array<[number, number, boolean]> = [
@@ -419,7 +420,7 @@ describe("HoldingsScreen", () => {
           gesture(dx, dy),
         ),
       ).toBe(captures);
-      act(() =>
+      await act(() =>
         responder.onPanResponderRelease?.(
           {} as GestureResponderEvent,
           gesture(dx, dy),
@@ -431,22 +432,22 @@ describe("HoldingsScreen", () => {
     expect(screen.queryByText("Primary PPF")).toBeNull();
   });
 
-  it("keeps pre-capture multi-touch cancelled after one finger lifts", () => {
+  it("keeps pre-capture multi-touch cancelled after one finger lifts", async () => {
     const createSpy = jest.spyOn(PanResponder, "create");
-    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const screen = await render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const responder = destinationResponder(createSpy);
     startGesture(responder);
     responder.onStartShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-10, 0, 2));
     expect(responder.onMoveShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-40, 0, 2))).toBe(false);
     expect(responder.onMoveShouldSetPanResponderCapture?.({} as GestureResponderEvent, gesture(-90, 0, 1))).toBe(false);
-    act(() => responder.onPanResponderRelease?.({} as GestureResponderEvent, gesture(-90, 0, 0)));
+    await act(() => responder.onPanResponderRelease?.({} as GestureResponderEvent, gesture(-90, 0, 0)));
     expect(screen.queryByText("Primary PPF")).toBeNull();
     createSpy.mockRestore();
   });
 
-  it("invalidates a captured gesture after multi-touch, vertical movement, or termination", () => {
+  it("invalidates a captured gesture after multi-touch, vertical movement, or termination", async () => {
     const createSpy = jest.spyOn(PanResponder, "create");
-    const screen = render(<HoldingsScreen store={seedMarketAndPpf()} />);
+    const screen = await render(<HoldingsScreen store={seedMarketAndPpf()} />);
     const responder = destinationResponder(createSpy);
 
     for (const invalidate of [
@@ -462,7 +463,7 @@ describe("HoldingsScreen", () => {
         ),
       ).toBe(true);
       invalidate();
-      act(() =>
+      await act(() =>
         responder.onPanResponderRelease?.(
           {} as GestureResponderEvent,
           gesture(-80, 4),
@@ -473,9 +474,9 @@ describe("HoldingsScreen", () => {
     }
   });
 
-  it("does not capture destination gestures while an add modal is open", () => {
+  it("does not capture destination gestures while an add modal is open", async () => {
     const createSpy = jest.spyOn(PanResponder, "create");
-    const screen = render(
+    const screen = await render(
       <HoldingsScreen openAddMenu store={seedMarketAndPpf()} />,
     );
     const responder = destinationResponder(createSpy);
@@ -487,20 +488,20 @@ describe("HoldingsScreen", () => {
         gesture(-80, 4),
       ),
     ).toBe(false);
-    act(() =>
+    await act(() =>
       responder.onPanResponderRelease?.(
         {} as GestureResponderEvent,
         gesture(-80, 4),
       ),
     );
 
-    fireEvent.press(screen.getByTestId("holdings-panel-close"));
+    await fireEvent.press(screen.getByTestId("holdings-panel-close"));
     expect(screen.getByText("Reliance Industries")).toBeTruthy();
     expect(screen.queryByText("Primary PPF")).toBeNull();
   });
 
-  it("keeps legacy PPF holdings in the counted destination and migration path", () => {
-    const { getByTestId, getByText } = render(
+  it("keeps legacy PPF holdings in the counted destination and migration path", async () => {
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onAddPpfAccount={jest.fn()}
         store={seedMixedHoldings()}
@@ -510,7 +511,7 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("holdings-market-tab")).toHaveTextContent("Market 2");
     expect(getByTestId("holdings-ppf-tab")).toHaveTextContent("PPF 1");
 
-    fireEvent.press(getByTestId("holdings-ppf-tab"));
+    await fireEvent.press(getByTestId("holdings-ppf-tab"));
     expect(getByTestId("legacy-ppf-asset-ppf")).toBeTruthy();
     expect(
       getByText("Move Public Provident Fund to the PPF ledger"),
@@ -518,10 +519,10 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("convert-legacy-ppf-asset-ppf")).toBeTruthy();
   });
 
-  it("starts PPF-only portfolios at accounts without a market empty promo", () => {
+  it("starts PPF-only portfolios at accounts without a market empty promo", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(ppfAccount);
-    const { getByText, queryByTestId, queryByText } = render(
+    const { getByText, queryByTestId, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
 
@@ -532,11 +533,11 @@ describe("HoldingsScreen", () => {
     expect(queryByText("No market holdings yet")).toBeNull();
   });
 
-  it("opens More for management, transactions, and masking", () => {
+  it("opens More for management, transactions, and masking", async () => {
     const onManageAssets = jest.fn();
     const onReviewAllTrades = jest.fn();
     const store = seedMixedHoldings();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <HoldingsScreen
         onManageAssets={onManageAssets}
         onReviewAllTrades={onReviewAllTrades}
@@ -544,39 +545,39 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-manage-assets-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-manage-assets-button"));
     expect(onManageAssets).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-transactions-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-transactions-button"));
     expect(onReviewAllTrades).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-mask-toggle"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-mask-toggle"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
   });
 
-  it("closes the More panel through Android back and its close action", () => {
-    const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
+  it("closes the More panel through Android back and its close action", async () => {
+    const { getByTestId, queryByTestId, container } = await render(
       <HoldingsScreen store={seedMixedHoldings()} />,
     );
 
-    fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
     expect(getByTestId("holdings-panel-close")).toBeTruthy();
-    act(() => {
-      UNSAFE_getByType(Modal).props.onRequestClose();
+    await act(() => {
+      getByComponentType({ container }, Modal).props.onRequestClose();
     });
     expect(queryByTestId("holdings-panel-close")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-panel-close"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-panel-close"));
     expect(queryByTestId("holdings-panel-close")).toBeNull();
   });
 
-  it("keeps Add PPF in the Add menu", () => {
+  it("keeps Add PPF in the Add menu", async () => {
     const onAddPpfAccount = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <HoldingsScreen
         onAddPpfAccount={onAddPpfAccount}
         onAddTrade={jest.fn()}
@@ -585,24 +586,24 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("add-ppf-account"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("add-ppf-account"));
     expect(onAddPpfAccount).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the existing Futures screen without creating an account", () => {
+  it("opens the existing Futures screen without creating an account", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const before = store.getState().futuresAccounts;
     const onOpenFutures = jest.fn();
-    const screen = render(<HoldingsScreen onOpenFutures={onOpenFutures} store={store} />);
-    fireEvent.press(screen.getByTestId("holdings-add-button"));
-    fireEvent.press(screen.getByTestId("holdings-open-futures"));
+    const screen = await render(<HoldingsScreen onOpenFutures={onOpenFutures} store={store} />);
+    await fireEvent.press(screen.getByTestId("holdings-add-button"));
+    await fireEvent.press(screen.getByTestId("holdings-open-futures"));
     expect(onOpenFutures).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("holdings-panel-close")).toBeNull();
     expect(store.getState().futuresAccounts).toEqual(before);
   });
 
-  it("excludes legacy PPF and cash from allocation without hiding their records", () => {
+  it("excludes legacy PPF and cash from allocation without hiding their records", async () => {
     const store = seedMixedHoldings();
     const cash = {
       ...asset,
@@ -623,7 +624,7 @@ describe("HoldingsScreen", () => {
         currentPrice: 10000,
         date: null,
       });
-    const screen = render(
+    const screen = await render(
       <HoldingsScreen store={store} onReviewOpeningPosition={jest.fn()} />,
     );
     expect(screen.getByTestId("holding-row-cash-asset")).toBeTruthy();
@@ -637,34 +638,34 @@ describe("HoldingsScreen", () => {
         /Allocation/,
       ),
     ).toBeNull();
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     expect(screen.getAllByText("23.8%").length).toBeGreaterThan(0);
     expect(screen.getByText("First recorded purchase")).toBeTruthy();
     expect(screen.getByText("20 Apr 2026")).toBeTruthy();
     expect(screen.getByTestId(`holding-quote-context-${asset.id}`)).toHaveTextContent(
       /Stale · Yahoo Finance · as of/,
     );
-    fireEvent.press(screen.getByTestId("holding-detail-back"));
-    fireEvent.press(screen.getByTestId("holdings-ppf-tab"));
+    await fireEvent.press(screen.getByTestId("holding-detail-back"));
+    await fireEvent.press(screen.getByTestId("holdings-ppf-tab"));
     expect(
       within(screen.getByTestId(`holding-row-${debtAsset.id}`)).queryByText(
         /Allocation/,
       ),
     ).toBeNull();
-    fireEvent.press(screen.getByTestId(`holding-row-${debtAsset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-row-${debtAsset.id}`));
     expect(screen.getByText("Unavailable")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("holding-view-records"));
+    await fireEvent.press(screen.getByTestId("holding-view-records"));
     expect(
       screen.getByTestId("review-opening-position-opening-ppf"),
     ).toBeTruthy();
   });
 
-  it("keeps pending status readable while masking wealth", () => {
+  it("keeps pending status readable while masking wealth", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getAllByLabelText, getByText, getAllByText, getByTestId } = render(
+    const { getAllByLabelText, getByText, getAllByText, getByTestId } = await render(
       <HoldingsScreen store={store} />,
     );
     expect(getByText("Valuation pending")).toBeTruthy();
@@ -676,7 +677,7 @@ describe("HoldingsScreen", () => {
     expect(
       getAllByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL).length,
     ).toBeGreaterThan(0);
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(
       within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText(
         "Unavailable",
@@ -685,18 +686,18 @@ describe("HoldingsScreen", () => {
     expect(getByTestId("holding-xirr-unavailable")).toBeTruthy();
   });
 
-  it("keeps per-unit prices and percentages visible in masked expanded holdings", () => {
+  it("keeps per-unit prices and percentages visible in masked expanded holdings", async () => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getByTestId } = render(<HoldingsScreen store={store} />);
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    const { getByTestId } = await render(<HoldingsScreen store={store} />);
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     const details = within(getByTestId(`holding-expanded-${asset.id}`));
     expect(details.getByText("₹100.00")).toBeTruthy();
     expect(details.getByText("₹125.00")).toBeTruthy();
     expect(details.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
   });
 
-  it("shows pending valuation actions without presenting zero as current value", () => {
+  it("shows pending valuation actions without presenting zero as current value", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewOpeningPosition = jest.fn();
     store.getState().addAsset(asset);
@@ -707,7 +708,7 @@ describe("HoldingsScreen", () => {
       id: "opening-pending",
       quantity: 2,
     });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onReviewOpeningPosition={onReviewOpeningPosition}
         store={store}
@@ -724,13 +725,13 @@ describe("HoldingsScreen", () => {
       within(getByTestId(`holding-row-${asset.id}`)).getByText("₹200"),
     ).toBeTruthy();
 
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-    fireEvent.press(getByTestId(`holding-enter-manual-price-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-enter-manual-price-${asset.id}`));
 
     expect(onReviewOpeningPosition).toHaveBeenCalledWith("opening-pending");
   });
 
-  it("withholds incomplete allocation in insights and the high-allocation filter", () => {
+  it("withholds incomplete allocation in insights and the high-allocation filter", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition({
@@ -740,15 +741,15 @@ describe("HoldingsScreen", () => {
       id: "opening-pending",
       quantity: 2,
     });
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
-    fireEvent.press(getByTestId("holdings-filter-toggle"));
+    await fireEvent.press(getByTestId("holdings-filter-toggle"));
     expect(
       getByTestId("holdings-filter-high-allocation").props.accessibilityState
         .disabled,
     ).toBe(true);
-    fireEvent.press(getByTestId("holdings-insights-button"));
+    await fireEvent.press(getByTestId("holdings-insights-button"));
     expect(getByText("Awaiting valuation")).toBeTruthy();
     expect(getByText("Asset mix unavailable")).toBeTruthy();
     expect(
@@ -757,21 +758,21 @@ describe("HoldingsScreen", () => {
     expect(queryByText(/0.00%/)).toBeNull();
   });
 
-  it.each([true, false])("honors reduced motion (%s) for panels", (reduced) => {
+  it.each([true, false])("honors reduced motion (%s) for panels", async (reduced) => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(reduced);
-    const screen = render(<HoldingsScreen store={seedMixedHoldings()} />);
-    fireEvent.press(screen.getByTestId("holdings-more-button"));
-    expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe(
+    const screen = await render(<HoldingsScreen store={seedMixedHoldings()} />);
+    await fireEvent.press(screen.getByTestId("holdings-more-button"));
+    expect(getByComponentType(screen, Modal).props.animationType).toBe(
       reduced ? "none" : "fade",
     );
     jest.mocked(useReducedMotionPreference).mockReturnValue(true);
   });
 
-  it("shows an empty state with an Add Holding action", () => {
+  it("shows an empty state with an Add Holding action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen store={store} onAddTrade={onAddTrade} />,
     );
 
@@ -784,12 +785,12 @@ describe("HoldingsScreen", () => {
       ),
     ).toBeTruthy();
 
-    fireEvent.press(getByText("Add Holding"));
+    await fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the locked review hierarchy and compact holding information", () => {
+  it("shows the locked review hierarchy and compact holding information", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -801,7 +802,7 @@ describe("HoldingsScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
 
@@ -810,7 +811,7 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Best return")).toBeNull();
     expect(queryByText("Top 3")).toBeNull();
     expect(queryByText("All 1")).toBeNull();
-    fireEvent.press(getByTestId("holdings-filter-toggle"));
+    await fireEvent.press(getByTestId("holdings-filter-toggle"));
     expect(getByText("All 1")).toBeTruthy();
     expect(getByText("Winners 1")).toBeTruthy();
     expect(getByText("Losers 0")).toBeTruthy();
@@ -845,12 +846,12 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Quantity")).toBeNull();
     expect(queryByText(/LTCG/i)).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-insights-button"));
+    await fireEvent.press(getByTestId("holdings-insights-button"));
     expect(getByText("Dominant position")).toBeTruthy();
     expect(getByText("Asset mix")).toBeTruthy();
   });
 
-  it("keeps fund identity useful, formats tiny weights, and exposes a complete spoken summary", () => {
+  it("keeps fund identity useful, formats tiny weights, and exposes a complete spoken summary", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const fund: Asset = {
       assetClass: "stock",
@@ -887,7 +888,7 @@ describe("HoldingsScreen", () => {
       quantity: 1,
     });
 
-    const screen = render(<HoldingsScreen store={store} />);
+    const screen = await render(<HoldingsScreen store={store} />);
     const fundRow = screen.getByTestId(`holding-row-${fund.id}`);
     const spokenSummary = fundRow.props.accessibilityLabel as string;
 
@@ -910,10 +911,10 @@ describe("HoldingsScreen", () => {
     expect(parseFloat(width)).toBeLessThan(0.1);
   });
 
-  it("keeps spoken wealth amounts private while preserving signed return context", () => {
+  it("keeps spoken wealth amounts private while preserving signed return context", async () => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ maskWealthValues: true });
-    const screen = render(<HoldingsScreen store={store} />);
+    const screen = await render(<HoldingsScreen store={store} />);
     const row = screen.getByTestId(`holding-row-${asset.id}`);
     const spokenSummary = row.props.accessibilityLabel as string;
 
@@ -924,11 +925,11 @@ describe("HoldingsScreen", () => {
     expect(spokenSummary).not.toContain("₹200.00");
   });
 
-  it("keeps scannable holdings and exposure while hiding review prompts in Minimal mode", () => {
+  it("keeps scannable holdings and exposure while hiding review prompts in Minimal mode", async () => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
 
@@ -940,7 +941,7 @@ describe("HoldingsScreen", () => {
     expect(getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
     expect(queryByText("+25.00%")).toBeNull();
     expect(queryByText("Returns are since investment, not today.")).toBeNull();
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(getByText("+25.00%")).toHaveStyle({ color: colors.profit });
     expect(getByText("Invested in remaining units")).toBeTruthy();
     expect(within(getByTestId(`holding-expanded-${asset.id}`)).getAllByText("₹200.00").length).toBeGreaterThan(0);
@@ -948,30 +949,30 @@ describe("HoldingsScreen", () => {
     expect(queryByText("Best return")).toBeNull();
   });
 
-  it.each(["standard", "minimal"] as const)("keeps %s rows compact without removing their weight or detail access", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("keeps %s rows compact without removing their weight or detail access", async (displayMode) => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ displayMode });
-    const view = render(<HoldingsScreen store={store} />);
+    const view = await render(<HoldingsScreen store={store} />);
     const row = view.getByTestId(`holding-row-${asset.id}`);
     expect(Boolean(view.queryByText("Returns are since investment, not today."))).toBe(displayMode === "standard");
     expect(row).toHaveStyle({ paddingVertical: 12, gap: 8 });
     expect(view.getByTestId(`holding-weight-track-${asset.id}`, { includeHiddenElements: true })).toHaveStyle({ height: 3 });
     expect(view.getByTestId(`holding-weight-${asset.id}`)).toBeTruthy();
-    fireEvent.press(row);
+    await fireEvent.press(row);
     expect(view.getByText("Invested in remaining units")).toBeTruthy();
     expect(view.getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
   });
 
-  it("opens separate details and preserves search and filter on both back actions", () => {
-    const screen = render(<HoldingsScreen store={seedMixedHoldings()} />);
-    fireEvent.changeText(
+  it("opens separate details and preserves search and filter on both back actions", async () => {
+    const screen = await render(<HoldingsScreen store={seedMixedHoldings()} />);
+    await fireEvent.changeText(
       screen.getByTestId("holdings-search-input"),
       "Reliance",
     );
-    fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
-    fireEvent.press(screen.getByTestId("holdings-filter-winners"));
+    await fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
+    await fireEvent.press(screen.getByTestId("holdings-filter-winners"));
     const list = screen.getByTestId("holdings-list");
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     expect(screen.getByTestId("holding-detail-modal")).toBeTruthy();
     expect(within(list).queryByText("Quantity")).toBeNull();
     expect(screen.getByTestId(`holding-quantity-${asset.id}`)).toBeTruthy();
@@ -979,7 +980,7 @@ describe("HoldingsScreen", () => {
     expect(screen.getByTestId(`holding-quote-context-${asset.id}`)).toHaveTextContent(
       /Stale · Yahoo Finance · as of/,
     );
-    fireEvent.press(screen.getByTestId("holding-detail-back"));
+    await fireEvent.press(screen.getByTestId("holding-detail-back"));
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
     expect(screen.getByTestId("holdings-search-input").props.value).toBe(
       "Reliance",
@@ -988,10 +989,9 @@ describe("HoldingsScreen", () => {
       screen.getByTestId("holdings-filter-winners").props.accessibilityState
         .selected,
     ).toBe(true);
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
-    act(() => {
-      screen
-        .UNSAFE_getAllByType(Modal)
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await act(() => {
+      getAllByComponentType(screen, Modal)
         .find((modal) => modal.props.testID === "holding-detail-modal")!
         .props.onRequestClose();
     });
@@ -1001,12 +1001,12 @@ describe("HoldingsScreen", () => {
     );
   });
 
-  it.each(["standard", "minimal"] as const)("keeps labelled values, position and history in %s details without changing records", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("keeps labelled values, position and history in %s details without changing records", async (displayMode) => {
     const store = seedMixedHoldings();
     store.getState().updatePreferences({ displayMode });
     const records = store.getState().trades;
-    const view = render(<HoldingsScreen store={store} />);
-    fireEvent.press(view.getByTestId(`holding-row-${asset.id}`));
+    const view = await render(<HoldingsScreen store={store} />);
+    await fireEvent.press(view.getByTestId(`holding-row-${asset.id}`));
     const valuation = within(view.getByTestId("holding-detail-valuation"));
     expect(valuation.getByText("Current value")).toBeTruthy();
     expect(valuation.getByText("Invested in remaining units")).toBeTruthy();
@@ -1017,14 +1017,14 @@ describe("HoldingsScreen", () => {
     expect(store.getState().trades).toBe(records);
   });
 
-  it("exposes a Sell / redeem action from expanded holding details", () => {
+  it("exposes a Sell / redeem action from expanded holding details", async () => {
     const store = seedMixedHoldings();
     const onSellRedeem = jest.fn();
-    const screen = render(
+    const screen = await render(
       <HoldingsScreen store={store} onSellRedeem={onSellRedeem} />,
     );
 
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     const detailChildren = screen
       .getByTestId(`holding-expanded-${asset.id}`)
       .children.filter((child: unknown) => typeof child !== "string") as Array<{
@@ -1039,30 +1039,30 @@ describe("HoldingsScreen", () => {
     expect(actionsIndex).toBeGreaterThan(-1);
     expect(positionIndex).toBeGreaterThan(-1);
     expect(positionIndex).toBeLessThan(actionsIndex);
-    fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
 
     expect(onSellRedeem).toHaveBeenCalledWith(asset.id);
     expect(screen.getByTestId("holding-detail-modal").props.visible).toBe(true);
     expect(store.getState().trades).toHaveLength(1);
   });
 
-  it("retains the selected holding when returning from purchase", () => {
+  it("retains the selected holding when returning from purchase", async () => {
     const store = seedMixedHoldings();
     const onRecordPurchase = jest.fn();
     const ui = (isActive: boolean) => <SafeAreaProvider initialMetrics={testSafeAreaMetrics}>
       <HoldingsScreen store={store} onRecordPurchase={onRecordPurchase} isActive={isActive} />
     </SafeAreaProvider>;
-    const screen = renderNative(ui(true));
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
-    fireEvent.press(screen.getByTestId(`holding-record-purchase-${asset.id}`));
+    const screen = await renderNative(ui(true));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-record-purchase-${asset.id}`));
     expect(onRecordPurchase).toHaveBeenCalledWith(asset.id);
-    screen.rerender(ui(false));
+    await screen.rerender(ui(false));
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
-    screen.rerender(ui(true));
+    await screen.rerender(ui(true));
     expect(screen.getByTestId(`holding-expanded-${asset.id}`)).toBeTruthy();
   });
 
-  it("hides child-route details while inactive and restores their scroll context", () => {
+  it("hides child-route details while inactive and restores their scroll context", async () => {
     const store = seedMixedHoldings();
     const onSellRedeem = jest.fn();
     const scrollTo = jest
@@ -1078,24 +1078,24 @@ describe("HoldingsScreen", () => {
         />
       </SafeAreaProvider>
     );
-    const screen = renderNative(ui(true));
+    const screen = await renderNative(ui(true));
 
-    fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
-    fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
-    fireEvent.press(screen.getByTestId("holdings-filter-winners"));
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
-    fireEvent.press(screen.getByTestId("holding-view-records"));
+    await fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
+    await fireEvent.press(screen.getByTestId("holdings-filter-toggle"));
+    await fireEvent.press(screen.getByTestId("holdings-filter-winners"));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId("holding-view-records"));
     expect(screen.getByTestId(`review-transactions-${asset.id}`)).toBeTruthy();
-    fireEvent.scroll(screen.getByTestId("holding-detail-scroll"), {
+    await fireEvent.scroll(screen.getByTestId("holding-detail-scroll"), {
       nativeEvent: { contentOffset: { y: 240 } },
     });
-    fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-sell-redeem-${asset.id}`));
 
-    screen.rerender(ui(false));
+    await screen.rerender(ui(false));
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
 
-    screen.rerender(ui(true));
-    act(() => {
+    await screen.rerender(ui(true));
+    await act(() => {
       screen.getByTestId("holding-detail-modal").props.onShow();
     });
 
@@ -1111,13 +1111,13 @@ describe("HoldingsScreen", () => {
     scrollTo.mockRestore();
   });
 
-  it("returns to the preserved list when a mutation removes the selected holding", () => {
+  it("returns to the preserved list when a mutation removes the selected holding", async () => {
     const store = seedMixedHoldings();
-    const screen = render(<HoldingsScreen store={store} />);
+    const screen = await render(<HoldingsScreen store={store} />);
 
-    fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
-    act(() => {
+    await fireEvent.changeText(screen.getByTestId("holdings-search-input"), "Reliance");
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await act(() => {
       store.getState().addTrade({
         assetId: asset.id,
         date: "2026-04-21",
@@ -1136,22 +1136,22 @@ describe("HoldingsScreen", () => {
     expect(screen.getByText("No holdings match")).toBeTruthy();
   });
 
-  it("opens a scalable transaction history from an expanded holding", () => {
+  it("opens a scalable transaction history from an expanded holding", async () => {
     const store = seedMixedHoldings();
     const onReviewTrades = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <HoldingsScreen store={store} onReviewTrades={onReviewTrades} />,
     );
 
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
-    fireEvent.press(getByTestId("holding-view-records"));
-    fireEvent.press(getByTestId(`review-transactions-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId("holding-view-records"));
+    await fireEvent.press(getByTestId(`review-transactions-${asset.id}`));
 
     expect(onReviewTrades).toHaveBeenCalledWith(asset.id);
     expect(getByTestId("holding-detail-modal")).toBeTruthy();
   });
 
-  it("keeps all transaction history reachable after a holding is fully sold", () => {
+  it("keeps all transaction history reachable after a holding is fully sold", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewAllTrades = jest.fn();
     const onManageAssets = jest.fn();
@@ -1163,7 +1163,7 @@ describe("HoldingsScreen", () => {
       totalValue: 220,
       type: "sell",
     });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onManageAssets={onManageAssets}
         onReviewAllTrades={onReviewAllTrades}
@@ -1172,40 +1172,40 @@ describe("HoldingsScreen", () => {
     );
 
     expect(getByText("No holdings yet")).toBeTruthy();
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-transactions-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-transactions-button"));
     expect(onReviewAllTrades).toHaveBeenCalledTimes(1);
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-manage-assets-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-manage-assets-button"));
     expect(onManageAssets).toHaveBeenCalledTimes(1);
   });
 
-  it("exposes each opening record for correction without treating trades as openings", () => {
+  it("exposes each opening record for correction without treating trades as openings", async () => {
     const store = seedMixedHoldings();
     const onReviewOpeningPosition = jest.fn();
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <HoldingsScreen
         onReviewOpeningPosition={onReviewOpeningPosition}
         store={store}
       />,
     );
 
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(queryByTestId("review-opening-position-opening-ppf")).toBeNull();
     expect(queryByTestId("review-opening-position-opening-bitcoin")).toBeNull();
 
-    fireEvent.press(getByTestId("holding-detail-back"));
-    fireEvent.press(getByTestId("holdings-ppf-tab"));
-    fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
-    fireEvent.press(getByTestId("holding-view-records"));
-    fireEvent.press(getByTestId("review-opening-position-opening-ppf"));
+    await fireEvent.press(getByTestId("holding-detail-back"));
+    await fireEvent.press(getByTestId("holdings-ppf-tab"));
+    await fireEvent.press(getByTestId(`holding-row-${debtAsset.id}`));
+    await fireEvent.press(getByTestId("holding-view-records"));
+    await fireEvent.press(getByTestId("review-opening-position-opening-ppf"));
 
     expect(onReviewOpeningPosition).toHaveBeenCalledWith("opening-ppf");
   });
 
-  it("shows one calm completion message after correction", () => {
+  it("shows one calm completion message after correction", async () => {
     const store = seedMixedHoldings();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         statusMessage="Portfolio history updated."
         store={store}
@@ -1216,47 +1216,47 @@ describe("HoldingsScreen", () => {
     expect(getByText("Portfolio history updated.")).toBeTruthy();
   });
 
-  it("shows correction completion feedback inside restored holding details", () => {
+  it("shows correction completion feedback inside restored holding details", async () => {
     const store = seedMixedHoldings();
-    const screen = render(
+    const screen = await render(
       <HoldingsScreen
         statusMessage="Portfolio history updated."
         store={store}
       />,
     );
 
-    fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
 
     expect(screen.getByTestId("holding-detail-status-message")).toBeTruthy();
     expect(screen.getAllByText("Portfolio history updated.")).toHaveLength(2);
   });
 
-  it("wires header Add Holding and value masking actions", () => {
+  it("wires header Add Holding and value masking actions", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
     const onAddTrade = jest.fn();
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <HoldingsScreen store={store} onAddTrade={onAddTrade} />,
     );
 
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("add-one-holding-option"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("add-one-holding-option"));
     expect(onAddTrade).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-mask-toggle"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-mask-toggle"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
   });
 
-  it("lets the user choose one or multiple holdings from the header action", () => {
+  it("lets the user choose one or multiple holdings from the header action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
     const onQuickSetup = jest.fn();
     const onImportHoldings = jest.fn();
     const onImportTransactions = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onAddTrade={onAddTrade}
         onImportHoldings={onImportHoldings}
@@ -1267,28 +1267,28 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
     expect(getByText("Continue setup (2 saved)")).toBeTruthy();
-    fireEvent.press(getByTestId("add-one-holding-option"));
+    await fireEvent.press(getByTestId("add-one-holding-option"));
     expect(onAddTrade).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("add-multiple-holdings-option"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("add-multiple-holdings-option"));
     expect(onQuickSetup).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("import-holdings-csv-option"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("import-holdings-csv-option"));
     expect(onImportHoldings).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId("holdings-add-button"));
-    fireEvent.press(getByTestId("import-transactions-csv-option"));
+    await fireEvent.press(getByTestId("holdings-add-button"));
+    await fireEvent.press(getByTestId("import-transactions-csv-option"));
     expect(onImportTransactions).toHaveBeenCalledTimes(1);
   });
 
   it.each([
     ["with recorded Cash", true, ["record-purchase-option", "add-one-holding-option"]],
     ["without Cash", false, ["add-one-holding-option", "record-purchase-option"]],
-  ] as const)("leads the Add sheet with one primary action %s and keeps every destination", (_, withCash, lead) => {
+  ] as const)("leads the Add sheet with one primary action %s and keeps every destination", async (_, withCash, lead) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     if (withCash) {
       store.getState().addCashEntry({ id: "deposit", date: "2026-08-01", amount: 1000,
@@ -1299,8 +1299,8 @@ describe("HoldingsScreen", () => {
       onImportHoldings: jest.fn(), onImportTransactions: jest.fn(), onOpenFutures: jest.fn(),
       onQuickSetup: jest.fn(), onRecordPurchase: jest.fn(),
     };
-    const screen = render(<HoldingsScreen store={store} {...handlers} />);
-    fireEvent.press(screen.getByTestId("holdings-add-button"));
+    const screen = await render(<HoldingsScreen store={store} {...handlers} />);
+    await fireEvent.press(screen.getByTestId("holdings-add-button"));
 
     const options = [
       ...lead,
@@ -1320,15 +1320,15 @@ describe("HoldingsScreen", () => {
     expect(screen.getByText("Import")).toBeTruthy();
 
     for (const id of options) {
-      fireEvent.press(screen.getByTestId("holdings-add-button"));
-      fireEvent.press(screen.getByTestId(id));
+      await fireEvent.press(screen.getByTestId("holdings-add-button"));
+      await fireEvent.press(screen.getByTestId(id));
     }
     for (const handler of Object.values(handlers)) expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the Add menu from a requested route signal and acknowledges it", () => {
+  it("opens the Add menu from a requested route signal and acknowledges it", async () => {
     const onAddMenuOpened = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <HoldingsScreen
         onAddMenuOpened={onAddMenuOpened}
         openAddMenu
@@ -1340,11 +1340,11 @@ describe("HoldingsScreen", () => {
     expect(onAddMenuOpened).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the same Add modal with import choices from an empty portfolio setup action", () => {
+  it("opens the same Add modal with import choices from an empty portfolio setup action", async () => {
     const onQuickSetup = jest.fn();
     const onImportHoldings = jest.fn();
     const onImportTransactions = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onImportHoldings={onImportHoldings}
         onImportTransactions={onImportTransactions}
@@ -1353,17 +1353,17 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("quick-setup-button"));
+    await fireEvent.press(getByTestId("quick-setup-button"));
     expect(getByText("Add holdings")).toBeTruthy();
     expect(getByTestId("import-holdings-csv-option")).toBeTruthy();
     expect(getByTestId("import-transactions-csv-option")).toBeTruthy();
     expect(onQuickSetup).not.toHaveBeenCalled();
   });
 
-  it("keeps active setup visible above a populated holdings list", () => {
+  it("keeps active setup visible above a populated holdings list", async () => {
     const store = seedMixedHoldings();
     const onQuickSetup = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingsScreen
         onQuickSetup={onQuickSetup}
         quickSetupSavedCount={2}
@@ -1373,14 +1373,14 @@ describe("HoldingsScreen", () => {
 
     expect(getByText("Resume setup")).toBeTruthy();
     expect(getByText("2 saved locally.")).toBeTruthy();
-    fireEvent.press(getByTestId("holdings-continue-setup-button"));
+    await fireEvent.press(getByTestId("holdings-continue-setup-button"));
     expect(onQuickSetup).toHaveBeenCalledTimes(1);
   });
 
-  it("filters visible holdings by winners, losers, high allocation, and search", () => {
+  it("filters visible holdings by winners, losers, high allocation, and search", async () => {
     const store = seedMixedHoldings();
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <HoldingsScreen store={store} />,
     );
     const getList = () => within(getByTestId("holdings-list"));
@@ -1390,8 +1390,8 @@ describe("HoldingsScreen", () => {
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
     expect(queryByTestId("holdings-filter-losers")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-filter-toggle"));
-    fireEvent.press(getByTestId("holdings-filter-losers"));
+    await fireEvent.press(getByTestId("holdings-filter-toggle"));
+    await fireEvent.press(getByTestId("holdings-filter-losers"));
     expect(getByTestId("holdings-filter-losers")).toHaveStyle({
       backgroundColor: colors.primary,
     });
@@ -1404,19 +1404,19 @@ describe("HoldingsScreen", () => {
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
 
-    fireEvent.press(getByTestId("holdings-filter-winners"));
+    await fireEvent.press(getByTestId("holdings-filter-winners"));
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
     expect(getList().queryByText("Bitcoin")).toBeNull();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-filter-high-allocation"));
+    await fireEvent.press(getByTestId("holdings-filter-high-allocation"));
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
     expect(getList().getByText("23.8%")).toBeTruthy();
     expect(getList().getByText("Bitcoin")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
 
-    fireEvent.press(getByTestId("holdings-filter-all"));
-    fireEvent.changeText(getByTestId("holdings-search-input"), "reliance");
+    await fireEvent.press(getByTestId("holdings-filter-all"));
+    await fireEvent.changeText(getByTestId("holdings-search-input"), "reliance");
 
     expect(getList().getByText("Reliance Industries")).toBeTruthy();
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
@@ -1450,7 +1450,7 @@ describe("HoldingsScreen", () => {
         updated: [asset.id],
       });
 
-    const { getAllByText, UNSAFE_getByType } = render(
+    const { getAllByText, container } = await render(
       <HoldingsScreen
         now={new Date("2026-04-21T10:05:00.000Z")}
         store={store}
@@ -1458,7 +1458,7 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const scrollView = getByComponentType({ container }, ScrollView);
     await act(async () => {
       await scrollView.props.refreshControl.props.onRefresh();
     });
@@ -1468,7 +1468,7 @@ describe("HoldingsScreen", () => {
     });
   });
 
-  it("keeps complete stale and manual price coverage calm", () => {
+  it("keeps complete stale and manual price coverage calm", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const secondAsset: Asset = {
       ...asset,
@@ -1500,7 +1500,7 @@ describe("HoldingsScreen", () => {
       source: "manual",
     });
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen
         now={new Date("2026-04-21T10:05:00.000Z")}
         store={store}
@@ -1508,8 +1508,8 @@ describe("HoldingsScreen", () => {
     );
 
     expect(queryByText("Using saved prices")).toBeNull();
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-valuation-details-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-valuation-details-button"));
     expect(
       getByText("Current 0 · Stale 1 · Manual 1 · Missing 0"),
     ).toBeTruthy();
@@ -1531,7 +1531,7 @@ describe("HoldingsScreen", () => {
         ],
         updated: [],
       });
-    const { getByTestId, getByText, UNSAFE_getByType } = render(
+    const { getByTestId, getByText, container } = await render(
       <HoldingsScreen
         now={new Date("2026-04-20T10:10:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -1539,22 +1539,22 @@ describe("HoldingsScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-valuation-details-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-valuation-details-button"));
     expect(
       getByText("Current 1 · Stale 0 · Manual 0 · Missing 2"),
     ).toBeTruthy();
-    fireEvent.press(getByTestId("holdings-panel-close"));
+    await fireEvent.press(getByTestId("holdings-panel-close"));
 
     await act(async () => {
-      await UNSAFE_getByType(ScrollView).props.refreshControl.props.onRefresh();
+      await getByComponentType({ container }, ScrollView).props.refreshControl.props.onRefresh();
     });
 
     await waitFor(() => {
       expect(getByText("Refresh partially completed")).toBeTruthy();
     });
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-valuation-details-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-valuation-details-button"));
     expect(
       getByText(
         "Current 1 · Stale 0 · Manual 0 · Missing 2. 1 failed · 1 timed out. Existing prices remain available.",
@@ -1574,7 +1574,7 @@ describe("HoldingsScreen", () => {
         timedOut: [],
         updated: [],
       });
-    const { getByTestId, getByText, UNSAFE_getByType } = render(
+    const { getByTestId, getByText, container } = await render(
       <HoldingsScreen
         now={new Date("2026-04-20T10:10:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -1583,11 +1583,11 @@ describe("HoldingsScreen", () => {
     );
 
     await act(async () => {
-      await UNSAFE_getByType(ScrollView).props.refreshControl.props.onRefresh();
+      await getByComponentType({ container }, ScrollView).props.refreshControl.props.onRefresh();
     });
 
-    fireEvent.press(getByTestId("holdings-more-button"));
-    fireEvent.press(getByTestId("holdings-valuation-details-button"));
+    await fireEvent.press(getByTestId("holdings-more-button"));
+    await fireEvent.press(getByTestId("holdings-valuation-details-button"));
     await waitFor(() => {
       expect(getByText("Quote refresh failed")).toBeTruthy();
     });
@@ -1598,7 +1598,7 @@ describe("HoldingsScreen", () => {
     ).toBeTruthy();
   });
 
-  it("masks wealth values without hiding quantities or percentages", () => {
+  it("masks wealth values without hiding quantities or percentages", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addAsset(asset);
@@ -1611,7 +1611,7 @@ describe("HoldingsScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen store={store} />,
     );
 
@@ -1619,11 +1619,11 @@ describe("HoldingsScreen", () => {
     expect(getByText("+25.00%")).toBeTruthy();
     expect(queryByText("₹250")).toBeNull();
 
-    fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
     expect(getByText("2")).toBeTruthy();
   });
 
-  it("shows dedicated PPF accounts and opens their account detail", () => {
+  it("shows dedicated PPF accounts and opens their account detail", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const account: PpfAccount = {
       balanceAsOf: "2026-07-31",
@@ -1637,7 +1637,7 @@ describe("HoldingsScreen", () => {
     };
     store.getState().addPpfAccount(account);
     const onReviewPpfAccount = jest.fn();
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <HoldingsScreen
         now={new Date("2026-08-15T10:00:00.000Z")}
         onReviewPpfAccount={onReviewPpfAccount}
@@ -1648,7 +1648,7 @@ describe("HoldingsScreen", () => {
     expect(getByText("Primary PPF")).toBeTruthy();
     expect(getByText("₹1L")).toBeTruthy();
     expect(queryByText("No market holdings yet")).toBeNull();
-    fireEvent.press(getByTestId(`ppf-account-${account.id}`));
+    await fireEvent.press(getByTestId(`ppf-account-${account.id}`));
     expect(onReviewPpfAccount).toHaveBeenCalledWith(account.id);
   });
 });

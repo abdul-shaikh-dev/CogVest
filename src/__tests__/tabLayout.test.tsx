@@ -2,6 +2,7 @@ import React from "react";
 import { render } from "@testing-library/react-native";
 
 import TabLayout from "../../app/(tabs)/_layout";
+import { getAllByComponentType, getByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("react-native", () => {
   const actual = jest.requireActual("react-native");
@@ -39,10 +40,10 @@ jest.mock("expo-router", () => {
 });
 
 describe("TabLayout", () => {
-  it("configures bounded fitting without abbreviating the Dashboard label", () => {
-    const layout = render(<TabLayout />);
-    const options = layout.UNSAFE_getByType("Tabs" as never).props.screenOptions({ route: { name: "dashboard" } });
-    const { getByText } = render(options.tabBarLabel({ color: "#98989D" }));
+  it("configures bounded fitting without abbreviating the Dashboard label", async () => {
+    const layout = await render(<TabLayout />);
+    const options = getByComponentType(layout, "Tabs" as never).props.screenOptions({ route: { name: "dashboard" } });
+    const { getByText } = await render(options.tabBarLabel({ color: "#98989D" }));
     expect(getByText("Dashboard").props).toMatchObject({
       adjustsFontSizeToFit: true,
       maxFontSizeMultiplier: 1.5,
@@ -51,9 +52,9 @@ describe("TabLayout", () => {
     });
   });
 
-  it("registers Progress as the tab route name with stable automation ID", () => {
-    const layout = render(<TabLayout />);
-    const screens = layout.UNSAFE_getAllByType("Tabs.Screen" as never);
+  it("registers Progress as the tab route name with stable automation ID", async () => {
+    const layout = await render(<TabLayout />);
+    const screens = getAllByComponentType(layout, "Tabs.Screen" as never);
     const progress = screens.find((screen) => screen.props.name === "progress");
 
     expect(progress?.props.options).toMatchObject({

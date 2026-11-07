@@ -4,7 +4,7 @@ import {
   render,
   waitFor,
   within,
-  type RenderAPI,
+  type RenderResult,
 } from "@testing-library/react-native";
 
 import {
@@ -67,7 +67,7 @@ const etfBuyTrade: Trade = {
 };
 
 describe("DashboardScreen", () => {
-  it("reconciles combined Crypto and linked PPF Debt with portfolio wealth, including masked breakdowns", () => {
+  it("reconciles combined Crypto and linked PPF Debt with portfolio wealth, including masked breakdowns", async () => {
     const now = new Date("2026-10-05T12:00:00Z");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
     store.getState().addAsset({ ...asset, id: "spot", name: "Bitcoin", symbol: "BTC", ticker: "bitcoin",
@@ -99,14 +99,14 @@ describe("DashboardScreen", () => {
           allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true } } });
     const before = JSON.stringify({ assets: store.getState().assets, accounts: store.getState().futuresAccounts,
       ppf: store.getState().ppfAccounts, cash: store.getState().cashEntries });
-    const screen = render(<DashboardScreen store={store} now={now} />);
+    const screen = await render(<DashboardScreen store={store} now={now} />);
     expect(within(screen.getByTestId("dashboard-allocation-crypto")).getByLabelText("₹4,40,000.00")).toBeTruthy();
     expect(within(screen.getByTestId("dashboard-allocation-debt")).getByLabelText("₹50,000.00")).toBeTruthy();
     expect(screen.queryByTestId("dashboard-allocation-futures")).toBeNull();
-    fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
+    await fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
     expect(screen.getByTestId("dashboard-crypto-spot").props.accessibilityLabel).toBe("₹1,00,000.00");
     expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("₹3,40,000.00");
-    fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
+    await fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
     expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("Amount hidden");
     expect(JSON.stringify({ assets: store.getState().assets, accounts: store.getState().futuresAccounts,
       ppf: store.getState().ppfAccounts, cash: store.getState().cashEntries })).toBe(before);
@@ -135,7 +135,7 @@ describe("DashboardScreen", () => {
       },
       timedOut: [],
     });
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <DashboardScreen refreshQuotes={refreshQuotes} store={store} />,
     );
 
@@ -143,22 +143,22 @@ describe("DashboardScreen", () => {
     expect(getByText("Price coverage needs attention")).toBeTruthy();
     expect(queryByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
     expect(queryByText("Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.")).toBeNull();
-    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
+    await fireEvent.press(getByTestId("dashboard-price-details-toggle"));
     expect(getByTestId("dashboard-price-details")).toBeTruthy();
     expect(getByText("Current 0 · Stale 0 · Manual 0 · Missing 1")).toBeTruthy();
     expect(queryByText(/at saved quotes/u)).toBeNull();
     expect(getByText("Allocation unavailable")).toBeTruthy();
     if (displayMode === "minimal") {
       expect(queryByText("Holdings P&L")).toBeNull();
-      fireEvent.press(getByTestId("dashboard-performance-toggle"));
+      await fireEvent.press(getByTestId("dashboard-performance-toggle"));
     }
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
 
-    fireEvent.press(getByTestId("dashboard-mask-toggle"));
+    await fireEvent.press(getByTestId("dashboard-mask-toggle"));
     expect(getByText(/1 holding needs a price/u)).toBeTruthy();
     expect(getByText("Valuation pending")).toBeTruthy();
 
-    fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
+    await fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
 
     await waitFor(() => {
       expect(refreshQuotes).toHaveBeenCalledTimes(1);
@@ -166,11 +166,11 @@ describe("DashboardScreen", () => {
     });
   });
 
-  it("prioritizes entry on a truly empty dashboard instead of zero summaries", () => {
+  it("prioritizes entry on a truly empty dashboard instead of zero summaries", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <DashboardScreen store={store} onAddTrade={onAddTrade} />,
     );
 
@@ -185,37 +185,37 @@ describe("DashboardScreen", () => {
       getByText("Add holdings manually or import your statements. Your records stay on this device."),
     ).toBeTruthy();
 
-    fireEvent.press(getByText("Add Holding"));
+    await fireEvent.press(getByText("Add Holding"));
 
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });
 
-  it("retains summaries for a zero-net ledger and hides unused Futures allocation", () => {
+  it("retains summaries for a zero-net ledger and hides unused Futures allocation", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({ id: "deposit", date: "2026-09-01", amount: 100,
       label: "Contribution", purpose: "capitalContribution", type: "addition" });
     store.getState().addCashEntry({ id: "withdrawal", date: "2026-09-02", amount: 100,
       label: "Withdrawal", purpose: "withdrawal", type: "withdrawal" });
-    const screen = render(<DashboardScreen store={store} now={new Date("2026-09-29T12:00:00Z")} />);
+    const screen = await render(<DashboardScreen store={store} now={new Date("2026-09-29T12:00:00Z")} />);
     expect(screen.queryByText("Your portfolio starts here")).toBeNull();
     expect(screen.getByTestId("dashboard-portfolio-hero")).toBeTruthy();
     expect(screen.queryByText("Futures equity")).toBeNull();
   });
 
-  it("hides unused Futures allocation without hiding a real zero-wallet account", () => {
+  it("hides unused Futures allocation without hiding a real zero-wallet account", async () => {
     const now = new Date("2026-09-29T12:00:00Z");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
     store.getState().addCashEntry({ id: "cash", date: "2026-09-01", amount: 100,
       label: "Contribution", purpose: "capitalContribution", type: "addition" });
-    const screen = render(<DashboardScreen store={store} now={now} />);
+    const screen = await render(<DashboardScreen store={store} now={now} />);
     expect(screen.getByTestId("dashboard-allocation-card")).toBeTruthy();
     expect(screen.queryByText("Futures equity")).toBeNull();
-    act(() => store.getState().saveFuturesAccount({ id: "zero-wallet", settlementAsset: "USDT",
+    await act(() => store.getState().saveFuturesAccount({ id: "zero-wallet", settlementAsset: "USDT",
       marginMode: "cross", positionMode: "one-way", openingAt: "2026-09-01T00:00:00Z",
       openingWalletUsdt: "0", events: [] }));
     expect(screen.getByTestId("dashboard-futures-status")).toBeTruthy();
     expect(screen.queryByText("Your portfolio starts here")).toBeNull();
-    act(() => store.getState().saveFuturesAccount({ ...store.getState().futuresAccounts[0],
+    await act(() => store.getState().saveFuturesAccount({ ...store.getState().futuresAccounts[0],
       openingRate: { inrPerUsdt: "90", observedAt: "2026-09-01T00:00:00Z", source: "Recorded rate" },
       valuation: { asOf: "2026-09-29T12:00:00Z", marks: [],
         inrRate: { inrPerUsdt: "90", observedAt: "2026-09-29T12:00:00Z", source: "Observed rate" },
@@ -224,20 +224,20 @@ describe("DashboardScreen", () => {
           allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true } },
     }));
     expect(screen.queryByTestId("dashboard-allocation-futures")).toBeNull();
-    fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
+    await fireEvent.press(screen.getByTestId("dashboard-crypto-breakdown"));
     expect(screen.getByText("Futures wallet equity")).toBeTruthy();
     expect(screen.getByTestId("dashboard-crypto-futures").props.accessibilityLabel).toBe("₹0.00");
   });
 
-  it("does not hide unsupported-currency warnings behind first-run setup", () => {
+  it("does not hide unsupported-currency warnings behind first-run setup", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.setState({ assets: [unsupportedForeignAsset] });
-    const screen = render(<DashboardScreen store={store} />);
+    const screen = await render(<DashboardScreen store={store} />);
     expect(screen.getByTestId("dashboard-currency-warning")).toBeTruthy();
     expect(screen.queryByText("Your portfolio starts here")).toBeNull();
   });
 
-  it("does not present a negative Futures wallet as an empty allocation", () => {
+  it("does not present a negative Futures wallet as an empty allocation", async () => {
     const now = new Date("2026-09-29T12:00:00Z");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
     store.getState().saveFuturesAccount({
@@ -258,7 +258,7 @@ describe("DashboardScreen", () => {
         },
       },
     });
-    const screen = render(<DashboardScreen now={now} store={store} />);
+    const screen = await render(<DashboardScreen now={now} store={store} />);
     expect(screen.getByText("No spot prices needed")).toBeTruthy();
     expect(screen.queryByText("No market prices needed")).toBeNull();
     expect(screen.getByText("Allocation unavailable")).toBeTruthy();
@@ -267,7 +267,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByTestId("dashboard-review-negative-futures")).toBeTruthy();
   });
 
-  it("toggles price basis and saved-quote movement through an accessible disclosure", () => {
+  it("toggles price basis and saved-quote movement through an accessible disclosure", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -280,7 +280,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         store={store}
@@ -299,7 +299,7 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText(/Current 1 · Stale 0 · Manual 0 · Missing 0/u)).toBeNull();
     expect(screen.queryByText(/at saved quotes/u)).toBeNull();
 
-    fireEvent.press(toggle);
+    await fireEvent.press(toggle);
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: true });
     const details = within(screen.getByTestId("dashboard-price-details"));
@@ -320,7 +320,7 @@ describe("DashboardScreen", () => {
       ),
     ).toBeTruthy();
 
-    fireEvent.press(toggle);
+    await fireEvent.press(toggle);
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: false });
     expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
@@ -328,7 +328,7 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
   });
 
-  it("labels a manual quote and keeps its count behind the disclosure", () => {
+  it("labels a manual quote and keeps its count behind the disclosure", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -341,7 +341,7 @@ describe("DashboardScreen", () => {
       source: "manual",
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         store={store}
@@ -350,15 +350,15 @@ describe("DashboardScreen", () => {
 
     expect(screen.getByText("Using manual prices")).toBeTruthy();
     expect(screen.queryByText("Current 0 · Stale 0 · Manual 1 · Missing 0")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("Current 0 · Stale 0 · Manual 1 · Missing 0")).toBeTruthy();
   });
 
-  it("offers resumable setup before the single-holding action", () => {
+  it("offers resumable setup before the single-holding action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();
     const onQuickSetup = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <DashboardScreen
         onAddTrade={onAddTrade}
         onQuickSetup={onQuickSetup}
@@ -369,14 +369,14 @@ describe("DashboardScreen", () => {
 
     expect(getByText("Continue portfolio setup")).toBeTruthy();
     expect(getByText("2 holdings are already saved. Continue when ready.")).toBeTruthy();
-    fireEvent.press(getByTestId("quick-setup-button"));
-    fireEvent.press(getByTestId("add-trade-button"));
+    await fireEvent.press(getByTestId("quick-setup-button"));
+    await fireEvent.press(getByTestId("add-trade-button"));
 
     expect(onQuickSetup).toHaveBeenCalledTimes(1);
     expect(onAddTrade).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps active setup discoverable after the portfolio is populated", () => {
+  it("keeps active setup discoverable after the portfolio is populated", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addOpeningPosition({
@@ -394,7 +394,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
     const onQuickSetup = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <DashboardScreen
         onQuickSetup={onQuickSetup}
         quickSetupSavedCount={1}
@@ -402,11 +402,11 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("dashboard-continue-setup-button"));
+    await fireEvent.press(getByTestId("dashboard-continue-setup-button"));
     expect(onQuickSetup).toHaveBeenCalledTimes(1);
   });
 
-  it("warns about retained foreign data and excludes it from INR totals", () => {
+  it("warns about retained foreign data and excludes it from INR totals", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.setState({
       assets: [unsupportedForeignAsset],
@@ -427,7 +427,7 @@ describe("DashboardScreen", () => {
       ],
     });
 
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getAllByText, getByTestId, getByText } = await render(
       <DashboardScreen store={store} />,
     );
 
@@ -456,7 +456,7 @@ describe("DashboardScreen", () => {
       updated: [asset.id],
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -464,11 +464,11 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByLabelText("Mask values"));
+    await fireEvent.press(screen.getByLabelText("Mask values"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
 
     await act(async () => {
-      fireEvent.press(screen.getByLabelText("Refresh quotes"));
+      await fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
@@ -476,7 +476,7 @@ describe("DashboardScreen", () => {
     });
     expect(screen.getByText("Prices up to date")).toBeTruthy();
     expect(screen.queryByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("Current 1 · Stale 0 · Manual 0 · Missing 0")).toBeTruthy();
   });
 
@@ -499,7 +499,7 @@ describe("DashboardScreen", () => {
       updated: [],
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -508,7 +508,7 @@ describe("DashboardScreen", () => {
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByLabelText("Refresh quotes"));
+      await fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
@@ -517,7 +517,7 @@ describe("DashboardScreen", () => {
       ).toBeTruthy();
     });
     expect(screen.queryByText(/Current 0 · Stale 1/u)).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(
       screen.getByText(
         "Current 0 · Stale 1 · Manual 0 · Missing 0. 1 failed. Existing prices remain available.",
@@ -537,7 +537,7 @@ describe("DashboardScreen", () => {
       updated: [],
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         refreshQuotes={refreshQuotes}
@@ -546,13 +546,13 @@ describe("DashboardScreen", () => {
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByLabelText("Refresh quotes"));
+      await fireEvent.press(screen.getByLabelText("Refresh quotes"));
     });
 
     await waitFor(() => {
       expect(screen.getByText("Quote refresh failed")).toBeTruthy();
     });
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(
       screen.getByText(
         "Current 0 · Stale 0 · Manual 0 · Missing 1. 1 failed. No usable prices are available.",
@@ -560,7 +560,7 @@ describe("DashboardScreen", () => {
     ).toBeTruthy();
   });
 
-  it("shows partial coverage when one current quote masks a missing holding", () => {
+  it("shows partial coverage when one current quote masks a missing holding", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addAsset(etfAsset);
@@ -574,7 +574,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-05-16T10:05:00.000Z")}
         store={store}
@@ -583,13 +583,13 @@ describe("DashboardScreen", () => {
 
     expect(screen.getByText("Price coverage needs attention")).toBeTruthy();
     expect(screen.queryByText("Current 1 · Stale 0 · Manual 0 · Missing 1")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(
       screen.getByText("Current 1 · Stale 0 · Manual 0 · Missing 1"),
     ).toBeTruthy();
   });
 
-  it("wires Dashboard allocation and progress actions", () => {
+  it("wires Dashboard allocation and progress actions", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onOpenHoldings = jest.fn();
     const onOpenProgress = jest.fn();
@@ -604,7 +604,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <DashboardScreen
         onOpenHoldings={onOpenHoldings}
         onOpenProgress={onOpenProgress}
@@ -612,14 +612,14 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("dashboard-open-holdings"));
-    fireEvent.press(getByTestId("dashboard-open-progress"));
+    await fireEvent.press(getByTestId("dashboard-open-holdings"));
+    await fireEvent.press(getByTestId("dashboard-open-progress"));
 
     expect(onOpenHoldings).toHaveBeenCalledTimes(1);
     expect(onOpenProgress).toHaveBeenCalledTimes(1);
   });
 
-  it("shows portfolio totals, allocation, quote freshness, monthly metrics, and conviction guidance", () => {
+  it("shows portfolio totals, allocation, quote freshness, monthly metrics, and conviction guidance", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade({ ...buyTrade, conviction: 4 });
@@ -648,7 +648,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />,
     );
 
@@ -662,7 +662,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     expect(screen.queryByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
     expect(screen.getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
@@ -684,11 +684,11 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText(/Minimal Mode/i)).toBeNull();
   });
 
-  it("shows investing activity without household income capture", () => {
+  it("shows investing activity without household income capture", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({ id: "activity", date: "2026-09-01", amount: 100,
       label: "Investment cash", purpose: "capitalContribution", type: "addition" });
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date(2026, 8, 20, 12)}
         store={store}
@@ -700,7 +700,7 @@ describe("DashboardScreen", () => {
     expect(screen.queryByTestId("dashboard-record-income")).toBeNull();
   });
 
-  it("keeps essential portfolio evidence while removing optional commentary in Minimal mode", () => {
+  it("keeps essential portfolio evidence while removing optional commentary in Minimal mode", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade({ ...buyTrade, conviction: 4 });
@@ -714,7 +714,7 @@ describe("DashboardScreen", () => {
     });
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen store={store} />,
     );
 
@@ -723,7 +723,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByTestId("dashboard-performance-toggle")).toHaveProp("accessibilityState", { expanded: false });
     expect(screen.queryByText("Holdings P&L")).toBeNull();
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
+    await fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
     expect(screen.getByText("Holdings P&L")).toBeTruthy();
     const percentage = within(screen.getByTestId("dashboard-pnl-percent"));
     expect(percentage.getByText("Holdings P&L %")).toBeTruthy();
@@ -737,11 +737,11 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText("Progress shows stored month-end values. They can differ from current holdings and prices here.")).toBeNull();
     expect(screen.queryByTestId("dashboard-insights")).toBeNull();
     expect(screen.queryByText("+₹27.27 (+10.00%) at saved quotes")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("+₹27.27 (+10.00%) at saved quotes")).toBeTruthy();
   });
 
-  it.each(["standard", "minimal"] as const)("hides the daily monetary change in masked %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("hides the daily monetary change in masked %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -755,23 +755,23 @@ describe("DashboardScreen", () => {
     });
     store.getState().updatePreferences({ displayMode, maskWealthValues: true });
 
-    const screen = render(<DashboardScreen store={store} />);
+    const screen = await render(<DashboardScreen store={store} />);
 
     if (displayMode === "minimal") {
-      fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
+      await fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
       expect(screen.getByTestId("dashboard-performance-toggle")).toHaveProp("accessibilityState", { expanded: true });
       expect(within(screen.getByTestId("dashboard-top-metrics")).queryByText(/₹\d/)).toBeNull();
       expect(within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)).toHaveLength(2);
     }
 
     expect(screen.queryByText("+10.00% at saved quotes")).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("+10.00% at saved quotes")).toBeTruthy();
     expect(screen.queryByText(/today/u)).toBeNull();
     expect(screen.queryByText(/27\.27/u)).toBeNull();
   });
 
-  it("shows a negative cash liability and reconciles it to net portfolio value", () => {
+  it("shows a negative cash liability and reconciles it to net portfolio value", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -791,7 +791,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <DashboardScreen
         now={new Date("2026-04-22T10:05:00.000Z")}
         store={store}
@@ -818,7 +818,7 @@ describe("DashboardScreen", () => {
     ).toBeTruthy();
   });
 
-  it("shows signed net exposure when negative cash does not exhaust holdings", () => {
+  it("shows signed net exposure when negative cash does not exhaust holdings", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
@@ -838,7 +838,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <DashboardScreen
         now={new Date("2026-04-22T10:05:00.000Z")}
         store={store}
@@ -863,7 +863,7 @@ describe("DashboardScreen", () => {
     expect(queryByTestId("dashboard-allocation-visual")).toBeNull();
   });
 
-  it("masks a cash-only liability without hiding its reconciliation state", () => {
+  it("masks a cash-only liability without hiding its reconciliation state", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addCashEntry({
@@ -875,7 +875,7 @@ describe("DashboardScreen", () => {
       type: "withdrawal",
     });
 
-    const screen = render(
+    const screen = await render(
       <DashboardScreen
         now={new Date("2026-04-22T10:05:00.000Z")}
         store={store}
@@ -887,14 +887,14 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Cash")).toBeTruthy();
     expect(screen.getByText("No market prices needed")).toBeTruthy();
     expect(screen.queryByText(/at saved quotes/u)).toBeNull();
-    expandPriceDetails(screen);
+    await expandPriceDetails(screen);
     expect(screen.getByText("Cash and recorded PPF balances do not need market quotes.")).toBeTruthy();
     expect(screen.queryByText(/at saved quotes/u)).toBeNull();
     expect(screen.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(4);
     expect(screen.queryByText("-₹500")).toBeNull();
   });
 
-  it("groups stock and ETF allocation into one Equity row for Dashboard display", () => {
+  it("groups stock and ETF allocation into one Equity row for Dashboard display", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addAsset(etfAsset);
@@ -915,7 +915,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getByTestId } = render(<DashboardScreen store={store} />);
+    const { getByTestId } = await render(<DashboardScreen store={store} />);
 
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
     expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
@@ -929,7 +929,7 @@ describe("DashboardScreen", () => {
     expect(allocationCard.getAllByText("₹420")).toHaveLength(1);
   });
 
-  it("keeps portfolio answer and monthly context ahead of secondary summaries", () => {
+  it("keeps portfolio answer and monthly context ahead of secondary summaries", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade({ ...buyTrade, conviction: 4 });
@@ -949,7 +949,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const screen = render(<DashboardScreen store={store} />);
+    const screen = await render(<DashboardScreen store={store} />);
     const testIds = collectTestIds(screen.toJSON());
 
     const heroIndex = indexOfText(testIds, "dashboard-portfolio-hero");
@@ -968,7 +968,7 @@ describe("DashboardScreen", () => {
     expect(supportIndex).toBeGreaterThan(allocationIndex);
   });
 
-  it("masks wealth values when value masking is enabled", () => {
+  it("masks wealth values when value masking is enabled", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addAsset(asset);
@@ -981,11 +981,11 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByLabelText, getAllByText, getByTestId, queryByLabelText, queryByTestId, queryByText } = render(
+    const { getAllByLabelText, getAllByText, getByTestId, queryByLabelText, queryByTestId, queryByText } = await render(
       <DashboardScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("dashboard-price-details-toggle"));
+    await fireEvent.press(getByTestId("dashboard-price-details-toggle"));
 
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
     expect(
@@ -998,7 +998,7 @@ describe("DashboardScreen", () => {
     expect(getAllByText("+50.00%").length).toBeGreaterThan(0);
   });
 
-  it("keeps allocation percentages visible while masking allocation values", () => {
+  it("keeps allocation percentages visible while masking allocation values", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addAsset(asset);
@@ -1011,7 +1011,7 @@ describe("DashboardScreen", () => {
       source: "yahoo",
     });
 
-    const { getAllByText, getByText, queryByText } = render(
+    const { getAllByText, getByText, queryByText } = await render(
       <DashboardScreen store={store} />,
     );
 
@@ -1040,13 +1040,13 @@ function collectTestIds(node: unknown): string[] {
   return [...ownTestId, ...collectTestIds(candidate.children)];
 }
 
-function expandPriceDetails(screen: RenderAPI) {
+async function expandPriceDetails(screen: RenderResult) {
   const toggle = screen.getByTestId("dashboard-price-details-toggle");
 
   expect(toggle.props.accessibilityState).toEqual({ expanded: false });
   expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
 
-  fireEvent.press(toggle);
+  await fireEvent.press(toggle);
 
   expect(toggle.props.accessibilityState).toEqual({ expanded: true });
   expect(screen.getByTestId("dashboard-price-details")).toBeTruthy();

@@ -22,10 +22,10 @@ const account: PpfAccount = {
 };
 
 describe("PpfAccountScreen", () => {
-  it.each(["standard", "minimal"] as const)("prioritizes the balance before optional identifiers in %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("prioritizes the balance before optional identifiers in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
-    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    const screen = await render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
     const tree = JSON.stringify(screen.toJSON());
     expect(tree.indexOf("ppf-provider-input")).toBeLessThan(tree.indexOf("ppf-balance-input"));
     expect(tree.indexOf("ppf-balance-date")).toBeLessThan(tree.indexOf("ppf-opening-mode"));
@@ -35,19 +35,19 @@ describe("PpfAccountScreen", () => {
     expect(store.getState().ppfAccounts).toEqual([]);
   });
 
-  it("retains optional identifiers and baseline contributions through review and save", () => {
+  it("retains optional identifiers and baseline contributions through review and save", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
-    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
-    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
-    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
-    fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "1234");
-    fireEvent.changeText(screen.getByTestId("ppf-fy-contribution-input"), "5000");
-    fireEvent.press(screen.getByTestId("review-ppf-account"));
-    fireEvent.press(screen.getByTestId("edit-ppf-account-details"));
+    const screen = await render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    await fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+    await fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "1234");
+    await fireEvent.changeText(screen.getByTestId("ppf-fy-contribution-input"), "5000");
+    await fireEvent.press(screen.getByTestId("review-ppf-account"));
+    await fireEvent.press(screen.getByTestId("edit-ppf-account-details"));
     expect(screen.getByTestId("ppf-suffix-input")).toHaveProp("value", "1234");
     expect(screen.getByTestId("ppf-fy-contribution-input")).toHaveProp("value", "5000");
-    fireEvent.press(screen.getByTestId("review-ppf-account"));
-    fireEvent.press(screen.getByTestId("save-ppf-account"));
+    await fireEvent.press(screen.getByTestId("review-ppf-account"));
+    await fireEvent.press(screen.getByTestId("save-ppf-account"));
     expect(store.getState().ppfAccounts[0]).toMatchObject({
       accountNumberSuffix: "1234",
       confirmedBalance: 250000,
@@ -60,7 +60,7 @@ describe("PpfAccountScreen", () => {
     const focus = jest.spyOn(TextInput.prototype, "focus");
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
-    const screen = render(
+    const screen = await render(
       <PpfAccountScreen
         now={now}
         onBack={jest.fn()}
@@ -70,15 +70,15 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
-    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
-    fireEvent(screen.getByTestId("ppf-account-section"), "layout", {
+    await fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
+    await fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+    await fireEvent(screen.getByTestId("ppf-account-section"), "layout", {
       nativeEvent: { layout: { y: 400 } },
     });
-    fireEvent(screen.getByTestId("ppf-provider-field"), "layout", {
+    await fireEvent(screen.getByTestId("ppf-provider-field"), "layout", {
       nativeEvent: { layout: { y: 160 } },
     });
-    fireEvent.press(screen.getByTestId("review-ppf-account"));
+    await fireEvent.press(screen.getByTestId("review-ppf-account"));
 
     expect(screen.getByText("Bank or Post Office is required.")).toBeTruthy();
     expect(screen.getByText("Account suffix must contain the final 2 to 4 digits only.")).toBeTruthy();
@@ -89,7 +89,7 @@ describe("PpfAccountScreen", () => {
     await waitFor(() => expect(focus).toHaveBeenCalled());
     expect(scrollTo).toHaveBeenCalledWith({ animated: true, y: 544 });
 
-    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    await fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
     expect(screen.queryByText("Bank or Post Office is required.")).toBeNull();
     expect(screen.getByTestId("ppf-suffix-input")).toHaveProp("value", "123456");
     expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "250000");
@@ -101,14 +101,14 @@ describe("PpfAccountScreen", () => {
   it("reveals an invalid suffix in its relocated optional section", async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
-    const screen = render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    const screen = await render(<PpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
     try {
-      fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
-      fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
-      fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
-      fireEvent(screen.getByTestId("ppf-identification-section"), "layout", { nativeEvent: { layout: { y: 1200 } } });
-      fireEvent(screen.getByTestId("ppf-suffix-field"), "layout", { nativeEvent: { layout: { y: 60 } } });
-      fireEvent.press(screen.getByTestId("review-ppf-account"));
+      await fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+      await fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "250000");
+      await fireEvent.changeText(screen.getByTestId("ppf-suffix-input"), "123456");
+      await fireEvent(screen.getByTestId("ppf-identification-section"), "layout", { nativeEvent: { layout: { y: 1200 } } });
+      await fireEvent(screen.getByTestId("ppf-suffix-field"), "layout", { nativeEvent: { layout: { y: 60 } } });
+      await fireEvent.press(screen.getByTestId("review-ppf-account"));
       await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ animated: true, y: 1244 }));
       expect(screen.getByText("Account suffix must contain the final 2 to 4 digits only.")).toBeTruthy();
       expect(store.getState().ppfAccounts).toEqual([]);
@@ -117,10 +117,10 @@ describe("PpfAccountScreen", () => {
     }
   });
 
-  it("reviews and saves a dedicated PPF account without market fields", () => {
+  it("reviews and saves a dedicated PPF account without market fields", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <PpfAccountScreen
         now={now}
         onBack={jest.fn()}
@@ -130,23 +130,23 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("ppf-provider-input"), "India Post");
-    fireEvent.changeText(getByTestId("ppf-balance-input"), "100000");
-    fireEvent.press(getByTestId("review-ppf-account"));
+    await fireEvent.changeText(getByTestId("ppf-provider-input"), "India Post");
+    await fireEvent.changeText(getByTestId("ppf-balance-input"), "100000");
+    await fireEvent.press(getByTestId("review-ppf-account"));
 
     expect(getByText("Review PPF account")).toBeTruthy();
     expect(getByText("CogVest starts tracking from this balance. It does not rebuild earlier contributions or interest.")).toBeTruthy();
     expect(queryByText("Quantity")).toBeNull();
     expect(queryByText("Current price")).toBeNull();
 
-    fireEvent.press(getByTestId("save-ppf-account"));
+    await fireEvent.press(getByTestId("save-ppf-account"));
     expect(store.getState().ppfAccounts).toHaveLength(1);
     expect(onComplete).toHaveBeenCalledWith(store.getState().ppfAccounts[0].id);
     expect(getByTestId("ppf-account-screen")).toBeTruthy();
     expect(getByText("My PPF")).toBeTruthy();
   });
 
-  it("returns from account review to populated fields and protects dirty exit", () => {
+  it("returns from account review to populated fields and protects dirty exit", async () => {
     let hardwareBack: (() => boolean) | undefined;
     const backSpy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
       hardwareBack = () => handler(backPress) === true;
@@ -154,23 +154,23 @@ describe("PpfAccountScreen", () => {
     });
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
-    const screen = render(<PpfAccountScreen now={now} onBack={onBack} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
+    const screen = await render(<PpfAccountScreen now={now} onBack={onBack} onComplete={jest.fn()} onEntry={jest.fn()} store={store} />);
 
-    fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
-    fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "100000");
-    fireEvent.press(screen.getByTestId("review-ppf-account"));
-    act(() => { hardwareBack?.(); });
+    await fireEvent.changeText(screen.getByTestId("ppf-provider-input"), "India Post");
+    await fireEvent.changeText(screen.getByTestId("ppf-balance-input"), "100000");
+    await fireEvent.press(screen.getByTestId("review-ppf-account"));
+    await act(() => { hardwareBack?.(); });
     expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "100000");
     expect(onBack).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByLabelText("Back"));
+    await fireEvent.press(screen.getByLabelText("Back"));
     expect(screen.getByText("Discard account changes?")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("keep-editing-ppf-account"));
+    await fireEvent.press(screen.getByTestId("keep-editing-ppf-account"));
     expect(screen.getByTestId("ppf-provider-input")).toHaveProp("value", "India Post");
     backSpy.mockRestore();
   });
 
-  it("separates confirmed balance, official interest, and estimated interest", () => {
+  it("separates confirmed balance, official interest, and estimated interest", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const interest: PpfLedgerEntry = {
       accountId: account.id,
@@ -184,7 +184,7 @@ describe("PpfAccountScreen", () => {
     store.getState().addPpfAccount(account);
     store.getState().addPpfLedgerEntry(interest);
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -209,13 +209,13 @@ describe("PpfAccountScreen", () => {
     ).toBeTruthy();
   });
 
-  it("places ledger actions before secondary interest and timeline content", () => {
+  it("places ledger actions before secondary interest and timeline content", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const onEntry = jest.fn();
     const onImport = jest.fn();
     store.getState().addPpfAccount(account);
 
-    const screen = render(
+    const screen = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -231,17 +231,17 @@ describe("PpfAccountScreen", () => {
     expect(tree.indexOf("ppf-ledger-actions")).toBeLessThan(
       tree.indexOf("ppf-interest-card"),
     );
-    fireEvent.press(screen.getByTestId("add-ppf-entry"));
-    fireEvent.press(screen.getByTestId("ppf-import-csv"));
+    await fireEvent.press(screen.getByTestId("add-ppf-entry"));
+    await fireEvent.press(screen.getByTestId("ppf-import-csv"));
     expect(onEntry).toHaveBeenCalledWith(account.id);
     expect(onImport).toHaveBeenCalledWith(account.id);
   });
 
-  it("does not imply that same-day baseline interest was estimated", () => {
+  it("does not imply that same-day baseline interest was estimated", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-08-15" });
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -257,12 +257,12 @@ describe("PpfAccountScreen", () => {
     expect(queryByText("Through 15 Aug 2026")).toBeNull();
   });
 
-  it("keeps unavailable estimated interest readable while masking wealth", () => {
+  it("keeps unavailable estimated interest readable while masking wealth", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-08-15" });
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -280,8 +280,8 @@ describe("PpfAccountScreen", () => {
   it("requires reveal before editing a saved PPF baseline", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
-    const screen = render(
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -292,21 +292,21 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId("edit-ppf-account"));
+    await fireEvent.press(screen.getByTestId("edit-ppf-account"));
     expect(screen.getByText("Reveal to review")).toBeTruthy();
     expect(screen.queryByTestId("ppf-balance-input")).toBeNull();
-    fireEvent.press(screen.getByTestId("reveal-ppf-account-button"));
+    await fireEvent.press(screen.getByTestId("reveal-ppf-account-button"));
     expect(screen.getByTestId("ppf-balance-input")).toHaveProp("value", "100000");
 
-    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     await waitFor(() => {
       expect(screen.getByText("Reveal to review")).toBeTruthy();
       expect(screen.queryByTestId("ppf-balance-input")).toBeNull();
     });
   });
 
-  it("renders same-day ledger entries in the deterministic replay order", () => {
+  it("renders same-day ledger entries in the deterministic replay order", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
     store.getState().addPpfLedgerEntry({
@@ -326,7 +326,7 @@ describe("PpfAccountScreen", () => {
       type: "withdrawal",
     });
 
-    const { getAllByText } = render(
+    const { getAllByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -342,14 +342,14 @@ describe("PpfAccountScreen", () => {
     ).toEqual(["Withdrawal", "Contribution"]);
   });
 
-  it("clears hidden extension metadata when changing account status", () => {
+  it("clears hidden extension metadata when changing account status", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount({
       ...account,
       confirmedExtensionStartFinancialYear: 2036,
       status: "extendedWithContributions",
     });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -360,13 +360,13 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("edit-ppf-account"));
-    fireEvent.press(getByTestId("ppf-status-picker"));
-    fireEvent.press(getByTestId("ppf-status-active"));
-    fireEvent.press(getByTestId("review-ppf-account"));
+    await fireEvent.press(getByTestId("edit-ppf-account"));
+    await fireEvent.press(getByTestId("ppf-status-picker"));
+    await fireEvent.press(getByTestId("ppf-status-active"));
+    await fireEvent.press(getByTestId("review-ppf-account"));
 
     expect(getByText("Review PPF account")).toBeTruthy();
-    fireEvent.press(getByTestId("save-ppf-account"));
+    await fireEvent.press(getByTestId("save-ppf-account"));
     expect(store.getState().ppfAccounts[0]).toMatchObject({ status: "active" });
     expect(
       store.getState().ppfAccounts[0]?.confirmedExtensionStartFinancialYear,
@@ -374,10 +374,10 @@ describe("PpfAccountScreen", () => {
     expect(getByTestId("ppf-account-screen")).toBeTruthy();
   });
 
-  it("returns to saved details after editing instead of retaining stale form state", () => {
+  it("returns to saved details after editing instead of retaining stale form state", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -388,21 +388,21 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("edit-ppf-account"));
-    fireEvent.changeText(getByTestId("ppf-nickname-input"), "Updated PPF");
-    fireEvent.press(getByTestId("review-ppf-account"));
-    fireEvent.press(getByTestId("save-ppf-account"));
+    await fireEvent.press(getByTestId("edit-ppf-account"));
+    await fireEvent.changeText(getByTestId("ppf-nickname-input"), "Updated PPF");
+    await fireEvent.press(getByTestId("review-ppf-account"));
+    await fireEvent.press(getByTestId("save-ppf-account"));
 
     expect(store.getState().ppfAccounts[0]).toMatchObject({ nickname: "Updated PPF" });
     expect(getByTestId("ppf-account-screen")).toBeTruthy();
     expect(getByText("Updated PPF")).toBeTruthy();
   });
 
-  it("offers an explicit return to portfolio setup after saving", () => {
+  it("offers an explicit return to portfolio setup after saving", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     const onContinuePortfolioSetup = jest.fn();
     store.getState().addPpfAccount(account);
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <PpfAccountScreen
         accountId={account.id}
         now={now}
@@ -414,7 +414,7 @@ describe("PpfAccountScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("continue-portfolio-setup"));
+    await fireEvent.press(getByTestId("continue-portfolio-setup"));
     expect(onContinuePortfolioSetup).toHaveBeenCalledTimes(1);
   });
 });

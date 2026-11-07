@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 const { Ionicons } = require("@expo/vector-icons") as {
   Ionicons: { loadFont: jest.Mock };
@@ -85,7 +85,7 @@ describe("RootLayout storage recovery boundary", () => {
   it("opens a link that arrived before the navigator mounted", async () => {
     mockTakeStartupLinkPath.mockReturnValue("/settings?section=privacy");
 
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     await waitFor(() =>
@@ -95,7 +95,7 @@ describe("RootLayout storage recovery boundary", () => {
   });
 
   it("does not navigate when no startup link arrived", async () => {
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     expect(mockTakeStartupLinkPath).toHaveBeenCalledTimes(1);
@@ -106,7 +106,7 @@ describe("RootLayout storage recovery boundary", () => {
     mockRootState = undefined;
     mockTakeStartupLinkPath.mockReturnValue("/settings");
 
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
@@ -117,13 +117,13 @@ describe("RootLayout storage recovery boundary", () => {
     mockPathname = "/";
     mockTakeStartupLinkPath.mockReturnValue("/settings");
 
-    const { getByTestId, rerender } = render(<RootLayout />);
+    const { getByTestId, rerender } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     expect(mockTakeStartupLinkPath).not.toHaveBeenCalled();
 
     mockPathname = "/dashboard";
-    rerender(<RootLayout />);
+    await rerender(<RootLayout />);
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/settings"));
     expect(mockNavigate).toHaveBeenCalledTimes(1);
@@ -133,7 +133,7 @@ describe("RootLayout storage recovery boundary", () => {
     mockRecoveryState = { incidents: [{ displayName: "Portfolio records", preserved: true }] };
     mockTakeStartupLinkPath.mockReturnValue("/settings");
 
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() =>
       expect(getByTestId("storage-recovery-screen")).toBeTruthy(),
@@ -143,10 +143,15 @@ describe("RootLayout storage recovery boundary", () => {
   });
 
   it("loads required assets before rendering normal routes", async () => {
-    const { getByTestId, queryByTestId } = render(<RootLayout />);
+    // Hold the font load open so the gate is observable after an awaited render.
+    let finishFonts: () => void = () => undefined;
+    Ionicons.loadFont.mockImplementation(() => new Promise<void>((resolve) => { finishFonts = resolve; }));
+    const { getByTestId, queryByTestId } = await render(<RootLayout />);
 
     expect(getByTestId("app-asset-gate")).toBeTruthy();
+    expect(queryByTestId("app-stack")).toBeNull();
 
+    await act(() => finishFonts());
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
 
     expect(queryByTestId("storage-recovery-screen")).toBeNull();
@@ -163,7 +168,7 @@ describe("RootLayout storage recovery boundary", () => {
       ],
     };
 
-    const { getByTestId, queryByTestId } = render(<RootLayout />);
+    const { getByTestId, queryByTestId } = await render(<RootLayout />);
 
     await waitFor(() =>
       expect(getByTestId("storage-recovery-screen")).toBeTruthy(),
@@ -175,7 +180,7 @@ describe("RootLayout storage recovery boundary", () => {
   it("does not run month-end automation on the visual QA seed route", async () => {
     mockPathname = "/visual-qa-seed";
 
-    const { getByTestId } = render(<RootLayout />);
+    const { getByTestId } = await render(<RootLayout />);
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     expect(mockUseMonthEndSnapshotAutomation).toHaveBeenCalledWith({
@@ -195,7 +200,7 @@ describe("RootLayout storage recovery boundary", () => {
   it("retries a failed asset load without exposing an unhandled rejection", async () => {
     Ionicons.loadFont.mockRejectedValue(new Error("asset unavailable"));
 
-    const { getByTestId, getByText } = render(<RootLayout />);
+    const { getByTestId, getByText } = await render(<RootLayout />);
 
     await waitFor(() =>
       expect(getByText("CogVest could not finish loading")).toBeTruthy(),
@@ -203,7 +208,7 @@ describe("RootLayout storage recovery boundary", () => {
     expect(Ionicons.loadFont).toHaveBeenCalledTimes(3);
 
     Ionicons.loadFont.mockResolvedValue(undefined);
-    fireEvent.press(getByTestId("retry-app-assets"));
+    await fireEvent.press(getByTestId("retry-app-assets"));
 
     await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
     expect(Ionicons.loadFont).toHaveBeenCalledTimes(4);

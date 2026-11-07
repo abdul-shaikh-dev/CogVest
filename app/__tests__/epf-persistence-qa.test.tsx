@@ -7,8 +7,8 @@ jest.mock("expo-router", () => ({ useLocalSearchParams: () => ({ token: "invalid
 jest.mock("@/src/store", () => ({ createPortfolioStore: jest.fn() }));
 jest.mock("react-native-mmkv", () => ({ createMMKV: jest.fn() }));
 
-it("does not initialize the synthetic EPF store without the development token", () => {
-  expect(render(<EpfPersistenceQaRoute />).getByText("EPF QA unavailable.")).toBeTruthy();
+it("does not initialize the synthetic EPF store without the development token", async () => {
+  expect((await render(<EpfPersistenceQaRoute />)).getByText("EPF QA unavailable.")).toBeTruthy();
   expect(createPortfolioStore).not.toHaveBeenCalled();
   expect(createMMKV).not.toHaveBeenCalled();
 });

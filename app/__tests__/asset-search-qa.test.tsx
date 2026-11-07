@@ -35,7 +35,7 @@ jest.mock("@/src/components/common", () => {
 
   return {
     AppButton: ({ onPress, testID, title }: { onPress: () => void; testID: string; title: string }) =>
-      React.createElement(Pressable, { onPress, testID }, title),
+      React.createElement(Pressable, { onPress, testID }, React.createElement(Text, null, title)),
     AppText: ({ children, testID }: { children: unknown; testID?: string }) =>
       React.createElement(Text, { testID }, children),
     ScreenContainer: ({ children, testID }: { children: unknown; testID?: string }) =>
@@ -123,37 +123,37 @@ describe("asset-search QA instrumentation", () => {
 
   it("does not log profiler events, and capture exports then freezes the buffer", async () => {
     const consoleInfo = jest.spyOn(console, "info").mockImplementation();
-    const screen = render(<AssetSearchQaRoute />);
+    const screen = await render(<AssetSearchQaRoute />);
 
     await act(async () => {});
-    fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
     await act(async () => {});
     expect(consoleInfo).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
     const firstExport = exportedMetrics(consoleInfo);
 
     expect(firstExport.measurements.length).toBeGreaterThan(0);
     expect(firstExport.droppedMeasurements).toBe(0);
 
-    fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
     await act(async () => {});
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
 
     expect(exportedMetrics(consoleInfo)).toEqual(firstExport);
   });
 
   it("reset starts a new window that records the next warm-up render", async () => {
     const consoleInfo = jest.spyOn(console, "info").mockImplementation();
-    const screen = render(<AssetSearchQaRoute />);
+    const screen = await render(<AssetSearchQaRoute />);
 
     await act(async () => {});
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
-    fireEvent.press(screen.getByTestId("asset-search-qa-reset-metrics"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-reset-metrics"));
     await act(async () => {});
-    fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-warmup"));
     await act(async () => {});
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
 
     const metrics = exportedMetrics(consoleInfo);
 
@@ -161,25 +161,25 @@ describe("asset-search QA instrumentation", () => {
     expect(metrics.measurements[0].detail).toContain("warm-up form remount");
   });
 
-  it("cleans up the event-loop timer when the route loses focus", () => {
+  it("cleans up the event-loop timer when the route loses focus", async () => {
     const clearIntervalSpy = jest.spyOn(global, "clearInterval");
-    const screen = render(<AssetSearchQaRoute />);
+    const screen = await render(<AssetSearchQaRoute />);
 
     mockIsFocused = false;
-    screen.rerender(<AssetSearchQaRoute />);
+    await screen.rerender(<AssetSearchQaRoute />);
 
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 
-  it("keeps filter timing pending until both default-path result lists settle", () => {
+  it("keeps filter timing pending until both default-path result lists settle", async () => {
     mockParams = { token: "test-token" };
     const consoleInfo = jest.spyOn(console, "info").mockImplementation();
-    const screen = render(<AssetSearchQaRoute />);
+    const screen = await render(<AssetSearchQaRoute />);
 
     expect(mockProfilerRender).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId("mock-discovery-filter"));
-    fireEvent.press(screen.getByTestId("mock-discovery-settled-saved"));
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("mock-discovery-filter"));
+    await fireEvent.press(screen.getByTestId("mock-discovery-settled-saved"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
 
     const metrics = exportedMetrics(consoleInfo);
 
@@ -188,15 +188,15 @@ describe("asset-search QA instrumentation", () => {
       .toBe(false);
   });
 
-  it("retains the default-path filter metric after both lists settle", () => {
+  it("retains the default-path filter metric after both lists settle", async () => {
     mockParams = { token: "test-token" };
     const consoleInfo = jest.spyOn(console, "info").mockImplementation();
-    const screen = render(<AssetSearchQaRoute />);
+    const screen = await render(<AssetSearchQaRoute />);
 
-    fireEvent.press(screen.getByTestId("mock-discovery-filter"));
-    fireEvent.press(screen.getByTestId("mock-discovery-settled-saved"));
-    fireEvent.press(screen.getByTestId("mock-discovery-settled-provider"));
-    fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
+    await fireEvent.press(screen.getByTestId("mock-discovery-filter"));
+    await fireEvent.press(screen.getByTestId("mock-discovery-settled-saved"));
+    await fireEvent.press(screen.getByTestId("mock-discovery-settled-provider"));
+    await fireEvent.press(screen.getByTestId("asset-search-qa-capture-metrics"));
 
     const metrics = exportedMetrics(consoleInfo);
 

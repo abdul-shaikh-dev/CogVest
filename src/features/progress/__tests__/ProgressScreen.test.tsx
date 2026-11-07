@@ -37,19 +37,19 @@ const aprilSnapshot: MonthlySnapshot = {
   portfolioValue: 1260000,
 };
 
-test("explicitly scopes stored history when EPF is included on Dashboard", () => {
+test("explicitly scopes stored history when EPF is included on Dashboard", async () => {
   const qa = jest.spyOn(visualQaSeed, "isVisualQaSessionActive").mockReturnValue(true);
   const store = createEpfReportingFixture();
-  const view = render(<ProgressScreen store={store} now={epfReportingDate}
+  const view = await render(<ProgressScreen store={store} now={epfReportingDate}
     historicalPriceFetcher={async () => ({ ok: false, error: "No synthetic provider" })} />);
   expect(view.getByTestId("progress-epf-scope")).toBeTruthy();
   expect(view.getByText("EPF is not in monthly history")).toBeTruthy();
   expect(view.getByText("EPF at end of September 2026")).toBeTruthy();
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("₹1,40,000.00");
   expect(view.getByTestId("progress-epf-month-status")).toHaveTextContent("Last recorded balance; later activity is unconfirmed.");
-  act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+  await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
   expect(view.getByTestId("progress-epf-month-value").props.accessibilityLabel).toBe("Amount hidden");
-  view.unmount();
+  await view.unmount();
   qa.mockRestore();
 });
 
@@ -108,7 +108,7 @@ it.each(["standard", "minimal"] as const)("labels PPF-excluded history and masks
     balanceAsOf: "2026-09-10", confirmedBalance: 720000,
     createdAt: "2026-09-10T00:00:00Z",
   });
-  const screen = render(
+  const screen = await render(
     <ProgressScreen
       historicalPriceFetcher={jest.fn().mockResolvedValue({ ok: false })}
       now={new Date("2026-09-11T12:00:00Z")}
@@ -118,9 +118,9 @@ it.each(["standard", "minimal"] as const)("labels PPF-excluded history and masks
   );
   expect(await screen.findByText("Market and cash history available")).toBeTruthy();
   expect(screen.getByTestId("ppf-excluded-chart-notice")).toBeTruthy();
-  fireEvent.press(screen.getByLabelText("Snapshot status details"));
+  await fireEvent.press(screen.getByLabelText("Snapshot status details"));
   expect(screen.getByText(/Market and cash history is available through August 2026/u)).toBeTruthy();
-  fireEvent.press(screen.getByLabelText("Open Holdings"));
+  await fireEvent.press(screen.getByLabelText("Open Holdings"));
   expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Tracked Growth")).toBeTruthy();
   expect(screen.getByText(/Some months use estimated prices/)).toBeTruthy();
@@ -131,7 +131,7 @@ it.each(["standard", "minimal"] as const)("labels PPF-excluded history and masks
   expect(panel.queryByText("Invested")).toBeNull();
   expect(panel.queryByText(/ahead of invested/)).toBeNull();
   expect(store.getState().monthlySnapshots).toEqual([]);
-  fireEvent.press(screen.getByTestId("progress-mask-toggle"));
+  await fireEvent.press(screen.getByTestId("progress-mask-toggle"));
   expect(panel.queryByText("₹26K")).toBeNull();
 });
 
@@ -148,7 +148,7 @@ it("explains PPF exclusion even with only one reconstructed month", async () => 
     balanceAsOf: "2026-09-10", confirmedBalance: 720000,
     createdAt: "2026-09-10T00:00:00Z",
   });
-  const screen = render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
+  const screen = await render(<ProgressScreen store={store} now={new Date("2026-09-11T12:00:00Z")} />);
   expect(await screen.findByText("Market and cash history available")).toBeTruthy();
   expect(screen.getByText(/PPF is excluded: earlier balances are unknown/)).toBeTruthy();
   expect(screen.queryByText("Record at least 2 monthly snapshots to compare portfolio and asset trends.")).toBeNull();
@@ -252,88 +252,88 @@ describe("ProgressScreen", () => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(false);
   });
 
-  it("offers one setup action before portfolio history exists", () => {
+  it("offers one setup action before portfolio history exists", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onSetUpPortfolio = jest.fn();
 
-    const screen = render(
+    const screen = await render(
       <ProgressScreen onSetUpPortfolio={onSetUpPortfolio} store={store} />,
     );
 
     expect(screen.getByText("No portfolio history yet")).toBeTruthy();
     expect(screen.queryByTestId("month-end-snapshot-status-card")).toBeNull();
-    fireEvent.press(screen.getByTestId("progress-empty-setup"));
+    await fireEvent.press(screen.getByTestId("progress-empty-setup"));
     expect(onSetUpPortfolio).toHaveBeenCalledTimes(1);
   });
 
   describe("with EPF but no monthly history", () => {
     const now = new Date("2026-07-10T10:00:00Z");
-    const putEpfAccount = (store: ReturnType<typeof createPortfolioStore>, id: string) => act(() => {
+    const putEpfAccount = async (store: ReturnType<typeof createPortfolioStore>, id: string) => await act(() => {
       store.getState().applyEpfCommand({ commandId: `put-${id}`, reason: "Statement", change: { type: "accountPut", account: {
         id, nickname: id, provider: "epfo", status: "active", currency: "INR", historyCompleteThrough: null,
         checkpoint: { date: "2026-06-30", balance: { total: 140000, components: null }, capital: null,
           source: "epfoStatement", recordedAt: "2026-06-30T10:00:00Z" },
       } } }, store.getState().getBackupRevision());
     });
-    const renderProgress = (store: ReturnType<typeof createPortfolioStore>) => {
+    const renderProgress = async (store: ReturnType<typeof createPortfolioStore>) => {
       const handlers = { onAddHolding: jest.fn(), onOpenEpf: jest.fn(), onSetUpPortfolio: jest.fn() };
-      return { handlers, view: render(<ProgressScreen {...handlers} now={now} store={store} />) };
+      return { handlers, view: await render(<ProgressScreen {...handlers} now={now} store={store} />) };
     };
 
-    it("explains EPF-only history and opens the single EPF account", () => {
+    it("explains EPF-only history and opens the single EPF account", async () => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
-      putEpfAccount(store, "epf-main");
-      const { handlers, view } = renderProgress(store);
+      await putEpfAccount(store, "epf-main");
+      const { handlers, view } = await renderProgress(store);
 
       expect(view.getByText("Monthly history starts with market or cash activity")).toBeTruthy();
       expect(view.getByText("Add holdings or Cash activity to start month-end history.")).toBeTruthy();
       expect(view.getByTestId("progress-epf-scope")).toBeTruthy();
       expect(view.queryByText("No portfolio history yet")).toBeNull();
       expect(view.queryByTestId("progress-empty-setup")).toBeNull();
-      fireEvent.press(view.getByText("Open EPF account"));
+      await fireEvent.press(view.getByText("Open EPF account"));
       expect(handlers.onOpenEpf).toHaveBeenCalledWith("epf-main");
-      fireEvent.press(view.getByTestId("progress-empty-add-holding"));
+      await fireEvent.press(view.getByTestId("progress-empty-add-holding"));
       expect(handlers.onAddHolding).toHaveBeenCalledTimes(1);
       expect(handlers.onSetUpPortfolio).not.toHaveBeenCalled();
     });
 
-    it("opens the EPF accounts list when there are several", () => {
+    it("opens the EPF accounts list when there are several", async () => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
-      putEpfAccount(store, "epf-current");
-      putEpfAccount(store, "epf-previous");
-      const { handlers, view } = renderProgress(store);
+      await putEpfAccount(store, "epf-current");
+      await putEpfAccount(store, "epf-previous");
+      const { handlers, view } = await renderProgress(store);
 
-      fireEvent.press(view.getByText("Open EPF accounts"));
+      await fireEvent.press(view.getByText("Open EPF accounts"));
       expect(handlers.onOpenEpf).toHaveBeenCalledWith(undefined);
     });
 
-    it("keeps the setup state once Cash exists alongside EPF", () => {
+    it("keeps the setup state once Cash exists alongside EPF", async () => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
-      putEpfAccount(store, "epf-main");
+      await putEpfAccount(store, "epf-main");
       store.getState().addCashEntry({
         amount: 5000, date: "2026-07-01T00:00:00.000Z", id: "cash-epf", label: "Salary",
         purpose: "capitalContribution", type: "addition",
       });
-      const { view } = renderProgress(store);
+      const { view } = await renderProgress(store);
 
       expect(view.queryByTestId("progress-empty-open-epf")).toBeNull();
     });
 
-    it("keeps the setup state once PPF exists alongside EPF", () => {
+    it("keeps the setup state once PPF exists alongside EPF", async () => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
-      putEpfAccount(store, "epf-main");
+      await putEpfAccount(store, "epf-main");
       store.getState().addPpfAccount({
         id: "ppf", nickname: "Test PPF", provider: "HDFC", status: "active",
         opening: { kind: "financialYear", financialYearStart: 2020 },
         balanceAsOf: "2026-07-01", confirmedBalance: 720000, createdAt: "2026-07-01T00:00:00Z",
       });
-      const { view } = renderProgress(store);
+      const { view } = await renderProgress(store);
 
       expect(view.queryByTestId("progress-empty-open-epf")).toBeNull();
     });
   });
 
-  it("keeps pending valuation readable while masking no-snapshot portfolio values", () => {
+  it("keeps pending valuation readable while masking no-snapshot portfolio values", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
     store.getState().addAsset(stockAsset);
@@ -345,7 +345,7 @@ describe("ProgressScreen", () => {
       quantity: 2,
     });
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressScreen
         now={new Date("2026-07-20T00:00:00.000Z")}
         store={store}
@@ -355,11 +355,11 @@ describe("ProgressScreen", () => {
     expect(getByText("Valuation pending")).toBeTruthy();
   });
 
-  it("shows investing activity without household rates before snapshots exist", () => {
+  it("shows investing activity without household rates before snapshots exist", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedCurrentMonthMetrics(store);
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <ProgressScreen
         now={new Date("2026-07-20T00:00:00.000Z")}
         store={store}
@@ -372,11 +372,11 @@ describe("ProgressScreen", () => {
     expect(queryByText("Savings")).toBeNull();
   });
 
-  it("does not ask for household income when showing investing activity", () => {
+  it("does not ask for household income when showing investing activity", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedCurrentMonthMetrics(store, { includeIncome: false });
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressScreen
         now={new Date("2026-07-20T00:00:00.000Z")}
         store={store}
@@ -387,7 +387,7 @@ describe("ProgressScreen", () => {
     expect(getByText("Monthly investment: ₹10,000.00")).toBeTruthy();
   });
 
-  it("shows balances without allocation percentages for a negative net portfolio", () => {
+  it("shows balances without allocation percentages for a negative net portfolio", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
     store.getState().addOpeningPosition({
@@ -407,7 +407,7 @@ describe("ProgressScreen", () => {
       type: "withdrawal",
     });
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressScreen
         now={new Date("2026-07-20T00:00:00.000Z")}
         store={store}
@@ -428,7 +428,7 @@ describe("ProgressScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     seedHoldingAndCash(store);
 
-    const { findByText, getByLabelText, queryByTestId } = render(
+    const { findByText, getByLabelText, queryByTestId } = await render(
       <ProgressScreen
         historicalPriceFetcher={jest.fn().mockResolvedValue({ ok: false })}
         now={new Date("2026-08-02T10:00:00.000Z")}
@@ -469,7 +469,7 @@ describe("ProgressScreen", () => {
           }));
         }),
     );
-    const screen = render(
+    const screen = await render(
       <ProgressScreen
         historicalPriceFetcher={historicalPriceFetcher}
         now={new Date("2026-03-10T10:00:00.000Z")}
@@ -481,9 +481,9 @@ describe("ProgressScreen", () => {
     expect(await screen.findByText(/0 of 2 months checked/u)).toBeTruthy();
     expect(screen.getByTestId("progress-trends-building")).toBeTruthy();
     expect(screen.queryByText("Portfolio Growth")).toBeNull();
-    fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    await fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.queryByLabelText("Review month-end snapshot")).toBeNull();
-    fireEvent.press(screen.getByText("Close snapshot status"));
+    await fireEvent.press(screen.getByText("Close snapshot status"));
 
     await act(async () => {
       releases[0]?.();
@@ -514,7 +514,7 @@ describe("ProgressScreen", () => {
       error: "Historical price is temporarily unavailable.",
       ok: false,
     });
-    const screen = render(
+    const screen = await render(
       <ProgressScreen
         historicalPriceFetcher={historicalPriceFetcher}
         now={new Date("2026-08-02T10:00:00.000Z")}
@@ -523,11 +523,11 @@ describe("ProgressScreen", () => {
     );
 
     expect(await screen.findByText("Historical prices are unavailable")).toBeTruthy();
-    fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    await fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.getByText(/1 month is waiting for a historical price/u)).toBeTruthy();
     expect(screen.getByText(/HDFC Bank could not be priced for 2026-07/u)).toBeTruthy();
     expect(screen.queryByLabelText(/Review.*month-end/u)).toBeNull();
-    fireEvent.press(screen.getByLabelText("Retry monthly history"));
+    await fireEvent.press(screen.getByLabelText("Retry monthly history"));
     await waitFor(() => expect(historicalPriceFetcher).toHaveBeenCalledTimes(2));
   });
 
@@ -544,7 +544,7 @@ describe("ProgressScreen", () => {
       provider: "HDFC",
       status: "active",
     });
-    const screen = render(
+    const screen = await render(
       <ProgressScreen
         now={new Date("2026-09-11T12:00:00Z")}
         onOpenHoldings={onOpenHoldings}
@@ -553,10 +553,10 @@ describe("ProgressScreen", () => {
     );
 
     expect(await screen.findByText("Earlier PPF balances are missing")).toBeTruthy();
-    fireEvent.press(screen.getByLabelText("Snapshot status details"));
+    await fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.getByText(/for 17 months/u)).toBeTruthy();
     expect(screen.queryByText(/^2025-04:/u)).toBeNull();
-    fireEvent.press(screen.getByLabelText("Open Holdings"));
+    await fireEvent.press(screen.getByLabelText("Open Holdings"));
     expect(onOpenHoldings).toHaveBeenCalledTimes(1);
   });
 
@@ -580,12 +580,12 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText, getByLabelText, getByText, queryByText } = render(
+    const { findByText, getByLabelText, getByText, queryByText } = await render(
       <ProgressScreen store={store} />,
     );
 
     expect(queryByText(/Estimated prices remain/u)).toBeNull();
-    fireEvent.press(getByLabelText("Snapshot status details"));
+    await fireEvent.press(getByLabelText("Snapshot status details"));
     expect(
       await findByText(
         "Estimated prices remain for May 2026. Review if you have better month-end values.",
@@ -594,7 +594,7 @@ describe("ProgressScreen", () => {
     expect(getByLabelText("Refresh estimated month-end prices")).toBeTruthy();
     expect(getByText("Close snapshot status")).toBeTruthy();
     expect(queryByText(/provisional|historical|fallback/i)).toBeNull();
-    fireEvent.press(getByText("Close snapshot status"));
+    await fireEvent.press(getByText("Close snapshot status"));
     expect(queryByText(/Estimated prices remain/u)).toBeNull();
   });
 
@@ -618,9 +618,9 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText, getByLabelText } = render(<ProgressScreen store={store} />);
+    const { findByText, getByLabelText } = await render(<ProgressScreen store={store} />);
 
-    fireEvent.press(getByLabelText("Snapshot status details"));
+    await fireEvent.press(getByLabelText("Snapshot status details"));
     expect(await findByText("Month-end prices confirmed.")).toBeTruthy();
   });
 
@@ -661,12 +661,12 @@ describe("ProgressScreen", () => {
       },
     });
 
-    const { findByText, getByLabelText, queryByText } = render(
+    const { findByText, getByLabelText, queryByText } = await render(
       <ProgressScreen store={store} />,
     );
 
     expect(queryByText(/Estimated prices remain/u)).toBeNull();
-    fireEvent.press(getByLabelText("Snapshot status details"));
+    await fireEvent.press(getByLabelText("Snapshot status details"));
     expect(
       await findByText(
         "Estimated prices remain for April 2026. Review if you have better month-end values.",
@@ -684,7 +684,7 @@ describe("ProgressScreen", () => {
       id: "snapshot-2026-07",
       month: "2026-07",
     });
-    const { findByText, getByLabelText, queryByTestId } = render(
+    const { findByText, getByLabelText, queryByTestId } = await render(
       <ProgressScreen
         now={new Date("2026-08-02T10:00:00.000Z")}
         onReviewSnapshot={onReviewSnapshot}
@@ -693,17 +693,17 @@ describe("ProgressScreen", () => {
     );
 
     expect(await findByText("Monthly history is up to date")).toBeTruthy();
-    fireEvent.press(getByLabelText("Snapshot status details"));
-    fireEvent.press(getByLabelText("Review month-end snapshot"));
+    await fireEvent.press(getByLabelText("Snapshot status details"));
+    await fireEvent.press(getByLabelText("Review month-end snapshot"));
 
     expect(onReviewSnapshot).toHaveBeenCalledTimes(1);
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
-  it("prefills the latest generated snapshot for optional correction", () => {
+  it("prefills the latest generated snapshot for optional correction", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewSnapshotScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -717,27 +717,27 @@ describe("ProgressScreen", () => {
     expect(getByTestId("snapshot-notes-input").props.value).toBe("May close");
   });
 
-  it("requires explicit reveal for masked snapshot correction without changing preferences", () => {
+  it("requires explicit reveal for masked snapshot correction without changing preferences", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getByTestId, queryByTestId, unmount } = render(
+    const { getByTestId, queryByTestId, unmount } = await render(
       <ReviewSnapshotScreen onCancel={jest.fn()} onComplete={jest.fn()} store={store} />,
     );
     expect(queryByTestId("snapshot-portfolio-input")).toBeNull();
-    fireEvent.press(getByTestId("reveal-snapshot-button"));
+    await fireEvent.press(getByTestId("reveal-snapshot-button"));
     expect(getByTestId("snapshot-portfolio-input").props.value).toBe("1385000");
     expect(store.getState().preferences.maskWealthValues).toBe(true);
-    unmount();
-    const reopened = render(<ReviewSnapshotScreen onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    await unmount();
+    const reopened = await render(<ReviewSnapshotScreen onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
     expect(reopened.queryByTestId("snapshot-portfolio-input")).toBeNull();
   });
 
-  it("does not render retired household fields in snapshot review", () => {
+  it("does not render retired household fields in snapshot review", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewSnapshotScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -749,11 +749,11 @@ describe("ProgressScreen", () => {
     expect(() => getByTestId("snapshot-expense-input")).toThrow();
   });
 
-  it("cancels a review without persisting field changes", () => {
+  it("cancels a review without persisting field changes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     const onCancel = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewSnapshotScreen
         onCancel={onCancel}
         onComplete={jest.fn()}
@@ -761,16 +761,16 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
-    fireEvent.press(getByTestId("cancel-snapshot-review-button"));
+    await fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
+    await fireEvent.press(getByTestId("cancel-snapshot-review-button"));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().monthlySnapshots[0]?.portfolioValue).toBe(1385000);
   });
-  it("saves snapshot changes from the dedicated review screen", () => {
+  it("saves snapshot changes from the dedicated review screen", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewSnapshotScreen
         onCancel={jest.fn()}
         onComplete={onComplete}
@@ -778,15 +778,15 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
-    fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1385000");
-    fireEvent.changeText(getByTestId("snapshot-invested-input"), "1060000");
-    fireEvent.changeText(getByTestId("snapshot-equity-input"), "880000");
-    fireEvent.changeText(getByTestId("snapshot-debt-input"), "320000");
-    fireEvent.changeText(getByTestId("snapshot-crypto-input"), "45000");
-    fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
-    fireEvent.changeText(getByTestId("snapshot-investment-input"), "60000");
-    fireEvent.press(getByText("Save snapshot changes"));
+    await fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
+    await fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1385000");
+    await fireEvent.changeText(getByTestId("snapshot-invested-input"), "1060000");
+    await fireEvent.changeText(getByTestId("snapshot-equity-input"), "880000");
+    await fireEvent.changeText(getByTestId("snapshot-debt-input"), "320000");
+    await fireEvent.changeText(getByTestId("snapshot-crypto-input"), "45000");
+    await fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
+    await fireEvent.changeText(getByTestId("snapshot-investment-input"), "60000");
+    await fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
     expect(store.getState().monthlySnapshots[0]).toMatchObject({
@@ -805,12 +805,12 @@ describe("ProgressScreen", () => {
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
-  it("renders the monthly answer and monthly history disclosure", () => {
+  it("renders the monthly answer and monthly history disclosure", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText, toJSON } = render(
+    const { getAllByText, getByTestId, getByText, queryByTestId, queryByText, toJSON } = await render(
       <ProgressScreen store={store} />,
     );
 
@@ -831,8 +831,8 @@ describe("ProgressScreen", () => {
     expect(queryByText("Snapshot history")).toBeNull();
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-05"));
 
     expect(getAllByText("₹13.85L").length).toBeGreaterThanOrEqual(2);
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
@@ -843,7 +843,7 @@ describe("ProgressScreen", () => {
     expect(getByText("May close")).toBeTruthy();
   });
 
-  it.each(["standard", "minimal"] as const)("reflows comparison groups on narrow widths and live font changes in %s", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("reflows comparison groups on narrow widths and live font changes in %s", async (displayMode) => {
     const original = Dimensions.get("window");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
@@ -851,25 +851,25 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(maySnapshot);
     const snapshots = store.getState().monthlySnapshots;
     try {
-      act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1 } }));
-      const view = render(<ProgressScreen store={store} />);
-      if (displayMode === "minimal") fireEvent.press(view.getByTestId("progress-details-toggle"));
+      await act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1 } }));
+      const view = await render(<ProgressScreen store={store} />);
+      if (displayMode === "minimal") await fireEvent.press(view.getByTestId("progress-details-toggle"));
       expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "column" });
-      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
+      await act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
       expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "row" });
-      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1.3 } }));
+      await act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1.3 } }));
       expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "column" });
-      act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
+      await act(() => Dimensions.set({ window: { ...original, width: 600, fontScale: 1 } }));
       expect(view.getByTestId("portfolio-comparison-layout")).toHaveStyle({ flexDirection: "row" });
       expect(within(view.getByTestId("progress-difference-percent")).getAllByText(/%/).length).toBeGreaterThan(0);
       expect(store.getState().monthlySnapshots).toEqual(snapshots);
-      view.unmount();
+      await view.unmount();
     } finally {
-      act(() => Dimensions.set({ window: original }));
+      await act(() => Dimensions.set({ window: original }));
     }
   });
 
-  it("labels legacy snapshot performance unavailable instead of guessing", () => {
+  it("labels legacy snapshot performance unavailable instead of guessing", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot({
@@ -877,47 +877,47 @@ describe("ProgressScreen", () => {
       performanceBasis: undefined,
     });
 
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getAllByText, getByTestId, getByText } = await render(
       <ProgressScreen store={store} />,
     );
 
     expect(getAllByText("Unavailable").length).toBeGreaterThan(0);
     expect(getByText("History")).toBeTruthy();
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
   });
 
-  it("keeps snapshot detail unmounted until opened and returns to the history overview", () => {
+  it("keeps snapshot detail unmounted until opened and returns to the history overview", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, queryByTestId } = render(<ProgressScreen store={store} />);
+    const { getByTestId, queryByTestId } = await render(<ProgressScreen store={store} />);
 
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
-    fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
 
-    fireEvent.press(getByTestId("snapshot-month-2026-04"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-04"));
 
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getByTestId("history-back")).toBeTruthy();
-    fireEvent.press(getByTestId("history-back"));
+    await fireEvent.press(getByTestId("history-back"));
 
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
     expect(getByTestId("snapshot-month-2026-04")).toBeTruthy();
   });
 
-  it("changes only the top monthly answer when its summary month changes", () => {
+  it("changes only the top monthly answer when its summary month changes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId } = render(<ProgressScreen store={store} />);
+    const { getByTestId } = await render(<ProgressScreen store={store} />);
     const monthlyAnswer = getByTestId("progress-monthly-answer");
 
     expect(within(monthlyAnswer).getByText("₹13.85L")).toBeTruthy();
@@ -928,8 +928,8 @@ describe("ProgressScreen", () => {
       getByTestId("asset-trend-selected-panel").props.accessibilityLabel,
     ).toContain("May 2026");
 
-    fireEvent.press(getByTestId("progress-summary-month"));
-    fireEvent.press(getByTestId("progress-summary-month-2026-04"));
+    await fireEvent.press(getByTestId("progress-summary-month"));
+    await fireEvent.press(getByTestId("progress-summary-month-2026-04"));
 
     expect(within(monthlyAnswer).getByText("₹12.6L")).toBeTruthy();
     expect(within(monthlyAnswer).getByText("₹50K")).toBeTruthy();
@@ -941,11 +941,11 @@ describe("ProgressScreen", () => {
     ).toContain("May 2026");
   });
 
-  it("shows an insufficient chart-history state until two snapshots exist", () => {
+  it("shows an insufficient chart-history state until two snapshots exist", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByText } = render(<ProgressScreen store={store} />);
+    const { getByText } = await render(<ProgressScreen store={store} />);
 
     expect(getByText("Trend history is still building")).toBeTruthy();
     expect(
@@ -955,13 +955,13 @@ describe("ProgressScreen", () => {
 
   it.each(["standard", "minimal"] as const)(
     "includes visible chart percentages in %s accessible summaries",
-    (displayMode) => {
+    async (displayMode) => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       store.getState().updatePreferences({ displayMode });
       store.getState().addMonthlySnapshot(aprilSnapshot);
       store.getState().addMonthlySnapshot(maySnapshot);
-      const { getByTestId } = render(<ProgressScreen store={store} />);
-      if (displayMode === "minimal") fireEvent.press(getByTestId("progress-details-toggle"));
+      const { getByTestId } = await render(<ProgressScreen store={store} />);
+      if (displayMode === "minimal") await fireEvent.press(getByTestId("progress-details-toggle"));
       expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
         .toContain("+17.45% versus invested");
       expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -971,7 +971,7 @@ describe("ProgressScreen", () => {
     },
   );
 
-  it("announces negative changes and distinguishes zero baselines from the first month", () => {
+  it("announces negative changes and distinguishes zero baselines from the first month", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0, cashValue: 160000 });
     store.getState().addMonthlySnapshot({
@@ -980,7 +980,7 @@ describe("ProgressScreen", () => {
       cashValue: -185000,
       portfolioValue: 900000,
     });
-    const { getByTestId, getByText } = render(<ProgressScreen store={store} />);
+    const { getByTestId, getByText } = await render(<ProgressScreen store={store} />);
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
       .toContain("+2.36% versus invested");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -988,19 +988,19 @@ describe("ProgressScreen", () => {
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("Change unavailable: Apr 2026 value is zero");
     expect(getByText("—")).toBeTruthy();
-    fireEvent.press(getByTestId("asset-trend-previous-month"));
+    await fireEvent.press(getByTestId("asset-trend-previous-month"));
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("No prior stored month in this range; change unavailable");
   });
 
-  it("describes a zero invested baseline and retains percentage context when masked", () => {
+  it("describes a zero invested baseline and retains percentage context when masked", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot({ ...maySnapshot, investedValue: 0 });
-    const { getByTestId } = render(<ProgressScreen store={store} />);
+    const { getByTestId } = await render(<ProgressScreen store={store} />);
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
       .toContain("Percentage unavailable: invested value is zero");
-    fireEvent.press(getByTestId("progress-mask-toggle"));
+    await fireEvent.press(getByTestId("progress-mask-toggle"));
     expect(getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel)
       .toBe("May 2026. Portfolio amounts hidden. Percentage unavailable: invested value is zero.");
     expect(getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
@@ -1009,7 +1009,7 @@ describe("ProgressScreen", () => {
       .toContain("versus Apr 2026");
   });
 
-  it("renders portfolio growth and asset momentum charts without cash in asset trends", () => {
+  it("renders portfolio growth and asset momentum charts without cash in asset trends", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -1020,7 +1020,7 @@ describe("ProgressScreen", () => {
       getByText,
       queryByTestId,
       queryByText,
-    } = render(<ProgressScreen store={store} />);
+    } = await render(<ProgressScreen store={store} />);
 
     expect(getByText("Portfolio Growth")).toBeTruthy();
     expect(
@@ -1033,7 +1033,7 @@ describe("ProgressScreen", () => {
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(getByTestId("portfolio-trend-selected-panel")).toBeTruthy();
     expect(getByTestId("asset-trend-selected-panel")).toBeTruthy();
-    const orderedIds = getByTestId("progress-screen").findAll((node: { type: unknown; props: { testID?: string } }) =>
+    const orderedIds = getByTestId("progress-screen").queryAll((node: { type: unknown; props: { testID?: string } }) =>
       typeof node.type === "string" && Boolean(node.props.testID),
     ).map((node: { props: { testID?: string } }) => node.props.testID);
     expect(orderedIds.indexOf("portfolio-trend-plot-region")).toBeGreaterThan(-1);
@@ -1070,13 +1070,13 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("asset-trend-Cash")).toBeNull();
   });
 
-  it("keeps charts and snapshot controls while hiding optional insights in Minimal mode", () => {
+  it("keeps charts and snapshot controls while hiding optional insights in Minimal mode", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().updatePreferences({ displayMode: "minimal" });
 
-    const { getByTestId, getByText, queryByTestId, queryByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = await render(
       <ProgressScreen store={store} />,
     );
 
@@ -1086,7 +1086,7 @@ describe("ProgressScreen", () => {
     expect(queryByText("Market change")).toBeNull();
     expect(queryByTestId("portfolio-trend-Invested")).toBeNull();
     expect(getByTestId("progress-details-toggle")).toHaveProp("accessibilityState", { expanded: false });
-    fireEvent.press(getByTestId("progress-details-toggle"));
+    await fireEvent.press(getByTestId("progress-details-toggle"));
     expect(getByTestId("progress-details-toggle")).toHaveProp("accessibilityState", { expanded: true });
     expect(getByText("Value by asset class")).toBeTruthy();
     expect(getByText("+17.45%")).toHaveStyle({ color: colors.profit });
@@ -1095,47 +1095,47 @@ describe("ProgressScreen", () => {
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(queryByText(/share/u)).toBeNull();
-    fireEvent.press(getByTestId("progress-details-toggle"));
+    await fireEvent.press(getByTestId("progress-details-toggle"));
     expect(queryByText("Value by asset class")).toBeNull();
     expect(queryByText("+17.45%")).toBeNull();
   });
 
-  it("keeps Minimal month selection, masks and stored records intact through disclosure and mode changes", () => {
+  it("keeps Minimal month selection, masks and stored records intact through disclosure and mode changes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().updatePreferences({ displayMode: "minimal", maskWealthValues: true });
     const saved = store.getState().monthlySnapshots;
-    const view = render(<ProgressScreen store={store} />);
+    const view = await render(<ProgressScreen store={store} />);
 
     expect(view.queryByTestId("asset-trend-chart")).toBeNull();
     expect(within(view.getByTestId("portfolio-trend-selected-panel")).getByText(MASKED_INR_VALUE)).toBeTruthy();
     expect(view.queryByText("₹13.85L")).toBeNull();
-    fireEvent.press(view.getByTestId("portfolio-trend-previous-month"));
-    fireEvent.press(view.getByTestId("progress-details-toggle"));
+    await fireEvent.press(view.getByTestId("portfolio-trend-previous-month"));
+    await fireEvent.press(view.getByTestId("progress-details-toggle"));
     expect(view.getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel).toContain("Apr 2026");
     expect(view.getByTestId("portfolio-trend-selected-panel").props.accessibilityLabel).toContain("amounts hidden");
     expect(view.getByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeTruthy();
-    fireEvent.press(view.getByTestId("progress-details-toggle"));
+    await fireEvent.press(view.getByTestId("progress-details-toggle"));
     expect(view.queryByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeNull();
-    act(() => store.getState().updatePreferences({ displayMode: "standard" }));
+    await act(() => store.getState().updatePreferences({ displayMode: "standard" }));
     expect(view.getByTestId("asset-trend-chart", { includeHiddenElements: true })).toBeTruthy();
     expect(view.queryByTestId("progress-details-toggle")).toBeNull();
     expect(store.getState().monthlySnapshots).toEqual(saved);
   });
 
-  it("retains a missing-month warning and navigable history in collapsed Minimal", () => {
+  it("retains a missing-month warning and navigable history in collapsed Minimal", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().updatePreferences({ displayMode: "minimal" });
-    const view = render(<ProgressScreen store={store} />);
+    const view = await render(<ProgressScreen store={store} />);
     expect(view.getByTestId("portfolio-chart-context")).toHaveTextContent(/missing|gap/i);
     expect(view.getByTestId("monthly-history-panel")).toBeTruthy();
     expect(view.queryByText("Value by asset class")).toBeNull();
   });
 
-  it("keeps deterministic visual QA charts visible while automation is skipped", () => {
+  it("keeps deterministic visual QA charts visible while automation is skipped", async () => {
     const visualQaSpy = jest
       .spyOn(visualQaSeed, "isVisualQaSessionActive")
       .mockReturnValue(true);
@@ -1143,7 +1143,7 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
 
@@ -1153,13 +1153,13 @@ describe("ProgressScreen", () => {
     visualQaSpy.mockRestore();
   });
 
-  it("navigates chart months independently and resets selection when ranges change", () => {
+  it("navigates chart months independently and resets selection when ranges change", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(marchSnapshot);
 
-    const { getByTestId, queryByTestId, queryByText } = render(
+    const { getByTestId, queryByTestId, queryByText } = await render(
       <ProgressScreen store={store} />,
     );
 
@@ -1194,7 +1194,7 @@ describe("ProgressScreen", () => {
       disabled: true,
     });
 
-    fireEvent.press(button("portfolio-trend-previous-month"));
+    await fireEvent.press(button("portfolio-trend-previous-month"));
 
     expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
       "Apr 2026",
@@ -1205,7 +1205,7 @@ describe("ProgressScreen", () => {
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
 
-    fireEvent.press(button("asset-trend-previous-month"));
+    await fireEvent.press(button("asset-trend-previous-month"));
 
     expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
       "Apr 2026",
@@ -1214,7 +1214,7 @@ describe("ProgressScreen", () => {
       "Apr 2026",
     );
 
-    fireEvent.press(button("portfolio-trend-previous-month"));
+    await fireEvent.press(button("portfolio-trend-previous-month"));
     expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
       "Mar 2026",
     );
@@ -1225,7 +1225,7 @@ describe("ProgressScreen", () => {
       disabled: false,
     });
 
-    fireEvent.press(button("portfolio-monthly-chart-range-3M"));
+    await fireEvent.press(button("portfolio-monthly-chart-range-3M"));
 
     expect(selectedPanel("portfolio-trend-selected-panel").props.accessibilityLabel).toContain(
       "May 2026",
@@ -1237,7 +1237,7 @@ describe("ProgressScreen", () => {
       selected: true,
     });
 
-    fireEvent.press(button("asset-monthly-chart-range-3M"));
+    await fireEvent.press(button("asset-monthly-chart-range-3M"));
 
     expect(selectedPanel("asset-trend-selected-panel").props.accessibilityLabel).toContain(
       "May 2026",
@@ -1247,7 +1247,7 @@ describe("ProgressScreen", () => {
     });
   });
 
-  it("masks chart amounts while keeping percentages visible", () => {
+  it("masks chart amounts while keeping percentages visible", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
@@ -1259,7 +1259,7 @@ describe("ProgressScreen", () => {
       queryByTestId,
       queryByText,
       getAllByTestId,
-    } = render(<ProgressScreen store={store} />);
+    } = await render(<ProgressScreen store={store} />);
     const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
@@ -1273,8 +1273,8 @@ describe("ProgressScreen", () => {
     expect(queryByText("May 2026: Crypto +12.50%")).toBeNull();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
     expect(queryByTestId("selected-snapshot-summary")).toBeNull();
-    fireEvent.press(getByTestId("open-monthly-history"));
-    fireEvent.press(getByTestId("snapshot-month-2026-05"));
+    await fireEvent.press(getByTestId("open-monthly-history"));
+    await fireEvent.press(getByTestId("snapshot-month-2026-05"));
     expect(getByTestId("selected-snapshot-summary")).toBeTruthy();
     expect(getAllByText("+17.45%").length).toBeGreaterThan(0);
     expect(queryByText("37.50%")).toBeNull();
@@ -1347,7 +1347,7 @@ describe("ProgressScreen", () => {
         }),
       ],
     },
-  ])("uses matching native ticks for both charts with $label", ({
+  ])("uses matching native ticks for both charts with $label", async ({
     expectedMax,
     expectedStep,
     snapshots,
@@ -1355,7 +1355,7 @@ describe("ProgressScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     snapshots.forEach((snapshot) => store.getState().addMonthlySnapshot(snapshot));
 
-    const { getAllByTestId } = render(<ProgressScreen store={store} />);
+    const { getAllByTestId } = await render(<ProgressScreen store={store} />);
     const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
@@ -1384,7 +1384,7 @@ describe("ProgressScreen", () => {
     }
   });
 
-  it("derives plot width and spacing from measured surface width safely", () => {
+  it("derives plot width and spacing from measured surface width safely", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(
       chartSnapshot("2026-01", {
@@ -1414,11 +1414,11 @@ describe("ProgressScreen", () => {
       }),
     );
 
-    const { getAllByTestId, getByTestId } = render(
+    const { getAllByTestId, getByTestId } = await render(
       <ProgressScreen store={store} />,
     );
-    const layoutSurface = (testID: string, width: number) => {
-      fireEvent(getByTestId(testID, { includeHiddenElements: true }), "layout", {
+    const layoutSurface = async (testID: string, width: number) => {
+      await fireEvent(getByTestId(testID, { includeHiddenElements: true }), "layout", {
         nativeEvent: { layout: { width } },
       });
     };
@@ -1441,8 +1441,8 @@ describe("ProgressScreen", () => {
       );
     };
 
-    layoutSurface("portfolio-trend-chart", 400);
-    layoutSurface("asset-trend-chart", 400);
+    await layoutSurface("portfolio-trend-chart", 400);
+    await layoutSurface("asset-trend-chart", 400);
     let [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
@@ -1455,8 +1455,8 @@ describe("ProgressScreen", () => {
     assertSpacingRelationship(portfolioChart);
     assertSpacingRelationship(assetChart);
 
-    layoutSurface("portfolio-trend-chart", 40);
-    layoutSurface("asset-trend-chart", 40);
+    await layoutSurface("portfolio-trend-chart", 40);
+    await layoutSurface("asset-trend-chart", 40);
     [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
@@ -1469,7 +1469,7 @@ describe("ProgressScreen", () => {
     assertSpacingRelationship(assetChart);
   });
 
-    it("uses endpoint-only labels in narrow enlarged-text charts", () => {
+    it("uses endpoint-only labels in narrow enlarged-text charts", async () => {
       const original = Dimensions.get("window");
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       ["2025-12", "2026-01", "2026-02"].forEach(month => {
@@ -1478,9 +1478,9 @@ describe("ProgressScreen", () => {
         }));
       });
       try {
-        act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1.3 } }));
-        const view = render(<ProgressScreen store={store} />);
-        fireEvent(view.getByTestId("portfolio-trend-chart", { includeHiddenElements: true }), "layout", {
+        await act(() => Dimensions.set({ window: { ...original, width: 360, fontScale: 1.3 } }));
+        const view = await render(<ProgressScreen store={store} />);
+        await fireEvent(view.getByTestId("portfolio-trend-chart", { includeHiddenElements: true }), "layout", {
           nativeEvent: { layout: { width: 280 } },
         });
         const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
@@ -1488,13 +1488,13 @@ describe("ProgressScreen", () => {
           "Dec\n2025", "", "Feb\n2026",
         ]);
         expect(chart.props.data).toHaveLength(3);
-        view.unmount();
+        await view.unmount();
       } finally {
-        act(() => Dimensions.set({ window: original }));
+        await act(() => Dimensions.set({ window: original }));
       }
     });
 
-    it.each([3, 12, 60, 120])("keeps all %i months and readable sparse labels inside the measured plot", (count) => {
+    it.each([3, 12, 60, 120])("keeps all %i months and readable sparse labels inside the measured plot", async (count) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     for (let index = 0; index < count; index++) {
       const month = new Date(Date.UTC(2016, index, 1)).toISOString().slice(0, 7);
@@ -1506,12 +1506,12 @@ describe("ProgressScreen", () => {
         portfolioValue: index === count - 1 ? 9000000 : 1000000 + index * 1000,
       }));
     }
-    const { getByTestId, getAllByTestId } = render(<ProgressScreen store={store} />);
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-All"));
-    fireEvent.press(getByTestId("asset-monthly-chart-range-All"));
+    const { getByTestId, getAllByTestId } = await render(<ProgressScreen store={store} />);
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-All"));
+    await fireEvent.press(getByTestId("asset-monthly-chart-range-All"));
     for (const width of [280, 400]) {
       for (const prefix of ["portfolio", "asset"]) {
-        fireEvent(getByTestId(`${prefix}-trend-chart`, { includeHiddenElements: true }), "layout", {
+        await fireEvent(getByTestId(`${prefix}-trend-chart`, { includeHiddenElements: true }), "layout", {
           nativeEvent: { layout: { width } },
         });
       }
@@ -1548,7 +1548,7 @@ describe("ProgressScreen", () => {
       { label: "falling", values: [5722000, 1987000, 1929000] },
       { label: "flat", values: [1929000, 1929000, 1929000] },
       { label: "two-point", values: [1929000, 1987000] },
-    ])("uses straight segments and unchanged points for $label history", ({ values }) => {
+    ])("uses straight segments and unchanged points for $label history", async ({ values }) => {
       const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
       store.getState().updatePreferences({ displayMode });
       values.forEach((value, index) => {
@@ -1561,7 +1561,7 @@ describe("ProgressScreen", () => {
         }));
       });
       const saved = store.getState().monthlySnapshots;
-      const view = render(<ProgressScreen store={store} />);
+      const view = await render(<ProgressScreen store={store} />);
       const assertPortfolio = () => {
         const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
         expect(chart.props.curved).toBe(false);
@@ -1569,23 +1569,23 @@ describe("ProgressScreen", () => {
         return chart;
       };
       assertPortfolio();
-      if (displayMode === "minimal") fireEvent.press(view.getByTestId("progress-details-toggle"));
+      if (displayMode === "minimal") await fireEvent.press(view.getByTestId("progress-details-toggle"));
       expect(assertPortfolio().props.data2.map((point: { value: number }) => point.value))
         .toEqual(values.map(() => 1900000));
       const asset = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1];
       expect(asset.props.curved).toBe(false);
       expect(asset.props.dataSet[0].data.map((point: { value: number }) => point.value)).toEqual(values);
-      fireEvent.press(view.getByTestId("progress-mask-toggle"));
+      await fireEvent.press(view.getByTestId("progress-mask-toggle"));
       expect(assertPortfolio().props.formatYLabel("1929000")).toBe(MASKED_INR_VALUE);
       expect(store.getState().monthlySnapshots).toEqual(saved);
     });
   });
 
-  it("breaks lines at missing months and withholds their monthly percentage", () => {
+  it("breaks lines at missing months and withholds their monthly percentage", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot({ ...maySnapshot, id: "july", month: "2026-07" });
-    const screen = render(<ProgressScreen store={store} />);
+    const screen = await render(<ProgressScreen store={store} />);
     const [portfolio, asset] = screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true });
     expect(portfolio.props.areaChart).toBe(false);
     expect(portfolio.props.curved).toBe(false);
@@ -1598,18 +1598,18 @@ describe("ProgressScreen", () => {
     expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(/Missing months/u);
   });
 
-  it("hides only series that stay zero across the selected range", () => {
+  it("hides only series that stay zero across the selected range", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot({ ...aprilSnapshot, cryptoValue: 0, cashValue: 160000 });
     store.getState().addMonthlySnapshot({ ...maySnapshot, cryptoValue: 0, debtValue: 0, cashValue: 505000 });
-    const screen = render(<ProgressScreen store={store} />);
+    const screen = await render(<ProgressScreen store={store} />);
     expect(screen.queryByTestId("asset-trend-Crypto")).toBeNull();
     expect(screen.getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
       .toHaveLength(2);
   });
 
-  it("gives a focused small asset series its own disclosed scale", () => {
+  it("gives a focused small asset series its own disclosed scale", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(chartSnapshot("2026-01", {
       cryptoValue: 2,
@@ -1626,7 +1626,7 @@ describe("ProgressScreen", () => {
       portfolioValue: 1000015,
     }));
 
-    const { getAllByTestId, getByTestId, queryByTestId } = render(
+    const { getAllByTestId, getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
     const initialAssetChart = getAllByTestId("gifted-line-chart", {
@@ -1635,7 +1635,7 @@ describe("ProgressScreen", () => {
     expect(initialAssetChart.props.dataSet).toHaveLength(3);
     expect(initialAssetChart.props.maxValue).toBe(2000000);
 
-    fireEvent.press(getByTestId("asset-trend-Debt"));
+    await fireEvent.press(getByTestId("asset-trend-Debt"));
 
     const focusedAssetChart = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
@@ -1648,20 +1648,20 @@ describe("ProgressScreen", () => {
       "Debt scale · Other asset lines hidden",
     );
 
-    fireEvent.press(getByTestId("asset-trend-Debt"));
+    await fireEvent.press(getByTestId("asset-trend-Debt"));
     expect(queryByTestId("asset-trend-focused-scale")).toBeNull();
     expect(getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
       .toHaveLength(3);
   });
 
-  it("disables chart animation when reduced motion is enabled", () => {
+  it("disables chart animation when reduced motion is enabled", async () => {
     jest.mocked(useReducedMotionPreference).mockReturnValue(true);
 
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
-    const { getAllByTestId } = render(<ProgressScreen store={store} />);
+    const { getAllByTestId } = await render(<ProgressScreen store={store} />);
     const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
     });
@@ -1670,13 +1670,13 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.isAnimated).toBe(false);
   });
 
-  it("renders chart-local timeframe chips and updates selected range", () => {
+  it("renders chart-local timeframe chips and updates selected range", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, queryByText } = render(
+    const { getByTestId, queryByText } = await render(
       <ProgressScreen store={store} />,
     );
 
@@ -1691,8 +1691,8 @@ describe("ProgressScreen", () => {
     expect(getByTestId("asset-monthly-chart-range-All")).toBeTruthy();
     expect(getByTestId("asset-monthly-chart-range-Custom")).toBeTruthy();
 
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-3M"));
-    fireEvent.press(getByTestId("asset-monthly-chart-range-3M"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-3M"));
+    await fireEvent.press(getByTestId("asset-monthly-chart-range-3M"));
 
     expect(queryByText("Mar 2026")).toBeNull();
     for (const id of ["portfolio-monthly-chart-range-3M", "asset-monthly-chart-range-3M"]) {
@@ -1707,21 +1707,21 @@ describe("ProgressScreen", () => {
     );
   });
 
-  it("cancels a custom range without changing either chart or the monthly answer", () => {
+  it("cancels a custom range without changing either chart or the monthly answer", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByTestId, getByTestId, queryByTestId } = render(
+    const { getAllByTestId, getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
     expect(getByTestId("portfolio-custom-range-panel")).toBeTruthy();
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
-    fireEvent.press(getByTestId("portfolio-custom-range-cancel"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-cancel"));
 
     expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
     expect(getByTestId("portfolio-monthly-chart-range-All")).toHaveStyle({ backgroundColor: colors.primary });
@@ -1733,33 +1733,33 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.dataSet[0].data).toHaveLength(3);
   });
 
-  it("treats Android Back as cancel in the custom range panel", () => {
+  it("treats Android Back as cancel in the custom range panel", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, queryByTestId } = render(<ProgressScreen store={store} />);
+    const { getByTestId, queryByTestId } = await render(<ProgressScreen store={store} />);
 
-    fireEvent.press(getByTestId("asset-monthly-chart-range-Custom"));
-    fireEvent(getByTestId("asset-custom-range-modal"), "requestClose");
+    await fireEvent.press(getByTestId("asset-monthly-chart-range-Custom"));
+    await fireEvent(getByTestId("asset-custom-range-modal"), "requestClose");
 
     expect(queryByTestId("asset-custom-range-panel")).toBeNull();
     expect(getByTestId("asset-monthly-chart-range-All")).toHaveStyle({ backgroundColor: colors.primary });
   });
 
-  it("applies an independent custom range from persisted snapshot months", () => {
+  it("applies an independent custom range from persisted snapshot months", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getAllByTestId, getByTestId, queryByTestId } = render(
+    const { getAllByTestId, getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start"));
 
     expect(getByTestId("portfolio-custom-range-start-2026-03")).toBeTruthy();
     expect(getByTestId("portfolio-custom-range-start-2026-04")).toBeTruthy();
@@ -1770,8 +1770,8 @@ describe("ProgressScreen", () => {
       queryByTestId("portfolio-custom-range-start-2026-02"),
     ).toBeNull();
 
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
-    fireEvent.press(getByTestId("portfolio-custom-range-apply"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
     const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
       includeHiddenElements: true,
@@ -1781,29 +1781,29 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.dataSet[0].data).toHaveLength(3);
   });
 
-  it("only offers valid end months after the selected start month", () => {
+  it("only offers valid end months after the selected start month", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(marchSnapshot);
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot(maySnapshot);
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
-    fireEvent.press(getByTestId("portfolio-custom-range-end"));
-    fireEvent.press(getByTestId("portfolio-custom-range-end-2026-04"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end-2026-04"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start"));
     expect(
       queryByTestId("portfolio-custom-range-start-2026-05"),
     ).toBeNull();
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
 
     expect(getByTestId("portfolio-custom-range-end")).toHaveTextContent(
       /May 2026/,
     );
-    fireEvent.press(getByTestId("portfolio-custom-range-end"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end"));
     expect(
       queryByTestId("portfolio-custom-range-end-2026-03"),
     ).toBeNull();
@@ -1811,13 +1811,13 @@ describe("ProgressScreen", () => {
       queryByTestId("portfolio-custom-range-end-2026-04"),
     ).toBeNull();
     expect(getByTestId("portfolio-custom-range-end-2026-05")).toBeTruthy();
-    fireEvent.press(getByTestId("portfolio-custom-range-end-2026-05"));
-    fireEvent.press(getByTestId("portfolio-custom-range-apply"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end-2026-05"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
     expect(queryByTestId("portfolio-custom-range-error")).toBeNull();
   });
 
-  it("selects stored months across ten years through year-first navigation", () => {
+  it("selects stored months across ten years through year-first navigation", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     for (let index = 0; index < 120; index += 1) {
       const month = new Date(Date.UTC(2016, index, 1)).toISOString().slice(0, 7);
@@ -1830,36 +1830,36 @@ describe("ProgressScreen", () => {
       }));
     }
 
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start"));
 
     expect(getByText("Current selection: January 2016")).toBeTruthy();
     expect(getByTestId("portfolio-custom-range-start-previous-year")).toBeDisabled();
     expect(getByTestId("portfolio-custom-range-start-2016-01")).toBeTruthy();
     expect(queryByTestId("portfolio-custom-range-start-2017-01")).toBeNull();
 
-    fireEvent.press(getByTestId("portfolio-custom-range-start-choose-year"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-choose-year"));
     expect(getByTestId("portfolio-custom-range-start-year-2025")).toBeTruthy();
     expect(getByTestId("portfolio-custom-range-start-year-2016")).toBeTruthy();
     expect(queryByTestId("portfolio-custom-range-start-year-2015")).toBeNull();
     expect(queryByTestId("portfolio-custom-range-start-year-2026")).toBeNull();
-    fireEvent.press(getByTestId("portfolio-custom-range-start-year-2025"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-year-2025"));
 
     expect(getByTestId("portfolio-custom-range-start-next-year")).toBeDisabled();
     expect(getByTestId("portfolio-custom-range-start-2025-11")).toBeTruthy();
     expect(queryByTestId("portfolio-custom-range-start-2025-12")).toBeNull();
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2025-11"));
-    fireEvent.press(getByTestId("portfolio-custom-range-apply"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-2025-11"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
     expect(getByTestId("portfolio-chart-context")).toHaveTextContent(
       "Nov 2025 to Dec 2025",
     );
   });
 
-  it("keeps missing months and invalid end years out of sparse range choices", () => {
+  it("keeps missing months and invalid end years out of sparse range choices", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     for (const month of ["2016-01", "2016-03", "2026-02", "2026-05"]) {
       store.getState().addMonthlySnapshot(chartSnapshot(month, {
@@ -1871,30 +1871,30 @@ describe("ProgressScreen", () => {
       }));
     }
 
-    const { getAllByTestId, getByTestId, queryByTestId } = render(
+    const { getAllByTestId, getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
-    fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
-    fireEvent.press(getByTestId("portfolio-custom-range-start"));
+    await fireEvent.press(getByTestId("portfolio-monthly-chart-range-Custom"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start"));
 
     expect(getByTestId("portfolio-custom-range-start-2016-01")).toBeTruthy();
     expect(getByTestId("portfolio-custom-range-start-2016-03")).toBeTruthy();
     expect(queryByTestId("portfolio-custom-range-start-2016-02")).toBeNull();
-    fireEvent.press(getByTestId("portfolio-custom-range-start-2016-03"));
-    fireEvent.press(getByTestId("portfolio-custom-range-end"));
-    fireEvent.press(getByTestId("portfolio-custom-range-end-choose-year"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-start-2016-03"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end"));
+    await fireEvent.press(getByTestId("portfolio-custom-range-end-choose-year"));
 
     expect(queryByTestId("portfolio-custom-range-end-year-2016")).toBeNull();
     expect(getByTestId("portfolio-custom-range-end-year-2026")).toBeTruthy();
     // Three separate back presses, far enough apart not to be one press delivered twice.
     const clock = jest.spyOn(Date, "now").mockReturnValue(1_000);
-    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    await fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(getByTestId("portfolio-custom-range-end-2026-02")).toBeTruthy();
     clock.mockReturnValue(2_000);
-    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    await fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(getByTestId("portfolio-custom-range-panel")).toBeTruthy();
     clock.mockReturnValue(3_000);
-    fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
+    await fireEvent(getByTestId("portfolio-custom-range-modal"), "requestClose");
     expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
     clock.mockRestore();
 
@@ -1905,11 +1905,11 @@ describe("ProgressScreen", () => {
     expect(assetChart.props.dataSet[0].data).toHaveLength(4);
   });
 
-  it("updates an existing month instead of creating duplicate snapshots", () => {
+  it("updates an existing month instead of creating duplicate snapshots", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(maySnapshot);
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewSnapshotScreen
         onCancel={jest.fn()}
         onComplete={onComplete}
@@ -1917,15 +1917,15 @@ describe("ProgressScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
-    fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
-    fireEvent.changeText(getByTestId("snapshot-invested-input"), "1070000");
-    fireEvent.changeText(getByTestId("snapshot-equity-input"), "890000");
-    fireEvent.changeText(getByTestId("snapshot-debt-input"), "320000");
-    fireEvent.changeText(getByTestId("snapshot-crypto-input"), "50000");
-    fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
-    fireEvent.changeText(getByTestId("snapshot-investment-input"), "70000");
-    fireEvent.press(getByText("Save snapshot changes"));
+    await fireEvent.changeText(getByTestId("snapshot-month-input"), "2026-05");
+    await fireEvent.changeText(getByTestId("snapshot-portfolio-input"), "1400000");
+    await fireEvent.changeText(getByTestId("snapshot-invested-input"), "1070000");
+    await fireEvent.changeText(getByTestId("snapshot-equity-input"), "890000");
+    await fireEvent.changeText(getByTestId("snapshot-debt-input"), "320000");
+    await fireEvent.changeText(getByTestId("snapshot-crypto-input"), "50000");
+    await fireEvent.changeText(getByTestId("snapshot-cash-input"), "140000");
+    await fireEvent.changeText(getByTestId("snapshot-investment-input"), "70000");
+    await fireEvent.press(getByText("Save snapshot changes"));
 
     expect(store.getState().monthlySnapshots).toHaveLength(1);
     expect(store.getState().monthlySnapshots[0]).toMatchObject({

@@ -21,11 +21,11 @@ const account: PpfAccount = {
 };
 
 describe("PpfEntryScreen", () => {
-  it("keeps a new blank entry usable while masking is enabled", () => {
+  it("keeps a new blank entry usable while masking is enabled", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const screen = render(
+    const screen = await render(
       <PpfEntryScreen
         accountId={account.id}
         now={now}
@@ -52,7 +52,7 @@ describe("PpfEntryScreen", () => {
     store.getState().addPpfAccount(account);
     store.getState().addPpfLedgerEntry(entry);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const screen = render(
+    const screen = await render(
       <PpfEntryScreen
         accountId={account.id}
         entryId={entry.id}
@@ -65,21 +65,21 @@ describe("PpfEntryScreen", () => {
 
     expect(screen.getByText("Reveal to review")).toBeTruthy();
     expect(screen.queryByTestId("ppf-entry-amount")).toBeNull();
-    fireEvent.press(screen.getByTestId("reveal-ppf-entry-button"));
+    await fireEvent.press(screen.getByTestId("reveal-ppf-entry-button"));
     expect(screen.getByTestId("ppf-entry-amount")).toHaveProp("value", "500");
 
-    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     await waitFor(() => {
       expect(screen.getByText("Reveal to review")).toBeTruthy();
       expect(screen.queryByTestId("ppf-entry-amount")).toBeNull();
     });
   });
 
-  it("keeps optional notes and contribution guidance behind retained disclosures", () => {
+  it("keeps optional notes and contribution guidance behind retained disclosures", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
-    const screen = render(
+    const screen = await render(
       <PpfEntryScreen
         accountId={account.id}
         now={now}
@@ -91,25 +91,25 @@ describe("PpfEntryScreen", () => {
 
     expect(screen.queryByTestId("ppf-entry-notes")).toBeNull();
     expect(screen.queryByTestId("ppf-contribution-rules-details")).toBeNull();
-    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
-    fireEvent.changeText(screen.getByTestId("ppf-entry-notes"), "Passbook note");
-    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    await fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    await fireEvent.changeText(screen.getByTestId("ppf-entry-notes"), "Passbook note");
+    await fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
     expect(screen.queryByTestId("ppf-entry-notes")).toBeNull();
-    fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
+    await fireEvent.press(screen.getByTestId("ppf-entry-note-toggle"));
     expect(screen.getByTestId("ppf-entry-notes")).toHaveProp(
       "value",
       "Passbook note",
     );
 
-    fireEvent.press(screen.getByTestId("ppf-contribution-rules-toggle"));
+    await fireEvent.press(screen.getByTestId("ppf-contribution-rules-toggle"));
     expect(screen.getByTestId("ppf-contribution-rules-details")).toBeTruthy();
   });
 
-  it("reviews and saves a valid contribution", () => {
+  it("reviews and saves a valid contribution", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <PpfEntryScreen
         accountId={account.id}
         now={now}
@@ -119,10 +119,10 @@ describe("PpfEntryScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("ppf-entry-amount"), "500");
-    fireEvent.press(getByTestId("review-ppf-entry"));
+    await fireEvent.changeText(getByTestId("ppf-entry-amount"), "500");
+    await fireEvent.press(getByTestId("review-ppf-entry"));
     expect(getByText("Review PPF entry")).toBeTruthy();
-    fireEvent.press(getByTestId("save-ppf-entry"));
+    await fireEvent.press(getByTestId("save-ppf-entry"));
 
     expect(store.getState().ppfLedgerEntries).toEqual([
       expect.objectContaining({ amount: 500, type: "contribution" }),
@@ -130,7 +130,7 @@ describe("PpfEntryScreen", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("returns from review to the populated editor through visible and system Back", () => {
+  it("returns from review to the populated editor through visible and system Back", async () => {
     let hardwareBack: (() => boolean) | undefined;
     const backSpy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
       hardwareBack = () => handler(backPress) === true;
@@ -139,32 +139,32 @@ describe("PpfEntryScreen", () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
     const onBack = jest.fn();
-    const screen = render(<PpfEntryScreen accountId={account.id} now={now} onBack={onBack} onComplete={jest.fn()} store={store} />);
+    const screen = await render(<PpfEntryScreen accountId={account.id} now={now} onBack={onBack} onComplete={jest.fn()} store={store} />);
 
-    fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "500");
-    fireEvent.press(screen.getByTestId("review-ppf-entry"));
-    fireEvent.press(screen.getByLabelText("Back to entry editor"));
+    await fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "500");
+    await fireEvent.press(screen.getByTestId("review-ppf-entry"));
+    await fireEvent.press(screen.getByLabelText("Back to entry editor"));
     expect(screen.getByTestId("ppf-entry-amount")).toHaveProp("value", "500");
     expect(onBack).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId("review-ppf-entry"));
-    act(() => { hardwareBack?.(); });
+    await fireEvent.press(screen.getByTestId("review-ppf-entry"));
+    await act(() => { hardwareBack?.(); });
     expect(screen.getByTestId("ppf-entry-amount")).toHaveProp("value", "500");
     expect(onBack).not.toHaveBeenCalled();
     backSpy.mockRestore();
   });
 
-  it("requires a deliberate choice before leaving a dirty entry", () => {
+  it("requires a deliberate choice before leaving a dirty entry", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
     const onBack = jest.fn();
-    const screen = render(<PpfEntryScreen accountId={account.id} now={now} onBack={onBack} onComplete={jest.fn()} store={store} />);
+    const screen = await render(<PpfEntryScreen accountId={account.id} now={now} onBack={onBack} onComplete={jest.fn()} store={store} />);
 
-    fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "750");
-    fireEvent.press(screen.getByLabelText("Back to PPF account"));
+    await fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "750");
+    await fireEvent.press(screen.getByLabelText("Back to PPF account"));
     expect(screen.getByText("Discard entry changes?")).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId("keep-editing-ppf-entry"));
+    await fireEvent.press(screen.getByTestId("keep-editing-ppf-entry"));
     expect(screen.getByTestId("ppf-entry-amount")).toHaveProp("value", "750");
   });
 
@@ -172,32 +172,32 @@ describe("PpfEntryScreen", () => {
     const focus = jest.spyOn(TextInput.prototype, "focus");
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
-    const screen = render(<PpfEntryScreen accountId={account.id} now={now} onBack={jest.fn()} onComplete={jest.fn()} store={store} />);
+    const screen = await render(<PpfEntryScreen accountId={account.id} now={now} onBack={jest.fn()} onComplete={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("review-ppf-entry"));
+    await fireEvent.press(screen.getByTestId("review-ppf-entry"));
     expect(screen.getByText("Entry amount must be greater than zero.")).toBeTruthy();
     await waitFor(() => expect(focus).toHaveBeenCalled());
 
-    fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "500");
-    fireEvent.press(screen.getByTestId("ppf-entry-date"));
-    fireEvent(screen.getByTestId("ppf-entry-date-picker"), "onChange", {
+    await fireEvent.changeText(screen.getByTestId("ppf-entry-amount"), "500");
+    await fireEvent.press(screen.getByTestId("ppf-entry-date"));
+    await fireEvent(screen.getByTestId("ppf-entry-date-picker"), "onChange", {
       nativeEvent: { timestamp: new Date("2026-08-20T12:00:00.000Z").getTime() },
       type: "set",
     });
-    fireEvent.press(screen.getByTestId("review-ppf-entry"));
+    await fireEvent.press(screen.getByTestId("review-ppf-entry"));
     expect(screen.getByText("Entry date must be a valid non-future date.")).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId("ppf-entry-type-picker"));
-    fireEvent.press(screen.getByTestId("ppf-entry-type-reconciliation"));
-    fireEvent.press(screen.getByTestId("review-ppf-entry"));
+    await fireEvent.press(screen.getByTestId("ppf-entry-type-picker"));
+    await fireEvent.press(screen.getByTestId("ppf-entry-type-reconciliation"));
+    await fireEvent.press(screen.getByTestId("review-ppf-entry"));
     expect(screen.getByText("Reconciliation reason is required.")).toBeTruthy();
     focus.mockRestore();
   });
 
-  it("requires a reason before reviewing a balance correction", () => {
+  it("requires a reason before reviewing a balance correction", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().addPpfAccount(account);
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <PpfEntryScreen
         accountId={account.id}
         now={now}
@@ -207,10 +207,10 @@ describe("PpfEntryScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("ppf-entry-type-picker"));
-    fireEvent.press(getByTestId("ppf-entry-type-reconciliation"));
-    fireEvent.changeText(getByTestId("ppf-entry-amount"), "99000");
-    fireEvent.press(getByTestId("review-ppf-entry"));
+    await fireEvent.press(getByTestId("ppf-entry-type-picker"));
+    await fireEvent.press(getByTestId("ppf-entry-type-reconciliation"));
+    await fireEvent.changeText(getByTestId("ppf-entry-amount"), "99000");
+    await fireEvent.press(getByTestId("review-ppf-entry"));
 
     expect(getByText("Reconciliation reason is required.")).toBeTruthy();
   });

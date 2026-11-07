@@ -3,22 +3,23 @@ import { ScrollView } from "react-native";
 import { AppButton } from "@/src/components/common";
 
 import { RecoveryScreen } from "../RecoveryScreen";
+import { getAllByComponentType, getByComponentType } from "@/src/testing/componentQueries";
 
 describe("RecoveryScreen", () => {
-  it("keeps long recovery content scrollable and puts the safe action first", () => {
-    const screen = render(
+  it("keeps long recovery content scrollable and puts the safe action first", async () => {
+    const screen = await render(
       <RecoveryScreen affectedAreas={["Monthly snapshots and historical valuation evidence"]} onReset={jest.fn()} recoveryCopiesPreserved />,
     );
-    expect(screen.UNSAFE_getByType(ScrollView)).toBeTruthy();
-    fireEvent.press(screen.getByTestId("start-storage-reset"));
-    const buttons = screen.UNSAFE_getAllByType(AppButton);
+    expect(getByComponentType(screen, ScrollView)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("start-storage-reset"));
+    const buttons = getAllByComponentType(screen, AppButton);
     expect(buttons.map((button) => button.props.title)).toEqual(["Keep data", "Reset and continue"]);
     expect(buttons[0].props.variant).toBeUndefined();
     expect(buttons[1].props.variant).toBe("destructive");
   });
-  it("requires confirmation before resetting affected data", () => {
+  it("requires confirmation before resetting affected data", async () => {
     const onReset = jest.fn();
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <RecoveryScreen
         affectedAreas={["Portfolio records"]}
         onReset={onReset}
@@ -30,20 +31,20 @@ describe("RecoveryScreen", () => {
     expect(getByText("Portfolio records")).toBeTruthy();
     expect(queryByTestId("confirm-storage-reset")).toBeNull();
 
-    fireEvent.press(getByTestId("start-storage-reset"));
+    await fireEvent.press(getByTestId("start-storage-reset"));
 
     expect(getByTestId("confirm-storage-reset")).toBeTruthy();
     expect(onReset).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId("cancel-storage-reset"));
+    await fireEvent.press(getByTestId("cancel-storage-reset"));
 
     expect(queryByTestId("confirm-storage-reset")).toBeNull();
     expect(onReset).not.toHaveBeenCalled();
   });
 
-  it("resets only after explicit confirmation", () => {
+  it("resets only after explicit confirmation", async () => {
     const onReset = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RecoveryScreen
         affectedAreas={["Portfolio records", "Current quote cache"]}
         onReset={onReset}
@@ -51,14 +52,14 @@ describe("RecoveryScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("start-storage-reset"));
-    fireEvent.press(getByTestId("confirm-storage-reset"));
+    await fireEvent.press(getByTestId("start-storage-reset"));
+    await fireEvent.press(getByTestId("confirm-storage-reset"));
 
     expect(onReset).toHaveBeenCalledTimes(1);
   });
 
-  it("does not offer reset when a recovery copy could not be preserved", () => {
-    const { getByText, queryByTestId } = render(
+  it("does not offer reset when a recovery copy could not be preserved", async () => {
+    const { getByText, queryByTestId } = await render(
       <RecoveryScreen
         affectedAreas={["Portfolio records"]}
         onReset={jest.fn()}

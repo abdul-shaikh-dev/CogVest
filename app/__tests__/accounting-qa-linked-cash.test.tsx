@@ -9,8 +9,8 @@ jest.mock("expo-router", () => ({
   }),
 }));
 
-it("renders the token-gated missing linked Cash QA state", () => {
-  const screen = render(<AccountingQaRoute />);
+it("renders the token-gated missing linked Cash QA state", async () => {
+  const screen = await render(<AccountingQaRoute />);
 
   expect(screen.getByTestId("review-cash-entry-screen")).toBeTruthy();
   expect(screen.getByTestId("linked-cash-owner-missing")).toHaveTextContent(

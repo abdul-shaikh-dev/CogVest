@@ -67,7 +67,7 @@ describe("Import holdings route", () => {
   });
 
   it("writes the published template to a user-selected Android folder", async () => {
-    render(<ImportHoldingsRoute />);
+    await render(<ImportHoldingsRoute />);
 
     await expect(
       (capturedProps?.saveCsvTemplate as () => Promise<unknown>)(),
@@ -88,14 +88,14 @@ describe("Import holdings route", () => {
       text: () => Promise.resolve("cogvest_version,quantity,average_cost\n1,1,1"),
       uri: "content://holdings.csv",
     });
-    render(<ImportHoldingsRoute />);
+    await render(<ImportHoldingsRoute />);
 
     await expect(
       (capturedProps?.pickCsvFile as () => Promise<unknown>)(),
     ).resolves.toMatchObject({ name: "holdings.csv", size: 123 });
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "text/*");
 
-    act(() => {
+    await act(() => {
       (capturedProps?.onImported as (result: unknown) => void)({
         items: [
           {
@@ -125,7 +125,7 @@ describe("Import holdings route", () => {
       text,
       uri: "content://documents/too-large.csv",
     });
-    render(<ImportHoldingsRoute />);
+    await render(<ImportHoldingsRoute />);
 
     await expect(
       (capturedProps?.pickCsvFile as () => Promise<unknown>)(),

@@ -33,11 +33,11 @@ describe("ReviewAssetScreen", () => {
     const foreign = { ...asset, currency: "USD" as const };
     store.setState({ assets: [foreign] });
     const onComplete = jest.fn();
-    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    const screen = await render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
     expect(screen.getByTestId("asset-native-currency")).toHaveTextContent("USD");
     expect(screen.getByText(/CogVest V1 supports INR holdings only/)).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId("asset-name-input"), "Renamed");
-    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await fireEvent.changeText(screen.getByTestId("asset-name-input"), "Renamed");
+    await fireEvent.press(screen.getByTestId("save-asset-correction-button"));
     await waitFor(() => expect(screen.getByText("Check the asset details before saving.")).toBeTruthy());
     expect(store.getState().assets).toEqual([foreign]);
     expect(onComplete).not.toHaveBeenCalled();
@@ -50,28 +50,28 @@ describe("ReviewAssetScreen", () => {
     const other = { ...asset, id: "other", name: "Other", symbol: "OTHER", ticker: "OTHER.NS", quoteSourceId: "OTHER.NS" };
     store.getState().addAsset(other);
     const onComplete = jest.fn();
-    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
-    fireEvent.changeText(screen.getByTestId("asset-name-input"), "Corrected name");
+    const screen = await render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("asset-name-input"), "Corrected name");
     const write = storage.setItem;
     storage.setItem = () => { throw new Error("Storage full"); };
-    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await fireEvent.press(screen.getByTestId("save-asset-correction-button"));
     await waitFor(() => expect(screen.getByText(/could not be saved safely/)).toBeTruthy());
     expect(store.getState().assets).toEqual([asset, other]);
     expect(screen.getByTestId("asset-name-input")).toHaveProp("value", "Corrected name");
     expect(onComplete).not.toHaveBeenCalled();
     storage.setItem = write;
-    fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await fireEvent.press(screen.getByTestId("save-asset-correction-button"));
     await waitFor(() => expect(onComplete).toHaveBeenCalled());
     expect(store.getState().assets).toEqual([{ ...asset, name: "Corrected name", isTaxEligible: false }, other]);
   });
 
-  it("cancels identity edits without changing provider matches or classification", () => {
+  it("cancels identity edits without changing provider matches or classification", async () => {
     const store = createStore();
     const before = store.getState().assets;
     const onCancel = jest.fn();
-    const screen = render(<ReviewAssetScreen assetId={asset.id} onCancel={onCancel} onComplete={jest.fn()} store={store} />);
-    fireEvent.changeText(screen.getByTestId("asset-provider-id-input"), "OTHER.NS");
-    fireEvent.press(screen.getByTestId("cancel-asset-correction-button"));
+    const screen = await render(<ReviewAssetScreen assetId={asset.id} onCancel={onCancel} onComplete={jest.fn()} store={store} />);
+    await fireEvent.changeText(screen.getByTestId("asset-provider-id-input"), "OTHER.NS");
+    await fireEvent.press(screen.getByTestId("cancel-asset-correction-button"));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().assets).toEqual(before);
   });
@@ -81,7 +81,7 @@ describe("ReviewAssetScreen", () => {
       "HDFC Bank Limited Long-Term Employee Retirement Portfolio Holding";
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({ ...asset, name: longName });
-    const screen = render(
+    const screen = await render(
       <ReviewAssetScreen
         assetId={asset.id}
         onCancel={jest.fn()}
@@ -90,7 +90,7 @@ describe("ReviewAssetScreen", () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId("delete-asset-button"));
+    await fireEvent.press(screen.getByTestId("delete-asset-button"));
 
     const content = within(screen.getByTestId("asset-deletion-content"));
     expect(content.getByText(`Delete ${longName}?`)).toBeTruthy();
@@ -115,15 +115,15 @@ describe("ReviewAssetScreen", () => {
     expect(screen.getByTestId("keep-asset-button")).toBeTruthy();
     expect(screen.getByTestId("confirm-delete-asset-button")).toBeTruthy();
 
-    act(() => {
+    await act(() => {
       screen.getByTestId("asset-deletion-confirmation").props.onRequestClose();
     });
 
     expect(screen.queryByText(`Delete ${longName}?`)).toBeNull();
     expect(store.getState().assets).toHaveLength(1);
 
-    fireEvent.press(screen.getByTestId("delete-asset-button"));
-    fireEvent.press(screen.getByTestId("keep-asset-button"));
+    await fireEvent.press(screen.getByTestId("delete-asset-button"));
+    await fireEvent.press(screen.getByTestId("keep-asset-button"));
     expect(screen.queryByText(`Delete ${longName}?`)).toBeNull();
     expect(screen.getByTestId("delete-asset-button")).toHaveProp(
       "accessibilityLabel",
@@ -137,12 +137,12 @@ describe("ReviewAssetScreen", () => {
     store.setState({
       deleteAsset: jest.fn(() => ({ reason: "linkedDemerger" as const, status: "rejected" as const })),
     });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={jest.fn()} store={store} />,
     );
 
-    fireEvent.press(getByTestId("delete-asset-button"));
-    fireEvent.press(getByTestId("confirm-delete-asset-button"));
+    await fireEvent.press(getByTestId("delete-asset-button"));
+    await fireEvent.press(getByTestId("confirm-delete-asset-button"));
 
     expect(getByText("This holding is linked to a demerger. Its parent and successor history must be corrected together.")).toBeTruthy();
     expect(within(getByTestId("asset-deletion-content")).getByTestId("asset-deletion-error")).toBeTruthy();
@@ -154,7 +154,7 @@ describe("ReviewAssetScreen", () => {
     const correctionSpy = jest.fn(originalCorrection);
     store.setState({ correctAsset: correctionSpy });
     const onComplete = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewAssetScreen
         assetId={asset.id}
         onCancel={jest.fn()}
@@ -163,12 +163,12 @@ describe("ReviewAssetScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("asset-name-input"), "HDFC Bank Limited");
-    fireEvent.press(getByTestId("asset-sector-picker"));
-    fireEvent.press(getByTestId("asset-sector-technology"));
+    await fireEvent.changeText(getByTestId("asset-name-input"), "HDFC Bank Limited");
+    await fireEvent.press(getByTestId("asset-sector-picker"));
+    await fireEvent.press(getByTestId("asset-sector-technology"));
     const save = getByTestId("save-asset-correction-button");
-    fireEvent.press(save);
-    fireEvent.press(save);
+    await fireEvent.press(save);
+    await fireEvent.press(save);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith("Asset details saved."));
     expect(correctionSpy).toHaveBeenCalledTimes(1);
@@ -205,7 +205,7 @@ describe("ReviewAssetScreen", () => {
     const deletionSpy = jest.fn(originalDeletion);
     store.setState({ deleteAsset: deletionSpy });
     const onComplete = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewAssetScreen
         assetId={asset.id}
         onCancel={jest.fn()}
@@ -215,11 +215,11 @@ describe("ReviewAssetScreen", () => {
     );
 
     expect(getByText(/1 transaction, 1 linked cash movement/)).toBeTruthy();
-    fireEvent.press(getByTestId("delete-asset-button"));
+    await fireEvent.press(getByTestId("delete-asset-button"));
     expect(getByText("Delete HDFC Bank?")).toBeTruthy();
     const confirm = getByTestId("confirm-delete-asset-button");
-    fireEvent.press(confirm);
-    fireEvent.press(confirm);
+    await fireEvent.press(confirm);
+    await fireEvent.press(confirm);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalled());
     expect(deletionSpy).toHaveBeenCalledTimes(1);
@@ -238,7 +238,7 @@ describe("ReviewAssetScreen", () => {
       symbol: "OTHER",
       ticker: "OTHER.NS",
     });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewAssetScreen
         assetId={asset.id}
         onCancel={jest.fn()}
@@ -247,17 +247,17 @@ describe("ReviewAssetScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("asset-ticker-input"), "OTHER.NS");
-    fireEvent.changeText(getByTestId("asset-provider-id-input"), "OTHER.NS");
-    fireEvent.press(getByTestId("save-asset-correction-button"));
+    await fireEvent.changeText(getByTestId("asset-ticker-input"), "OTHER.NS");
+    await fireEvent.changeText(getByTestId("asset-provider-id-input"), "OTHER.NS");
+    await fireEvent.press(getByTestId("save-asset-correction-button"));
 
     await waitFor(() => expect(getByText(/Another asset already uses/)).toBeTruthy());
     expect(getByTestId("asset-ticker-input")).toHaveProp("value", "OTHER.NS");
     expect(store.getState().assets[0]).toEqual(asset);
   });
 
-  it("handles stale asset IDs safely", () => {
-    const { getByText } = render(
+  it("handles stale asset IDs safely", async () => {
+    const { getByText } = await render(
       <ReviewAssetScreen
         assetId="missing"
         onCancel={jest.fn()}

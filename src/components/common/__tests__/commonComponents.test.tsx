@@ -23,10 +23,11 @@ import {
 import { getButtonInteractionStyle } from "@/src/components/common/AppButton";
 import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
+import { getAllByComponentType, getByComponentType, queryAllComponents } from "@/src/testing/componentQueries";
 
 describe("common UI primitives", () => {
-  it("offers compact page controls without shrinking their touch targets or disabling scaling", () => {
-    const view = render(<ScreenHeader compact title="Holdings" subtitle="4 market positions"
+  it("offers compact page controls without shrinking their touch targets or disabling scaling", async () => {
+    const view = await render(<ScreenHeader compact title="Holdings" subtitle="4 market positions"
       action={<IconButton plain icon="add-outline" accessibilityLabel="Add Holding" />} />);
     expect(view.getByRole("header", { name: "Holdings" })).toHaveStyle({ fontSize: 24, lineHeight: 30 });
     expect(view.getByText("4 market positions")).toHaveStyle({ fontSize: 12 });
@@ -34,31 +35,31 @@ describe("common UI primitives", () => {
     expect(view.getByRole("button", { name: "Add Holding" })).toHaveStyle({
       minHeight: 48, minWidth: 48, backgroundColor: "transparent",
     });
-    const rippleNodes = view.UNSAFE_root.findAll((node: { props: { android_ripple?: unknown } }) => node.props.android_ripple !== undefined);
+    const rippleNodes = queryAllComponents(view, (node: { props: { android_ripple?: unknown } }) => node.props.android_ripple !== undefined);
     expect(rippleNodes).toHaveLength(1);
     expect(rippleNodes[0].props.android_ripple.color).toBe("rgba(255,255,255,0.12)");
   });
-  it("pairs disclosure state with a visible directional indicator and a stable label", () => {
+  it("pairs disclosure state with a visible directional indicator and a stable label", async () => {
     const onPress = jest.fn();
-    const view = render(<DisclosureButton expanded={false} title="Invested & returns" onPress={onPress} testID="disclosure" />);
+    const view = await render(<DisclosureButton expanded={false} title="Invested & returns" onPress={onPress} testID="disclosure" />);
     const button = view.getByRole("button", { name: "Invested & returns" });
     expect(button).toHaveProp("accessibilityState", { expanded: false });
     expect(button).toHaveStyle({ minHeight: interaction.minimumTouchTarget });
-    expect(view.UNSAFE_getByType(Ionicons).props.name).toBe("chevron-down");
-    expect(view.UNSAFE_getByType(Ionicons).props.accessible).toBe(false);
-    fireEvent.press(button);
+    expect(getByComponentType(view, Ionicons).props.name).toBe("chevron-down");
+    expect(getByComponentType(view, Ionicons).props.accessible).toBe(false);
+    await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
-    view.rerender(<DisclosureButton expanded title="Invested & returns" onPress={onPress} testID="disclosure" />);
+    await view.rerender(<DisclosureButton expanded title="Invested & returns" onPress={onPress} testID="disclosure" />);
     expect(view.getByRole("button", { name: "Invested & returns" })).toHaveProp("accessibilityState", { expanded: true });
-    expect(view.UNSAFE_getByType(Ionicons).props.name).toBe("chevron-up");
+    expect(getByComponentType(view, Ionicons).props.name).toBe("chevron-up");
     expect(view.getByText("Invested & returns")).toHaveStyle({ flex: 1, flexShrink: 1 });
   });
-  it("preserves intrinsic header height when large text stacks its identity", () => {
+  it("preserves intrinsic header height when large text stacks its identity", async () => {
     const dimensions = jest.spyOn(ReactNative, "useWindowDimensions")
       .mockReturnValue({ fontScale: 1.3, height: 800, scale: 3, width: 360 });
     try {
-      const screen = render(<ScreenHeader title="Manage Assets" subtitle="Identity and classification" />);
-      expect(screen.UNSAFE_getAllByType(ReactNative.View).some((view) => {
+      const screen = await render(<ScreenHeader title="Manage Assets" subtitle="Identity and classification" />);
+      expect(getAllByComponentType(screen, ReactNative.View).some((view) => {
         const style = ReactNative.StyleSheet.flatten(view.props.style);
         return style?.flex === 0 && style.flexBasis === "auto" && style.flexGrow === 0 && style.flexShrink === 0;
       })).toBe(true);
@@ -66,8 +67,8 @@ describe("common UI primitives", () => {
       dimensions.mockRestore();
     }
   });
-  it("keeps routine sections open while preserving default decision cards", () => {
-    const screen = render(<>
+  it("keeps routine sections open while preserving default decision cards", async () => {
+    const screen = await render(<>
       <PremiumCard section testID="routine"><AppText>Activity</AppText></PremiumCard>
       <PremiumCard testID="decision"><AppText>Confirm deletion</AppText></PremiumCard>
       <MaskedValue value="123.45" testID="numeric" />
@@ -78,8 +79,8 @@ describe("common UI primitives", () => {
     expect(screen.getByTestId("numeric")).toHaveStyle({ fontVariant: ["tabular-nums"] });
     expect(screen.getByRole("header", { name: "Cash" })).toBeTruthy();
   });
-  it("separates screen and section heading roles without reducing contrast", () => {
-    const { getByRole } = render(
+  it("separates screen and section heading roles without reducing contrast", async () => {
+    const { getByRole } = await render(
       <>
         <ScreenHeader title="Settings" subtitle="Local-first controls" />
         <SectionHeader title="Display" />
@@ -98,8 +99,8 @@ describe("common UI primitives", () => {
     expect(getByRole("header", { name: "Display" }).props.numberOfLines).toBeUndefined();
   });
 
-  it("renders AppText with CogVest text colors", () => {
-    const { getByText } = render(
+  it("renders AppText with CogVest text colors", async () => {
+    const { getByText } = await render(
       <AppText color="secondary">Local-first portfolio tracker</AppText>,
     );
 
@@ -111,8 +112,8 @@ describe("common UI primitives", () => {
   it.each([
     { expectedBackground: colors.primary, variant: "primary" as const },
     { expectedBackground: colors.loss, variant: "destructive" as const },
-  ])("pairs $variant labels with inverse text", ({ expectedBackground, variant }) => {
-    const { getByTestId, getByText } = render(
+  ])("pairs $variant labels with inverse text", async ({ expectedBackground, variant }) => {
+    const { getByTestId, getByText } = await render(
       <AppButton
         testID={`${variant}-button`}
         title={`${variant} action`}
@@ -140,8 +141,8 @@ describe("common UI primitives", () => {
     ).toBeUndefined();
   });
 
-  it("exposes button semantics and a readable default label", () => {
-    const { getByRole } = render(<AppButton title="Save holding" />);
+  it("exposes button semantics and a readable default label", async () => {
+    const { getByRole } = await render(<AppButton title="Save holding" />);
 
     expect(getByRole("button", { name: "Save holding" })).toHaveStyle({
       minHeight: interaction.minimumTouchTarget,
@@ -149,8 +150,8 @@ describe("common UI primitives", () => {
     });
   });
 
-  it("uses disabled opacity instead of pressed feedback", () => {
-    const { getByTestId } = render(
+  it("uses disabled opacity instead of pressed feedback", async () => {
+    const { getByTestId } = await render(
       <AppButton
         disabled
         testID="disabled-button"
@@ -170,8 +171,8 @@ describe("common UI primitives", () => {
     { expectedRipple: interaction.primaryRippleColor, variant: "primary" as const },
     { expectedRipple: interaction.primaryRippleColor, variant: "destructive" as const },
     { expectedRipple: interaction.rippleColor, variant: "secondary" as const },
-  ])("routes $variant through its accessible Android ripple", ({ expectedRipple, variant }) => {
-    const { UNSAFE_root } = render(
+  ])("routes $variant through its accessible Android ripple", async ({ expectedRipple, variant }) => {
+    const { container } = await render(
       <AppButton
         testID={`${variant}-ripple-button`}
         title={`${variant} action`}
@@ -179,7 +180,7 @@ describe("common UI primitives", () => {
       />,
     );
 
-    const rippleNodes = UNSAFE_root.findAll(
+    const rippleNodes = queryAllComponents({ container }, 
       (node: { props: { android_ripple?: unknown } }) => node.props.android_ripple !== undefined,
     );
     expect(rippleNodes).toHaveLength(1);
@@ -202,8 +203,8 @@ describe("common UI primitives", () => {
     });
   });
 
-  it("renders icon buttons with the minimum Android touch target", () => {
-    const { getByTestId, UNSAFE_getByType } = render(
+  it("renders icon buttons with the minimum Android touch target", async () => {
+    const { getByTestId, container } = await render(
       <IconButton
         accessibilityLabel="Mask values"
         icon="eye-outline"
@@ -217,7 +218,7 @@ describe("common UI primitives", () => {
       minWidth: interaction.minimumTouchTarget,
       width: 46,
     });
-    expect(UNSAFE_getByType(Ionicons).props.accessible).toBe(false);
+    expect(getByComponentType({ container }, Ionicons).props.accessible).toBe(false);
   });
 
   it("selects adaptive shared layouts from the Android font scale", () => {
@@ -229,8 +230,8 @@ describe("common UI primitives", () => {
     expect(getMetricColumnCount(2)).toBe(1);
   });
 
-  it("uses a fixed accessible token for wealth without masking percentages", () => {
-    const { getByLabelText, getByText, queryByLabelText } = render(
+  it("uses a fixed accessible token for wealth without masking percentages", async () => {
+    const { getByLabelText, getByText, queryByLabelText } = await render(
       <>
         <MaskedValue
           accessibilityLabel="₹1,23,456.78"
@@ -248,14 +249,14 @@ describe("common UI primitives", () => {
     expect(getByText("12.4%")).toBeTruthy();
   });
 
-  it("exposes an exact value for compact text only while unmasked", () => {
-    const { getByLabelText, queryByLabelText, rerender } = render(
+  it("exposes an exact value for compact text only while unmasked", async () => {
+    const { getByLabelText, queryByLabelText, rerender } = await render(
       <MaskedValue exactValue="₹1,23,456.78" value="₹1.23L" />,
     );
 
     expect(getByLabelText("₹1,23,456.78")).toBeTruthy();
 
-    rerender(
+    await rerender(
       <MaskedValue exactValue="₹1,23,456.78" masked value="₹1.23L" />,
     );
 
@@ -263,8 +264,8 @@ describe("common UI primitives", () => {
     expect(getByLabelText(MASKED_VALUE_ACCESSIBILITY_LABEL)).toBeTruthy();
   });
 
-  it("renders an empty state action when provided", () => {
-    const { getByText } = render(
+  it("renders an empty state action when provided", async () => {
+    const { getByText } = await render(
       <EmptyState
         title="No holdings yet"
         message="Holdings are created from confirmed trades."
@@ -278,8 +279,8 @@ describe("common UI primitives", () => {
     expect(getByText("Add Trade")).toBeTruthy();
   });
 
-  it("uses readable secondary text for form placeholders", () => {
-    const { getByPlaceholderText } = render(
+  it("uses readable secondary text for form placeholders", async () => {
+    const { getByPlaceholderText } = await render(
       <FormTextField
         label="Amount"
         placeholder="1000"
@@ -293,10 +294,10 @@ describe("common UI primitives", () => {
     );
   });
 
-  it("forwards focus lifecycle callbacks to the text input", () => {
+  it("forwards focus lifecycle callbacks to the text input", async () => {
     const onBlur = jest.fn();
     const onFocus = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FormTextField
         label="Password"
         onBlur={onBlur}
@@ -306,8 +307,8 @@ describe("common UI primitives", () => {
       />,
     );
 
-    fireEvent(getByLabelText("Password"), "focus");
-    fireEvent(getByLabelText("Password"), "blur");
+    await fireEvent(getByLabelText("Password"), "focus");
+    await fireEvent(getByLabelText("Password"), "blur");
 
     expect(onFocus).toHaveBeenCalledTimes(1);
     expect(onBlur).toHaveBeenCalledTimes(1);

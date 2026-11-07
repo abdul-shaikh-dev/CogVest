@@ -45,8 +45,8 @@ describe("Quick Portfolio Setup route", () => {
     mockParams = {};
   });
 
-  it("keeps PPF inside setup and completes on Dashboard", () => {
-    render(<QuickPortfolioSetupRoute />);
+  it("keeps PPF inside setup and completes on Dashboard", async () => {
+    await render(<QuickPortfolioSetupRoute />);
 
     expect(mockScreenProps?.hardwareBackEnabled).toBe(true);
     mockScreenProps?.onAddPpfAccount();
@@ -59,13 +59,13 @@ describe("Quick Portfolio Setup route", () => {
     expect(mockReplace).toHaveBeenCalledWith("/(tabs)/dashboard");
   });
 
-  it("enables deterministic lookup only for the authorized development harness", () => {
+  it("enables deterministic lookup only for the authorized development harness", async () => {
     mockParams = {
       token: "cogvest-local-visual-qa",
       visualQaState: "lookup",
     };
 
-    render(<QuickPortfolioSetupRoute />);
+    await render(<QuickPortfolioSetupRoute />);
 
     expect(mockScreenProps?.resolveQuote).toEqual(expect.any(Function));
     expect(mockScreenProps?.now).toEqual(
@@ -76,10 +76,10 @@ describe("Quick Portfolio Setup route", () => {
     );
   });
 
-  it("does not expose deterministic providers without the harness token", () => {
+  it("does not expose deterministic providers without the harness token", async () => {
     mockParams = { visualQaState: "lookup" };
 
-    render(<QuickPortfolioSetupRoute />);
+    await render(<QuickPortfolioSetupRoute />);
 
     expect(mockScreenProps?.resolveQuote).toBeUndefined();
     expect(mockScreenProps?.searchAssetLookupResults).toBeUndefined();

@@ -26,8 +26,8 @@ it("ignores a previous asset completion after identity changes", async () => {
   let finishA!: (entry: DailyPriceEntry) => void;
   jest.mocked(fetchAssetHistory).mockImplementation((request) => request.providerId === "A.NS"
     ? new Promise((resolve) => { finishA = resolve; }) : Promise.resolve(makeEntry("B.NS")));
-  const hook = renderHook(({ selected }: { selected: Asset }) => useAssetHistory(selected, "2025-01-01", "2025-01-05"), { initialProps: { selected: asset } });
-  hook.rerender({ selected: { ...asset, id: "b", ticker: "B.NS" } });
+  const hook = await renderHook(({ selected }: { selected: Asset }) => useAssetHistory(selected, "2025-01-01", "2025-01-05"), { initialProps: { selected: asset } });
+  await hook.rerender({ selected: { ...asset, id: "b", ticker: "B.NS" } });
   await waitFor(() => expect(hook.result.current.entry?.providerId).toBe("B.NS"));
   await act(async () => { finishA(makeEntry("A.NS")); });
   expect(hook.result.current.entry?.providerId).toBe("B.NS");
@@ -38,15 +38,15 @@ it("keeps stale cached observations visible when offline", async () => {
   cache.write({ ...makeEntry("A.NS"), fetchedAt: "2025-01-06T00:00:00.000Z" });
   jest.mocked(createDailyPriceCache).mockReturnValue(cache);
   jest.mocked(fetchAssetHistory).mockRejectedValue(new Error("offline"));
-  const hook = renderHook(() => useAssetHistory(asset, "2025-01-01", "2025-01-05"));
+  const hook = await renderHook(() => useAssetHistory(asset, "2025-01-01", "2025-01-05"));
   await waitFor(() => expect(hook.result.current.loading).toBe(false));
   expect(hook.result.current.entry?.points[0].close).toBe(100);
   expect(hook.result.current.freshness).toBe("stale");
   expect(hook.result.current.message).toContain("connection");
 });
 
-it("does not request a manual asset", () => {
-  const hook = renderHook(() => useAssetHistory({ ...asset, assetClass: "debt", instrumentType: "ppf" }, "2025-01-01", "2025-01-05"));
+it("does not request a manual asset", async () => {
+  const hook = await renderHook(() => useAssetHistory({ ...asset, assetClass: "debt", instrumentType: "ppf" }, "2025-01-01", "2025-01-05"));
   expect(hook.result.current.loading).toBe(false);
   expect(hook.result.current.message).toContain("not available");
   expect(fetchAssetHistory).not.toHaveBeenCalled();
@@ -57,7 +57,7 @@ it("removes unsafe cached history after discovering a corporate action", async (
   cache.write({ ...makeEntry("A.NS"), fetchedAt: "2025-01-06T00:00:00.000Z" });
   jest.mocked(createDailyPriceCache).mockReturnValue(cache);
   jest.mocked(fetchAssetHistory).mockRejectedValue(new AssetHistoryError("corporate-action", "A split affects this range."));
-  const hook = renderHook(() => useAssetHistory(asset, "2025-01-01", "2025-01-05"));
+  const hook = await renderHook(() => useAssetHistory(asset, "2025-01-01", "2025-01-05"));
   await waitFor(() => expect(hook.result.current.loading).toBe(false));
   expect(hook.result.current.entry).toBeUndefined();
   expect(cache.read(makeEntry("A.NS")).status).toBe("missing");
@@ -70,11 +70,11 @@ it("does not revive unverified holding values when corporate-action cache cleari
   jest.mocked(createDailyPriceCache).mockReturnValue(cache);
   jest.mocked(fetchAssetHistory).mockRejectedValue(new AssetHistoryError("corporate-action", "Split"));
   const selected = { ...asset, ticker: "FAIL-CLEAR.NS" };
-  const first = renderHook(() => useAssetHistory(selected, "2025-01-01", "2025-01-05"));
+  const first = await renderHook(() => useAssetHistory(selected, "2025-01-01", "2025-01-05"));
   await waitFor(() => expect(first.result.current.loading).toBe(false));
-  first.unmount();
+  await first.unmount();
   jest.mocked(fetchAssetHistory).mockRejectedValue(new Error("offline"));
-  const second = renderHook(() => useAssetHistory(selected, "2025-01-01", "2025-01-05"));
+  const second = await renderHook(() => useAssetHistory(selected, "2025-01-01", "2025-01-05"));
   await waitFor(() => expect(second.result.current.loading).toBe(false));
   expect(second.result.current.entry).toBeDefined();
   expect(second.result.current.holdingSafe).toBe(false);

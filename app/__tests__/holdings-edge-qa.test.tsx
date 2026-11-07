@@ -26,36 +26,36 @@ jest.mock("@/src/hooks/useReducedMotionPreference", () => ({
 
 beforeEach(() => { mockParams = { token: "cogvest-local-visual-qa" }; });
 
-it("blocks missing tokens and release access", () => {
+it("blocks missing tokens and release access", async () => {
   mockParams = {};
-  const screen = render(<HoldingsEdgeQaRoute />);
+  const screen = await render(<HoldingsEdgeQaRoute />);
   expect(screen.getByTestId("holdings-edge-qa-blocked")).toBeTruthy();
   const development = __DEV__;
   try {
     Object.assign(globalThis, { __DEV__: false });
     mockParams = { token: "cogvest-local-visual-qa" };
-    screen.rerender(<HoldingsEdgeQaRoute />);
+    await screen.rerender(<HoldingsEdgeQaRoute />);
     expect(screen.getByTestId("holdings-edge-qa-blocked")).toBeTruthy();
   } finally { Object.assign(globalThis, { __DEV__: development }); }
 });
 
-it("renders exact synthetic balances and masking without changing the saved portfolio", () => {
-  const screen = render(<HoldingsEdgeQaRoute />);
-  fireEvent.press(screen.getByTestId("holding-row-edge-long"));
+it("renders exact synthetic balances and masking without changing the saved portfolio", async () => {
+  const screen = await render(<HoldingsEdgeQaRoute />);
+  await fireEvent.press(screen.getByTestId("holding-row-edge-long"));
   expect(screen.getByText("₹12,19,31,84,926.08")).toBeTruthy();
   expect(screen.getByText("₹12,19,31,84,926.08")).toHaveStyle({ fontSize: typography.sizes.title });
   expect(screen.getByText("₹9,44,97,18,533.76")).toBeTruthy();
-  fireEvent.press(screen.getByTestId("holding-detail-mask"));
+  await fireEvent.press(screen.getByTestId("holding-detail-mask"));
   expect(screen.queryByText("₹12,19,31,84,926.08")).toBeNull();
   expect(getPortfolioStore).not.toHaveBeenCalled();
 });
 
-it("keeps missing prices pending and supports the empty fixture", () => {
+it("keeps missing prices pending and supports the empty fixture", async () => {
   mockParams.scenario = "pending";
-  const screen = render(<HoldingsEdgeQaRoute />);
+  const screen = await render(<HoldingsEdgeQaRoute />);
   expect(screen.getAllByText("Valuation pending").length).toBeGreaterThan(0);
   mockParams.scenario = "empty";
-  screen.rerender(<HoldingsEdgeQaRoute />);
+  await screen.rerender(<HoldingsEdgeQaRoute />);
   expect(screen.queryByTestId("holding-row-edge-long")).toBeNull();
 });
 
@@ -65,12 +65,12 @@ it("stacks the large-text pending warning and preserves the failed refresh state
   });
   try {
     mockParams = { ...mockParams, scenario: "pending", mode: "minimal" };
-    const screen = render(<HoldingsEdgeQaRoute />);
+    const screen = await render(<HoldingsEdgeQaRoute />);
     expect(screen.getByTestId("holdings-pending-valuations")).toHaveStyle({ flexDirection: "column" });
     expect(screen.queryByTestId("holding-pnl-edge-long")).toBeNull();
-    fireEvent.press(screen.getByTestId("holdings-refresh-pending-prices"));
-    fireEvent.press(screen.getByTestId("holdings-more-button"));
-    fireEvent.press(screen.getByTestId("holdings-valuation-details-button"));
+    await fireEvent.press(screen.getByTestId("holdings-refresh-pending-prices"));
+    await fireEvent.press(screen.getByTestId("holdings-more-button"));
+    await fireEvent.press(screen.getByTestId("holdings-valuation-details-button"));
     await waitFor(() => expect(screen.getByText("Quote refresh failed")).toBeTruthy());
     expect(screen.getByText(/No usable prices are available/)).toBeTruthy();
     expect(getPortfolioStore).not.toHaveBeenCalled();

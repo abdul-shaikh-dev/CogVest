@@ -5,14 +5,14 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
 describe("useSettings", () => {
-  it("toggles and persists the global value masking preference", () => {
+  it("toggles and persists the global value masking preference", async () => {
     const storage = createMemoryJsonStorage();
     const firstStore = createPortfolioStore({ storage });
-    const { result } = renderHook(() => useSettings({ store: firstStore }));
+    const { result } = await renderHook(() => useSettings({ store: firstStore }));
 
     expect(result.current.maskWealthValues).toBe(false);
 
-    act(() => {
+    await act(() => {
       result.current.toggleMaskWealthValues();
     });
 
@@ -23,14 +23,14 @@ describe("useSettings", () => {
     expect(secondStore.getState().preferences.maskWealthValues).toBe(true);
   });
 
-  it("updates and persists display mode independently from value masking", () => {
+  it("updates and persists display mode independently from value masking", async () => {
     const storage = createMemoryJsonStorage();
     const firstStore = createPortfolioStore({ storage });
-    const { result } = renderHook(() => useSettings({ store: firstStore }));
+    const { result } = await renderHook(() => useSettings({ store: firstStore }));
 
     expect(result.current.displayMode).toBe("standard");
 
-    act(() => {
+    await act(() => {
       result.current.setDisplayMode("minimal");
     });
 
@@ -42,9 +42,9 @@ describe("useSettings", () => {
     });
   });
 
-  it("derives empty quote status without pretending live quotes exist", () => {
+  it("derives empty quote status without pretending live quotes exist", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() => useSettings({ store }));
+    const { result } = await renderHook(() => useSettings({ store }));
 
     expect(result.current.quoteStatus).toEqual({
       latestQuoteAsOf: null,
@@ -57,7 +57,7 @@ describe("useSettings", () => {
     });
   });
 
-  it("labels quote source as Live when only live quotes are cached", () => {
+  it("labels quote source as Live when only live quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-live",
@@ -67,12 +67,12 @@ describe("useSettings", () => {
       source: "yahoo",
     });
 
-    const { result } = renderHook(() => useSettings({ store }));
+    const { result } = await renderHook(() => useSettings({ store }));
 
     expect(result.current.quoteStatus.quoteSourceLabel).toBe("Live");
   });
 
-  it("labels quote source as Manual when only manual quotes are cached", () => {
+  it("labels quote source as Manual when only manual quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-manual",
@@ -82,12 +82,12 @@ describe("useSettings", () => {
       source: "manual",
     });
 
-    const { result } = renderHook(() => useSettings({ store }));
+    const { result } = await renderHook(() => useSettings({ store }));
 
     expect(result.current.quoteStatus.quoteSourceLabel).toBe("Manual");
   });
 
-  it("labels quote source as Mixed when live and manual quotes are cached", () => {
+  it("labels quote source as Mixed when live and manual quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-live",
@@ -104,12 +104,12 @@ describe("useSettings", () => {
       source: "manual",
     });
 
-    const { result } = renderHook(() => useSettings({ store }));
+    const { result } = await renderHook(() => useSettings({ store }));
 
     expect(result.current.quoteStatus.quoteSourceLabel).toBe("Mixed");
   });
 
-  it("derives quote freshness and manual fallback status from stored quotes", () => {
+  it("derives quote freshness and manual fallback status from stored quotes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-live",
@@ -126,7 +126,7 @@ describe("useSettings", () => {
       source: "manual",
     });
 
-    const { result } = renderHook(() => useSettings({ store }));
+    const { result } = await renderHook(() => useSettings({ store }));
 
     expect(result.current.quoteStatus).toEqual({
       latestQuoteAsOf: "2026-05-16T10:00:00.000Z",

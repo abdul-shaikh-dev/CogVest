@@ -29,8 +29,8 @@ describe("Insight route", () => {
     mockCanGoBack.mockReturnValue(true);
     mockParams = { kind: "conviction" };
   });
-  it("returns to the caller or Dashboard when launched without history", () => {
-    render(<InsightRoute />);
+  it("returns to the caller or Dashboard when launched without history", async () => {
+    await render(<InsightRoute />);
     expect(mockProps.kind).toBe("conviction");
     mockProps.onClose();
     expect(mockBack).toHaveBeenCalledTimes(1);
@@ -38,22 +38,22 @@ describe("Insight route", () => {
     mockProps.onClose();
     expect(mockReplace).toHaveBeenCalledWith("/(tabs)/dashboard");
   });
-  it("handles hardware Back and cleans up its listener", () => {
+  it("handles hardware Back and cleans up its listener", async () => {
     const remove = jest.fn();
     const listener = jest
       .spyOn(BackHandler, "addEventListener")
       .mockReturnValue({ remove });
-    const screen = render(<InsightRoute />);
+    const screen = await render(<InsightRoute />);
     expect(listener.mock.calls[0][0]).toBe("hardwareBackPress");
     expect(listener.mock.calls[0][1](backPress)).toBe(true);
     expect(mockBack).toHaveBeenCalledTimes(1);
-    screen.unmount();
+    await screen.unmount();
     expect(remove).toHaveBeenCalledTimes(1);
     listener.mockRestore();
   });
-  it("does not accept ambiguous repeated kind parameters", () => {
+  it("does not accept ambiguous repeated kind parameters", async () => {
     mockParams = { kind: ["conviction", "frequency"] };
-    render(<InsightRoute />);
+    await render(<InsightRoute />);
     expect(mockProps.kind).toBe("");
   });
 });

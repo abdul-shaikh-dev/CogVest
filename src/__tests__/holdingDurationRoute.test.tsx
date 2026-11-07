@@ -19,18 +19,18 @@ jest.mock("@/src/features/holdings/HoldingDurationScreen", () => ({
   },
 }));
 const Route = require("../../app/holding-duration").default;
-it("returns to the caller, safely handles direct launch and cleans up hardware Back", () => {
+it("returns to the caller, safely handles direct launch and cleans up hardware Back", async () => {
   const remove = jest.fn();
   const listener = jest
     .spyOn(BackHandler, "addEventListener")
     .mockReturnValue({ remove });
-  const screen = render(<Route />);
+  const screen = await render(<Route />);
   mockClose();
   expect(mockBack).toHaveBeenCalledTimes(1);
   mockCanGoBack.mockReturnValue(false);
   expect(listener.mock.calls[0][1](backPress)).toBe(true);
   expect(mockReplace).toHaveBeenCalledWith("/(tabs)/holdings");
-  screen.unmount();
+  await screen.unmount();
   expect(remove).toHaveBeenCalledTimes(1);
   listener.mockRestore();
 });

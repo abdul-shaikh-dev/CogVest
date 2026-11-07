@@ -42,16 +42,16 @@ function seedStore() {
 }
 
 describe("useSellRedeemHolding", () => {
-  it("never overwrites an entered execution price when the saved quote changes", () => {
+  it("never overwrites an entered execution price when the saved quote changes", async () => {
     const store = seedStore();
-    const { result } = renderHook(() => useSellRedeemHolding({
+    const { result } = await renderHook(() => useSellRedeemHolding({
       assetId: hdfc.id,
       now: new Date("2026-05-20T10:05:00.000Z"),
       store,
     }));
 
-    act(() => result.current.setSellPrice("1650"));
-    act(() => store.getState().upsertQuote({
+    await act(() => result.current.setSellPrice("1650"));
+    await act(() => store.getState().upsertQuote({
       asOf: "2026-05-20T10:04:00.000Z",
       assetId: hdfc.id,
       currency: "INR",
@@ -62,8 +62,8 @@ describe("useSellRedeemHolding", () => {
     expect(result.current.holding?.currentPrice).toBe(1710);
     expect(result.current.sellPrice).toBe("1650");
 
-    act(() => result.current.setSellPrice(""));
-    act(() => store.getState().upsertQuote({
+    await act(() => result.current.setSellPrice(""));
+    await act(() => store.getState().upsertQuote({
       asOf: "2026-05-20T10:05:00.000Z",
       assetId: hdfc.id,
       currency: "INR",
@@ -73,7 +73,7 @@ describe("useSellRedeemHolding", () => {
     expect(result.current.sellPrice).toBe("");
   });
 
-  it("previews a sale above pre-split units but rejects it before the split date", () => {
+  it("previews a sale above pre-split units but rejects it before the split date", async () => {
     const store = seedStore();
     store.setState({
       openingPositions: store.getState().openingPositions.map((position) => ({ ...position, measuredAsOf: "2026-04-15" })),
@@ -83,60 +83,60 @@ describe("useSellRedeemHolding", () => {
         evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
       }] }],
     });
-    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
-    act(() => result.current.setQuantity("30"));
+    const { result } = await renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
+    await act(() => result.current.setQuantity("30"));
     expect(result.current.availableUnits).toBe(50);
     expect(result.current.canSave).toBe(true);
     expect(result.current.preview?.remainingUnits).toBe(20);
-    act(() => result.current.setDate("2026-04-20"));
+    await act(() => result.current.setDate("2026-04-20"));
     expect(result.current.canSave).toBe(false);
     expect(result.current.preview).toBeNull();
   });
 
-  it("blocks unresolved split holdings without crashing or allowing save", () => {
+  it("blocks unresolved split holdings without crashing or allowing save", async () => {
     const store = seedStore();
     store.setState({ assets: [{ ...hdfc, stockSplits: [{
       id: "split", kind: "split", effectiveDate: "2026-05-01",
       oldIsin: "INE040A01026", newIsin: "INE040A01034", newShares: 2, oldShares: 1,
       evidence: { url: "https://www.nseindia.com/split.pdf", publishedDate: "2026-04-01", verifiedDate: "2026-04-02" },
     }] }] });
-    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
+    const { result } = await renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store, now: new Date("2026-05-20T12:00:00Z") }));
     expect(result.current.canSave).toBe(false);
     expect(result.current.preview).toBeNull();
     expect(result.current.errors.quantity).toMatch(/unavailable/);
   });
 
-  it("blocks a backdated sale before ownership instead of previewing today's inventory", () => {
+  it("blocks a backdated sale before ownership instead of previewing today's inventory", async () => {
     const store = seedStore();
-    const { result } = renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store }));
-    act(() => {
+    const { result } = await renderHook(() => useSellRedeemHolding({ assetId: hdfc.id, store }));
+    await act(() => {
       result.current.setQuantity("1");
       result.current.setDate("2026-04-01");
     });
     expect(result.current.canSave).toBe(false);
     expect(result.current.preview).toBeNull();
     expect(result.current.errors.quantity).toMatch(/Not enough units on this date/);
-    act(() => { result.current.save(); });
+    await act(() => { result.current.save(); });
     expect(store.getState().trades).toHaveLength(0);
     expect(store.getState().cashEntries).toHaveLength(0);
   });
-  it("creates a sell trade and linked cash proceeds by default", () => {
+  it("creates a sell trade and linked cash proceeds by default", async () => {
     const store = seedStore();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSellRedeemHolding({ assetId: hdfc.id, store }),
     );
 
-    act(() => result.current.setQuantity("5"));
-    act(() => result.current.setSellPrice("1700"));
-    act(() => result.current.setFees("100"));
-    act(() => result.current.setDate("2026-05-20"));
+    await act(() => result.current.setQuantity("5"));
+    await act(() => result.current.setSellPrice("1700"));
+    await act(() => result.current.setFees("100"));
+    await act(() => result.current.setDate("2026-05-20"));
 
     expect(result.current.preview).toMatchObject({
       grossProceeds: 8500,
       netProceeds: 8400,
       remainingUnits: 20,
     });
-    act(() => {
+    await act(() => {
       result.current.save();
     });
 
@@ -163,17 +163,17 @@ describe("useSellRedeemHolding", () => {
     expect(result.current.successMessage).toBe("Sell / redeem recorded.");
   });
 
-  it("returns the completed result without duplicating a repeated sale", () => {
+  it("returns the completed result without duplicating a repeated sale", async () => {
     const store = seedStore();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSellRedeemHolding({ assetId: hdfc.id, store }),
     );
     let firstResult: ReturnType<typeof result.current.save> | undefined;
     let secondResult: ReturnType<typeof result.current.save> | undefined;
 
-    act(() => result.current.setQuantity("5"));
-    act(() => result.current.setSellPrice("1700"));
-    act(() => {
+    await act(() => result.current.setQuantity("5"));
+    await act(() => result.current.setSellPrice("1700"));
+    await act(() => {
       firstResult = result.current.save();
       secondResult = result.current.save();
     });
@@ -183,15 +183,15 @@ describe("useSellRedeemHolding", () => {
     expect(store.getState().cashEntries).toHaveLength(1);
   });
 
-  it("rejects selling more than available units", () => {
+  it("rejects selling more than available units", async () => {
     const store = seedStore();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSellRedeemHolding({ assetId: hdfc.id, store }),
     );
 
-    act(() => result.current.setQuantity("26"));
-    act(() => result.current.setSellPrice("1700"));
-    act(() => {
+    await act(() => result.current.setQuantity("26"));
+    await act(() => result.current.setSellPrice("1700"));
+    await act(() => {
       result.current.save();
     });
 
@@ -201,16 +201,16 @@ describe("useSellRedeemHolding", () => {
     expect(store.getState().trades).toEqual([]);
   });
 
-  it("rejects fees above gross proceeds", () => {
+  it("rejects fees above gross proceeds", async () => {
     const store = seedStore();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSellRedeemHolding({ assetId: hdfc.id, store }),
     );
 
-    act(() => result.current.setQuantity("1"));
-    act(() => result.current.setSellPrice("100"));
-    act(() => result.current.setFees("101"));
-    act(() => {
+    await act(() => result.current.setQuantity("1"));
+    await act(() => result.current.setSellPrice("100"));
+    await act(() => result.current.setFees("101"));
+    await act(() => {
       result.current.save();
     });
 
@@ -218,9 +218,9 @@ describe("useSellRedeemHolding", () => {
     expect(store.getState().trades).toEqual([]);
   });
 
-  it("reports a missing holding state", () => {
+  it("reports a missing holding state", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSellRedeemHolding({ assetId: hdfc.id, store }),
     );
 

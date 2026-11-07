@@ -7,8 +7,8 @@ jest.mock("expo-router", () => ({ router: { replace: (...args: unknown[]) => moc
 describe("legacy entry compatibility", () => {
   beforeEach(() => mockReplace.mockClear());
 
-  it("does not automatically enter a financial form or expose raw fields", () => {
-    const screen = render(<LegacyEntryRoute />);
+  it("does not automatically enter a financial form or expose raw fields", async () => {
+    const screen = await render(<LegacyEntryRoute />);
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.queryByText("Quote source ID")).toBeNull();
     expect(screen.queryByTestId("add-trade-screen")).toBeNull();
@@ -20,9 +20,9 @@ describe("legacy entry compatibility", () => {
     ["legacy-record-purchase", "/record-purchase"],
     ["legacy-sell-holding", "/(tabs)/holdings"],
     ["legacy-cancel", "/(tabs)/holdings"],
-  ])("replaces the obsolete route after an explicit %s choice", (id, destination) => {
-    const screen = render(<LegacyEntryRoute />);
-    fireEvent.press(screen.getByTestId(id));
+  ])("replaces the obsolete route after an explicit %s choice", async (id, destination) => {
+    const screen = await render(<LegacyEntryRoute />);
+    await fireEvent.press(screen.getByTestId(id));
     expect(mockReplace).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith(destination);
   });

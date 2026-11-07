@@ -50,28 +50,28 @@ function createStore() {
 describe("ReviewOpeningPositionScreen", () => {
   it("retains optional context while collapsed and saves the hidden values", async () => {
     const { store } = createStore();
-    const screen = render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
+    const screen = await render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
       onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
-    fireEvent.changeText(screen.getByTestId("opening-correction-notes-input"), "Updated context");
-    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    await fireEvent.changeText(screen.getByTestId("opening-correction-notes-input"), "Updated context");
+    await fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
     expect(screen.queryByTestId("opening-correction-notes-input")).toBeNull();
     expect(screen.getByTestId("opening-correction-context-toggle")).toBeCollapsed();
-    fireEvent.press(screen.getByTestId("save-opening-correction-button"));
+    await fireEvent.press(screen.getByTestId("save-opening-correction-button"));
     await waitFor(() => expect(store.getState().openingPositions[0]).toMatchObject({
       notes: "Updated context", conviction: 4,
     }));
   });
 
-  it("starts empty context collapsed and reopens it for a validation error", () => {
+  it("starts empty context collapsed and reopens it for a validation error", async () => {
     const { store } = createStore();
     store.setState({ openingPositions: [{ ...openingPosition, notes: undefined, conviction: undefined }] });
-    const screen = render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
+    const screen = await render(<ReviewOpeningPositionScreen openingPositionId={openingPosition.id}
       onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
     expect(screen.queryByTestId("opening-correction-notes-input")).toBeNull();
-    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
-    fireEvent.changeText(screen.getByTestId("opening-correction-intended-hold-days-input"), "-1");
-    fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
-    fireEvent.press(screen.getByTestId("save-opening-correction-button"));
+    await fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    await fireEvent.changeText(screen.getByTestId("opening-correction-intended-hold-days-input"), "-1");
+    await fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
+    await fireEvent.press(screen.getByTestId("save-opening-correction-button"));
     expect(screen.getByTestId("opening-correction-context-toggle")).toBeExpanded();
     expect(screen.getByTestId("opening-correction-intended-hold-days-input")).toHaveProp("value", "-1");
     expect(store.getState().openingPositions[0].intendedHoldDays).toBeUndefined();
@@ -79,8 +79,8 @@ describe("ReviewOpeningPositionScreen", () => {
 
   it("requires reveal before exposing saved aggregate values", async () => {
     const { store } = createStore();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
-    const screen = render(
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = await render(
       <ReviewOpeningPositionScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -92,14 +92,14 @@ describe("ReviewOpeningPositionScreen", () => {
     expect(screen.getByText("Reveal to review")).toBeTruthy();
     expect(screen.queryByTestId("opening-correction-average-cost-input")).toBeNull();
     expect(screen.queryByText("1450")).toBeNull();
-    fireEvent.press(screen.getByTestId("reveal-opening-position-button"));
+    await fireEvent.press(screen.getByTestId("reveal-opening-position-button"));
     expect(screen.getByTestId("opening-correction-average-cost-input")).toHaveProp(
       "value",
       "1450",
     );
 
-    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     await waitFor(() => {
       expect(screen.getByText("Reveal to review")).toBeTruthy();
       expect(screen.queryByTestId("opening-correction-average-cost-input")).toBeNull();
@@ -114,7 +114,7 @@ describe("ReviewOpeningPositionScreen", () => {
       .fn(originalCorrection)
       .mockName("correctOpeningPosition");
     store.setState({ correctOpeningPosition: correctionSpy });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewOpeningPositionScreen
         now={new Date(2026, 6, 22, 12)}
         onCancel={jest.fn()}
@@ -125,18 +125,18 @@ describe("ReviewOpeningPositionScreen", () => {
     );
 
     expect(getByText(/holding remains saved with valuation pending/)).toBeTruthy();
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("opening-correction-quantity-input"),
       "30",
     );
-    fireEvent.press(getByTestId("opening-correction-conviction-5"));
-    fireEvent.changeText(
+    await fireEvent.press(getByTestId("opening-correction-conviction-5"));
+    await fireEvent.changeText(
       getByTestId("opening-correction-intended-hold-days-input"),
       "1095",
     );
     const saveButton = getByTestId("save-opening-correction-button");
-    fireEvent.press(saveButton);
-    fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith("Portfolio history updated.");
@@ -154,7 +154,7 @@ describe("ReviewOpeningPositionScreen", () => {
 
   it("records new provenance only when the manual price changes", async () => {
     const { store } = createStore();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewOpeningPositionScreen
         now={new Date("2026-07-22T06:30:00.000Z")}
         onCancel={jest.fn()}
@@ -164,11 +164,11 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("opening-correction-current-price-input"),
       "1700",
     );
-    fireEvent.press(getByTestId("save-opening-correction-button"));
+    await fireEvent.press(getByTestId("save-opening-correction-button"));
 
     await waitFor(() => {
       expect(store.getState().openingPositions[0]?.manualValuation).toEqual({
@@ -181,13 +181,13 @@ describe("ReviewOpeningPositionScreen", () => {
     });
   });
 
-  it("validates correction fields before touching the store", () => {
+  it("validates correction fields before touching the store", async () => {
     const { store } = createStore();
     const correctionSpy = jest.spyOn(
       store.getState(),
       "correctOpeningPosition",
     );
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewOpeningPositionScreen
         now={new Date(2026, 6, 22, 12)}
         onCancel={jest.fn()}
@@ -197,8 +197,8 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("opening-correction-quantity-input"), "0");
-    fireEvent.press(getByTestId("save-opening-correction-button"));
+    await fireEvent.changeText(getByTestId("opening-correction-quantity-input"), "0");
+    await fireEvent.press(getByTestId("save-opening-correction-button"));
 
     expect(getByText("Quantity must be greater than zero.")).toBeTruthy();
     expect(correctionSpy).not.toHaveBeenCalled();
@@ -216,7 +216,7 @@ describe("ReviewOpeningPositionScreen", () => {
         status: "applied" as const,
       })),
     });
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewOpeningPositionScreen
         onCancel={jest.fn()}
         onComplete={onComplete}
@@ -225,7 +225,7 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("save-opening-correction-button"));
+    await fireEvent.press(getByTestId("save-opening-correction-button"));
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith(
@@ -242,7 +242,7 @@ describe("ReviewOpeningPositionScreen", () => {
       .fn(originalDeletion)
       .mockName("deleteOpeningPosition");
     store.setState({ deleteOpeningPosition: deletionSpy });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewOpeningPositionScreen
         onCancel={jest.fn()}
         onComplete={onComplete}
@@ -251,13 +251,13 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("delete-opening-position-button"));
+    await fireEvent.press(getByTestId("delete-opening-position-button"));
     expect(getByText("Remove this opening position?")).toBeTruthy();
     const confirmButton = getByTestId(
       "confirm-delete-opening-position-button",
     );
-    fireEvent.press(confirmButton);
-    fireEvent.press(confirmButton);
+    await fireEvent.press(confirmButton);
+    await fireEvent.press(confirmButton);
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith(
@@ -275,7 +275,7 @@ describe("ReviewOpeningPositionScreen", () => {
         throw new Error("simulated opening correction failure");
       }
     };
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewOpeningPositionScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -284,11 +284,11 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("opening-correction-quantity-input"),
       "40",
     );
-    fireEvent.press(getByTestId("save-opening-correction-button"));
+    await fireEvent.press(getByTestId("save-opening-correction-button"));
 
     await waitFor(() => {
       expect(
@@ -302,9 +302,9 @@ describe("ReviewOpeningPositionScreen", () => {
     );
   });
 
-  it("handles a stale opening-position ID safely", () => {
+  it("handles a stale opening-position ID safely", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText } = render(
+    const { getByText } = await render(
       <ReviewOpeningPositionScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}

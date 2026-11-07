@@ -5,6 +5,7 @@ import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { Asset, Trade } from "@/src/types";
+import { getByComponentType } from "@/src/testing/componentQueries";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -34,59 +35,59 @@ describe("TradeHistoryScreen", () => {
     store.getState().recordFundedBuy({ cashLabel: "Purchase", trade });
     const other = { ...trade, id: "other-trade", assetId: "other" };
     store.getState().recordFundedBuy({ cashLabel: "Other purchase", trade: other });
-    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
-    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("select-all-transactions"));
     expect(screen.getByText("Select all 1 shown")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("clear-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("clear-transaction-selection"));
     expect(screen.getByTestId("review-selected-transaction-deletion")).toBeDisabled();
-    fireEvent.press(screen.getByTestId("select-all-transactions"));
-    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
-    fireEvent.press(screen.getByText("Keep transactions"));
+    await fireEvent.press(screen.getByTestId("select-all-transactions"));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByText("Keep transactions"));
     expect(store.getState().trades).toHaveLength(2);
     expect(store.getState().cashEntries).toHaveLength(3);
-    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
-    fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
     await waitFor(() => expect(store.getState().trades).toEqual([other]));
     expect(store.getState().cashEntries).toHaveLength(2);
     expect(store.getState().cashEntries).toContainEqual(expect.objectContaining({ linkedTradeId: other.id, amount: 200 }));
   });
 
-  it("keeps long mixed histories selectable without treating transfers as cash", () => {
+  it("keeps long mixed histories selectable without treating transfers as cash", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({ ...asset, name: "A long mutual fund name with Direct Growth and Non Demat details" });
     store.setState({ trades: Array.from({ length: 60 }, (_, index) => index % 2 === 0
       ? { ...trade, id: `trade-${index}` }
       : { assetId: asset.id, id: `trade-${index}`, type: "transferOut" as const, quantity: 1, date: "2026-04-10" }) });
-    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
     expect(screen.getByTestId("transaction-value-trade-1")).toHaveTextContent("1 units");
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
-    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("select-all-transactions"));
     expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("60 selected");
     expect(screen.getByTestId("review-trade-trade-59")).toHaveProp("accessibilityState", { checked: true });
     expect(store.getState().trades).toHaveLength(60);
   });
 
-  it("shows realized gain separately from net proceeds even after a full exit", () => {
+  it("shows realized gain separately from net proceeds even after a full exit", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
     store.getState().addTrade({ ...trade, id: "sale", date: "2026-04-11", type: "sell", pricePerUnit: 150, fees: 5, totalValue: 295 });
-    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
     expect(screen.getByText("Net ₹295.00")).toBeTruthy();
     expect(screen.getByText(/Realized gain \+₹95.00 · after fees/)).toBeTruthy();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
-    screen.rerender(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await screen.rerender(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
     expect(screen.queryByText(/₹95.00/)).toBeNull();
     expect(screen.queryByText(/₹295.00/)).toBeNull();
   });
 
-  it("lists the holding transaction with a review action", () => {
+  it("lists the holding transaction with a review action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewTrade = jest.fn();
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <TradeHistoryScreen
         assetId={asset.id}
         onBack={jest.fn()}
@@ -97,12 +98,12 @@ describe("TradeHistoryScreen", () => {
 
     expect(getByText("1 record")).toBeTruthy();
     expect(getByText("Purchase")).toBeTruthy();
-    fireEvent.press(getByTestId(`review-trade-${trade.id}`));
+    await fireEvent.press(getByTestId(`review-trade-${trade.id}`));
     expect(onReviewTrade).toHaveBeenCalledWith(trade.id);
   });
 
-  it("shows a safe state for a missing holding", () => {
-    const { getByText } = render(
+  it("shows a safe state for a missing holding", async () => {
+    const { getByText } = await render(
       <TradeHistoryScreen
         assetId="missing"
         onBack={jest.fn()}
@@ -114,12 +115,12 @@ describe("TradeHistoryScreen", () => {
     expect(getByText("Holding unavailable")).toBeTruthy();
   });
 
-  it("does not expose transaction values while wealth masking is active", () => {
+  it("does not expose transaction values while wealth masking is active", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <TradeHistoryScreen
         assetId={asset.id}
         onBack={jest.fn()}
@@ -133,11 +134,11 @@ describe("TradeHistoryScreen", () => {
     expect(queryByText(/2 units at/)).toBeNull();
   });
 
-  it("lists transactions across closed and active holdings", () => {
+  it("lists transactions across closed and active holdings", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
-    const { getByText } = render(
+    const { getByText } = await render(
       <TradeHistoryScreen
         assetId=""
         onBack={jest.fn()}
@@ -151,7 +152,7 @@ describe("TradeHistoryScreen", () => {
     expect(getByText(/Purchase ·/)).toBeTruthy();
   });
 
-  it("renders imported transfers without inventing a price or total", () => {
+  it("renders imported transfers without inventing a price or total", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const transfer: Trade = {
       acquisitionCostPerUnit: 150,
@@ -163,7 +164,7 @@ describe("TradeHistoryScreen", () => {
     };
     store.getState().addAsset(asset);
     store.getState().addTrade(transfer);
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <TradeHistoryScreen
         assetId={asset.id}
         onBack={jest.fn()}
@@ -184,44 +185,44 @@ describe("TradeHistoryScreen", () => {
     store.getState().addAsset(asset);
     store.getState().addCashEntry({ amount: 1000, date: "2026-04-01", id: "cash", label: "Cash", purpose: "capitalContribution", type: "addition" });
     store.getState().recordFundedBuy({ cashLabel: "Purchase", trade });
-    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
     expect(screen.getByText("0 selected")).toBeTruthy();
-    fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
+    await fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
     expect(screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityState).toEqual({ checked: true });
-    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
     expect(screen.getByText("The transaction shown on this screen is selected.")).toBeTruthy();
     expect(screen.getByText(/1 linked cash movement will be removed/u)).toBeTruthy();
 
-    act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+    await act(() => getByComponentType(screen, Modal).props.onRequestClose());
     expect(store.getState().trades).toHaveLength(1);
-    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
-    fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
     await waitFor(() => expect(store.getState().trades).toEqual([]));
     expect(store.getState().cashEntries).toEqual([expect.objectContaining({ id: "cash" })]);
     expect(screen.getByText(/1 transaction removed/u)).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
   });
 
-  it("clears selection without navigating and labels select-all scope", () => {
+  it("clears selection without navigating and labels select-all scope", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onBack = jest.fn();
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
     store.getState().addTrade({ ...trade, date: "2026-05-10", id: "second" });
-    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
-    fireEvent.press(screen.getByTestId("select-all-transactions"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("select-all-transactions"));
     expect(screen.getByText("2 selected")).toBeTruthy();
-    fireEvent.press(screen.getByText("Cancel selection"));
+    await fireEvent.press(screen.getByText("Cancel selection"));
     expect(screen.getByText("2 records")).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
     expect(store.getState().trades).toHaveLength(2);
   });
 
-  it("announces distinct same-date transactions with identity, detail, and selection state", () => {
+  it("announces distinct same-date transactions with identity, detail, and selection state", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const secondAsset: Asset = {
       ...asset,
@@ -242,9 +243,9 @@ describe("TradeHistoryScreen", () => {
     store.getState().addAsset(secondAsset);
     store.getState().addTrade(trade);
     store.getState().addTrade(sameDateTrade);
-    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
     expect(screen.getByTestId("transaction-selection-count").props.accessibilityLiveRegion).toBe("polite");
     expect(screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityLabel).toMatch(
       /Not selected, HDFC Bank, Purchase, .*2 units at ₹100\.00, total ₹200\.00, transaction 1 of 2/u,
@@ -253,35 +254,35 @@ describe("TradeHistoryScreen", () => {
       /Not selected, Reliance Industries, Purchase, .*3 units at ₹2,500\.00, total ₹7,500\.00, transaction 2 of 2/u,
     );
 
-    fireEvent.press(screen.getByTestId(`review-trade-${sameDateTrade.id}`));
+    await fireEvent.press(screen.getByTestId(`review-trade-${sameDateTrade.id}`));
     expect(screen.getByTestId(`review-trade-${sameDateTrade.id}`).props.accessibilityLabel).toMatch(/^Selected,/u);
     expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("1 selected");
   });
 
-  it("keeps financial detail out of accessible selection labels while values are masked", () => {
+  it("keeps financial detail out of accessible selection labels while values are masked", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const screen = render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
     const label = screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityLabel as string;
     expect(label).toMatch(/Not selected, HDFC Bank, Purchase, .*values masked, transaction 1 of 1/u);
     expect(label).not.toMatch(/₹|2 units|100|200/u);
   });
 
-  it("blocks a partial deletion that would leave a negative position", () => {
+  it("blocks a partial deletion that would leave a negative position", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const sale: Trade = { ...trade, date: "2026-05-10", id: "sale", type: "sell" };
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
     store.getState().addTrade(sale);
-    const screen = render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
 
-    fireEvent.press(screen.getByTestId("start-transaction-selection"));
-    fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
-    fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
     expect(screen.getByTestId("transaction-deletion-blocked")).toHaveTextContent(/more disposals than available units/u);
     expect(screen.queryByTestId("confirm-delete-selected-transactions")).toBeNull();
     expect(store.getState().trades).toHaveLength(2);

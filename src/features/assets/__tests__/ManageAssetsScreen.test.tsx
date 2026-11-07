@@ -28,7 +28,7 @@ const closedAsset: Asset = {
 };
 
 describe("ManageAssetsScreen", () => {
-  it("keeps Back in the fixed header and exposes complete asset identity", () => {
+  it("keeps Back in the fixed header and exposes complete asset identity", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const longFund: Asset = {
       ...activeAsset,
@@ -41,10 +41,10 @@ describe("ManageAssetsScreen", () => {
     };
     store.getState().addAsset(longFund);
     const onBack = jest.fn();
-    const screen = render(<ManageAssetsScreen onBack={onBack} onReviewAsset={jest.fn()} store={store} />);
+    const screen = await render(<ManageAssetsScreen onBack={onBack} onReviewAsset={jest.fn()} store={store} />);
 
     expect(screen.getByTestId("manage-assets-back")).toHaveProp("accessibilityLabel", "Back to Holdings");
-    fireEvent.press(screen.getByTestId("manage-assets-back"));
+    await fireEvent.press(screen.getByTestId("manage-assets-back"));
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId(`manage-asset-name-${longFund.id}`).props.numberOfLines).toBeUndefined();
     expect(screen.getByTestId(`manage-asset-${longFund.id}`).props.accessibilityLabel).toContain(
@@ -52,7 +52,7 @@ describe("ManageAssetsScreen", () => {
     );
   });
 
-  it("searches by name, symbol, ticker, and ISIN without losing the query", () => {
+  it("searches by name, symbol, ticker, and ISIN without losing the query", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const searchableAsset: Asset = {
       ...activeAsset,
@@ -63,46 +63,46 @@ describe("ManageAssetsScreen", () => {
     };
     store.getState().addAsset(searchableAsset);
     store.getState().addAsset(closedAsset);
-    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+    const screen = await render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
     const input = screen.getByTestId("manage-assets-search-input");
     expect(input).toHaveProp("placeholder", "Search assets");
     expect(input).toHaveProp("accessibilityLabel", "Search assets");
     const originalAssets = store.getState().assets;
 
     for (const query of ["hdfc bank", "HDFCBANK", "hdfcbank.ns", "INE040A01034"]) {
-      fireEvent.changeText(input, query);
+      await fireEvent.changeText(input, query);
       expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("1 of 2 assets");
       expect(screen.getByText("HDFC Bank Limited")).toBeTruthy();
       expect(screen.queryByText("Closed Fund")).toBeNull();
       expect(input).toHaveProp("value", query);
     }
-    fireEvent.changeText(input, "nse");
+    await fireEvent.changeText(input, "nse");
     expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("2 assets");
-    fireEvent.changeText(input, "not-a-saved-asset");
+    await fireEvent.changeText(input, "not-a-saved-asset");
     expect(screen.getByText("No matching assets")).toBeTruthy();
     expect(screen.getByText(/Try a name, symbol, ticker, or ISIN/)).toBeTruthy();
-    fireEvent.changeText(input, "");
+    await fireEvent.changeText(input, "");
     expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent("2 assets");
     expect(store.getState().assets).toBe(originalAssets);
   });
 
-  it("preserves search context while a reviewed asset changes", () => {
+  it("preserves search context while a reviewed asset changes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(activeAsset);
     store.getState().addAsset(closedAsset);
     const onReviewAsset = jest.fn();
-    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={onReviewAsset} store={store} />);
+    const screen = await render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={onReviewAsset} store={store} />);
 
-    fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Closed Fund");
-    fireEvent.press(screen.getByTestId(`manage-asset-${closedAsset.id}`));
+    await fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Closed Fund");
+    await fireEvent.press(screen.getByTestId(`manage-asset-${closedAsset.id}`));
     expect(onReviewAsset).toHaveBeenCalledWith(closedAsset.id);
 
-    act(() => store.setState({ assets: [activeAsset] }));
+    await act(() => store.setState({ assets: [activeAsset] }));
     expect(screen.getByTestId("manage-assets-search-input")).toHaveProp("value", "Closed Fund");
     expect(screen.getByText("No matching assets")).toBeTruthy();
   });
 
-  it.each([4, 30, 52])("renders a searchable %i-asset fixture", (count) => {
+  it.each([4, 30, 52])("renders a searchable %i-asset fixture", async (count) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.setState({
       assets: Array.from({ length: count }, (_, index): Asset => ({
@@ -116,15 +116,15 @@ describe("ManageAssetsScreen", () => {
         ticker: `ASSET${index}.NS`,
       })),
     });
-    const screen = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+    const screen = await render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
 
     expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent(`${count} assets`);
-    fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Navi Nasdaq100");
+    await fireEvent.changeText(screen.getByTestId("manage-assets-search-input"), "Navi Nasdaq100");
     expect(screen.getByTestId("manage-assets-result-count")).toHaveTextContent(`1 of ${count} assets`);
     expect(screen.getByText(/Navi Nasdaq100 US Specific Equity Passive Fund/u)).toBeTruthy();
   });
 
-  it("keeps post-split residual units active and labels unresolved quantities unavailable", () => {
+  it("keeps post-split residual units active and labels unresolved quantities unavailable", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const stockSplits: NonNullable<Asset["stockSplits"]> = [{
       id: "split", kind: "split", effectiveDate: "2026-02-01",
@@ -139,13 +139,13 @@ describe("ManageAssetsScreen", () => {
         { assetId: activeAsset.id, id: "sell", date: "2026-03-01", type: "sell", quantity: 2, pricePerUnit: 100, totalValue: 200 },
       ],
     });
-    const { getByText, queryByText } = render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
+    const { getByText, queryByText } = await render(<ManageAssetsScreen onBack={jest.fn()} onReviewAsset={jest.fn()} store={store} />);
     expect(getByText("Active")).toBeTruthy();
     expect(getByText("Unavailable")).toBeTruthy();
     expect(queryByText("Closed")).toBeNull();
   });
 
-  it("lists active and fully sold assets and opens review by stable ID", () => {
+  it("lists active and fully sold assets and opens review by stable ID", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(activeAsset);
     store.getState().addAsset(closedAsset);
@@ -176,7 +176,7 @@ describe("ManageAssetsScreen", () => {
       type: "sell",
     });
     const onReviewAsset = jest.fn();
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getAllByText, getByTestId, getByText } = await render(
       <ManageAssetsScreen
         onBack={jest.fn()}
         onReviewAsset={onReviewAsset}
@@ -188,7 +188,7 @@ describe("ManageAssetsScreen", () => {
     expect(getByText("Closed Fund")).toBeTruthy();
     expect(getAllByText("Active")).toHaveLength(1);
     expect(getAllByText("Closed")).toHaveLength(1);
-    fireEvent.press(getByTestId(`manage-asset-${closedAsset.id}`));
+    await fireEvent.press(getByTestId(`manage-asset-${closedAsset.id}`));
     expect(onReviewAsset).toHaveBeenCalledWith(closedAsset.id);
   });
 });

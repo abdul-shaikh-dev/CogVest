@@ -35,7 +35,7 @@ describe("appearance", () => {
     expect(resolveAppearance("light", "dark")).toBe("light");
   });
 
-  it("updates mounted styles and text on system changes/resume without losing a draft", () => {
+  it("updates mounted styles and text on system changes/resume without losing a draft", async () => {
     const mounted = jest.fn();
     function Draft() {
       const styles = useStyles();
@@ -47,28 +47,28 @@ describe("appearance", () => {
         <AppButton testID="button" title="Save" />
       </View>;
     }
-    const view = render(<ThemeProvider preference="system"><Draft /></ThemeProvider>);
+    const view = await render(<ThemeProvider preference="system"><Draft /></ThemeProvider>);
     expect(view.getByTestId("panel")).toHaveStyle({ backgroundColor: lightColors.surface.card });
     expect(view.getByText("Save")).toHaveStyle({ color: lightColors.text.inverse });
     expect(view.getByTestId("button")).toHaveStyle({ backgroundColor: lightColors.primary });
-    fireEvent.changeText(view.getByTestId("draft"), "unsaved amount");
-    act(() => appearanceChanged({ colorScheme: "dark" }));
+    await fireEvent.changeText(view.getByTestId("draft"), "unsaved amount");
+    await act(() => appearanceChanged({ colorScheme: "dark" }));
     expect(view.getByText("dark")).toHaveStyle({ color: darkColors.text.primary });
     expect(view.getByTestId("panel")).toHaveStyle({ backgroundColor: darkColors.surface.card });
     expect(view.getByTestId("button")).toHaveStyle({ backgroundColor: darkColors.primary });
     expect(view.getByTestId("draft").props.value).toBe("unsaved amount");
-    act(() => { system = "light"; appStateChanged("active"); });
+    await act(() => { system = "light"; appStateChanged("active"); });
     expect(view.getByText("light")).toHaveStyle({ color: lightColors.text.primary });
-    view.rerender(<ThemeProvider preference="dark"><Draft /></ThemeProvider>);
-    act(() => appearanceChanged({ colorScheme: "light" }));
+    await view.rerender(<ThemeProvider preference="dark"><Draft /></ThemeProvider>);
+    await act(() => appearanceChanged({ colorScheme: "light" }));
     expect(view.getByText("dark")).toBeTruthy();
     expect(Appearance.setColorScheme).toHaveBeenLastCalledWith("dark");
-    view.rerender(<ThemeProvider preference="system"><Draft /></ThemeProvider>);
+    await view.rerender(<ThemeProvider preference="system"><Draft /></ThemeProvider>);
     expect(Appearance.setColorScheme).toHaveBeenLastCalledWith("unspecified");
     expect(view.getByText("light")).toBeTruthy();
     expect(view.getByTestId("draft").props.value).toBe("unsaved amount");
     expect(mounted).toHaveBeenCalledTimes(1);
-    view.unmount();
+    await view.unmount();
     expect(removed).toHaveBeenCalled();
   });
 });

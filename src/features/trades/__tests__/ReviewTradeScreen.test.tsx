@@ -52,15 +52,15 @@ describe("ReviewTradeScreen", () => {
   it("preserves optional drafts when context is collapsed before saving", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();
-    const screen = render(
+    const screen = await render(
       <ReviewTradeScreen onCancel={jest.fn()} onComplete={onComplete} store={store} tradeId={trade.id} />,
     );
-    fireEvent.changeText(screen.getByTestId("trade-correction-notes-input"), "Updated plan");
-    fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "365");
-    fireEvent.changeText(screen.getByLabelText("Why this investment?"), "Long-term allocation");
-    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    await fireEvent.changeText(screen.getByTestId("trade-correction-notes-input"), "Updated plan");
+    await fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "365");
+    await fireEvent.changeText(screen.getByLabelText("Why this investment?"), "Long-term allocation");
+    await fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
     expect(screen.queryByTestId("trade-correction-notes-input")).toBeNull();
-    fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+    await fireEvent.press(screen.getByTestId("save-trade-correction-button"));
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(store.getState().trades[0]).toMatchObject({
       conviction: 4,
@@ -74,18 +74,18 @@ describe("ReviewTradeScreen", () => {
     );
   });
 
-  it("starts empty context collapsed and reveals hidden validation errors", () => {
+  it("starts empty context collapsed and reveals hidden validation errors", async () => {
     const { store } = createStore();
     store.setState({ trades: [{ ...trade, notes: undefined, conviction: undefined }] });
     const onComplete = jest.fn();
-    const screen = render(
+    const screen = await render(
       <ReviewTradeScreen onCancel={jest.fn()} onComplete={onComplete} store={store} tradeId={trade.id} />,
     );
     expect(screen.queryByTestId("trade-correction-notes-input")).toBeNull();
-    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
-    fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "-1");
-    fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
-    fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+    await fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    await fireEvent.changeText(screen.getByLabelText("Planned holding period (days)"), "-1");
+    await fireEvent.press(screen.getByTestId("trade-correction-context-toggle"));
+    await fireEvent.press(screen.getByTestId("save-trade-correction-button"));
     expect(screen.getByText("Holding period must be a whole number of days.")).toBeTruthy();
     expect(screen.getByTestId("trade-correction-context-toggle")).toHaveProp("accessibilityState", { expanded: true });
     expect(onComplete).not.toHaveBeenCalled();
@@ -98,7 +98,7 @@ describe("ReviewTradeScreen", () => {
     const originalCorrection = store.getState().correctTrade;
     const correctionSpy = jest.fn(originalCorrection);
     store.setState({ correctTrade: correctionSpy });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewTradeScreen
         now={new Date(2026, 6, 22, 12)}
         onCancel={jest.fn()}
@@ -109,12 +109,12 @@ describe("ReviewTradeScreen", () => {
     );
 
     expect(getByText("Purchase")).toBeTruthy();
-    fireEvent.changeText(getByTestId("trade-correction-quantity-input"), "3");
-    fireEvent.changeText(getByTestId("trade-correction-price-input"), "120");
+    await fireEvent.changeText(getByTestId("trade-correction-quantity-input"), "3");
+    await fireEvent.changeText(getByTestId("trade-correction-price-input"), "120");
     expect(getByText("₹370.00")).toBeTruthy();
     const saveButton = getByTestId("save-trade-correction-button");
-    fireEvent.press(saveButton);
-    fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(correctionSpy).toHaveBeenCalledTimes(1);
@@ -134,7 +134,7 @@ describe("ReviewTradeScreen", () => {
     const originalDeletion = store.getState().deleteTrade;
     const deletionSpy = jest.fn(originalDeletion);
     store.setState({ deleteTrade: deletionSpy });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={onComplete}
@@ -143,11 +143,11 @@ describe("ReviewTradeScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("delete-trade-button"));
+    await fireEvent.press(getByTestId("delete-trade-button"));
     expect(getByText("Remove this transaction?")).toBeTruthy();
     const confirmButton = getByTestId("confirm-delete-trade-button");
-    fireEvent.press(confirmButton);
-    fireEvent.press(confirmButton);
+    await fireEvent.press(confirmButton);
+    await fireEvent.press(confirmButton);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(deletionSpy).toHaveBeenCalledTimes(1);
@@ -160,7 +160,7 @@ describe("ReviewTradeScreen", () => {
     storage.setItem = (key) => {
       if (key === portfolioStorageKey) throw new Error("simulated failure");
     };
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -169,16 +169,16 @@ describe("ReviewTradeScreen", () => {
       />,
     );
 
-    fireEvent.changeText(getByTestId("trade-correction-quantity-input"), "4");
-    fireEvent.press(getByTestId("save-trade-correction-button"));
+    await fireEvent.changeText(getByTestId("trade-correction-quantity-input"), "4");
+    await fireEvent.press(getByTestId("save-trade-correction-button"));
 
     await waitFor(() => expect(getByText(/could not be saved safely/)).toBeTruthy());
     expect(getByTestId("trade-correction-quantity-input")).toHaveProp("value", "4");
     expect(store.getState().trades).toEqual([trade]);
   });
 
-  it("handles a stale transaction ID safely", () => {
-    const { getByText } = render(
+  it("handles a stale transaction ID safely", async () => {
+    const { getByText } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -191,12 +191,12 @@ describe("ReviewTradeScreen", () => {
     expect(getByText("Back to Holdings")).toBeTruthy();
   });
 
-  it("requires an explicit reveal while value masking is active", () => {
+  it("requires an explicit reveal while value masking is active", async () => {
     const { store } = createStore();
-    act(() => {
+    await act(() => {
       store.getState().updatePreferences({ maskWealthValues: true });
     });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <ReviewTradeScreen
         backLabel="Back to Cash Ledger"
         onCancel={jest.fn()}
@@ -209,13 +209,13 @@ describe("ReviewTradeScreen", () => {
     expect(getByText("Reveal to review")).toBeTruthy();
     expect(getByText("Back to Cash Ledger")).toBeTruthy();
     expect(queryByTestId("trade-correction-quantity-input")).toBeNull();
-    fireEvent.press(getByTestId("reveal-trade-button"));
+    await fireEvent.press(getByTestId("reveal-trade-button"));
     expect(getByTestId("trade-correction-quantity-input")).toBeTruthy();
   });
 
   it("hides an open correction form when masking is enabled", async () => {
     const { store } = createStore();
-    const { getByText, getByTestId, queryByTestId } = render(
+    const { getByText, getByTestId, queryByTestId } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -225,14 +225,14 @@ describe("ReviewTradeScreen", () => {
     );
 
     expect(queryByTestId("trade-correction-quantity-input")).toBeTruthy();
-    act(() => {
+    await act(() => {
       store.getState().updatePreferences({ maskWealthValues: true });
     });
 
     await waitFor(() => expect(getByText("Reveal to review")).toBeTruthy());
     expect(queryByTestId("trade-correction-quantity-input")).toBeNull();
 
-    act(() => {
+    await act(() => {
       store.getState().updatePreferences({ maskWealthValues: false });
     });
     await waitFor(() => {
@@ -240,11 +240,11 @@ describe("ReviewTradeScreen", () => {
     });
   });
 
-  it("describes an unlinked legacy transaction honestly", () => {
+  it("describes an unlinked legacy transaction honestly", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
-    const { getByText } = render(
+    const { getByText } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}
@@ -258,7 +258,7 @@ describe("ReviewTradeScreen", () => {
     ).toBeTruthy();
   });
 
-  it("keeps imported transfers read-only", () => {
+  it("keeps imported transfers read-only", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const transfer: Trade = {
       acquisitionCostPerUnit: 150,
@@ -276,7 +276,7 @@ describe("ReviewTradeScreen", () => {
     };
     store.getState().addAsset(asset);
     store.getState().addTrade(transfer);
-    const { getByText, queryByTestId } = render(
+    const { getByText, queryByTestId } = await render(
       <ReviewTradeScreen
         onCancel={jest.fn()}
         onComplete={jest.fn()}

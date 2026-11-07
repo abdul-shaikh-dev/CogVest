@@ -5,7 +5,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
 describe("useCash", () => {
-  it("derives cash balance from additions minus withdrawals and sorts history newest first", () => {
+  it("derives cash balance from additions minus withdrawals and sorts history newest first", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addCashEntry({
       amount: 1000,
@@ -24,7 +24,7 @@ describe("useCash", () => {
       type: "withdrawal",
     });
 
-    const { result } = renderHook(() => useCash({ store }));
+    const { result } = await renderHook(() => useCash({ store }));
 
     expect(result.current.balance).toBe(750);
     expect(result.current.entries.map((entry) => entry.id)).toEqual([
@@ -33,11 +33,11 @@ describe("useCash", () => {
     ]);
   });
 
-  it("adds and withdraws cash through the store-backed action", () => {
+  it("adds and withdraws cash through the store-backed action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() => useCash({ store }));
+    const { result } = await renderHook(() => useCash({ store }));
 
-    act(() => {
+    await act(() => {
       result.current.addEntry({
         amount: 1000,
         date: "2026-04-20",
@@ -58,12 +58,12 @@ describe("useCash", () => {
     expect(store.getState().cashEntries).toHaveLength(2);
   });
 
-  it("persists cash entries in the portfolio snapshot storage", () => {
+  it("persists cash entries in the portfolio snapshot storage", async () => {
     const storage = createMemoryJsonStorage();
     const firstStore = createPortfolioStore({ storage });
-    const { result } = renderHook(() => useCash({ store: firstStore }));
+    const { result } = await renderHook(() => useCash({ store: firstStore }));
 
-    act(() => {
+    await act(() => {
       result.current.addEntry({
         amount: 500,
         date: "2026-04-20",
@@ -83,7 +83,7 @@ describe("useCash", () => {
     });
   });
 
-  it("recalculates balance and monthly metrics after correction and deletion", () => {
+  it("recalculates balance and monthly metrics after correction and deletion", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const entry = {
       amount: 1000,
@@ -94,11 +94,11 @@ describe("useCash", () => {
       type: "addition" as const,
     };
     store.getState().addCashEntry(entry);
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
     );
 
-    act(() => {
+    await act(() => {
       store.getState().correctManualCashEntry({ ...entry, amount: 1500 });
     });
 
@@ -108,7 +108,7 @@ describe("useCash", () => {
       contributions: 1500,
     });
 
-    act(() => {
+    await act(() => {
       store.getState().deleteManualCashEntry(entry.id);
     });
 
@@ -119,7 +119,7 @@ describe("useCash", () => {
     });
   });
 
-  it("derives monthly cash metrics from stored cash and investment records", () => {
+  it("derives monthly cash metrics from stored cash and investment records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -156,7 +156,7 @@ describe("useCash", () => {
       type: "buy",
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
     );
 
@@ -168,7 +168,7 @@ describe("useCash", () => {
     });
   });
 
-  it("keeps manual cash actions to deposit and withdrawal while deriving invested from investment records", () => {
+  it("keeps manual cash actions to deposit and withdrawal while deriving invested from investment records", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -199,7 +199,7 @@ describe("useCash", () => {
       },
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
     );
 
@@ -214,7 +214,7 @@ describe("useCash", () => {
     );
   });
 
-  it("shows investing activity without household income", () => {
+  it("shows investing activity without household income", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset({
       assetClass: "stock",
@@ -245,7 +245,7 @@ describe("useCash", () => {
       },
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useCash({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
     );
 

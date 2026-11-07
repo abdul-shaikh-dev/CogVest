@@ -43,10 +43,10 @@ function createStore(entry: CashEntry = manualEntry) {
 }
 
 describe("ReviewCashEntryScreen", () => {
-  it("protects an EPF Cash counterpart without claiming a missing investment trade", () => {
+  it("protects an EPF Cash counterpart without claiming a missing investment trade", async () => {
     const { store } = createStore();
     store.setState({ cashEntries: [{ ...manualEntry, purpose: "epfTransfer", linkedEpf: { accountId: "epf", eventId: "event" } }] });
-    const screen = render(<ReviewCashEntryScreen entryId={manualEntry.id} onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
+    const screen = await render(<ReviewCashEntryScreen entryId={manualEntry.id} onCancel={jest.fn()} onComplete={jest.fn()} store={store} />);
     expect(screen.getByText("Linked EPF movement")).toBeTruthy();
     expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
     expect(screen.queryByText("Linked transaction unavailable")).toBeNull();
@@ -54,37 +54,37 @@ describe("ReviewCashEntryScreen", () => {
   it("keeps existing notes visible and saves them when the editor is collapsed", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();
-    const screen = render(
+    const screen = await render(
       <ReviewCashEntryScreen entryId={manualEntry.id} onCancel={jest.fn()}
         onComplete={onComplete} store={store} />,
     );
 
     expect(screen.getByTestId("cash-correction-notes-input")).toHaveProp("value", "Initial note");
-    fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Corrected note");
-    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    await fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Corrected note");
+    await fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
     expect(screen.queryByTestId("cash-correction-notes-input")).toBeNull();
     expect(screen.getByTestId("cash-correction-note-toggle")).toBeCollapsed();
-    fireEvent.press(screen.getByTestId("save-cash-correction-button"));
+    await fireEvent.press(screen.getByTestId("save-cash-correction-button"));
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(store.getState().cashEntries[0].notes).toBe("Corrected note");
   });
 
-  it("keeps a new note through disclosure changes without saving on Cancel", () => {
+  it("keeps a new note through disclosure changes without saving on Cancel", async () => {
     const { store } = createStore({ ...manualEntry, notes: undefined });
     const onCancel = jest.fn();
-    const screen = render(
+    const screen = await render(
       <ReviewCashEntryScreen entryId={manualEntry.id} onCancel={onCancel}
         onComplete={jest.fn()} store={store} />,
     );
 
     expect(screen.queryByTestId("cash-correction-notes-input")).toBeNull();
-    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
-    fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Draft note");
-    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    await fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    await fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Draft note");
+    await fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
     expect(screen.getByText("Show note")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
+    await fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
     expect(screen.getByTestId("cash-correction-notes-input")).toHaveProp("value", "Draft note");
-    fireEvent.press(screen.getByText("Cancel"));
+    await fireEvent.press(screen.getByText("Cancel"));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(store.getState().cashEntries[0].notes).toBeUndefined();
   });
@@ -97,7 +97,7 @@ describe("ReviewCashEntryScreen", () => {
       .fn(originalCorrection)
       .mockName("correctManualCashEntry");
     store.setState({ correctManualCashEntry: correctionSpy });
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         now={new Date(2026, 6, 22, 12)}
@@ -107,16 +107,16 @@ describe("ReviewCashEntryScreen", () => {
       />,
     );
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("cash-correction-amount-input"),
       "1250",
     );
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("cash-correction-label-input"),
       "Corrected broker cash",
     );
-    fireEvent.press(getByTestId("save-cash-correction-button"));
-    fireEvent.press(getByTestId("save-cash-correction-button"));
+    await fireEvent.press(getByTestId("save-cash-correction-button"));
+    await fireEvent.press(getByTestId("save-cash-correction-button"));
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledTimes(1);
@@ -133,7 +133,7 @@ describe("ReviewCashEntryScreen", () => {
 
   it("changes a deposit into a withdrawal with the correct purpose", async () => {
     const { store } = createStore();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         now={new Date(2026, 6, 22, 12)}
@@ -143,8 +143,8 @@ describe("ReviewCashEntryScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("cash-correction-type-withdrawal"));
-    fireEvent.press(getByTestId("save-cash-correction-button"));
+    await fireEvent.press(getByTestId("cash-correction-type-withdrawal"));
+    await fireEvent.press(getByTestId("save-cash-correction-button"));
 
     await waitFor(() => {
       expect(store.getState().cashEntries[0]).toMatchObject({
@@ -162,7 +162,7 @@ describe("ReviewCashEntryScreen", () => {
       .fn(originalDeletion)
       .mockName("deleteManualCashEntry");
     store.setState({ deleteManualCashEntry: deletionSpy });
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         onCancel={jest.fn()}
@@ -171,15 +171,15 @@ describe("ReviewCashEntryScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("delete-cash-entry-button"));
+    await fireEvent.press(getByTestId("delete-cash-entry-button"));
     expect(getByText("Delete this cash entry?")).toBeTruthy();
     expect(store.getState().cashEntries).toHaveLength(1);
 
     const confirmDeleteButton = getByTestId(
       "confirm-delete-cash-entry-button",
     );
-    fireEvent.press(confirmDeleteButton);
-    fireEvent.press(confirmDeleteButton);
+    await fireEvent.press(confirmDeleteButton);
+    await fireEvent.press(confirmDeleteButton);
 
     await waitFor(() => {
       expect(store.getState().cashEntries).toEqual([]);
@@ -189,12 +189,12 @@ describe("ReviewCashEntryScreen", () => {
     expect(queryByText("Delete this cash entry?")).toBeNull();
   });
 
-  it("explains the metric impact of a migrated uncategorized deposit", () => {
+  it("explains the metric impact of a migrated uncategorized deposit", async () => {
     const { store } = createStore({
       ...manualEntry,
       purpose: "legacyUncategorized",
     });
-    const { getByText } = render(
+    const { getByText } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         onCancel={jest.fn()}
@@ -210,7 +210,7 @@ describe("ReviewCashEntryScreen", () => {
   it.each([
     { purpose: "purchaseFunding" as const, trade: linkedBuy, typeLabel: "Purchase" },
     { purpose: "saleProceeds" as const, trade: { ...linkedBuy, id: "trade-sale", type: "sell" as const }, typeLabel: "Sale" },
-  ])("routes a linked $typeLabel through its owning transaction", ({ purpose, trade, typeLabel }) => {
+  ])("routes a linked $typeLabel through its owning transaction", async ({ purpose, trade, typeLabel }) => {
     const { store } = createStore({
       ...manualEntry,
       id: `cash-${trade.id}`,
@@ -221,7 +221,7 @@ describe("ReviewCashEntryScreen", () => {
     store.getState().addTrade(trade);
     const onCancel = jest.fn();
     const onReviewLinkedTrade = jest.fn();
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <ReviewCashEntryScreen
         entryId={`cash-${trade.id}`}
         onCancel={onCancel}
@@ -235,20 +235,20 @@ describe("ReviewCashEntryScreen", () => {
     expect(getByTestId("linked-cash-owner-summary")).toHaveTextContent(new RegExp(`HDFC Bank · ${typeLabel} ·`, "u"));
     expect(queryByTestId("save-cash-correction-button")).toBeNull();
     expect(queryByTestId("delete-cash-entry-button")).toBeNull();
-    fireEvent.press(getByTestId("review-linked-cash-transaction"));
+    await fireEvent.press(getByTestId("review-linked-cash-transaction"));
     expect(onReviewLinkedTrade).toHaveBeenCalledWith(trade.id);
-    fireEvent.press(getByText("Back to Cash Ledger"));
+    await fireEvent.press(getByText("Back to Cash Ledger"));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps a stale linked movement read-only and explains recovery", () => {
+  it("keeps a stale linked movement read-only and explains recovery", async () => {
     const { store } = createStore({
       ...manualEntry,
       id: "cash-missing-trade",
       linkedTradeId: "trade-missing",
       purpose: "purchaseFunding",
     });
-    const screen = render(
+    const screen = await render(
       <ReviewCashEntryScreen
         entryId="cash-missing-trade"
         onCancel={jest.fn()}
@@ -265,19 +265,19 @@ describe("ReviewCashEntryScreen", () => {
     expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
   });
 
-  it("routes linked Futures Cash to its owning wallet without editing one side", () => {
+  it("routes linked Futures Cash to its owning wallet without editing one side", async () => {
     const { store } = createStore();
     store.getState().saveFuturesAccount({ id: "futures", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way", openingAt: "2026-07-19T00:00:00Z", openingWalletUsdt: "0", events: [] });
     store.getState().saveFuturesCashTransfer({ accountId: "futures", cashEntryId: "cash-futures", eventId: "wallet-futures", at: "2026-07-20T12:00:00Z", amountUsdt: "10", cashAmountInr: 900, conversionFeeInr: "0", inrPerUsdt: "90", rateObservedAt: "2026-07-20T12:00:00Z", rateSource: "Receipt" });
     const onReviewLinkedFutures = jest.fn();
-    const screen = render(<ReviewCashEntryScreen entryId="cash-futures" onCancel={jest.fn()} onComplete={jest.fn()} onReviewLinkedFutures={onReviewLinkedFutures} store={store} />);
+    const screen = await render(<ReviewCashEntryScreen entryId="cash-futures" onCancel={jest.fn()} onComplete={jest.fn()} onReviewLinkedFutures={onReviewLinkedFutures} store={store} />);
     expect(screen.queryByTestId("save-cash-correction-button")).toBeNull();
     expect(screen.queryByTestId("delete-cash-entry-button")).toBeNull();
-    fireEvent.press(screen.getByTestId("review-linked-cash-futures"));
+    await fireEvent.press(screen.getByTestId("review-linked-cash-futures"));
     expect(onReviewLinkedFutures).toHaveBeenCalledTimes(1);
   });
 
-  it("does not reveal linked transaction values while wealth masking is active", () => {
+  it("does not reveal linked transaction values while wealth masking is active", async () => {
     const { store } = createStore({
       ...manualEntry,
       id: "cash-trade-buy",
@@ -287,7 +287,7 @@ describe("ReviewCashEntryScreen", () => {
     store.getState().addAsset(linkedAsset);
     store.getState().addTrade(linkedBuy);
     store.getState().updatePreferences({ maskWealthValues: true });
-    const screen = render(
+    const screen = await render(
       <ReviewCashEntryScreen
         entryId="cash-trade-buy"
         onCancel={jest.fn()}
@@ -303,8 +303,8 @@ describe("ReviewCashEntryScreen", () => {
 
   it("requires reveal for a saved amount and resets when masking returns", async () => {
     const { store } = createStore();
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
-    const screen = render(
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    const screen = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         onCancel={jest.fn()}
@@ -317,14 +317,14 @@ describe("ReviewCashEntryScreen", () => {
     expect(screen.queryByTestId("cash-correction-amount-input")).toBeNull();
     expect(screen.queryByText("1000")).toBeNull();
 
-    fireEvent.press(screen.getByTestId("reveal-cash-entry-button"));
+    await fireEvent.press(screen.getByTestId("reveal-cash-entry-button"));
     expect(screen.getByTestId("cash-correction-amount-input")).toHaveProp(
       "value",
       "1000",
     );
 
-    act(() => store.getState().updatePreferences({ maskWealthValues: false }));
-    act(() => store.getState().updatePreferences({ maskWealthValues: true }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: false }));
+    await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
 
     await waitFor(() => {
       expect(screen.getByText("Reveal to review")).toBeTruthy();
@@ -332,9 +332,9 @@ describe("ReviewCashEntryScreen", () => {
     });
   });
 
-  it("handles a stale entry ID safely", () => {
+  it("handles a stale entry ID safely", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText } = render(
+    const { getByText } = await render(
       <ReviewCashEntryScreen
         entryId="cash-missing"
         onCancel={jest.fn()}
@@ -357,7 +357,7 @@ describe("ReviewCashEntryScreen", () => {
 
       originalSetItem(key, value);
     };
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
         onCancel={jest.fn()}
@@ -366,11 +366,11 @@ describe("ReviewCashEntryScreen", () => {
       />,
     );
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByTestId("cash-correction-amount-input"),
       "2250",
     );
-    fireEvent.press(getByTestId("save-cash-correction-button"));
+    await fireEvent.press(getByTestId("save-cash-correction-button"));
 
     await waitFor(() => {
       expect(

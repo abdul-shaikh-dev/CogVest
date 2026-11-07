@@ -48,7 +48,7 @@ const buyEtf: Trade = {
 };
 
 describe("useDashboard", () => {
-  it("includes only reconciled Futures wallet equity, never contract notional", () => {
+  it("includes only reconciled Futures wallet equity, never contract notional", async () => {
     const now = new Date("2026-09-29T12:00:00Z");
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
     const account: UsdmFuturesAccount = {
@@ -63,17 +63,17 @@ describe("useDashboard", () => {
         reconciliation: { observedWalletUsdt: "999", observedAt: "2026-09-29T11:00:00Z", source: "Binance Futures wallet", allOpenPositionsConfirmed: true, allWalletEventsConfirmed: true, portfolioBoundaryConfirmed: true },
       },
     };
-    act(() => store.getState().saveFuturesAccount(account));
-    const { result } = renderHook(() => useDashboard({ now, store }));
+    await act(() => store.getState().saveFuturesAccount(account));
+    const { result } = await renderHook(() => useDashboard({ now, store }));
     expect(result.current.totalValue).toBe(91710);
     expect(result.current.rollupTotals.totalInvested).toBe(90000);
     expect(result.current.rollupTotals.pnl).toBe(1710);
     expect(result.current.futuresEquityInr).toBe(91710);
-    act(() => store.getState().saveFuturesAccount({ ...account, valuation: undefined }));
+    await act(() => store.getState().saveFuturesAccount({ ...account, valuation: undefined }));
     expect(result.current.totalValue).toBeNull();
     expect(result.current.rollupTotals.valuationCoverage.status).toBe("incomplete");
   });
-  it("derives total, allocation, day change, quote freshness, and conviction readiness", () => {
+  it("derives total, allocation, day change, quote freshness, and conviction readiness", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
     store.getState().addAsset(etfAsset);
@@ -104,7 +104,7 @@ describe("useDashboard", () => {
       source: "yahoo",
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDashboard({
         now: new Date("2026-04-22T10:10:00.000Z"),
         store,
@@ -183,7 +183,7 @@ describe("useDashboard", () => {
     ]);
   });
 
-  it("does not classify cash holdings as missing quotes", () => {
+  it("does not classify cash holdings as missing quotes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const cashAsset: Asset = {
       assetClass: "cash",
@@ -204,7 +204,7 @@ describe("useDashboard", () => {
       type: "buy",
     });
 
-    const { result } = renderHook(() => useDashboard({ store }));
+    const { result } = await renderHook(() => useDashboard({ store }));
 
     expect(result.current.quoteFreshness).toEqual({
       current: 0,
@@ -216,7 +216,7 @@ describe("useDashboard", () => {
     });
   });
 
-  it("includes debt and crypto opening positions in consolidated allocation", () => {
+  it("includes debt and crypto opening positions in consolidated allocation", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const debtAsset: Asset = {
       assetClass: "debt",
@@ -275,7 +275,7 @@ describe("useDashboard", () => {
       type: "addition",
     });
 
-    const { result } = renderHook(() => useDashboard({ store }));
+    const { result } = await renderHook(() => useDashboard({ store }));
 
     expect(result.current.totalValue).toBe(250000);
     expect(result.current.allocation).toEqual([
@@ -293,7 +293,7 @@ describe("useDashboard", () => {
     ]);
   });
 
-  it("derives current-month investment and Cash change without household rates", () => {
+  it("derives current-month investment and Cash change without household rates", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(stockAsset);
     store.getState().addTrade({
@@ -355,7 +355,7 @@ describe("useDashboard", () => {
       type: "addition",
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDashboard({ now: new Date("2026-05-16T00:00:00.000Z"), store }),
     );
 
@@ -366,13 +366,13 @@ describe("useDashboard", () => {
     });
   });
 
-  it("toggles value masking through the dashboard hook", () => {
+  it("toggles value masking through the dashboard hook", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { result } = renderHook(() => useDashboard({ store }));
+    const { result } = await renderHook(() => useDashboard({ store }));
 
     expect(result.current.maskWealthValues).toBe(false);
 
-    act(() => {
+    await act(() => {
       result.current.toggleMaskWealthValues();
     });
 
@@ -406,7 +406,7 @@ describe("useDashboard", () => {
       timedOut: [],
       updated: [stockAsset.id],
     });
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDashboard({ refreshQuotes, store }),
     );
 
@@ -426,7 +426,7 @@ describe("useDashboard", () => {
     });
   });
 
-  it("includes confirmed PPF value in portfolio totals and Debt allocation", () => {
+  it("includes confirmed PPF value in portfolio totals and Debt allocation", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const account: PpfAccount = {
       balanceAsOf: "2026-07-31",
@@ -440,7 +440,7 @@ describe("useDashboard", () => {
     };
     store.getState().addPpfAccount(account);
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDashboard({ now: new Date("2026-08-15T10:00:00.000Z"), store }),
     );
 
@@ -455,7 +455,7 @@ describe("useDashboard", () => {
     ]);
   });
 
-  it("replaces a linked legacy PPF holding instead of double counting it", () => {
+  it("replaces a linked legacy PPF holding instead of double counting it", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const legacyPpf: Asset = {
       assetClass: "debt",
@@ -488,7 +488,7 @@ describe("useDashboard", () => {
       status: "active",
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDashboard({ now: new Date("2026-08-15T10:00:00.000Z"), store }),
     );
 

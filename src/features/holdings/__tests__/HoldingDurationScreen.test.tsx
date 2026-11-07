@@ -30,13 +30,13 @@ function fixture() {
   return store;
 }
 describe("Holding duration screen", () => {
-  it("recomputes corrected dates and deleted records without stale results", () => {
+  it("recomputes corrected dates and deleted records without stale results", async () => {
     const store = fixture();
-    const screen = render(
+    const screen = await render(
       <HoldingDurationScreen store={store} now={now} onClose={jest.fn()} />,
     );
     expect(screen.getByText("More than 12 months recorded")).toBeTruthy();
-    act(() =>
+    await act(() =>
       store.setState({
         openingPositions: [
           { ...store.getState().openingPositions[0], date: "2026-08-01" },
@@ -45,26 +45,26 @@ describe("Holding duration screen", () => {
     );
     expect(screen.getByText("Within the 12-month reference")).toBeTruthy();
     expect(screen.getByText("38 days recorded")).toBeTruthy();
-    act(() => store.setState({ openingPositions: [] }));
+    await act(() => store.setState({ openingPositions: [] }));
     expect(screen.getByText("No stock or ETF holdings")).toBeTruthy();
     expect(screen.queryByText("Example stock")).toBeNull();
   });
-  it("masks names and dates, suppresses Minimal analysis and has a safe exit", () => {
+  it("masks names and dates, suppresses Minimal analysis and has a safe exit", async () => {
     const store = fixture();
     const onClose = jest.fn();
-    const screen = render(
+    const screen = await render(
       <HoldingDurationScreen store={store} now={now} onClose={onClose} />,
     );
-    fireEvent.press(screen.getByTestId("duration-mask"));
+    await fireEvent.press(screen.getByTestId("duration-mask"));
     expect(screen.queryByText("Example stock")).toBeNull();
     expect(screen.queryByText("01 Jan 2025")).toBeNull();
     expect(screen.queryByText("08 Sep 2026")).toBeNull();
-    act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
+    await act(() => store.getState().updatePreferences({ displayMode: "minimal" }));
     expect(screen.getByText("Optional analysis is paused")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("duration-back"));
+    await fireEvent.press(screen.getByTestId("duration-back"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
-  it("does not trust the legacy tax flag or unknown ETF classification", () => {
+  it("does not trust the legacy tax flag or unknown ETF classification", async () => {
     const store = fixture();
     store.setState({
       assets: [
@@ -76,7 +76,7 @@ describe("Holding duration screen", () => {
         },
       ],
     });
-    const screen = render(
+    const screen = await render(
       <HoldingDurationScreen store={store} now={now} onClose={jest.fn()} />,
     );
     expect(screen.getByText("Comparison unavailable")).toBeTruthy();
@@ -87,11 +87,11 @@ describe("Holding duration screen", () => {
     const open = jest
       .spyOn(Linking, "openURL")
       .mockRejectedValue(new Error("No browser"));
-    const screen = render(
+    const screen = await render(
       <HoldingDurationScreen store={fixture()} now={now} onClose={jest.fn()} />,
     );
     await act(async () =>
-      fireEvent.press(screen.getByText("Read official guidance")),
+      await fireEvent.press(screen.getByText("Read official guidance")),
     );
     expect(screen.getByText(/Could not open the guidance/)).toBeTruthy();
     open.mockRestore();

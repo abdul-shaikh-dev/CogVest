@@ -27,22 +27,22 @@ const mockedConstants = Constants as unknown as {
 };
 
 describe("SettingsScreen", () => {
-  it("persists appearance separately from display mode and masking", () => {
+  it("persists appearance separately from display mode and masking", async () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
     store.getState().updatePreferences({ displayMode: "minimal", maskWealthValues: true });
-    const view = render(<SettingsScreen store={store} />);
+    const view = await render(<SettingsScreen store={store} />);
     expect(view.getByTestId("appearance-system").props.accessibilityState.checked).toBe(true);
     for (const appearance of ["light", "dark", "system"] as const) {
-      fireEvent.press(view.getByTestId(`appearance-${appearance}`));
+      await fireEvent.press(view.getByTestId(`appearance-${appearance}`));
       expect(view.getByTestId(`appearance-${appearance}`).props.accessibilityState.checked).toBe(true);
       expect(createPortfolioStore({ storage }).getState().preferences).toMatchObject({ appearance, displayMode: "minimal", maskWealthValues: true });
     }
   });
-  it.each(["standard", "minimal"] as const)("separates investment tools from backup and groups app facts once in %s mode", (displayMode) => {
+  it.each(["standard", "minimal"] as const)("separates investment tools from backup and groups app facts once in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ displayMode });
-    const view = render(<SettingsScreen store={store} />);
+    const view = await render(<SettingsScreen store={store} />);
     const tools = within(view.getByTestId("futures-settings-card"));
     const backup = within(view.getByTestId("backup-settings-card"));
     expect(tools.getByRole("header", { name: "Investment tools" })).toBeTruthy();
@@ -58,9 +58,9 @@ describe("SettingsScreen", () => {
     expect(view.getByText("Base currency")).toBeTruthy();
     expect(view.getByText("Version")).toBeTruthy();
   });
-  it("uses named choices and disclosures without generic action text", () => {
+  it("uses named choices and disclosures without generic action text", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const view = render(<SettingsScreen store={store} />);
+    const view = await render(<SettingsScreen store={store} />);
     expect(view.getByTestId("display-mode-options").props.accessibilityRole).toBe("radiogroup");
     const standard = view.getByRole("radio", { name: "Standard display mode" });
     const minimal = view.getByRole("radio", { name: "Minimal display mode" });
@@ -68,14 +68,14 @@ describe("SettingsScreen", () => {
     expect(standard.props.accessibilityState.checked).toBe(true);
     expect(view.getByTestId("display-mode-description")).toHaveTextContent("Monthly activity, portfolio insights and optional guidance.");
     expect(view.queryByText("Hides monthly activity, insights and guidance. Keeps core values and actions.")).toBeNull();
-    fireEvent.press(minimal);
+    await fireEvent.press(minimal);
     expect(standard.props.accessibilityState.checked).toBe(false);
     expect(minimal.props.accessibilityState.checked).toBe(true);
     expect(view.getByTestId("display-mode-description")).toHaveTextContent(/Returns and breakdowns on demand; warnings and actions stay available\./);
     expect(view.queryByText("Monthly activity, portfolio insights and optional guidance.")).toBeNull();
-    fireEvent.press(minimal);
+    await fireEvent.press(minimal);
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    fireEvent.press(standard);
+    await fireEvent.press(standard);
     expect(store.getState().preferences.displayMode).toBe("standard");
     for (const label of ["Choose", "Selected", "Show", "Hide"]) {
       expect(view.queryByText(label)).toBeNull();
@@ -84,7 +84,7 @@ describe("SettingsScreen", () => {
       const disclosure = view.getByTestId(id);
       expect(disclosure.props.accessibilityRole).toBe("button");
       expect(disclosure.props.accessibilityState.expanded).toBe(false);
-      fireEvent.press(disclosure);
+      await fireEvent.press(disclosure);
       expect(disclosure.props.accessibilityState.expanded).toBe(true);
     }
   });
@@ -94,23 +94,23 @@ describe("SettingsScreen", () => {
     mockedConstants.expoConfig = { version: "test-version" };
   });
 
-  it("routes to the focused backup and restore flows and explains manual backup privacy", () => {
+  it("routes to the focused backup and restore flows and explains manual backup privacy", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(<SettingsScreen store={store} />);
+    const { getByTestId, getByText } = await render(<SettingsScreen store={store} />);
 
     expect(getByText("Portfolio backup")).toBeTruthy();
-    fireEvent.press(getByTestId("backup-portfolio-action"));
-    fireEvent.press(getByTestId("restore-backup-action"));
+    await fireEvent.press(getByTestId("backup-portfolio-action"));
+    await fireEvent.press(getByTestId("restore-backup-action"));
     expect(mockPush).toHaveBeenNthCalledWith(1, "/backup?mode=export");
     expect(mockPush).toHaveBeenNthCalledWith(2, "/backup?mode=restore");
-    fireEvent.press(getByTestId("open-futures-action"));
+    await fireEvent.press(getByTestId("open-futures-action"));
     expect(mockPush).toHaveBeenNthCalledWith(3, "/futures");
 
-    fireEvent.press(getByTestId("privacy-details-toggle"));
+    await fireEvent.press(getByTestId("privacy-details-toggle"));
     expect(getByText("Backups are not encrypted: save them only somewhere you trust.")).toBeTruthy();
   });
 
-  it("shows collapsed privacy settings and toggles value masking", () => {
+  it("shows collapsed privacy settings and toggles value masking", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const {
       getAllByText,
@@ -119,7 +119,7 @@ describe("SettingsScreen", () => {
       getByText,
       queryByTestId,
       queryByText,
-    } = render(<SettingsScreen store={store} />);
+    } = await render(<SettingsScreen store={store} />);
 
     expect(getByTestId("value-mask-toggle")).toBeTruthy();
     expect(getByTestId("value-mask-toggle").props.accessibilityState).toEqual({
@@ -138,7 +138,7 @@ describe("SettingsScreen", () => {
       getByText(`Hide portfolio amounts. Preview ${MASKED_INR_VALUE}`),
     ).toBeTruthy();
 
-    fireEvent.press(getByTestId("privacy-details-toggle"));
+    await fireEvent.press(getByTestId("privacy-details-toggle"));
 
     expect(
       getByTestId("privacy-details-toggle").props.accessibilityState,
@@ -166,14 +166,14 @@ describe("SettingsScreen", () => {
     expect(getByText("Minimal")).toBeTruthy();
     expect(queryByText(/LTCG/i)).toBeNull();
 
-    fireEvent.press(getByTestId("privacy-details-toggle"));
+    await fireEvent.press(getByTestId("privacy-details-toggle"));
 
     expect(
       getByTestId("privacy-details-toggle").props.accessibilityState,
     ).toEqual({ expanded: false });
     expect(queryByTestId("privacy-storage-details")).toBeNull();
 
-    fireEvent.press(getByLabelText("Toggle value masking"));
+    await fireEvent.press(getByLabelText("Toggle value masking"));
 
     expect(getByTestId("value-mask-toggle").props.accessibilityState).toEqual({
       checked: true,
@@ -182,10 +182,10 @@ describe("SettingsScreen", () => {
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("shows empty price information without refresh or provider claims", () => {
+  it("shows empty price information without refresh or provider claims", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText, queryByRole, queryByTestId, queryByText } =
-      render(<SettingsScreen store={store} />);
+      await render(<SettingsScreen store={store} />);
     const toggle = getByTestId("settings-price-details-toggle");
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: false });
@@ -194,7 +194,7 @@ describe("SettingsScreen", () => {
     expect(queryByText("Clear local data")).toBeNull();
     expect(queryByText("Unavailable")).toBeNull();
 
-    fireEvent.press(toggle);
+    await fireEvent.press(toggle);
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: true });
     expect(getByTestId("settings-price-details")).toBeTruthy();
@@ -209,13 +209,13 @@ describe("SettingsScreen", () => {
     expect(queryByText("Provider")).toBeNull();
     expect(queryByRole("button", { name: "Price sources" })).toBeNull();
 
-    fireEvent.press(toggle);
+    await fireEvent.press(toggle);
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: false });
     expect(queryByTestId("settings-price-details")).toBeNull();
   });
 
-  it("does not treat an initial manual holding price as a saved price update", () => {
+  it("does not treat an initial manual holding price as a saved price update", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addOpeningPosition({
       assetId: "asset-initial-manual",
@@ -232,9 +232,9 @@ describe("SettingsScreen", () => {
       quantity: 10,
     });
 
-    const { getByTestId, getByText } = render(<SettingsScreen store={store} />);
+    const { getByTestId, getByText } = await render(<SettingsScreen store={store} />);
 
-    fireEvent.press(getByTestId("settings-price-details-toggle"));
+    await fireEvent.press(getByTestId("settings-price-details-toggle"));
 
     expect(store.getState().quoteCache).toEqual({});
     expect(
@@ -249,7 +249,7 @@ describe("SettingsScreen", () => {
     expect(getByText("0 price updates")).toBeTruthy();
   });
 
-  it("shows manual saved-price provenance without calling it live", () => {
+  it("shows manual saved-price provenance without calling it live", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-manual",
@@ -259,11 +259,11 @@ describe("SettingsScreen", () => {
       source: "manual",
     });
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <SettingsScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("settings-price-details-toggle"));
+    await fireEvent.press(getByTestId("settings-price-details-toggle"));
 
     expect(getByText("16 May 2026")).toBeTruthy();
     expect(getByText("Manual")).toBeTruthy();
@@ -273,7 +273,7 @@ describe("SettingsScreen", () => {
     expect(queryByText("Provider")).toBeNull();
   });
 
-  it("shows provider saved-price provenance without a Live label", () => {
+  it("shows provider saved-price provenance without a Live label", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-live",
@@ -283,11 +283,11 @@ describe("SettingsScreen", () => {
       source: "yahoo",
     });
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <SettingsScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("settings-price-details-toggle"));
+    await fireEvent.press(getByTestId("settings-price-details-toggle"));
 
     expect(getByText("15 May 2026")).toBeTruthy();
     expect(getByText("Provider")).toBeTruthy();
@@ -298,7 +298,7 @@ describe("SettingsScreen", () => {
     expect(queryByText("Live")).toBeNull();
   });
 
-  it("shows mixed saved-price provenance and keeps quote facts informational", () => {
+  it("shows mixed saved-price provenance and keeps quote facts informational", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().upsertQuote({
       assetId: "asset-live",
@@ -315,11 +315,11 @@ describe("SettingsScreen", () => {
       source: "manual",
     });
 
-    const { getByTestId, getByText, queryByRole, queryByText } = render(
+    const { getByTestId, getByText, queryByRole, queryByText } = await render(
       <SettingsScreen store={store} />,
     );
 
-    fireEvent.press(getByTestId("settings-price-details-toggle"));
+    await fireEvent.press(getByTestId("settings-price-details-toggle"));
 
     expect(getByText("16 May 2026")).toBeTruthy();
     expect(getByText("Mixed")).toBeTruthy();
@@ -336,9 +336,9 @@ describe("SettingsScreen", () => {
     expect(queryByText("Unavailable")).toBeNull();
   });
 
-  it("shows About values with a truthful configured version", () => {
+  it("shows About values with a truthful configured version", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByText, queryByRole } = render(<SettingsScreen store={store} />);
+    const { getByText, queryByRole } = await render(<SettingsScreen store={store} />);
 
     expect(getByText("Base currency")).toBeTruthy();
     expect(getByText("Portfolio totals are reported in INR.")).toBeTruthy();
@@ -350,19 +350,19 @@ describe("SettingsScreen", () => {
     expect(queryByRole("button", { name: "Version" })).toBeNull();
   });
 
-  it("falls back when Expo does not provide an app version", () => {
+  it("falls back when Expo does not provide an app version", async () => {
     mockedConstants.expoConfig = undefined;
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
 
-    const { getByText } = render(<SettingsScreen store={store} />);
+    const { getByText } = await render(<SettingsScreen store={store} />);
 
     expect(getByText("Not available")).toBeTruthy();
   });
 
-  it("selects and persists Minimal display mode", () => {
+  it("selects and persists Minimal display mode", async () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage });
-    const { getByTestId, queryByTestId, queryByText } = render(
+    const { getByTestId, queryByTestId, queryByText } = await render(
       <SettingsScreen store={store} />,
     );
 
@@ -372,7 +372,7 @@ describe("SettingsScreen", () => {
     expect(queryByTestId("nudge-minimal")).toBeNull();
     expect(queryByText("Minimal Mode")).toBeNull();
 
-    fireEvent.press(getByTestId("display-mode-minimal"));
+    await fireEvent.press(getByTestId("display-mode-minimal"));
 
     expect(store.getState().preferences.displayMode).toBe("minimal");
     expect(getByTestId("display-mode-minimal").props.accessibilityState).toEqual({

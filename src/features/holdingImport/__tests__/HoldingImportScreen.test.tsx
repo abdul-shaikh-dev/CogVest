@@ -36,7 +36,7 @@ describe("HoldingImportScreen", () => {
     const saveCsvTemplate = jest
       .fn()
       .mockResolvedValue("cogvest-holdings-v1.csv");
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -46,7 +46,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("save-holdings-csv-template"));
+    await fireEvent.press(getByTestId("save-holdings-csv-template"));
 
     await waitFor(() =>
       expect(
@@ -59,7 +59,7 @@ describe("HoldingImportScreen", () => {
   });
 
   it("shows a recoverable message when the template cannot be saved", async () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -71,7 +71,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("save-holdings-csv-template"));
+    await fireEvent.press(getByTestId("save-holdings-csv-template"));
 
     await waitFor(() =>
       expect(
@@ -85,7 +85,7 @@ describe("HoldingImportScreen", () => {
   it("previews and atomically imports an exact provider holding", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onImported = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingImportScreen
         now={() => new Date("2026-08-15T12:00:00.000Z")}
         onCancel={jest.fn()}
@@ -108,14 +108,14 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
     expect(getByText("Row 2 • 25 units")).toBeTruthy();
     expect(getByText("HDFC Bank Limited • HDFCBANK.NS • Equity • INR")).toBeTruthy();
     expect(getByText("₹36,250.00")).toBeTruthy();
     expect(getByText("₹41,956.25")).toBeTruthy();
 
-    fireEvent.press(getByTestId("confirm-holdings-import"));
+    await fireEvent.press(getByTestId("confirm-holdings-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().assets).toHaveLength(1);
     expect(store.getState().openingPositions).toHaveLength(1);
@@ -125,7 +125,7 @@ describe("HoldingImportScreen", () => {
   it("requires explicit selection for a non-exact provider result", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const candidate = { ...lookup, id: "yahoo:HDFC.NS", ticker: "HDFC.NS" };
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -138,7 +138,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() =>
       expect(
         getByTestId("holding-import-row-2-candidate-yahoo:HDFC.NS"),
@@ -146,7 +146,7 @@ describe("HoldingImportScreen", () => {
     );
     expect(queryByTestId("holding-import-summary")).toBeNull();
 
-    fireEvent.press(
+    await fireEvent.press(
       getByTestId("holding-import-row-2-candidate-yahoo:HDFC.NS"),
     );
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
@@ -154,7 +154,7 @@ describe("HoldingImportScreen", () => {
 
   it("requires explicit manual conversion and keeps missing valuation pending", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -169,11 +169,11 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() =>
       expect(getByTestId("holding-import-row-2-manual")).toBeTruthy(),
     );
-    fireEvent.press(getByTestId("holding-import-row-2-manual"));
+    await fireEvent.press(getByTestId("holding-import-row-2-manual"));
 
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
     expect(getByText("Row 2 • 3 units")).toBeTruthy();
@@ -182,7 +182,7 @@ describe("HoldingImportScreen", () => {
 
   it("shows parser errors without mutating the portfolio", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -193,7 +193,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByText(/quantity must be a positive number/u)).toBeTruthy());
     expect(queryByTestId("holding-import-summary")).toBeNull();
     expect(store.getState().assets).toEqual([]);
@@ -202,7 +202,7 @@ describe("HoldingImportScreen", () => {
   it("keeps cancellation and oversized files mutation-free", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const search = jest.fn();
-    const { getByTestId, getByText, queryByTestId, rerender } = render(
+    const { getByTestId, getByText, queryByTestId, rerender } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -212,11 +212,11 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(search).not.toHaveBeenCalled());
     expect(queryByTestId("holding-import-summary")).toBeNull();
 
-    rerender(
+    await rerender(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -225,14 +225,14 @@ describe("HoldingImportScreen", () => {
         store={store}
       />,
     );
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByText(/CSV file is too large/u)).toBeTruthy());
     expect(store.getState().assets).toEqual([]);
   });
 
   it("offers explicit manual recovery when lookup throws", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -246,7 +246,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() =>
       expect(getByTestId("holding-import-row-2-manual")).toBeTruthy(),
     );
@@ -275,7 +275,7 @@ describe("HoldingImportScreen", () => {
       id: "existing-opening",
       quantity: 20,
     });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <HoldingImportScreen
         now={() => new Date("2026-08-15T12:00:00.000Z")}
         onCancel={jest.fn()}
@@ -288,17 +288,17 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() =>
       expect(getByTestId("holding-import-row-2-update")).toBeTruthy(),
     );
     expect(queryByTestId("holding-import-summary")).toBeNull();
-    fireEvent.press(getByTestId("holding-import-row-2-update"));
+    await fireEvent.press(getByTestId("holding-import-row-2-update"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
     expect(
       getByText("Current price ₹1,678.25 • Manual • as of 2026-08-01"),
     ).toBeTruthy();
-    fireEvent.press(getByTestId("confirm-holdings-import"));
+    await fireEvent.press(getByTestId("confirm-holdings-import"));
     await waitFor(() =>
       expect(store.getState().openingPositions[0]).toMatchObject({ quantity: 25 }),
     );
@@ -308,7 +308,7 @@ describe("HoldingImportScreen", () => {
   it("masks imported totals while keeping per-unit prices visible", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
-    const { getAllByText, getByTestId, getByText, queryByText } = render(
+    const { getAllByText, getByTestId, getByText, queryByText } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -320,7 +320,7 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
     expect(getAllByText(MASKED_INR_VALUE).length).toBeGreaterThanOrEqual(2);
     expect(getByText("₹1,450.00 average")).toBeTruthy();
@@ -343,7 +343,7 @@ describe("HoldingImportScreen", () => {
       .fn()
       .mockResolvedValueOnce(first)
       .mockResolvedValueOnce({ ...second, name: "replacement.csv" });
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={jest.fn()}
@@ -356,9 +356,9 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() =>
       expect(getByText("This CSV could not be read. Choose the template again.")).toBeTruthy(),
     );
@@ -375,7 +375,7 @@ describe("HoldingImportScreen", () => {
     });
     const csv = `${header}\n${rows.join("\n")}`;
     const onImported = jest.fn();
-    const { getAllByText, getByTestId } = render(
+    const { getAllByText, getByTestId } = await render(
       <HoldingImportScreen
         onCancel={jest.fn()}
         onImported={onImported}
@@ -400,10 +400,10 @@ describe("HoldingImportScreen", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("select-holdings-csv"));
+    await fireEvent.press(getByTestId("select-holdings-csv"));
     await waitFor(() => expect(getByTestId("holding-import-summary")).toBeTruthy());
     expect(getAllByText("21")).toHaveLength(2);
-    fireEvent.press(getByTestId("confirm-holdings-import"));
+    await fireEvent.press(getByTestId("confirm-holdings-import"));
     await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
     expect(store.getState().assets).toHaveLength(21);
     expect(store.getState().openingPositions).toHaveLength(21);

@@ -5,9 +5,9 @@ import { DatePickerField } from "@/src/components/forms";
 describe("DatePickerField", () => {
   const maximumDate = new Date(2026, 6, 22, 12);
 
-  it("opens accessibly and confirms a canonical local date", () => {
+  it("opens accessibly and confirms a canonical local date", async () => {
     const onChange = jest.fn();
-    const { getByLabelText, getByTestId, queryByTestId } = render(
+    const { getByLabelText, getByTestId, queryByTestId } = await render(
       <DatePickerField
         label="Date acquired"
         maximumDate={maximumDate}
@@ -20,8 +20,8 @@ describe("DatePickerField", () => {
     expect(getByLabelText("Choose Date acquired")).toBeTruthy();
     expect(queryByTestId("date-field-picker")).toBeNull();
 
-    fireEvent.press(getByTestId("date-field"));
-    fireEvent(
+    await fireEvent.press(getByTestId("date-field"));
+    await fireEvent(
       getByTestId("date-field-picker"),
       "onChange",
       { nativeEvent: { timestamp: new Date(2026, 6, 21, 12).getTime() } },
@@ -31,9 +31,9 @@ describe("DatePickerField", () => {
     expect(queryByTestId("date-field-picker")).toBeNull();
   });
 
-  it("closes without changing the value when cancelled", () => {
+  it("closes without changing the value when cancelled", async () => {
     const onChange = jest.fn();
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <DatePickerField
         label="Date"
         maximumDate={maximumDate}
@@ -43,8 +43,8 @@ describe("DatePickerField", () => {
       />,
     );
 
-    fireEvent.press(getByTestId("date-field"));
-    fireEvent(getByTestId("date-field-picker"), "onPickerDismiss");
+    await fireEvent.press(getByTestId("date-field"));
+    await fireEvent(getByTestId("date-field-picker"), "onPickerDismiss");
 
     expect(onChange).not.toHaveBeenCalled();
     expect(queryByTestId("date-field-picker")).toBeNull();

@@ -25,8 +25,8 @@ const prepared: PreparedRestore = {
   },
 };
 
-function renderScreen(overrides: Partial<ComponentProps<typeof BackupScreen>> = {}) {
-  return render(
+async function renderScreen(overrides: Partial<ComponentProps<typeof BackupScreen>> = {}) {
+  return await render(
     <BackupScreen
       exportPortfolioBackup={async () => "cogvest-backup.json"}
       initialMode="restore"
@@ -43,11 +43,11 @@ describe("BackupScreen", () => {
   it("labels both counts at larger text sizes, including zeros and long record names", async () => {
     const dimensions = jest.spyOn(ReactNative, "useWindowDimensions").mockReturnValue({ fontScale: 1.3, height: 800, scale: 3, width: 360 });
     try {
-      const view = renderScreen({ selectPortfolioBackup: async () => ({ review: {
+      const view = await renderScreen({ selectPortfolioBackup: async () => ({ review: {
         ...prepared.review,
         counts: [{ label: "Long synthetic record category", current: 0, backup: 123456 }],
       } }) });
-      fireEvent.press(view.getByTestId("choose-backup-file"));
+      await fireEvent.press(view.getByTestId("choose-backup-file"));
       await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
       expect(view.queryByTestId("backup-count-headings")).toBeNull();
       expect(view.getByText("This device")).toBeTruthy();
@@ -55,7 +55,7 @@ describe("BackupScreen", () => {
       expect(view.getByTestId("backup-count-current-Long synthetic record category")).toHaveTextContent("0");
       expect(view.getByTestId("backup-count-file-Long synthetic record category")).toHaveTextContent("123456");
       expect(view.getByLabelText("Long synthetic record category. This device: 0. Backup: 123456.")).toBeTruthy();
-      view.unmount();
+      await view.unmount();
     } finally {
       dimensions.mockRestore();
     }
@@ -63,53 +63,53 @@ describe("BackupScreen", () => {
 
   it("returns header and intercepted navigation Back to the populated review", async () => {
     const onBack = jest.fn();
-    const view = renderScreen({ onBack });
-    fireEvent.press(view.getByTestId("choose-backup-file"));
+    const view = await renderScreen({ onBack });
+    await fireEvent.press(view.getByTestId("choose-backup-file"));
     await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
-    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
-    fireEvent.press(view.getByTestId("backup-back"));
+    await fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    await fireEvent.press(view.getByTestId("backup-back"));
     expect(view.getByLabelText("Holdings. This device: 1. Backup: 3.")).toBeTruthy();
     expect(onBack).not.toHaveBeenCalled();
-    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    await fireEvent.press(view.getByTestId("continue-restore-confirmation"));
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
+    await act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(view.getByTestId("backup-restore-preview")).toBeTruthy();
-    fireEvent.press(view.getByTestId("backup-back"));
+    await fireEvent.press(view.getByTestId("backup-back"));
     expect(view.getByTestId("backup-restore-warning")).toBeTruthy();
-    fireEvent.press(view.getByTestId("backup-back"));
+    await fireEvent.press(view.getByTestId("backup-back"));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it("blocks Back during export and announces a readable failure", async () => {
     let reject!: (error: Error) => void;
     const onBack = jest.fn();
-    const view = renderScreen({ initialMode: "export", onBack,
+    const view = await renderScreen({ initialMode: "export", onBack,
       exportPortfolioBackup: () => new Promise((_, fail) => { reject = fail; }),
     });
-    fireEvent.press(view.getByTestId("choose-backup-location"));
+    await fireEvent.press(view.getByTestId("choose-backup-location"));
     expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(true);
-    fireEvent.press(view.getByTestId("backup-back"));
+    await fireEvent.press(view.getByTestId("backup-back"));
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
+    await act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(onBack).not.toHaveBeenCalled();
     await act(async () => reject(new Error("Could not save backup.")));
     expect(view.getByText("Could not save backup.").props.accessibilityLiveRegion).toBe("polite");
     expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(false);
-    fireEvent.press(view.getByTestId("backup-back"));
+    await fireEvent.press(view.getByTestId("backup-back"));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it("warns before export and treats a cancelled location picker as neutral", async () => {
     const exportPortfolioBackup = jest.fn(async () => undefined);
-    const { getByTestId, getByText, queryByTestId } = renderScreen({
+    const { getByTestId, getByText, queryByTestId } = await renderScreen({
       exportPortfolioBackup,
       initialMode: "export",
     });
 
     expect(getByText("This backup contains sensitive financial information and is not encrypted.")).toBeTruthy();
-    fireEvent.press(getByTestId("choose-backup-location"));
+    await fireEvent.press(getByTestId("choose-backup-location"));
     await waitFor(() => expect(exportPortfolioBackup).toHaveBeenCalledTimes(1));
     expect(queryByTestId("backup-status")).toBeNull();
   });
@@ -119,18 +119,18 @@ describe("BackupScreen", () => {
     const onBack = jest.fn();
     const restorePortfolioBackup = jest.fn(() => new Promise<void>(resolve => { finish = resolve; }));
     const onRestored = jest.fn();
-    const view = renderScreen({ onBack, onRestored, restorePortfolioBackup });
-    fireEvent.press(view.getByTestId("choose-backup-file"));
+    const view = await renderScreen({ onBack, onRestored, restorePortfolioBackup });
+    await fireEvent.press(view.getByTestId("choose-backup-file"));
     await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
     expect(restorePortfolioBackup).not.toHaveBeenCalled();
-    fireEvent.press(view.getByTestId("continue-restore-confirmation"));
-    fireEvent.press(view.getByTestId("confirm-restore-replacement"));
-    fireEvent.press(view.getByTestId("confirm-restore-replacement"));
-    fireEvent.press(view.getByText("Back to review"));
+    await fireEvent.press(view.getByTestId("continue-restore-confirmation"));
+    await fireEvent.press(view.getByTestId("confirm-restore-replacement"));
+    await fireEvent.press(view.getByTestId("confirm-restore-replacement"));
+    await fireEvent.press(view.getByText("Back to review"));
     expect(view.getByTestId("backup-back").props.accessibilityState.disabled).toBe(true);
     const [blocked, back] = jest.mocked(usePreventRemove).mock.calls.at(-1)!;
     expect(blocked).toBe(true);
-    act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
+    await act(() => back!({ data: { action: { type: "GO_BACK" } }, repeat: jest.fn() }));
     expect(onBack).not.toHaveBeenCalled();
     expect(restorePortfolioBackup).toHaveBeenCalledTimes(1);
     await act(async () => finish());
@@ -139,9 +139,9 @@ describe("BackupScreen", () => {
 
   it("only previews a selected backup and shows original and backup counts", async () => {
     const restorePortfolioBackup = jest.fn();
-    const { getByTestId, getByText } = renderScreen({ restorePortfolioBackup });
+    const { getByTestId, getByText } = await renderScreen({ restorePortfolioBackup });
 
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByTestId("backup-restore-preview")).toBeTruthy());
     expect(getByText(`Created ${formatBackupCreatedAt(prepared.review.createdAt)}`)).toBeTruthy();
     expect(getByText("Display mode and value masking preferences in this backup replace the settings on this device.")).toBeTruthy();
@@ -157,12 +157,12 @@ describe("BackupScreen", () => {
 
   it("treats a cancelled backup picker as neutral and keeps restore inactive", async () => {
     const restorePortfolioBackup = jest.fn();
-    const { getByTestId, queryByTestId } = renderScreen({
+    const { getByTestId, queryByTestId } = await renderScreen({
       restorePortfolioBackup,
       selectPortfolioBackup: async () => undefined,
     });
 
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() =>
       expect(getByTestId("choose-backup-file").props.accessibilityState).toEqual({
         disabled: false,
@@ -175,20 +175,20 @@ describe("BackupScreen", () => {
   it("requires a separate destructive confirmation and requires a new review after a failed restore", async () => {
     const restorePortfolioBackup = jest.fn(async () => { throw new Error("Your portfolio changed. Select the backup again."); });
     const selectPortfolioBackup = jest.fn(async () => prepared);
-    const { getByTestId, getByText, queryByTestId } = renderScreen({
+    const { getByTestId, getByText, queryByTestId } = await renderScreen({
       restorePortfolioBackup,
       selectPortfolioBackup,
     });
 
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByTestId("continue-restore-confirmation")).toBeTruthy());
-    fireEvent.press(getByTestId("continue-restore-confirmation"));
-    fireEvent.press(getByTestId("confirm-restore-replacement"));
+    await fireEvent.press(getByTestId("continue-restore-confirmation"));
+    await fireEvent.press(getByTestId("confirm-restore-replacement"));
     await waitFor(() => expect(restorePortfolioBackup).toHaveBeenCalledWith(prepared, expect.any(AbortSignal)));
     expect(getByText("Your portfolio changed. Select the backup again. Reopen the backup review or restart CogVest if recovery is required.")).toBeTruthy();
     expect(queryByTestId("backup-restore-preview")).toBeNull();
     expect(queryByTestId("backup-restore-confirmation")).toBeNull();
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(selectPortfolioBackup).toHaveBeenCalledTimes(2));
   });
 
@@ -197,12 +197,12 @@ describe("BackupScreen", () => {
       .fn()
       .mockResolvedValueOnce(prepared)
       .mockRejectedValueOnce(new Error("bad file"));
-    const { getByTestId, getByText, queryByTestId } = renderScreen({ selectPortfolioBackup });
+    const { getByTestId, getByText, queryByTestId } = await renderScreen({ selectPortfolioBackup });
 
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByTestId("backup-restore-preview")).toBeTruthy());
-    fireEvent.press(getByText("Choose another backup"));
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByText("Choose another backup"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByText("bad file")).toBeTruthy());
     expect(queryByTestId("backup-restore-preview")).toBeNull();
   });
@@ -210,20 +210,20 @@ describe("BackupScreen", () => {
   it("backs up current data before confirmation and calls onRestored only after a successful replacement", async () => {
     const exportPortfolioBackup = jest.fn(async () => "before-restore.json");
     const onRestored = jest.fn();
-    const { getByTestId } = renderScreen({ exportPortfolioBackup, onRestored });
+    const { getByTestId } = await renderScreen({ exportPortfolioBackup, onRestored });
 
-    fireEvent.press(getByTestId("choose-backup-file"));
+    await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByTestId("backup-current-data")).toBeTruthy());
-    fireEvent.press(getByTestId("backup-current-data"));
+    await fireEvent.press(getByTestId("backup-current-data"));
     await waitFor(() => expect(exportPortfolioBackup).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(getByTestId("backup-current-data").props.accessibilityState).toEqual({
         disabled: false,
       }),
     );
-    fireEvent.press(getByTestId("continue-restore-confirmation"));
+    await fireEvent.press(getByTestId("continue-restore-confirmation"));
     await waitFor(() => expect(getByTestId("confirm-restore-replacement")).toBeTruthy());
-    fireEvent.press(getByTestId("confirm-restore-replacement"));
+    await fireEvent.press(getByTestId("confirm-restore-replacement"));
     await waitFor(() => expect(onRestored).toHaveBeenCalledTimes(1));
   });
 
@@ -231,16 +231,16 @@ describe("BackupScreen", () => {
     let finishSelection: ((value: PreparedRestore | undefined) => void) | undefined;
     const onBack = jest.fn();
     const onRestored = jest.fn();
-    const screen = renderScreen({
+    const screen = await renderScreen({
       onBack,
       onRestored,
       selectPortfolioBackup: () => new Promise((resolve) => { finishSelection = resolve; }),
     });
 
-    fireEvent.press(screen.getByTestId("backup-back"));
+    await fireEvent.press(screen.getByTestId("backup-back"));
     expect(onBack).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByTestId("choose-backup-file"));
-    screen.unmount();
+    await fireEvent.press(screen.getByTestId("choose-backup-file"));
+    await screen.unmount();
     finishSelection?.(prepared);
     await Promise.resolve();
     expect(onRestored).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("BackupScreen", () => {
   it("aborts an in-progress export when the screen unmounts", async () => {
     let finishExport: ((value: string | undefined) => void) | undefined;
     let receivedSignal: AbortSignal | undefined;
-    const screen = renderScreen({
+    const screen = await renderScreen({
       exportPortfolioBackup: (signal) => {
         receivedSignal = signal;
         return new Promise((resolve) => { finishExport = resolve; });
@@ -257,9 +257,9 @@ describe("BackupScreen", () => {
       initialMode: "export",
     });
 
-    fireEvent.press(screen.getByTestId("choose-backup-location"));
+    await fireEvent.press(screen.getByTestId("choose-backup-location"));
     await waitFor(() => expect(receivedSignal).toBeDefined());
-    screen.unmount();
+    await screen.unmount();
     expect(receivedSignal?.aborted).toBe(true);
     finishExport?.("late-backup.json");
     await Promise.resolve();
