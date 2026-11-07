@@ -103,7 +103,9 @@ function optionalConvictionField() {
     }
 
     return parsedValue;
-  });
+  })
+    // Zod 4.6 rejects an undefined output from a key that is not marked optional.
+    .optional();
 }
 
 function optionalPositiveWholeNumberField() {
@@ -126,7 +128,9 @@ function optionalPositiveWholeNumberField() {
     }
 
     return parsedValue;
-  });
+  })
+    // Zod 4.6 rejects an undefined output from a key that is not marked optional.
+    .optional();
 }
 
 export function createTradeFormSchema(now = new Date()) {
