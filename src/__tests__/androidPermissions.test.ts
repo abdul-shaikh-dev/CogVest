@@ -33,6 +33,12 @@ describe("Android least-privilege permissions", () => {
     );
   });
 
+  it("blocks the unused Play install-referrer permission", () => {
+    expect(RELEASE_BLOCKED_PERMISSIONS).toContain(
+      "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
+    );
+  });
+
   it("blocks storage and overlay permissions from merged release manifests", () => {
     const manifest: AndroidManifest = {
       manifest: {
