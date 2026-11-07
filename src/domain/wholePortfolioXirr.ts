@@ -5,7 +5,7 @@ import { decimal, sumFinancialValues } from "./precision";
 import { epfXirrFlows, futuresXirrFlows, ppfXirrFlows, type AccountXirrOutcome } from "./xirrAccountFlows";
 import {
   compareFlows, terminalQuoteIssue, tradeFlow,
-  type InvestmentsXirrInput, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
+  type InvestmentsXirrInput, type PayoutCoverageGap, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
 } from "./xirrInputs";
 import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
@@ -259,6 +259,7 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   }
   // Every asset that can pay out and was held in the period needs payouts recorded from then on.
   const heldAtEnd = new Set(holdings.map((holding) => holding.asset.id));
+  const payoutCoverageGaps: PayoutCoverageGap[] = [];
   for (const asset of input.assets) {
     if (asset.assetClass === "crypto" || asset.assetClass === "cash") continue;
     const tradeDates = input.trades.filter((trade) => trade.assetId === asset.id)
@@ -269,7 +270,10 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
       : [...tradeDates, ...openings.map((item) => getCalendarDatePart(item.date!) ?? start)].sort()[0] ?? null;
     const required = earliest === null || earliest < start ? start : earliest;
     const coverage = input.distributionCoverage.find((item) => item.assetId === asset.id);
-    if (!coverage || coverage.from > required) limitations.push({ assetId: asset.id, limitation: "payouts-not-recorded" });
+    if (!coverage || coverage.from > required) {
+      limitations.push({ assetId: asset.id, limitation: "payouts-not-recorded" });
+      payoutCoverageGaps.push({ assetId: asset.id, requiredFrom: required });
+    }
   }
 
   // Accounts: their own flows, reclassified by where the money came from or went.
@@ -344,5 +348,6 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     includedAssetIds: [...holdings.map((holding) => holding.asset.id), "cash",
       ...input.ppfAccounts.map((account) => `ppf:${account.id}`), ...input.epf.accounts.map((account) => `epf:${account.id}`),
       ...input.futuresAccounts.map((account) => `futures:${account.id}`)],
+    payoutCoverageGaps,
   };
 }

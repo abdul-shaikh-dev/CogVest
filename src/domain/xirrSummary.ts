@@ -18,6 +18,8 @@ export type XirrSummary =
     valueAsOf: string | null;
     flows: XirrFlow[];
     notes: string[];
+    /** Holdings behind the "Dividends aren't recorded" note, so it can lead to confirming them (#619). */
+    payoutGapAssetIds?: string[];
   }
   | { status: "unavailable"; messages: string[]; blockers: XirrBlocker[] };
 
@@ -157,5 +159,7 @@ export function summariseXirr(input: XirrInputResult): XirrSummary {
     valueAsOf: input.valueAsOf,
     flows: input.flows,
     notes,
+    payoutGapAssetIds: [...new Set(input.limitations
+      .filter((item) => item.limitation === "payouts-not-recorded").map((item) => item.assetId))],
   };
 }

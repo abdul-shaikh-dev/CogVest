@@ -98,6 +98,36 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     expect(summary.notes).toContain(note);
   });
 
+  // #619: the holdings behind the payouts note, with the date each needs, for confirming them in bulk.
+  describe("payout coverage gaps", () => {
+    const gaps = (overrides: Partial<WholePortfolioXirrInput>) => {
+      const result = buildWholePortfolioXirrInput(input(overrides));
+      if (result.status !== "ready") throw new Error(JSON.stringify(result));
+      return result.payoutCoverageGaps;
+    };
+    const coverageFrom = (from: string) => [{ assetId: "stock", from, confirmedAt: "2025-01-01T00:00:00Z" }];
+
+    it("names each unconfirmed holding from its first purchase, matching the note", () => {
+      const overrides = { ...market, distributionCoverage: [] };
+      expect(gaps(overrides)).toEqual([{ assetId: "stock", requiredFrom: "2025-01-01" }]);
+      expect(rate(overrides).payoutGapAssetIds).toEqual(["stock"]);
+    });
+
+    it("needs coverage only from the start when the holding was bought before it", () => {
+      const records = { ...market, distributionCoverage: [] };
+      const basis = openingBasis(records, "2025-06-30");
+      expect(gaps({ ...records, basis })).toEqual([{ assetId: "stock", requiredFrom: "2025-06-30" }]);
+    });
+
+    it("keeps a holding whose coverage starts too late, and drops it once coverage reaches the date", () => {
+      expect(gaps({ ...market, distributionCoverage: coverageFrom("2025-03-01") })).toEqual([{ assetId: "stock", requiredFrom: "2025-01-01" }]);
+      expect(gaps({ ...market, distributionCoverage: coverageFrom("2025-01-01") })).toEqual([]);
+      const summary = rate({ ...market, distributionCoverage: coverageFrom("2025-01-01") });
+      expect(summary.payoutGapAssetIds).toEqual([]);
+      expect(summary.notes.some((note) => note.startsWith("Dividends aren't recorded"))).toBe(false);
+    });
+  });
+
   it("cancels an unlinked purchase payment against its unlinked trade", () => {
     const summary = rate({ ...market, cashEntries: [deposit, { ...funding, linkedTradeId: undefined }] });
     expect(summary.rate).toBeCloseTo(0.1, 9);

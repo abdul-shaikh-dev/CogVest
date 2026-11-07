@@ -1,0 +1,92 @@
+appId: ${APP_ID}
+---
+# #619: confirm payouts for several holdings at once from the return Breakdown,
+# and check the saved coverage records, not only the message.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///xirr-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: xirr-qa-reset-many
+- assertVisible:
+    id: xirr-qa-status
+    text: "Fixture ready"
+# selector: the stored coverage records are the data under test
+- assertVisible:
+    id: xirr-qa-coverage
+    text: "Coverage: none"
+- tapOn:
+    id: xirr-qa-open-dashboard
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-toggle
+    direction: DOWN
+- tapOn:
+    id: dashboard-xirr-toggle
+# selector: the payouts note and its count are under test
+- scrollUntilVisible:
+    element:
+      text: "Dividends aren't recorded for 3 holdings, so the return may be understated."
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-confirm-payouts
+    direction: DOWN
+- tapOn:
+    id: dashboard-xirr-confirm-payouts
+- extendedWaitUntil:
+    visible:
+      id: payout-coverage-screen
+    timeout: 15000
+# The holding with a recorded payout is not offered for "no payouts".
+- assertNotVisible:
+    id: payout-coverage-select-xirr-qa-stock
+- assertVisible:
+    id: payout-coverage-open-xirr-qa-stock
+- tapOn:
+    id: payout-coverage-select-xirr-qa-alpha
+- tapOn:
+    id: payout-coverage-select-xirr-qa-beta
+- takeScreenshot: .expo/payout-coverage-${SHOT}-selected
+- tapOn:
+    id: payout-coverage-continue
+- extendedWaitUntil:
+    visible:
+      id: payout-coverage-review
+    timeout: 10000
+- assertVisible:
+    id: payout-coverage-review-xirr-qa-alpha
+- assertVisible:
+    id: payout-coverage-review-xirr-qa-beta
+- takeScreenshot: .expo/payout-coverage-${SHOT}-review
+- tapOn:
+    id: payout-coverage-confirm
+# selector: the confirmation count is under test
+- assertVisible:
+    id: payout-coverage-saved
+    text: "Payouts confirmed for 2 holdings."
+- assertNotVisible:
+    id: payout-coverage-select-xirr-qa-alpha
+- tapOn:
+    id: payout-coverage-back
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 15000
+# selector: the updated note count is under test
+- scrollUntilVisible:
+    element:
+      text: "Dividends aren't recorded for 1 holding, so the return may be understated."
+    direction: DOWN
+- back
+- extendedWaitUntil:
+    visible:
+      id: xirr-qa-status
+    timeout: 15000
+# selector: the stored coverage records are the data under test
+- assertVisible:
+    id: xirr-qa-coverage
+    text: "Coverage: xirr-qa-alpha from 2025-01-01; xirr-qa-beta from 2025-01-01"

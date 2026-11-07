@@ -52,6 +52,7 @@ const defaultFlows = [
   "e2e/payouts.yaml",
   "e2e/xirr-holding.yaml",
   "e2e/xirr-whole.yaml",
+  "e2e/payout-coverage.yaml",
   "e2e/snapshot-review.yaml",
   "e2e/progress-chart-range.yaml",
   "e2e/progress-chart-month-navigation.yaml",

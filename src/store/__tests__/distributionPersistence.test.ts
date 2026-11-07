@@ -116,6 +116,37 @@ describe("payout records", () => {
     expect(createPortfolioStore({ storage, now }).getState().distributionCoverage).toEqual([]);
   });
 
+  it("confirms coverage for several holdings in one save, replacing earlier dates (#619)", () => {
+    const { store, storage } = harness();
+    const fund = { ...stock, id: "fund", name: "Synthetic Fund", symbol: "SYNF", ticker: "SYNF.NS" };
+    store.getState().addAsset(fund);
+    store.getState().setDistributionCoverage("stock", "2026-03-01");
+    expect(store.getState().confirmDistributionCoverage([
+      { assetId: "stock", from: "2026-01-05" }, { assetId: "fund", from: "2026-02-01" },
+    ])).toEqual({ status: "applied" });
+    const expected = [
+      { assetId: "stock", from: "2026-01-05", confirmedAt: "2026-10-05T10:00:00.000Z" },
+      { assetId: "fund", from: "2026-02-01", confirmedAt: "2026-10-05T10:00:00.000Z" },
+    ];
+    expect(store.getState().distributionCoverage).toEqual(expected);
+    expect(createPortfolioStore({ storage, now }).getState().distributionCoverage).toEqual(expected);
+  });
+
+  it.each([
+    ["empty", []],
+    ["repeated holding", [{ assetId: "stock", from: "2026-01-05" }, { assetId: "stock", from: "2026-02-01" }]],
+    ["future date", [{ assetId: "stock", from: "2026-01-05" }, { assetId: "fund", from: "2026-10-06" }]],
+    ["invalid date", [{ assetId: "fund", from: "2026-02-30" }]],
+    ["unknown holding", [{ assetId: "stock", from: "2026-01-05" }, { assetId: "missing", from: "2026-01-05" }]],
+  ])("saves nothing from a batch with a %s", (_name, entries) => {
+    const { store, storage } = harness();
+    store.getState().addAsset({ ...stock, id: "fund", name: "Synthetic Fund", symbol: "SYNF", ticker: "SYNF.NS" });
+    const raw = storage.getRawItem(portfolioStorageKey);
+    expect(store.getState().confirmDistributionCoverage(entries)).toMatchObject({ status: "rejected" });
+    expect(store.getState().distributionCoverage).toEqual([]);
+    expect(storage.getRawItem(portfolioStorageKey)).toBe(raw);
+  });
+
   it("round trips payouts, their Cash and coverage through a backup", async () => {
     const { store } = harness();
     store.getState().saveDistribution(payout());
