@@ -56,6 +56,7 @@ import {
   type EpfFieldErrors,
 } from "./epfAccountForm";
 import { eventAmountLabel, eventTitle } from "./epfEntryForm";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type EpfAccountScreenProps = {
   accountId?: string;
@@ -164,7 +165,7 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
   const events = snapshot.epf.events
     .filter((event) => event.type === "transfer"
       ? event.sourceId === account.id || event.destinationId === account.id : event.accountId === account.id)
-    .sort((left, right) => right.effectiveDate.localeCompare(left.effectiveDate) || right.recordedAt.localeCompare(left.recordedAt));
+    .sort((left, right) => compareCodeUnits(right.effectiveDate, left.effectiveDate) || compareCodeUnits(right.recordedAt, left.recordedAt));
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const components = value?.balance.components ?? null;

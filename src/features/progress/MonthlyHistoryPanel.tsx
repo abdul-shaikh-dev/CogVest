@@ -29,6 +29,7 @@ import { decimal, normalizePercentage } from "@/src/domain/precision";
 import { useSingleBackRequest } from "@/src/hooks";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { AssetClass } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type MonthlyHistoryPanelProps = {
   maskWealthValues: boolean;
@@ -115,7 +116,7 @@ export function MonthlyHistoryPanel({
     summaries.map((summary) => [summary.snapshot.month, summary]),
   );
   const years = [...new Set(summaries.map((summary) => summary.snapshot.month.slice(0, 4)))].sort(
-    (left, right) => right.localeCompare(left),
+    (left, right) => compareCodeUnits(right, left),
   );
   const selectedSummary = selectedMonth
     ? summariesByMonth.get(selectedMonth)
@@ -123,7 +124,7 @@ export function MonthlyHistoryPanel({
   const isDetailVisible = Boolean(selectedSummary);
   const overviewSummaries = summaries
     .filter((summary) => summary.snapshot.month.startsWith(`${selectedYear}-`))
-    .sort((left, right) => right.snapshot.month.localeCompare(left.snapshot.month));
+    .sort((left, right) => compareCodeUnits(right.snapshot.month, left.snapshot.month));
   const largestYearValue = Math.max(0, ...overviewSummaries.map((summary) => summary.snapshot.portfolioValue));
   const showValueBars = !maskWealthValues && largestYearValue > 0 &&
     overviewSummaries.every((summary) => summary.snapshot.portfolioValue >= 0);

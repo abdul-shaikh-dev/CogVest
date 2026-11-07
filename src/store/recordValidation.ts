@@ -31,6 +31,7 @@ import type {
 
 import type { PortfolioStoreState } from "./storeTypes";
 import { tradeMonth } from "./tradeRules";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export function cashBalance(cashEntries: CashEntry[]) {
   const balance = cashEntries
@@ -352,7 +353,7 @@ export function rebuildPortfolioSnapshots({
     }
   }
 
-  monthlySnapshots.sort((left, right) => left.month.localeCompare(right.month));
+  monthlySnapshots.sort((left, right) => compareCodeUnits(left.month, right.month));
 
   return {
     monthlySnapshots,

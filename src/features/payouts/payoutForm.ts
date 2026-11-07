@@ -4,6 +4,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 import type { Asset, BuyTrade, Distribution, DistributionCoverage, DistributionTreatment, Trade } from "@/src/types";
 import { parseInrAmount } from "@/src/features/epf/epfAccountForm";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type PayoutDraft = {
   paidOn: string;
@@ -47,7 +48,7 @@ export function reinvestmentBuyOptions(trades: readonly Trade[], assetId: string
   const taken = new Set(distributions.filter((item) => item.id !== editingId).map((item) => item.linkedTradeId));
   return trades
     .filter((trade): trade is BuyTrade => trade.assetId === assetId && trade.type === "buy" && trade.date.slice(0, 10) >= paidOn && !taken.has(trade.id))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a, b) => compareCodeUnits(a.date, b.date))
     .map((trade) => ({ label: `${formatDate(trade.date.slice(0, 10))} · ${formatINR(trade.totalValue)}`, value: trade.id }));
 }
 
@@ -94,7 +95,7 @@ export function payoutEffectCopy(draft: PayoutDraft) {
 
 export function sortedPayouts(distributions: readonly Distribution[], assetId: string) {
   return distributions.filter((item) => item.assetId === assetId)
-    .sort((a, b) => b.paidOn.localeCompare(a.paidOn) || a.id.localeCompare(b.id));
+    .sort((a, b) => compareCodeUnits(b.paidOn, a.paidOn) || compareCodeUnits(a.id, b.id));
 }
 
 /** One line for the holding detail row and the payouts screen. */

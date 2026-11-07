@@ -19,6 +19,7 @@ import { getTradeQuantityDelta, isTradeAcquisition } from "@/src/domain/transact
 import { parsePersistedHistoricalQuoteCache, parsePersistedPortfolio, parsePersistedQuoteCache } from "@/src/store/persistedPortfolioSchema";
 import type { RawPortfolioSnapshot } from "@/src/store";
 import type { CashEntry, HistoricalQuoteCache, QuoteCache, Trade } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export const portfolioBackupFormat = "cogvest-portfolio-backup";
 export const portfolioBackupFormatVersion = 1;
@@ -209,8 +210,8 @@ function validateInventory(portfolio: RawPortfolioSnapshot) {
       const date = getCalendarDatePart(trade.date);
       if (date !== null) events.push({ date, delta: getTradeQuantityDelta(trade), id: trade.id, importBatchId: trade.importProvenance?.importBatchId, originalRowNumber: trade.importProvenance?.originalRowNumber, priority: isTradeAcquisition(trade) ? 1 : 2 });
     }
-    events.sort((left, right) => left.date.localeCompare(right.date) ||
-      (left.importBatchId !== undefined && left.importBatchId === right.importBatchId && left.originalRowNumber !== undefined && right.originalRowNumber !== undefined ? left.originalRowNumber - right.originalRowNumber : left.priority - right.priority || left.id.localeCompare(right.id)));
+    events.sort((left, right) => compareCodeUnits(left.date, right.date) ||
+      (left.importBatchId !== undefined && left.importBatchId === right.importBatchId && left.originalRowNumber !== undefined && right.originalRowNumber !== undefined ? left.originalRowNumber - right.originalRowNumber : left.priority - right.priority || compareCodeUnits(left.id, right.id)));
     let quantity = decimal(0);
     for (const event of events) {
       quantity = quantity.plus(event.delta);

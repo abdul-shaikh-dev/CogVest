@@ -46,6 +46,7 @@ import type {
   TradeDeletionImpact,
   TradeDeletionPreview,
 } from "./storeTypes";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export function tradeMonth(trade: Trade) {
   return getCalendarDatePart(trade.date)?.slice(0, 7) ?? null;
@@ -179,11 +180,10 @@ export function deriveTrade(input: TradeCorrectionInput): BuyTrade | SellTrade {
 
 export function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
   const orderedEntries = [...cashEntries].sort((left, right) => {
-    const dateOrder = (getCalendarDatePart(left.date) ?? left.date)
-      .localeCompare(getCalendarDatePart(right.date) ?? right.date);
+    const dateOrder = compareCodeUnits(getCalendarDatePart(left.date) ?? left.date, getCalendarDatePart(right.date) ?? right.date);
     if (dateOrder !== 0) return dateOrder;
     if (left.type !== right.type) return left.type === "addition" ? -1 : 1;
-    return left.id.localeCompare(right.id);
+    return compareCodeUnits(left.id, right.id);
   });
   let balance = decimal(0);
 
@@ -271,7 +271,7 @@ export function assetQuantityEvents(
 
   events.sort(
     (left, right) => {
-      const dateOrder = left.date.localeCompare(right.date);
+      const dateOrder = compareCodeUnits(left.date, right.date);
       if (dateOrder !== 0) return dateOrder;
       if (left.split && right.split) return (left.split.sequence ?? 0) - (right.split.sequence ?? 0);
       if (
@@ -282,7 +282,7 @@ export function assetQuantityEvents(
       ) {
         return left.originalRowNumber - right.originalRowNumber;
       }
-      return left.priority - right.priority || left.id.localeCompare(right.id);
+      return left.priority - right.priority || compareCodeUnits(left.id, right.id);
     },
   );
 

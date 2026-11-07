@@ -10,6 +10,7 @@ import {
 } from "./xirrAccountFlows";
 import type { WholePortfolioReason } from "./wholePortfolioXirr";
 import type { Asset, CashEntry, Distribution, DistributionCoverage, OpeningPosition, PpfAccount, PpfLedgerEntry, Quote, Trade } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 /**
  * Per-asset and Investments XIRR inputs from existing records.
@@ -212,7 +213,7 @@ export function terminalQuoteIssue(quote: Quote | undefined, endDate: string): X
 
 export function compareFlows(a: XirrFlow, b: XirrFlow) {
   if ((a.source === "terminal") !== (b.source === "terminal")) return a.source === "terminal" ? 1 : -1;
-  return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+  return compareCodeUnits(a.date, b.date) || compareCodeUnits(a.id, b.id);
 }
 
 function validEndDate(endDate: string) {

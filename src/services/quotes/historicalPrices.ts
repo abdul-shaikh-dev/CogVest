@@ -15,6 +15,7 @@ import {
   roundQuoteNumber,
   yahooChartBaseUrl,
 } from "./utils";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type YahooHistoricalChartResponse = {
   chart?: {
@@ -221,7 +222,7 @@ export async function fetchYahooHistoricalPrice({
           event.effectiveDate > targetMonthEnd &&
           event.effectiveDate <= fetchedAtDate,
       )
-      .sort((left, right) => right.effectiveDate.localeCompare(left.effectiveDate))[0];
+      .sort((left, right) => compareCodeUnits(right.effectiveDate, left.effectiveDate))[0];
     const adjustmentThrough = latestLaterAdjustment
       ? latestLaterAdjustment.availableFrom ?? latestLaterAdjustment.creditedDate ??
         new Date(Date.parse(`${latestLaterAdjustment.effectiveDate}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)

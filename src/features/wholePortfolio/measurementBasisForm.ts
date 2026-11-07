@@ -4,6 +4,7 @@ import { decimal } from "@/src/domain/precision";
 import { measurementEvidenceDigest } from "@/src/domain/wholePortfolioXirr";
 import type { MeasurementBasisInput, PortfolioStoreState } from "@/src/store";
 import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type BasisState = Pick<PortfolioStoreState, "cashEntries" | "distributions" | "epf" | "futuresAccounts" | "measurementBasis"
   | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "trades">;
@@ -100,7 +101,7 @@ export function snapshotStarts(snapshots: MonthlySnapshot[], today: string): Sna
     const lines = (values.length ? values : [["Portfolio value", 0] as [string, number]])
       .map(([label, value], index) => ({ key: `snapshot-${index}`, label, value: decimal(value).toFixed(2) }));
     return [{ id: snapshot.id, label: `${monthNames[month - 1]} ${year} · ${formatCompactINR(snapshot.portfolioValue)}`, startDate, lines }];
-  }).sort((a, b) => b.startDate.localeCompare(a.startDate));
+  }).sort((a, b) => compareCodeUnits(b.startDate, a.startDate));
 }
 
 /** Whether the saved basis still stands on the records it was confirmed against. */

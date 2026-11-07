@@ -2,6 +2,7 @@ import {
   createMmkvJsonStorage,
   type JsonStorage,
 } from "@/src/services/storage";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export const dailyPriceCacheStorageKey = "cogvest:v3:daily-price-cache";
 
@@ -217,7 +218,7 @@ export function createDailyPriceCache({ storage, now = () => new Date() }: { now
     while (true) {
       try { serialized = JSON.stringify({ entries, generation: base.generation, version }); } catch { return { reason: "rejected", status: "rejected" }; }
       if (entries.length <= maxEntries && entries.reduce((count, item) => count + item.points.length, 0) <= maxPoints && bytes(serialized) <= maxBytes) break;
-      const oldest = [...entries].sort((left, right) => new Date(left.fetchedAt).getTime() - new Date(right.fetchedAt).getTime() || requestKey(left).localeCompare(requestKey(right)))[0];
+      const oldest = [...entries].sort((left, right) => new Date(left.fetchedAt).getTime() - new Date(right.fetchedAt).getTime() || compareCodeUnits(requestKey(left), requestKey(right)))[0];
       // The incoming entry is pinned: never report it stored after evicting it.
       if (oldest === cleanEntry) return { reason: "rejected", status: "rejected" };
       entries = entries.filter((item) => item !== oldest);

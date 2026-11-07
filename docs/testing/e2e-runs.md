@@ -4,6 +4,22 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-07: Code-unit ordering for dates and ids (#138), full tier 63 passed with one rerun
+
+- Commit: perf/138-ordinal-compare 041a7db, version 1.0.30. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, cold boot,
+  E2E APK (R8 on) freshly built from 041a7db, Metro stopped.
+- Full tier: 62 passed, 1 failed, 75m 03s. trade-correction failed while
+  typing the cash label: the Maestro driver returned `DEADLINE_EXCEEDED`
+  after 120 s, before any trade step. Environmental. It passed on its own
+  right after (1m 58s).
+- Startup stall, probe builds of main (6789968) and 041a7db, 250-asset
+  scale fixture, cold-booted AVD, builds alternated in blocks of four cold
+  launches. Largest event-loop delay in the first 5 s window, in ms:
+  - main: 307, 292, 284, 292, 441, 400, 326, 377 (median 317)
+  - 041a7db: 181, 182, 175, 222, 188, 205, 209, 188 (median 188)
+  - The window after it was 28 to 35 ms for both.
+
 ## 2026-11-07: R8 release shrinking (#618), full tier 63 passed with one rerun
 
 - Commit: build/618-enable-r8 69ea519 (R8 on, pdfbox keep rules), version

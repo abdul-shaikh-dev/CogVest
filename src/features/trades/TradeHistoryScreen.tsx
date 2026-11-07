@@ -20,6 +20,7 @@ import { calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type TradeHistoryScreenProps = {
   assetId: string;
@@ -44,7 +45,7 @@ export function TradeHistoryScreen({
   const asset = snapshot.assets.find((item) => item.id === assetId);
   const trades = snapshot.trades
     .filter((trade) => !assetId || trade.assetId === assetId)
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .sort((left, right) => compareCodeUnits(right.date, left.date));
   const gains = calculateRecordedSaleGains({
     assets: snapshot.assets.filter((item) => !assetId || item.id === assetId),
     openingPositions: snapshot.openingPositions,

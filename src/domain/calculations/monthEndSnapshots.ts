@@ -50,6 +50,7 @@ import {
 import { buildMonthlyPerformanceBasis } from "./monthlyPerformance";
 import { validateMonthlySnapshot } from "@/src/domain/monthlySnapshotValidation";
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type GeneratedSnapshotStatus =
   | "already-exists"
@@ -464,9 +465,7 @@ function selectAssetPrice({
     )
     .sort(
       (left, right) =>
-        (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
-          getOpeningPositionHistoryDate(left) ?? "",
-        ),
+        compareCodeUnits(getOpeningPositionHistoryDate(right) ?? "", getOpeningPositionHistoryDate(left) ?? ""),
     )[0];
   const manualPrice =
     latestManualPrice?.manualValuation?.price ?? latestManualPrice?.currentPrice;

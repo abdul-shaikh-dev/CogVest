@@ -37,6 +37,7 @@ import {
   type PpfAccount,
 } from "@/src/types";
 import { createId } from "@/src/utils";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export function emptyProgressFormValues() {
   const now = new Date();
@@ -470,7 +471,7 @@ export function getCompletedMonthState(
 ) {
   const latestCompletedSnapshot = [...state.monthlySnapshots]
     .filter((monthlySnapshot) => monthlySnapshot.month <= lastCompletedMonth)
-    .sort((left, right) => right.month.localeCompare(left.month))[0] ?? null;
+    .sort((left, right) => compareCodeUnits(right.month, left.month))[0] ?? null;
   const hasCompletedPortfolioRecord = [
     ...state.cashEntries.map((entry) => entry.date),
     ...state.openingPositions.map((position) =>
@@ -661,7 +662,7 @@ export function presentSnapshotAutomationStatus({
       : automationStatus;
   const reconstructedThroughMonth = reconstructedSnapshots
     ? [...reconstructedSnapshots]
-        .sort((left, right) => right.month.localeCompare(left.month))[0]?.month ?? null
+        .sort((left, right) => compareCodeUnits(right.month, left.month))[0]?.month ?? null
     : null;
   const incompletePpfHistoryMonths = getIncompletePpfHistoryMonths(
     ppfAccounts,

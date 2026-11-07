@@ -9,6 +9,7 @@ import { positionEvents, splitQuantity, StockSplitError } from "@/src/domain/sto
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
 import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type AssetHistoryPoint = {
   date: string;
@@ -157,7 +158,7 @@ export function buildAssetHistory({
   }
   const events = [...deltasByDate.entries()]
     .map(([date, delta]) => ({ date, delta }))
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .sort((left, right) => compareCodeUnits(left.date, right.date));
 
   const holdingStart = events[0]?.date ?? null;
   let quantity = decimal(0);

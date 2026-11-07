@@ -12,6 +12,7 @@ import {
   calculateMonthlyPerformance,
   type MonthlyPerformanceResult,
 } from "./monthlyPerformance";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type MonthlyChartRange = "3M" | "6M" | "1Y" | "All" | "Custom";
 
@@ -270,7 +271,7 @@ export function buildMonthlyProgressChartData(
   customRange?: MonthlyChartCustomRange,
 ): MonthlyProgressChartData {
   const chronological = [...snapshots].sort((left, right) =>
-    left.month.localeCompare(right.month),
+    compareCodeUnits(left.month, right.month),
   );
   const availableMonths = [
     ...new Set(chronological.map((snapshot) => snapshot.month)),

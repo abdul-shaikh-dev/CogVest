@@ -6,6 +6,7 @@ import type {
   TransferOutTrade,
 } from "@/src/types";
 import { getCalendarDatePart } from "@/src/domain/dates";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type CostBasisAcquisition = {
   fees: number;
@@ -30,7 +31,7 @@ export function isTradeDisposal(
 }
 
 export function compareTransactionsChronologically(left: Trade, right: Trade) {
-  const dateOrder = left.date.localeCompare(right.date);
+  const dateOrder = compareCodeUnits(left.date, right.date);
   if (dateOrder !== 0) return dateOrder;
 
   const leftProvenance = left.importProvenance;
@@ -45,7 +46,7 @@ export function compareTransactionsChronologically(left: Trade, right: Trade) {
 
   const directionOrder =
     Number(!isTradeAcquisition(left)) - Number(!isTradeAcquisition(right));
-  return directionOrder || left.id.localeCompare(right.id);
+  return directionOrder || compareCodeUnits(left.id, right.id);
 }
 
 export function hasAmbiguousSameDayTransactionOrder(

@@ -3,6 +3,7 @@ import { decimal } from "./precision";
 import type { UsdmFuturesAccount } from "./usdmFutures";
 import type { EpfState } from "./epf/persistence";
 import type { Asset, CashEntry, OpeningPosition, PpfAccount, PpfLedgerEntry, Trade } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type XirrHistorySource = "portfolio" | "asset" | "cash" | "trade" | "opening" | "ppf" | "ppf-entry" | "futures"
   | "epf" | "epf-event";
@@ -147,6 +148,6 @@ export function auditPortfolioXirrHistory(input: PortfolioXirrHistoryInput): Por
       gap({ source: "epf-event", id: event.id }, "epf-history-and-boundary");
     }
   }
-  result.recordedExternalCashFlows.sort((a, b) => a.date.localeCompare(b.date) || a.reference.id.localeCompare(b.reference.id));
+  result.recordedExternalCashFlows.sort((a, b) => compareCodeUnits(a.date, b.date) || compareCodeUnits(a.reference.id, b.reference.id));
   return result;
 }

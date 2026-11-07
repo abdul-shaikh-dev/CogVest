@@ -4,6 +4,7 @@ import type {
   DailyPriceEntry,
   DailyPriceRequest,
 } from "./dailyPriceCache";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 const yahooChartUrl = "https://query1.finance.yahoo.com/v8/finance/chart";
 const coinGeckoUrl = "https://api.coingecko.com/api/v3/coins";
@@ -349,7 +350,7 @@ function yahooEntry(request: DailyPriceRequest, payload: YahooPayload, now: Date
 
   const points = [...dates.entries()]
     .map(([date, close]) => ({ close, date }))
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .sort((left, right) => compareCodeUnits(left.date, right.date));
   if (points.length === 0) {
     throw new AssetHistoryError("invalid-data", "Yahoo historical response did not include usable closes.");
   }
@@ -405,7 +406,7 @@ function coinGeckoEntry(request: DailyPriceRequest, payload: CoinGeckoPayload, n
 
   const points = [...dates.entries()]
     .map(([date, close]) => ({ close, date }))
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .sort((left, right) => compareCodeUnits(left.date, right.date));
   if (points.length === 0) {
     throw new AssetHistoryError("invalid-data", "CoinGecko historical response did not include usable prices.");
   }
