@@ -22,7 +22,7 @@ describe("Android build settings plugin", () => {
     const template = "-keep class com.swmansion.reanimated.** { *; }\n";
     const patched = addPdfboxKeepRules(template);
     expect(patched.startsWith(template.trimEnd())).toBe(true);
-    expect(patched).toContain("-dontwarn com.gemalto.jp2.JP2Decoder");
+    expect(patched).toContain("-dontwarn com.gemalto.jp2.**");
     expect(patched).toContain("-keep class com.tom_roush.** { *; }");
     expect(addPdfboxKeepRules(patched)).toBe(patched);
   });

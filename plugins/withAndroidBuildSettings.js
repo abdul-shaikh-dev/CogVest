@@ -12,13 +12,13 @@ function enableReleaseMinify(properties) {
 }
 
 // pdfbox-android backs expo-pdf-text-extract for statement imports. Its JPEG
-// 2000 decoder is an optional dependency that is not bundled, and it loads
+// 2000 codec (com.gemalto.jp2) is an optional dependency that is not bundled, and it loads
 // fonts, glyph lists and CMaps as resources relative to its own classes, so
 // R8 must not rename or strip them.
 const pdfboxMarker = "# CogVest: pdfbox-android rules for statement imports.";
 const pdfboxRules = `
 ${pdfboxMarker}
--dontwarn com.gemalto.jp2.JP2Decoder
+-dontwarn com.gemalto.jp2.**
 -keep class com.tom_roush.** { *; }
 `;
 
