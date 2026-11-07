@@ -63,7 +63,7 @@ describe("ReviewCashEntryScreen", () => {
     fireEvent.changeText(screen.getByTestId("cash-correction-notes-input"), "Corrected note");
     fireEvent.press(screen.getByTestId("cash-correction-note-toggle"));
     expect(screen.queryByTestId("cash-correction-notes-input")).toBeNull();
-    expect(screen.getByTestId("cash-correction-note-toggle")).toHaveAccessibilityState({ expanded: false });
+    expect(screen.getByTestId("cash-correction-note-toggle")).toBeCollapsed();
     fireEvent.press(screen.getByTestId("save-cash-correction-button"));
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(store.getState().cashEntries[0].notes).toBe("Corrected note");

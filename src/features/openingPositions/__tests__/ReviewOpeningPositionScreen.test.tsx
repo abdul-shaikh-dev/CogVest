@@ -55,7 +55,7 @@ describe("ReviewOpeningPositionScreen", () => {
     fireEvent.changeText(screen.getByTestId("opening-correction-notes-input"), "Updated context");
     fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
     expect(screen.queryByTestId("opening-correction-notes-input")).toBeNull();
-    expect(screen.getByTestId("opening-correction-context-toggle")).toHaveAccessibilityState({ expanded: false });
+    expect(screen.getByTestId("opening-correction-context-toggle")).toBeCollapsed();
     fireEvent.press(screen.getByTestId("save-opening-correction-button"));
     await waitFor(() => expect(store.getState().openingPositions[0]).toMatchObject({
       notes: "Updated context", conviction: 4,
@@ -72,7 +72,7 @@ describe("ReviewOpeningPositionScreen", () => {
     fireEvent.changeText(screen.getByTestId("opening-correction-intended-hold-days-input"), "-1");
     fireEvent.press(screen.getByTestId("opening-correction-context-toggle"));
     fireEvent.press(screen.getByTestId("save-opening-correction-button"));
-    expect(screen.getByTestId("opening-correction-context-toggle")).toHaveAccessibilityState({ expanded: true });
+    expect(screen.getByTestId("opening-correction-context-toggle")).toBeExpanded();
     expect(screen.getByTestId("opening-correction-intended-hold-days-input")).toHaveProp("value", "-1");
     expect(store.getState().openingPositions[0].intendedHoldDays).toBeUndefined();
   });

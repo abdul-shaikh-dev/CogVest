@@ -37,7 +37,7 @@ it("keeps CAS layout failures distinct from unsupported events and prevents savi
   expect(screen.queryByText("Skipped unsupported events")).toBeNull();
   expect(screen.queryByTestId("transaction-import-demerger-summary")).toBeNull();
   expect(screen.getByTestId("transaction-import-summary-unsupported")).toHaveTextContent("0");
-  expect(screen.getByTestId("confirm-transaction-import")).toHaveAccessibilityState({ disabled: true });
+  expect(screen.getByTestId("confirm-transaction-import")).toBeDisabled();
   fireEvent.press(screen.getByTestId("confirm-transaction-import"));
   expect(onImported).not.toHaveBeenCalled();
   expect(store.getState()).toBe(before);

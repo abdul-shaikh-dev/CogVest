@@ -80,11 +80,11 @@ describe("TransactionImportScreen", () => {
     fireEvent.press(screen.getByTestId("transaction-import-source-zerodhaTradebookEqV1"));
     expect(screen.getByTestId("select-transaction-csv")).toHaveTextContent("Choose Tradebook CSV");
     expect(screen.queryByText("Get your Tradebook CSV")).toBeNull();
-    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: false });
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toBeCollapsed();
     fireEvent.press(screen.getByTestId("transaction-import-toggle-source-guide"));
     expect(screen.getByText("Get your Tradebook CSV")).toBeTruthy();
     expect(screen.getByText(/no more than 365 days/u)).toBeTruthy();
-    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toHaveAccessibilityState({ expanded: true });
+    expect(screen.getByTestId("transaction-import-toggle-source-guide")).toBeExpanded();
     expect(screen.queryByTestId("transaction-import-mode-full-history")).toBeNull();
     fireEvent.press(screen.getByTestId("open-import-source-website"));
     await waitFor(() => expect(screen.getByTestId("import-source-link-fallback")).toHaveTextContent(/support\.zerodha\.com/u));
