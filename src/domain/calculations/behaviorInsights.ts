@@ -15,6 +15,7 @@ import type {
 } from "@/src/types";
 
 import { getConvictionReadiness } from "./holdings";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_CONVICTION_THRESHOLD = 5;
@@ -219,7 +220,7 @@ export function analysePatienceFromSells(
       })),
     ]
       .filter((event) => event.date !== null)
-      .sort((left, right) => left.date!.localeCompare(right.date!));
+      .sort((left, right) => compareCodeUnits(left.date!, right.date!));
 
     events.forEach((event) => {
       if (event.type === "opening") {
@@ -229,7 +230,7 @@ export function analysePatienceFromSells(
           quantity: event.position.quantity,
         });
         lots.sort((left, right) =>
-          (left.acquiredOn ?? "").localeCompare(right.acquiredOn ?? ""),
+          compareCodeUnits(left.acquiredOn ?? "", right.acquiredOn ?? ""),
         );
         return;
       }

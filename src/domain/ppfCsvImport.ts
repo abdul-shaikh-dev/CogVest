@@ -2,6 +2,7 @@ import { formatLocalCalendarDate, parseCalendarDate } from "./dates";
 import { parsePpfCsv, type PpfCsvError } from "./ppfCsv";
 import { calculatePpfConfirmedBalance, getFinancialYearStart, validatePpfAccount, validatePpfLedgerEntryForAccount } from "./ppf";
 import type { PpfAccount, PpfLedgerEntry } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type PpfCsvImportInput = {
   accountId: string;
@@ -66,7 +67,7 @@ export function planPpfCsvImport(input: PpfCsvImportInput, accounts: readonly Pp
   let balance = Math.round(input.openingBalance * 100);
   let contributions = 0, interest = 0, withdrawals = 0;
   const seen = new Set<string>();
-  const ordered = [...parsed.rows].sort((a, b) => a.date.localeCompare(b.date) || a.rowNumber - b.rowNumber);
+  const ordered = [...parsed.rows].sort((a, b) => compareCodeUnits(a.date, b.date) || a.rowNumber - b.rowNumber);
   for (const [index, row] of ordered.entries()) {
     const base = { accountId: existing.id, id: `ppf-csv:${existing.id}:${index}`, date: row.date,
       recordedAt: new Date(now.getTime() + index).toISOString(), ...(row.note ? { notes: row.note } : {}), amount: row.amount };

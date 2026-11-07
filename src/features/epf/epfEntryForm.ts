@@ -3,6 +3,7 @@ import { calculateEpfLedger, changeEpfEvent, type EpfAccount, type EpfBalance, t
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 import { parseInrAmount, type EpfEvidence, type EpfFieldErrors } from "./epfAccountForm";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type EpfEntryKind =
   | "employeeContribution"
@@ -367,7 +368,7 @@ function explainSummaryConflict(event: EpfEvent, context: EpfLedgerContext, toda
     ((item.type === "contribution" || item.type === "interest" || item.type === "reconciliation") &&
       item.effectiveDate >= event.periodStart && item.effectiveDate <= event.effectiveDate) ||
     (item.type === "yearSummary" && item.periodStart <= event.effectiveDate && item.effectiveDate >= event.periodStart)))
-    .sort((left, right) => left.effectiveDate.localeCompare(right.effectiveDate));
+    .sort((left, right) => compareCodeUnits(left.effectiveDate, right.effectiveDate));
   if (inside.length) {
     return `${inside.length === 1 ? "1 entry is" : `${inside.length} entries are`} already recorded in this period, starting with the ` +
       `${eventTitle(inside[0])} on ${formatDate(inside[0].effectiveDate)}. Delete them, or shorten the period so it does not overlap them.`;
@@ -399,7 +400,7 @@ function explainWithdrawalConflict(event: EpfEvent, context: EpfLedgerContext, t
   if (event.settlement) {
     const later = others.filter((item) => (item.type === "transfer"
       ? [item.sourceId, item.destinationId] : [item.accountId]).includes(context.account.id) && item.effectiveDate > event.effectiveDate)
-      .sort((left, right) => left.effectiveDate.localeCompare(right.effectiveDate))[0];
+      .sort((left, right) => compareCodeUnits(left.effectiveDate, right.effectiveDate))[0];
     if (later) {
       return `A final settlement must be the last entry in this account. Remove the ${eventTitle(later).toLowerCase()} on ${formatDate(later.effectiveDate)}: ` +
         "the settlement already pays interest up to its own date.";

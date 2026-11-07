@@ -8,6 +8,7 @@ import {
   type InvestmentsXirrInput, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
 } from "./xirrInputs";
 import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 /**
  * Whole-portfolio XIRR input (D9-D11 in docs/design/xirr-evidence-contract.md):
@@ -88,7 +89,7 @@ function fnv1a(text: string, seed: number) {
 export function measurementEvidenceDigest(input: DigestRecords, startDate: string) {
   const text = datedRecords(input)
     .filter((item) => item.date === null || item.date <= startDate)
-    .sort((a, b) => a.key.localeCompare(b.key))
+    .sort((a, b) => compareCodeUnits(a.key, b.key))
     .map((item) => `${item.key}=${canonical(item.record)}`)
     .join("\n");
   return `${fnv1a(text, 0x811c9dc5)}${fnv1a(text, 0x050c5d1f)}`;
@@ -124,7 +125,7 @@ export function automaticMeasurementBasis(snapshots: readonly MonthlySnapshot[],
     const lastDay = new Date(Date.UTC(Number(match[1]), Number(match[2]), 0)).getUTCDate();
     const startDate = `${snapshot.month}-${String(lastDay).padStart(2, "0")}`;
     return startDate < today ? [{ startDate, value: decimal(snapshot.portfolioValue).toDecimalPlaces(2).toNumber() }] : [];
-  }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }).sort((a, b) => compareCodeUnits(a.startDate, b.startDate));
   const first = starts[0];
   if (!first) return null;
   return { startDate: first.startDate, kind: "openingValue", openingValueInr: first.value,

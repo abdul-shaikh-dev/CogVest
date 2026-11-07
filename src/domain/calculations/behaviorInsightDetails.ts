@@ -11,6 +11,7 @@ import {
   type AnalysisAvailability,
   type BehaviorInsight,
 } from "./behaviorInsights";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type InsightKind = BehaviorInsight["kind"];
 export type InsightEvidenceRecord = {
@@ -177,7 +178,7 @@ export function getBehaviorInsightDetails({
     ...detail,
     records: detail.records.sort(
       (a, b) =>
-        (b.date ?? "").localeCompare(a.date ?? "") || a.id.localeCompare(b.id),
+        compareCodeUnits(b.date ?? "", a.date ?? "") || compareCodeUnits(a.id, b.id),
     ),
   }));
 }

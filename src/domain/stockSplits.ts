@@ -4,6 +4,7 @@ import { decimal, type FinancialDecimalInstance } from "./precision";
 import { compareTransactionsChronologically } from "./transactionSemantics";
 import type { OpeningPosition, StockSplitEvent, Trade } from "@/src/types";
 import type { DemergerAdjustment } from "./demergerEvents";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export class StockSplitError extends Error {
   constructor(readonly eventId: string, message: string) {
@@ -41,7 +42,7 @@ export function orderedStockSplits(events: readonly StockSplitEvent[]) {
       throw new StockSplitError(group[0].id, "Same-day share adjustments need verified ordering.");
     }
   }
-  return [...events].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || (a.sequence ?? 0) - (b.sequence ?? 0));
+  return [...events].sort((a, b) => compareCodeUnits(a.effectiveDate, b.effectiveDate) || (a.sequence ?? 0) - (b.sequence ?? 0));
 }
 
 export function splitQuantity(quantity: FinancialDecimalInstance, event: StockSplitEvent) {
@@ -107,7 +108,7 @@ export function positionEvents({
     ...splits.map((split) => ({ date: split.effectiveDate, split, type: "split" as const })),
   ];
   return events.sort((a, b) => {
-    const day = (getCalendarDatePart(a.date) ?? a.date).localeCompare(getCalendarDatePart(b.date) ?? b.date);
+    const day = compareCodeUnits(getCalendarDatePart(a.date) ?? a.date, getCalendarDatePart(b.date) ?? b.date);
     if (day) return day;
     if (a.type === "demerger" || b.type === "demerger") return a.type === b.type ? 0 : a.type === "demerger" ? -1 : 1;
     if (a.type === "split" && b.type === "split") return (a.split.sequence ?? 0) - (b.split.sequence ?? 0);

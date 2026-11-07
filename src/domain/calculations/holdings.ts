@@ -40,6 +40,7 @@ import {
   calculateMonthlyPerformance,
   type MonthlyPerformanceResult,
 } from "./monthlyPerformance";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 type CalculateHoldingInput = {
   asset: Asset;
@@ -429,11 +430,10 @@ function replayHoldings({
           (!minimumValuationDate || (position.manualValuation.asOf ?? "") >= minimumValuationDate))
         .sort(
           (left, right) =>
-            (
+            compareCodeUnits(
               right.manualValuation?.asOf ??
-              getOpeningPositionHistoryDate(right) ??
-              ""
-            ).localeCompare(
+                getOpeningPositionHistoryDate(right) ??
+                "",
               left.manualValuation?.asOf ??
                 getOpeningPositionHistoryDate(left) ??
                 "",
@@ -443,9 +443,7 @@ function replayHoldings({
         .filter((position) => position.currentPrice !== undefined &&
           (!minimumValuationDate || (getOpeningPositionHistoryDate(position) ?? "") >= minimumValuationDate))
         .sort((left, right) =>
-          (getOpeningPositionHistoryDate(right) ?? "").localeCompare(
-            getOpeningPositionHistoryDate(left) ?? "",
-          ),
+          compareCodeUnits(getOpeningPositionHistoryDate(right) ?? "", getOpeningPositionHistoryDate(left) ?? ""),
         )[0]?.currentPrice;
       const currentPrice =
         quote?.price ??
@@ -870,7 +868,7 @@ export function calculateMonthlyProgressSummaries(
   snapshots: MonthlySnapshot[],
 ): MonthlyProgressSummary[] {
   const chronological = [...snapshots].sort((left, right) =>
-    left.month.localeCompare(right.month),
+    compareCodeUnits(left.month, right.month),
   );
 
   return chronological
@@ -910,7 +908,7 @@ export function calculateMonthlyProgressSummaries(
         snapshot,
       };
     })
-    .sort((left, right) => right.snapshot.month.localeCompare(left.snapshot.month));
+    .sort((left, right) => compareCodeUnits(right.snapshot.month, left.snapshot.month));
 }
 
 export function calculateMetadataAllocation(

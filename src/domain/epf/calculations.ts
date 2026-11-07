@@ -2,6 +2,7 @@ import { decimal } from "@/src/domain/precision";
 
 import { epfDateSchema, epfLedgerSchema } from "./model";
 import type { EpfAccount, EpfBalance, EpfEvent, EpfLedger } from "./model";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type EpfAccountValue = {
   accountId: string;
@@ -175,8 +176,8 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
     const debit = { date: event.effectiveDate, event, credit: false };
     return event.type === "transfer" && event.creditDate
       ? [debit, { date: event.creditDate, event, credit: true }] : [debit];
-  }).sort((a, b) => a.date.localeCompare(b.date) || dayRank(a.event) - dayRank(b.event) ||
-    Date.parse(a.event.recordedAt) - Date.parse(b.event.recordedAt) || a.event.id.localeCompare(b.event.id) ||
+  }).sort((a, b) => compareCodeUnits(a.date, b.date) || dayRank(a.event) - dayRank(b.event) ||
+    Date.parse(a.event.recordedAt) - Date.parse(b.event.recordedAt) || compareCodeUnits(a.event.id, b.event.id) ||
     Number(a.credit) - Number(b.credit));
   const transit = new Map<string, { value: number; capital: number | null }>();
   const applied = new Set<string>();

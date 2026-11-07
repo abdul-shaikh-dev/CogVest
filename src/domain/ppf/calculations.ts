@@ -11,15 +11,16 @@ import {
   ppfInterestRateScheduleVersion,
 } from "./interestRates";
 import { getFinancialYearStart } from "./validation";
+import { compareCodeUnits } from "@/src/domain/ordering";
 
 const annualContributionMaximum = 150_000;
 const annualContributionMinimum = 500;
 
 export function comparePpfLedgerEntries(left: PpfLedgerEntry, right: PpfLedgerEntry) {
   return (
-    left.date.localeCompare(right.date) ||
-    left.recordedAt.localeCompare(right.recordedAt) ||
-    left.id.localeCompare(right.id)
+    compareCodeUnits(left.date, right.date) ||
+    compareCodeUnits(left.recordedAt, right.recordedAt) ||
+    compareCodeUnits(left.id, right.id)
   );
 }
 
