@@ -68,6 +68,31 @@ describe("AMFI historical NAV", () => {
     expect(url).toContain("todt=31-Aug-2026");
   });
 
+  it("times out a stalled history body and rejects what arrived before the abort", async () => {
+    // expo/fetch resolves text() with the bytes received so far when aborted.
+    jest.useFakeTimers();
+    try {
+      const fetcher = jest.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes("NAVAll.txt")) return new Response(currentCatalog);
+        if (url.includes("nav-download")) return new Response('{\\"mfId\\":\\"53\\",\\"mfName\\":\\"Axis Mutual Fund\\"}');
+        return {
+          ok: true,
+          status: 200,
+          text: () => new Promise<string>((resolve) => {
+            init?.signal?.addEventListener("abort", () => resolve(historical.slice(0, historical.length - 4)));
+          }),
+        } as unknown as Response;
+      });
+      const pending = fetchAmfiHistoricalNav({ asset, fetcher, targetMonth: "2026-08" });
+      await jest.advanceTimersByTimeAsync(10_000);
+      const result = await pending;
+
+      expect(result.ok).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("resolves historical NAV by verified ISIN and fund house", async () => {
     const fetcher = jest.fn(async (url: string) => {
       if (url.includes("NAVAll.txt")) return new Response(currentCatalog);

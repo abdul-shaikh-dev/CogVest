@@ -77,6 +77,36 @@ describe("AMFI scheme catalogue", () => {
     expect(result.failure).toMatch(/unavailable/u);
   });
 
+  it("rejects a catalogue body cut short by its own timeout", async () => {
+    // expo/fetch resolves text() with the bytes received so far when the
+    // request is aborted mid-body; React Native's fetch rejected instead.
+    jest.useFakeTimers();
+    try {
+      // Cut after the first complete scheme row: a plausible partial catalogue.
+      const truncated = fixture.slice(0, fixture.indexOf("Open Ended Schemes(Debt"));
+      const fetcher = jest.fn(async (_url: string, init?: RequestInit) => ({
+        ok: true,
+        status: 200,
+        text: () => new Promise<string>((resolve) => {
+          init?.signal?.addEventListener("abort", () => resolve(truncated));
+        }),
+      }) as unknown as Response);
+      const pending = lookupAmfiSchemeClassifications({ fetcher, isins: ["INF000000001", "INF000000002"] });
+      await jest.advanceTimersByTimeAsync(8_000);
+      const result = await pending;
+
+      expect(result.classifications).toEqual({});
+      expect(result.failure).toMatch(/unavailable/u);
+
+      const retry = jest.fn(async () => new Response(fixture));
+      const next = await lookupAmfiSchemeClassifications({ fetcher: retry, isins: ["INF000000001"] });
+      expect(retry).toHaveBeenCalledTimes(1);
+      expect(next.classifications.INF000000001.nav).toBe(10);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("does not expose malformed or non-positive NAV evidence", () => {
     const malformed = [
       "Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Plan;Option;Net Asset Value;Date",
