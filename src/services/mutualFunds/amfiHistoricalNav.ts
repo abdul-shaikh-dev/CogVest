@@ -100,7 +100,13 @@ async function fetchText(fetcher: QuoteFetcher, url: string, label: string) {
     if (!response.ok) {
       throw new Error(`${label} request failed with status ${response.status}.`);
     }
-    return response.text();
+    // Await here so the timeout also bounds the body. expo/fetch resolves
+    // text() with a partial body when aborted mid-read, so reject that.
+    const text = await response.text();
+    if (controller.signal.aborted) {
+      throw new Error(`${label} request timed out.`);
+    }
+    return text;
   } finally {
     clearTimeout(timeout);
   }

@@ -136,7 +136,12 @@ async function loadCatalog(fetcher: QuoteFetcher) {
         if (!response.ok) {
           throw new Error(`AMFI catalogue request failed with status ${response.status}.`);
         }
-        const parsed = parseAmfiSchemeCatalog(await response.text());
+        const text = await response.text();
+        // expo/fetch resolves text() with a partial body when aborted mid-read.
+        if (controller.signal.aborted) {
+          throw new Error("AMFI catalogue request timed out.");
+        }
+        const parsed = parseAmfiSchemeCatalog(text);
         if (Object.keys(parsed).length === 0) {
           throw new Error("AMFI catalogue contained no scheme identities.");
         }
