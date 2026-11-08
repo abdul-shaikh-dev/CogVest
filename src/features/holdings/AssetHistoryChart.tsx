@@ -1,6 +1,7 @@
-import { Circle, Line as SkiaLine, matchFont, vec } from "@shopify/react-native-skia";
+import { Circle, Line as SkiaLine, matchFont, multiply4, scale, translate, vec } from "@shopify/react-native-skia";
 import { memo, useCallback, useMemo, useRef } from "react";
 import { Platform, View } from "react-native";
+import { Gesture, type ComposedGesture } from "react-native-gesture-handler";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 import {
   CartesianChart,
@@ -16,6 +17,9 @@ import { scheduleOnRN } from "react-native-worklets";
 import type { AssetHistoryChartModel } from "./assetHistoryChartModel";
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
+// Victory's own pan has no pointer-count option, so its transforms are off and
+// the chart's two-finger gestures drive the same transform state instead.
+const OWN_TIME_GESTURES = { pan: { enabled: false }, pinch: { enabled: false } } as const;
 
 type AssetHistoryChartProps = {
   model: AssetHistoryChartModel;
@@ -31,8 +35,9 @@ type AssetHistoryChartProps = {
 };
 
 /**
- * Skia line chart for one history range. Press and hold to inspect points;
- * pinch to zoom along time and drag to pan while zoomed. A gesture stretches
+ * Skia line chart for one history range. One finger inspects: press and hold,
+ * then drag. Two fingers move through time: pinch to zoom, and drag to pan
+ * while zoomed. Separate finger counts stop a pan from stealing an inspection. A gesture stretches
  * the drawing on the UI thread; when it settles the panel redraws that window
  * from the underlying daily observations instead of keeping a stretched image.
  */
@@ -85,6 +90,41 @@ export const AssetHistoryChart = memo(function AssetHistoryChart({
     },
   );
 
+  const timeGestures = useMemo(() => {
+    const pinch = Gesture.Pinch()
+      .onBegin((event) => {
+        transform.offset.value = transform.matrix.value;
+        transform.origin.value = { x: event.focalX, y: event.focalY };
+      })
+      .onStart(() => {
+        transform.zoomActive.value = true;
+      })
+      .onChange((event) => {
+        transform.matrix.value = multiply4(
+          transform.offset.value,
+          scale(event.scale, 1, 1, transform.origin.value),
+        );
+      })
+      .onFinalize(() => {
+        transform.zoomActive.value = false;
+      });
+    const pan = Gesture.Pan()
+      .enabled(zoomed)
+      .minPointers(2)
+      .onStart(() => {
+        transform.panActive.value = true;
+      })
+      .onChange((event) => {
+        transform.matrix.value = multiply4(translate(event.changeX, 0, 0), transform.matrix.value);
+      })
+      .onFinalize(() => {
+        transform.panActive.value = false;
+      });
+    // Victory 42 composes this with its own legacy Gesture.Race at runtime; its
+    // prop type predates Gesture Handler 3 renaming ComposedGesture.
+    return Gesture.Simultaneous(pinch, pan) as unknown as ComposedGesture;
+  }, [transform, zoomed]);
+
   const guideStart = useDerivedValue(() => vec(press.x.position.value, plotTop.value));
   const guideEnd = useDerivedValue(() => vec(press.x.position.value, plotBottom.value));
   const pressOpacity = useDerivedValue(() => (press.isActive.value ? 1 : 0));
@@ -94,6 +134,7 @@ export const AssetHistoryChart = memo(function AssetHistoryChart({
     <View style={{ height: 200 }}>
       <CartesianChart
         chartPressState={press}
+        customGestures={timeGestures}
         data={model.data}
         domain={{ x: [model.data[0].x, model.data.at(-1)!.x], y: model.yDomain }}
         frame={{ lineWidth: 0 }}
@@ -107,10 +148,7 @@ export const AssetHistoryChart = memo(function AssetHistoryChart({
           xScale.current = nextX;
         }}
         padding={{ left: 4, right: 12, top: 8, bottom: 4 }}
-        transformConfig={{
-          pan: { enabled: zoomed, dimensions: "x", activeOffsetX: [-12, 12], failOffsetY: [-12, 12] },
-          pinch: { enabled: true, dimensions: "x" },
-        }}
+        transformConfig={OWN_TIME_GESTURES}
         transformState={transform}
         xAxis={{
           font,

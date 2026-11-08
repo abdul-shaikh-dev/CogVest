@@ -106,7 +106,7 @@ describe("AssetHistoryPanel", () => {
     expect(screen.getByTestId("asset-history-chart", { includeHiddenElements: true })).toBeTruthy();
     const model = chartOf(screen).props.model;
     expect(model.xTicks).toHaveLength(2);
-    expect(chartOf(screen).props.formatX(model.xTicks[0])).toBe("Jan 16");
+    expect(chartOf(screen).props.formatX(model.xTicks[0])).toBe("Jan 2016");
 
     await fireEvent.press(screen.getByTestId("asset-history-previous"));
     expect(chartOf(screen).props.model).toBe(model);

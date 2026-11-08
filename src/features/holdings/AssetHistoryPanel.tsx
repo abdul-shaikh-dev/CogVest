@@ -122,8 +122,17 @@ export function AssetHistoryPanel({
             : amount.toFixed(amount > 0 && amount < 1 ? 3 : 0);
     return `${prefix}${abbreviated}`;
   }, [asset.currency]);
+  // A two-digit year ("Nov 16") reads as a day, so long spans show the full
+  // year and short spans show day and month.
+  const spanMs = (model.data.at(-1)?.x ?? 0) - (model.data[0]?.x ?? 0);
+  const longSpan = spanMs >= 60 * 86_400_000;
   const dateFormat = useCallback((time: number) =>
-    new Date(time).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" }), []);
+    new Date(time).toLocaleDateString(
+      "en-GB",
+      longSpan
+        ? { month: "short", year: "numeric", timeZone: "UTC" }
+        : { day: "numeric", month: "short", timeZone: "UTC" },
+    ), [longSpan]);
   const chartColors = useMemo(() => ({
     line: minimal ? colors.text.secondary : colors.primary,
     marker: colors.text.primary,
@@ -273,7 +282,7 @@ export function AssetHistoryPanel({
             <View style={styles.zoomRow}>
               <AppText color="secondary" style={styles.zoomHint} variant="caption">
                 {window
-                  ? `Showing ${formatDate(available[0].date)} to ${formatDate(available.at(-1)!.date)}`
+                  ? `Showing ${formatDate(available[0].date)} to ${formatDate(available.at(-1)!.date)} · drag with two fingers to move`
                   : "Press and hold to inspect · pinch to zoom"}
               </AppText>
               {window ? (

@@ -44,19 +44,20 @@ describe("AssetHistoryChart", () => {
     ]);
   });
 
-  it("inspects on press-and-hold, zooms time by pinch, and pans only when zoomed", async () => {
+  it("keeps one finger for inspecting and two fingers for zoom and pan", async () => {
+    const timeGestures = (chart: { props: Record<string, any> }) => {
+      const [pinch, pan] = chart.props.customGestures.gestures;
+      return { pan: pan.config, pinch: pinch.config };
+    };
+
     const resting = await renderChart(false);
+    // One finger: press and hold, then drag, to inspect.
     expect(resting.chart.props.gestureLongPressDelay).toBe(200);
-    expect(resting.chart.props.transformConfig).toMatchObject({
-      pan: { dimensions: "x", enabled: false },
-      pinch: { dimensions: "x", enabled: true },
-    });
+    // Victory's one-finger pan would race the inspection, so its transforms are off.
+    expect(resting.chart.props.transformConfig).toEqual({ pan: { enabled: false }, pinch: { enabled: false } });
+    expect(timeGestures(resting.chart).pan).toMatchObject({ enabled: false, minPointers: 2 });
 
     const zoomed = await renderChart(true);
-    expect(zoomed.chart.props.transformConfig.pan).toMatchObject({
-      enabled: true,
-      // Vertical drags still scroll the page.
-      failOffsetY: [-12, 12],
-    });
+    expect(timeGestures(zoomed.chart).pan).toMatchObject({ enabled: true, minPointers: 2 });
   });
 });
