@@ -52,9 +52,16 @@ label them profit or return.
 
 The history section follows Your position inside Holding details. It has two
 modes and 1M, 3M, 1Y, 5Y and 10Y presets, ending on the last completed UTC day.
-The plot uses Gifted Charts with proportional calendar spacing, bounded sampling,
-endpoint labels and a selected-point marker. Previous/Next selects observed
-dates, not invented daily values. Currency, stale/partial state and source remain
+The plot uses Victory Native (Skia) with proportional calendar spacing, bounded
+sampling, gap-aware line segments, endpoint labels and a selected-point marker.
+Previous/Next selects observed dates, not invented daily values. Press and hold
+on the plot, then drag, to inspect the nearest observed date; releasing keeps
+that selection. Pinch zooms along time only; once zoomed, a horizontal drag pans
+and vertical drags still scroll the page. When a gesture settles, the visible
+window is redrawn from the full daily observations (capped at 500), the change
+caption covers the first to last visible observation, and Reset zoom returns to
+the full range. Windows shorter than seven days are ignored. Changing range or
+mode clears the zoom. Currency, stale/partial state and source remain
 visible; About this history discloses fetch date and interpretation limits.
 
 Value change includes transactions and is not return. Percentages are suppressed
