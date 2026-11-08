@@ -27,7 +27,8 @@ those boundaries. Historical plans are not implementation instructions.
 
 - Expo SDK 54, React Native, TypeScript, and Expo Router.
 - Zustand with MMKV for local persistence.
-- `react-native-gifted-charts` for stored monthly-snapshot charts.
+- Victory Native (`victory-native` 42 on `@shopify/react-native-skia`) for the
+  monthly-snapshot and holding price-history charts.
 - Reanimated for purposeful motion.
 - Functional components and hooks only.
 - Persist raw user records; derive portfolio views with pure functions.

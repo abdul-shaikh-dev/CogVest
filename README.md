@@ -6,7 +6,7 @@ quotes, Add Holding entry, derived holdings, cash tracking, value masking, and
 lightweight conviction capture.
 
 The app is built with Expo Router, TypeScript, Zustand, MMKV, Zod, Reanimated,
-and `react-native-gifted-charts` for V1 charts. There is no backend, auth, cloud sync,
+and Victory Native on Skia for charts. There is no backend, auth, cloud sync,
 analytics, or push notification dependency in V1.
 
 ## Current Phase

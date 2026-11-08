@@ -1,6 +1,6 @@
 import { Circle, Line as SkiaLine, matchFont, multiply4, scale, translate, vec } from "@shopify/react-native-skia";
 import { memo, useCallback, useMemo, useRef } from "react";
-import { Platform, View } from "react-native";
+import { Platform, View, useWindowDimensions } from "react-native";
 import { Gesture, type ComposedGesture } from "react-native-gesture-handler";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 import {
@@ -51,9 +51,14 @@ export const AssetHistoryChart = memo(function AssetHistoryChart({
   onInspect,
   onZoom,
 }: AssetHistoryChartProps) {
+  // Skia text does not follow the system font size on its own.
+  const { fontScale } = useWindowDimensions();
   const font = useMemo(
-    () => matchFont({ fontFamily: Platform.select({ ios: "Helvetica", default: "sans-serif" }), fontSize: 11 }),
-    [],
+    () => matchFont({
+      fontFamily: Platform.select({ ios: "Helvetica", default: "sans-serif" }),
+      fontSize: Math.round(11 * Math.max(1, fontScale)),
+    }),
+    [fontScale],
   );
   const { state: press } = useChartPressState({ x: 0, y: { value: 0 } });
   const { state: transform } = useChartTransformState();

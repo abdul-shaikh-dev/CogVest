@@ -555,13 +555,12 @@ The accepted charts are:
 - `Portfolio Growth`: portfolio value against invested capital
 - `Asset Momentum`: equity, debt, and crypto trends over months; cash excluded
 
-Use `react-native-gifted-charts` for the current V1 implementation.
+Charts render with Victory Native on Skia.
 
 Each chart owns independent `3M`, `6M`, `1Y`, `All`, and `Custom` range
 controls. Custom ranges select inclusive start and end months from available
 stored snapshots only. Selecting a chart month updates a CogVest-owned summary
-panel with the exact values and change context; chart rendering remains the
-responsibility of `react-native-gifted-charts`.
+panel with the exact values and change context; the chart library only draws.
 
 ## Verification
 

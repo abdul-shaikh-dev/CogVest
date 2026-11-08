@@ -466,9 +466,11 @@ Accepted chart direction:
   shows portfolio value, invested value, and the percentage and amount ahead or
   behind invested capital. Asset Momentum shows Equity, Debt, and Crypto values
   with percentage movement from the previous visible month.
-- plots are non-interactive: vertical swipes scroll the page without changing
-  the inspected month. Each chart has accessible Previous/Next stored-month
-  controls with disabled boundaries and a politely announced selected summary
+- press and hold on a plot, then drag, to inspect a month; it uses the same
+  selection as the Previous/Next controls. A swipe that moves before the
+  200 ms hold scrolls the page without changing the inspected month. Each
+  chart keeps accessible Previous/Next stored-month controls with disabled
+  boundaries and a politely announced selected summary
 - grouped chart summaries include the visible signed percentages, not only
   amounts. Explain first-visible-month and zero-baseline unavailable changes;
   when masked, announce only the month and that values are hidden. Decorative
@@ -487,8 +489,8 @@ Accepted chart direction:
 - latest-in-range asset insights retain explicit month and comparison dates,
   distinct from the inspected month; hide them when values are masked
 - CogVest owns month selection, figures, legend, masking, and accessibility text
-- use `react-native-gifted-charts` for V1 chart rendering; do not use Victory
-  Native for these charts
+- charts render with Victory Native on Skia (user decision, November 2026,
+  replacing `react-native-gifted-charts`)
 - x-axis labels should be sparse and chart-native: show the first month, a
   useful midpoint, and the latest month for longer ranges
 - Long histories must retain every point inside the measured plot. Native label

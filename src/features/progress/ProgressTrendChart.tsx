@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
-import { LineChart } from "react-native-gifted-charts";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, View, useWindowDimensions } from "react-native";
 
 import {
   AppButton,
@@ -17,79 +16,19 @@ import {
   formatINR,
   formatPercentage,
 } from "@/src/domain/formatters";
-import { spacing, useTheme } from "@/src/theme";
+import { useTheme } from "@/src/theme";
 
+import { ProgressTrendPlot } from "./ProgressTrendPlot";
+import { buildProgressTrendModel } from "./progressTrendChartModel";
 import { useStyles } from "./progressStyles";
 import {
-  chartEndSpacing,
-  chartHeight,
-  chartInitialSpacing,
-  chartSections,
   chartWidth,
-  formatChartAxisLabel,
   formatChartYLabel,
   formatSignedCompactINR,
-  getChartMaxValue,
-  getChartPointRadius,
-  getChartSpacing,
-  getDisplayedSeriesColor,
   getSelectedChange,
   getSeriesColor,
   getSeriesValue,
-  shouldShowAxisLabel,
 } from "./progressViewModel";
-
-function toGiftedChartData(
-  series: MonthlyProgressChartSeries,
-  monthLabels: string[],
-  showAxisLabels = true,
-  selectedIndex?: number,
-  labelLayout?: { spacing: number; width: number; fontScale: number },
-) {
-  const total = series.values.length;
-  const spansYears = new Set(monthLabels.map((label) => label.split(" ")[1])).size > 1;
-
-  return series.values.map((value, index) => {
-    const dataPointRadius = getChartPointRadius(total, index, selectedIndex);
-    const endpointsOnly = labelLayout && labelLayout.fontScale > 1.15 && labelLayout.width < 250;
-    const showLabel = showAxisLabels && (endpointsOnly
-      ? index === 0 || index === total - 1
-      : shouldShowAxisLabel(index, total));
-    const label = showLabel
-      ? spansYears
-        ? (monthLabels[index] ?? "").replace(" ", "\n")
-        : formatChartAxisLabel(monthLabels[index] ?? "")
-      : "";
-    const labelWidth = labelLayout
-      ? Math.min(72 * Math.max(1, labelLayout.fontScale), labelLayout.width / 3)
-      : 72;
-    return {
-      dataPointRadius,
-      hideDataPoint: dataPointRadius === 0,
-      label,
-      // Gifted Charts otherwise constrains labels to one point's spacing.
-      ...(showLabel && labelLayout
-        ? {
-            labelComponent: () => (
-              <AppText
-                align={index === 0 ? "left" : index === total - 1 ? "right" : "center"}
-                color="secondary"
-                variant="caption"
-                style={{
-                  width: labelWidth,
-                  top: 4 + 44 * Math.max(0, labelLayout.fontScale - 1),
-                  left: labelLayout.spacing / 2 - (index === 0 ? 0 : index === total - 1 ? labelWidth : labelWidth / 2),
-                }}
-              >
-                {label}
-              </AppText>
-            ),
-          }
-        : {}),
-      value,
-    };
-  });
-}
 
 function TrendLegend({
   focusedSeries,
@@ -400,39 +339,39 @@ export function TrendChart({
   const displayedSeries = !isPortfolioChart && focusedSeries
     ? visibleSeries.filter((item) => item.label === focusedSeries)
     : visibleSeries;
-  const gapSegments = gapAfterIndices.map(index => ({ startIndex: index, endIndex: index + 1, color: "transparent" }));
-  const maxValue = getChartMaxValue(displayedSeries);
   const yAxisWidth = Math.ceil(52 * Math.max(1, fontScale));
-  const plotWidth = surfaceWidth > 0
-    ? Math.max(1, surfaceWidth - yAxisWidth - spacing.xs - spacing.sm - 2 * StyleSheet.hairlineWidth)
-    : chartWidth;
-  const axisProps = {
-    maxValue,
-    noOfSections: chartSections,
-    stepValue: maxValue / chartSections,
-    height: chartHeight,
-    hideOrigin: false,
-    showFractionalValues: true,
-    roundToDigits: 2,
-    yAxisLabelWidth: yAxisWidth,
-    yAxisTextNumberOfLines: 1,
-    formatYLabel: (label: string) => formatChartYLabel(label, maskWealthValues),
-    width: plotWidth,
-    rulesLength: plotWidth,
-    xAxisLength: plotWidth,
-  };
+  const plotWidth = surfaceWidth > 0 ? surfaceWidth - yAxisWidth : chartWidth;
   const pointCount = series[0]?.values.length ?? 0;
-  const spacingValue = getChartSpacing(pointCount, plotWidth);
-  // The renderer's reveal animation captures its initial width. Refresh that
-  // renderer on geometry changes, leaving this component's month state intact.
-  const rendererKey = `${plotWidth}:${pointCount}`;
-  const labelLayout = { spacing: spacingValue, width: plotWidth, fontScale };
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
   );
   const safeSelectedIndex = Math.min(
     selectedIndex,
     Math.max(pointCount - 1, 0),
+  );
+  const model = useMemo(() => buildProgressTrendModel({
+    colors,
+    dashedLabels: ["Invested"],
+    drawnSeries: isPortfolioChart
+      ? (partialHistory || summaryOnly ? series.slice(0, 1) : series.slice(0, 2))
+      : displayedSeries,
+    endpointsOnly: fontScale > 1.15 && plotWidth < 250,
+    fillUnderFirst: isPortfolioChart,
+    focusedSeries,
+    gapAfterIndices,
+    monthLabels,
+    reducedMotion: isReducedMotionEnabled,
+    scaleSeries: displayedSeries,
+    selectedIndex: safeSelectedIndex,
+  }), [colors, displayedSeries, focusedSeries, fontScale, gapAfterIndices, isPortfolioChart,
+    isReducedMotionEnabled, monthLabels, partialHistory, plotWidth, safeSelectedIndex, series, summaryOnly]);
+  const formatYLabel = useCallback(
+    (value: number) => formatChartYLabel(value, maskWealthValues),
+    [maskWealthValues],
+  );
+  const plotColors = useMemo(
+    () => ({ fill: colors.profit, label: colors.text.secondary, rule: colors.border.subtle }),
+    [colors],
   );
 
   const chartName = isPortfolioChart ? "Portfolio Growth" : "Value by asset class";
@@ -474,86 +413,16 @@ export function TrendChart({
         <View
           accessible={false}
           importantForAccessibility="no-hide-descendants"
-          pointerEvents="none"
           onLayout={(event) => setSurfaceWidth(event.nativeEvent.layout.width)}
           style={styles.chartSurface}
           testID={`${testIDPrefix}-chart`}
         >
-          {isPortfolioChart ? (
-            <LineChart
-            key={`portfolio:${rendererKey}`}
-            {...axisProps}
-            adjustToWidth
-            areaChart={gapSegments.length === 0}
-            lineSegments={gapSegments}
-            lineSegments2={gapSegments}
-            color1={getDisplayedSeriesColor(colors,
-              series[0]?.label ?? "",
-              focusedSeries,
-            )}
-            color2={getDisplayedSeriesColor(colors,
-              series[1]?.label ?? "",
-              focusedSeries,
-            )}
-            curved={false}
-            data={toGiftedChartData(series[0], monthLabels, true, safeSelectedIndex, labelLayout)}
-            data2={partialHistory || summaryOnly ? undefined : toGiftedChartData(series[1], monthLabels, false, safeSelectedIndex)}
-            dataPointsColor1={getSeriesColor(colors, series[0]?.label ?? "")}
-            dataPointsColor2={getSeriesColor(colors, series[1]?.label ?? "")}
-            disableScroll
-            endFillColor={`${colors.profit}00`}
-            endOpacity={0}
-            endSpacing={chartEndSpacing}
-            initialSpacing={chartInitialSpacing}
-            intersectionAreaConfig={partialHistory || summaryOnly || gapSegments.length > 0 ? undefined : { fillColor: `${colors.profit}24` }}
-            isAnimated={!isReducedMotionEnabled}
-            rulesColor={colors.border.subtle}
-            rulesType="dashed"
-            spacing={spacingValue}
-            startFillColor={`${colors.profit}2E`}
-            startOpacity={0.18}
-            thickness1={3}
-            thickness2={3}
-            strokeDashArray2={[6, 4]}
-            xAxisColor={colors.border.subtle}
-            xAxisLabelTextStyle={styles.axisText}
-            xAxisTextNumberOfLines={2}
-            xAxisLabelsHeight={Math.ceil(44 * Math.max(1, fontScale))}
-            xAxisThickness={1}
-            yAxisColor="transparent"
-            yAxisTextStyle={styles.axisText}
-            yAxisThickness={0}
-            />
-          ) : (
-            <LineChart
-            key={`assets:${rendererKey}`}
-            {...axisProps}
-            adjustToWidth
-            curved={false}
-            dataSet={displayedSeries.map((item, index) => ({
-              color: getDisplayedSeriesColor(colors, item.label, focusedSeries),
-              data: toGiftedChartData(item, monthLabels, index === 0, safeSelectedIndex, labelLayout),
-              dataPointsColor: getSeriesColor(colors, item.label),
-              lineSegments: gapSegments,
-              thickness: 3,
-            }))}
-            disableScroll
-            endSpacing={chartEndSpacing}
-            initialSpacing={chartInitialSpacing}
-            isAnimated={!isReducedMotionEnabled}
-            rulesColor={colors.border.subtle}
-            rulesType="dashed"
-            spacing={spacingValue}
-            xAxisColor={colors.border.subtle}
-            xAxisLabelTextStyle={styles.axisText}
-            xAxisTextNumberOfLines={2}
-            xAxisLabelsHeight={Math.ceil(44 * Math.max(1, fontScale))}
-            xAxisThickness={1}
-            yAxisColor="transparent"
-            yAxisTextStyle={styles.axisText}
-            yAxisThickness={0}
-            />
-          )}
+          <ProgressTrendPlot
+            colors={plotColors}
+            formatYLabel={formatYLabel}
+            model={model}
+            onInspect={setSelectedIndex}
+          />
         </View>
       </View>}
       <SelectedMonthPanel
