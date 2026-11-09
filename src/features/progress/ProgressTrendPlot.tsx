@@ -89,7 +89,9 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
           chartPressState={press}
           data={data}
           domain={{ x: [0, last], y: [0, model.maxValue] }}
-          domainPadding={{ left: 10, right: 14, top: 8 }}
+          // Victory hides the y-label at the very bottom of the domain; lifting
+          // zero off the edge keeps the ₹0 label.
+          domainPadding={{ left: 10, right: 14, top: 8, bottom: 8 }}
           frame={{ lineWidth: 0 }}
           gestureLongPressDelay={PRESS_DELAY_MS}
           onChartBoundsChange={(bounds) => {
