@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 
 import {
@@ -345,10 +345,24 @@ export function TrendChart({
   const [selectedIndex, setSelectedIndex] = useState(
     Math.max(pointCount - 1, 0),
   );
-  const safeSelectedIndex = Math.min(
+  const committedIndex = Math.min(
     selectedIndex,
     Math.max(pointCount - 1, 0),
   );
+  // A press-and-hold shows its month live; lifting the finger commits it. The
+  // plot only redraws on commit, so the gesture is never reset mid-drag.
+  const [inspecting, setInspecting] = useState<number | null>(null);
+  const inspectingRef = useRef<number | null>(null);
+  const onInspect = useCallback((index: number | null) => {
+    if (index === null) {
+      if (inspectingRef.current !== null) setSelectedIndex(inspectingRef.current);
+      inspectingRef.current = null;
+    } else {
+      inspectingRef.current = index;
+    }
+    setInspecting(index);
+  }, []);
+  const safeSelectedIndex = inspecting !== null && inspecting < pointCount ? inspecting : committedIndex;
   const model = useMemo(() => buildProgressTrendModel({
     colors,
     dashedLabels: ["Invested"],
@@ -362,9 +376,9 @@ export function TrendChart({
     monthLabels,
     reducedMotion: isReducedMotionEnabled,
     scaleSeries: displayedSeries,
-    selectedIndex: safeSelectedIndex,
+    selectedIndex: committedIndex,
   }), [colors, displayedSeries, focusedSeries, fontScale, gapAfterIndices, isPortfolioChart,
-    isReducedMotionEnabled, monthLabels, partialHistory, plotWidth, safeSelectedIndex, series, summaryOnly]);
+    isReducedMotionEnabled, monthLabels, partialHistory, plotWidth, committedIndex, series, summaryOnly]);
   const formatYLabel = useCallback(
     (value: number) => formatChartYLabel(value, maskWealthValues),
     [maskWealthValues],
@@ -420,8 +434,10 @@ export function TrendChart({
           <ProgressTrendPlot
             colors={plotColors}
             formatYLabel={formatYLabel}
+            // The press state is per series, so a new series set needs a fresh plot.
+            key={model.lines.map((line) => line.label).join("|")}
             model={model}
-            onInspect={setSelectedIndex}
+            onInspect={onInspect}
           />
         </View>
       </View>}

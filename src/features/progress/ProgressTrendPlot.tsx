@@ -1,7 +1,7 @@
-import { Circle, DashPathEffect, LinearGradient, matchFont, vec } from "@shopify/react-native-skia";
+import { Circle, DashPathEffect, LinearGradient, Line as SkiaLine, matchFont, vec } from "@shopify/react-native-skia";
 import { memo, useCallback, useMemo, useState } from "react";
 import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useAnimatedReaction } from "react-native-reanimated";
+import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { Area, CartesianChart, Line, useChartPressState, type Scale } from "victory-native";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -16,8 +16,8 @@ type ProgressTrendPlotProps = {
   model: ProgressTrendModel;
   formatYLabel: (value: number) => string;
   colors: { rule: string; label: string; fill: string };
-  /** Month under a press-and-hold, as the finger moves. */
-  onInspect: (index: number) => void;
+  /** Month under a press-and-hold as the finger moves, then null on release. */
+  onInspect: (index: number | null) => void;
 };
 
 const PRESS_DELAY_MS = 200;
@@ -25,6 +25,9 @@ const PRESS_DELAY_MS = 200;
 /**
  * Victory line chart for one Progress card. Press and hold, then drag, to
  * inspect a month; a swipe that moves before the hold scrolls the page instead.
+ * The finger's marker is drawn on the UI thread, so the screen can show the
+ * month live without re-rendering the chart, which would reset the gesture.
+ * Remount it (via key) when its series change: the press state is per series.
  */
 export const ProgressTrendPlot = memo(function ProgressTrendPlot({
   model,
@@ -56,12 +59,20 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
   const [labelX, setLabelX] = useState<number[]>([]);
   const [plotWidth, setPlotWidth] = useState(0);
 
+  const plotTop = useSharedValue(0);
+  const plotBottom = useSharedValue(0);
+  const reportInspect = useCallback((index: number) => onInspect(index < 0 ? null : index), [onInspect]);
   useAnimatedReaction(
     () => (press.isActive.value ? press.matchedIndex.value : -1),
     (index, previous) => {
-      if (index >= 0 && index !== previous) scheduleOnRN(onInspect, index);
+      if (index !== previous && previous !== null) scheduleOnRN(reportInspect, index);
     },
   );
+  const guideStart = useDerivedValue(() => vec(press.x.position.value, plotTop.value));
+  const guideEnd = useDerivedValue(() => vec(press.x.position.value, plotBottom.value));
+  const pressOpacity = useDerivedValue(() => (press.isActive.value ? 1 : 0));
+  const restingOpacity = useDerivedValue(() => (press.isActive.value ? 0 : 1));
+  const pressY = press.y as unknown as Record<string, { position: { value: number } }>;
 
   const onScaleChange = useCallback((xScale: Scale) => {
     setLabelX(model.xLabels.map((label) => xScale(label.index)));
@@ -81,8 +92,13 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
           domainPadding={{ left: 10, right: 14, top: 8 }}
           frame={{ lineWidth: 0 }}
           gestureLongPressDelay={PRESS_DELAY_MS}
+          onChartBoundsChange={(bounds) => {
+            plotTop.value = bounds.top;
+            plotBottom.value = bounds.bottom;
+          }}
           onScaleChange={onScaleChange}
-          padding={{ left: 0, right: 0, top: 6, bottom: 0 }}
+          // Room for the y-axis labels centred on the top and zero rules.
+          padding={{ left: 0, right: 0, top: 8, bottom: 8 }}
           xKey={"x" as never}
           yAxis={[{
             font,
@@ -131,10 +147,23 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
                       cx={point.x}
                       cy={point.y}
                       key={`${line.key}:p${index}`}
+                      // The committed month steps aside while a finger inspects.
+                      opacity={radius >= 6 ? restingOpacity : 1}
                       r={radius}
                     />
                   ) : null;
                 }))}
+                <SkiaLine color={colors.rule} opacity={pressOpacity} p1={guideStart} p2={guideEnd} strokeWidth={1} />
+                {model.lines.map((line) => pressY[line.key] ? (
+                  <Circle
+                    color={line.pointColor}
+                    cx={press.x.position}
+                    cy={pressY[line.key].position as never}
+                    key={`${line.key}:press`}
+                    opacity={pressOpacity}
+                    r={6}
+                  />
+                ) : null)}
               </>
             );
           }}

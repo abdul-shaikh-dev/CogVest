@@ -1429,7 +1429,12 @@ describe("ProgressScreen", () => {
 
     await layoutSurface("portfolio-trend-chart", 400);
     await layoutSurface("asset-trend-chart", 400);
+    // While a finger inspects, the month shows live but the plot is not redrawn,
+    // which would reset the gesture; lifting the finger commits the month.
     await act(async () => plots()[0].props.onInspect(0));
+    expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    expect(plots()[0].props.model.lines[0].pointRadii).toEqual([3, 3, 6]);
+    await act(async () => plots()[0].props.onInspect(null));
     expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
 
     for (const width of [40, 400]) {
