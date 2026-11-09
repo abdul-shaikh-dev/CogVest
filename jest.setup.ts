@@ -63,7 +63,7 @@ jest.mock("victory-native", () => {
     return React.createElement(
       View,
       { ...props, data, testID: "victory-cartesian-chart", yKeys },
-      children({ chartBounds: { bottom: 200, left: 0, right: 300, top: 0 }, points }),
+      children({ chartBounds: { bottom: 200, left: 0, right: 300, top: 0 }, points, xScale: scale, yScale: scale }),
     );
   }
 

@@ -113,7 +113,7 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
           }]}
           yKeys={keys as never}
         >
-          {({ points, chartBounds }) => {
+          {({ points, chartBounds, yScale }) => {
             const byKey = points as unknown as Record<string, Array<{ x: number; y: number | null | undefined }>>;
             return (
               <>
@@ -121,11 +121,11 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
                   <Area
                     animate={model.animate ? { type: "timing", duration: 300 } : undefined}
                     points={byKey[model.lines[0].key] as never}
-                    y0={chartBounds.bottom}
+                    y0={yScale(0)}
                   >
                     <LinearGradient
                       colors={[`${colors.fill}2E`, `${colors.fill}00`]}
-                      end={vec(0, chartBounds.bottom)}
+                      end={vec(0, yScale(0))}
                       start={vec(0, chartBounds.top)}
                     />
                   </Area>
