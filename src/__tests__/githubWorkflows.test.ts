@@ -26,7 +26,10 @@ describe("GitHub workflows", () => {
     expect(workflow).toContain("permissions:\n  contents: read");
     expect(workflow).toContain("uses: actions/checkout@v6");
     expect(workflow).toContain("uses: actions/setup-node@v6");
-    expect(workflow).toContain("npm install --global eas-cli@latest");
+    expect(workflow).toContain("npm install --global eas-cli@27");
+    // A cancelled EAS build still exits 0, so the status is checked.
+    expect(workflow).toContain("--non-interactive --json > build.json");
+    expect(workflow).toContain(`test "$(jq -r '.[0].status' build.json)" = "FINISHED"`);
     expect(workflow).toContain("EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}");
     expect(workflow).not.toContain("expo/expo-github-action");
   });

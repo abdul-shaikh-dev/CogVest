@@ -30,7 +30,7 @@ jobs:
           cache: npm
 
       - name: Install EAS CLI
-        run: npm install --global eas-cli@latest
+        run: npm install --global eas-cli@27
 
       - name: Install dependencies
         run: npm ci
@@ -47,4 +47,9 @@ jobs:
       - name: Build preview APK
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive
+        # eas-cli exits 0 when EAS cancels a build (for example at the
+        # build-time limit), so fail unless the build finished.
+        run: |
+          eas build --platform android --profile preview --non-interactive --json > build.json
+          jq '.[0] | {id, status, appVersion, appBuildVersion, artifacts}' build.json
+          test "$(jq -r '.[0].status' build.json)" = "FINISHED"
