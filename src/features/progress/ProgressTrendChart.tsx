@@ -333,12 +333,14 @@ export function TrendChart({
     setFocusedSeries(null);
   }
   const isPortfolioChart = testIDPrefix === "portfolio-trend";
-  const visibleSeries = isPortfolioChart
+  // Memoised so a press-and-hold re-render keeps the same plot model; a new
+  // model mid-gesture would reset the press.
+  const visibleSeries = useMemo(() => (isPortfolioChart
     ? summaryOnly ? series.filter(item => item.label !== "Invested") : series
-    : series.filter(item => item.values.some(value => value !== 0));
-  const displayedSeries = !isPortfolioChart && focusedSeries
+    : series.filter(item => item.values.some(value => value !== 0))), [isPortfolioChart, series, summaryOnly]);
+  const displayedSeries = useMemo(() => (!isPortfolioChart && focusedSeries
     ? visibleSeries.filter((item) => item.label === focusedSeries)
-    : visibleSeries;
+    : visibleSeries), [focusedSeries, isPortfolioChart, visibleSeries]);
   const yAxisWidth = Math.ceil(52 * Math.max(1, fontScale));
   const plotWidth = surfaceWidth > 0 ? surfaceWidth - yAxisWidth : chartWidth;
   const pointCount = series[0]?.values.length ?? 0;
@@ -370,7 +372,9 @@ export function TrendChart({
       ? (partialHistory || summaryOnly ? series.slice(0, 1) : series.slice(0, 2))
       : displayedSeries,
     endpointsOnly: fontScale > 1.15 && plotWidth < 250,
-    fillUnderFirst: isPortfolioChart,
+    // Asset classes get the soft fill only when one is focused; overlapping
+    // fills would hide each other and read as a stacked total.
+    fillUnderFirst: isPortfolioChart || displayedSeries.length === 1,
     focusedSeries,
     gapAfterIndices,
     monthLabels,
@@ -384,7 +388,7 @@ export function TrendChart({
     [maskWealthValues],
   );
   const plotColors = useMemo(
-    () => ({ fill: colors.profit, label: colors.text.secondary, rule: colors.border.subtle }),
+    () => ({ label: colors.text.secondary, rule: colors.border.subtle }),
     [colors],
   );
 

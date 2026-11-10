@@ -15,7 +15,7 @@ type Row = Record<string, number>;
 type ProgressTrendPlotProps = {
   model: ProgressTrendModel;
   formatYLabel: (value: number) => string;
-  colors: { rule: string; label: string; fill: string };
+  colors: { rule: string; label: string };
   /** Month under a press-and-hold as the finger moves, then null on release. */
   onInspect: (index: number | null) => void;
 };
@@ -124,7 +124,7 @@ export const ProgressTrendPlot = memo(function ProgressTrendPlot({
                     y0={yScale(0)}
                   >
                     <LinearGradient
-                      colors={[`${colors.fill}2E`, `${colors.fill}00`]}
+                      colors={[`${model.lines[0].pointColor}2E`, `${model.lines[0].pointColor}00`]}
                       end={vec(0, yScale(0))}
                       start={vec(0, chartBounds.top)}
                     />

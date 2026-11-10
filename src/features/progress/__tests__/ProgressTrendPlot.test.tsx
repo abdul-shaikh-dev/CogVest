@@ -5,7 +5,7 @@ import { colors } from "@/src/theme";
 import { ProgressTrendPlot } from "../ProgressTrendPlot";
 import { buildProgressTrendModel } from "../progressTrendChartModel";
 
-const plotColors = { fill: colors.profit, label: colors.text.secondary, rule: colors.border.subtle };
+const plotColors = { label: colors.text.secondary, rule: colors.border.subtle };
 
 async function renderPlot(gapAfterIndices: number[] = []) {
   const model = buildProgressTrendModel({

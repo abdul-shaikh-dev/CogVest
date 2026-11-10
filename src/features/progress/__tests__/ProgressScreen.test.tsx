@@ -1436,6 +1436,16 @@ describe("ProgressScreen", () => {
     expect(plots()[0].props.model.lines[0].pointRadii).toEqual([3, 3, 6]);
     await act(async () => plots()[0].props.onInspect(null));
     expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    // The asset chart keeps the very same model while inspecting, so the
+    // native press is not reset by a redraw.
+    const assetModel = plots()[1].props.model;
+    await act(async () => plots()[1].props.onInspect(0));
+    expect(getByTestId("asset-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    expect(plots()[1].props.model).toBe(assetModel);
+    await act(async () => plots()[1].props.onInspect(1));
+    expect(plots()[1].props.model).toBe(assetModel);
+    await act(async () => plots()[1].props.onInspect(null));
+    expect(getByTestId("asset-trend-month-navigation")).toHaveTextContent(/Feb 2026/u);
 
     for (const width of [40, 400]) {
       await layoutSurface("portfolio-trend-chart", width);
@@ -1600,6 +1610,8 @@ describe("ProgressScreen", () => {
     })[1];
     expect(initialAssetChart.props.model.lines).toHaveLength(3);
     expect(initialAssetChart.props.model.maxValue).toBe(2000000);
+    // Overlapping asset fills would hide each other, so only a focused class is filled.
+    expect(initialAssetChart.props.model.fillUnderFirst).toBe(false);
 
     await fireEvent.press(getByTestId("asset-trend-Debt"));
 
@@ -1610,6 +1622,7 @@ describe("ProgressScreen", () => {
     expect(focusedAssetChart.props.model.lines[0].values)
       .toEqual([10, 12]);
     expect(focusedAssetChart.props.model.maxValue).toBe(20);
+    expect(focusedAssetChart.props.model.fillUnderFirst).toBe(true);
     expect(getByTestId("asset-trend-focused-scale")).toHaveTextContent(
       "Debt scale · Other asset lines hidden",
     );
