@@ -471,6 +471,10 @@ Accepted chart direction:
   200 ms hold scrolls the page without changing the inspected month. Each
   chart keeps accessible Previous/Next stored-month controls with disabled
   boundaries and a politely announced selected summary
+- only one line is ever filled, so fills never overlap. Portfolio Growth fills
+  softly under Portfolio down to zero. Asset Momentum stays unfilled while
+  several classes show; a focused class gets the same soft fill in its own
+  colour
 - grouped chart summaries include the visible signed percentages, not only
   amounts. Explain first-visible-month and zero-baseline unavailable changes;
   when masked, announce only the month and that values are hidden. Decorative
