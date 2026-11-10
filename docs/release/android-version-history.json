@@ -157,6 +157,11 @@
     {
       "versionCode": 31,
       "versionName": "1.0.30",
+      "status": "previous"
+    },
+    {
+      "versionCode": 32,
+      "versionName": "1.0.31",
       "status": "current"
     }
   ]

@@ -25,7 +25,7 @@ those boundaries. Historical plans are not implementation instructions.
 
 ## Stack And Architecture
 
-- Expo SDK 54, React Native, TypeScript, and Expo Router.
+- Expo SDK 58, React Native 0.88, TypeScript, and Expo Router.
 - Zustand with MMKV for local persistence.
 - Victory Native (`victory-native` 42 on `@shopify/react-native-skia`) for the
   monthly-snapshot and holding price-history charts.
