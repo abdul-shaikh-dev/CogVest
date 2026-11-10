@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Asset } from "@/src/types";
 import { createDailyPriceCache, type DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import { AssetHistoryError, fetchAssetHistory, getAssetHistoryRequest } from "@/src/services/quotes/assetHistoryProvider";
@@ -20,9 +20,23 @@ const verificationKey = (entry: DailyPriceEntry) => JSON.stringify([entry.provid
 export function useAssetHistory(asset: Asset, from: string, to: string, suppliedCache?: ReturnType<typeof createDailyPriceCache>) {
   const request = getAssetHistoryRequest(asset, from, to);
   const key = JSON.stringify(request);
-  const cacheRef = useRef<ReturnType<typeof createDailyPriceCache> | null>(null);
+  // One cache per mounted panel, created only when the caller does not supply one.
+  const [ownCache] = useState(() => (suppliedCache ? null : createDailyPriceCache()));
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<HistoryState>({ key: "", loading: true });
+  // A new range reads the cache during render, so a cached range never flashes
+  // an empty chart before the effect below catches up.
+  const pending = useMemo<HistoryState>(() => {
+    if (!request) return { key, loading: true };
+    const cache = suppliedCache ?? ownCache ?? createDailyPriceCache();
+    const cached = cache.read(request);
+    if (cached.status !== "hit") return { key, loading: true };
+    const holdingSafe = request.provider !== "yahoo" || Boolean(suppliedCache) ||
+      verifiedYahooEntries.has(verificationKey(cached.entry));
+    return { key, entry: cached.entry, freshness: cached.freshness, loading: true, holdingSafe };
+    // The serialized provider/range identity owns the read, not a recreated asset object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, suppliedCache]);
 
   useEffect(() => {
     let active = true;
@@ -33,7 +47,7 @@ export function useAssetHistory(asset: Asset, from: string, to: string, supplied
       setState({ key, loading: false, message: "Market history is not available for this asset. Your saved records are unchanged." });
       return;
     }
-    const cache = suppliedCache ?? cacheRef.current ?? (cacheRef.current = createDailyPriceCache());
+    const cache = suppliedCache ?? ownCache ?? createDailyPriceCache();
     const cached = cache.read(request);
     if (cached.status === "incompatible" || cached.status === "unavailable") {
       setState({ key, loading: false, message: "History storage is unavailable. Your portfolio is unaffected." });
@@ -90,5 +104,5 @@ export function useAssetHistory(asset: Asset, from: string, to: string, supplied
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, revision, suppliedCache]);
 
-  return { ...(state.key === key ? state : { key, loading: true }), supported: request !== null, retry: () => setRevision((value) => value + 1) };
+  return { ...(state.key === key ? state : pending), supported: request !== null, retry: () => setRevision((value) => value + 1) };
 }

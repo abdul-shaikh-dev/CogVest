@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { AssetHistoryPanel, getVisiblePriceScale } from "../AssetHistoryPanel";
 import { useAssetHistory } from "../useAssetHistory";
@@ -9,6 +9,14 @@ import { queryAllComponents } from "@/src/testing/componentQueries";
 jest.mock("../useAssetHistory", () => ({
   useAssetHistory: jest.fn(),
 }));
+jest.mock("../AssetHistoryChart", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  return { AssetHistoryChart: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: "history-chart" }) };
+});
+
+const chartOf = (screen: Awaited<ReturnType<typeof render>>) =>
+  queryAllComponents(screen, (component) => component.props.testID === "history-chart")[0];
 
 const mockUseAssetHistory = jest.mocked(useAssetHistory);
 const retry = jest.fn();
@@ -86,20 +94,28 @@ describe("AssetHistoryPanel", () => {
     mockHistory();
   });
 
-  it("formats only visible endpoint labels for a ten-year series", async () => {
+  it("labels only the endpoints of a ten-year series and does not rebuild it to move the selection", async () => {
     const points = Array.from({ length: 3653 }, (_, index) => ({
       date: new Date(Date.UTC(2016, 0, 1 + index)).toISOString().slice(0, 10),
       close: 100 + index,
     }));
     mockHistory({ entry: entry(points) });
-    const format = jest.spyOn(Date.prototype, "toLocaleDateString");
-    try {
-      const screen = await renderPanel();
-      expect(screen.getByTestId("asset-history-chart", { includeHiddenElements: true })).toBeTruthy();
-      expect(format).toHaveBeenCalledTimes(2);
-      await fireEvent.press(screen.getByTestId("asset-history-previous"));
-      expect(format).toHaveBeenCalledTimes(4);
-    } finally { format.mockRestore(); }
+    const openingPositions = [opening];
+    const trades: never[] = [];
+    const screen = await renderPanel({ openingPositions, trades });
+    expect(screen.getByTestId("asset-history-chart", { includeHiddenElements: true })).toBeTruthy();
+    const model = chartOf(screen).props.model;
+    expect(model.xTicks).toHaveLength(2);
+    expect(chartOf(screen).props.formatX(model.xTicks[0])).toBe("Jan 2016");
+
+    await fireEvent.press(screen.getByTestId("asset-history-previous"));
+    expect(chartOf(screen).props.model).toBe(model);
+    // A re-read of identical cached content arrives as a new object.
+    mockHistory({ entry: entry(points.map((point) => ({ ...point }))) });
+    await screen.rerender(
+      <AssetHistoryPanel asset={asset} openingPositions={openingPositions} trades={trades} masked={false} minimal={false} />,
+    );
+    expect(chartOf(screen).props.model).toBe(model);
   });
 
   it("switches between price and holding-value history using real transformed values", async () => {
@@ -148,20 +164,19 @@ describe("AssetHistoryPanel", () => {
       ]),
     });
     const screen = await renderPanel();
-    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
+    const chart = chartOf(screen);
 
-    expect(chart.props.data.map((point: { value: number }) => point.value)).toEqual([100, 101, 102]);
-    expect(chart.props.yAxisOffset).toBeGreaterThan(0);
-    expect(chart.props.maxValue).toBeLessThan(10);
-    expect(chart.props.stepValue).toBe(chart.props.maxValue / 3);
-    expect(chart.props.data.map((point: { dataPointRadius: number }) => point.dataPointRadius)).toEqual([0, 0, 6]);
+    expect(chart.props.model.data.map((point: { value: number }) => point.value)).toEqual([100, 101, 102]);
+    expect(chart.props.model.yDomain[0]).toBeGreaterThan(0);
+    expect(chart.props.model.yDomain[1] - chart.props.model.yDomain[0]).toBeLessThan(10);
+    expect(chart.props.model.yTicks).toHaveLength(4);
+    expect(chart.props.selectedIndex).toBe(2);
     expect(screen.getByTestId("asset-history-visible-range")).toHaveTextContent(
       /Axis starts at .*not zero/u,
     );
 
     await fireEvent.press(screen.getByTestId("asset-history-mode-holdingValue"));
-    const holdingChart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
-    expect(holdingChart.props.yAxisOffset).toBeUndefined();
+    expect(chartOf(screen).props.model.yDomain[0]).toBe(0);
     expect(screen.queryByTestId("asset-history-visible-range")).toBeNull();
   });
 
@@ -182,11 +197,7 @@ describe("AssetHistoryPanel", () => {
       ]),
     });
     const screen = await renderPanel();
-    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
-
-    expect(chart.props.lineSegments).toEqual([
-      { color: "transparent", endIndex: 1, startIndex: 0 },
-    ]);
+    expect(chartOf(screen).props.model.segments).toEqual([[0, 0], [1, 1]]);
   });
 
   it("requests a new date range when a range control changes", async () => {
@@ -245,9 +256,55 @@ describe("AssetHistoryPanel", () => {
     mockHistory({ entry: entry(points) });
     const screen = await renderPanel({ openingPositions: [{ ...opening, date: points[0]!.date }] });
 
-    const chart = queryAllComponents(screen, (component) => component.props.testID === "gifted-line-chart")[0];
-    expect(chart.props.data).toHaveLength(500);
-    expect(chart.props.data[0].value).toBe(100);
-    expect(chart.props.data.at(-1).value).toBe(799);
+    const chart = chartOf(screen);
+    expect(chart.props.model.data).toHaveLength(500);
+    expect(chart.props.model.data[0].value).toBe(100);
+    expect(chart.props.model.data.at(-1).value).toBe(799);
+  });
+
+  it("shows the observation under the finger and keeps it selected on release", async () => {
+    const screen = await renderPanel();
+    expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹120.00");
+
+    await act(() => chartOf(screen).props.onInspect(0));
+    expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹100.00");
+    await act(() => chartOf(screen).props.onInspect(null));
+    expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹100.00");
+    expect(chartOf(screen).props.selectedIndex).toBe(0);
+
+    await fireEvent.press(screen.getByTestId("asset-history-next"));
+    expect(screen.getByTestId("asset-history-selected-value")).toHaveTextContent("₹110.00");
+  });
+
+  it("redraws a zoomed window from the daily observations and resets", async () => {
+    const points = Array.from({ length: 700 }, (_, index) => ({
+      close: 100 + index,
+      date: new Date(Date.UTC(2020, 0, index + 1)).toISOString().slice(0, 10),
+    }));
+    mockHistory({ entry: entry(points) });
+    const screen = await renderPanel({ openingPositions: [{ ...opening, date: points[0]!.date }] });
+    expect(chartOf(screen).props.zoomed).toBe(false);
+
+    const day = (index: number) => Date.parse(`${points[index]!.date}T12:00:00Z`);
+    await act(() => chartOf(screen).props.onZoom(day(100), day(160)));
+    const zoomed = chartOf(screen);
+    expect(zoomed.props.zoomed).toBe(true);
+    // Every daily observation in the window, not the 500-point sample of all 700.
+    expect(zoomed.props.model.data.map((point: { value: number }) => point.value)).toEqual(
+      Array.from({ length: 61 }, (_, index) => 200 + index),
+    );
+    expect(screen.getByText(/first to last visible observation/u)).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("asset-history-reset-zoom"));
+    expect(chartOf(screen).props.zoomed).toBe(false);
+    expect(chartOf(screen).props.model.data).toHaveLength(500);
+  });
+
+  it("ignores a zoom narrower than a week or wider than the range", async () => {
+    const screen = await renderPanel();
+    await act(() => chartOf(screen).props.onZoom(Date.parse("2026-01-01T12:00:00Z"), Date.parse("2026-01-02T12:00:00Z")));
+    expect(chartOf(screen).props.zoomed).toBe(false);
+    await act(() => chartOf(screen).props.onZoom(0, Date.parse("2030-01-01T00:00:00Z")));
+    expect(chartOf(screen).props.zoomed).toBe(false);
   });
 });

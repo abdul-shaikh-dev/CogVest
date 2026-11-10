@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-10: Victory Native chart migration (#138), smoke 14 passed
+
+- Commit: feat/asset-history-victory 3b1f8d8, version 1.0.30. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, E2E APK
+  (R8 on, x86_64) freshly built from 3b1f8d8, 59.4 MB, Metro stopped.
+- Smoke tier: 14 passed, 0 failed, 12m 53s.
+- Chart flows, all passed: progress-chart-month-navigation,
+  progress-chart-range, minimal-mode, ppf-history-fallback,
+  shared-ui-hierarchy, snapshot-review, epf-progress-empty, epf-reporting and
+  dashboard-valuation-basis (7m 26s).
+- Checked by hand with `adb shell input motionevent`: a press-and-hold drag
+  on the Progress chart moves the inspected month across the range and keeps
+  the month on release. The screenshot shows the zero y-axis label and the
+  Portfolio fill ending at zero. Pinch, two-finger pan and Reset zoom still
+  need a check on a real device, because the emulator cannot inject
+  multi-touch.
+
 ## 2026-11-08: Bulk payout confirmation (#619), smoke 14 passed
 
 - Commit: feat/619-bulk-payout-confirmation da16a9d, version 1.0.30. AVD

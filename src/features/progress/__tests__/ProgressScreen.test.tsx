@@ -25,6 +25,18 @@ jest.mock("react-native-safe-area-context", () => {
   };
 });
 
+// The Victory renderer is covered by its own test; here the drawing model and
+// handlers the screen hands it are what matter.
+jest.mock("../ProgressTrendPlot", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+
+  return {
+    ProgressTrendPlot: (props: Record<string, unknown>) =>
+      React.createElement(View, { ...props, testID: "progress-trend-plot" }),
+  };
+});
+
 const aprilSnapshot: MonthlySnapshot = {
   cashValue: 120000,
   cryptoValue: 40000,
@@ -1041,29 +1053,26 @@ describe("ProgressScreen", () => {
     expect(getByTestId("portfolio-trend-Portfolio")).toBeTruthy();
     expect(getByTestId("portfolio-trend-Invested")).toBeTruthy();
     expect(queryByTestId("asset-latest-summary")).toBeNull();
-    expect(
-      getByTestId("portfolio-trend-chart", { includeHiddenElements: true })
-        .props.pointerEvents,
-    ).toBe("none");
-    expect(
-      getByTestId("asset-trend-chart", { includeHiddenElements: true }).props
-        .pointerEvents,
-    ).toBe("none");
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    // The plot is decorative for screen readers; the month panel carries the figures.
+    for (const id of ["portfolio-trend-chart", "asset-trend-chart"]) {
+      expect(getByTestId(id, { includeHiddenElements: true }).props.importantForAccessibility)
+        .toBe("no-hide-descendants");
+    }
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
 
-    expect(portfolioChart.props.color1).toBe(
-      colors.primary,
-    );
-    expect(portfolioChart.props.color2).toBe(
-      colors.text.primary,
-    );
-    expect(portfolioChart.props.strokeDashArray2).toEqual([6, 4]);
-    expect(portfolioChart.props.getPointerProps).toBeUndefined();
-    expect(portfolioChart.props.pointerConfig).toBeUndefined();
-    expect(assetChart.props.getPointerProps).toBeUndefined();
-    expect(assetChart.props.pointerConfig).toBeUndefined();
+    const [portfolioLine, investedLine] = portfolioChart.props.model.lines;
+    expect(portfolioLine).toMatchObject({ color: colors.primary, dashed: false, label: "Portfolio" });
+    expect(investedLine).toMatchObject({ color: colors.text.primary, dashed: true, label: "Invested" });
+    expect(assetChart.props.model.lines.map((line: { label: string }) => line.label))
+      .toEqual(["Equity", "Debt", "Crypto"]);
+
+    // Press and hold inspects a month through the same selection as the buttons.
+    expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/May 2026/u);
+    await act(async () => portfolioChart.props.onInspect(0));
+    expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Apr 2026/u);
+    expect(getByTestId("asset-trend-month-navigation")).toHaveTextContent(/May 2026/u);
     expect(getByTestId("asset-trend-Equity")).toBeTruthy();
     expect(getByTestId("asset-trend-Debt")).toBeTruthy();
     expect(getByTestId("asset-trend-Crypto")).toBeTruthy();
@@ -1260,7 +1269,7 @@ describe("ProgressScreen", () => {
       queryByText,
       getAllByTestId,
     } = await render(<ProgressScreen store={store} />);
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
 
@@ -1356,7 +1365,7 @@ describe("ProgressScreen", () => {
     snapshots.forEach((snapshot) => store.getState().addMonthlySnapshot(snapshot));
 
     const { getAllByTestId } = await render(<ProgressScreen store={store} />);
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
 
@@ -1371,20 +1380,14 @@ describe("ProgressScreen", () => {
       }
 
     for (const chart of [portfolioChart, assetChart].filter(Boolean)) {
-      expect(chart.props.maxValue).toBe(expectedMax);
-      expect(chart.props.stepValue).toBe(expectedStep);
-      expect(chart.props.stepValue).toBe(
-        chart.props.maxValue / chart.props.noOfSections,
-      );
-      expect(chart.props.noOfSections).toBe(2);
-      expect(chart.props.hideOrigin).toBe(false);
-      expect(chart.props.showFractionalValues).toBe(true);
-      expect(chart.props.roundToDigits).toBe(2);
-      expect(chart.props.formatYLabel("2000000")).toBe("₹20L");
+      expect(chart.props.model.maxValue).toBe(expectedMax);
+      // Zero-based, two equal sections.
+      expect(chart.props.model.yTicks).toEqual([0, expectedStep, 2 * expectedStep]);
+      expect(chart.props.formatYLabel(2000000)).toBe("₹20L");
     }
   });
 
-  it("derives plot width and spacing from measured surface width safely", async () => {
+  it("keeps every month and the inspected month when the plot is re-measured", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addMonthlySnapshot(
       chartSnapshot("2026-01", {
@@ -1422,51 +1425,35 @@ describe("ProgressScreen", () => {
         nativeEvent: { layout: { width } },
       });
     };
-    const chartPointCount = (chart: { props: Record<string, any> }) =>
-      chart.props.data?.length ?? chart.props.dataSet[0].data.length;
-    const initialRenderers = getAllByTestId("gifted-line-chart", {
-      includeHiddenElements: true,
-    });
-    const assertSpacingRelationship = (chart: { props: Record<string, any> }) => {
-      expect(chart.props.width).toBeGreaterThanOrEqual(1);
-      expect(chart.props.spacing).toBeGreaterThanOrEqual(0);
-      expect(chart.props.rulesLength).toBe(chart.props.width);
-      expect(chart.props.xAxisLength).toBe(chart.props.width);
-      expect(chart.props.spacing).toBe(
-        Math.max(
-          0,
-          (chart.props.width - chart.props.initialSpacing - chart.props.endSpacing) /
-            (chartPointCount(chart) - 1),
-        ),
-      );
-    };
+    const plots = () => getAllByTestId("progress-trend-plot", { includeHiddenElements: true });
 
     await layoutSurface("portfolio-trend-chart", 400);
     await layoutSurface("asset-trend-chart", 400);
-    let [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
-      includeHiddenElements: true,
-    });
+    // While a finger inspects, the month shows live but the plot is not redrawn,
+    // which would reset the gesture; lifting the finger commits the month.
+    await act(async () => plots()[0].props.onInspect(0));
+    expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    expect(plots()[0].props.model.lines[0].pointRadii).toEqual([3, 3, 6]);
+    await act(async () => plots()[0].props.onInspect(null));
+    expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    // The asset chart keeps the very same model while inspecting, so the
+    // native press is not reset by a redraw.
+    const assetModel = plots()[1].props.model;
+    await act(async () => plots()[1].props.onInspect(0));
+    expect(getByTestId("asset-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+    expect(plots()[1].props.model).toBe(assetModel);
+    await act(async () => plots()[1].props.onInspect(1));
+    expect(plots()[1].props.model).toBe(assetModel);
+    await act(async () => plots()[1].props.onInspect(null));
+    expect(getByTestId("asset-trend-month-navigation")).toHaveTextContent(/Feb 2026/u);
 
-    expect(portfolioChart.props.width).toBe(assetChart.props.width);
-    expect(portfolioChart).not.toBe(initialRenderers[0]);
-    expect(assetChart).not.toBe(initialRenderers[1]);
-    expect(portfolioChart.props.width).toBeGreaterThan(228);
-    expect(portfolioChart.props.spacing).toBe(assetChart.props.spacing);
-    assertSpacingRelationship(portfolioChart);
-    assertSpacingRelationship(assetChart);
-
-    await layoutSurface("portfolio-trend-chart", 40);
-    await layoutSurface("asset-trend-chart", 40);
-    [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
-      includeHiddenElements: true,
-    });
-
-    expect(portfolioChart.props.width).toBe(1);
-    expect(assetChart.props.width).toBe(1);
-    expect(portfolioChart.props.spacing).toBe(0);
-    expect(assetChart.props.spacing).toBe(0);
-    assertSpacingRelationship(portfolioChart);
-    assertSpacingRelationship(assetChart);
+    for (const width of [40, 400]) {
+      await layoutSurface("portfolio-trend-chart", width);
+      await layoutSurface("asset-trend-chart", width);
+      for (const plot of plots()) expect(plot.props.model.count).toBe(3);
+      expect(getByTestId("portfolio-trend-month-navigation")).toHaveTextContent(/Jan 2026/u);
+      expect(plots()[0].props.model.lines[0].pointRadii).toEqual([6, 3, 3]);
+    }
   });
 
     it("uses endpoint-only labels in narrow enlarged-text charts", async () => {
@@ -1483,11 +1470,11 @@ describe("ProgressScreen", () => {
         await fireEvent(view.getByTestId("portfolio-trend-chart", { includeHiddenElements: true }), "layout", {
           nativeEvent: { layout: { width: 280 } },
         });
-        const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
-        expect(chart.props.data.map((point: { label: string }) => point.label)).toEqual([
-          "Dec\n2025", "", "Feb\n2026",
+        const chart = view.getAllByTestId("progress-trend-plot", { includeHiddenElements: true })[0];
+        expect(chart.props.model.xLabels.map((label: { text: string }) => label.text)).toEqual([
+          "Dec\n2025", "Feb\n2026",
         ]);
-        expect(chart.props.data).toHaveLength(3);
+        expect(chart.props.model.count).toBe(3);
         await view.unmount();
       } finally {
         await act(() => Dimensions.set({ window: original }));
@@ -1515,29 +1502,22 @@ describe("ProgressScreen", () => {
           nativeEvent: { layout: { width } },
         });
       }
-      for (const chart of getAllByTestId("gifted-line-chart", { includeHiddenElements: true })) {
-        const data = chart.props.data ?? chart.props.dataSet[0].data;
-        expect(data).toHaveLength(count);
-        expect(data.at(-1).dataPointRadius).toBe(6);
-        expect(data.at(-1).hideDataPoint).toBe(false);
-        if (count > 24) {
-          expect(data.slice(0, -1).every((point: { dataPointRadius: number }) =>
-            point.dataPointRadius === 0)).toBe(true);
-          expect(data.slice(0, -1).every((point: { hideDataPoint: boolean }) =>
-            point.hideDataPoint)).toBe(true);
-        } else {
-          expect(data.slice(0, -1).every((point: { dataPointRadius: number }) =>
-            point.dataPointRadius === 3)).toBe(true);
+      for (const chart of getAllByTestId("progress-trend-plot", { includeHiddenElements: true })) {
+        const { model } = chart.props;
+        expect(model.count).toBe(count);
+        for (const line of model.lines) {
+          // Every month stays on the line; markers thin out on long ranges.
+          expect(line.values).toHaveLength(count);
+          expect(line.pointRadii.at(-1)).toBe(6);
+          expect(line.pointRadii.slice(0, -1).every((radius: number) => radius === (count > 24 ? 0 : 3)))
+            .toBe(true);
         }
-        const lastX = chart.props.initialSpacing + (count - 1) * chart.props.spacing;
-        expect(lastX + 6).toBeLessThan(chart.props.width);
-          const expectedLabels = Dimensions.get("window").fontScale > 1.15 && chart.props.width < 250 ? 2 : 3;
-          expect(data.filter((item: { label: string }) => item.label)).toHaveLength(expectedLabels);
-        const lastLabel = data[count - 1].labelComponent();
-        expect(lastLabel.props.style.width).toBeGreaterThan(50);
-        expect(lastLabel.props.align).toBe("right");
-        expect(data[0].labelComponent().props.align).toBe("left");
-        if (count > 12) expect(data[count - 1].label).toContain("\n");
+        const { fontScale } = Dimensions.get("window");
+        const narrowEnlarged = fontScale > 1.15 && width - Math.ceil(52 * fontScale) < 250;
+        expect(model.xLabels).toHaveLength(narrowEnlarged ? 2 : 3);
+        expect(model.xLabels[0]).toMatchObject({ align: "left", index: 0 });
+        expect(model.xLabels.at(-1)).toMatchObject({ align: "right", index: count - 1 });
+        if (count > 12) expect(model.xLabels.at(-1).text).toContain("\n");
       }
     }
   });
@@ -1563,18 +1543,16 @@ describe("ProgressScreen", () => {
       const saved = store.getState().monthlySnapshots;
       const view = await render(<ProgressScreen store={store} />);
       const assertPortfolio = () => {
-        const chart = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[0];
-        expect(chart.props.curved).toBe(false);
-        expect(chart.props.data.map((point: { value: number }) => point.value)).toEqual(values);
+        const chart = view.getAllByTestId("progress-trend-plot", { includeHiddenElements: true })[0];
+        expect(chart.props.model.lines[0].values).toEqual(values);
         return chart;
       };
       assertPortfolio();
       if (displayMode === "minimal") await fireEvent.press(view.getByTestId("progress-details-toggle"));
-      expect(assertPortfolio().props.data2.map((point: { value: number }) => point.value))
+      expect(assertPortfolio().props.model.lines[1].values)
         .toEqual(values.map(() => 1900000));
-      const asset = view.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1];
-      expect(asset.props.curved).toBe(false);
-      expect(asset.props.dataSet[0].data.map((point: { value: number }) => point.value)).toEqual(values);
+      const asset = view.getAllByTestId("progress-trend-plot", { includeHiddenElements: true })[1];
+      expect(asset.props.model.lines[0].values).toEqual(values);
       await fireEvent.press(view.getByTestId("progress-mask-toggle"));
       expect(assertPortfolio().props.formatYLabel("1929000")).toBe(MASKED_INR_VALUE);
       expect(store.getState().monthlySnapshots).toEqual(saved);
@@ -1586,13 +1564,11 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
     store.getState().addMonthlySnapshot({ ...maySnapshot, id: "july", month: "2026-07" });
     const screen = await render(<ProgressScreen store={store} />);
-    const [portfolio, asset] = screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true });
-    expect(portfolio.props.areaChart).toBe(false);
-    expect(portfolio.props.curved).toBe(false);
-    expect(asset.props.curved).toBe(false);
-    expect(portfolio.props.lineSegments2).toEqual(portfolio.props.lineSegments);
-    expect(portfolio.props.lineSegments).toEqual([{ startIndex: 0, endIndex: 1, color: "transparent" }]);
-    expect(asset.props.dataSet[0].lineSegments).toEqual(portfolio.props.lineSegments);
+    const [portfolio, asset] = screen.getAllByTestId("progress-trend-plot", { includeHiddenElements: true });
+    // No line or fill bridges April to July; every series breaks at the same month.
+    expect(portfolio.props.model.fillUnderFirst).toBe(false);
+    expect(portfolio.props.model.segments).toEqual([[0, 0], [1, 1]]);
+    expect(asset.props.model.segments).toEqual(portfolio.props.model.segments);
     expect(screen.getByTestId("asset-trend-selected-panel").props.accessibilityLabel)
       .toContain("Previous calendar month is missing; change unavailable");
     expect(screen.getByTestId("portfolio-chart-context")).toHaveTextContent(/Missing months/u);
@@ -1605,7 +1581,7 @@ describe("ProgressScreen", () => {
     const screen = await render(<ProgressScreen store={store} />);
     expect(screen.queryByTestId("asset-trend-Crypto")).toBeNull();
     expect(screen.getByTestId("asset-trend-Debt")).toBeTruthy();
-    expect(screen.getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
+    expect(screen.getAllByTestId("progress-trend-plot", { includeHiddenElements: true })[1].props.model.lines)
       .toHaveLength(2);
   });
 
@@ -1629,28 +1605,31 @@ describe("ProgressScreen", () => {
     const { getAllByTestId, getByTestId, queryByTestId } = await render(
       <ProgressScreen store={store} />,
     );
-    const initialAssetChart = getAllByTestId("gifted-line-chart", {
+    const initialAssetChart = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     })[1];
-    expect(initialAssetChart.props.dataSet).toHaveLength(3);
-    expect(initialAssetChart.props.maxValue).toBe(2000000);
+    expect(initialAssetChart.props.model.lines).toHaveLength(3);
+    expect(initialAssetChart.props.model.maxValue).toBe(2000000);
+    // Overlapping asset fills would hide each other, so only a focused class is filled.
+    expect(initialAssetChart.props.model.fillUnderFirst).toBe(false);
 
     await fireEvent.press(getByTestId("asset-trend-Debt"));
 
-    const focusedAssetChart = getAllByTestId("gifted-line-chart", {
+    const focusedAssetChart = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     })[1];
-    expect(focusedAssetChart.props.dataSet).toHaveLength(1);
-    expect(focusedAssetChart.props.dataSet[0].data.map((point: { value: number }) => point.value))
+    expect(focusedAssetChart.props.model.lines).toHaveLength(1);
+    expect(focusedAssetChart.props.model.lines[0].values)
       .toEqual([10, 12]);
-    expect(focusedAssetChart.props.maxValue).toBe(20);
+    expect(focusedAssetChart.props.model.maxValue).toBe(20);
+    expect(focusedAssetChart.props.model.fillUnderFirst).toBe(true);
     expect(getByTestId("asset-trend-focused-scale")).toHaveTextContent(
       "Debt scale · Other asset lines hidden",
     );
 
     await fireEvent.press(getByTestId("asset-trend-Debt"));
     expect(queryByTestId("asset-trend-focused-scale")).toBeNull();
-    expect(getAllByTestId("gifted-line-chart", { includeHiddenElements: true })[1].props.dataSet)
+    expect(getAllByTestId("progress-trend-plot", { includeHiddenElements: true })[1].props.model.lines)
       .toHaveLength(3);
   });
 
@@ -1662,12 +1641,12 @@ describe("ProgressScreen", () => {
     store.getState().addMonthlySnapshot(aprilSnapshot);
 
     const { getAllByTestId } = await render(<ProgressScreen store={store} />);
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
 
-    expect(portfolioChart.props.isAnimated).toBe(false);
-    expect(assetChart.props.isAnimated).toBe(false);
+    expect(portfolioChart.props.model.animate).toBe(false);
+    expect(assetChart.props.model.animate).toBe(false);
   });
 
   it("renders chart-local timeframe chips and updates selected range", async () => {
@@ -1726,11 +1705,11 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
     expect(getByTestId("portfolio-monthly-chart-range-All")).toHaveStyle({ backgroundColor: colors.primary });
     expect(within(getByTestId("progress-monthly-answer")).getByText("₹13.85L")).toBeTruthy();
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
-    expect(portfolioChart.props.data).toHaveLength(3);
-    expect(assetChart.props.dataSet[0].data).toHaveLength(3);
+    expect(portfolioChart.props.model.count).toBe(3);
+    expect(assetChart.props.model.count).toBe(3);
   });
 
   it("treats Android Back as cancel in the custom range panel", async () => {
@@ -1773,12 +1752,12 @@ describe("ProgressScreen", () => {
     await fireEvent.press(getByTestId("portfolio-custom-range-start-2026-04"));
     await fireEvent.press(getByTestId("portfolio-custom-range-apply"));
 
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
 
-    expect(portfolioChart.props.data).toHaveLength(2);
-    expect(assetChart.props.dataSet[0].data).toHaveLength(3);
+    expect(portfolioChart.props.model.count).toBe(2);
+    expect(assetChart.props.model.count).toBe(3);
   });
 
   it("only offers valid end months after the selected start month", async () => {
@@ -1898,11 +1877,11 @@ describe("ProgressScreen", () => {
     expect(queryByTestId("portfolio-custom-range-panel")).toBeNull();
     clock.mockRestore();
 
-    const [portfolioChart, assetChart] = getAllByTestId("gifted-line-chart", {
+    const [portfolioChart, assetChart] = getAllByTestId("progress-trend-plot", {
       includeHiddenElements: true,
     });
-    expect(portfolioChart.props.data).toHaveLength(4);
-    expect(assetChart.props.dataSet[0].data).toHaveLength(4);
+    expect(portfolioChart.props.model.count).toBe(4);
+    expect(assetChart.props.model.count).toBe(4);
   });
 
   it("updates an existing month instead of creating duplicate snapshots", async () => {
