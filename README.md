@@ -205,6 +205,10 @@ worth installing; small fixes can ship as a locally signed APK
 4. Publish a GitHub pre-release for the tag with the changes and the
    verification summary, then link the EAS build once it finishes.
 
+Preview APKs are built for 64-bit ARM phones only (`arm64-v8a`), which keeps
+the build inside the 45-minute EAS limit. They do not install on x86 emulators;
+use a local build there. The workflow fails if EAS cancels the build.
+
 Full details: `docs/release/android-release-process.md`.
 
 ## Maestro E2E

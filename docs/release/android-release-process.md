@@ -88,6 +88,15 @@ Preview release checklist:
    APK was verified at publication time.
 4. When the workflow finishes, add the EAS build link to the pre-release.
 
+The preview profile builds `arm64-v8a` only, through
+`ORG_GRADLE_PROJECT_reactNativeArchitectures`. The four-ABI 1.0.31 preview hit
+the 45-minute EAS limit and was cancelled, after Skia, Reanimated 4 and R8
+joined the build. A preview APK therefore installs on 64-bit ARM phones but not
+on x86 emulators; use a local build there. The production AAB keeps every ABI.
+
+`eas build` exits 0 when EAS cancels a build, so the workflow reads the build
+status from `--json` and fails unless it is `FINISHED`.
+
 The Expo free plan has a small monthly Android build quota. Tag a preview only
 for a set of changes worth a real release; a tag that the quota blocks still
 uses its `versionCode`, so the next attempt needs a new one.
@@ -177,6 +186,9 @@ Configured in root `eas.json`:
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
+      },
       "android": {
         "buildType": "apk"
       }

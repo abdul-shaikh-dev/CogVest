@@ -25,6 +25,11 @@ describe("EAS build profiles", () => {
         buildType: "apk",
       },
     });
+    // Four ABIs passed the 45-minute EAS limit; previews target phones only.
+    expect(easConfig.build.preview).toMatchObject({
+      env: { ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a" },
+    });
+    expect(easConfig.build.production).not.toHaveProperty("env");
     expect(easConfig.build.production).toMatchObject({
       distribution: "store",
       android: {
