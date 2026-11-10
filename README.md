@@ -64,15 +64,26 @@ Add these folders to `PATH`:
 
 Native Android builds on Windows also need a long-path-aware ninja (1.12 or
 newer) with Windows long paths enabled. The Android SDK's CMake 3.22.1 ships
-ninja 1.10.2, which fails on Gesture Handler's codegen paths. Visual Studio 2022
-Build Tools includes a suitable ninja; point the build at it:
+ninja 1.10.2, which fails on Gesture Handler's codegen paths. Visual Studio
+Build Tools includes a suitable ninja; point the build at it. The folder is
+`18` for the current Build Tools and `2022` for the older ones:
 
 ```powershell
-$env:COGVEST_NINJA = "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"
+$env:COGVEST_NINJA = "C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"
 ```
 
 `cogvestNinja` in `~/.gradle/gradle.properties` works too. Even then, keep the
-checkout path short: a deep worktree path can still fail.
+checkout path short: a deep worktree path can still fail. After changing the
+ninja, delete `android/app/.cxx` and `node_modules/*/android/.cxx` so CMake
+reconfigures.
+
+A full native build (Skia, Reanimated and the other C++ modules) needs a lot of
+memory. If the Kotlin daemon or the C++ linker runs out of memory, close the
+emulator for the build and limit Gradle's workers:
+
+```powershell
+$env:GRADLE_OPTS = "-Dorg.gradle.workers.max=2 -Dkotlin.compiler.execution.strategy=in-process"
+```
 
 ## Setup
 
@@ -169,6 +180,32 @@ APK versus AAB:
 
 V1 dev-complete requires local APK build/install verification. Production AAB
 success is a release-candidate gate, not a normal development gate.
+
+## Preview Releases
+
+Installable preview APKs are built by Expo (EAS) from GitHub. The Expo free plan
+has a small monthly build quota, so cut a preview only for a set of changes
+worth installing; small fixes can ship as a locally signed APK
+(`npm run android:apk:release`).
+
+1. On a `release/<version>-preview` branch, bump `version` in `app.json` and
+   `package.json` (and the root entries of `package-lock.json`), increase
+   `android.versionCode`, and add the new identity to
+   `docs/release/android-version-history.json`. Never reuse a `versionCode`.
+2. Merge that PR after CI passes.
+3. Tag the merge commit on `main` and push the tag. The
+   `Android Preview APK` workflow typechecks, tests and runs `eas build
+   --profile preview`:
+
+   ```powershell
+   git tag -a v1.0.31-preview.1 -m "CogVest 1.0.31 Android preview 1"
+   git push origin v1.0.31-preview.1
+   ```
+
+4. Publish a GitHub pre-release for the tag with the changes and the
+   verification summary, then link the EAS build once it finishes.
+
+Full details: `docs/release/android-release-process.md`.
 
 ## Maestro E2E
 

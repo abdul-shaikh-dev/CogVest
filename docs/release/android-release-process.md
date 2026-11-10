@@ -76,6 +76,22 @@ git push origin v1.0.1-preview.2
 Increment `android.versionCode` before creating another externally distributed
 preview. The workflow can also be dispatched manually against an existing tag.
 
+Preview release checklist:
+
+1. Prepare the version on a `release/<version>-preview` branch: `app.json`
+   `version` and `android.versionCode`, `package.json`, the root entries of
+   `package-lock.json`, and a new `current` entry in
+   `android-version-history.json`. Merge it after CI passes.
+2. Tag the merge commit on `main` (annotated) and push the tag.
+3. Publish a GitHub pre-release for the tag: what changed since the previous
+   preview, the verification evidence, and any known gaps. Say whether the EAS
+   APK was verified at publication time.
+4. When the workflow finishes, add the EAS build link to the pre-release.
+
+The Expo free plan has a small monthly Android build quota. Tag a preview only
+for a set of changes worth a real release; a tag that the quota blocks still
+uses its `versionCode`, so the next attempt needs a new one.
+
 ### Production Build
 
 Purpose: Google Play Store release candidate.
