@@ -48,7 +48,7 @@ function payload(): BackupPayload {
         hasCompletedOnboarding: true,
         maskWealthValues: false,
       },
-      schemaVersion: 18,
+      schemaVersion: 19,
       measurementBasis: null,
       distributionCoverage: [],
       distributions: [],

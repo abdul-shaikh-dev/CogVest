@@ -78,47 +78,70 @@ function getSnapshotScopedTrades(
   );
 }
 
+type SnapshotBasisRecords = Pick<BuildGeneratedMonthEndSnapshotInput,
+  "assets" | "cashEntries" | "distributions" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "trades"
+>;
+
+/** A saved month's performance basis from the records on or before its month end. */
+function buildSavedSnapshotPerformanceBasis(
+  {
+    assets,
+    cashEntries,
+    distributions = [],
+    openingPositions,
+    ppfAccounts = [],
+    ppfLedgerEntries = [],
+    trades,
+  }: SnapshotBasisRecords,
+  month: string,
+) {
+  const monthEnd = getMonthEndDate(month);
+  const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(ppfAccounts, formatLocalCalendarDate(monthEnd));
+  const supportedAssetIds = new Set(assets
+    .filter((asset) => isV1SupportedAsset(asset) && !linkedLegacyAssetIds.has(asset.id))
+    .map((asset) => asset.id));
+  const scopedOpeningPositions = openingPositions.filter((position) =>
+    supportedAssetIds.has(position.assetId) &&
+    isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd));
+  return buildMonthlyPerformanceBasis({
+    cashEntries: cashEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
+    distributions,
+    openingPositions: scopedOpeningPositions,
+    ppfLedgerEntries: ppfLedgerEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
+    targetMonth: month,
+    trades: getSnapshotScopedTrades(trades, supportedAssetIds, scopedOpeningPositions, monthEnd),
+  });
+}
+
+function isAutomaticSnapshot(snapshot: MonthlySnapshot) {
+  return snapshot.generated?.source === "auto" &&
+    snapshot.generated.priceEvidence !== undefined;
+}
+
+/** Whether CogVest derived this month's basis from records, rather than leaving it to the user. */
+function hasDerivedPerformanceBasis(snapshot: MonthlySnapshot) {
+  if (Object.keys(validateMonthlySnapshot(snapshot)).length > 0) return false;
+  // Aggregate-only legacy records may contain corrections without provenance.
+  return isAutomaticSnapshot(snapshot) || snapshot.performanceBasis?.status === "complete";
+}
+
 export function refreshFuturesCashSnapshotHistory({
-  assets,
-  cashEntries,
-  distributions = [],
-  earliestAffectedMonth = cashEntries
+  earliestAffectedMonth: requestedEarliestMonth,
+  monthlySnapshots,
+  ...records
+}: SnapshotBasisRecords & { earliestAffectedMonth?: string; monthlySnapshots: MonthlySnapshot[] }): MonthlySnapshot[] {
+  const { cashEntries } = records;
+  const earliestAffectedMonth = requestedEarliestMonth ?? cashEntries
     .filter((entry) => (entry.purpose === "futuresTransfer" && entry.linkedFutures) ||
       (entry.purpose === "epfTransfer" && entry.linkedEpf))
-    .map((entry) => entry.date.slice(0, 7)).sort()[0],
-  monthlySnapshots,
-  openingPositions,
-  ppfAccounts = [],
-  ppfLedgerEntries = [],
-  trades,
-}: Pick<BuildGeneratedMonthEndSnapshotInput,
-  "assets" | "cashEntries" | "distributions" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "trades"
-> & { earliestAffectedMonth?: string; monthlySnapshots: MonthlySnapshot[] }): MonthlySnapshot[] {
+    .map((entry) => entry.date.slice(0, 7)).sort()[0];
   if (!earliestAffectedMonth) return monthlySnapshots;
   let changed = false;
   const refreshed = monthlySnapshots.map((snapshot) => {
-    if (Object.keys(validateMonthlySnapshot(snapshot)).length > 0) return snapshot;
-    // Aggregate-only legacy records may contain corrections without provenance.
-    const automatic = snapshot.generated?.source === "auto" &&
-      snapshot.generated.priceEvidence !== undefined;
-    if (snapshot.month < earliestAffectedMonth ||
-        (!automatic && snapshot.performanceBasis?.status !== "complete")) return snapshot;
+    if (snapshot.month < earliestAffectedMonth || !hasDerivedPerformanceBasis(snapshot)) return snapshot;
+    const automatic = isAutomaticSnapshot(snapshot);
     const monthEnd = getMonthEndDate(snapshot.month);
-    const linkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(ppfAccounts, formatLocalCalendarDate(monthEnd));
-    const supportedAssetIds = new Set(assets
-      .filter((asset) => isV1SupportedAsset(asset) && !linkedLegacyAssetIds.has(asset.id))
-      .map((asset) => asset.id));
-    const scopedOpeningPositions = openingPositions.filter((position) =>
-      supportedAssetIds.has(position.assetId) &&
-      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd));
-    const performanceBasis = buildMonthlyPerformanceBasis({
-      cashEntries: cashEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
-      distributions,
-      openingPositions: scopedOpeningPositions,
-      ppfLedgerEntries: ppfLedgerEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
-      targetMonth: snapshot.month,
-      trades: getSnapshotScopedTrades(trades, supportedAssetIds, scopedOpeningPositions, monthEnd),
-    });
+    const performanceBasis = buildSavedSnapshotPerformanceBasis(records, snapshot.month);
     // Cash can be refreshed without selecting new market prices. Keep every
     // saved price, confidence label, ID and manual valuation exactly as recorded.
     const cashValue = automatic ? normalizeMoney(calculateCashBalance(cashEntries, monthEnd)) : snapshot.cashValue;
@@ -135,6 +158,55 @@ export function refreshFuturesCashSnapshotHistory({
     return next;
   });
   return changed ? refreshed : monthlySnapshots;
+}
+
+/**
+ * Schema 19 migration (#647). Bases saved earlier left out trades without a
+ * Cash entry, and the unlinked purchase and sale Cash entries that pay for
+ * them. This adds only that part, computed from the current records, to each
+ * derived basis. A saved basis is never rebuilt from scratch: records deleted
+ * after a month was saved must not change what that month already counted.
+ *
+ * A month with a holding transferred in or out becomes unavailable. A month
+ * whose saved basis is not complete, or whose records no longer give a
+ * complete basis without trades, is left unchanged.
+ */
+export function addTradeFlowsToSavedPerformanceBases({
+  monthlySnapshots,
+  ...records
+}: SnapshotBasisRecords & { monthlySnapshots: MonthlySnapshot[] }): MonthlySnapshot[] {
+  const recordsBeforeTradeFlows: SnapshotBasisRecords = {
+    ...records,
+    cashEntries: records.cashEntries.filter((entry) => entry.linkedTradeId ||
+      !((entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
+        (entry.type === "addition" && entry.purpose === "saleProceeds"))),
+    trades: [],
+  };
+  let changed = false;
+  const migrated = monthlySnapshots.map((snapshot) => {
+    const saved = snapshot.performanceBasis;
+    if (saved?.status !== "complete" || !hasDerivedPerformanceBasis(snapshot)) return snapshot;
+    const before = buildSavedSnapshotPerformanceBasis(recordsBeforeTradeFlows, snapshot.month);
+    if (before.status !== "complete") return snapshot;
+    const after = buildSavedSnapshotPerformanceBasis(records, snapshot.month);
+    if (after.status !== "complete") {
+      changed = true;
+      return { ...snapshot, performanceBasis: after };
+    }
+    const netDelta = decimal(after.netExternalFlow).minus(before.netExternalFlow);
+    const weightedDelta = decimal(after.weightedExternalFlow).minus(before.weightedExternalFlow);
+    if (netDelta.isZero() && weightedDelta.isZero()) return snapshot;
+    changed = true;
+    return {
+      ...snapshot,
+      performanceBasis: {
+        ...saved,
+        netExternalFlow: normalizeMoney(decimal(saved.netExternalFlow).plus(netDelta)),
+        weightedExternalFlow: normalizeMoney(decimal(saved.weightedExternalFlow).plus(weightedDelta)),
+      },
+    };
+  });
+  return changed ? migrated : monthlySnapshots;
 }
 
 export type GeneratedMonthEndSnapshotResult = {

@@ -37,7 +37,7 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 18;
+export const portfolioSchemaVersion = 19;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
 
