@@ -1,6 +1,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { backupRestoreJournalKey } from "@/src/services/storage/backupKeys";
 import { createMmkvJsonStorage } from "@/src/services/storage";
+import { withoutOrphanQuotes } from "@/src/domain/quoteCacheIntegrity";
 import type { HistoricalQuoteCache, QuoteCache } from "@/src/types";
 
 import { captureBackupStorage, recoverBackupRestore } from "./backupPersistence";
@@ -29,6 +30,8 @@ import {
 import {
   createEmptyPortfolioSnapshot,
   migratePortfolioSnapshot,
+  persistHistoricalQuoteCache,
+  persistQuoteCache,
   readHistoricalQuoteCache,
   readPortfolioSnapshot,
   readQuoteCache,
@@ -124,8 +127,20 @@ export function createPortfolioStore({
     historicalQuoteCacheResult.incident,
   ].filter((incident): incident is StorageRecoveryIncident => Boolean(incident));
   const snapshot = snapshotResult.data;
-  const quoteCache = quoteCacheResult.data;
-  const historicalQuoteCache = historicalQuoteCacheResult.data;
+  let quoteCache = quoteCacheResult.data;
+  let historicalQuoteCache = historicalQuoteCacheResult.data;
+  if (incidents.length === 0) {
+    // Drop quotes whose holding is gone, which earlier versions could save
+    // when a refresh finished after a delete; they block backup export (#651).
+    const keptQuotes = withoutOrphanQuotes(quoteCache, snapshot.assets);
+    const keptHistoricalQuotes = withoutOrphanQuotes(historicalQuoteCache, snapshot.assets);
+    if (keptQuotes !== quoteCache) persistQuoteCache(storage, keptQuotes);
+    if (keptHistoricalQuotes !== historicalQuoteCache) {
+      persistHistoricalQuoteCache(storage, keptHistoricalQuotes);
+    }
+    quoteCache = keptQuotes;
+    historicalQuoteCache = keptHistoricalQuotes;
+  }
 
   function revision(state: PortfolioStoreState) {
     return JSON.stringify({

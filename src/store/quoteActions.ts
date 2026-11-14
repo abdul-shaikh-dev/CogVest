@@ -19,12 +19,12 @@ type QuoteActions = Pick<PortfolioStoreState,
 export function createQuoteActions({ get, set, storage }: StoreContext): QuoteActions {
   return {
     clearQuoteCache: () => {
-      set({ quoteCache: {} });
       storage.removeItem(quoteCacheStorageKey);
+      set({ quoteCache: {} });
     },
     clearHistoricalQuoteCache: () => {
-      set({ historicalQuoteCache: {} });
       storage.removeItem(historicalQuoteCacheStorageKey);
+      set({ historicalQuoteCache: {} });
     },
     upsertHistoricalQuote: (historicalQuote) => {
       if (!Number.isFinite(historicalQuote.price)) {
@@ -38,26 +38,24 @@ export function createQuoteActions({ get, set, storage }: StoreContext): QuoteAc
         (currentAsset) =>
           currentAsset.id === normalizedHistoricalQuote.assetId,
       );
-      const currencyIssue = asset
-        ? getV1QuoteCurrencyIssue(asset, normalizedHistoricalQuote)
-        : normalizedHistoricalQuote.currency === "INR"
-          ? undefined
-          : "Cannot save a non-INR historical quote without a supported asset.";
+      // A month-end run can finish after its holding was deleted; its quote
+      // belongs to nothing and would block backup export (#651).
+      if (!asset) return;
+      const currencyIssue = getV1QuoteCurrencyIssue(asset, normalizedHistoricalQuote);
 
       if (currencyIssue) {
         throw new Error(currencyIssue);
       }
 
-      set((state) => ({
-        historicalQuoteCache: {
-          ...state.historicalQuoteCache,
-          [historicalQuoteCacheKey(
-            normalizedHistoricalQuote.assetId,
-            normalizedHistoricalQuote.asOfMonth,
-          )]: normalizedHistoricalQuote,
-        },
-      }));
-      persistHistoricalQuoteCache(storage, get().historicalQuoteCache);
+      const historicalQuoteCache = {
+        ...get().historicalQuoteCache,
+        [historicalQuoteCacheKey(
+          normalizedHistoricalQuote.assetId,
+          normalizedHistoricalQuote.asOfMonth,
+        )]: normalizedHistoricalQuote,
+      };
+      persistHistoricalQuoteCache(storage, historicalQuoteCache);
+      set({ historicalQuoteCache });
     },
     upsertQuote: (quote) => {
       if (
@@ -76,23 +74,20 @@ export function createQuoteActions({ get, set, storage }: StoreContext): QuoteAc
       const asset = get().assets.find(
         (currentAsset) => currentAsset.id === normalizedQuote.assetId,
       );
-      const currencyIssue = asset
-        ? getV1QuoteCurrencyIssue(asset, normalizedQuote)
-        : normalizedQuote.currency === "INR"
-          ? undefined
-          : "Cannot save a non-INR quote without a supported asset.";
+      // A quote refresh can finish after its holding was deleted (#651).
+      if (!asset) return;
+      const currencyIssue = getV1QuoteCurrencyIssue(asset, normalizedQuote);
 
       if (currencyIssue) {
         throw new Error(currencyIssue);
       }
 
-      set((state) => ({
-        quoteCache: {
-          ...state.quoteCache,
-          [normalizedQuote.assetId]: normalizedQuote,
-        },
-      }));
-      persistQuoteCache(storage, get().quoteCache);
+      const quoteCache = {
+        ...get().quoteCache,
+        [normalizedQuote.assetId]: normalizedQuote,
+      };
+      persistQuoteCache(storage, quoteCache);
+      set({ quoteCache });
     },
   };
 }

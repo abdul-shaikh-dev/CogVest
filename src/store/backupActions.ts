@@ -1,4 +1,5 @@
 import { validateBackupPayload } from "@/src/domain/portfolioBackup";
+import { withoutOrphanQuotes } from "@/src/domain/quoteCacheIntegrity";
 import {
   backupRestoreJournalKey,
   casFolioSaltStorageKey,
@@ -36,8 +37,9 @@ export function createBackupActions(context: StoreContext): BackupActions {
       return {
         payload: validateBackupPayload({
           portfolio: selectRawSnapshot(state),
-          quoteCache: state.quoteCache,
-          historicalQuoteCache: state.historicalQuoteCache,
+          // Export only quotes that still belong to a saved asset (#651).
+          quoteCache: withoutOrphanQuotes(state.quoteCache, state.assets),
+          historicalQuoteCache: withoutOrphanQuotes(state.historicalQuoteCache, state.assets),
           casFolioSalt: storage.getRawItem(casFolioSaltStorageKey),
         }),
         revision: revision(state),

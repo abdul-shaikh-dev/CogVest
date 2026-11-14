@@ -7,6 +7,13 @@ import { MASKED_INR_VALUE } from "@/src/components/common";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
+/** Quotes are kept only for saved assets (#651). */
+function addQuoteAsset(store: ReturnType<typeof createPortfolioStore>, id: string) {
+  store.getState().addAsset({
+    assetClass: "stock", currency: "INR", exchange: "NSE", id, name: id, symbol: id, ticker: `${id}.NS`,
+  });
+}
+
 const mockPush = jest.fn();
 
 jest.mock("expo-router", () => ({
@@ -251,6 +258,7 @@ describe("SettingsScreen", () => {
 
   it("shows manual saved-price provenance without calling it live", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-manual");
     store.getState().upsertQuote({
       assetId: "asset-manual",
       asOf: "2026-05-16T10:00:00.000Z",
@@ -275,6 +283,7 @@ describe("SettingsScreen", () => {
 
   it("shows provider saved-price provenance without a Live label", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-live");
     store.getState().upsertQuote({
       assetId: "asset-live",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -300,6 +309,7 @@ describe("SettingsScreen", () => {
 
   it("shows mixed saved-price provenance and keeps quote facts informational", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-live");
     store.getState().upsertQuote({
       assetId: "asset-live",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -307,6 +317,7 @@ describe("SettingsScreen", () => {
       price: 100,
       source: "yahoo",
     });
+    addQuoteAsset(store, "asset-manual");
     store.getState().upsertQuote({
       assetId: "asset-manual",
       asOf: "2026-05-16T10:00:00.000Z",
