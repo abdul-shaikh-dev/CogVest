@@ -149,7 +149,10 @@ function resolvedTransactionFingerprint(
   ]);
 }
 
-function materialTransactionKey(transaction: Trade) {
+function materialTransactionKey(
+  transaction: Trade,
+  { ignoreExternalId = false }: { ignoreExternalId?: boolean } = {},
+) {
   const provenance = transaction.importProvenance;
   return JSON.stringify({
     acquisitionCostPerUnit:
@@ -161,7 +164,7 @@ function materialTransactionKey(transaction: Trade) {
     importProvenance: provenance
       ? {
           account: provenance.account ?? null,
-          externalId: provenance.externalId ?? null,
+          externalId: ignoreExternalId ? null : provenance.externalId ?? null,
           fees: provenance.fees ?? null,
           originalDescription: provenance.originalDescription ?? null,
           settlementDate: provenance.settlementDate ?? null,
@@ -561,9 +564,18 @@ export function buildTransactionImportPlan({
 
   const existingExternal = new Map<string, Trade>();
   const existingFingerprints = new Map<string, Trade>();
+  // Trades imported without an external ID, which a later file may repeat with
+  // one (#650). Each can be matched by only one incoming row.
+  const existingWithoutExternalId = new Map<string, Trade>();
   for (const transaction of state.trades) {
     const provenance = transaction.importProvenance;
     if (!provenance) continue;
+    if (!provenance.externalId && provenance.fingerprint) {
+      existingWithoutExternalId.set(
+        fingerprintIdentity(provenance.sourceFormat, provenance.account, provenance.fingerprint),
+        transaction,
+      );
+    }
     if (provenance.externalId) {
       existingExternal.set(
         externalIdentity(
@@ -616,6 +628,30 @@ export function buildTransactionImportPlan({
       const fingerprintMatch =
         existingFingerprintMatch ?? stagedFingerprintMatch;
       const match = externalKey ? externalMatch : fingerprintMatch;
+
+      // The same trade imported earlier without an external ID (#650).
+      const earlierWithoutExternalId = externalKey && !externalMatch
+        ? existingWithoutExternalId.get(fingerprintKey)
+        : undefined;
+      if (earlierWithoutExternalId) {
+        existingWithoutExternalId.delete(fingerprintKey);
+        if (
+          materialTransactionKey(earlierWithoutExternalId, { ignoreExternalId: true }) ===
+          materialTransactionKey(item.transaction, { ignoreExternalId: true })
+        ) {
+          duplicates += 1;
+          continue;
+        }
+        conflicts += 1;
+        errors.push({
+          assetId,
+          code: "conflictingIdentity",
+          message:
+            "This row matches a trade imported earlier without an external ID, but its other details differ.",
+          rowNumber: item.row.rowNumber,
+        });
+        continue;
+      }
 
       if (match) {
         const exact = materialTransactionKey(match) === materialTransactionKey(item.transaction);
