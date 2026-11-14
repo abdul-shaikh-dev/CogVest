@@ -4,6 +4,11 @@ import { useSettings } from "@/src/features/settings/useSettings";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
+/** Quotes are kept only for saved assets (#651). */
+function addQuoteAsset(store: ReturnType<typeof createPortfolioStore>, id: string) {
+  store.getState().addAsset({ assetClass: "stock", currency: "INR", exchange: "NSE", id, name: id, symbol: id, ticker: `${id}.NS` });
+}
+
 describe("useSettings", () => {
   it("toggles and persists the global value masking preference", async () => {
     const storage = createMemoryJsonStorage();
@@ -59,6 +64,7 @@ describe("useSettings", () => {
 
   it("labels quote source as Live when only live quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-live");
     store.getState().upsertQuote({
       assetId: "asset-live",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -74,6 +80,7 @@ describe("useSettings", () => {
 
   it("labels quote source as Manual when only manual quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-manual");
     store.getState().upsertQuote({
       assetId: "asset-manual",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -89,6 +96,7 @@ describe("useSettings", () => {
 
   it("labels quote source as Mixed when live and manual quotes are cached", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-live");
     store.getState().upsertQuote({
       assetId: "asset-live",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -96,6 +104,7 @@ describe("useSettings", () => {
       price: 100,
       source: "yahoo",
     });
+    addQuoteAsset(store, "asset-manual");
     store.getState().upsertQuote({
       assetId: "asset-manual",
       asOf: "2026-05-16T10:00:00.000Z",
@@ -111,6 +120,7 @@ describe("useSettings", () => {
 
   it("derives quote freshness and manual fallback status from stored quotes", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    addQuoteAsset(store, "asset-live");
     store.getState().upsertQuote({
       assetId: "asset-live",
       asOf: "2026-05-15T10:00:00.000Z",
@@ -118,6 +128,7 @@ describe("useSettings", () => {
       price: 100,
       source: "yahoo",
     });
+    addQuoteAsset(store, "asset-manual");
     store.getState().upsertQuote({
       assetId: "asset-manual",
       asOf: "2026-05-16T10:00:00.000Z",

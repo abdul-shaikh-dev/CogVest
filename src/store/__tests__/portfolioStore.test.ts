@@ -145,6 +145,7 @@ describe("portfolio store", () => {
       },
       quantity: 0.123456785,
     });
+    store.getState().addAsset(asset);
     store.getState().upsertQuote({
       ...quote,
       dayChangeAbs: 1.005,
@@ -2601,6 +2602,7 @@ describe("portfolio store", () => {
       },
       portfolioValue: 1050000,
     });
+    store.getState().addAsset(asset);
     store.getState().upsertHistoricalQuote({
       assetId: "asset-reliance",
       asOfMonth: "2026-07",
