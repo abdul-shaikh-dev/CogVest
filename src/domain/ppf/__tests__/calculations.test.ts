@@ -203,10 +203,67 @@ describe("PPF calculations", () => {
         schedule: [],
       }),
     ).toMatchObject({
+      amount: 0,
+      estimatedThrough: "2026-04-01",
       missingMonth: "2026-04",
-      reason: "rate-unavailable",
-      status: "unavailable",
+      reason: "rate-not-notified",
+      status: "partial",
     });
+  });
+
+  it("keeps the interest estimated before a month whose rate is not yet notified", () => {
+    expect(
+      estimatePpfInterest({
+        account: account(),
+        asOf: "2026-09-01",
+        entries: [],
+        schedule: [{ ...twelvePercentSchedule[0], effectiveTo: "2026-06-30" }],
+      }),
+    ).toEqual({
+      amount: 3_000,
+      estimatedFrom: "2026-04-01",
+      estimatedThrough: "2026-06-30",
+      missingMonth: "2026-07",
+      reason: "rate-not-notified",
+      scheduleVersion: "dea-2026-q3",
+      status: "partial",
+    });
+  });
+
+  describe("official rate schedule boundary (#652)", () => {
+    const confirmedAtQ2End = account({ balanceAsOf: "2026-09-30" });
+
+    it("estimates October 2026 at the Q3 FY 2026-27 notified rate", () => {
+      expect(estimatePpfInterest({ account: confirmedAtQ2End, asOf: "2026-11-15", entries: [] })).toEqual({
+        amount: 591.67,
+        estimatedFrom: "2026-09-30",
+        estimatedThrough: "2026-10-31",
+        scheduleVersion: "dea-2026-q3",
+        status: "available",
+      });
+    });
+
+    it("stops after December 2026, the last notified month", () => {
+      expect(estimatePpfInterest({ account: confirmedAtQ2End, asOf: "2027-02-10", entries: [] })).toMatchObject({
+        amount: 1_775,
+        estimatedThrough: "2026-12-31",
+        missingMonth: "2027-01",
+        status: "partial",
+      });
+    });
+  });
+
+  it("starts at a mid-year confirmed balance, not the financial-year start (#652)", () => {
+    // Confirmed on 15 October: November to February are complete months by 31 March.
+    // April to October's interest is unknown until the March credit is recorded.
+    const result = estimatePpfInterest({
+      account: account({ balanceAsOf: "2025-10-15" }),
+      asOf: "2026-03-31",
+      entries: [],
+      schedule: [{ ...twelvePercentSchedule[0], effectiveFrom: "2025-04-01", effectiveTo: "2026-03-31" }],
+    });
+
+    expect(result).toMatchObject({ amount: 4_000, estimatedFrom: "2025-10-15", estimatedThrough: "2026-02-28", status: "available" });
   });
 
   it("resets estimates after the latest official checkpoint", () => {

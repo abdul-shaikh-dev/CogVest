@@ -18,7 +18,7 @@ import {
   getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import {
   formatCompactINR,
   formatDate,
@@ -146,10 +146,19 @@ export function PpfAccountScreen({
     entries,
   });
   const masked = snapshot.preferences.maskWealthValues;
+  const estimate = summary.estimatedInterest;
   const hasCompletedEstimatePeriod =
-    summary.estimatedInterest.status === "available" &&
-    summary.estimatedInterest.estimatedThrough >
-      summary.estimatedInterest.estimatedFrom;
+    estimate.estimatedThrough > estimate.estimatedFrom;
+  const estimateCaption = [
+    hasCompletedEstimatePeriod
+      ? `${formatDate(estimate.estimatedFrom)} to ${formatDate(estimate.estimatedThrough)}`
+      : "No completed estimate period yet",
+    estimate.status === "partial"
+      ? `Rate from ${formatMonthYear(new Date(`${estimate.missingMonth}-01T12:00:00`))} not yet notified`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   return (
     <ScreenContainer scroll testID="ppf-account-screen">
@@ -280,26 +289,16 @@ export function PpfAccountScreen({
           <View style={[styles.detailRow, stackRows && styles.stacked]}>
             <View style={[styles.flex, stackRows && styles.intrinsic]}>
               <AppText color="secondary">Estimated, not credited</AppText>
-              <AppText color="secondary" variant="caption">
-                {summary.estimatedInterest.status === "available"
-                  ? hasCompletedEstimatePeriod
-                    ? `Through ${formatDate(summary.estimatedInterest.estimatedThrough)}`
-                    : "No completed estimate period yet"
-                  : `Rate unavailable for ${summary.estimatedInterest.missingMonth}`}
+              <AppText color="secondary" testID="ppf-estimate-period" variant="caption">
+                {estimateCaption}
               </AppText>
             </View>
             <MaskedValue
-              masked={
-                masked &&
-                summary.estimatedInterest.status === "available" &&
-                hasCompletedEstimatePeriod
-              }
+              masked={masked && hasCompletedEstimatePeriod}
               value={
-                summary.estimatedInterest.status === "available"
-                  ? hasCompletedEstimatePeriod
-                    ? formatINR(summary.estimatedInterest.amount)
-                    : "Not available yet"
-                  : "Unavailable"
+                hasCompletedEstimatePeriod
+                  ? formatINR(estimate.amount)
+                  : "Not available yet"
               }
               weight="bold"
             />

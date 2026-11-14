@@ -82,6 +82,8 @@ Preview release checklist:
    `version` and `android.versionCode`, `package.json`, the root entries of
    `package-lock.json`, and a new `current` entry in
    `android-version-history.json`. Merge it after CI passes.
+   Check that the PPF rate schedule covers the current quarter (see
+   [PPF Interest Rate Schedule](#ppf-interest-rate-schedule)).
 2. Tag the merge commit on `main` (annotated) and push the tag.
 3. Publish a GitHub pre-release for the tag: what changed since the previous
    preview, the verification evidence, and any known gaps. Say whether the EAS
@@ -100,6 +102,18 @@ status from `--json` and fails unless it is `FINISHED`.
 The Expo free plan has a small monthly Android build quota. Tag a preview only
 for a set of changes worth a real release; a tag that the quota blocks still
 uses its `versionCode`, so the next attempt needs a new one.
+
+### PPF Interest Rate Schedule
+
+PPF interest estimates use the official rates in
+`src/domain/ppf/interestRates.ts`, which stop at the latest notified quarter.
+The Department of Economic Affairs notifies the next quarter's small-savings
+rates near the end of each quarter. After each notification, add one period
+(rate, effective dates, notification date and the DEA source link), bump
+`ppfInterestRateScheduleVersion`, and update the boundary tests in
+`src/domain/ppf/__tests__/calculations.test.ts`. Never extend a period past
+its notified quarter. Until a rate is added, the PPF screen shows the estimate
+through the last notified month and says the next rate is not yet notified.
 
 ### Production Build
 
