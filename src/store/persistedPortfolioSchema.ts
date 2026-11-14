@@ -3,6 +3,7 @@ import { emptyEpfState, epfStateSchema, validateEpfState } from "@/src/domain/ep
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
 import { ppfCashLinkProblems } from "@/src/domain/ppfCashLinks";
+import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import type {
   Asset,
   CashEntry,
@@ -108,8 +109,15 @@ const persistedPortfolioSchema = z
     if (payoutProblems.length) {
       context.addIssue({ code: "custom", message: "Payout records or their links are invalid.", path: ["distributions"] });
     }
+    // Saved records are checked against the later of today and their own
+    // latest date, so a clock that moves back cannot quarantine them (#646).
+    const reference = getRecordValidationReference({
+      epf: portfolio.epf,
+      ppfAccounts: portfolio.ppfAccounts,
+      ppfLedgerEntries: portfolio.ppfLedgerEntries,
+    });
     try {
-      validateEpfState(portfolio.epf ?? emptyEpfState(), (portfolio.cashEntries ?? []) as CashEntry[]);
+      validateEpfState(portfolio.epf ?? emptyEpfState(), (portfolio.cashEntries ?? []) as CashEntry[], reference.today);
       validateEpfLegacyLinks((portfolio.epf ?? emptyEpfState()).accounts, (portfolio.assets ?? []) as Asset[]);
     } catch {
       context.addIssue({ code: "custom", message: "EPF records or Cash links are invalid.", path: ["epf"] });
@@ -168,7 +176,7 @@ const persistedPortfolioSchema = z
       (portfolio.assets ?? []).map((asset) => [asset.id, asset]),
     );
     (portfolio.ppfAccounts ?? []).forEach((account, index) => {
-      if (!validatePpfAccount(account).isValid) {
+      if (!validatePpfAccount(account, reference.now).isValid) {
         context.addIssue({
           code: "custom",
           message: "PPF account lifecycle is invalid.",
@@ -201,7 +209,7 @@ const persistedPortfolioSchema = z
         .sort(comparePpfLedgerEntries);
       for (let index = 0; index < accountEntries.length; index += 1) {
         const entry = accountEntries[index];
-        if (!validatePpfLedgerEntryForAccount(account, entry).isValid) {
+        if (!validatePpfLedgerEntryForAccount(account, entry, reference.now).isValid) {
           context.addIssue({
             code: "custom",
             message: "PPF ledger timeline is invalid.",

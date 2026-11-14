@@ -13,6 +13,7 @@ import { getCalendarDatePart, parseCalendarDate } from "@/src/domain/dates";
 import { getOpeningPositionHistoryDate, isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { decimal, isWithinQuantum, moneyQuantum } from "@/src/domain/precision";
 import { comparePpfLedgerEntries, calculatePpfConfirmedBalance, validatePpfAccount, validatePpfLedgerEntryForAccount } from "@/src/domain/ppf";
+import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { reconcileTransactions } from "@/src/domain/transactionReconciliation";
 import { getTradeQuantityDelta, isTradeAcquisition } from "@/src/domain/transactionSemantics";
@@ -293,11 +294,14 @@ function validateGraph(payload: BackupPayload) {
     if (snapshot.generated) requireIsoTimestamp(snapshot.generated.generatedAt, "snapshot generation time");
     snapshot.generated?.priceEvidence?.forEach((evidence) => { if (!assetIds.has(evidence.assetId)) fail("snapshot evidence has a dangling asset"); });
   }
+  // The backup's records were valid when captured; a device clock behind
+  // their latest date must not reject the restore (#646).
+  const reference = getRecordValidationReference(portfolio);
   for (const account of portfolio.ppfAccounts) {
-    if (!validatePpfAccount(account).isValid || (account.legacyAssetId !== undefined && portfolio.assets.find((asset) => asset.id === account.legacyAssetId)?.instrumentType !== "ppf")) fail("PPF account is invalid");
+    if (!validatePpfAccount(account, reference.now).isValid || (account.legacyAssetId !== undefined && portfolio.assets.find((asset) => asset.id === account.legacyAssetId)?.instrumentType !== "ppf")) fail("PPF account is invalid");
     const entries = portfolio.ppfLedgerEntries.filter((entry) => entry.accountId === account.id).sort(comparePpfLedgerEntries);
     for (let index = 0; index < entries.length; index += 1) {
-      if (!validatePpfLedgerEntryForAccount(account, entries[index]).isValid || calculatePpfConfirmedBalance(account, entries.slice(0, index + 1), entries[index].date).confirmedBalance < 0) fail("PPF ledger is invalid");
+      if (!validatePpfLedgerEntryForAccount(account, entries[index], reference.now).isValid || calculatePpfConfirmedBalance(account, entries.slice(0, index + 1), entries[index].date).confirmedBalance < 0) fail("PPF ledger is invalid");
     }
   }
   if (portfolio.ppfLedgerEntries.some((entry) => !portfolio.ppfAccounts.some((account) => account.id === entry.accountId))) fail("PPF ledger has a dangling account");

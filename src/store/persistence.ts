@@ -7,6 +7,7 @@ import {
 import { validateFuturesCashLinks } from "@/src/domain/futuresCashFunding";
 import { validateDistributionGraph } from "@/src/domain/distributions";
 import { validatePpfCashLinks } from "@/src/domain/ppfCashLinks";
+import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import { normalizeAssetMetadata } from "@/src/domain/assets";
 import { refreshFuturesCashSnapshotHistory } from "@/src/domain/calculations";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
@@ -338,7 +339,14 @@ export function persistPortfolioTransition(
   transition: Partial<RawPortfolioSnapshot>,
 ) {
   validateSplitInventory({ ...state, ...transition });
-  validateEpfState(transition.epf ?? state.epf, transition.cashEntries ?? state.cashEntries);
+  // Already-saved EPF records must not block an unrelated save when the
+  // clock moves back (#646). New EPF events are checked against the real
+  // date by the EPF command planner before they reach this point.
+  validateEpfState(
+    transition.epf ?? state.epf,
+    transition.cashEntries ?? state.cashEntries,
+    getRecordValidationReference({ epf: state.epf }).today,
+  );
   validateEpfLegacyLinks((transition.epf ?? state.epf).accounts, transition.assets ?? state.assets);
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   validateDistributionGraph({ ...selectRawSnapshot(state), ...transition });
