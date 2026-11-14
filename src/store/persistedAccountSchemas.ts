@@ -187,6 +187,7 @@ export const schemaVersionSchema = z.union([
   z.literal(16),
   z.literal(17),
   z.literal(18),
+  z.literal(19),
 ]);
 
 // D9: inception has no opening value or fingerprint; an opening value is the sum of its lines.

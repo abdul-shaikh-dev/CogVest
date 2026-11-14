@@ -9,7 +9,10 @@ import { validateDistributionGraph } from "@/src/domain/distributions";
 import { validatePpfCashLinks } from "@/src/domain/ppfCashLinks";
 import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import { normalizeAssetMetadata } from "@/src/domain/assets";
-import { refreshFuturesCashSnapshotHistory } from "@/src/domain/calculations";
+import {
+  addTradeFlowsToSavedPerformanceBases,
+  refreshFuturesCashSnapshotHistory,
+} from "@/src/domain/calculations";
 import type { JsonStorage, JsonValue } from "@/src/services/storage";
 import type {
   Asset,
@@ -166,7 +169,7 @@ export function migratePortfolioSnapshot(
   validateSplitInventory({ assets, openingPositions: stored.openingPositions ?? [], trades: stored.trades ?? [] });
   validateFuturesCashLinks((stored.cashEntries ?? []).map(normalizeCashEntry), stored.futuresAccounts ?? []);
 
-  return {
+  const migrated: RawPortfolioSnapshot = {
     assets,
     epf: stored.epf ?? emptyEpfState(),
     cashEntries: (stored.cashEntries ?? []).map(normalizeCashEntry),
@@ -194,6 +197,10 @@ export function migratePortfolioSnapshot(
     // only at write boundaries for new or corrected records.
     trades: stored.trades ?? [],
   };
+  // V19 adds trades without a Cash entry to saved monthly bases, once (#647).
+  return parsedSnapshot.schemaVersion < 19
+    ? { ...migrated, monthlySnapshots: addTradeFlowsToSavedPerformanceBases(migrated) }
+    : migrated;
 }
 
 export function readPortfolioSnapshot(

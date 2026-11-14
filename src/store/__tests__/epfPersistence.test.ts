@@ -1,3 +1,4 @@
+import { addTradeFlowsToSavedPerformanceBases } from "@/src/domain/calculations";
 import { createHash } from "node:crypto";
 
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
@@ -43,16 +44,19 @@ describe("EPF durable account records", () => {
     delete legacy.distributionCoverage;
     delete legacy.measurementBasis;
     legacy.schemaVersion = 15;
+    // V19 also adds the seed's unlinked purchase payments to saved bases (#647).
+    const expected = { ...original, portfolio: { ...original.portfolio,
+      monthlySnapshots: addTradeFlowsToSavedPerformanceBases(original.portfolio) } };
     const backupTarget = harness();
     backupTarget.store.getState().replaceFromBackup({ ...original, portfolio: legacy }, backupTarget.store.getState().getBackupRevision());
-    expect(backupTarget.store.getState().captureBackup().payload).toEqual(original);
+    expect(backupTarget.store.getState().captureBackup().payload).toEqual(expected);
     storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));
     const write = jest.spyOn(storage, "setItem");
     const migrated = createPortfolioStore({ storage, now });
-    expect(migrated.getState().captureBackup().payload).toEqual(original);
+    expect(migrated.getState().captureBackup().payload).toEqual(expected);
     expect(migrated.getState().epf).toEqual(emptyEpfState());
     expect(write.mock.calls.filter(([key]) => key === portfolioStorageKey)).toHaveLength(1);
-    expect(createPortfolioStore({ storage, now }).getState().captureBackup().payload).toEqual(original);
+    expect(createPortfolioStore({ storage, now }).getState().captureBackup().payload).toEqual(expected);
     expect(write.mock.calls.filter(([key]) => key === portfolioStorageKey)).toHaveLength(1);
   });
 
@@ -227,7 +231,7 @@ describe("EPF durable account records", () => {
     apply({ type: "eventPut", event: withdrawal, cash: { id: "cash", label: "From EPF" } });
     const payload = JSON.parse(JSON.stringify(store.getState().captureBackup().payload));
     if (kind === "missing") delete payload.portfolio.epf;
-    if (kind === "future") payload.portfolio.schemaVersion = 19;
+    if (kind === "future") payload.portfolio.schemaVersion = 20;
     if (kind === "dangling") payload.portfolio.epf.cashLinks[0].eventId = "missing";
     if (kind === "amount") payload.portfolio.cashEntries[0].amount += 1;
     if (kind === "audit") payload.portfolio.epf.audit.push(payload.portfolio.epf.audit[0]);

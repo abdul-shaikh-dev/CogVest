@@ -8,7 +8,7 @@ import { calculateEpfLedger } from "@/src/domain/epf";
 import { createPortfolioBackup, parsePortfolioBackup } from "@/src/domain/portfolioBackup";
 import { ReviewCashEntryScreen } from "@/src/features/cash";
 import { createMmkvJsonStorage } from "@/src/services/storage";
-import { createEmptyPortfolioSnapshot, createPortfolioStore, portfolioStorageKey } from "@/src/store";
+import { createEmptyPortfolioSnapshot, createPortfolioStore, portfolioSchemaVersion, portfolioStorageKey } from "@/src/store";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 
 const now = () => new Date("2026-10-05T10:00:00Z");
@@ -39,7 +39,7 @@ function EnabledQa({ page }: { page?: string }) {
     setBusy(true);
     try {
       const testStore = createPortfolioStore({ storage, now });
-      assert(testStore.getState().schemaVersion === 18 && testStore.getState().epf.accounts.length === 0, "Migration failed or fixture not reset");
+      assert(testStore.getState().schemaVersion === portfolioSchemaVersion && testStore.getState().epf.accounts.length === 0, "Migration failed or fixture not reset");
       assert(testStore.getState().cashEntries[0]?.amount === 2000, "Legacy Cash changed");
       testStore.getState().applyEpfCommand({ commandId: "setup", reason: "Synthetic statement", change: { type: "accountPut", account: {
         id: "epf", nickname: "Synthetic EPF", provider: "epfo", status: "active", currency: "INR", historyCompleteThrough: null,
