@@ -34,6 +34,7 @@ import {
 import { normalizeMonthlySnapshot } from "@/src/domain/financialRecords";
 import {
   getTradeQuantityDelta,
+  getTradeNetAmount,
   isTradeCashPurchase,
 } from "@/src/domain/transactionSemantics";
 import {
@@ -1058,7 +1059,8 @@ export function buildGeneratedMonthEndSnapshot({
         ...monthTrades
           .filter(isTradeCashPurchase)
           .filter((trade) => isWithinMonth(trade.date, targetMonth))
-          .map((trade) => trade.totalValue),
+          // Imported buys keep their charges beside a gross total (#649).
+          .map(getTradeNetAmount),
         ...ppfLedgerEntries
           .filter(
             (entry) =>

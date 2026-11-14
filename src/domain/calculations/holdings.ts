@@ -567,8 +567,9 @@ export function calculateCashMonthlyMetrics({
   const allBuyTradeIds = new Set(
     trades.filter(isTradeCashPurchase).map((trade) => trade.id),
   );
+  // Imported buys keep their charges beside a gross total (#649).
   const investedFromTrades = sumFinancialValues(
-    monthlyBuyTrades.map((trade) => trade.totalValue),
+    monthlyBuyTrades.map(getTradeNetAmount),
   );
   const unmatchedPurchaseFunding = sumFinancialValues(
     monthlyEntries

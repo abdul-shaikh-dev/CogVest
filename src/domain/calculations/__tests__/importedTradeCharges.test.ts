@@ -1,4 +1,4 @@
-import { calculateHolding, calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
+import { calculateCashMonthlyMetrics, calculateHolding, calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { reconcileTransactions } from "@/src/domain/transactionReconciliation";
 import { getTradeNetAmount } from "@/src/domain/transactionSemantics";
@@ -62,5 +62,12 @@ describe("manually entered fees (regression)", () => {
 
   it("still reconcile with their fees, as before", () => {
     expect(reconcileTransactions({ through: "2026-06-30", transactions: [manualBuy] }).averageCostPrice).toBe(101.5);
+  });
+});
+
+describe("Cash screen monthly investment (#649)", () => {
+  it("counts an imported buy at its cost after charges", () => {
+    expect(calculateCashMonthlyMetrics({ cashEntries: [], now: new Date("2026-01-20T12:00:00Z"), openingPositions: [],
+      trades: [importedBuy] }).invested).toBe(10150);
   });
 });

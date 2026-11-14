@@ -1505,3 +1505,20 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     });
   });
 });
+
+describe("monthly investment with imported charges (#649)", () => {
+  it("counts an imported buy at its cost after charges", () => {
+    const imported = trade({
+      date: "2026-07-15T00:00:00.000Z", id: "imported", pricePerUnit: 100, quantity: 2, totalValue: 200,
+      importProvenance: { fees: 10, importBatchId: "batch", originalRowNumber: 1, sourceFormat: "zerodha-tradebook",
+        sourceVersion: "1", taxes: 5 },
+    });
+    const result = buildGeneratedMonthEndSnapshot(buildInput({
+      historicalQuotes: { [historicalQuoteCacheKey(stockAsset.id, "2026-07")]: { assetId: stockAsset.id, asOfMonth: "2026-07",
+        basis: "historical-close", currency: "INR", fetchedAt: "2026-08-01T00:00:00.000Z", price: 120, source: "yahoo" } },
+      trades: [imported],
+    }));
+
+    expect(result.snapshot?.monthlyInvestment).toBe(215);
+  });
+});
