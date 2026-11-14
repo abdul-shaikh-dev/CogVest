@@ -228,6 +228,50 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     });
   });
 
+  describe("automatic start with EPF and Futures (#648)", () => {
+    // Earliest snapshot: January 2025, ₹10,000 of Cash. Its month-end value leaves out EPF and Futures.
+    const snapshot: MonthlySnapshot = { id: "2025-01", month: "2025-01", portfolioValue: 10000, equityValue: 0, debtValue: 0,
+      cryptoValue: 0, cashValue: 10000, investedValue: 0, monthlyInvestment: 0 };
+    const basis = automaticMeasurementBasis([snapshot], endDate);
+    const epfAccount = (date: string, total: number): EpfAccount => ({ id: "epf", nickname: "Acme", provider: "epfo", status: "active",
+      currency: "INR", historyCompleteThrough: endDate, checkpoint: { date, balance: { total, components: { employee: total, employer: 0 } },
+        capital: total, source: "epfoStatement", recordedAt: `${date}T00:00:00Z` } });
+    const automatic = { cashEntries: [deposit], basis, automaticBasis: true };
+
+    it("adds EPF's value on the start date to the opening value", () => {
+      // ₹5,00,000 of EPF before the start and nothing added since: no return, not thousands of percent.
+      const summary = rate({ ...automatic, epf: { accounts: [epfAccount("2024-12-31", 500000)], events: [] } });
+
+      expect(summary.rate).toBeCloseTo(0, 6);
+      expect(summary.flows).toContainEqual(expect.objectContaining({ date: "2025-01-31", amountInr: "-500000", id: "epf" }));
+    });
+
+    it("keeps an EPF account opened after the start as money put in on its date", () => {
+      const summary = rate({ ...automatic, epf: { accounts: [epfAccount("2025-06-30", 500000)], events: [] } });
+
+      expect(summary.flows.filter((flow) => flow.date === "2025-01-31").map((flow) => flow.id)).toEqual(["portfolio"]);
+      expect(summary.flows).toContainEqual(expect.objectContaining({ date: "2025-06-30", amountInr: "-500000" }));
+    });
+
+    it("blocks with a clear reason when Futures was already open at the start", () => {
+      const futures = { id: "futures", settlementAsset: "USDT", marginMode: "cross", positionMode: "one-way",
+        openingAt: "2024-12-01T00:00:00Z", openingWalletUsdt: "100", events: [] } as unknown as WholePortfolioXirrInput["futuresAccounts"][number];
+
+      expect(reasons({ ...automatic, futuresAccounts: [futures] })).toContain("futures-before-automatic-start");
+      expect(reasons({ ...automatic, futuresAccounts: [{ ...futures, openingAt: "2025-03-01T00:00:00Z" }] }))
+        .not.toContain("futures-before-automatic-start");
+    });
+
+    it("leaves a start value you set unchanged: it already includes what you confirmed", () => {
+      const epf = { accounts: [epfAccount("2024-12-31", 500000)], events: [] };
+      const manual = openingBasis({ cashEntries: [deposit], epf }, "2025-01-31", 510000);
+      const result = buildWholePortfolioXirrInput(input({ cashEntries: [deposit], epf, basis: manual }));
+
+      expect(result.status).toBe("ready");
+      if (result.status === "ready") expect(result.flows.filter((flow) => flow.date === "2025-01-31").map((flow) => flow.id)).toEqual(["portfolio"]);
+    });
+  });
+
   it("validates a basis before it is saved", () => {
     expect(measurementBasisProblems({ startDate: "2025-01-01", kind: "openingValue", openingBreakdown: [] }, endDate))
       .toEqual(["Add at least one opening value."]);

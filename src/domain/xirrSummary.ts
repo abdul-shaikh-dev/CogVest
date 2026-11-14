@@ -51,6 +51,7 @@ const inputMessages: Array<[XirrUnavailableReason, string]> = [
   ["no-measurement-basis", "Save a month-end snapshot in Progress, or set a start date, to measure the return."],
   ["basis-needs-reconfirming", "Records on or before the start date changed. Confirm the opening value again."],
   ["records-before-start", "Records exist before your start date. Use the automatic start, or choose an earlier date."],
+  ["futures-before-automatic-start", "Futures was already open at your earliest month-end snapshot, which leaves it out. Set a start value that includes Futures."],
   ["missing-asset", "This holding's record is missing."],
   ["cash-asset", "Cash has no return of its own."],
   ["foreign-currency", "Returns are only measured for INR holdings."],

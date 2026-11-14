@@ -1,6 +1,7 @@
 import { calculateCashBalance, calculateHoldings } from "./calculations/holdings";
 import { calendarDateToLocalDate, getCalendarDatePart, parseCalendarDate } from "./dates";
 import { distributionNetAmount } from "./distributions";
+import { calculateEpfLedger } from "./epf/calculations";
 import { decimal, sumFinancialValues } from "./precision";
 import { epfXirrFlows, futuresXirrFlows, ppfXirrFlows, type AccountXirrOutcome } from "./xirrAccountFlows";
 import {
@@ -25,7 +26,8 @@ import { compareCodeUnits } from "@/src/domain/ordering";
  */
 export type WholePortfolioReason =
   | "no-measurement-basis" | "basis-needs-reconfirming" | "records-before-start" | "opening-after-start"
-  | "cash-uncategorized" | "trade-funding-unknown" | "ppf-funding-unknown" | "epf-withdrawal-destination";
+  | "cash-uncategorized" | "trade-funding-unknown" | "ppf-funding-unknown" | "epf-withdrawal-destination"
+  | "futures-before-automatic-start";
 
 export type WholePortfolioXirrInput = InvestmentsXirrInput & {
   basis: MeasurementBasis | null;
@@ -164,6 +166,22 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   }
   if (!inception && basis.openingValueInr !== null && basis.openingValueInr > 0) {
     flows.push({ date: start, amountInr: decimal(basis.openingValueInr).negated().toString(), source: "opening", id: portfolio });
+  }
+  // The automatic start's month-end value leaves out EPF and Futures, which the
+  // end value includes (#648). EPF adds its ledger value on the start date.
+  // Futures has no recorded value on a past date, so an account already open
+  // then needs a start value that includes it.
+  if (input.automaticBasis && !inception) {
+    if (input.epf.accounts.some((account) => account.checkpoint.date <= start)) {
+      const epfAtStart = calculateEpfLedger({ accounts: input.epf.accounts, events: input.epf.events }, start, input.today);
+      if (!epfAtStart.ok) issue("epf", "epf-ledger-invalid");
+      else if (epfAtStart.coveredTotal > 0) {
+        flows.push({ date: start, amountInr: decimal(epfAtStart.coveredTotal).negated().toString(), source: "opening", id: "epf" });
+      }
+    }
+    for (const account of input.futuresAccounts) {
+      if (account.openingAt.slice(0, 10) <= start) issue(`futures:${account.id}`, "futures-before-automatic-start");
+    }
   }
 
   // Cash: deposits in, withdrawals out. Linked legs moved money inside the portfolio.
