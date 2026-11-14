@@ -1,9 +1,13 @@
 import type { ComponentProps } from "react";
 import { StyleSheet } from "react-native";
 
+import { useTheme } from "@/src/theme";
+
 import { AppText } from "./AppText";
 
 export const MASKED_INR_VALUE = "₹••••";
+/** For amounts in a currency other than INR, such as USDT. */
+export const MASKED_AMOUNT = "••••";
 export const MASKED_VALUE_ACCESSIBILITY_LABEL = "Amount hidden";
 
 type MaskedValueType = "wealth" | "price" | "quantity" | "percentage";
@@ -11,6 +15,8 @@ type MaskedValueType = "wealth" | "price" | "quantity" | "percentage";
 type MaskedValueProps = Omit<ComponentProps<typeof AppText>, "children"> & {
   exactValue?: string;
   masked?: boolean;
+  /** What a masked amount shows; INR by default. */
+  maskedText?: string;
   value: string;
   valueType?: MaskedValueType;
 };
@@ -19,24 +25,31 @@ export function MaskedValue({
   accessibilityLabel,
   exactValue,
   masked = false,
+  maskedText = MASKED_INR_VALUE,
   value,
   valueType = "wealth",
   style,
   ...textProps
 }: MaskedValueProps) {
+  const { colors } = useTheme();
   const shouldMask = masked && valueType === "wealth";
 
   return (
     <AppText
       {...textProps}
-      style={[styles.numeric, style]}
+      // A gain or loss colour would reveal the hidden amount's direction.
+      style={[
+        styles.numeric,
+        style,
+        shouldMask && { color: colors.text[textProps.color ?? "primary"] },
+      ]}
       accessibilityLabel={
         shouldMask
           ? MASKED_VALUE_ACCESSIBILITY_LABEL
           : accessibilityLabel ?? exactValue
       }
     >
-      {shouldMask ? MASKED_INR_VALUE : value}
+      {shouldMask ? maskedText : value}
     </AppText>
   );
 }

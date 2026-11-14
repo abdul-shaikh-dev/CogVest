@@ -259,7 +259,7 @@ describe("TradeHistoryScreen", () => {
     expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("1 selected");
   });
 
-  it("keeps financial detail out of accessible selection labels while values are masked", async () => {
+  it("keeps amounts out of accessible selection labels while values are masked, but not quantities", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(trade);
@@ -268,8 +268,22 @@ describe("TradeHistoryScreen", () => {
 
     await fireEvent.press(screen.getByTestId("start-transaction-selection"));
     const label = screen.getByTestId(`review-trade-${trade.id}`).props.accessibilityLabel as string;
-    expect(label).toMatch(/Not selected, HDFC Bank, Purchase, .*values masked, transaction 1 of 1/u);
-    expect(label).not.toMatch(/₹|2 units|100|200/u);
+    expect(label).toMatch(/Not selected, HDFC Bank, Purchase, .*2 units, amount hidden, transaction 1 of 1/u);
+    expect(label).not.toMatch(/₹|100|200/u);
+    const value = screen.getByTestId(`transaction-value-${trade.id}`);
+    expect(value).toHaveTextContent("₹••••");
+    expect(value.props.accessibilityLabel).toBe("Amount hidden");
+  });
+
+  it("keeps a transfer's quantity visible while values are masked (#656)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const transfer: Trade = { assetId: asset.id, date: "2026-04-12", id: "transfer", quantity: 3, type: "transferIn" };
+    store.getState().addAsset(asset);
+    store.getState().addTrade(transfer);
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const screen = await render(<TradeHistoryScreen assetId="" onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+
+    expect(screen.getByTestId("transaction-value-transfer")).toHaveTextContent("3 units");
   });
 
   it("blocks a partial deletion that would leave a negative position", async () => {

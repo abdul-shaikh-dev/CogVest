@@ -321,6 +321,9 @@ describe("manual Futures screen", () => {
     await act(() => store.getState().updatePreferences({ maskWealthValues: true }));
     expect(screen.queryByText(/1 @ 100 USDT/)).toBeNull();
     expect(screen.queryByText(/1 @ 120 USDT/)).toBeNull();
+    // Masked amounts keep their currency and are spoken as hidden (#656).
+    expect(screen.getAllByText("•••• USDT").length).toBeGreaterThan(0);
+    for (const node of screen.getAllByText(/••••/)) expect(node.props.accessibilityLabel).toBe("Amount hidden");
   });
 
   it("stores a separate observation time per field only when asked, and reopens that way", async () => {
