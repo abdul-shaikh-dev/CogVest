@@ -31,7 +31,7 @@ import {
   normalizePercentage,
   sumFinancialValues,
 } from "@/src/domain/precision";
-import { isTradeCashPurchase } from "@/src/domain/transactionSemantics";
+import { getTradeNetAmount, isTradeCashPurchase } from "@/src/domain/transactionSemantics";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import {
   refreshQuotes as defaultRefreshQuotes,
@@ -167,7 +167,8 @@ function calculateMonthlyMetrics(
             ),
           ),
       )
-      .map((trade) => trade.totalValue),
+      // Imported buys keep their charges beside a gross total (#649).
+      .map(getTradeNetAmount),
   );
   const openingInvestment = state.openingPositions
     .filter(

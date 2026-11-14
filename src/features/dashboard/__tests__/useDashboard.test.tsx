@@ -499,4 +499,19 @@ describe("useDashboard", () => {
       { assetClass: "debt", percentage: 100, value: 100_000 },
     ]);
   });
+
+  it("counts an imported buy's charges in this month's investment (#649)", async () => {
+    const now = new Date("2026-09-20T12:00:00Z");
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now: () => now });
+    store.getState().addAsset(stockAsset);
+    store.getState().addTrade({
+      assetId: stockAsset.id, date: "2026-09-10", id: "imported", pricePerUnit: 100, quantity: 2, totalValue: 200, type: "buy",
+      importProvenance: { fees: 10, importBatchId: "batch", originalRowNumber: 1, sourceFormat: "zerodha-tradebook",
+        sourceVersion: "1", taxes: 5 },
+    });
+
+    const { result } = await renderHook(() => useDashboard({ now, store }));
+
+    expect(result.current.monthlyMetrics.investment).toBe(215);
+  });
 });
