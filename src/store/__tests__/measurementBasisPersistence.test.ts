@@ -133,7 +133,7 @@ describe("PPF entries paid from or into Cash (D11)", () => {
   it("keeps the Cash-to-PPF move out of monthly performance flows", () => {
     const { store } = harness();
     store.getState().addPpfLedgerEntry(ppfDeposit());
-    const basis = buildMonthlyPerformanceBasis({ cashEntries: store.getState().cashEntries, openingPositions: [],
+    const basis = buildMonthlyPerformanceBasis({ cashEntries: store.getState().cashEntries, distributions: [], openingPositions: [], trades: [],
       ppfLedgerEntries: store.getState().ppfLedgerEntries, targetMonth: "2026-02" });
     expect(basis).toMatchObject({ status: "complete", netExternalFlow: 0 });
   });
