@@ -244,6 +244,7 @@ describe("HoldingsScreen", () => {
     expect(onAddTrade).not.toHaveBeenCalled();
   });
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
@@ -260,14 +261,15 @@ describe("HoldingsScreen", () => {
     expect(fourScreen.getAllByTestId(/^holding-row-/)).toHaveLength(1);
 
     await fourScreen.unmount();
+    // Fake timers hold the next batch until the test releases it. On real
+    // timers a slow runner could fire it before the first check (#686).
+    jest.useFakeTimers();
     const thirtyScreen = await render(
       <HoldingsScreen store={seedListHoldings(30)} />,
     );
     // The first commit renders one batch; the rest arrive in the next task (#138).
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(24);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await act(() => jest.advanceTimersByTime(0));
     expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
     await fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),
