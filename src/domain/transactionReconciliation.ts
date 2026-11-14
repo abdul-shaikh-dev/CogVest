@@ -89,6 +89,8 @@ export function reconcileTransactions({
     const acquisition = getTradeCostBasisAcquisition(transaction);
     if (acquisition) {
       quantity = quantity.plus(acquisition.quantity);
+      // Imported charges are left out: baselines come from broker holdings
+      // statements, whose average cost excludes them (#649).
       totalCost = totalCost.plus(
         decimal(acquisition.quantity)
           .times(acquisition.pricePerUnit)

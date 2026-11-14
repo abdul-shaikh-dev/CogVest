@@ -3,6 +3,7 @@ import { decimal, sumFinancialValues } from "./precision";
 import { distributionNetAmount } from "./distributions";
 import type { EpfLedger } from "./epf/model";
 import { positionEvents, splitQuantity } from "./stockSplits";
+import { getTradeNetAmount } from "./transactionSemantics";
 import type { UsdmFuturesAccount } from "./usdmFutures";
 import {
   epfXirrFlows, futuresXirrFlows, ppfXirrFlows,
@@ -94,9 +95,7 @@ function isDemergerMember(asset: Asset, assets: readonly Asset[]) {
 
 /** D4: manual totals include the fee; imported totals are gross with fees and taxes in provenance. */
 export function tradeFlow(trade: Trade & { type: "buy" | "sell" }) {
-  const provenance = trade.importProvenance;
-  const charges = provenance ? decimal(provenance.fees ?? 0).plus(provenance.taxes ?? 0) : decimal(0);
-  const net = trade.type === "buy" ? decimal(trade.totalValue).plus(charges) : decimal(trade.totalValue).minus(charges);
+  const net = getTradeNetAmount(trade);
   return trade.type === "buy" ? net.negated() : net;
 }
 

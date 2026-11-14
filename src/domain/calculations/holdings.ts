@@ -32,6 +32,7 @@ import {
 } from "@/src/domain/openingPositions";
 import {
   getTradeCostBasisAcquisition,
+  getTradeNetAmount,
   getTradeQuantityDelta,
   isTradeCashPurchase,
 } from "@/src/domain/transactionSemantics";
@@ -201,7 +202,8 @@ export function calculatePositionAccounting({
       const existingCost = totalUnits.times(averageCostPrice);
       const acquisitionCost = decimal(acquisition.pricePerUnit)
         .times(acquisition.quantity)
-        .plus(acquisition.fees);
+        .plus(acquisition.fees)
+        .plus(acquisition.importedCharges);
       const nextUnits = totalUnits.plus(acquisition.quantity);
 
       averageCostPrice = nextUnits.greaterThan(0)
@@ -231,9 +233,9 @@ export function calculatePositionAccounting({
       chronologyKnown = false;
     }
     if (event.trade.type === "sell") {
-      // The saved total is net of sale fees; purchase fees are already in basis.
+      // Net of every sale charge; purchase charges are already in basis.
       saleGains[event.trade.id] = basisKnown
-        ? normalizeMoney(decimal(event.trade.totalValue).minus(
+        ? normalizeMoney(getTradeNetAmount(event.trade).minus(
             averageCostPrice.times(event.trade.quantity),
           ))
         : null;

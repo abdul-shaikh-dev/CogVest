@@ -1,3 +1,4 @@
+import { decimal } from "@/src/domain/precision";
 import {
   getTradeCostBasisAcquisition,
   getTradeQuantityDelta,
@@ -61,11 +62,13 @@ describe("transaction semantics", () => {
     expect(isTradeCashPurchase(costedTransfer)).toBe(false);
     expect(getTradeCostBasisAcquisition(buy)).toEqual({
       fees: 10,
+      importedCharges: decimal(0),
       pricePerUnit: 100,
       quantity: 2,
     });
     expect(getTradeCostBasisAcquisition(costedTransfer)).toEqual({
       fees: 0,
+      importedCharges: decimal(0),
       pricePerUnit: 150,
       quantity: 2,
     });
