@@ -120,6 +120,71 @@ function plan(input: {
   });
 }
 
+describe("re-importing trades that gained an external_id (#650)", () => {
+  const row = (input: { externalId?: string; quantity?: string; price?: string; notes?: string }) => resolution(csvRow({
+    date: "2025-04-01", price: input.price ?? "100", quantity: input.quantity ?? "2", type: "buy",
+    ...(input.externalId ? { externalId: input.externalId } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+  }));
+  const importedWithoutIds = (resolutions: TransactionCsvResolution[]) => {
+    const first = plan({ mode: "supplemental", resolutions, sharedCutover: "2025-03-01" });
+    expect(first.errors).toEqual([]);
+    return first.command!.transactions;
+  };
+
+  it("skips trades imported earlier without an external_id instead of adding them again", () => {
+    const existing = importedWithoutIds([row({})]);
+
+    const again = plan({ mode: "supplemental", resolutions: [row({ externalId: "order-1" })],
+      sharedCutover: "2025-03-01", trades: existing });
+
+    expect(again.errors).toEqual([]);
+    expect(again.duplicates).toBe(1);
+    expect(again.command).toBeUndefined();
+  });
+
+  it("still adds a second identical trade with its own external_id", () => {
+    const existing = importedWithoutIds([row({})]);
+
+    const again = plan({ mode: "supplemental", resolutions: [row({ externalId: "order-1" }), row({ externalId: "order-2" })],
+      sharedCutover: "2025-03-01", trades: existing });
+
+    expect(again.errors).toEqual([]);
+    expect(again.duplicates).toBe(1);
+    expect(again.command?.transactions).toHaveLength(1);
+  });
+
+  it("blocks a row that matches the earlier trade but changes its other details", () => {
+    const existing = importedWithoutIds([row({})]);
+
+    const again = plan({ mode: "supplemental", resolutions: [row({ externalId: "order-1", notes: "Changed" })],
+      sharedCutover: "2025-03-01", trades: existing });
+
+    expect(again.conflicts).toBe(1);
+    expect(again.errors).toEqual([expect.objectContaining({ code: "conflictingIdentity" })]);
+    expect(again.command).toBeUndefined();
+  });
+
+  it("still adds genuinely new trades", () => {
+    const existing = importedWithoutIds([row({})]);
+
+    const again = plan({ mode: "supplemental", resolutions: [row({ externalId: "order-9", quantity: "5" })],
+      sharedCutover: "2025-03-01", trades: existing });
+
+    expect(again.errors).toEqual([]);
+    expect(again.command?.transactions).toHaveLength(1);
+  });
+
+  it("keeps the reverse order a duplicate: imported with an external_id, then without", () => {
+    const existing = importedWithoutIds([row({ externalId: "order-1" })]);
+
+    const again = plan({ mode: "supplemental", resolutions: [row({})], sharedCutover: "2025-03-01", trades: existing });
+
+    expect(again.command).toBeUndefined();
+    expect(again.duplicates + again.conflicts).toBe(1);
+  });
+});
+
 describe("transaction import planner", () => {
   it("keeps distinct executions when reliable external IDs differ", () => {
     const first = resolution(
