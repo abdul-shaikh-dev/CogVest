@@ -8,6 +8,7 @@ import { useStyles } from "./dashboardStyles";
 /** Reasons fixed on the return start screen. */
 const startReasons = new Set<XirrBlocker["reason"]>([
   "no-measurement-basis", "basis-needs-reconfirming", "records-before-start", "opening-after-start", "trade-funding-unknown",
+  "futures-before-automatic-start",
 ]);
 /** Reasons fixed on a holding's payouts screen. */
 const payoutReasons = new Set<XirrBlocker["reason"]>(["distributions-not-recorded", "payout-before-purchase"]);
