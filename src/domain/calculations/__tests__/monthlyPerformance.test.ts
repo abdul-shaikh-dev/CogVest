@@ -3,9 +3,13 @@ import {
   calculateMonthlyPerformance,
 } from "@/src/domain/calculations/monthlyPerformance";
 import type {
+  BuyTrade,
   CashEntry,
+  Distribution,
   MonthlySnapshot,
   OpeningPosition,
+  SellTrade,
+  Trade,
 } from "@/src/types";
 
 function cashEntry(
@@ -41,7 +45,7 @@ function snapshot(
 
 describe("buildMonthlyPerformanceBasis", () => {
   it.each(["addition", "withdrawal"] as const)("treats EPF %s as crossing the current EPF-excluded history scope", (type) => {
-    const basis = buildMonthlyPerformanceBasis({ cashEntries: [cashEntry({ amount: 1000, type, purpose: "epfTransfer",
+    const basis = buildMonthlyPerformanceBasis({ distributions: [], trades: [], cashEntries: [cashEntry({ amount: 1000, type, purpose: "epfTransfer",
       date: "2026-05-16", linkedEpf: { accountId: "epf", eventId: "event" } })], openingPositions: [], targetMonth: "2026-05" });
     expect(basis).toMatchObject({ status: "complete", netExternalFlow: type === "addition" ? 1000 : -1000 });
   });
@@ -49,7 +53,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     ["withdrawal", 9010, 20000, 10990, -9010],
     ["addition", 1795, 10990, 12785, 1795],
   ] as const)("classifies a linked Futures %s as crossing the historical boundary", (type, amount, before, after, flow) => {
-    const basis = buildMonthlyPerformanceBasis({
+    const basis = buildMonthlyPerformanceBasis({ distributions: [], trades: [],
       cashEntries: [cashEntry({
         amount, type, purpose: "futuresTransfer", date: "2026-05-16",
         linkedFutures: { accountId: "wallet", eventId: "transfer" },
@@ -62,7 +66,7 @@ describe("buildMonthlyPerformanceBasis", () => {
   });
 
   it("does not assume a detached Futures Cash leg has verified flow semantics", () => {
-    expect(buildMonthlyPerformanceBasis({
+    expect(buildMonthlyPerformanceBasis({ distributions: [], trades: [],
       cashEntries: [cashEntry({ purpose: "futuresTransfer", type: "withdrawal" })],
       openingPositions: [], targetMonth: "2026-05",
     })).toMatchObject({ reason: "ambiguous-cash-flow", status: "unavailable" });
@@ -73,14 +77,14 @@ describe("buildMonthlyPerformanceBasis", () => {
       date: "2026-06-01", amount: 9000, purpose: "futuresTransfer", type: "withdrawal",
       linkedFutures: { accountId: "wallet", eventId: "2026-05-31T20:30:00Z" },
     });
-    expect(buildMonthlyPerformanceBasis({ cashEntries: [entry], openingPositions: [], targetMonth: "2026-05" }))
+    expect(buildMonthlyPerformanceBasis({ distributions: [], trades: [], cashEntries: [entry], openingPositions: [], targetMonth: "2026-05" }))
       .toMatchObject({ netExternalFlow: 0 });
-    expect(buildMonthlyPerformanceBasis({ cashEntries: [entry], openingPositions: [], targetMonth: "2026-06" }))
+    expect(buildMonthlyPerformanceBasis({ distributions: [], trades: [], cashEntries: [entry], openingPositions: [], targetMonth: "2026-06" }))
       .toMatchObject({ netExternalFlow: -9000, weightedExternalFlow: -9000 });
   });
 
   it("counts typed external inflows and withdrawals but ignores linked trades", () => {
-    const basis = buildMonthlyPerformanceBasis({
+    const basis = buildMonthlyPerformanceBasis({ distributions: [], trades: [],
       cashEntries: [
         cashEntry({ purpose: "capitalContribution", type: "addition" }),
         cashEntry({
@@ -92,12 +96,14 @@ describe("buildMonthlyPerformanceBasis", () => {
         cashEntry({
           amount: 80000,
           id: "buy",
+          linkedTradeId: "trade-buy",
           purpose: "purchaseFunding",
           type: "withdrawal",
         }),
         cashEntry({
           amount: 30000,
           id: "sale",
+          linkedTradeId: "trade-sale",
           purpose: "saleProceeds",
           type: "addition",
         }),
@@ -130,7 +136,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     };
 
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [],
         openingPositions: [openingPosition],
         targetMonth: "2026-05",
@@ -153,7 +159,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     };
 
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [],
         openingPositions: [openingPosition],
         targetMonth: "2026-05",
@@ -163,7 +169,7 @@ describe("buildMonthlyPerformanceBasis", () => {
       status: "complete",
     });
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [],
         openingPositions: [openingPosition],
         targetMonth: "2020-01",
@@ -184,7 +190,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     };
 
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [],
         openingPositions: [openingPosition],
         targetMonth: "2026-05",
@@ -197,7 +203,7 @@ describe("buildMonthlyPerformanceBasis", () => {
 
   it("weights intramonth external flow by its time in the portfolio", () => {
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [
           cashEntry({
             amount: 31000,
@@ -227,7 +233,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     }));
 
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [],
         openingPositions: positions,
         targetMonth: "2026-05",
@@ -242,7 +248,7 @@ describe("buildMonthlyPerformanceBasis", () => {
 
   it("marks legacy or inconsistent cash semantics unavailable", () => {
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [
           cashEntry({
             purpose: "legacyUncategorized",
@@ -258,7 +264,7 @@ describe("buildMonthlyPerformanceBasis", () => {
     });
 
     expect(
-      buildMonthlyPerformanceBasis({
+      buildMonthlyPerformanceBasis({ distributions: [], trades: [],
         cashEntries: [
           cashEntry({
             purpose: "capitalContribution",
@@ -400,5 +406,77 @@ describe("calculateMonthlyPerformance", () => {
       reason: "ambiguous-cash-flow",
       status: "unavailable",
     });
+  });
+});
+
+describe("trades without a Cash entry (#647)", () => {
+  const buy = (overrides: Partial<BuyTrade> = {}): BuyTrade => ({
+    assetId: "asset", date: "2026-02-10", id: "buy", pricePerUnit: 100, quantity: 100,
+    totalValue: 10000, type: "buy", ...overrides,
+  });
+  const basisFor = (input: Partial<Parameters<typeof buildMonthlyPerformanceBasis>[0]>) =>
+    buildMonthlyPerformanceBasis({
+      cashEntries: [], distributions: [], openingPositions: [], targetMonth: "2026-02", trades: [], ...input,
+    });
+
+  it("counts an imported buy as money from outside, so market change is zero", () => {
+    // January ₹5,000; ₹10,000 of buys imported in February; February ₹15,000.
+    const basis = basisFor({ trades: [buy()] });
+
+    expect(basis).toMatchObject({ netExternalFlow: 10000, status: "complete" });
+    expect(calculateMonthlyPerformance(snapshot("2026-01", 5000), snapshot("2026-02", 15000, basis)))
+      .toMatchObject({ marketMovement: 0, marketMovementPct: 0, status: "available" });
+  });
+
+  it("does not count a Cash-funded buy twice", () => {
+    const basis = basisFor({
+      cashEntries: [cashEntry({ amount: 10000, date: "2026-02-10", id: "pay", linkedTradeId: "buy",
+        purpose: "purchaseFunding", type: "withdrawal" })],
+      trades: [buy()],
+    });
+
+    expect(basis).toMatchObject({ netExternalFlow: 0, status: "complete" });
+  });
+
+  it("nets an unlinked buy against its unlinked Cash payment, as whole-portfolio XIRR does", () => {
+    const basis = basisFor({
+      cashEntries: [cashEntry({ amount: 10000, date: "2026-02-10", id: "pay",
+        purpose: "purchaseFunding", type: "withdrawal" })],
+      trades: [buy()],
+    });
+
+    expect(basis).toMatchObject({ netExternalFlow: 0, status: "complete" });
+  });
+
+  it("counts a sale paid outside as money leaving, net of imported charges", () => {
+    const sale: SellTrade = {
+      ...buy(), id: "sale", totalValue: 4000, type: "sell",
+      importProvenance: { fees: 15, importBatchId: "batch", originalRowNumber: 2, sourceFormat: "csv",
+        sourceVersion: "1", taxes: 5 },
+    };
+
+    expect(basisFor({ trades: [buy({ importProvenance: sale.importProvenance }), sale] }))
+      .toMatchObject({ netExternalFlow: 10020 - 3980, status: "complete" });
+  });
+
+  it("does not count a buy funded by a reinvested payout", () => {
+    const payout: Distribution = {
+      assetId: "asset", grossAmount: 10000, id: "payout", linkedTradeId: "buy", paidOn: "2026-02-10",
+      recordedAt: "2026-02-10T10:00:00.000Z", taxWithheld: 0, treatment: "reinvested",
+    };
+
+    expect(basisFor({ distributions: [payout], trades: [buy()] }))
+      .toMatchObject({ netExternalFlow: 0, status: "complete" });
+  });
+
+  it("ignores trades from other months", () => {
+    expect(basisFor({ trades: [buy({ date: "2026-01-31" }), buy({ date: "2026-03-01", id: "march" })] }))
+      .toMatchObject({ netExternalFlow: 0, status: "complete" });
+  });
+
+  it("marks the month unavailable when a holding is transferred in or out", () => {
+    const transfer: Trade = { assetId: "asset", date: "2026-02-10", id: "transfer", quantity: 5, type: "transferIn" };
+
+    expect(basisFor({ trades: [transfer] })).toMatchObject({ reason: "ambiguous-cash-flow", status: "unavailable" });
   });
 });

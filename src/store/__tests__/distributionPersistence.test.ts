@@ -199,7 +199,8 @@ describe("payout records", () => {
   it("treats payout Cash as return earned, not new money, in monthly Progress", () => {
     const { store } = harness();
     store.getState().saveDistribution(payout());
-    const basis = buildMonthlyPerformanceBasis({ cashEntries: store.getState().cashEntries, openingPositions: [], targetMonth: "2026-06" });
+    const basis = buildMonthlyPerformanceBasis({ cashEntries: store.getState().cashEntries,
+      distributions: store.getState().distributions, openingPositions: [], targetMonth: "2026-06", trades: store.getState().trades });
     expect(basis).toMatchObject({ status: "complete", netExternalFlow: 0 });
   });
 });

@@ -141,6 +141,7 @@ export async function runMonthEndSnapshotAutomation({
     const result = buildGeneratedMonthEndSnapshot({
       assets: refreshedState.assets,
       cashEntries: refreshedState.cashEntries,
+      distributions: refreshedState.distributions,
       existingSnapshots: refreshedState.monthlySnapshots,
       historicalQuotes: refreshedState.historicalQuoteCache,
       now,

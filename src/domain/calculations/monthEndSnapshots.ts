@@ -10,6 +10,7 @@ import type {
   PpfAccount,
   PpfLedgerEntry,
   QuoteCache,
+  Distribution,
   Trade,
 } from "@/src/types";
 import {
@@ -57,9 +58,30 @@ export type GeneratedSnapshotStatus =
   | "created"
   | "insufficient-data";
 
+/** Trades a month-end snapshot values: supported assets after any opening cutover. */
+function getSnapshotScopedTrades(
+  trades: Trade[],
+  supportedAssetIds: ReadonlySet<string>,
+  scopedOpeningPositions: OpeningPosition[],
+  monthEnd: Date,
+): Trade[] {
+  return trades.filter(
+    (trade) =>
+      supportedAssetIds.has(trade.assetId) &&
+      isOnOrBefore(trade.date, monthEnd) &&
+      isTransactionAfterOpeningCutover(
+        trade.date,
+        scopedOpeningPositions.filter(
+          (position) => position.assetId === trade.assetId,
+        ),
+      ),
+  );
+}
+
 export function refreshFuturesCashSnapshotHistory({
   assets,
   cashEntries,
+  distributions = [],
   earliestAffectedMonth = cashEntries
     .filter((entry) => (entry.purpose === "futuresTransfer" && entry.linkedFutures) ||
       (entry.purpose === "epfTransfer" && entry.linkedEpf))
@@ -68,8 +90,9 @@ export function refreshFuturesCashSnapshotHistory({
   openingPositions,
   ppfAccounts = [],
   ppfLedgerEntries = [],
+  trades,
 }: Pick<BuildGeneratedMonthEndSnapshotInput,
-  "assets" | "cashEntries" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries"
+  "assets" | "cashEntries" | "distributions" | "openingPositions" | "ppfAccounts" | "ppfLedgerEntries" | "trades"
 > & { earliestAffectedMonth?: string; monthlySnapshots: MonthlySnapshot[] }): MonthlySnapshot[] {
   if (!earliestAffectedMonth) return monthlySnapshots;
   let changed = false;
@@ -85,13 +108,16 @@ export function refreshFuturesCashSnapshotHistory({
     const supportedAssetIds = new Set(assets
       .filter((asset) => isV1SupportedAsset(asset) && !linkedLegacyAssetIds.has(asset.id))
       .map((asset) => asset.id));
+    const scopedOpeningPositions = openingPositions.filter((position) =>
+      supportedAssetIds.has(position.assetId) &&
+      isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd));
     const performanceBasis = buildMonthlyPerformanceBasis({
       cashEntries: cashEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
-      openingPositions: openingPositions.filter((position) =>
-        supportedAssetIds.has(position.assetId) &&
-        isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd)),
+      distributions,
+      openingPositions: scopedOpeningPositions,
       ppfLedgerEntries: ppfLedgerEntries.filter((entry) => isOnOrBefore(entry.date, monthEnd)),
       targetMonth: snapshot.month,
+      trades: getSnapshotScopedTrades(trades, supportedAssetIds, scopedOpeningPositions, monthEnd),
     });
     // Cash can be refreshed without selecting new market prices. Keep every
     // saved price, confidence label, ID and manual valuation exactly as recorded.
@@ -120,6 +146,8 @@ export type GeneratedMonthEndSnapshotResult = {
 export type BuildGeneratedMonthEndSnapshotInput = {
   assets: Asset[];
   cashEntries: CashEntry[];
+  /** Reinvested payouts fund their buys from inside the portfolio (#647). */
+  distributions?: Distribution[];
   existingSnapshots: MonthlySnapshot[];
   historicalQuotes: HistoricalQuoteCache;
   now: Date;
@@ -578,6 +606,7 @@ export function getMissingCompletedSnapshotMonths({
 export function buildGeneratedMonthEndSnapshot({
   assets,
   cashEntries,
+  distributions = [],
   existingSnapshots,
   historicalQuotes,
   now,
@@ -679,16 +708,11 @@ export function buildGeneratedMonthEndSnapshot({
       supportedAssetIds.has(position.assetId) &&
       isOnOrBefore(getOpeningPositionHistoryDate(position) ?? "", monthEnd),
   );
-  const monthTrades = trades.filter(
-    (trade) =>
-      supportedAssetIds.has(trade.assetId) &&
-      isOnOrBefore(trade.date, monthEnd) &&
-      isTransactionAfterOpeningCutover(
-        trade.date,
-        monthOpeningPositions.filter(
-          (position) => position.assetId === trade.assetId,
-        ),
-      ),
+  const monthTrades = getSnapshotScopedTrades(
+    trades,
+    supportedAssetIds,
+    monthOpeningPositions,
+    monthEnd,
   );
   const monthCashEntries = cashEntries.filter((entry) =>
     isOnOrBefore(entry.date, monthEnd),
@@ -974,11 +998,13 @@ export function buildGeneratedMonthEndSnapshot({
     ),
     performanceBasis: buildMonthlyPerformanceBasis({
       cashEntries: monthCashEntries,
+      distributions,
       openingPositions: monthOpeningPositions,
       ppfLedgerEntries: ppfLedgerEntries.filter((entry) =>
         isOnOrBefore(entry.date, monthEnd),
       ),
       targetMonth,
+      trades: monthTrades,
     }),
     portfolioValue,
   };

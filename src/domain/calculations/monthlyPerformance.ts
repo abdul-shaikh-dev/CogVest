@@ -1,9 +1,11 @@
 import type {
   CashEntry,
+  Distribution,
   MonthlyPerformanceBasis,
   MonthlySnapshot,
   OpeningPosition,
   PpfLedgerEntry,
+  Trade,
 } from "@/src/types";
 import {
   decimal,
@@ -13,6 +15,7 @@ import {
   sumFinancialValues,
 } from "@/src/domain/precision";
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
+import { tradeFlow } from "@/src/domain/xirrInputs";
 
 export type MonthlyPerformanceUnavailableReason =
   | "ambiguous-cash-flow"
@@ -82,6 +85,18 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
     };
   }
 
+  // An unlinked trade payment counts as money crossing the edge, matching
+  // whole-portfolio XIRR: it cancels its unlinked trade, which counts as money
+  // from outside, so nothing is doubled (#647).
+  if (!entry.linkedTradeId &&
+      ((entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
+       (entry.type === "addition" && entry.purpose === "saleProceeds"))) {
+    return {
+      amount: entry.type === "addition" ? decimal(entry.amount) : decimal(entry.amount).negated(),
+      date: entry.date,
+    };
+  }
+
   // A payout into Cash is return earned inside the portfolio, not new money.
   if (
     (entry.type === "withdrawal" && entry.purpose === "purchaseFunding") ||
@@ -97,14 +112,20 @@ function classifyCashEntry(entry: CashEntry): ExternalFlow | "ambiguous" | null 
 
 export function buildMonthlyPerformanceBasis({
   cashEntries,
+  distributions,
   openingPositions,
   ppfLedgerEntries = [],
   targetMonth,
+  trades,
 }: {
   cashEntries: CashEntry[];
+  /** Reinvested payouts fund their linked buy from inside the portfolio. */
+  distributions: Distribution[];
   openingPositions: OpeningPosition[];
   ppfLedgerEntries?: PpfLedgerEntry[];
   targetMonth: string;
+  /** Trades in this report's scope: supported assets after any opening cutover. */
+  trades: Trade[];
 }): MonthlyPerformanceBasis {
   const externalFlows: ExternalFlow[] = [];
   let hasAmbiguousCashFlow = false;
@@ -129,6 +150,29 @@ export function buildMonthlyPerformanceBasis({
         "Monthly performance is unavailable because at least one cash flow has unknown semantics.",
       ],
     };
+  }
+
+  const monthTrades = trades.filter((trade) => isWithinMonth(trade.date, targetMonth));
+  if (monthTrades.some((trade) => trade.type === "transferIn" || trade.type === "transferOut")) {
+    return {
+      reason: "ambiguous-cash-flow",
+      status: "unavailable",
+      warnings: [
+        "Monthly performance is unavailable because a holding was transferred in or out without a market value.",
+      ],
+    };
+  }
+
+  // A trade without a Cash leg was paid from, or paid into, money outside
+  // CogVest, as whole-portfolio XIRR treats it (#647).
+  const cashLinkedTradeIds = new Set(cashEntries.map((entry) => entry.linkedTradeId).filter(Boolean));
+  const reinvestedBuyIds = new Set(distributions
+    .filter((distribution) => distribution.treatment === "reinvested")
+    .map((distribution) => distribution.linkedTradeId));
+  for (const trade of monthTrades) {
+    if (trade.type !== "buy" && trade.type !== "sell") continue;
+    if (cashLinkedTradeIds.has(trade.id) || reinvestedBuyIds.has(trade.id)) continue;
+    externalFlows.push({ amount: tradeFlow(trade).negated(), date: trade.date });
   }
 
   const monthPpfEntries = ppfLedgerEntries.filter((entry) =>

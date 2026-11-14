@@ -1221,8 +1221,10 @@ describe("buildGeneratedMonthEndSnapshot", () => {
     expect(result.snapshot?.cashValue).toBe(1250);
     expect(result.snapshot?.investedValue).toBeCloseTo(52386.666666666664);
     expect(result.snapshot?.portfolioValue).toBe(65500);
+    // The July buy (240) and sale (130) have no Cash leg, so they are money
+    // from and to outside CogVest (#647).
     expect(result.snapshot?.performanceBasis).toMatchObject({
-      netExternalFlow: 52500,
+      netExternalFlow: 52610,
       status: "complete",
     });
     expect(result.snapshot).not.toHaveProperty("salary");

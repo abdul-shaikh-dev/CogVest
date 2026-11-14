@@ -327,6 +327,7 @@ export function rebuildPortfolioSnapshots({
     const result = buildGeneratedMonthEndSnapshot({
       assets: nextAssets,
       cashEntries: nextCashEntries,
+      distributions: state.distributions,
       existingSnapshots: monthlySnapshots,
       historicalQuotes: state.historicalQuoteCache,
       now,
