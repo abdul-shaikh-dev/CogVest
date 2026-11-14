@@ -167,7 +167,10 @@ All domain calculations must be pure functions under `src/domain/`.
   Government of India rate periods and the statutory fifth-day/month-end
   balance rule only when sufficient ledger history exists. It never enters
   Dashboard, Holdings, allocation, or monthly snapshots until recorded as an
-  official interest credit.
+  official interest credit. It accrues from the latest official checkpoint
+  (starting balance, interest credit, or reconciliation), even mid-year, because
+  earlier monthly balances are unknown. Past the latest notified rate it shows
+  the estimate through that month and says the next rate is not yet notified.
 - The annual contribution minimum, maximum, and multiples-of-₹50 rules are
   presented as tracked context. Existing valid records are not silently changed.
 - Maturity follows the 15-year scheme lifecycle. Contribution extensions use

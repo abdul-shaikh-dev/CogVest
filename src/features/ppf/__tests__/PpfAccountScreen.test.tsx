@@ -257,6 +257,28 @@ describe("PpfAccountScreen", () => {
     expect(queryByText("Through 15 Aug 2026")).toBeNull();
   });
 
+  it("shows the estimate through the last notified rate, and says the next rate is not yet notified (#652)", async () => {
+    const later = new Date("2027-02-10T10:00:00.000Z");
+    const store = createPortfolioStore({ now: () => later, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount({ ...account, balanceAsOf: "2026-09-30" });
+
+    const { getByTestId, getByText } = await render(
+      <PpfAccountScreen
+        accountId={account.id}
+        now={later}
+        onBack={jest.fn()}
+        onComplete={jest.fn()}
+        onEntry={jest.fn()}
+        store={store}
+      />,
+    );
+
+    expect(getByText("₹1,775.00")).toBeTruthy();
+    expect(getByTestId("ppf-estimate-period")).toHaveTextContent(
+      /^30 Sept? 2026 to 31 Dec 2026 • Rate from January 2027 not yet notified$/,
+    );
+  });
+
   it("keeps unavailable estimated interest readable while masking wealth", async () => {
     const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });

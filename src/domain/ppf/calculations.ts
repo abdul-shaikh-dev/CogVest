@@ -158,12 +158,28 @@ export type PpfInterestEstimate =
       status: "available";
     }
   | {
+      /** Interest through the last month with a notified rate. */
+      amount: number;
+      estimatedFrom: string;
+      estimatedThrough: string;
+      /** The first month whose official rate is not yet in the schedule. */
       missingMonth: string;
-      reason: "rate-unavailable";
+      reason: "rate-not-notified";
       scheduleVersion: string;
-      status: "unavailable";
+      status: "partial";
     };
 
+/**
+ * Estimates interest earned since the latest official checkpoint (the confirmed
+ * starting balance, an interest credit or a reconciliation), month by month at
+ * the notified rate, stopping before the first month without one.
+ *
+ * Accrual deliberately starts at that checkpoint, even mid-year (#652). Before a
+ * starting balance there is no ledger, so the monthly balances that interest
+ * would be earned on are unknown; and a reconciled balance may already include
+ * interest the provider has posted. The financial year's interest before the
+ * checkpoint therefore appears only when the March credit is recorded.
+ */
 export function estimatePpfInterest({
   account,
   asOf,
@@ -189,10 +205,13 @@ export function estimatePpfInterest({
     const rate = findPpfInterestRate(monthDate, schedule);
     if (!rate) {
       return {
+        amount: normalizeMoney(total + annualAccrued),
+        estimatedFrom: anchor,
+        estimatedThrough,
         missingMonth: monthDate.slice(0, 7),
-        reason: "rate-unavailable",
+        reason: "rate-not-notified",
         scheduleVersion: ppfInterestRateScheduleVersion,
-        status: "unavailable",
+        status: "partial",
       };
     }
 
