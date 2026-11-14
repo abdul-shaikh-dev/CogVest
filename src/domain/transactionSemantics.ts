@@ -7,12 +7,40 @@ import type {
 } from "@/src/types";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { decimal, type FinancialDecimalInstance } from "@/src/domain/precision";
 
 export type CostBasisAcquisition = {
   fees: number;
+  /**
+   * Charges an import recorded beside its gross total. They belong in the
+   * holding's cost, but not in import reconciliation, whose baselines come from
+   * broker holdings statements that exclude charges (#649).
+   */
+  importedCharges: FinancialDecimalInstance;
   pricePerUnit: number;
   quantity: number;
 };
+
+/**
+ * Fees and taxes an import kept in its provenance (#649). An imported trade's
+ * `totalValue` is gross (quantity × price); a manual trade has none of these
+ * and keeps its fees in `fees`, already inside `totalValue`.
+ */
+export function getImportedTradeCharges(trade: Trade): FinancialDecimalInstance {
+  const provenance = trade.importProvenance;
+  return provenance ? decimal(provenance.fees ?? 0).plus(provenance.taxes ?? 0) : decimal(0);
+}
+
+/**
+ * What a buy cost or a sale returned after every charge. Shared by holding
+ * cost, realised gain and XIRR so they cannot disagree (#649).
+ */
+export function getTradeNetAmount(trade: BuyTrade | SellTrade): FinancialDecimalInstance {
+  const charges = getImportedTradeCharges(trade);
+  return trade.type === "buy"
+    ? decimal(trade.totalValue).plus(charges)
+    : decimal(trade.totalValue).minus(charges);
+}
 
 export function isManualTrade(trade: Trade): trade is BuyTrade | SellTrade {
   return trade.type === "buy" || trade.type === "sell";
@@ -92,6 +120,7 @@ export function getTradeCostBasisAcquisition(
   if (trade.type === "buy") {
     return {
       fees: trade.fees ?? 0,
+      importedCharges: getImportedTradeCharges(trade),
       pricePerUnit: trade.pricePerUnit,
       quantity: trade.quantity,
     };
@@ -103,6 +132,7 @@ export function getTradeCostBasisAcquisition(
   ) {
     return {
       fees: 0,
+      importedCharges: decimal(0),
       pricePerUnit: trade.acquisitionCostPerUnit,
       quantity: trade.quantity,
     };
