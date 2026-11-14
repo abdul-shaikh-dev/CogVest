@@ -69,7 +69,7 @@ describe("CashScreen", () => {
     expect(screen.getByText("December 2025")).toBeTruthy();
     expect(screen.getByLabelText("08 Jan 2026")).toBeTruthy();
     expect(screen.getByText("-₹100.00")).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal."));
+    await fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal. -₹100.00."));
     expect(onCorrectEntry).toHaveBeenCalledWith("jan-late");
   });
   it("uses a neutral label when the optional label is blank", async () => {
@@ -556,11 +556,23 @@ describe("CashScreen", () => {
     expect(
       getByText("Linked investment"),
     ).toBeTruthy();
-    await fireEvent.press(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit."));
-    await fireEvent.press(getByLabelText("Review Investment purchase. 02 May 2026. Investment purchase."));
+    await fireEvent.press(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit. +₹1,000.00."));
+    await fireEvent.press(getByLabelText("Review Investment purchase. 02 May 2026. Investment purchase. -₹500.00."));
 
     expect(onCorrectEntry).toHaveBeenNthCalledWith(1, "cash-manual");
     expect(onCorrectEntry).toHaveBeenNthCalledWith(2, "cash-linked");
+  });
+
+  it("announces Amount hidden instead of a cash row's amount while values are masked (#656)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addCashEntry({ amount: 1000, date: "2026-05-01", id: "cash-manual", label: "Broker cash",
+      purpose: "capitalContribution", type: "addition" });
+    store.getState().updatePreferences({ maskWealthValues: true });
+
+    const { getByLabelText, queryByText } = await render(<CashScreen onCorrectEntry={jest.fn()} store={store} />);
+
+    expect(getByLabelText("Review Broker cash. 01 May 2026. Cash deposit. Amount hidden.")).toBeTruthy();
+    expect(queryByText("+₹1,000.00")).toBeNull();
   });
 
   it("keeps unclassified legacy Cash without household-income prompts", async () => {

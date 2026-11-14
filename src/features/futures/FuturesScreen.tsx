@@ -24,7 +24,7 @@ import {
   type UsdmMark,
 } from "@/src/domain/usdmFutures";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { Choice, EntryErrors, EntryField, Explainer, Money, TimeField, displayTime, type EntryTarget } from "./FuturesFields";
+import { AmountLine, Choice, EntryErrors, EntryField, Explainer, Money, TimeField, displayTime, type EntryTarget } from "./FuturesFields";
 import { useStyles } from "./futuresStyles";
 import { spacing } from "@/src/theme";
 import { createId } from "@/src/utils";
@@ -417,9 +417,19 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               <AppText>Net P&L</AppText><Money value={`₹${contribution.pnlInr}`} masked={masked} />
               <AppText>Trading and funding, net of fees</AppText><Money value={`₹${contribution.tradingPnlInr}`} masked={masked} />
               <AppText>FX, conversion costs and rounding</AppText><Money value={`₹${contribution.fxPnlInr}`} masked={masked} />
-              <AppText color="secondary">Fees {masked ? "••••" : `${replay?.feesUsdt} USDT`} · Funding {masked ? "••••" : `${replay?.fundingUsdt} USDT`} · External flows {masked ? "••••" : `${replay?.externalTransfersUsdt} USDT`}</AppText>
+              <AmountLine color="secondary" masked={masked} parts={[
+                { label: "Fees", value: `${replay?.feesUsdt} USDT` },
+                { label: "Funding", value: `${replay?.fundingUsdt} USDT` },
+                { label: "External flows", value: `${replay?.externalTransfersUsdt} USDT` },
+              ]} testID="futures-fee-flows" />
             </View> : <AppText color="secondary">Portfolio inclusion pending: {contribution?.reason ?? "Check account records."}</AppText>}
-            {replay && replay.historicalRealizedPnlUsdt !== "0" ? <AppText color="secondary">Older realized P&L: {masked ? "••••" : `${replay.historicalRealizedPnlUsdt} USDT · ${replay.historicalRealizedPnlInr === null ? "INR rate pending" : `₹${replay.historicalRealizedPnlInr}`}`} (already reflected in starting wallet, not added again)</AppText> : null}
+            {replay && replay.historicalRealizedPnlUsdt !== "0" ? <View>
+              <AmountLine color="secondary" masked={masked} parts={[
+                { label: "Older realized P&L:", value: `${replay.historicalRealizedPnlUsdt} USDT` },
+                ...(replay.historicalRealizedPnlInr === null ? [] : [{ value: `₹${replay.historicalRealizedPnlInr}` }]),
+              ]} testID="futures-older-realized" />
+              <AppText color="secondary">{replay.historicalRealizedPnlInr === null ? "INR rate pending. " : ""}Already reflected in starting wallet, not added again.</AppText>
+            </View> : null}
             <AppText color="secondary">Only verified wallet equity enters portfolio totals. Notional and margin are never added.</AppText>
           </PremiumCard>
           <PremiumCard section testID="futures-open-positions">
@@ -427,11 +437,16 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             {!openPositions.length ? <AppText color="secondary">No open positions in recorded activity.</AppText> : null}
             {openPositions.map((position) => <View key={position.contract} style={styles.row}>
               <AppText weight="bold">{position.contract} · {position.signedQuantity.startsWith("-") ? "Short" : "Long"}</AppText>
-              <AppText>Qty {masked ? "••••" : position.signedQuantity} · Entry {masked ? "••••" : position.entryPriceUsdt} USDT · {position.leverage ?? "?"}× reported</AppText>
+              <AmountLine masked={masked} parts={[
+                { label: "Qty", value: position.signedQuantity },
+                { label: "Entry", value: `${position.entryPriceUsdt} USDT` },
+              ]} />
+              <AppText>{position.leverage ?? "?"}× reported leverage</AppText>
               <View style={styles.metric}><AppText color="secondary">Notional exposure</AppText><Money masked={masked} value={position.notionalUsdt === null ? "Mark price needed" : `${position.notionalUsdt} USDT`} /></View>
               <View style={styles.metric}><AppText color="secondary">Indicative margin at mark</AppText><Money masked={masked} value={position.notionalUsdt && position.leverage ? `${decimal(position.notionalUsdt).dividedBy(position.leverage).toFixed(2)} USDT` : "Leverage and mark needed"} /></View>
-              {position.reportedMarginUsdt !== null ? <AppText>Binance-reported position margin: {masked ? "••••" : `${position.reportedMarginUsdt} USDT`}</AppText> : null}
-              <AppText>Unrealized: {masked ? "••••" : `${position.unrealizedPnlUsdt ?? "mark needed"} USDT`}</AppText>
+              {position.reportedMarginUsdt !== null ? <AmountLine masked={masked} parts={[{ label: "Binance-reported position margin:", value: `${position.reportedMarginUsdt} USDT` }]} /> : null}
+              {position.unrealizedPnlUsdt === null ? <AppText>Unrealized: mark needed</AppText>
+                : <AmountLine masked={masked} parts={[{ label: "Unrealized:", value: `${position.unrealizedPnlUsdt} USDT` }]} />}
             </View>)}
             <Explainer summary="Indicative only: not Binance maintenance margin or liquidation risk." details="It is already part of wallet funds and never added to equity." testID="futures-margin-details" />
           </PremiumCard>
@@ -440,7 +455,10 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
             <Explainer summary="Add every fill with its fee, plus funding and transfers." details="For money from recorded INR Cash, use Move Cash and USDT. An unlinked Binance Spot movement stays outside portfolio totals." testID="futures-activity-details" />
             {account.events.map((event) => <View key={event.id} style={styles.row}>
               <AppText weight="bold">{event.type === "execution" ? `${event.side.toUpperCase()} ${event.contract}` : event.type === "funding" ? `Funding ${event.contract}` : event.linkedCashEntryId ? "Linked Cash transfer" : event.transferBoundary === "internal" ? "Unlinked Spot transfer" : "External transfer"}</AppText>
-              <AppText color="secondary">{displayTime(event.at)} · {masked ? "••••" : event.type === "execution" ? `${event.quantity} @ ${event.price} USDT` : `${event.amountUsdt} USDT`}</AppText>
+              <AppText color="secondary">{displayTime(event.at)}</AppText>
+              <AmountLine color="secondary" masked={masked} parts={event.type === "execution"
+                ? [{ value: `${event.quantity} @ ${event.price} USDT` }]
+                : [{ value: `${event.amountUsdt} USDT` }]} testID={`futures-event-amount-${event.id}`} />
               <View style={styles.choices}>
                 <AppButton title="Edit" variant="secondary" onPress={() => exit.request(() => editEvent(event), false, event.type === "transfer" && event.linkedCashEntryId ? cashDirty : eventDirty)} testID={`edit-futures-${event.id}`} />
                 <Pressable accessibilityRole="button" onPress={() => confirmDeleteEvent(event.id)} style={styles.eventDelete} testID={`delete-futures-${event.id}`}><AppText style={styles.error}>Delete</AppText></Pressable>
@@ -451,7 +469,10 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               {replay.closedCycles.map((cycle) => <View key={cycle.closingExecutionId} style={styles.row}>
                 <AppText weight="bold">{cycle.contract} · {cycle.side}</AppText>
                 <AppText color="secondary">{displayTime(cycle.openedAt)} → {displayTime(cycle.closedAt)}</AppText>
-                <AppText>Gross realized: {masked ? "••••" : `${cycle.realizedPnlUsdt} USDT`} · Fees: {masked ? "••••" : `${cycle.feesUsdt} USDT`}</AppText>
+                <AmountLine masked={masked} parts={[
+                  { label: "Gross realized:", value: `${cycle.realizedPnlUsdt} USDT` },
+                  { label: "Fees:", value: `${cycle.feesUsdt} USDT` },
+                ]} />
                 {cycle.beforeWalletCutover ? <AppText color="secondary">Before starting wallet; not added again.</AppText> : null}
               </View>)}
             </> : null}

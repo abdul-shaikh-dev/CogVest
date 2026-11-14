@@ -4,6 +4,7 @@ export { AppText } from "./AppText";
 export { DisclosureButton } from "./DisclosureButton";
 export { EmptyState } from "./EmptyState";
 export {
+  MASKED_AMOUNT,
   MASKED_INR_VALUE,
   MASKED_VALUE_ACCESSIBILITY_LABEL,
   MaskedValue,

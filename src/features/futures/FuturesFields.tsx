@@ -1,8 +1,8 @@
-import { createContext, useContext, useRef, useState, type ComponentProps } from "react";
+import { createContext, Fragment, useContext, useRef, useState, type ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, type TextInputInstance, View, type ViewInstance } from "react-native";
+import { Pressable, StyleSheet, type TextInputInstance, View, type ViewInstance } from "react-native";
 
-import { AppText, DisclosureButton } from "@/src/components/common";
+import { AppText, DisclosureButton, MASKED_AMOUNT, MASKED_INR_VALUE, MASKED_VALUE_ACCESSIBILITY_LABEL, MaskedValue } from "@/src/components/common";
 import { DateTimeField, FormTextField } from "@/src/components/forms";
 import { useTheme } from "@/src/theme";
 import { useStyles } from "./futuresStyles";
@@ -35,9 +35,39 @@ export function Choice({ label, selected, onPress, testID, checkbox = false }: {
   </Pressable>;
 }
 
-export function Money({ value, masked, prominent = false }: { value: string; masked: boolean; prominent?: boolean }) {
-  return <AppText variant={prominent ? "title" : "body"} weight="bold">{masked ? "••••" : value}</AppText>;
+/** A masked Futures amount keeps its currency visible: ₹•••• or •••• USDT. */
+function maskedTextFor(value: string) {
+  if (value.startsWith("₹")) return MASKED_INR_VALUE;
+  return value.endsWith(" USDT") ? `${MASKED_AMOUNT} USDT` : MASKED_AMOUNT;
 }
+
+export function Money({ value, masked, prominent = false }: { value: string; masked: boolean; prominent?: boolean }) {
+  return <MaskedValue masked={masked} maskedText={maskedTextFor(value)} value={value} variant={prominent ? "title" : "body"} weight="bold" />;
+}
+
+/** Labelled amounts on one wrapping line, each masked on its own: "Fees 1 USDT · Funding 2 USDT". */
+export function AmountLine({ color, masked, parts, testID }: {
+  color?: "primary" | "secondary";
+  masked: boolean;
+  parts: readonly { label?: string; value: string }[];
+  testID?: string;
+}) {
+  // One element for TalkBack (and Maestro): "Qty 1 · Entry Amount hidden".
+  const label = parts
+    .map((part) => [part.label, masked ? MASKED_VALUE_ACCESSIBILITY_LABEL : part.value].filter(Boolean).join(" "))
+    .join(" · ");
+  return <View accessibilityLabel={label} accessible style={amountLineStyles.line} testID={testID}>
+    {parts.map((part, index) => <Fragment key={index}>
+      {index > 0 ? <AppText color={color}> · </AppText> : null}
+      {part.label ? <AppText color={color}>{part.label} </AppText> : null}
+      <MaskedValue color={color} masked={masked} maskedText={maskedTextFor(part.value)} value={part.value} />
+    </Fragment>)}
+  </View>;
+}
+
+const amountLineStyles = StyleSheet.create({
+  line: { flexDirection: "row", flexWrap: "wrap" },
+});
 
 export function displayTime(value: string) {
   return new Date(value).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });

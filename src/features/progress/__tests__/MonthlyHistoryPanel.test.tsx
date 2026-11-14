@@ -78,7 +78,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(screen.getByText("+₹20,000.00")).toBeTruthy();
   });
 
-  it("uses neutral zero and unavailable states, and hides comparison signs/colors when masked", async () => {
+  it("uses neutral zero and unavailable states, and keeps comparison percentages visible when masked", async () => {
     const summaries = [
       createSummary("2026-01", { portfolioValue: 100000, cashValue: 25000 }),
       createSummary("2026-02", { investedValue: 0 }),
@@ -91,11 +91,11 @@ describe("MonthlyHistoryPanel", () => {
     expect(zero).not.toHaveStyle({ color: colors.profit });
     expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("—");
     await screen.rerender(<MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />);
-    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).not.toHaveStyle({ color: colors.loss });
-    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveTextContent("••••");
+    // Settings: percentages stay visible when values are masked (#656).
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveTextContent("-55.00%");
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveStyle({ color: colors.loss });
     await fireEvent.press(screen.getByTestId("snapshot-month-2026-03"));
-    expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("••••");
-    expect(screen.queryByText("-55.00%")).toBeNull();
+    expect(screen.getByTestId("snapshot-invested-percentage")).toHaveTextContent("-55.00%");
   });
 
   it("scales portfolio value bars within the selected year independently of the invested comparison", async () => {
@@ -385,7 +385,7 @@ describe("MonthlyHistoryPanel", () => {
     expect(screen.getByText("Portfolio change includes deposits and withdrawals; it is not investment return.")).toBeTruthy();
   });
 
-  it("masks the invested percentage and its accessibility label along with the portfolio", async () => {
+  it("masks the portfolio amount but keeps the invested percentage visible and spoken", async () => {
     const screen = await render(
       <MonthlyHistoryPanel maskWealthValues minimal={false} summaries={summaries} />,
     );
@@ -393,9 +393,8 @@ describe("MonthlyHistoryPanel", () => {
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText(MASKED_INR_VALUE)).toBeTruthy();
-    expect(within(january).getByText("••••")).toBeTruthy();
-    expect(january.props.accessibilityLabel).toContain("Comparison hidden");
-    expect(january.props.accessibilityLabel).not.toContain("33.33");
+    expect(within(january).getByText("+33.33%")).toBeTruthy();
+    expect(january.props.accessibilityLabel).toContain("+33.33% versus this month's recorded invested basis");
     expect(january.props.accessibilityLabel).toContain("Portfolio hidden");
     expect(january.props.accessibilityLabel).not.toContain("₹1,10,000.00");
   });

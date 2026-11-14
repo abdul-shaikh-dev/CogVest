@@ -762,6 +762,10 @@ describe("DashboardScreen", () => {
       expect(screen.getByTestId("dashboard-performance-toggle")).toHaveProp("accessibilityState", { expanded: true });
       expect(within(screen.getByTestId("dashboard-top-metrics")).queryByText(/₹\d/)).toBeNull();
       expect(within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)).toHaveLength(2);
+      // A gain colour would reveal the hidden P&L's direction (#656).
+      for (const masked of within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)) {
+        expect(masked).toHaveStyle({ color: colors.text.primary });
+      }
     }
 
     expect(screen.queryByText("+10.00% at saved quotes")).toBeNull();

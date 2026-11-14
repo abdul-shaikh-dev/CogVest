@@ -699,6 +699,19 @@ describe("HoldingsScreen", () => {
     expect(details.getAllByText(MASKED_INR_VALUE).length).toBeGreaterThan(0);
   });
 
+  it("shows masked P&L in a neutral colour, without a sign (#656)", async () => {
+    const store = seedMixedHoldings();
+    store.getState().updatePreferences({ maskWealthValues: true });
+    const { getByTestId } = await render(<HoldingsScreen store={store} />);
+
+    const rowPnl = within(getByTestId(`holding-pnl-${asset.id}`)).getByText(MASKED_INR_VALUE);
+    expect(rowPnl).toHaveStyle({ color: colors.text.primary });
+    expect(rowPnl.props.accessibilityLabel).toBe(MASKED_VALUE_ACCESSIBILITY_LABEL);
+    await fireEvent.press(getByTestId(`holding-row-${asset.id}`));
+    expect(within(getByTestId("holding-detail-pnl")).getByText(MASKED_INR_VALUE))
+      .toHaveStyle({ color: colors.text.primary });
+  });
+
   it("shows pending valuation actions without presenting zero as current value", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onReviewOpeningPosition = jest.fn();

@@ -92,7 +92,7 @@ export function SettingsScreen({
 
         <Pressable
           accessibilityLabel="Toggle value masking"
-          accessibilityHint="Hides portfolio amounts. Quantities, percentages, and per-unit prices stay visible."
+          accessibilityHint="Hides portfolio amounts. Quantities, percentages, and per-unit prices stay visible, except Futures position details."
           accessibilityRole="switch"
           accessibilityState={{ checked: maskWealthValues }}
           onPress={() => {
@@ -112,7 +112,7 @@ export function SettingsScreen({
               Hide portfolio amounts. Preview {MASKED_INR_VALUE}
             </AppText>
             <AppText color="secondary" variant="caption">
-              Quantities, percentages, and per-unit prices stay visible.
+              Quantities, percentages, and per-unit prices stay visible, except Futures position details.
             </AppText>
           </View>
           <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, maskWealthValues && styles.switchOn]}>

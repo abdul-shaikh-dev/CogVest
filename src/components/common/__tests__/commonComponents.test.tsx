@@ -249,6 +249,20 @@ describe("common UI primitives", () => {
     expect(getByText("12.4%")).toBeTruthy();
   });
 
+  it("drops a gain or loss colour while masked, and keeps it when shown (#656)", async () => {
+    const { getByText } = await render(
+      <>
+        <MaskedValue masked style={{ color: colors.loss }} value="-₹10" />
+        <MaskedValue color="secondary" masked maskedText="•••• USDT" style={{ color: colors.profit }} value="5 USDT" />
+        <MaskedValue style={{ color: colors.loss }} value="-₹20" />
+      </>,
+    );
+
+    expect(getByText(MASKED_INR_VALUE)).toHaveStyle({ color: colors.text.primary });
+    expect(getByText("•••• USDT")).toHaveStyle({ color: colors.text.secondary });
+    expect(getByText("-₹20")).toHaveStyle({ color: colors.loss });
+  });
+
   it("exposes an exact value for compact text only while unmasked", async () => {
     const { getByLabelText, queryByLabelText, rerender } = await render(
       <MaskedValue exactValue="₹1,23,456.78" value="₹1.23L" />,

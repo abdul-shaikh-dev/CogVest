@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import {
   AppText,
+  MASKED_VALUE_ACCESSIBILITY_LABEL,
   MaskedValue,
   PremiumCard,
   androidRipple,
@@ -107,7 +108,9 @@ export function CashEntryRow({
   return (
     <Pressable
       accessibilityHint={accessibilityHint}
-      accessibilityLabel={`Review ${entry.label}. ${formatDate(entry.date)}. ${getCashEntryMovement(entry)}.`}
+      accessibilityLabel={`Review ${entry.label}. ${formatDate(entry.date)}. ${getCashEntryMovement(entry)}. ${
+        masked ? MASKED_VALUE_ACCESSIBILITY_LABEL : formatCashAmount(entry)
+      }.`}
       accessibilityRole="button"
       android_ripple={androidRipple()}
       onPress={onPress}

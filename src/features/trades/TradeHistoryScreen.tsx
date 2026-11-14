@@ -10,6 +10,9 @@ import {
   androidRipple,
   getAdaptiveLayoutMode,
   getPressedStateStyle,
+  MASKED_AMOUNT,
+  MASKED_INR_VALUE,
+  MaskedValue,
   PremiumCard,
   ScreenContainer,
   ScreenHeader,
@@ -203,8 +206,9 @@ export function TradeHistoryScreen({
                     ? "\nRealized gain unavailable: incomplete or unsupported history"
                     : `\nRealized gain ${gain >= 0 ? "+" : ""}${formatCurrency(gain, currency)} · after fees`;
                 }
+                // Masking hides amounts; quantities stay visible, as Settings says.
                 const selectionDetails = snapshot.preferences.maskWealthValues
-                  ? "values masked"
+                  ? `${trade.quantity} units, amount hidden`
                   : isManual
                     ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}, total ${currency ? formatCurrency(trade.totalValue, currency) : "unavailable"}`
                     : `${trade.quantity} units, ${
@@ -233,11 +237,16 @@ export function TradeHistoryScreen({
                           <AppText weight="bold">{asset ? title : tradeAsset?.name ?? "Unknown holding"}</AppText>
                           <AppText color="secondary" variant="caption">{asset ? "" : `${title} · `}{formatDate(trade.date)}</AppText>
                         </View>
-                        <AppText style={styles.rowValue} testID={`transaction-value-${trade.id}`} weight="bold">
-                          {snapshot.preferences.maskWealthValues ? "••••" : isManual
+                        <MaskedValue
+                          masked={snapshot.preferences.maskWealthValues && isManual && Boolean(currency)}
+                          maskedText={currency === "INR" ? MASKED_INR_VALUE : MASKED_AMOUNT}
+                          style={styles.rowValue}
+                          testID={`transaction-value-${trade.id}`}
+                          value={isManual
                             ? currency ? `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}` : "Currency unavailable"
                             : `${trade.quantity} units`}
-                        </AppText>
+                          weight="bold"
+                        />
                       </View>
                       <AppText color="secondary" variant="caption">{description}</AppText>
                     </View>
