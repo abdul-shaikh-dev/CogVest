@@ -2,6 +2,8 @@ import type { QuoteProviderInput, QuoteResult } from "./types";
 import {
   defaultNow,
   getDefaultFetcher,
+  isUsableProviderPrice,
+  providerMarketTime,
   roundQuoteNumber,
   yahooChartBaseUrl,
 } from "./utils";
@@ -13,6 +15,8 @@ type YahooChartResponse = {
         chartPreviousClose?: number;
         currency?: string;
         regularMarketPrice?: number;
+        /** Unix seconds of the last trade or close. */
+        regularMarketTime?: number;
       };
     }>;
   };
@@ -54,26 +58,35 @@ export async function fetchYahooQuote({
       };
     }
 
-    if (typeof price !== "number") {
+    if (!isUsableProviderPrice(price)) {
       return {
-        error: "Yahoo quote response did not include a current price.",
+        error: "Yahoo quote response did not include a valid current price.",
+        ok: false,
+      };
+    }
+
+    const fetchedAt = now();
+    const asOf = providerMarketTime(meta?.regularMarketTime, fetchedAt);
+    if (!asOf) {
+      return {
+        error: "Yahoo quote response did not include a market time; the price was not accepted.",
         ok: false,
       };
     }
 
     const previousClose = meta?.chartPreviousClose;
-    const dayChangeAbs =
-      typeof previousClose === "number" ? price - previousClose : undefined;
-    const dayChangePct =
-      typeof previousClose === "number" && previousClose !== 0
-        ? (dayChangeAbs! / previousClose) * 100
-        : undefined;
+    const dayChangeAbs = isUsableProviderPrice(previousClose)
+      ? price - previousClose
+      : undefined;
+    const dayChangePct = isUsableProviderPrice(previousClose)
+      ? (dayChangeAbs! / previousClose) * 100
+      : undefined;
 
     return {
       ok: true,
       quote: {
         assetId: asset.id,
-        asOf: now(),
+        asOf,
         currency: "INR",
         dayChangeAbs:
           dayChangeAbs === undefined
@@ -83,6 +96,7 @@ export async function fetchYahooQuote({
           dayChangePct === undefined
             ? undefined
             : roundQuoteNumber(dayChangePct, 2),
+        fetchedAt,
         price: roundQuoteNumber(price),
         source: "yahoo",
       },

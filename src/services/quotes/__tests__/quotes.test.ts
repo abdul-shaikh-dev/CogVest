@@ -71,6 +71,7 @@ describe("Yahoo quote service", () => {
                 chartPreviousClose: 2850,
                 currency: "INR",
                 regularMarketPrice: 2910,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -91,10 +92,11 @@ describe("Yahoo quote service", () => {
       ok: true,
       quote: {
         assetId: reliance.id,
-        asOf: "2026-04-26T10:00:00.000Z",
+        asOf: "2026-04-26T09:50:00.000Z",
         currency: "INR",
         dayChangeAbs: 60,
         dayChangePct: 2.11,
+        fetchedAt: "2026-04-26T10:00:00.000Z",
         price: 2910,
         source: "yahoo",
       },
@@ -119,6 +121,7 @@ describe("Yahoo quote service", () => {
               meta: {
                 currency: "INR",
                 regularMarketPrice: 101,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -147,6 +150,7 @@ describe("Yahoo quote service", () => {
                 meta: {
                   currency: "USD",
                   regularMarketPrice: 101,
+                  regularMarketTime: 1777197000,
                 },
               },
             ],
@@ -162,12 +166,79 @@ describe("Yahoo quote service", () => {
   });
 });
 
+describe("Yahoo market time and price checks (#658)", () => {
+  const yahoo = (meta: Record<string, unknown>) =>
+    fetchYahooQuote({
+      asset: reliance,
+      fetcher: jest.fn().mockResolvedValue(response({ chart: { result: [{ meta: { currency: "INR", ...meta } }] } })),
+      now: () => "2026-04-26T10:00:00.000Z",
+    });
+
+  it("dates a weekend refresh at Friday's close, not the fetch", async () => {
+    const fridayClose = Date.parse("2026-04-24T10:00:00Z") / 1000;
+    const result = await yahoo({ regularMarketPrice: 2910, regularMarketTime: fridayClose });
+
+    expect(result).toMatchObject({ ok: true, quote: { asOf: "2026-04-24T10:00:00.000Z", fetchedAt: "2026-04-26T10:00:00.000Z" } });
+  });
+
+  it.each([0, -5, Number.NaN, Number.POSITIVE_INFINITY, "2910"])("rejects a current price of %p", async (price) => {
+    expect(await yahoo({ regularMarketPrice: price, regularMarketTime: 1777197000 })).toEqual({
+      error: "Yahoo quote response did not include a valid current price.",
+      ok: false,
+    });
+  });
+
+  it("rejects a price without a market time", async () => {
+    expect(await yahoo({ regularMarketPrice: 2910 })).toMatchObject({ ok: false });
+  });
+
+  it("caps a market time ahead of the device clock at the fetch time", async () => {
+    const result = await yahoo({ regularMarketPrice: 2910, regularMarketTime: Date.parse("2026-04-26T10:05:00Z") / 1000 });
+
+    expect(result).toMatchObject({ ok: true, quote: { asOf: "2026-04-26T10:00:00.000Z" } });
+  });
+
+  it.each([0, -1, Number.NaN])("leaves out the day change when the previous close is %p", async (chartPreviousClose) => {
+    const result = await yahoo({ chartPreviousClose, regularMarketPrice: 2910, regularMarketTime: 1777197000 });
+
+    expect(result.ok && result.quote.dayChangeAbs).toBeUndefined();
+    expect(result.ok && result.quote.dayChangePct).toBeUndefined();
+  });
+});
+
 describe("CoinGecko quote service", () => {
+  describe("update time and price checks (#658)", () => {
+    const coinGecko = (fields: Record<string, unknown>) =>
+      fetchCoinGeckoQuote({
+        asset: bitcoin,
+        fetcher: jest.fn().mockResolvedValue(response({ bitcoin: fields })),
+        now: () => "2026-04-26T10:00:00.000Z",
+      });
+
+    it.each([0, -1, Number.NaN, null])("rejects an INR price of %p", async (inr) => {
+      expect(await coinGecko({ inr, last_updated_at: 1777197000 })).toEqual({
+        error: "CoinGecko quote response did not include a valid INR price.",
+        ok: false,
+      });
+    });
+
+    it("rejects a price without an update time", async () => {
+      expect(await coinGecko({ inr: 5800000 })).toMatchObject({ ok: false });
+    });
+
+    it("drops a non-finite 24-hour change", async () => {
+      const result = await coinGecko({ inr: 5800000, inr_24h_change: Number.NaN, last_updated_at: 1777197000 });
+
+      expect(result.ok && result.quote.dayChangePct).toBeUndefined();
+    });
+  });
+
   it("maps a CoinGecko simple price response to an INR quote", async () => {
     const fetcher = jest.fn().mockResolvedValue(
       response({
         bitcoin: {
           inr: 5800000,
+          last_updated_at: 1777197000,
           inr_24h_change: 1.234,
         },
       }),
@@ -180,15 +251,16 @@ describe("CoinGecko quote service", () => {
     });
 
     expect(fetcher).toHaveBeenCalledWith(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=inr&include_24hr_change=true",
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=inr&include_24hr_change=true&include_last_updated_at=true",
     );
     expect(result).toEqual({
       ok: true,
       quote: {
         assetId: bitcoin.id,
-        asOf: "2026-04-26T10:00:00.000Z",
+        asOf: "2026-04-26T09:50:00.000Z",
         currency: "INR",
         dayChangePct: 1.23,
+        fetchedAt: "2026-04-26T10:00:00.000Z",
         price: 5800000,
         source: "coingecko",
       },
@@ -200,6 +272,7 @@ describe("CoinGecko quote service", () => {
       response({
         ethereum: {
           inr: 320000,
+          last_updated_at: 1777197000,
         },
       }),
     );
@@ -210,7 +283,7 @@ describe("CoinGecko quote service", () => {
     });
 
     expect(fetcher).toHaveBeenCalledWith(
-      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=inr&include_24hr_change=true",
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=inr&include_24hr_change=true&include_last_updated_at=true",
     );
     expect(result.ok && result.quote.price).toBe(320000);
   });
@@ -227,6 +300,7 @@ describe("quote resolver", () => {
                 chartPreviousClose: 100,
                 currency: "INR",
                 regularMarketPrice: 101,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -247,6 +321,7 @@ describe("quote resolver", () => {
       response({
         bitcoin: {
           inr: 5800000,
+          last_updated_at: 1777197000,
         },
       }),
     );
@@ -363,6 +438,7 @@ describe("quote resolver", () => {
                   chartPreviousClose: 100,
                   currency: "INR",
                   regularMarketPrice: 101,
+                  regularMarketTime: 1777197000,
                 },
               },
             ],
@@ -398,7 +474,8 @@ describe("quote resolver", () => {
     });
 
     expect(result.quoteCache[reliance.id]).toMatchObject({
-      asOf: "2026-04-26T10:00:00.000Z",
+      asOf: "2026-04-26T09:50:00.000Z",
+      fetchedAt: "2026-04-26T10:00:00.000Z",
       price: 101,
       source: "yahoo",
     });
@@ -463,6 +540,7 @@ describe("quote resolver", () => {
                 meta: {
                   currency: "INR",
                   regularMarketPrice: 101,
+                  regularMarketTime: 1777197000,
                 },
               },
             ],
@@ -518,6 +596,7 @@ describe("quote resolver", () => {
               meta: {
                 currency: "INR",
                 regularMarketPrice: 3000,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -564,6 +643,7 @@ describe("quote resolver", () => {
               meta: {
                 currency: "INR",
                 regularMarketPrice: 3000,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -615,6 +695,7 @@ describe("quote resolver", () => {
               meta: {
                 currency: "INR",
                 regularMarketPrice: 101,
+                regularMarketTime: 1777197000,
               },
             },
           ],
@@ -635,6 +716,7 @@ describe("quote resolver", () => {
                 meta: {
                   currency: "INR",
                   regularMarketPrice: 101,
+                  regularMarketTime: 1777197000,
                 },
               },
             ],

@@ -263,6 +263,12 @@ All domain calculations must be pure functions under `src/domain/`.
 - AMFI NAVs use daily rather than intraday freshness semantics. Normal weekend
   age remains current, while an older catalogue date is shown as stale. Provider
   failures retain a valid cached or manual value and never invent a NAV.
+- Yahoo and CoinGecko quotes are dated by the provider's market time, not the
+  fetch, and keep the fetch time separately. A price is current when it was
+  fetched within 15 minutes and its market time is at most four days old, so a
+  weekend refresh shows Friday's close as current and dated Friday. Provider
+  prices must be finite and above zero, and a quote without a market time is
+  not accepted.
 - Asset and quote currency compatibility must be proven before a record enters
   INR totals, allocation, P&L, or monthly snapshots.
 - Unsupported persisted records remain local and visible as excluded data; they

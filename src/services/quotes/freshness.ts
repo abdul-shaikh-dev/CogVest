@@ -2,6 +2,8 @@ import type { Quote, QuoteCache } from "@/src/types";
 
 export const QUOTE_FRESHNESS_THRESHOLD_MS = 15 * 60 * 1000;
 export const AMFI_QUOTE_FRESHNESS_THRESHOLD_MS = 4 * 24 * 60 * 60 * 1000;
+/** The oldest market time a just-fetched exchange or crypto price can have and stay current. */
+export const MARKET_TIME_FRESHNESS_THRESHOLD_MS = 4 * 24 * 60 * 60 * 1000;
 
 export type QuoteFreshness = "current" | "stale" | "manual" | "missing";
 
@@ -43,11 +45,24 @@ export function classifyQuoteFreshness(
     return "missing";
   }
 
-  const threshold = quote.source === "amfi"
-    ? AMFI_QUOTE_FRESHNESS_THRESHOLD_MS
-    : QUOTE_FRESHNESS_THRESHOLD_MS;
+  if (quote.source === "amfi") {
+    return age <= AMFI_QUOTE_FRESHNESS_THRESHOLD_MS ? "current" : "stale";
+  }
 
-  return age <= threshold ? "current" : "stale";
+  // Since #658 asOf is the market time and fetchedAt the fetch. A price is
+  // current when it was fetched recently and the market time is recent enough
+  // to be the latest price: a Friday close fetched on Sunday stays current, a
+  // suspended stock's month-old price does not. Older quotes have no
+  // fetchedAt; their asOf was the fetch time.
+  const fetchedTime = quote.fetchedAt === undefined ? quoteTime : new Date(quote.fetchedAt).getTime();
+  if (!Number.isFinite(fetchedTime) || fetchedTime > now.getTime()) {
+    return "missing";
+  }
+
+  return now.getTime() - fetchedTime <= QUOTE_FRESHNESS_THRESHOLD_MS &&
+    age <= MARKET_TIME_FRESHNESS_THRESHOLD_MS
+    ? "current"
+    : "stale";
 }
 
 export function summarizeQuoteFreshness(

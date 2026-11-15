@@ -25,6 +25,25 @@ export function getDefaultFetcher(): QuoteFetcher {
   return fetch;
 }
 
+/** A provider price is usable only if it is a finite number above zero (#658). */
+export function isUsableProviderPrice(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * The market time of a provider quote as an ISO timestamp, or undefined when it
+ * is missing or invalid. A time ahead of the fetch (a device clock running
+ * behind) is capped at the fetch time, so the quote is never dated in the future.
+ */
+export function providerMarketTime(epochSeconds: unknown, fetchedAt: string) {
+  if (typeof epochSeconds !== "number" || !Number.isFinite(epochSeconds) || epochSeconds <= 0) {
+    return undefined;
+  }
+  const marketMs = epochSeconds * 1000;
+  const fetchedMs = Date.parse(fetchedAt);
+  return new Date(Number.isFinite(fetchedMs) ? Math.min(marketMs, fetchedMs) : marketMs).toISOString();
+}
+
 export function roundQuoteNumber(
   value: number,
   decimals: number = financialPrecision.unitPrice,

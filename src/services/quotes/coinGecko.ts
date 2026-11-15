@@ -4,6 +4,8 @@ import {
   coinGeckoSimplePriceUrl,
   defaultNow,
   getDefaultFetcher,
+  isUsableProviderPrice,
+  providerMarketTime,
   roundQuoteNumber,
 } from "./utils";
 
@@ -12,6 +14,8 @@ type CoinGeckoSimplePriceResponse = Record<
   {
     inr?: number;
     inr_24h_change?: number;
+    /** Unix seconds of the last price update. */
+    last_updated_at?: number;
   }
 >;
 
@@ -20,6 +24,7 @@ export function buildCoinGeckoSimplePriceUrl(coinId: string) {
     ids: coinId,
     vs_currencies: "inr",
     include_24hr_change: "true",
+    include_last_updated_at: "true",
   });
 
   return `${coinGeckoSimplePriceUrl}?${params.toString()}`;
@@ -55,23 +60,34 @@ export async function fetchCoinGeckoQuote({
     const coinPrice = payload[quoteSourceId];
     const price = coinPrice?.inr;
 
-    if (typeof price !== "number") {
+    if (!isUsableProviderPrice(price)) {
       return {
-        error: "CoinGecko quote response did not include an INR price.",
+        error: "CoinGecko quote response did not include a valid INR price.",
         ok: false,
       };
     }
 
+    const fetchedAt = now();
+    const asOf = providerMarketTime(coinPrice.last_updated_at, fetchedAt);
+    if (!asOf) {
+      return {
+        error: "CoinGecko quote response did not include an update time; the price was not accepted.",
+        ok: false,
+      };
+    }
+
+    const dayChange = coinPrice.inr_24h_change;
     return {
       ok: true,
       quote: {
         assetId: asset.id,
-        asOf: now(),
+        asOf,
         currency: "INR",
         dayChangePct:
-          typeof coinPrice.inr_24h_change === "number"
-            ? roundQuoteNumber(coinPrice.inr_24h_change, 2)
+          typeof dayChange === "number" && Number.isFinite(dayChange)
+            ? roundQuoteNumber(dayChange, 2)
             : undefined,
+        fetchedAt,
         price: roundQuoteNumber(price),
         source: "coingecko",
       },

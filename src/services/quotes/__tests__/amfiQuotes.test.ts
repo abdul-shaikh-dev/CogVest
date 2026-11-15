@@ -61,6 +61,7 @@ describe("AMFI current NAV quotes", () => {
     const result = await resolveQuote({
       asset: equityFund,
       fetcher: jest.fn().mockResolvedValue(amfiResponse()),
+      now: () => "2026-09-12T08:00:00.000Z",
     });
 
     expect(result).toEqual({
@@ -69,6 +70,7 @@ describe("AMFI current NAV quotes", () => {
         assetId: equityFund.id,
         asOf: "2026-09-11T00:00:00.000Z",
         currency: "INR",
+        fetchedAt: "2026-09-12T08:00:00.000Z",
         price: 123.4567,
         source: "amfi",
       },
@@ -114,6 +116,8 @@ describe("AMFI current NAV quotes", () => {
     });
 
     expect(result).toMatchObject({
+      // A NAV failure, not the catalogue's fund-category message (#658).
+      error: "AMFI NAVs are unavailable right now. The last saved price stays in use.",
       fallbackQuote: cachedQuote,
       ok: false,
     });

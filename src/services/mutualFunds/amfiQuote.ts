@@ -1,6 +1,6 @@
 import { normalizeIsin } from "@/src/domain/assets";
 import type { QuoteProviderInput, QuoteResult } from "@/src/services/quotes/types";
-import { roundQuoteNumber } from "@/src/services/quotes/utils";
+import { defaultNow, roundQuoteNumber } from "@/src/services/quotes/utils";
 
 import { lookupAmfiSchemeClassifications } from "./amfiSchemeCatalog";
 
@@ -21,6 +21,7 @@ export function isMutualFundAsset(
 export async function fetchAmfiQuote({
   asset,
   fetcher,
+  now = defaultNow,
 }: QuoteProviderInput): Promise<QuoteResult> {
   const isin = normalizeIsin(asset.isin);
   if (!isin) {
@@ -37,7 +38,10 @@ export async function fetchAmfiQuote({
   const record = result.classifications[isin];
   if (!record || record.nav === undefined || !record.asOf) {
     return {
-      error: result.failure ?? "AMFI did not provide a valid current NAV for this ISIN.",
+      // The catalog's own failure message is about fund categories, not prices (#658).
+      error: result.failure
+        ? "AMFI NAVs are unavailable right now. The last saved price stays in use."
+        : "AMFI did not provide a valid current NAV for this ISIN.",
       ok: false,
     };
   }
@@ -48,6 +52,7 @@ export async function fetchAmfiQuote({
       assetId: asset.id,
       asOf: record.asOf,
       currency: "INR",
+      fetchedAt: now(),
       price: roundQuoteNumber(record.nav),
       source: "amfi",
     },
