@@ -17,6 +17,7 @@ import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
 import { getPortfolioStore } from "@/src/store";
+import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
@@ -118,6 +119,11 @@ function RootContents() {
     () => store.getState().storageRecovery,
     () => store.getState().storageRecovery,
   );
+
+  // A statement copy left by an interrupted CAS import must not stay in the cache (#659).
+  useEffect(() => {
+    deleteStaleCasCacheFiles();
+  }, []);
 
   useEffect(() => {
     let active = true;

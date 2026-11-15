@@ -42,6 +42,7 @@ describe("CAS folio fingerprint provider", () => {
     const cache = {
       delete: jest.fn(),
       exists: true,
+      size: 4096,
       uri: "file:///cache/random-cas.pdf",
     };
     const review = await readCasStatementForImport({

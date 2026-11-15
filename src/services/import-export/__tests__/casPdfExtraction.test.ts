@@ -2,6 +2,7 @@ import {
   casPdfMaxBytes,
   casPdfMaxPages,
   CasPdfExtractionError,
+  deleteStaleCasCacheFiles,
   extractCasPdfLocally,
   type CasPdfExtractionRuntime,
 } from "../casPdfExtraction";
@@ -20,10 +21,13 @@ type TestFile = {
 };
 
 function createHarness({
+  copiedSize,
   pageCount = 6,
   sourceSize = 120_000,
   text = "Consolidated Account Statement",
 }: {
+  /** The real size of the cache copy; the declared source size by default. */
+  copiedSize?: number;
   pageCount?: number;
   sourceSize?: number;
   text?: string;
@@ -43,6 +47,7 @@ function createHarness({
   const runtime: CasPdfExtractionRuntime = {
     copyToCache: jest.fn(async () => {
       cache.exists = true;
+      cache.size = copiedSize ?? sourceSize;
     }),
     createCacheFile: jest.fn(() => cache),
     extractText: jest.fn(async () => text),
@@ -224,5 +229,58 @@ describe("extractCasPdfLocally", () => {
     );
 
     expect(error.code).toBe("cleanupFailed");
+  });
+
+  describe("the copy's real size (#659)", () => {
+    it("rejects a statement whose provider under-reported its size, and removes the copy", async () => {
+      const { cache, runtime, source } = createHarness({ copiedSize: casPdfMaxBytes + 1, sourceSize: 4096 });
+
+      const error = await captureError(() => extractCasPdfLocally({ consumeText: () => true, runtime, source }));
+
+      expect(error.code).toBe("fileTooLarge");
+      expect(runtime.getPageCount).not.toHaveBeenCalled();
+      expect(cache.delete).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([0, Number.NaN])("rejects a copy of size %p as an empty file", async (copiedSize) => {
+      const { cache, runtime, source } = createHarness({ copiedSize });
+
+      const error = await captureError(() => extractCasPdfLocally({ consumeText: () => true, runtime, source }));
+
+      expect(error.code).toBe("invalidFile");
+      expect(cache.delete).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("deleteStaleCasCacheFiles (#659)", () => {
+  const cached = (name: string) => ({ delete: jest.fn(), name });
+
+  it("deletes only statement copies left by an interrupted import", () => {
+    const stale = cached("cas-import_mf3k2a_x9y8z7w6.pdf");
+    const other = cached("cogvest-backup.json");
+    const lookalike = cached("cas-import-notes.pdf");
+
+    expect(deleteStaleCasCacheFiles(() => [stale, other, lookalike])).toBe(1);
+    expect(stale.delete).toHaveBeenCalledTimes(1);
+    expect(other.delete).not.toHaveBeenCalled();
+    expect(lookalike.delete).not.toHaveBeenCalled();
+  });
+
+  it("keeps going when one copy cannot be deleted, and never throws", () => {
+    const stuck = cached("cas-import_a1_b2.pdf");
+    stuck.delete.mockImplementation(() => { throw new Error("locked"); });
+    const next = cached("cas-import_c3_d4.pdf");
+
+    expect(deleteStaleCasCacheFiles(() => [stuck, next])).toBe(1);
+    expect(next.delete).toHaveBeenCalledTimes(1);
+    expect(deleteStaleCasCacheFiles(() => { throw new Error("no cache"); })).toBe(0);
+  });
+
+  it("matches the names the extractor creates", () => {
+    const { createId } = jest.requireActual("@/src/utils") as typeof import("@/src/utils");
+    const copy = cached(`${createId("cas-import")}.pdf`);
+
+    expect(deleteStaleCasCacheFiles(() => [copy])).toBe(1);
   });
 });
