@@ -1,7 +1,7 @@
 package com.abdulshaikh.cogvest.screensecurity
 
+import android.util.Log
 import android.view.WindowManager
-import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -12,16 +12,27 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * state is remembered and re-applied whenever the activity returns to the
  * foreground, so a recreated window, or a setting applied before the activity
  * existed, is still protected.
+ *
+ * Expo can call the lifecycle hooks on the JS thread (for example while the
+ * module is created at import), so the window is only touched on the UI
+ * thread, and a failure is logged rather than thrown into app start-up.
  */
 class ScreenSecurityModule : Module() {
-  private var secure = false
+  @Volatile private var secure = false
 
   private fun apply() {
-    val window = appContext.currentActivity?.window ?: return
-    if (secure) {
-      window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-    } else {
-      window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    val activity = appContext.currentActivity ?: return
+    val wanted = secure
+    activity.runOnUiThread {
+      try {
+        if (wanted) {
+          activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+          activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+      } catch (error: Throwable) {
+        Log.w("CogVestScreenSecurity", "Could not update FLAG_SECURE: ${error.message}")
+      }
     }
   }
 
@@ -31,7 +42,7 @@ class ScreenSecurityModule : Module() {
     AsyncFunction("setSecure") { enabled: Boolean ->
       secure = enabled
       apply()
-    }.runOnQueue(Queues.MAIN)
+    }
 
     OnActivityEntersForeground {
       apply()
