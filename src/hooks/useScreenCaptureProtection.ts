@@ -1,9 +1,8 @@
-import * as ScreenCapture from "expo-screen-capture";
 import { useEffect } from "react";
 
-const protectionKey = "cogvest-settings";
+import { setScreenSecureAsync } from "@/modules/cogvest-screen-security";
 
-type ScreenCaptureModule = Pick<typeof ScreenCapture, "allowScreenCaptureAsync" | "preventScreenCaptureAsync">;
+type SetScreenSecure = (enabled: boolean) => Promise<void>;
 
 /**
  * Applies the "Block screenshots" setting (#660). On Android this sets
@@ -13,13 +12,13 @@ type ScreenCaptureModule = Pick<typeof ScreenCapture, "allowScreenCaptureAsync" 
  */
 export function useScreenCaptureProtection(
   enabled: boolean,
-  screenCapture: ScreenCaptureModule = ScreenCapture,
+  setScreenSecure: SetScreenSecure = setScreenSecureAsync,
 ) {
   useEffect(() => {
     if (!enabled) return undefined;
-    screenCapture.preventScreenCaptureAsync(protectionKey).catch(() => undefined);
+    setScreenSecure(true).catch(() => undefined);
     return () => {
-      screenCapture.allowScreenCaptureAsync(protectionKey).catch(() => undefined);
+      setScreenSecure(false).catch(() => undefined);
     };
-  }, [enabled, screenCapture]);
+  }, [enabled, setScreenSecure]);
 }
