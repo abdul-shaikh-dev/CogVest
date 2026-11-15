@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
+import { useScreenCaptureProtection } from "@/src/hooks/useScreenCaptureProtection";
 import { getPortfolioStore } from "@/src/store";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
@@ -119,6 +120,12 @@ function RootContents() {
     () => store.getState().storageRecovery,
     () => store.getState().storageRecovery,
   );
+  const blockScreenCapture = useSyncExternalStore(
+    store.subscribe,
+    () => store.getState().preferences.blockScreenCapture === true,
+    () => store.getState().preferences.blockScreenCapture === true,
+  );
+  useScreenCaptureProtection(blockScreenCapture);
 
   // A statement copy left by an interrupted CAS import must not stay in the cache (#659).
   useEffect(() => {

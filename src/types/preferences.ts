@@ -5,6 +5,11 @@ export type AppearancePreference = "system" | "light" | "dark";
 
 export type Preferences = {
   appearance?: AppearancePreference;
+  /**
+   * Blocks screenshots, screen recording and the recents preview (Android
+   * FLAG_SECURE). Off unless the user turns it on (#660).
+   */
+  blockScreenCapture?: boolean;
   defaultChartRange: ChartRange;
   displayMode: DisplayMode;
   hasCompletedOnboarding: boolean;

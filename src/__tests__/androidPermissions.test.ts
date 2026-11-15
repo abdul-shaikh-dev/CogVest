@@ -39,6 +39,19 @@ describe("Android least-privilege permissions", () => {
     );
   });
 
+  it("blocks screenshots without any screenshot permission (#660)", () => {
+    // expo-screen-capture registers a screenshot-detection callback on load,
+    // which crashes on Android 14+ once DETECT_SCREEN_CAPTURE is removed. The
+    // local module only sets FLAG_SECURE and declares no permission.
+    const packageJson = require("../../package.json") as { dependencies: Record<string, string> };
+    const moduleConfig = require("../../modules/cogvest-screen-security/expo-module.config.json") as {
+      platforms: string[];
+    };
+
+    expect(packageJson.dependencies).not.toHaveProperty("expo-screen-capture");
+    expect(moduleConfig.platforms).toEqual(["android"]);
+  });
+
   it("blocks storage and overlay permissions from merged release manifests", () => {
     const manifest: AndroidManifest = {
       manifest: {

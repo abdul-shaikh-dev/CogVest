@@ -311,6 +311,11 @@ The plugin also removes
 `com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE`, which
 `expo-application`'s Play Install Referrer library merges in. CogVest reads only
 the application id from that module and never requests the install referrer.
+The "Block screenshots" setting uses the local
+`modules/cogvest-screen-security` module, which only sets FLAG_SECURE and needs
+no permission. Do not replace it with `expo-screen-capture`: that module
+registers a screenshot-detection callback on load, which needs
+`DETECT_SCREEN_CAPTURE` and crashes on Android 14+ without it.
 After a dependency change, check the built APK with
 `aapt dump permissions <apk>`. A release should list only
 `android.permission.INTERNET`, `android.permission.VIBRATE`, and the app's own

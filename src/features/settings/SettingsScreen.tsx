@@ -50,16 +50,23 @@ export function SettingsScreen({
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const {
     appearance,
+    blockScreenCapture,
     setAppearance,
     displayMode,
     maskWealthValues,
     quoteStatus,
     setDisplayMode,
+    toggleBlockScreenCapture,
     toggleMaskWealthValues,
   } = useSettings({ store });
 
   async function handleToggleMasking() {
     toggleMaskWealthValues();
+    await Haptics.selectionAsync();
+  }
+
+  async function handleToggleScreenCapture() {
+    toggleBlockScreenCapture();
     await Haptics.selectionAsync();
   }
 
@@ -122,6 +129,31 @@ export function SettingsScreen({
                 maskWealthValues && styles.switchThumbOn,
               ]}
             />
+          </View>
+        </Pressable>
+
+        <Pressable
+          accessibilityLabel="Toggle screenshot blocking"
+          accessibilityHint="Blocks screenshots, screen recording and the recent-apps preview of CogVest."
+          accessibilityRole="switch"
+          accessibilityState={{ checked: blockScreenCapture }}
+          onPress={() => {
+            void handleToggleScreenCapture();
+          }}
+          style={({ pressed }) => [styles.toggleRow, pressed && styles.pressed]}
+          testID="screen-capture-toggle"
+        >
+          <View style={styles.toggleCopy}>
+            <AppText weight="bold">Block screenshots</AppText>
+            <AppText color="secondary">
+              Hide CogVest from screenshots, screen recording and the recent-apps preview.
+            </AppText>
+            <AppText color="secondary" variant="caption">
+              Off by default. Turn it off to take a screenshot for a bug report.
+            </AppText>
+          </View>
+          <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, blockScreenCapture && styles.switchOn]}>
+            <View style={[styles.switchThumb, blockScreenCapture && styles.switchThumbOn]} />
           </View>
         </Pressable>
 

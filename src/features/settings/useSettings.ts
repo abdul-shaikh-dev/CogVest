@@ -12,11 +12,13 @@ type UseSettingsInput = {
 
 export type UseSettingsResult = {
   appearance: AppearancePreference;
+  blockScreenCapture: boolean;
   setAppearance: (appearance: AppearancePreference) => void;
   displayMode: DisplayMode;
   maskWealthValues: boolean;
   quoteStatus: SettingsQuoteStatus;
   setDisplayMode: (displayMode: DisplayMode) => void;
+  toggleBlockScreenCapture: () => void;
   toggleMaskWealthValues: () => void;
 };
 
@@ -110,6 +112,12 @@ export function useSettings({
     });
   }
 
+  function toggleBlockScreenCapture() {
+    store.getState().updatePreferences({
+      blockScreenCapture: !store.getState().preferences.blockScreenCapture,
+    });
+  }
+
   function setDisplayMode(displayMode: DisplayMode) {
     store.getState().updatePreferences({ displayMode });
   }
@@ -117,10 +125,12 @@ export function useSettings({
   return {
     displayMode: snapshot.preferences.displayMode,
     appearance: snapshot.preferences.appearance ?? "dark",
+    blockScreenCapture: snapshot.preferences.blockScreenCapture === true,
     setAppearance: (appearance) => store.getState().updatePreferences({ appearance }),
     maskWealthValues: snapshot.preferences.maskWealthValues,
     quoteStatus: deriveQuoteStatus(snapshot.quoteCache),
     setDisplayMode,
+    toggleBlockScreenCapture,
     toggleMaskWealthValues,
   };
 }
