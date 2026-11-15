@@ -89,12 +89,12 @@ describe("holding child routes", () => {
     };
 
     route.props.onCancel();
-    route.props.onComplete("Opening position updated.");
+    route.props.onComplete("openingPositionSaved");
 
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockDismissTo).toHaveBeenCalledWith({
       pathname: "/(tabs)/holdings",
-      params: { statusMessage: "Opening position updated." },
+      params: { status: "openingPositionSaved" },
     });
   });
 
@@ -105,12 +105,12 @@ describe("holding child routes", () => {
     };
 
     route.props.onCancel();
-    route.props.onComplete("Transaction saved.");
+    route.props.onComplete("transactionSaved");
 
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockDismissTo).toHaveBeenCalledWith({
       pathname: "/(tabs)/holdings",
-      params: { statusMessage: "Transaction saved." },
+      params: { status: "transactionSaved" },
     });
   });
 

@@ -139,7 +139,7 @@ describe("ReviewOpeningPositionScreen", () => {
     await fireEvent.press(saveButton);
 
     await waitFor(() => {
-      expect(onComplete).toHaveBeenCalledWith("Portfolio history updated.");
+      expect(onComplete).toHaveBeenCalledWith("openingPositionSaved");
     });
     expect(correctionSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().openingPositions).toEqual([
@@ -229,7 +229,7 @@ describe("ReviewOpeningPositionScreen", () => {
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith(
-        "Saved. Portfolio history will refresh automatically.",
+        "openingPositionSavedHistoryRefresh",
       );
     });
   });
@@ -261,7 +261,7 @@ describe("ReviewOpeningPositionScreen", () => {
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith(
-        "Opening position removed. Portfolio history updated.",
+        "openingPositionRemoved",
       );
     });
     expect(deletionSpy).toHaveBeenCalledTimes(1);

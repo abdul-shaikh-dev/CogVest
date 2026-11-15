@@ -52,7 +52,7 @@ describe("asset routes", () => {
       props: { onCancel: () => void; onComplete: (message: string) => void };
     };
 
-    route.props.onComplete("Asset updated.");
+    route.props.onComplete("assetSaved");
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
   });
@@ -64,11 +64,11 @@ describe("asset routes", () => {
     };
 
     route.props.onCancel();
-    route.props.onComplete("Asset updated.");
+    route.props.onComplete("assetSaved");
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/(tabs)/holdings",
-      params: { statusMessage: "Asset updated." },
+      params: { status: "assetSaved" },
     });
   });
 });

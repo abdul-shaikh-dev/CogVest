@@ -5,5 +5,5 @@ export default function RecordPurchaseRoute() {
   const { assetId } = useLocalSearchParams<{ assetId?: string }>();
   return <RecordPurchaseScreen initialAssetId={assetId}
     onCancel={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/holdings")}
-    onSaved={() => router.replace({ pathname: "/(tabs)/holdings", params: { statusMessage: "Purchase recorded." } })} />;
+    onSaved={() => router.replace({ pathname: "/(tabs)/holdings", params: { status: "purchaseRecorded" } })} />;
 }

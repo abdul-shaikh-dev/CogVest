@@ -2,11 +2,14 @@ import { useIsFocused } from "expo-router/react-navigation";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 
-import { HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings";
+import { getHoldingsStatusMessage, HoldingsScreen as HoldingsFeatureScreen } from "@/src/features/holdings";
 import { useQuickSetupSession } from "@/src/features/quickSetup";
 
 export default function HoldingsScreen() {
-  const params = useLocalSearchParams<{ statusMessage?: string; openAddMenu?: string; destination?: string }>();
+  // Every parameter here can come from an outside link (`cogvest://holdings?...`),
+  // so each is read only as an allowlisted value (#657): a status code, never text;
+  // openAddMenu only as "true"; destination only as "epf". Anything else is ignored.
+  const params = useLocalSearchParams<{ status?: string; openAddMenu?: string; destination?: string }>();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const [statusMessage, setStatusMessage] = useState<string>();
@@ -14,15 +17,15 @@ export default function HoldingsScreen() {
   const quickSetup = useQuickSetupSession();
 
   useEffect(() => {
-    if (!isFocused || !params.statusMessage) {
+    if (!isFocused || !params.status) {
       return;
     }
 
     // A one-shot route param is consumed into state and then cleared from the router.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- consume and clear in one step.
-    setStatusMessage(params.statusMessage);
-    router.setParams({ statusMessage: undefined });
-  }, [isFocused, params.statusMessage]);
+    setStatusMessage(getHoldingsStatusMessage(params.status));
+    router.setParams({ status: undefined });
+  }, [isFocused, params.status]);
 
   useEffect(() => {
     if (!isFocused || params.destination !== "epf") return;
