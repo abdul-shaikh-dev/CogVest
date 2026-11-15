@@ -1,5 +1,7 @@
 import { render } from "@testing-library/react-native";
 
+import { pressChartAt } from "@/src/testing/chartPress";
+
 import { AssetHistoryChart } from "../AssetHistoryChart";
 import { buildAssetHistoryChartModel } from "../assetHistoryChartModel";
 
@@ -13,20 +15,21 @@ async function renderChart(zoomed = false) {
     mode: "price",
     points: [point("2026-01-01", 100), point("2026-01-02", 101), point("2026-01-12", 103), point("2026-01-13", 104)],
   });
+  const onInspect = jest.fn();
   const screen = await render(
     <AssetHistoryChart
       colors={colors}
       formatX={String}
       formatY={String}
       model={model}
-      onInspect={jest.fn()}
+      onInspect={onInspect}
       onZoom={jest.fn()}
       selectedIndex={3}
       zoomed={zoomed}
     />,
   );
   const chart = screen.getByTestId("victory-cartesian-chart");
-  return { chart, model, screen };
+  return { chart, model, onInspect, screen };
 }
 
 describe("AssetHistoryChart", () => {
@@ -59,5 +62,29 @@ describe("AssetHistoryChart", () => {
 
     const zoomed = await renderChart(true);
     expect(timeGestures(zoomed.chart).pan).toMatchObject({ enabled: true, minPointers: 2 });
+  });
+
+  it("reports the pressed point and swaps the resting marker for the guide (#673)", async () => {
+    const { onInspect, screen } = await renderChart();
+    const opacities = () => ({
+      guide: screen.getByTestId("skia-line").props.opacity.value,
+      markers: screen.getAllByTestId("skia-circle").map((circle) => circle.props.opacity.value),
+    });
+    // Reanimated runs a reaction once on mount, which reports no inspection.
+    expect(onInspect).toHaveBeenLastCalledWith(null);
+    expect(opacities()).toEqual({ guide: 0, markers: [0, 1] });
+    onInspect.mockClear();
+
+    await pressChartAt(1, { position: 120 });
+    expect(onInspect).toHaveBeenCalledWith(1);
+    expect(opacities()).toEqual({ guide: 1, markers: [1, 0] });
+    expect(screen.getAllByTestId("skia-circle")[0].props.cx.value).toBe(120);
+
+    await pressChartAt(2);
+    expect(onInspect).toHaveBeenLastCalledWith(2);
+    await pressChartAt(null);
+    expect(onInspect).toHaveBeenLastCalledWith(null);
+    expect(onInspect).toHaveBeenCalledTimes(3);
+    expect(opacities()).toEqual({ guide: 0, markers: [0, 1] });
   });
 });

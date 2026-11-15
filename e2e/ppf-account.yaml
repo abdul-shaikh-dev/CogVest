@@ -127,3 +127,12 @@ appId: ${APP_ID}
     id: "ppf-confirmed-balance-card"
 - assertVisible: "₹1,00,000.00"
 - takeScreenshot: .expo/ux-enlarged/ppf-reopened-balance
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "PPF account count: 1"
+- scrollUntilVisible:
+    element:
+      id: "e2e-ppf-my-ppf-balance"
+    direction: DOWN
+- assertVisible:
+    id: "e2e-ppf-my-ppf-balance"
+    text: "PPF balance: ₹1,00,000.00 [|] synthetic asset none"

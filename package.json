@@ -28,6 +28,7 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "globalSetup": "<rootDir>/jest.global-setup.js",
     "setupFiles": [
       "react-native-gesture-handler/jestSetup.js"
     ],
@@ -37,7 +38,8 @@
     "testMatch": [
       "**/__tests__/**/*.test.ts",
       "**/__tests__/**/*.test.tsx"
-    ]
+    ],
+    "testTimeout": 15000
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

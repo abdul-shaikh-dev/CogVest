@@ -1,5 +1,7 @@
 appId: ${APP_ID}
 ---
+# A saved cash entry survives an app restart (#673): checked in stored state
+# through e2e-evidence, before and after the restart.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -8,33 +10,44 @@ appId: ${APP_ID}
     timeout: 120000
 - tapOn:
     id: "tab-cash"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "cash-screen"
 - tapOn:
     id: "cash-entry-deposit"
+- scrollUntilVisible:
+    element:
+      id: "cash-amount-input"
+    direction: DOWN
 - tapOn:
     id: "cash-amount-input"
 - inputText: "1000"
-- hideKeyboard
+# Label and date stay above the keyboard, so tap them directly: hideKeyboard
+# acts as Back when no keyboard is shown.
 - tapOn:
     id: "cash-label-input"
 - inputText: "Broker cash"
-- hideKeyboard
+# The date field opens the native date picker; keep today's date.
 - tapOn:
     id: "cash-date-input"
-- inputText: "2026-04-20"
-- hideKeyboard
+- tapOn: "OK"
 - scrollUntilVisible:
     element:
       id: "save-cash-entry-button"
     direction: DOWN
 - tapOn:
     id: "save-cash-entry-button"
-- assertVisible: "Broker cash"
+- assertVisible:
+    id: "cash-screen"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Cash entry count: 1"
+- assertVisible: "Cash balance: ₹1,000.00"
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
       id: dashboard-screen
     timeout: 120000
-- tapOn:
-    id: "tab-cash"
-- assertVisible: "Broker cash"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Cash entry count: 1"
+- assertVisible: "Cash balance: ₹1,000.00"

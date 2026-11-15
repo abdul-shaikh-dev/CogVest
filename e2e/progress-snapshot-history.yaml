@@ -65,3 +65,5 @@ appId: ${APP_ID}
     id: "progress-screen"
 - assertNotVisible:
     id: "snapshot-month-2025-11"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Monthly snapshot count: 7 [|] latest 2026-05"

@@ -225,8 +225,15 @@ cogvest:///e2e-evidence?token=cogvest-local-visual-qa
 That route projects the actual persisted store into stable evidence for asset
 identity, classification, market/currency, quote source and price, opening
 positions, PPF balances, aggregate invested/current values, valuation
-completeness, allocation, and canonical-identity conflicts. It does not seed or
-mutate data. The harness needs the matching local token, and is available only
+completeness, allocation, and canonical-identity conflicts. It also reports the
+cash balance, EPF account and entry counts, the monthly snapshot count and
+latest month, and the value-mask preference. It does not seed or mutate data.
+
+Open it with `runFlow: helpers/open-e2e-evidence.yaml`. Every smoke flow that
+saves data checks the stored result there. The exceptions: `smoke-launch` and
+`navigation` save nothing, `xirr-holding` only reads a QA fixture, and
+`epf-accounts` writes to its own synthetic database, which its QA check page
+reads back. The harness needs the matching local token, and is available only
 in development builds and the E2E build (`com.abdulshaikh.cogvest.e2e` with the
 build-time harness flag). The Play and private release builds cannot enable it;
 see [`e2e-build-variant.md`](e2e-build-variant.md). On the E2E build the route

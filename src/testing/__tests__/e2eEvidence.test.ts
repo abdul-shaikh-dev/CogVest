@@ -128,6 +128,48 @@ describe("buildE2ePortfolioEvidence", () => {
     );
   });
 
+  it("reports cash, EPF, snapshot and value-mask state for smoke flows (#673)", () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const state = store.getState();
+    const now = new Date(2026, 3, 21, 12);
+
+    expect(buildE2ePortfolioEvidence(state, now)).toMatchObject({
+      cashBalance: 0,
+      epfAccountCount: 0,
+      epfEventCount: 0,
+      latestSnapshotMonth: null,
+      maskWealthValues: false,
+      monthlySnapshotCount: 0,
+    });
+
+    state.addCashEntry({
+      amount: 1000, date: "2026-04-20", id: "cash-1", label: "Broker cash",
+      purpose: "capitalContribution", type: "addition",
+    });
+    state.addCashEntry({
+      amount: 500, date: "2026-05-01", id: "cash-future", label: "Not yet",
+      purpose: "capitalContribution", type: "addition",
+    });
+    state.updatePreferences({ maskWealthValues: true });
+    const stored = store.getState();
+    const evidence = buildE2ePortfolioEvidence({
+      ...stored,
+      epf: { ...stored.epf, accounts: [{}, {}] as never, events: [{}, {}, {}] as never },
+      monthlySnapshots: [{ month: "2026-03" }, { month: "2026-01" }] as never,
+    }, now);
+
+    expect(evidence).toMatchObject({
+      // A future-dated entry is stored but not yet in the balance.
+      cashBalance: 1000,
+      cashEntryCount: 2,
+      epfAccountCount: 2,
+      epfEventCount: 3,
+      latestSnapshotMonth: "2026-03",
+      maskWealthValues: true,
+      monthlySnapshotCount: 2,
+    });
+  });
+
   it("normalizes provider identities for stable test IDs", () => {
     expect(toEvidenceKey(" HDFCBANK.NS ")).toBe("hdfcbank-ns");
     expect(toEvidenceKey("coingecko:bitcoin")).toBe("coingecko-bitcoin");

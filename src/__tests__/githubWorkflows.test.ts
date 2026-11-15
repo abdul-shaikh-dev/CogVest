@@ -118,6 +118,16 @@ describe("GitHub workflows", () => {
     expect(workflow.indexOf("EXPO_TOKEN")).toBeGreaterThan(build);
   });
 
+  it("runs the tests once more in UTC (#673)", () => {
+    const workflow = readWorkflow("ci.yml");
+    const start = workflow.indexOf("  test-utc:\n");
+    expect(start).toBeGreaterThan(-1);
+    const job = workflow.slice(start);
+
+    expect(job).toContain("name: Test in UTC");
+    expect(job).toContain("- name: Test\n        env:\n          TZ: UTC\n        run: npm test -- --runInBand\n");
+  });
+
   it("runs lint and the Maestro selector lint in default CI", () => {
     const workflow = readWorkflow("ci.yml");
 

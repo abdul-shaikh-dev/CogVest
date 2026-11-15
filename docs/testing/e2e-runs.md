@@ -4,6 +4,47 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-15: Smoke tier with stored-data checks (#673), 15 passed, 18m 58s
+
+- Commit: test/673-tz-stable-tests 933b9ae plus the two flow fixes below, version
+  1.0.31. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  E2E APK (R8 on, x86_64) freshly built from 933b9ae, 58.7 MB, SHA-256 prefix
+  a2b03318109afebf, Metro stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 18m 58s, over the 15-minute budget. The
+  user chose to keep the tier as it is.
+- The overrun has two causes:
+  - The new stored-data checks and the backup round trip added by #671 account
+    for about 1 to 2 minutes.
+  - Flows this change doesn't touch also ran 10 to 20% slower than on 2026-11-10
+    (navigation 29s against 24s, add-holding-lookup 1m 19s against 1m 10s),
+    with unrelated Java processes running on the PC.
+- An earlier run of the seven changed flows stalled because an idle Gradle
+  daemon from the APK build was still running. trade-correction timed out in
+  Maestro's text input. After `gradlew --stop`, every flow passed.
+- That run also corrected two expectations:
+  - The visual QA seed stores 7 monthly snapshots.
+  - epf-accounts writes to its own synthetic database, which the evidence
+    screen does not read, so its QA check page stays its stored-data assertion.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 18s |
+| navigation | PASS | 0m 29s |
+| add-holding-lookup | PASS | 1m 19s |
+| record-purchase | PASS | 1m 13s |
+| payouts | PASS | 1m 10s |
+| xirr-holding | PASS | 0m 54s |
+| cash | PASS | 1m 18s |
+| trade-correction | PASS | 2m 44s |
+| holdings-csv-import | PASS | 1m 33s |
+| epf-accounts | PASS | 1m 23s |
+| ppf-account | PASS | 1m 44s |
+| progress-snapshot-history | PASS | 0m 53s |
+| value-masking | PASS | 1m 29s |
+| persistence | PASS | 0m 55s |
+| backup-roundtrip | PASS | 1m 35s |
+
 ## 2026-11-15: Full tier with the backup round trip (#671), 64 passed, 1 failed
 
 - Commit: test/671-backup-maestro-tier f7fb712, version 1.0.31. AVD
