@@ -97,7 +97,7 @@ jest.mock("victory-native", () => {
       const [, rerender] = React.useReducer((count: number) => count + 1, 0);
       const state = React.useRef(null);
       state.current ??= createMockChartPressState(init);
-      React.useEffect(() => registerMockChart({ rerender, state: state.current }), []);
+      React.useEffect(() => registerMockChart({ rerender, state: state.current }), [registerMockChart]);
       return { isActive: state.current.isActive.value, state: state.current };
     },
     useChartTransformState: () => ({

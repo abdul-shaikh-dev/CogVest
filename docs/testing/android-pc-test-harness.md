@@ -61,9 +61,25 @@ This runs:
 
 ```powershell
 npm run typecheck
+npm run lint
+npm run maestro:lint
 npm test
 npm run doctor
 ```
+
+Jest conventions (#673):
+
+- Tests run in India Standard Time (`jest.global-setup.js`) unless `TZ` is
+  already set. CI runs the suite a second time with `TZ=UTC`. To check another
+  zone locally, run, for example, `TZ=UTC npx jest`.
+- A test whose result depends on today's date pins the clock with
+  `pinTestClock` from `src/testing/fixedClock.ts`. It freezes only `Date`, so
+  `waitFor` and timers still run.
+- Tests time out after 15 seconds (`testTimeout` in `package.json`), which
+  leaves room for slow first renders on a loaded runner.
+- To test a chart press, render the chart and call `pressChartAt(index)` from
+  `src/testing/chartPress.ts`; `pressChartAt(null)` releases it. The Jest mocks
+  then run the chart's own reactions and re-render it.
 
 For code verification and Android environment/package readiness, run:
 
