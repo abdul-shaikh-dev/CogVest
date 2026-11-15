@@ -105,6 +105,8 @@ appId: ${APP_ID}
     id: epf-account-total
     text: "₹1,45,567.00"
 - assertVisible: "As of .* · all activity recorded"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "EPF account count: 1 [|] entries 3"
 - openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=check"
 - tapOn:
     id: epf-accounts-qa-check

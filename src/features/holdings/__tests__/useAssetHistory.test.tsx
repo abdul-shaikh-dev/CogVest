@@ -4,6 +4,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createDailyPriceCache, type DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
 import { AssetHistoryError, fetchAssetHistory } from "@/src/services/quotes/assetHistoryProvider";
 import type { Asset } from "@/src/types";
+import { pinTestClock } from "@/src/testing/fixedClock";
 
 jest.mock("@/src/services/quotes/assetHistoryProvider", () => ({
   ...jest.requireActual("@/src/services/quotes/assetHistoryProvider"),
@@ -16,6 +17,9 @@ jest.mock("@/src/services/quotes/dailyPriceCache", () => ({
 const realCreate = jest.requireActual("@/src/services/quotes/dailyPriceCache").createDailyPriceCache;
 const asset: Asset = { id: "a", assetClass: "stock", currency: "INR", name: "A", symbol: "A", ticker: "A.NS" };
 const makeEntry = (id: string): DailyPriceEntry => ({ basis: "close", provider: "yahoo", providerId: id, currency: "INR", from: "2025-01-01", to: "2025-01-05", complete: true, fetchedAt: new Date().toISOString(), points: [{ date: "2025-01-01", close: 100 }] });
+
+// Freshness is judged against "now"; a fixed clock keeps it independent of the run date.
+pinTestClock("2026-11-15T06:30:00.000Z");
 
 beforeEach(() => {
   jest.clearAllMocks();

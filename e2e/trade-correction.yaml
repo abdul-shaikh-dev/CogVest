@@ -151,3 +151,14 @@ appId: ${APP_ID}
 - tapOn:
     id: "tab-cash"
 - assertVisible: "₹700.00"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Trade count: 1"
+- assertVisible: "Cash entry count: 2"
+- assertVisible: "Cash balance: ₹700.00"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-fixt-ns-values"
+    direction: DOWN
+- assertVisible:
+    id: "e2e-asset-fixt-ns-values"
+    text: "Values: invested ₹350.00 [|] current ₹400.00 [|] quantity 4"

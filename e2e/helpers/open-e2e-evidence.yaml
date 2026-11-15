@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+# Opens the read-only persisted-state screen. Flows assert stored records
+# there rather than through visible summary text (#673).
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: e2e-evidence-screen
+    timeout: 15000

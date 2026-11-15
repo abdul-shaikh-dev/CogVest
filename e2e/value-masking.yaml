@@ -88,3 +88,13 @@ appId: ${APP_ID}
 - assertVisible: "Masking Test Asset"
 - assertVisible: "₹••••"
 - assertVisible: "+11.11%"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Value mask: on"
+- assertVisible: "Asset count: 1"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-mask-ns-values"
+    direction: DOWN
+- assertVisible:
+    id: "e2e-asset-mask-ns-values"
+    text: "Values: invested ₹180.00 [|] current ₹200.00 [|] quantity 2"

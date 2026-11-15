@@ -69,6 +69,15 @@ export default function E2eEvidenceScreen() {
         <EvidenceText testID="e2e-ppf-count">
           PPF account count: {evidence.ppfCount}
         </EvidenceText>
+        <EvidenceText testID="e2e-epf-count">
+          EPF account count: {evidence.epfAccountCount} | entries {evidence.epfEventCount}
+        </EvidenceText>
+        <EvidenceText testID="e2e-snapshot-count">
+          Monthly snapshot count: {evidence.monthlySnapshotCount} | latest {evidence.latestSnapshotMonth ?? "none"}
+        </EvidenceText>
+        <EvidenceText testID="e2e-value-mask">
+          Value mask: {evidence.maskWealthValues ? "on" : "off"}
+        </EvidenceText>
         <EvidenceText testID="e2e-duplicate-identity-count">
           Duplicate identity count: {evidence.duplicateIdentityCount}
         </EvidenceText>
@@ -81,6 +90,9 @@ export default function E2eEvidenceScreen() {
         </EvidenceText>
         <EvidenceText testID="e2e-total-current">
           Total current: {evidence.rollupTotals.totalCurrentValue === null ? "incomplete" : formatINR(evidence.rollupTotals.totalCurrentValue)}
+        </EvidenceText>
+        <EvidenceText testID="e2e-cash-balance">
+          Cash balance: {formatINR(evidence.cashBalance)}
         </EvidenceText>
         <EvidenceText testID="e2e-valuation-coverage">
           Valuation: {evidence.rollupTotals.valuationCoverage.status} | pending {evidence.rollupTotals.valuationCoverage.pendingHoldings}

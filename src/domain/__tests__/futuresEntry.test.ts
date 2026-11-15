@@ -1,6 +1,9 @@
 import { futuresEntryDate, futuresEntryErrors, futuresTimeZone, replaceFuturesTimePart } from "../futuresEntry";
+import { pinTestClock } from "@/src/testing/fixedClock";
 
 describe("Futures entry instants", () => {
+  // The fallback "now" must not decide a result, so pin it.
+  pinTestClock("2026-11-15T06:30:00.000Z");
   it("preserves the exact offset-bearing instant until an explicit edit", () => {
     const value = "2026-01-01T00:01:58.123+05:30";
     expect(futuresEntryDate(value)?.toISOString()).toBe("2025-12-31T18:31:58.123Z");

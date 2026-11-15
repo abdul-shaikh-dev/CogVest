@@ -9,13 +9,33 @@ jest.mock("@expo/vector-icons", () => {
   return { Ionicons };
 });
 
-// Chart gesture reactions run on the UI thread; tests only need their JS-side shape.
-jest.mock("react-native-reanimated", () => ({
-  useAnimatedReaction: jest.fn(),
-  useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
-  useSharedValue: <T,>(value: T) => ({ value }),
+// Chart gesture reactions run on the UI thread. These mocks run them on the
+// JS thread instead, registered with src/testing/chartPress.ts so a test can
+// drive a press with pressChartAt (#673).
+jest.mock("react-native-reanimated", () => {
+  const React = require("react");
+  const { registerMockReaction } = require("./src/testing/chartPress");
+
+  function useAnimatedReaction(prepare: () => unknown, react: (value: unknown, previous: unknown) => void) {
+    const handle = React.useRef(null);
+    handle.current?.update({ prepare, react });
+    React.useEffect(() => {
+      handle.current = registerMockReaction({ prepare, react });
+      return () => handle.current.remove();
+    // The handle tracks later closures through update().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+  }
+
+  return {
+    useAnimatedReaction,
+    useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
+    useSharedValue: <T,>(value: T) => ({ value }),
+  };
+});
+jest.mock("react-native-worklets", () => ({
+  scheduleOnRN: (callback: (...args: unknown[]) => void, ...args: unknown[]) => callback(...args),
 }));
-jest.mock("react-native-worklets", () => ({ scheduleOnRN: jest.fn() }));
 
 // Skia draws on a native canvas; Jest checks the props CogVest passes instead.
 jest.mock("@shopify/react-native-skia", () => {
@@ -72,16 +92,14 @@ jest.mock("victory-native", () => {
     CartesianChart,
     Line: (props: Record<string, unknown>) => React.createElement(View, { ...props, testID: "victory-line" }),
     getTransformComponents: () => ({ scaleX: 1, scaleY: 1, translateX: 0, translateY: 0 }),
-    useChartPressState: () => ({
-      isActive: false,
-      state: {
-        isActive: shared(false),
-        matchedIndex: shared(-1),
-        x: { position: shared(0), value: shared(0) },
-        y: { value: { position: shared(0), value: shared(0) } },
-        yIndex: shared(0),
-      },
-    }),
+    useChartPressState: (init: { x: number; y: Record<string, number> }) => {
+      const { createMockChartPressState, registerMockChart } = require("./src/testing/chartPress");
+      const [, rerender] = React.useReducer((count: number) => count + 1, 0);
+      const state = React.useRef(null);
+      state.current ??= createMockChartPressState(init);
+      React.useEffect(() => registerMockChart({ rerender, state: state.current }), []);
+      return { isActive: state.current.isActive.value, state: state.current };
+    },
     useChartTransformState: () => ({
       state: {
         matrix: shared(identity),

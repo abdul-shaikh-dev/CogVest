@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react-native";
 
+import { pressChartAt } from "@/src/testing/chartPress";
 import { colors } from "@/src/theme";
 
 import { ProgressTrendPlot } from "../ProgressTrendPlot";
@@ -24,10 +25,11 @@ async function renderPlot(gapAfterIndices: number[] = []) {
     scaleSeries: [],
     selectedIndex: 2,
   });
+  const onInspect = jest.fn();
   const screen = await render(
-    <ProgressTrendPlot colors={plotColors} formatYLabel={String} model={model} onInspect={jest.fn()} />,
+    <ProgressTrendPlot colors={plotColors} formatYLabel={String} model={model} onInspect={onInspect} />,
   );
-  return { model, screen };
+  return { model, onInspect, screen };
 }
 
 describe("ProgressTrendPlot", () => {
@@ -52,8 +54,28 @@ describe("ProgressTrendPlot", () => {
     expect(chart.props.yKeys).toEqual(["s0", "s1"]);
     expect(chart.props.domain).toEqual({ x: [0, 2], y: [0, model.maxValue] });
     expect(chart.props.gestureLongPressDelay).toBe(200);
-    expect(screen.getAllByTestId("skia-circle").map((circle) => circle.props.r)).toEqual([3, 3, 6, 3, 3, 6]);
+    // Month markers per series, then one press marker per series.
+    expect(screen.getAllByTestId("skia-circle").map((circle) => circle.props.r)).toEqual([3, 3, 6, 3, 3, 6, 6, 6]);
     expect(screen.getAllByTestId("progress-trend-axis-label").map((label) => label.props.children))
       .toEqual(["Dec\n2025", "Jan\n2026", "Feb\n2026"]);
+  });
+
+  it("inspects the pressed month and hides the committed markers while pressed (#673)", async () => {
+    const { onInspect, screen } = await renderPlot();
+    const opacity = (value: unknown) => (typeof value === "number" ? value : (value as { value: number }).value);
+    const circles = () => screen.getAllByTestId("skia-circle").map((circle) => opacity(circle.props.opacity));
+    // The plot ignores the mount-time reaction, so nothing is inspected yet.
+    expect(onInspect).not.toHaveBeenCalled();
+    expect(circles()).toEqual([1, 1, 1, 1, 1, 1, 0, 0]);
+
+    await pressChartAt(0);
+    expect(onInspect).toHaveBeenLastCalledWith(0);
+    // The selected month (r 6) steps aside; the press markers and guide show.
+    expect(circles()).toEqual([1, 1, 0, 1, 1, 0, 1, 1]);
+    expect(opacity(screen.getByTestId("skia-line").props.opacity)).toBe(1);
+
+    await pressChartAt(null);
+    expect(onInspect).toHaveBeenLastCalledWith(null);
+    expect(circles()).toEqual([1, 1, 1, 1, 1, 1, 0, 0]);
   });
 });

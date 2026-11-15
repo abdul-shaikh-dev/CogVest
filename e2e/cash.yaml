@@ -53,6 +53,13 @@ appId: ${APP_ID}
 - runScript:
     file: scripts/current-local-date.js
 - assertVisible: "${output.currentLocalDate}"
+# The double tap stored exactly one entry.
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Cash entry count: 1"
+- assertVisible: "Cash balance: ₹1,000.00"
+- back
+- assertVisible:
+    id: "cash-screen"
 # The Broker cash deposit is the only cash entry.
 - scrollUntilVisible:
     element:
@@ -81,3 +88,6 @@ appId: ${APP_ID}
     id: "cash-screen"
 - assertNotVisible: 'Review Broker cash\..*'
 - assertVisible: "No cash movement yet"
+- runFlow: helpers/open-e2e-evidence.yaml
+- assertVisible: "Cash entry count: 0"
+- assertVisible: "Cash balance: ₹0.00"
