@@ -10,6 +10,10 @@ const RELEASE_BLOCKED_PERMISSIONS = [
   // Merged in by expo-application's Play Install Referrer library. CogVest only
   // reads the application id from that module and never asks for the referrer.
   "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE",
+  // Merged in by expo-screen-capture. CogVest only sets FLAG_SECURE (#660); it
+  // never listens for screenshots or reads the screenshot it would detect.
+  "android.permission.DETECT_SCREEN_CAPTURE",
+  "android.permission.READ_MEDIA_IMAGES",
 ];
 
 function applyLeastPrivilegeAndroidPermissions(androidManifest) {

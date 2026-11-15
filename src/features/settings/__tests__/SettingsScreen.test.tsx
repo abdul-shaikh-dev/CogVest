@@ -189,6 +189,20 @@ describe("SettingsScreen", () => {
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
   });
 
+  it("offers screenshot blocking off by default, and saves it when turned on (#660)", async () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const { getByLabelText, getByTestId } = await render(<SettingsScreen store={store} />);
+
+    expect(getByTestId("screen-capture-toggle").props.accessibilityState).toEqual({ checked: false });
+    await fireEvent.press(getByLabelText("Toggle screenshot blocking"));
+
+    expect(getByTestId("screen-capture-toggle").props.accessibilityState).toEqual({ checked: true });
+    expect(createPortfolioStore({ storage }).getState().preferences.blockScreenCapture).toBe(true);
+    await fireEvent.press(getByLabelText("Toggle screenshot blocking"));
+    expect(store.getState().preferences.blockScreenCapture).toBe(false);
+  });
+
   it("shows empty price information without refresh or provider claims", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText, queryByRole, queryByTestId, queryByText } =

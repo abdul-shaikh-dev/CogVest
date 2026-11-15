@@ -39,6 +39,13 @@ describe("Android least-privilege permissions", () => {
     );
   });
 
+  it("blocks the permissions expo-screen-capture merges in (#660)", () => {
+    expect(RELEASE_BLOCKED_PERMISSIONS).toEqual(expect.arrayContaining([
+      "android.permission.DETECT_SCREEN_CAPTURE",
+      "android.permission.READ_MEDIA_IMAGES",
+    ]));
+  });
+
   it("blocks storage and overlay permissions from merged release manifests", () => {
     const manifest: AndroidManifest = {
       manifest: {

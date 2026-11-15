@@ -524,7 +524,9 @@ in the screen baseline (#275/#277/#351).
 Cash Ledger owns deployable capital and cash movement.
 
 Settings owns local-first trust, value masking, quote status, app metadata, and
-clearly separated destructive/deferred actions.
+clearly separated destructive/deferred actions. An optional "Block screenshots"
+setting, off by default, sets Android FLAG_SECURE so screenshots, screen
+recording and the recent-apps preview cannot capture the app.
 
 ## Design Direction
 
