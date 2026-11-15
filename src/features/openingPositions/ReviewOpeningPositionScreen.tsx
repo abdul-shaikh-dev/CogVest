@@ -23,11 +23,12 @@ import {
   type OpeningPositionFormValues,
   validateOpeningPositionForm,
 } from "./openingPositionForm";
+import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
 
 type ReviewOpeningPositionScreenProps = {
   now?: Date;
   onCancel: () => void;
-  onComplete: (message: string) => void;
+  onComplete: (status: HoldingsStatus) => void;
   openingPositionId: string;
   store?: StoreApi<PortfolioStoreState>;
 };
@@ -228,9 +229,7 @@ export function ReviewOpeningPositionScreen({
       await Promise.resolve();
       completed = true;
       onComplete(
-        result.pendingMonths.length > 0
-          ? "Saved. Portfolio history will refresh automatically."
-          : "Portfolio history updated.",
+        result.pendingMonths.length > 0 ? "openingPositionSavedHistoryRefresh" : "openingPositionSaved",
       );
     } catch {
       setErrors({ save: saveFailureMessage() });
@@ -264,9 +263,7 @@ export function ReviewOpeningPositionScreen({
       await Promise.resolve();
       completed = true;
       onComplete(
-        result.pendingMonths.length > 0
-          ? "Opening position removed. History will refresh automatically."
-          : "Opening position removed. Portfolio history updated.",
+        result.pendingMonths.length > 0 ? "openingPositionRemovedHistoryRefresh" : "openingPositionRemoved",
       );
     } catch {
       setErrors({

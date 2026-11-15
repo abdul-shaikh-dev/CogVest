@@ -21,12 +21,13 @@ import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
+import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
 
 type ReviewTradeScreenProps = {
   backLabel?: string;
   now?: Date;
   onCancel: () => void;
-  onComplete: (message: string) => void;
+  onComplete: (status: HoldingsStatus) => void;
   store?: StoreApi<PortfolioStoreState>;
   tradeId: string;
 };
@@ -217,9 +218,7 @@ export function ReviewTradeScreen({
       }
       await Promise.resolve();
       completed = true;
-      onComplete(result.pendingMonths.length > 0
-        ? "Transaction saved. Portfolio history will refresh automatically."
-        : "Transaction saved. Portfolio and cash records updated.");
+      onComplete(result.pendingMonths.length > 0 ? "transactionSavedHistoryRefresh" : "transactionSaved");
     } catch {
       setErrors({ save: failureMessage() });
     } finally {
@@ -243,9 +242,7 @@ export function ReviewTradeScreen({
       }
       await Promise.resolve();
       completed = true;
-      onComplete(result.pendingMonths.length > 0
-        ? "Transaction removed. Portfolio history will refresh automatically."
-        : "Transaction removed. Portfolio and cash records updated.");
+      onComplete(result.pendingMonths.length > 0 ? "transactionRemovedHistoryRefresh" : "transactionRemoved");
     } catch {
       setErrors({ save: "This transaction could not be removed safely. Try again." });
     } finally {

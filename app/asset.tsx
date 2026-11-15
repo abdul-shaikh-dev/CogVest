@@ -9,7 +9,7 @@ export default function ReviewAssetRoute() {
     <ReviewAssetScreen
       assetId={params.assetId ?? ""}
       onCancel={() => router.back()}
-      onComplete={(statusMessage) => {
+      onComplete={(status) => {
         if (params.returnTo === "manage-assets") {
           router.back();
           return;
@@ -17,7 +17,7 @@ export default function ReviewAssetRoute() {
 
         router.replace({
           pathname: "/(tabs)/holdings",
-          params: { statusMessage },
+          params: { status },
         });
       }}
     />

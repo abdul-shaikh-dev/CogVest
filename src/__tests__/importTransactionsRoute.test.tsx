@@ -89,7 +89,7 @@ describe("Import transactions route", () => {
       });
     });
     expect(mockReplace).toHaveBeenCalledWith({
-      params: { statusMessage: "Transaction history imported." },
+      params: { status: "transactionsImported" },
       pathname: "/(tabs)/holdings",
     });
   });

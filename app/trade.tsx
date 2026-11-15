@@ -11,12 +11,12 @@ export default function TradeRoute() {
       backLabel={returnsToCash ? "Back to Cash Ledger" : "Back to Holdings"}
       tradeId={params.tradeId ?? ""}
       onCancel={() => returnsToCash ? router.dismissTo("/(tabs)/cash") : router.back()}
-      onComplete={(statusMessage) =>
+      onComplete={(status) =>
         returnsToCash
           ? router.dismissTo("/(tabs)/cash")
           : router.dismissTo({
               pathname: "/(tabs)/holdings",
-              params: { statusMessage },
+              params: { status },
             })
       }
     />

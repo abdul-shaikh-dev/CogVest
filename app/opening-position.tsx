@@ -9,10 +9,10 @@ export default function OpeningPositionRoute() {
     <ReviewOpeningPositionScreen
       openingPositionId={params.openingPositionId ?? ""}
       onCancel={() => router.back()}
-      onComplete={(statusMessage) =>
+      onComplete={(status) =>
         router.dismissTo({
           pathname: "/(tabs)/holdings",
-          params: { statusMessage },
+          params: { status },
         })
       }
     />

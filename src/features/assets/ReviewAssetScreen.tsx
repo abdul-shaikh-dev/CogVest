@@ -35,11 +35,12 @@ import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
+import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
 
 type ReviewAssetScreenProps = {
   assetId: string;
   onCancel: () => void;
-  onComplete: (message: string) => void;
+  onComplete: (status: HoldingsStatus) => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -279,9 +280,7 @@ export function ReviewAssetScreen({
       await Promise.resolve();
       completed = true;
       onComplete(
-        result.quoteCacheInvalidated
-          ? "Asset details saved. Its prices will refresh automatically."
-          : "Asset details saved.",
+        result.quoteCacheInvalidated ? "assetSavedPricesRefresh" : "assetSaved",
       );
     } catch {
       setError("Asset details could not be saved safely. Try again.");
@@ -307,9 +306,7 @@ export function ReviewAssetScreen({
       await Promise.resolve();
       completed = true;
       onComplete(
-        result.pendingMonths.length > 0
-          ? "Asset deleted. Portfolio history will refresh automatically."
-          : "Asset and linked records deleted.",
+        result.pendingMonths.length > 0 ? "assetDeletedHistoryRefresh" : "assetDeleted",
       );
     } catch {
       setError("This asset could not be deleted safely. Nothing was changed.");

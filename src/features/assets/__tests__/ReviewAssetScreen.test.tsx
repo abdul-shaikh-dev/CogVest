@@ -170,7 +170,7 @@ describe("ReviewAssetScreen", () => {
     await fireEvent.press(save);
     await fireEvent.press(save);
 
-    await waitFor(() => expect(onComplete).toHaveBeenCalledWith("Asset details saved."));
+    await waitFor(() => expect(onComplete).toHaveBeenCalledWith("assetSaved"));
     expect(correctionSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().assets[0]).toMatchObject({
       id: asset.id,
