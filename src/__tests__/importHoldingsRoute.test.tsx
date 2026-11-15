@@ -18,6 +18,12 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({}),
 }));
 
+const mockReadAsStringAsync = jest.fn();
+jest.mock("expo-file-system/legacy", () => ({
+  readAsStringAsync: (...args: unknown[]) => mockReadAsStringAsync(...args),
+}));
+const base64 = (text: string) => Buffer.from(text, "utf8").toString("base64");
+
 jest.mock("expo-file-system", () => ({
   Directory: class MockDirectory {
     static pickDirectoryAsync(...args: unknown[]) {
@@ -83,16 +89,19 @@ describe("Import holdings route", () => {
   });
 
   it("reads the selected Android CSV and enters Quick Setup review after import", async () => {
+    const csv = "cogvest_version,quantity,average_cost\n1,1,1";
     mockPickFileAsync.mockResolvedValue({
       size: 123,
-      text: () => Promise.resolve("cogvest_version,quantity,average_cost\n1,1,1"),
+      text: () => Promise.resolve(csv),
       uri: "content://holdings.csv",
     });
+    mockReadAsStringAsync.mockResolvedValue(base64(csv));
     await render(<ImportHoldingsRoute />);
 
+    // The size is the bytes actually read, not the provider's declared 123 (#659).
     await expect(
       (capturedProps?.pickCsvFile as () => Promise<unknown>)(),
-    ).resolves.toMatchObject({ name: "holdings.csv", size: 123 });
+    ).resolves.toEqual({ name: "holdings.csv", size: csv.length, text: csv });
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "text/*");
 
     await act(() => {
@@ -134,6 +143,18 @@ describe("Import holdings route", () => {
       size: 1_000_001,
       text: "",
     });
+    expect(text).not.toHaveBeenCalled();
+    expect(mockReadAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  it("treats an under-reported file over 1 MB as too large (#659)", async () => {
+    const text = jest.fn();
+    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size: 10, text, uri: "content://big.csv" });
+    mockReadAsStringAsync.mockResolvedValue(base64("x".repeat(1_000_001)));
+    await render(<ImportHoldingsRoute />);
+
+    await expect((capturedProps?.pickCsvFile as () => Promise<unknown>)())
+      .resolves.toEqual({ name: "big.csv", size: 1_000_001, text: "" });
     expect(text).not.toHaveBeenCalled();
   });
 });

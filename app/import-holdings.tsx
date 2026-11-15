@@ -10,6 +10,7 @@ import {
   holdingsCsvTemplateFileName,
 } from "@/src/domain/holdingsCsvTemplate";
 import { getQuickSetupSessionStore } from "@/src/features/quickSetup";
+import { readPickedCsvFile } from "@/src/services/import-export/boundedTextFile";
 import {
   canUseVisualQaHarness,
   resolveVisualQaQuote,
@@ -31,15 +32,7 @@ async function pickCsvFile() {
         ? uriName
         : "Selected CSV file";
 
-    if (selected.size > holdingsCsvMaxBytes) {
-      return { name, size: selected.size, text: "" };
-    }
-
-    return {
-      name,
-      size: selected.size,
-      text: await selected.text(),
-    };
+    return { name, ...(await readPickedCsvFile(selected, holdingsCsvMaxBytes)) };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (/cancelled|canceled/iu.test(message)) return undefined;

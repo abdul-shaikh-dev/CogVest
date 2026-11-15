@@ -28,6 +28,12 @@ jest.mock("expo-file-system", () => ({
   },
 }));
 
+const mockReadAsStringAsync = jest.fn();
+jest.mock("expo-file-system/legacy", () => ({
+  readAsStringAsync: (...args: unknown[]) => mockReadAsStringAsync(...args),
+}));
+const base64 = (text: string) => Buffer.from(text, "utf8").toString("base64");
+
 jest.mock("@/src/features/transactionImport", () => ({
   TransactionImportScreen: (props: Record<string, unknown>) => {
     capturedProps = props;
@@ -69,6 +75,7 @@ describe("Import transactions route", () => {
       text: () => Promise.resolve(text),
       uri: "content://transactions.csv",
     });
+    mockReadAsStringAsync.mockResolvedValue(base64(text));
     await render(<ImportTransactionsRoute />);
 
     await expect(
@@ -79,6 +86,9 @@ describe("Import transactions route", () => {
       text,
     });
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "text/*");
+    // A native read capped one byte past the limit (#659).
+    expect(mockReadAsStringAsync).toHaveBeenCalledWith("content://transactions.csv",
+      { encoding: "base64", length: 1_000_001, position: 0 });
 
     await act(() => {
       (capturedProps?.onImported as (result: unknown) => void)({
@@ -111,6 +121,19 @@ describe("Import transactions route", () => {
       size: 1_000_001,
       text: "",
     });
+    expect(text).not.toHaveBeenCalled();
+    expect(mockReadAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, Number.NaN, 10])("treats a file over 1 MB as too large when its declared size is %p (#659)", async (size) => {
+    const text = jest.fn();
+    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size, text, uri: "content://big.csv" });
+    // The bounded read returns one byte more than the limit.
+    mockReadAsStringAsync.mockResolvedValue(base64("x".repeat(1_000_001)));
+    await render(<ImportTransactionsRoute />);
+
+    await expect((capturedProps?.pickCsvFile as () => Promise<unknown>)())
+      .resolves.toEqual({ name: "big.csv", size: 1_000_001, text: "" });
     expect(text).not.toHaveBeenCalled();
   });
 

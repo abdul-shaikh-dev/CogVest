@@ -3,6 +3,7 @@ import { router } from "expo-router";
 
 import { transactionCsvTemplate, transactionCsvTemplateFileName } from "@/src/domain/transactionCsvTemplate";
 import { TransactionImportScreen, transactionCsvMaxBytes } from "@/src/features/transactionImport";
+import { readPickedCsvFile } from "@/src/services/import-export/boundedTextFile";
 
 async function pickCsvFile() {
   try {
@@ -12,8 +13,7 @@ async function pickCsvFile() {
     const named = selected as typeof selected & { name?: string };
     const uriName = decodeURIComponent(selected.uri).split(/[\\/]/u).at(-1);
     const name = named.name?.trim() || uriName || "Selected CSV file";
-    if (selected.size > transactionCsvMaxBytes) return { name, size: selected.size, text: "" };
-    return { name, size: selected.size, text: await selected.text() };
+    return { name, ...(await readPickedCsvFile(selected, transactionCsvMaxBytes)) };
   } catch (error) {
     if (/cancelled|canceled/iu.test(error instanceof Error ? error.message : "")) return undefined;
     throw error;

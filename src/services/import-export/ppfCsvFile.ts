@@ -1,6 +1,7 @@
 import { Directory, File } from "expo-file-system";
 import { readAsStringAsync } from "expo-file-system/legacy";
 
+import { decodeBoundedBase64Text } from "./boundedTextFile";
 import {
   ppfCsvMaxBytes,
   ppfCsvByteLength,
@@ -30,27 +31,9 @@ function selectedFileName(selected: { name?: string; uri: string }) {
 }
 
 function decodeBoundedBase64(encoded: string) {
-  const maxEncodedBytes = Math.ceil((ppfCsvMaxBytes + 1) / 3) * 4;
-  if (encoded.length > maxEncodedBytes) throw new Error(tooLargeMessage);
-
-  // Hermes does not provide browser atob/TextEncoder globals. Decode the
-  // native Base64 result without a polyfill; URI decoding rejects invalid UTF-8.
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const bytes: string[] = [];
-  let bits = 0;
-  let value = 0;
-  for (const character of encoded.replace(/=+$/u, "")) {
-    const digit = alphabet.indexOf(character);
-    if (digit < 0) throw new Error(readErrorMessage);
-    value = (value << 6) | digit;
-    bits += 6;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push(`%${((value >>> bits) & 255).toString(16).padStart(2, "0")}`);
-      if (bytes.length > ppfCsvMaxBytes) throw new Error(tooLargeMessage);
-    }
-  }
-  return decodeURIComponent(bytes.join(""));
+  const result = decodeBoundedBase64Text(encoded, ppfCsvMaxBytes);
+  if (result.status === "too-large") throw new Error(tooLargeMessage);
+  return result.text;
 }
 
 export async function pickPpfCsvFile(): Promise<

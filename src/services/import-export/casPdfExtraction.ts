@@ -1,4 +1,4 @@
-import { File, Paths } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import { copyAsync } from "expo-file-system/legacy";
 import {
   extractText,
@@ -43,7 +43,7 @@ export type CasPdfExtractionResult<T> = {
 
 export type CasPdfSourceFile = Pick<File, "size" | "uri">;
 
-type CasPdfCacheFile = Pick<File, "delete" | "exists" | "uri">;
+type CasPdfCacheFile = Pick<File, "delete" | "exists" | "size" | "uri">;
 
 export type CasPdfExtractionRuntime = {
   copyToCache: (sourceUri: string, cacheUri: string) => Promise<void>;
@@ -53,11 +53,14 @@ export type CasPdfExtractionRuntime = {
   isAvailable: () => boolean;
 };
 
+const casCacheFilePrefix = "cas-import";
+const casCacheFileName = /^cas-import_[a-z0-9]+_[a-z0-9]+\.pdf$/u;
+
 const nativeRuntime: CasPdfExtractionRuntime = {
   copyToCache: (sourceUri, cacheUri) =>
     copyAsync({ from: sourceUri, to: cacheUri }),
   createCacheFile: () =>
-    new File(Paths.cache, `${createId("cas-import")}.pdf`),
+    new File(Paths.cache, `${createId(casCacheFilePrefix)}.pdf`),
   extractText,
   getPageCount,
   isAvailable,
@@ -104,6 +107,17 @@ export async function extractCasPdfLocally<T>({
       throw new CasPdfExtractionError(
         "cacheCopyFailed",
         "The selected statement could not be prepared for local reading.",
+      );
+    }
+    // The provider's declared size may be wrong; the copy's size is real (#659).
+    const copiedSize = cacheFile.size;
+    if (!Number.isFinite(copiedSize) || copiedSize <= 0) {
+      throw new CasPdfExtractionError("invalidFile", "Choose a non-empty PDF statement.");
+    }
+    if (copiedSize > casPdfMaxBytes) {
+      throw new CasPdfExtractionError(
+        "fileTooLarge",
+        "This statement is larger than the supported 10 MB limit.",
       );
     }
     const nativePassword = password === "" ? undefined : password;
@@ -161,6 +175,35 @@ export async function extractCasPdfLocally<T>({
 
   if (failure) throw failure;
   return result!;
+}
+
+type CachedFile = { delete: () => void; name: string };
+
+function listCacheFiles(): CachedFile[] {
+  return new Directory(Paths.cache).list().filter((entry): entry is File => entry instanceof File);
+}
+
+/**
+ * Deletes statement copies left in the cache when the app was killed during an
+ * extraction (#659). Run at startup, when no extraction can be in progress.
+ * Best effort: it never throws, and returns how many copies it removed.
+ */
+export function deleteStaleCasCacheFiles(list: () => readonly CachedFile[] = listCacheFiles) {
+  let removed = 0;
+  try {
+    for (const file of list()) {
+      if (!casCacheFileName.test(file.name)) continue;
+      try {
+        file.delete();
+        removed += 1;
+      } catch {
+        // Leave it for the next launch.
+      }
+    }
+  } catch {
+    // The cache could not be listed; try again next launch.
+  }
+  return removed;
 }
 
 function sanitizeExtractionError(error: unknown) {
