@@ -73,6 +73,17 @@ describe("all-key backup replacement journal", () => {
     expect(storage.getRawItem(backupRestoreJournalKey)).not.toBeNull();
   });
 
+  it.each([
+    ["an array", []],
+    ["missing", undefined],
+    ["a string", "original"],
+  ])("rejects a journal whose original image is %s, without changing data (#671)", (_label, original) => {
+    const { storage, original: before } = fixture();
+    storage.setRawItem(backupRestoreJournalKey, JSON.stringify({ version: 1, original }));
+    expect(() => recoverBackupRestore(storage)).toThrow("Invalid restore journal");
+    expect(captureBackupStorage(storage)).toEqual(before);
+  });
+
   it("requires a readable journal before changing data", () => {
     const { storage, original, next } = fixture();
     const dropping: JsonStorage = { ...storage, setRawItem: () => undefined };
@@ -131,5 +142,31 @@ describe("all-key backup replacement journal", () => {
     };
     expect(() => commitBackupRestore(unreadable, next)).toThrow("Restart CogVest");
     expect(captureBackupStorage(storage)).toEqual(next);
+  });
+
+  it("requires recovery when the journal is gone but the stored keys do not match the backup (#671)", () => {
+    const { storage, next } = fixture();
+    let removed = false;
+    let failedOnce = false;
+    const mismatched: JsonStorage = {
+      ...storage,
+      removeItem: (key) => {
+        storage.removeItem(key);
+        if (key === backupRestoreJournalKey) {
+          removed = true;
+          // Another writer changed a key after the commit.
+          storage.setRawItem(backupRestoreKeys[0], "changed elsewhere");
+        }
+      },
+      getRawItem: (key) => {
+        if (removed && !failedOnce && key === backupRestoreJournalKey) {
+          failedOnce = true;
+          throw new Error("Readback failed");
+        }
+        return storage.getRawItem(key);
+      },
+    };
+    expect(() => commitBackupRestore(mismatched, next)).toThrow("Restart CogVest");
+    expect(storage.getRawItem(backupRestoreJournalKey)).toBeNull();
   });
 });

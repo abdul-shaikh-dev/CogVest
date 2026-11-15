@@ -90,6 +90,27 @@ describe("portfolio backup replacement", () => {
     expect(captureBackupStorage(storage)).toEqual(original);
   });
 
+  it("records a recovery incident when a live restore fails and leaves its journal behind (#671)", () => {
+    const { store, storage } = destination();
+    const before = store.getState();
+    const revision = before.captureBackup().revision;
+    const setter = storage.setRawItem;
+    const remover = storage.removeItem;
+    // The replacement fails, and so does the rollback's journal removal.
+    storage.setRawItem = jest.fn((key, value) => {
+      if (key === quoteCacheStorageKey) throw new Error("Storage full");
+      setter(key, value);
+    });
+    storage.removeItem = jest.fn((key) => {
+      if (key === backupRestoreJournalKey) throw new Error("Storage locked");
+      remover(key);
+    });
+    expect(() => before.replaceFromBackup(payload(), revision)).toThrow("Restart CogVest");
+    const incident = store.getState().storageRecovery?.incidents[0];
+    expect(incident).toMatchObject({ metadataKey: backupRestoreJournalKey, reason: "migration-failed" });
+    expect(storage.getRawItem(backupRestoreJournalKey)).not.toBeNull();
+  });
+
   it("blocks changes and CAS/setup initialization when rollback cannot finish", () => {
     const { store, storage } = destination();
     const original = captureBackupStorage(storage);

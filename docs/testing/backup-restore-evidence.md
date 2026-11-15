@@ -110,16 +110,19 @@ the Android storage root, which cannot be granted. Back in a directory picker
 can navigate to parent folders before canceling the activity.
 
 ```powershell
-npm run maestro:test -- e2e/standalone/backup-roundtrip.yaml
+npm run maestro:test -- e2e/backup-roundtrip.yaml
 adb -s emulator-5554 push e2e/fixtures/invalid-portfolio-backup.json /sdcard/Documents/CogVest-QA/invalid-portfolio-backup.json
 npm run maestro:test -- e2e/standalone/backup-cancel-invalid.yaml
 ```
 
-The round-trip flow captures the exact filename from its successful export, not
-an arbitrary older backup. It restores that file and verifies cold-reopened
-holding data, Standard mode, and unmasked values, then exports again. These are
-opt-in standalone flows, not part of the default destructive developer-seed suite
-or GitHub emulator checks. Picker labels assume English Android Documents UI.
+Since #671 the round trip is `e2e/backup-roundtrip.yaml`, in the smoke and full
+tiers. It needs no manual setup: the runner empties `Documents/CogVest-QA`
+first, and the flow navigates the picker there when it doesn't already open
+there. It seeds the synthetic visual-QA portfolio, masks values, exports, clears
+the app, restores the exported file (captured by name, never an older backup)
+into the empty app, and checks the stored records, totals and the mask setting
+through `e2e-evidence`, again after a cold start. The invalid-file flow stays
+opt-in. Picker labels assume English Android Documents UI.
 
 Pull the two synthetic exports to ignored `.expo/backup-before.json` and
 `.expo/backup-after.json` and compare complete payloads, not filenames/checksums:

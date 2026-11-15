@@ -1,0 +1,27 @@
+appId: ${APP_ID}
+---
+# The visual-QA portfolio as stored after the backup round trip (#671).
+# "[|]" matches a literal separator; Maestro text matching is a regex.
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: e2e-evidence-screen
+    timeout: 15000
+- assertVisible: "Asset count: 5"
+- assertVisible: "Opening position count: 4"
+- assertVisible: "Trade count: 0"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Duplicate identity count: 0"
+- assertVisible: "Total invested: ₹12,37,551.60"
+- assertVisible: "Total current: ₹15,90,019.61"
+- assertVisible: "Valuation: complete [|] pending 0"
+- scrollUntilVisible:
+    element:
+      id: e2e-asset-hdfcbank-ns-position-0
+    direction: DOWN
+- assertVisible:
+    id: e2e-asset-hdfcbank-ns-values
+    text: "Values: invested ₹36,250.00 [|] current ₹41,956.25 [|] quantity 25"
+- assertVisible:
+    id: e2e-asset-hdfcbank-ns-position-0
+    text: "Position 1: quantity 25 [|] average ₹1,450.00 [|] date 2024-04-15T00:00:00.000Z.*conviction 4"

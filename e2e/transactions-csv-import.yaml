@@ -128,4 +128,5 @@ appId: ${APP_ID}
       id: "e2e-asset-niftybees-ns-values"
     direction: DOWN
     timeout: 10000
-- assertVisible: "Values: invested ₹48,351.60 | current ₹50,553.36 | quantity 198"
+# Includes the second buy's fees 10 + taxes 2 in the acquisition cost (#649).
+- assertVisible: "Values: invested ₹48,363.60 | current ₹50,553.36 | quantity 198"

@@ -4,6 +4,24 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-15: Full tier with the backup round trip (#671), 64 passed, 1 failed
+
+- Commit: test/671-backup-maestro-tier f7fb712, version 1.0.31. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, E2E APK
+  (R8 on, x86_64) freshly built from f7fb712, 58.7 MB, SHA-256 prefix
+  136af3fc8fb9c329, Metro stopped. Command: `npm run maestro:test` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Full tier: 64 passed, 1 failed, 80m 38s.
+- backup-roundtrip passed in 1m 27s: it exports with the value mask on,
+  restores into a cleared app, checks the preview counts, the restored records
+  and totals, and the value mask after a restart.
+- transactions-csv-import failed: the app showed NIFTYBEES invested
+  ₹48,363.60 where the flow expected ₹48,351.60. The ₹12 is the fixture's
+  fees 10 and taxes 2, which #649 now adds to average cost, so the expectation
+  was stale rather than the app being wrong. After the flow was updated,
+  transactions-csv-import (1m 38s) and zerodha-tradebook-import (3m 11s) both
+  passed.
+
 ## 2026-11-10: Victory Native chart migration (#138), smoke 14 passed
 
 - Commit: feat/asset-history-victory 3b1f8d8, version 1.0.30. AVD
