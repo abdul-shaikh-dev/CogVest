@@ -12,6 +12,10 @@ describe("bounded backup document read", () => {
     const read = jest.fn(async () => Buffer.alloc(backupMaxBytes + 1, 32).toString("base64"));
     await expect(readBoundedBackupFile("content://synthetic", read)).rejects.toThrow("size");
   });
+  it("rejects a provider that ignores the length bound before decoding it (#671)", async () => {
+    const read = jest.fn(async () => Buffer.alloc(backupMaxBytes + 4096, 32).toString("base64"));
+    await expect(readBoundedBackupFile("content://synthetic", read)).rejects.toThrow("Backup exceeds the supported size.");
+  });
   it("rejects malformed UTF-8 and unreadable files", async () => {
     await expect(readBoundedBackupFile("content://synthetic", async () => "/w==")).rejects.toThrow();
     await expect(readBoundedBackupFile("content://synthetic", async () => { throw new Error("Access denied"); })).rejects.toThrow();

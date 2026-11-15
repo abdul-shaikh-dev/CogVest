@@ -1,0 +1,133 @@
+appId: ${APP_ID}
+---
+# Backup and restore round trip (#671). Synthetic visual-QA data only.
+# The runner empties Documents/CogVest-QA before this flow. It backs up the
+# seeded portfolio with values masked, clears the app, restores that file into
+# the empty app, and checks the stored records, derived totals and preferences
+# through e2e-evidence, again after a cold start.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+# A non-default preference, so the restore has to bring it back.
+- openLink: "${SCHEME}:///settings"
+- tapOn:
+    id: value-mask-toggle
+- assertVisible:
+    id: value-mask-toggle
+    checked: true
+
+# Export into Documents/CogVest-QA.
+- openLink: "${SCHEME}:///backup?mode=export"
+- tapOn:
+    id: choose-backup-location
+- runFlow:
+    when:
+      notVisible: Files in CogVest-QA
+    commands:
+      - scrollUntilVisible:
+          element: Documents
+          direction: DOWN
+      - tapOn: Documents
+      # selector: the QA folder's name in the Android folder picker
+      - tapOn: CogVest-QA
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000
+- copyTextFrom: ".*saved. Keep this unencrypted file somewhere you trust."
+- evalScript: ${output.backupName = maestro.copiedText.split(' saved.')[0]}
+
+# Start again from an empty app; the backup file stays in shared storage.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible: "Asset count: 0"
+- assertVisible: "Cash entry count: 0"
+
+# Restore. The picker reopens in the folder used for the export.
+- openLink: "${SCHEME}:///backup?mode=restore"
+- tapOn:
+    id: choose-backup-file
+# selector: the exported file's name in the Android document picker
+- scrollUntilVisible:
+    element: ${output.backupName}
+    direction: DOWN
+# selector: the exported file's name in the Android document picker
+- tapOn: ${output.backupName}
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-preview
+    timeout: 15000
+- assertVisible:
+    id: backup-count-current-Assets
+    text: "0"
+- assertVisible:
+    id: backup-count-file-Assets
+    text: "5"
+- assertVisible:
+    id: backup-count-file-Opening positions
+    text: "4"
+- assertVisible:
+    id: backup-count-file-Cash entries
+    text: "4"
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- assertVisible:
+    id: backup-restore-confirmation
+# System back from the confirmation returns to the review without restoring.
+- back
+- assertVisible:
+    id: backup-restore-preview
+- scrollUntilVisible:
+    element:
+      id: continue-restore-confirmation
+    direction: DOWN
+- tapOn:
+    id: continue-restore-confirmation
+- tapOn:
+    id: confirm-restore-replacement
+- extendedWaitUntil:
+    visible:
+      id: backup-restore-done
+    timeout: 30000
+- tapOn:
+    id: backup-restore-done
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+
+# The restored records and values match the seeded portfolio.
+- runFlow:
+    file: helpers/backup-restored-evidence.yaml
+
+# They are stored, not only in memory: check again after a cold start.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+- runFlow:
+    file: helpers/backup-restored-evidence.yaml
+- openLink: "${SCHEME}:///settings"
+- assertVisible:
+    id: value-mask-toggle
+    checked: true

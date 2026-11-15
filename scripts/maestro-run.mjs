@@ -63,6 +63,7 @@ const defaultFlows = [
   "e2e/holding-duration.yaml",
   "e2e/contextual-nudges.yaml",
   "e2e/persistence.yaml",
+  "e2e/backup-roundtrip.yaml",
   "e2e/privacy-settings.yaml",
   "e2e/settings-preference-hierarchy.yaml",
   "e2e/shared-ui-hierarchy.yaml",
@@ -86,6 +87,7 @@ const smokeFlows = [
   "e2e/progress-snapshot-history.yaml",
   "e2e/value-masking.yaml",
   "e2e/persistence.yaml",
+  "e2e/backup-roundtrip.yaml",
 ];
 const smokeBudgetMs = 15 * 60 * 1000;
 
@@ -160,6 +162,9 @@ const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
 const casNativeFlow = "e2e/cas-native-import.yaml";
 const casNativeFreshPortfolioFlow = "e2e/cas-native-fresh-portfolio.yaml";
 const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
+const backupRoundtripFlow = "e2e/backup-roundtrip.yaml";
+// The flow exports into this shared folder and restores from it; see #671.
+const backupQaFolder = "/sdcard/Documents/CogVest-QA";
 const zerodhaTradebookFixtures = [
   "e2e/fixtures/zerodha-tradebook-2024.csv",
   "e2e/fixtures/zerodha-tradebook-2025.csv",
@@ -214,6 +219,13 @@ if (allowlistAdbPath) {
 /** Copies the files a flow picks through the system picker; returns a setup error. */
 function prepareFlow(flow) {
   const normalized = flow.replaceAll("\\", "/");
+  if (normalized === backupRoundtripFlow) {
+    // Start from an empty folder so earlier runs' backups never accumulate.
+    const adbPath = findExecutable("adb");
+    if (!adbPath) return "adb not found";
+    const folder = run(adbPath, ["shell", `rm -rf ${backupQaFolder} && mkdir -p ${backupQaFolder}`]);
+    return folder.status === 0 ? null : `unable to prepare ${backupQaFolder}`;
+  }
   const fixtures = {
     [holdingsCsvFlow]: [holdingsCsvFixture],
     [transactionsCsvFlow]: [transactionsCsvFixture],

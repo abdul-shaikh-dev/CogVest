@@ -209,4 +209,34 @@ describe("backup file service", () => {
     await expect(service.restorePortfolioBackup(prepared, controller.signal)).rejects.toThrow("canceled");
     expect(store.getState().captureBackup()).toEqual(original);
   });
+
+  it("lists payout counts in the preview when either side has payouts (#671)", async () => {
+    const { service, store, file } = harness();
+    await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
+    store.setState({ distributions: [{
+      assetId: "synthetic-asset", grossAmount: 10, id: "payout", paidOn: "2026-03-01",
+      recordedAt: "2026-03-02T00:00:00.000Z", taxWithheld: 0, treatment: "paidToCash",
+    }] });
+
+    const prepared = (await service.selectPortfolioBackup())!;
+
+    expect(prepared.review.counts).toContainEqual({ label: "Dividends and payouts", current: 1, backup: 0 });
+    expect(prepared.review.counts.map((count) => count.label)).not.toContain("Payout confirmations");
+  });
+
+  it("passes a recovery instruction through, and replaces any other restore failure with a safe message (#671)", async () => {
+    const { service, store, file, runtime } = harness();
+    await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
+
+    const recovery = (await service.selectPortfolioBackup())!;
+    const replace = jest.spyOn(store.getState(), "replaceFromBackup");
+    replace.mockImplementationOnce(() => { throw new Error("Restart CogVest to finish local data recovery before continuing."); });
+    await expect(service.restorePortfolioBackup(recovery)).rejects.toThrow("Restart CogVest to finish local data recovery");
+
+    const other = (await service.selectPortfolioBackup())!;
+    replace.mockImplementationOnce(() => { throw new Error("content://provider/secret/123 write failed"); });
+    await expect(service.restorePortfolioBackup(other)).rejects.toThrow(
+      "Restore did not finish. Restart CogVest if local data recovery is required, then select the backup again.");
+    expect(runtime.onRestored).not.toHaveBeenCalled();
+  });
 });
