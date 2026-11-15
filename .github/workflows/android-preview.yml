@@ -20,29 +20,54 @@ jobs:
     timeout-minutes: 90
 
     steps:
+      # Only a release tag may be built and signed; a manual dispatch must
+      # also pick a tag, not a branch.
+      - name: Require a release tag
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "FAIL Preview builds run only from a release tag, not $GITHUB_REF."
+            exit 1
+          fi
+
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          # Every tag is needed to check that the versionCode was not used.
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
           cache: npm
 
       - name: Install EAS CLI
-        run: npm install --global eas-cli@27
+        run: npm install --global eas-cli@27.2.0
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Check the tag, version and versionCode
+        run: node scripts/check-release-version.mjs "$GITHUB_REF_NAME"
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Maestro selector lint
+        run: npm run maestro:lint
 
       - name: Test
         run: npm test -- --runInBand
 
       - name: Expo doctor
         run: npm run doctor
+
+      - name: Check the release bundle has no QA harness
+        run: npm run release:check-harness
 
       - name: Build preview APK
         env:
