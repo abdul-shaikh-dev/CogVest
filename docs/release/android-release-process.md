@@ -74,7 +74,26 @@ git push origin v1.0.1-preview.2
 ```
 
 Increment `android.versionCode` before creating another externally distributed
-preview. The workflow can also be dispatched manually against an existing tag.
+preview. The workflow can also be dispatched manually, but only against a tag:
+its first step fails on a branch ref.
+
+Before the signed build, the workflow runs typecheck, lint, the Maestro
+selector lint, tests, Expo doctor and `npm run release:check-harness`. It also
+runs `scripts/check-release-version.mjs`, which fails when:
+
+- the tag's version differs from `app.json` or `package.json`;
+- `android.versionCode` is not higher than the versionCode in `app.json` at
+  every other `v*` tag.
+
+Each tag counts as a distributed build, including one the build quota
+blocked. Tags before 1.0.32 reused 26 and 32, so a manual rebuild of
+`v1.0.25-preview.2` or `v1.0.31-preview.2` now fails, as does any rebuild of
+an older tag.
+
+Actions in both workflows are pinned to commit SHAs, with the release tag in a
+comment, and `eas-cli` to an exact version. Update a pin deliberately: look up
+the tag's commit (`gh api repos/<owner>/<action>/git/ref/tags/<tag>`) and
+change the SHA and comment together.
 
 Preview release checklist:
 
