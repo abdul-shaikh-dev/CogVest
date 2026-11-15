@@ -52,7 +52,7 @@ export function getHoldingQuoteContext(
   const source = quote?.source ?? holding.valuation.source;
   const asOf = quote?.asOf ?? holding.valuation.asOf;
   const candidate = asOf
-    ? { assetId: holding.asset.id, asOf, currency: holding.asset.currency, price: holding.currentPrice, source }
+    ? { assetId: holding.asset.id, asOf, currency: holding.asset.currency, fetchedAt: quote?.fetchedAt, price: holding.currentPrice, source }
     : undefined;
   const freshness = classifyQuoteFreshness(candidate, now);
   const formattedAsOf = asOf ? formatAsOf(asOf, source) : null;

@@ -311,6 +311,7 @@ function validateGraph(payload: BackupPayload) {
     if (key !== quote.assetId || !asset || asset.currency !== quote.currency) fail("current quote cache is invalid");
     requireFinancialValue(quote.price, "current quote price", Number.MIN_VALUE);
     requireIsoTimestamp(quote.asOf, "current quote timestamp");
+    if (quote.fetchedAt !== undefined) requireIsoTimestamp(quote.fetchedAt, "current quote fetch time");
   }
   for (const [key, quote] of Object.entries(payload.historicalQuoteCache)) {
     const asset = portfolio.assets.find((candidate) => candidate.id === quote.assetId);

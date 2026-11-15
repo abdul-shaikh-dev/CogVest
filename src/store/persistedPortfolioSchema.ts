@@ -241,6 +241,7 @@ const quoteSchema = z.object({
   currency: z.enum(["INR", "USD"]),
   dayChangeAbs: finiteNumberSchema.optional(),
   dayChangePct: finiteNumberSchema.optional(),
+  fetchedAt: nonEmptyStringSchema.optional(),
   price: finiteNumberSchema,
   source: z.enum(["amfi", "yahoo", "coingecko", "manual"]),
 });

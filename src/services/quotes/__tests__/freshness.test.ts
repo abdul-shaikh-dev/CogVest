@@ -22,6 +22,27 @@ function quote(
   };
 }
 
+describe("market time and fetch time (#658)", () => {
+  const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString();
+  const marketQuote = (asOf: string, fetchedAt: string): Quote => ({ ...quote("asset", "yahoo", asOf), fetchedAt });
+
+  it("keeps a Friday close current when it was just fetched on Sunday", () => {
+    expect(classifyQuoteFreshness(marketQuote(minutesAgo(2 * 24 * 60), minutesAgo(1)), now)).toBe("current");
+  });
+
+  it("marks a just-fetched price stale when its market time is over four days old", () => {
+    expect(classifyQuoteFreshness(marketQuote(minutesAgo(5 * 24 * 60), minutesAgo(1)), now)).toBe("stale");
+  });
+
+  it("marks a recent market price stale when it was fetched over 15 minutes ago", () => {
+    expect(classifyQuoteFreshness(marketQuote(minutesAgo(20), minutesAgo(16)), now)).toBe("stale");
+  });
+
+  it("treats a fetch time in the future as missing", () => {
+    expect(classifyQuoteFreshness(marketQuote(minutesAgo(1), new Date(now.getTime() + 60_000).toISOString()), now)).toBe("missing");
+  });
+});
+
 describe("quote freshness", () => {
   it("uses one inclusive 15-minute threshold for live quotes", () => {
     const boundary = new Date(

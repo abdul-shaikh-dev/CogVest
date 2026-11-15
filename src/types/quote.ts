@@ -4,7 +4,10 @@ export type QuoteSource = "amfi" | "yahoo" | "coingecko" | "manual";
 
 export type Quote = {
   assetId: string;
+  /** When the price was set at the source: market time, or the NAV date for AMFI. */
   asOf: string;
+  /** When CogVest fetched it. Absent on quotes saved before #658, whose asOf was the fetch time. */
+  fetchedAt?: string;
   currency: Currency;
   dayChangeAbs?: number;
   dayChangePct?: number;
