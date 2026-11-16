@@ -4,6 +4,36 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-16: Smoke tier and Recovery flow for storage recovery (#654), 15 passed, 13m 24s
+
+- Commit: fix/654-storage-recovery 7abbd63, version 1.0.31. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, E2E APK
+  (R8 on, x86_64) freshly built from 7abbd63, SHA-256 prefix 16a66ab1d2e41bf0,
+  Metro stopped, Gradle daemons stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 13m 24s, within the 15-minute budget.
+- `e2e/visual/secondary-recovery.yaml` (`-e SIZE=normal`) passed. It covers the
+  new Export recovery copies button, the saved-file message, and no export
+  without a kept copy.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 00s |
+| record-purchase | Pass | 0m 49s |
+| payouts | Pass | 0m 45s |
+| xirr-holding | Pass | 0m 35s |
+| cash | Pass | 0m 54s |
+| trade-correction | Pass | 1m 55s |
+| holdings-csv-import | Pass | 1m 10s |
+| epf-accounts | Pass | 1m 03s |
+| ppf-account | Pass | 1m 17s |
+| progress-snapshot-history | Pass | 0m 38s |
+| value-masking | Pass | 1m 03s |
+| persistence | Pass | 0m 36s |
+| backup-roundtrip | Pass | 1m 04s |
+
 ## 2026-11-15: Smoke tier with stored-data checks (#673), 15 passed, 18m 58s
 
 - Commit: test/673-tz-stable-tests 933b9ae plus the two flow fixes below, version
