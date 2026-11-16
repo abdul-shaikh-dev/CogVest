@@ -3,6 +3,9 @@ import {
   type JsonStorage,
 } from "@/src/services/storage";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import type { DailyPriceEntry, DailyPricePoint, DailyPriceRequest } from "@/src/types";
+
+export type { DailyPriceEntry, DailyPricePoint, DailyPriceRequest };
 
 export const dailyPriceCacheStorageKey = "cogvest:v3:daily-price-cache";
 
@@ -14,22 +17,6 @@ const maxEntryPoints = 4_000;
 const freshnessMs = 24 * 60 * 60 * 1000;
 const refreshTimeoutMs = 10_000;
 let generationCounter = 0;
-
-export type DailyPriceRequest = {
-  basis: "close" | "adjusted-close";
-  currency: "INR" | "USD";
-  from: string;
-  provider: "yahoo" | "coingecko";
-  providerId: string;
-  to: string;
-};
-
-export type DailyPricePoint = { close: number; date: string };
-export type DailyPriceEntry = DailyPriceRequest & {
-  complete: boolean;
-  fetchedAt: string;
-  points: DailyPricePoint[];
-};
 
 type Envelope = { entries: DailyPriceEntry[]; generation: string; version: number };
 type EnvelopeMemo = {

@@ -6,6 +6,7 @@ import {
   createMmkvJsonStorage,
   type JsonStorage,
 } from "@/src/services/storage";
+import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 
 import { quickSetupStorageKey, backupRestoreJournalKey } from "@/src/services/storage/backupKeys";
@@ -186,13 +187,25 @@ let runtimeQuickSetupSessionStore:
   | undefined;
 
 export function getQuickSetupSessionStore() {
-  runtimeQuickSetupSessionStore ??= createQuickSetupSessionStore();
+  if (!runtimeQuickSetupSessionStore) {
+    runtimeQuickSetupSessionStore = createQuickSetupSessionStore();
+    resetSessionOnRestore(runtimeQuickSetupSessionStore, getPortfolioStore());
+  }
   return runtimeQuickSetupSessionStore;
 }
 
-export function resetQuickSetupSessionAfterRestore() {
-  // Persistence was cleared in the restore transaction, not in this notification.
-  runtimeQuickSetupSessionStore?.setState({ session: null });
+/**
+ * Drops the in-memory session when the portfolio is restored from a backup.
+ * The restore transaction already cleared the saved session; this keeps the
+ * screen from showing it until restart (#666, replacing a backup-service hook).
+ */
+export function resetSessionOnRestore(
+  sessionStore: StoreApi<QuickSetupSessionState>,
+  portfolioStore: StoreApi<PortfolioStoreState>,
+) {
+  return portfolioStore.subscribe((next, previous) => {
+    if (next.restoreEpoch !== previous.restoreEpoch) sessionStore.setState({ session: null });
+  });
 }
 
 export function useQuickSetupSession(

@@ -16,6 +16,31 @@ module.exports = defineConfig([
     },
   },
   {
+    // Layering (#666): domain is pure, services do not reach into screens.
+    files: ["src/domain/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          group: ["@/src/store", "@/src/store/*", "@/src/services", "@/src/services/*", "@/src/features", "@/src/features/*", "@/src/hooks", "@/src/hooks/*", "@/src/components", "@/src/components/*"],
+          message: "src/domain must stay pure: move shared types to src/types or src/domain.",
+        }],
+      }],
+    },
+  },
+  {
+    files: ["src/services/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          group: ["@/src/features", "@/src/features/*"],
+          message: "Services must not depend on feature screens; subscribe to store state instead.",
+        }],
+      }],
+    },
+  },
+  {
     // jest.mock factories run before imports and must use require().
     files: ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "jest.setup.ts"],
     rules: {

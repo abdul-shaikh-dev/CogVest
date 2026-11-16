@@ -2,7 +2,7 @@ import {
   parsePersistedHistoricalQuoteCache,
   parsePersistedPortfolio,
   parsePersistedQuoteCache,
-} from "@/src/store/persistedPortfolioSchema";
+} from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
 
 const validAsset = {
   assetClass: "stock",

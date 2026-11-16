@@ -1,11 +1,14 @@
 import {
   type EpfCommand,
-  type EpfState,
   previewEpfAccountDeletion,
 } from "@/src/domain/epf/persistence";
 import type { UsdmFuturesAccount } from "@/src/domain/usdmFutures";
 import type { DistributionInput } from "@/src/domain/distributions";
 import type { BackupPayload } from "@/src/domain/portfolioBackup";
+import {
+  portfolioSchemaVersion,
+  type RawPortfolioSnapshot,
+} from "@/src/domain/portfolioSnapshot";
 import type { PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
 import type { JsonStorage } from "@/src/services/storage";
 import type {
@@ -13,7 +16,6 @@ import type {
   BuyTrade,
   CashEntry,
   Distribution,
-  DistributionCoverage,
   HistoricalQuote,
   HistoricalQuoteCache,
   MeasurementBasis,
@@ -29,7 +31,7 @@ import type {
   Trade,
 } from "@/src/types";
 
-import type { PersistedParseFailure, PersistedPortfolioSnapshot } from "./persistedPortfolioSchema";
+import type { PersistedParseFailure, PersistedPortfolioSnapshot } from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
 /**
@@ -44,27 +46,11 @@ export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";
 export const assetGraphJournalStorageKey =
   "cogvest:v1:asset-graph-journal";
-export const portfolioSchemaVersion = 19;
 export const storageRecoveryKeyPrefix = "cogvest:recovery";
 
+export { portfolioSchemaVersion, type RawPortfolioSnapshot };
 
-export type RawPortfolioSnapshot = {
-  epf: EpfState;
-  assets: Asset[];
-  cashEntries: CashEntry[];
-  distributionCoverage: DistributionCoverage[];
-  distributions: Distribution[];
-  futuresAccounts: UsdmFuturesAccount[];
-  /** Where whole-portfolio XIRR starts (D9); null until the user sets it. */
-  measurementBasis: MeasurementBasis | null;
-  monthlySnapshots: MonthlySnapshot[];
-  openingPositions: OpeningPosition[];
-  ppfAccounts: PpfAccount[];
-  ppfLedgerEntries: PpfLedgerEntry[];
-  preferences: Preferences;
-  schemaVersion: typeof portfolioSchemaVersion;
-  trades: Trade[];
-};
+
 
 export type PortfolioStoreState = RawPortfolioSnapshot & {
   applyEpfCommand: (command: EpfCommand, expectedRevision: string) => "applied" | "alreadyApplied";

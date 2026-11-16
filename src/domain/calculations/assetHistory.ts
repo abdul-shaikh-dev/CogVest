@@ -7,8 +7,7 @@ import { decimal, normalizeMoney } from "@/src/domain/precision";
 import { getTradeQuantityDelta } from "@/src/domain/transactionSemantics";
 import { positionEvents, splitQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
-import type { DailyPriceEntry } from "@/src/services/quotes/dailyPriceCache";
-import type { Asset, OpeningPosition, Trade } from "@/src/types";
+import type { Asset, DailyPriceEntry, OpeningPosition, Trade } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type AssetHistoryPoint = {

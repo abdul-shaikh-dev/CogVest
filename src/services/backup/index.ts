@@ -5,7 +5,6 @@ import type { StoreApi } from "zustand/vanilla";
 
 import { backupMaxBytes, createPortfolioBackup, parsePortfolioBackup, type BackupPayload } from "@/src/domain/portfolioBackup";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import { resetQuickSetupSessionAfterRestore } from "@/src/features/quickSetup/quickSetupSession";
 import { readBoundedBackupFile } from "./boundedRead";
 
 export type BackupReview = {
@@ -24,7 +23,8 @@ type BackupRuntime = {
   uniqueId: () => string;
   selectFile: () => Promise<{ size: number; text: () => Promise<string> } | undefined>;
   selectDirectory: () => Promise<{ createFile: (name: string, mime: string) => WritableBackupFile } | undefined>;
-  onRestored: () => void;
+  /** Called after a successful restore. The quick setup session resets itself on the restore (#666). */
+  onRestored?: () => void;
 };
 
 const invalidBackupPrefix = "Invalid CogVest backup:";
@@ -145,7 +145,7 @@ export function createBackupService(runtime: BackupRuntime) {
       if (error instanceof Error && /portfolio changed|recovery|Restart CogVest/iu.test(error.message)) throw error;
       throw new Error("Restore did not finish. Restart CogVest if local data recovery is required, then select the backup again.");
     }
-    runtime.onRestored();
+    runtime.onRestored?.();
   }
 
   /**
@@ -209,7 +209,6 @@ function getService() {
         },
       };
     },
-    onRestored: resetQuickSetupSessionAfterRestore,
   });
   return service;
 }
