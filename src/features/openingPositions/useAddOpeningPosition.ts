@@ -21,6 +21,7 @@ import {
   type ResolveQuoteInput,
 } from "@/src/services/quotes";
 import {
+  describeSaveFailure,
   getPortfolioStore,
   type OpeningPositionCommandResult,
   type PortfolioStoreState,
@@ -625,9 +626,9 @@ export function useAddOpeningPosition({
       );
       setSavedAssetId(commandResult.asset.id);
       return commandResult;
-    } catch {
+    } catch (error) {
       setErrors({
-        save: "This holding could not be saved safely. Review it and try again.",
+        save: describeSaveFailure(error, "This holding could not be saved safely. Review it and try again."),
       });
     } finally {
       isSavingRef.current = false;

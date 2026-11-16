@@ -60,6 +60,22 @@ function createDefaultMmkvStorage(): MmkvLikeStorage {
   return createMMKV();
 }
 
+/** Native storage refused a write, for example because the device is full. */
+export class StorageWriteError extends Error {
+  constructor(cause: unknown) {
+    super("Local storage could not save the change.", { cause });
+    this.name = "StorageWriteError";
+  }
+}
+
+function writeOrThrow(write: () => void) {
+  try {
+    write();
+  } catch (error) {
+    throw new StorageWriteError(error);
+  }
+}
+
 export function createMmkvJsonStorage(
   storage: MmkvLikeStorage = createDefaultMmkvStorage(),
 ): JsonStorage {
@@ -77,13 +93,14 @@ export function createMmkvJsonStorage(
       return storage.getString(key) ?? null;
     },
     removeItem: (key: string) => {
-      storage.remove(key);
+      writeOrThrow(() => storage.remove(key));
     },
     setItem: <T extends JsonValue>(key: string, value: T) => {
-      storage.set(key, JSON.stringify(value));
+      const rawValue = JSON.stringify(value);
+      writeOrThrow(() => storage.set(key, rawValue));
     },
     setRawItem: (key: string, rawValue: string) => {
-      storage.set(key, rawValue);
+      writeOrThrow(() => storage.set(key, rawValue));
     },
   };
 }

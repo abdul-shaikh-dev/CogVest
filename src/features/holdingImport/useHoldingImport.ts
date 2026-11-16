@@ -17,6 +17,7 @@ import {
   type ResolveQuoteInput,
 } from "@/src/services/quotes";
 import {
+  describeSaveFailure,
   getPortfolioStore,
   type OpeningPositionCommandResult,
   type PortfolioStoreState,
@@ -261,10 +262,11 @@ export function useHoldingImport({
         items: result.items,
         pendingValuations: plan.summary.pendingValuations,
       });
-    } catch {
-      setScreenError(
+    } catch (error) {
+      setScreenError(describeSaveFailure(
+        error,
         "Nothing was imported. The portfolio stayed unchanged; review the rows and try again.",
-      );
+      ));
     } finally {
       setIsSaving(false);
     }

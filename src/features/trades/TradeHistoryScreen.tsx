@@ -21,7 +21,7 @@ import {
 import { formatCurrency, formatDate } from "@/src/domain/formatters";
 import { calculateRecordedSaleGains } from "@/src/domain/calculations/holdings";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { compareCodeUnits } from "@/src/domain/ordering";
 import { useLatestCallback, usePortfolioFields } from "@/src/hooks";
@@ -206,8 +206,8 @@ export function TradeHistoryScreen({
         tone: "success",
         text: `${count} ${count === 1 ? "transaction" : "transactions"} removed. Portfolio and automatic history updated.`,
       });
-    } catch {
-      setDeletionMessage({ tone: "error", text: "The selected transactions could not be removed safely. Nothing was changed." });
+    } catch (error) {
+      setDeletionMessage({ tone: "error", text: describeSaveFailure(error, "The selected transactions could not be removed safely. Nothing was changed.") });
     } finally {
       setIsDeleting(false);
     }

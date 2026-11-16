@@ -16,7 +16,7 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntry, CashEntryType } from "@/src/types";
 import { usePortfolioFields } from "@/src/hooks";
@@ -259,8 +259,8 @@ export function ReviewCashEntryScreen({
       await Promise.resolve();
       completed = true;
       onComplete();
-    } catch {
-      setErrors({ save: getSaveFailureMessage() });
+    } catch (error) {
+      setErrors({ save: describeSaveFailure(error, getSaveFailureMessage()) });
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;
@@ -289,9 +289,9 @@ export function ReviewCashEntryScreen({
       await Promise.resolve();
       completed = true;
       onComplete();
-    } catch {
+    } catch (error) {
       setErrors({
-        save: "This cash entry could not be deleted safely. Try again.",
+        save: describeSaveFailure(error, "This cash entry could not be deleted safely. Try again."),
       });
     } finally {
       if (!completed) {

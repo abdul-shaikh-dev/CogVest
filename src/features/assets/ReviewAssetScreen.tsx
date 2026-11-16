@@ -32,7 +32,7 @@ import {
 } from "@/src/domain/assets";
 import { getOpeningPositionHistoryDate } from "@/src/domain/openingPositions";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
@@ -283,8 +283,8 @@ export function ReviewAssetScreen({
       onComplete(
         result.quoteCacheInvalidated ? "assetSavedPricesRefresh" : "assetSaved",
       );
-    } catch {
-      setError("Asset details could not be saved safely. Try again.");
+    } catch (error) {
+      setError(describeSaveFailure(error, "Asset details could not be saved safely. Try again."));
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;
@@ -309,8 +309,8 @@ export function ReviewAssetScreen({
       onComplete(
         result.pendingMonths.length > 0 ? "assetDeletedHistoryRefresh" : "assetDeleted",
       );
-    } catch {
-      setError("This asset could not be deleted safely. Nothing was changed.");
+    } catch (error) {
+      setError(describeSaveFailure(error, "This asset could not be deleted safely. Nothing was changed."));
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;

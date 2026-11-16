@@ -20,7 +20,7 @@ import {
   isValidDateString,
   validateSellQuantity,
 } from "@/src/domain/validators";
-import { getPortfolioStore, wouldOversellAsset, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState, wouldOversellAsset } from "@/src/store";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { StockSplitError } from "@/src/domain/stockSplits";
 import { getHoldingQuoteContext, type QuoteContext } from "@/src/services/quotes";
@@ -358,9 +358,9 @@ export function useSellRedeemHolding({
       setSuccessMessage("Sell / redeem recorded.");
 
       return saveResult;
-    } catch {
+    } catch (error) {
       const saveErrors = {
-        save: "This sale could not be saved safely. Review it and try again.",
+        save: describeSaveFailure(error, "This sale could not be saved safely. Review it and try again."),
       };
       setErrors(saveErrors);
       return { errors: saveErrors, isValid: false };

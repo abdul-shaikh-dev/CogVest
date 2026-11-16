@@ -18,7 +18,7 @@ import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
 import { formatCurrency, formatINR } from "@/src/domain/formatters";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
@@ -220,8 +220,8 @@ export function ReviewTradeScreen({
       await Promise.resolve();
       completed = true;
       onComplete(result.pendingMonths.length > 0 ? "transactionSavedHistoryRefresh" : "transactionSaved");
-    } catch {
-      setErrors({ save: failureMessage() });
+    } catch (error) {
+      setErrors({ save: describeSaveFailure(error, failureMessage()) });
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;
@@ -244,8 +244,8 @@ export function ReviewTradeScreen({
       await Promise.resolve();
       completed = true;
       onComplete(result.pendingMonths.length > 0 ? "transactionRemovedHistoryRefresh" : "transactionRemoved");
-    } catch {
-      setErrors({ save: "This transaction could not be removed safely. Try again." });
+    } catch (error) {
+      setErrors({ save: describeSaveFailure(error, "This transaction could not be removed safely. Try again.") });
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;

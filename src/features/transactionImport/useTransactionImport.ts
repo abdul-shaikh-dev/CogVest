@@ -22,6 +22,7 @@ import {
   type CasStatementImportReview,
 } from "@/src/services/import-export";
 import {
+  describeSaveFailure,
   getPortfolioStore,
   type PortfolioStoreState,
   type TransactionImportCommandResult,
@@ -407,10 +408,11 @@ export function useTransactionImport({
     setScreenError(undefined);
     try {
       onImported(store.getState().recordTransactionImport(plan.command));
-    } catch {
-      setScreenError(
+    } catch (error) {
+      setScreenError(describeSaveFailure(
+        error,
         "Nothing was imported. Your portfolio and Cash Ledger stayed unchanged; review the conflicts and try again.",
-      );
+      ));
     } finally {
       setIsSaving(false);
     }
