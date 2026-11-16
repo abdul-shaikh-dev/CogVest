@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   BackHandler,
+  type FlatList,
   Keyboard,
   PanResponder,
   Pressable,
   RefreshControl,
-  type ScrollViewInstance,
   TextInput,
   useWindowDimensions,
   View,
@@ -20,13 +20,13 @@ import {
   EmptyState,
   IconButton,
   PremiumCard,
-  ScreenContainer,
   ScreenHeader,
+  ScreenList,
 } from "@/src/components/common";
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
-import { useLatestCallback, useProgressiveCount } from "@/src/hooks";
+import { useLatestCallback } from "@/src/hooks";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useTheme } from "@/src/theme";
@@ -134,7 +134,7 @@ export function HoldingsScreen({
     setAppliedDestinationRequest(destinationRequest);
     if (destinationRequest) setSelectedDestination(destinationRequest.destination);
   }
-  const scrollRef = useRef<ScrollViewInstance>(null);
+  const scrollRef = useRef<FlatList<HoldingReviewItem>>(null);
   const detailScrollOffsetRef = useRef(0);
   const verticalGesture = useRef(false);
   useEffect(() => {
@@ -213,7 +213,7 @@ export function HoldingsScreen({
     if (destination === activeDestination) return;
     Keyboard.dismiss();
     setSelectedDestination(destination);
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    scrollRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
   // PanResponder.create only stores these handlers; they read the ref on touch, never during render.
   // eslint-disable-next-line react-hooks/refs
@@ -257,8 +257,10 @@ export function HoldingsScreen({
     effectiveFilter,
     searchQuery,
   );
-  // 250 rows in one commit blocked the JS thread for ~0.8 s on first open (#138).
-  const renderedRowCount = useProgressiveCount(visibleItems.length);
+  // Rows are virtualised, so only those near the screen are mounted (#664).
+  const showMarketList = activeDestination === "market" && hasMarketHoldings;
+  const marketRows = showMarketList ? visibleItems : [];
+  const showNoMatches = showMarketList && visibleItems.length === 0;
   const allocationItems = marketReviewItems.filter(
     (item) => item.holding.asset.assetClass !== "cash",
   );
@@ -339,8 +341,27 @@ export function HoldingsScreen({
 
   return (
     <View style={{ flex: 1 }} testID="holdings-swipe-surface" {...destinationGesture.panHandlers}>
-    <ScreenContainer
-      scrollRef={scrollRef}
+    <ScreenList
+      data={marketRows}
+      empty={showNoMatches ? (
+        <View style={styles.listGap}>
+          <EmptyState
+            message="Try another search or review filter."
+            title="No holdings match"
+          />
+        </View>
+      ) : undefined}
+      footer={activeDestination === "market" && hasMarketHoldings && !isMinimalMode ? (
+        <AppText color="secondary" style={styles.listGap} variant="caption">
+          Returns are since investment, not today.
+        </AppText>
+      ) : undefined}
+      itemGap={0}
+      keyExtractor={(item: HoldingReviewItem) => item.holding.asset.id}
+      listRef={scrollRef}
+      listStyle={styles.listContent}
+      listTestID="holdings-list"
+      renderItem={({ item }: { item: HoldingReviewItem }) => renderHoldingRow(item)}
       refreshControl={
         holdings.length > 0 ? (
           <RefreshControl
@@ -352,10 +373,9 @@ export function HoldingsScreen({
           />
         ) : undefined
       }
-      scroll
       testID="holdings-screen"
-    >
-      <View style={styles.content}>
+      header={(
+      <View style={styles.listHeaderContent}>
         <ScreenHeader
           compact
           title="Holdings"
@@ -630,22 +650,11 @@ export function HoldingsScreen({
               />
             ) : null}
 
-            {visibleItems.length === 0 ? (
-              <EmptyState
-                message="Try another search or review filter."
-                title="No holdings match"
-              />
-            ) : (
-              <View style={styles.holdingsList} testID="holdings-list">
-                {visibleItems.slice(0, renderedRowCount).map(renderHoldingRow)}
-              </View>
-            )}
-            {!isMinimalMode ? <AppText color="secondary" variant="caption">
-              Returns are since investment, not today.
-            </AppText> : null}
           </>
         ) : null}
-
+      </View>
+      )}
+    >
         {selectedItem ? (
           <HoldingDetailModal
             allocationAvailable={
@@ -728,8 +737,7 @@ export function HoldingsScreen({
             />
           ) : null}
         </HoldingsPanelSheet>
-      </View>
-    </ScreenContainer>
+    </ScreenList>
     </View>
   );
 }

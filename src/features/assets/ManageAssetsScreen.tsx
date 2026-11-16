@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { useState } from "react";
+import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { memo, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -8,7 +8,6 @@ import {
   CategoryIcon,
   EmptyState,
   IconButton,
-  PremiumCard,
   ScreenContainer,
   ScreenHeader,
   assetClassLabel,
@@ -25,6 +24,7 @@ import { projectDemergers } from "@/src/domain/demergers";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import type { Asset, OpeningPosition, Trade } from "@/src/types";
 import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { usePortfolioFields } from "@/src/hooks";
 
@@ -34,26 +34,53 @@ type ManageAssetsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
-function remainingUnits(
+function groupByAsset<Item extends { assetId: string }>(items: readonly Item[]) {
+  const groups = new Map<string, Item[]>();
+  for (const item of items) {
+    const group = groups.get(item.assetId);
+    if (group) group.push(item);
+    else groups.set(item.assetId, [item]);
+  }
+  return groups;
+}
+
+/**
+ * Remaining units for every asset, worked out once per record change rather
+ * than per asset and per search keystroke (#664). Null when a stock split
+ * leaves the quantity unknown.
+ */
+function remainingUnitsByAsset(
   state: Pick<PortfolioStoreState, "assets" | "openingPositions" | "trades">,
-  assetId: string,
+) {
+  const demergerAdjustments = groupByAsset(projectDemergers({
+    assets: state.assets,
+    openingPositions: state.openingPositions,
+    trades: state.trades,
+  }));
+  const openingsByAsset = groupByAsset<OpeningPosition>(state.openingPositions);
+  const tradesByAsset = groupByAsset<Trade>(state.trades);
+  return new Map(state.assets.map((asset) => [asset.id, remainingUnits(
+    asset,
+    openingsByAsset.get(asset.id) ?? [],
+    tradesByAsset.get(asset.id) ?? [],
+    demergerAdjustments.get(asset.id) ?? [],
+  )]));
+}
+
+function remainingUnits(
+  asset: Asset,
+  assetOpenings: OpeningPosition[],
+  assetTrades: readonly Trade[],
   demergerAdjustments: readonly DemergerAdjustment[],
 ) {
-  const assetOpenings = state.openingPositions.filter(
-    (position) => position.assetId === assetId,
-  );
-  const trades = state.trades
-    .filter(
-      (trade) =>
-        trade.assetId === assetId &&
-        isTransactionAfterOpeningCutover(trade.date, assetOpenings),
-    );
+  const trades = assetTrades.filter((trade) =>
+    isTransactionAfterOpeningCutover(trade.date, assetOpenings));
 
   try {
     return normalizeQuantity(positionQuantity({
       openingPositions: assetOpenings,
       trades,
-      stockSplits: state.assets.find((asset) => asset.id === assetId)?.stockSplits,
+      stockSplits: asset.stockSplits,
       demergerAdjustments,
     }));
   } catch (error) {
@@ -61,6 +88,68 @@ function remainingUnits(
     return null;
   }
 }
+
+/** The space between rows, and above the first and below the last, as in the section card it replaces. */
+function RowGap() {
+  const styles = useStyles();
+  return <View style={styles.rowGap} />;
+}
+
+const ManageAssetRow = memo(function ManageAssetRow({
+  asset,
+  isLast,
+  onReviewAsset,
+  units,
+}: {
+  asset: Asset;
+  isLast: boolean;
+  onReviewAsset: (assetId: string) => void;
+  units: string | number | null;
+}) {
+  const styles = useStyles();
+  const isActive = units !== null && decimal(units).greaterThanOrEqualTo(quantityQuantum);
+  const status = units === null ? "Unavailable quantity" : isActive ? "Active" : "Closed";
+  const identity = [...new Set([
+    asset.symbol,
+    asset.ticker && asset.ticker !== asset.symbol ? asset.ticker : undefined,
+    asset.isin,
+  ].filter((value): value is string => Boolean(value)))].join(" · ");
+  return (
+    <Pressable
+      accessibilityHint="Opens asset details and deletion impact"
+      accessibilityLabel={`Review ${asset.name}, ${identity || "no market identifier"}, ${instrumentTypeLabel(asset.instrumentType ?? "other")}, ${assetClassLabel(asset.assetClass)}, ${status}`}
+      accessibilityRole="button"
+      onPress={() => onReviewAsset(asset.id)}
+      style={({ pressed }) => [
+        styles.row,
+        !isLast && styles.divider,
+        getPressedStateStyle({ pressed }),
+      ]}
+      testID={`manage-asset-${asset.id}`}
+    >
+      <View style={styles.icon}>
+        <CategoryIcon assetClass={asset.assetClass} size={20} />
+      </View>
+      <View style={styles.copy}>
+        <AppText testID={`manage-asset-name-${asset.id}`} weight="bold">{asset.name}</AppText>
+        <AppText color="secondary" variant="caption">
+          {identity || "No market identifier"}
+        </AppText>
+        <View style={styles.classification}>
+          <AppText color="secondary" variant="caption" style={styles.classificationCopy}>
+            {[...new Set([instrumentTypeLabel(asset.instrumentType ?? "other"), assetClassLabel(asset.assetClass)])].join(" · ")}
+          </AppText>
+          <View style={[styles.status, isActive ? styles.active : styles.closed]}>
+            <AppText color={isActive ? "primary" : "secondary"} variant="caption" weight="bold">
+              {units === null ? "Unavailable" : isActive ? "Active" : "Closed"}
+            </AppText>
+          </View>
+        </View>
+      </View>
+      <AppText color="secondary">›</AppText>
+    </Pressable>
+  );
+});
 
 export function ManageAssetsScreen({
   onBack,
@@ -70,11 +159,7 @@ export function ManageAssetsScreen({
   const { colors } = useTheme();
   const styles = useStyles();
   const snapshot = usePortfolioFields(store, ["assets", "openingPositions", "trades"]);
-  const demergerAdjustments = projectDemergers({
-    assets: snapshot.assets,
-    openingPositions: snapshot.openingPositions,
-    trades: snapshot.trades,
-  });
+  const unitsByAsset = useMemo(() => remainingUnitsByAsset(snapshot), [snapshot]);
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const visibleAssets = normalizedQuery
@@ -107,7 +192,6 @@ export function ManageAssetsScreen({
             value={searchQuery}
           />
         </View> : null}
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always" testID="manage-assets-list-scroll">
         {snapshot.assets.length === 0 ? (
           <EmptyState
             actionLabel="Back to Holdings"
@@ -115,73 +199,40 @@ export function ManageAssetsScreen({
             onAction={onBack}
             title="No assets yet"
           />
-        ) : visibleAssets.length === 0 ? (
-          <EmptyState
-            message={`No asset identity matches “${searchQuery.trim()}”. Try a name, symbol, ticker, or ISIN.`}
-            title="No matching assets"
-          />
         ) : (
-          <>
-          <AppText color="secondary" testID="manage-assets-result-count" variant="caption">
-            {visibleAssets.length === snapshot.assets.length
-              ? `${snapshot.assets.length} ${snapshot.assets.length === 1 ? "asset" : "assets"}`
-              : `${visibleAssets.length} of ${snapshot.assets.length} assets`}
-          </AppText>
-          <PremiumCard section style={styles.list}>
-            {visibleAssets.map((asset, index) => {
-              const units = remainingUnits(
-                snapshot,
-                asset.id,
-                demergerAdjustments.filter((adjustment) => adjustment.assetId === asset.id),
-              );
-              const isActive = units !== null && decimal(units).greaterThanOrEqualTo(quantityQuantum);
-              const status = units === null ? "Unavailable quantity" : isActive ? "Active" : "Closed";
-              const identity = [...new Set([
-                asset.symbol,
-                asset.ticker && asset.ticker !== asset.symbol ? asset.ticker : undefined,
-                asset.isin,
-              ].filter((value): value is string => Boolean(value)))].join(" · ");
-              return (
-                <Pressable
-                  accessibilityHint="Opens asset details and deletion impact"
-                  accessibilityLabel={`Review ${asset.name}, ${identity || "no market identifier"}, ${instrumentTypeLabel(asset.instrumentType ?? "other")}, ${assetClassLabel(asset.assetClass)}, ${status}`}
-                  accessibilityRole="button"
-                  key={asset.id}
-                  onPress={() => onReviewAsset(asset.id)}
-                  style={({ pressed }) => [
-                    styles.row,
-                    index < visibleAssets.length - 1 && styles.divider,
-                    getPressedStateStyle({ pressed }),
-                  ]}
-                  testID={`manage-asset-${asset.id}`}
-                >
-                  <View style={styles.icon}>
-                    <CategoryIcon assetClass={asset.assetClass} size={20} />
-                  </View>
-                  <View style={styles.copy}>
-                    <AppText testID={`manage-asset-name-${asset.id}`} weight="bold">{asset.name}</AppText>
-                    <AppText color="secondary" variant="caption">
-                      {identity || "No market identifier"}
-                    </AppText>
-                    <View style={styles.classification}>
-                      <AppText color="secondary" variant="caption" style={styles.classificationCopy}>
-                        {[...new Set([instrumentTypeLabel(asset.instrumentType ?? "other"), assetClassLabel(asset.assetClass)])].join(" · ")}
-                      </AppText>
-                      <View style={[styles.status, isActive ? styles.active : styles.closed]}>
-                        <AppText color={isActive ? "primary" : "secondary"} variant="caption" weight="bold">
-                          {units === null ? "Unavailable" : isActive ? "Active" : "Closed"}
-                        </AppText>
-                      </View>
-                    </View>
-                  </View>
-                  <AppText color="secondary">›</AppText>
-                </Pressable>
-              );
-            })}
-          </PremiumCard>
-          </>
+          <FlatList
+            ItemSeparatorComponent={RowGap}
+            ListEmptyComponent={(
+              <EmptyState
+                message={`No asset identity matches “${searchQuery.trim()}”. Try a name, symbol, ticker, or ISIN.`}
+                title="No matching assets"
+              />
+            )}
+            ListFooterComponent={visibleAssets.length > 0 ? RowGap : undefined}
+            ListHeaderComponent={visibleAssets.length > 0 ? (
+              <AppText color="secondary" style={styles.resultCount} testID="manage-assets-result-count" variant="caption">
+                {visibleAssets.length === snapshot.assets.length
+                  ? `${snapshot.assets.length} ${snapshot.assets.length === 1 ? "asset" : "assets"}`
+                  : `${visibleAssets.length} of ${snapshot.assets.length} assets`}
+              </AppText>
+            ) : undefined}
+            contentContainerStyle={styles.content}
+            data={visibleAssets}
+            initialNumToRender={12}
+            keyExtractor={(asset) => asset.id}
+            keyboardShouldPersistTaps="always"
+            renderItem={({ index, item }) => (
+              <ManageAssetRow
+                asset={item}
+                isLast={index === visibleAssets.length - 1}
+                onReviewAsset={onReviewAsset}
+                units={unitsByAsset.get(item.id) ?? null}
+              />
+            )}
+            testID="manage-assets-list-scroll"
+            windowSize={7}
+          />
         )}
-        </ScrollView>
       </View>
     </ScreenContainer>
   );
@@ -190,14 +241,15 @@ export function ManageAssetsScreen({
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   active: { backgroundColor: colors.selected },
   closed: { backgroundColor: colors.surface.elevated },
-  content: { gap: spacing.cardGap, paddingBottom: spacing.xl },
+  content: { paddingBottom: spacing.xl },
   copy: { flex: 1, minWidth: 0, gap: spacing.xs },
   classification: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
   classificationCopy: { flexShrink: 1 },
   divider: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   icon: { alignItems: "center", justifyContent: "center", width: 32 },
-  list: { paddingHorizontal: 0, paddingVertical: 0 },
-  row: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 72, paddingVertical: spacing.sm },
+  resultCount: { marginBottom: spacing.cardGap },
+  row: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 72, paddingHorizontal: spacing.xs, paddingVertical: spacing.sm },
+  rowGap: { height: spacing.md },
   screen: { flex: 1, gap: spacing.md },
   searchField: { alignItems: "center", backgroundColor: colors.surface.card, borderRadius: radii.button, flexDirection: "row", gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md },
   searchInput: { color: colors.text.primary, flex: 1, minHeight: 48, paddingVertical: spacing.sm },

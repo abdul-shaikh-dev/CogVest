@@ -267,10 +267,9 @@ describe("HoldingsScreen", () => {
     const thirtyScreen = await render(
       <HoldingsScreen store={seedListHoldings(30)} />,
     );
-    // The first commit renders one batch; the rest arrive in the next task (#138).
-    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(24);
-    await act(() => jest.advanceTimersByTime(0));
-    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
+    // The list is virtualised: the first commit mounts one screenful, not all 30 (#664).
+    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(12);
+    // A holding that is not mounted yet is still found by search.
     await fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),
       "List holding 30",
