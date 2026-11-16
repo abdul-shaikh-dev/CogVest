@@ -131,6 +131,29 @@ describe("Zerodha delivery-series import persistence", () => {
     expect(reloaded.getState()).toBe(before);
   });
 
+  it("saves trades whose trade number the exchange reused on another day or exchange, and recognises them again (#655)", () => {
+    const row = (day: number, asset: Asset) => {
+      const date = `2025-01-${String(day).padStart(2, "0")}`;
+      return [asset.symbol, asset.isin, date, asset.exchange, "EQ", "EQ", "buy", "false", 1, 100,
+        "1000001", `synthetic-order-${day}-${asset.exchange}`, `${date}T10:00:00`].join(",");
+    };
+    const parsed = parseZerodhaTradebook([zerodhaTradebookHeaders.join(","), row(1, nseAsset), row(6, nseAsset), row(1, bseAsset)].join("\n"));
+    expect(parsed.errors).toEqual([]);
+    const reused: TransactionCsvResolution[] = parsed.rows.map((item) => ({
+      asset: item.isin === nseAsset.isin ? nseAsset : bseAsset, row: item, status: "ready",
+    }));
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage, now });
+
+    const result = plan(store.getState(), reused);
+    expect(result.errors).toEqual([]);
+    expect(store.getState().recordTransactionImport(result.command!).added).toBe(3);
+
+    const reloaded = createPortfolioStore({ storage, now });
+    expect(reloaded.getState().trades.map((trade) => trade.importProvenance?.externalId)).toEqual(["1000001", "1000001", "1000001"]);
+    expect(plan(reloaded.getState(), reused, "synthetic-reimport")).toMatchObject({ duplicates: 3, conflicts: 0, errors: [] });
+  });
+
   it("rejects a true oversell without writing any part of the batch", () => {
     const storage = createMemoryJsonStorage();
     const store = createPortfolioStore({ storage, now });

@@ -16,7 +16,9 @@ or cash-reconstruction tools.
    Android picker selects one file at a time, but CogVest reviews up to ten
    files as one ordered batch.
 5. Remove or reorder files before confirming. Repeated trades from overlapping
-   exports are detected by Zerodha's execution-level `trade_id`.
+   exports are detected by Zerodha's execution-level `trade_id`, together with
+   its exchange, segment and execution date: exchanges reuse trade numbers
+   across days and between NSE and BSE.
 6. Review holding matches, not individual transactions. Exact symbol/exchange/
    currency suggestions can be accepted together; ambiguous matches still need
    an explicit selection. Accepted matches stay selected as annual files change.

@@ -5,6 +5,7 @@ import {
 } from "@/src/domain/assets";
 import { formatLocalCalendarDate, getCalendarDatePart, isFutureCalendarDate, parseCalendarDate } from "@/src/domain/dates";
 import { normalizeTrade } from "@/src/domain/financialRecords";
+import { importExternalIdentityKey } from "@/src/domain/importIdentity";
 import { decimal } from "@/src/domain/precision";
 import {
   matchesOpeningPosition,
@@ -110,16 +111,6 @@ type BuildTransactionImportPlanInput = {
 
 function normalizeScope(value?: string) {
   return value?.trim().toUpperCase() ?? "";
-}
-
-function externalIdentity(
-  sourceFormat: string,
-  account: string | undefined,
-  externalId: string,
-) {
-  return [sourceFormat, normalizeScope(account), normalizeScope(externalId)].join(
-    "|",
-  );
 }
 
 function fingerprintIdentity(
@@ -576,16 +567,8 @@ export function buildTransactionImportPlan({
         transaction,
       );
     }
-    if (provenance.externalId) {
-      existingExternal.set(
-        externalIdentity(
-          provenance.sourceFormat,
-          provenance.account,
-          provenance.externalId,
-        ),
-        transaction,
-      );
-    }
+    const existingExternalKey = importExternalIdentityKey(provenance);
+    if (existingExternalKey) existingExternal.set(existingExternalKey, transaction);
     if (provenance.fingerprint) {
       existingFingerprints.set(
         fingerprintIdentity(
@@ -608,13 +591,7 @@ export function buildTransactionImportPlan({
     const kept: typeof items = [];
     for (const item of items) {
       const provenance = item.transaction.importProvenance!;
-      const externalKey = provenance.externalId
-        ? externalIdentity(
-            provenance.sourceFormat,
-            provenance.account,
-            provenance.externalId,
-          )
-        : undefined;
+      const externalKey = importExternalIdentityKey(provenance);
       const fingerprintKey = fingerprintIdentity(
         provenance.sourceFormat,
         provenance.account,
