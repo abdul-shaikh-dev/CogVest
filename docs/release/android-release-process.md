@@ -85,10 +85,14 @@ runs `scripts/check-release-version.mjs`, which fails when:
 - `android.versionCode` is not higher than the versionCode in `app.json` at
   every other `v*` tag.
 
-Each tag counts as a distributed build, including one the build quota
-blocked. Tags before 1.0.32 reused 26 and 32, so a manual rebuild of
-`v1.0.25-preview.2` or `v1.0.31-preview.2` now fails, as does any rebuild of
-an older tag.
+The rule is that a `versionCode` is never reused once a binary carrying it has
+been distributed. A build that was cancelled or blocked before it produced an
+APK distributed nothing, so its `versionCode` was free: `v1.0.25-preview.2`
+reused 26 and `v1.0.31-preview.2` reused 32 after the first preview of each
+was cancelled without an APK. The check cannot tell which tags produced a
+binary, so it is stricter and treats every tag as used. Give each new tag a
+new `versionCode`, even after a cancelled build. A manual rebuild of
+`v1.0.25-preview.2`, `v1.0.31-preview.2` or any older tag therefore fails.
 
 Actions in both workflows are pinned to commit SHAs, with the release tag in a
 comment, and `eas-cli` to an exact version. Update a pin deliberately: look up
@@ -119,8 +123,9 @@ on x86 emulators; use a local build there. The production AAB keeps every ABI.
 status from `--json` and fails unless it is `FINISHED`.
 
 The Expo free plan has a small monthly Android build quota. Tag a preview only
-for a set of changes worth a real release; a tag that the quota blocks still
-uses its `versionCode`, so the next attempt needs a new one.
+for a set of changes worth a real release. When the quota blocks or cancels a
+tag's build, no binary is distributed, but the version check still counts the
+tag, so bump `versionCode` and tag again (`v<version>-preview.<number + 1>`).
 
 ### PPF Interest Rate Schedule
 
@@ -313,10 +318,17 @@ to publish. Existing preview-build triggers do not authorize Play submission.
   `package.json`, and the current release-history entry.
 - `versionCode`: strictly increasing Android integer for every APK or AAB
   distributed outside the developer machine, including previews.
+- Never reuse a `versionCode` once a binary carrying it has been distributed,
+  even when that preview is later discarded. A build cancelled before it
+  produced a binary distributed nothing; see
+  [Preview APK](#preview-build) for why a new tag still needs a new one.
 - Record every distributed identity in
   `docs/release/android-version-history.json` before building it.
-- Never reuse a `versionCode`, even when a preview is discarded.
-- Git tag format: `v0.1.0`.
+- Git tag formats, both annotated and on the merge commit on `main`:
+  - preview: `v<version>-preview.<number>`, for example `v1.0.32-preview.1`;
+    this is the only format that triggers the preview workflow;
+  - release: `v<version>`, for example `v1.0.32`. The version check accepts
+    it, but no workflow builds it; run the production `eas build` by hand.
 
 ## Release Permissions
 
