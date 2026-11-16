@@ -28,7 +28,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 import { useBackHandler, usePortfolioFields } from "@/src/hooks";
-import { applyEpfChange } from "./EpfAccountScreen";
+import { applyEpfChange } from "./epfChange";
 import { EpfCheckRow } from "./EpfCheckRow";
 import {
   buildEpfBalanceUpdate,
