@@ -1,6 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { createMemoryJsonStorage } from "@/src/services/storage";
-import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
+import { createPortfolioStore, portfolioStorageKey, preferencesStorageKey } from "@/src/store";
 import { ContextualNudge } from "../ContextualNudge";
 
 function fixture() {
@@ -34,7 +34,9 @@ describe("Contextual guidance", () => {
     await fireEvent.press(view.getByTestId("dismiss-nudge-metadata"));
     expect(restored.getState().preferences.maskWealthValues).toBe(true);
     expect(restored.getState().trades).toEqual([]);
+    // Clearing app data removes every key, including preferences saved apart (#665).
     storage.removeItem(portfolioStorageKey);
+    storage.removeItem(preferencesStorageKey);
     expect(
       createPortfolioStore({ storage }).getState().preferences.nudgeVersions,
     ).toBeUndefined();

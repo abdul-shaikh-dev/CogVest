@@ -32,6 +32,13 @@ import type {
 import type { PersistedParseFailure, PersistedPortfolioSnapshot } from "./persistedPortfolioSchema";
 
 export const portfolioStorageKey = "cogvest:v1:portfolio";
+/**
+ * Display preferences, saved apart from the portfolio so a toggle does not
+ * rewrite every record (#665). Absent until the first preference change; the
+ * copy inside the portfolio record applies until then.
+ */
+export const preferencesStorageKey = "cogvest:v1:preferences";
+export const preferencesRecordVersion = 1;
 export const quoteCacheStorageKey = "cogvest:v1:quote-cache";
 export const historicalQuoteCacheStorageKey =
   "cogvest:v1:historical-quote-cache";

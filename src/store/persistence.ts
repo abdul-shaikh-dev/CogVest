@@ -27,6 +27,7 @@ import type {
 import {
   parsePersistedHistoricalQuoteCache,
   parsePersistedPortfolio,
+  parsePersistedPreferences,
   parsePersistedQuoteCache,
   type PersistedPortfolioSnapshot,
 } from "./persistedPortfolioSchema";
@@ -36,6 +37,8 @@ import {
   portfolioSchemaVersion,
   portfolioStorageKey,
   type PortfolioStoreState,
+  preferencesRecordVersion,
+  preferencesStorageKey,
   quoteCacheStorageKey,
   type RawPortfolioSnapshot,
   type StorageRecoveryCopy,
@@ -320,6 +323,43 @@ export function readPortfolioSnapshot(
     };
   }
 
+}
+
+/**
+ * Reads the separately saved preferences (#665). Undefined when none are
+ * saved yet, so the copy in the portfolio record applies: that is how a
+ * portfolio from an earlier version migrates. An unreadable record is
+ * quarantined like any other.
+ */
+export function readPreferences(
+  storage: JsonStorage,
+  now: () => Date,
+): PersistedReadResult<Preferences | undefined> {
+  const rawValue = storage.getRawItem(preferencesStorageKey);
+  if (rawValue === null) return { data: undefined };
+
+  const parsed = parsePersistedPreferences(rawValue);
+  return parsed.success
+    ? { data: { ...createDefaultPreferences(), ...parsed.data.preferences } }
+    : {
+        data: undefined,
+        incident: quarantineRawValue(
+          storage,
+          preferencesStorageKey,
+          "Display preferences",
+          rawValue,
+          parsed.reason,
+          now,
+        ),
+      };
+}
+
+/** Saves only the preferences, not the portfolio records (#665). */
+export function persistPreferences(storage: JsonStorage, preferences: Preferences) {
+  storage.setItem(preferencesStorageKey, {
+    preferences,
+    version: preferencesRecordVersion,
+  } as JsonValue);
 }
 
 export function readQuoteCache(

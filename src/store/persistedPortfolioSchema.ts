@@ -326,6 +326,28 @@ export function parsePersistedPortfolio(
     : { reason: "invalid-shape", success: false };
 }
 
+const preferencesRecordSchema = z
+  .object({
+    preferences: preferencesSchema.unwrap(),
+    version: z.literal(1),
+  })
+  .strict();
+
+export type PersistedPreferencesRecord = z.output<typeof preferencesRecordSchema>;
+
+/** Parses the preferences record (#665). A version this build does not know is unsupported. */
+export function parsePersistedPreferences(
+  rawValue: string,
+): PersistedParseResult<PersistedPreferencesRecord> {
+  const parsed = parseWithSchema(rawValue, preferencesRecordSchema);
+  if (parsed.success || parsed.reason !== "invalid-shape") return parsed;
+  const value: unknown = JSON.parse(rawValue);
+  const version = value && typeof value === "object" ? (value as { version?: unknown }).version : undefined;
+  return typeof version === "number" && version !== 1
+    ? { reason: "unsupported-schema", success: false }
+    : parsed;
+}
+
 export function parsePersistedQuoteCache(
   rawValue: string,
 ): PersistedParseResult<PersistedQuoteCache> {
