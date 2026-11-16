@@ -92,7 +92,7 @@ describe("SellRedeemScreen", () => {
     expect(getByTestId("sell-redeem-quote-context")).toHaveTextContent(
       /Stale · Yahoo Finance · as of/,
     );
-    expect(getByText("Actual execution price")).toBeTruthy();
+    expect(getByText("Price received per unit")).toBeTruthy();
     expect(getByTestId("sell-redeem-price-guidance")).toHaveTextContent(
       /Confirm or replace it with the executed price/,
     );
@@ -112,7 +112,7 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "5");
-    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(getByLabelText("Price received per unit, in rupees"), "1700");
     await fireEvent.changeText(getByLabelText("Fees, in rupees"), "100");
     await selectDate(getByTestId, "2026-05-20");
 
@@ -147,7 +147,7 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "1");
-    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(getByLabelText("Price received per unit, in rupees"), "1700");
     await selectDate(getByTestId, "2026-05-20");
 
     expect(getByText("Net proceeds to Cash")).toBeTruthy();
@@ -163,7 +163,7 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "26");
-    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(getByLabelText("Price received per unit, in rupees"), "1700");
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
@@ -213,7 +213,7 @@ describe("SellRedeemScreen", () => {
     expect(screen.queryByText("₹41.95K")).toBeNull();
 
     await fireEvent.changeText(screen.getByLabelText("Quantity"), "5");
-    await fireEvent.changeText(screen.getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(screen.getByLabelText("Price received per unit, in rupees"), "1700");
     await fireEvent.changeText(screen.getByLabelText("Fees, in rupees"), "100");
     await selectDate(screen.getByTestId, "2026-05-20");
     expect(screen.queryByText("₹8,400.00")).toBeNull();

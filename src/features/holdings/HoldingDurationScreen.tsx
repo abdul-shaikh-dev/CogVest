@@ -54,7 +54,7 @@ export function HoldingDurationScreen({
           action={
             <IconButton
               icon={masked ? "eye-off-outline" : "eye-outline"}
-              accessibilityLabel={masked ? "Show values" : "Mask values"}
+              accessibilityLabel={masked ? "Show values" : "Hide values"}
               onPress={() =>
                 state.updatePreferences({ maskWealthValues: !masked })
               }

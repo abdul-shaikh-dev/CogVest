@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { Modal, StyleSheet } from "react-native";
+import { BackHandler, Modal, StyleSheet } from "react-native";
 
 import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
@@ -28,6 +28,31 @@ const trade: Trade = {
 };
 
 describe("TradeHistoryScreen", () => {
+  it("leaves selection mode on Android Back instead of leaving the screen (#670)", async () => {
+    const listeners: (() => boolean | null | undefined)[] = [];
+    const backSpy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
+      const listener = () => handler({ type: "hardwareBackPress", timeStamp: 0 } as never);
+      listeners.push(listener);
+      return { remove: () => { listeners.splice(listeners.indexOf(listener), 1); } };
+    });
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addCashEntry({ amount: 1000, date: "2026-04-01", id: "cash", label: "Cash", purpose: "capitalContribution", type: "addition" });
+    store.getState().recordFundedBuy({ cashLabel: "Purchase", trade });
+    const onBack = jest.fn();
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={onBack} onReviewTrade={jest.fn()} store={store} />);
+    expect(listeners).toHaveLength(0);
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    expect(listeners).toHaveLength(1);
+    let handled: boolean | null | undefined;
+    await act(async () => { handled = listeners[listeners.length - 1](); });
+    expect(handled).toBe(true);
+    expect(onBack).not.toHaveBeenCalled();
+    expect(screen.getByTestId("start-transaction-selection")).toBeTruthy();
+    expect(listeners).toHaveLength(0);
+    backSpy.mockRestore();
+  });
+
   it("keeps select-all scoped to this holding and retains other holdings and cash", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

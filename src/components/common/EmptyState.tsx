@@ -29,7 +29,7 @@ export function EmptyState({
   const styles = useStyles();
   return (
     <View style={styles.card}>
-      <AppText align="center" variant="title" weight="bold">
+      <AppText accessibilityRole="header" align="center" variant="title" weight="bold">
         {title}
       </AppText>
       <AppText align="center" color="secondary">

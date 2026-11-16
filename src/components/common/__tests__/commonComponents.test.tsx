@@ -21,6 +21,7 @@ import {
   minimumTouchTargetStyle,
 } from "@/src/components/common";
 import { getButtonInteractionStyle } from "@/src/components/common/AppButton";
+import { EntryProgress } from "@/src/components/common/EntryProgress";
 import { colors, interaction } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 import { getAllByComponentType, getByComponentType, queryAllComponents } from "@/src/testing/componentQueries";
@@ -206,7 +207,7 @@ describe("common UI primitives", () => {
   it("renders icon buttons with the minimum Android touch target", async () => {
     const { getByTestId, container } = await render(
       <IconButton
-        accessibilityLabel="Mask values"
+        accessibilityLabel="Hide values"
         icon="eye-outline"
         testID="mask-toggle"
       />,
@@ -219,6 +220,33 @@ describe("common UI primitives", () => {
       width: 46,
     });
     expect(getByComponentType({ container }, Ionicons).props.accessible).toBe(false);
+  });
+
+  it("announces a busy icon button and ignores taps while it works (#670)", async () => {
+    const onPress = jest.fn();
+    const { getByTestId } = await render(
+      <IconButton accessibilityLabel="Refreshing quotes" busy icon="refresh-outline" onPress={onPress} testID="refresh" />,
+    );
+
+    expect(getByTestId("refresh").props.accessibilityState).toMatchObject({ busy: true });
+    await fireEvent.press(getByTestId("refresh"));
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it("names the current entry step only when the screen says what it is (#670)", async () => {
+    const { getByTestId, rerender } = await render(
+      <EntryProgress label="Progress" step={2} total={3} testID="progress" />,
+    );
+    expect(getByTestId("progress").props.accessibilityValue.text).toBe("Step 2 of 3");
+
+    await rerender(<EntryProgress label="Progress" step={2} stepName="Purchase details" total={3} testID="progress" />);
+    expect(getByTestId("progress").props.accessibilityValue.text).toBe("Step 2 of 3: Purchase details");
+  });
+
+  it("marks the empty-state title as a header (#670)", async () => {
+    const view = await render(<EmptyState message="Nothing yet" title="No holdings" />);
+
+    expect(view.getByRole("header", { name: "No holdings" })).toBeTruthy();
   });
 
   it("selects adaptive shared layouts from the Android font scale", () => {

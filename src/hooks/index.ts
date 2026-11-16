@@ -8,6 +8,7 @@ export {
   useQuoteRefresh,
   withQuoteMetadata,
 } from "./useQuoteRefresh";
+export { useModalAnimation } from "./useModalAnimation";
 export { useReducedMotionPreference } from "./useReducedMotionPreference";
 export { useScreenCaptureProtection } from "./useScreenCaptureProtection";
 export { useSingleBackRequest } from "./useSingleBackRequest";

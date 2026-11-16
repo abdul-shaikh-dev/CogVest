@@ -21,7 +21,7 @@ export function AddHoldingStepper({
   const styles = useStyles();
   if (currentPhase === "asset") {
     return (
-      <EntryProgress label="Add Holding progress" step={1} total={displayPhases.length} testID="add-holding-step-asset" />
+      <EntryProgress label="Add Holding progress" step={1} stepName="Choose asset" total={displayPhases.length} testID="add-holding-step-asset" />
     );
   }
 

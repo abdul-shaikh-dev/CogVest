@@ -16,7 +16,7 @@ appId: ${APP_ID}
       PREFIX: "${SIZE}-standard"
 - openLink: "${SCHEME}:///investing-cash-qa?token=cogvest-local-visual-qa"
 - tapOn: "Minimal mode"
-- tapOn: "Mask values"
+- tapOn: "Hide values"
 - runFlow:
     file: investing-cash-screens.yaml
     env:

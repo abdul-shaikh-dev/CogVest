@@ -154,6 +154,7 @@ export function ScreenHeader({
 export function IconButton({
   plain = false,
   accessibilityLabel,
+  busy = false,
   disabled = false,
   icon,
   onPress,
@@ -161,6 +162,8 @@ export function IconButton({
 }: {
   plain?: boolean;
   accessibilityLabel: string;
+  /** Work is running: the button is announced as busy and ignores taps (#670). */
+  busy?: boolean;
   disabled?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   onPress?: () => void;
@@ -172,8 +175,8 @@ export function IconButton({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ busy, disabled }}
+      disabled={disabled || busy}
       android_ripple={androidRipple(colors.ripple)}
       onPress={onPress}
       style={({ pressed }) => [
@@ -269,13 +272,7 @@ export function MetricGroup({ metrics, testID }: MetricGroupProps) {
   );
 }
 
-export function SectionHeader({
-  actionLabel,
-  title,
-}: {
-  actionLabel?: string;
-  title: string;
-}) {
+export function SectionHeader({ title }: { title: string }) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const shouldStack = getAdaptiveLayoutMode(fontScale) !== "standard";
@@ -287,11 +284,6 @@ export function SectionHeader({
       <AppText accessibilityRole="header" variant="section" weight="medium">
         {title}
       </AppText>
-      {actionLabel ? (
-        <AppText style={styles.brandText} variant="caption" weight="bold">
-          {actionLabel}
-        </AppText>
-      ) : null}
     </View>
   );
 }

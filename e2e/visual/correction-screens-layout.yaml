@@ -7,7 +7,7 @@ appId: ${APP_ID}
     visible:
       id: dashboard-screen
     timeout: 30000
-- assertVisible: "Mask values"
+- assertVisible: "Hide values"
 - openLink: "${SCHEME}:///review-snapshot"
 - assertVisible:
     id: snapshot-portfolio-input
@@ -124,7 +124,7 @@ appId: ${APP_ID}
 - assertVisible: "Show values"
 - tapOn:
     id: dashboard-mask-toggle
-- assertVisible: "Mask values"
+- assertVisible: "Hide values"
 - openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - openLink: "${SCHEME}:///opening-position?openingPositionId=visual-qa-opening-hdfc"

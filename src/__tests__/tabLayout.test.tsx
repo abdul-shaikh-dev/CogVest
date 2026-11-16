@@ -47,9 +47,11 @@ describe("TabLayout", () => {
     expect(getByText("Dashboard").props).toMatchObject({
       adjustsFontSizeToFit: true,
       maxFontSizeMultiplier: 1.5,
-      minimumFontScale: 0.85,
+      minimumFontScale: 0.92,
       numberOfLines: 1,
     });
+    // 12sp that never fits below 11sp (#670).
+    expect(getByText("Dashboard")).toHaveStyle({ fontSize: 12 });
   });
 
   it("registers Progress as the tab route name with stable automation ID", async () => {

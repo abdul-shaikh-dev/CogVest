@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppText, SectionHeader } from "@/src/components/common";
 
 import { useStyles } from "./addHoldingStyles";
+import { useModalAnimation } from "@/src/hooks";
 
 /** Confirms leaving Add Holding or portfolio setup with unsaved details. */
 export function HoldingExitConfirmation({
@@ -16,11 +17,12 @@ export function HoldingExitConfirmation({
   quickSetup: boolean;
   setIsExitConfirmationVisible: (visible: boolean) => void;
 }) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   return (
     <Modal
       testID="holding-exit-confirmation"
-      animationType="fade"
+      animationType={modalAnimation}
       onRequestClose={() => setIsExitConfirmationVisible(false)}
       transparent
       visible={isExitConfirmationVisible}

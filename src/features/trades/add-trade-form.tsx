@@ -167,7 +167,7 @@ export function AddTradeForm({
       </PremiumCard>
 
       <PremiumCard>
-        <SectionHeader title="Position Details" />
+        <SectionHeader title="Holding details" />
         <View style={styles.row}>
           <View style={styles.flex}>
             <FormTextField

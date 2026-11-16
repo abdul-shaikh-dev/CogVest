@@ -4,7 +4,7 @@ import type { StoreApi } from "zustand/vanilla";
 import { AppText, PremiumCard, SectionHeader } from "@/src/components/common";
 import type { InsightKind } from "@/src/domain/calculations/behaviorInsightDetails";
 import type { PortfolioStoreState } from "@/src/store";
-import { spacing, useTheme } from "@/src/theme";
+import { interaction, spacing, useTheme } from "@/src/theme";
 import { useBehaviorInsights } from "./useBehaviorInsights";
 
 export function InsightCards({
@@ -65,5 +65,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   text: { flex: 1, gap: spacing.xs },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: interaction.pressedOpacity },
 });

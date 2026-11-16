@@ -29,7 +29,7 @@ appId: ${APP_ID}
     id: "holding-sell-redeem-visual-qa-asset-hdfc"
 - assertVisible:
     id: "sell-redeem-screen"
-- assertVisible: "Actual execution price"
+- assertVisible: "Price received per unit"
 - assertVisible: "Suggested from the stale saved quote.*"
 - tapOn:
     id: "sell-redeem-quantity-input"

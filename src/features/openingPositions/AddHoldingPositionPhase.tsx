@@ -55,7 +55,7 @@ export function AddHoldingPositionPhase({
   } = holding;
   return (
       <PremiumCard section testID="add-holding-phase-position">
-        <SectionHeader title="Position Details" />
+        <SectionHeader title="Holding details" />
         <View style={styles.positionIdentity} testID="position-asset-context">
           <CategoryIcon assetClass={assetClass} size={20} />
           <View style={styles.summaryCopy}>

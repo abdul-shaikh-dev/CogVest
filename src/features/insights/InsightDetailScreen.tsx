@@ -49,7 +49,7 @@ export function InsightDetailScreen({
           }
           action={
             <IconButton
-              accessibilityLabel={masked ? "Show values" : "Mask values"}
+              accessibilityLabel={masked ? "Show values" : "Hide values"}
               icon={masked ? "eye-off-outline" : "eye-outline"}
               onPress={() =>
                 store

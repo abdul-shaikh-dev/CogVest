@@ -42,7 +42,7 @@ describe("Record purchase", () => {
     });
     await fireEvent.press(ui.getByTestId("existing-asset-asset"));
     expect(ui.getByLabelText("Record purchase progress")).toHaveProp("accessibilityValue", {
-      min: 1, max: 3, now: 2, text: "Step 2 of 3",
+      min: 1, max: 3, now: 2, text: "Step 2 of 3: Purchase details",
     });
     await fireEvent.press(ui.getByTestId("purchase-back"));
     expect(ui.getByText("Search asset")).toBeTruthy();

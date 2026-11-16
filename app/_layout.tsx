@@ -23,6 +23,7 @@ import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExt
 import { takeStartupLinkPath } from "@/src/services/linking";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
+import { useModalAnimation } from "@/src/hooks";
 
 function MonthEndSnapshotAutomation({ enabled }: { enabled: boolean }) {
   useMonthEndSnapshotAutomation({ enabled });
@@ -96,6 +97,7 @@ export default function RootLayout() {
 }
 
 function RootContents() {
+  const modalAnimation = useModalAnimation();
   const { colors, scheme } = useTheme();
   const styles = useStyles();
   const store = getPortfolioStore();
@@ -154,7 +156,7 @@ function RootContents() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-        <Modal visible={showRestoreComplete} onRequestClose={() => setShowRestoreComplete(false)} animationType="fade">
+        <Modal visible={showRestoreComplete} onRequestClose={() => setShowRestoreComplete(false)} animationType={modalAnimation}>
           <ScreenContainer scroll>
             <PremiumCard style={styles.restoreComplete}>
               <AppText accessibilityLiveRegion="polite" variant="title" weight="bold">Portfolio restored</AppText>

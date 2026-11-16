@@ -15,7 +15,7 @@ import {
   type MonthlyChartCustomRange,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
-import { useReducedMotionPreference, useSingleBackRequest } from "@/src/hooks";
+import { useModalAnimation, useReducedMotionPreference, useSingleBackRequest } from "@/src/hooks";
 import { interaction, spacing } from "@/src/theme";
 
 import { useStyles } from "./progressStyles";
@@ -90,6 +90,7 @@ export function MonthPickerField({
   testID: string;
   value: string;
 }) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -117,7 +118,7 @@ export function MonthPickerField({
         </AppText>
       </Pressable>
       <Modal
-        animationType="fade"
+        animationType={modalAnimation}
         onRequestClose={() => setIsOpen(false)}
         transparent
         visible={isOpen}
@@ -125,12 +126,13 @@ export function MonthPickerField({
         <View style={styles.monthPickerOverlay}>
           <Pressable
             accessibilityLabel="Close month picker"
+            accessibilityRole="button"
             onPress={() => setIsOpen(false)}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.monthPickerSheet}>
             <View style={styles.monthPickerHeader}>
-              <AppText variant="title" weight="bold">
+              <AppText accessibilityRole="header" variant="title" weight="bold">
                 {label}
               </AppText>
               <AppText color="secondary" variant="caption">
