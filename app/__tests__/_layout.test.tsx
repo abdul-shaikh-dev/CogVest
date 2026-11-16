@@ -63,6 +63,7 @@ jest.mock("@/src/store", () => ({
   getPortfolioStore: () => ({
     getState: () => ({
       preferences: { appearance: "dark" },
+      readRecoveryCopies: () => [],
       resetAffectedStorage: mockResetAffectedStorage,
       storageRecovery: mockRecoveryState,
     }),

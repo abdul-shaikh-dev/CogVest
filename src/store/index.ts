@@ -28,8 +28,10 @@ import {
   type StorageRecoveryIncident,
 } from "./storeTypes";
 import {
+  AssetGraphJournalPendingError,
   createEmptyPortfolioSnapshot,
   migratePortfolioSnapshot,
+  pendingAssetGraphIncident,
   persistHistoricalQuoteCache,
   persistQuoteCache,
   readHistoricalQuoteCache,
@@ -187,15 +189,30 @@ export function createPortfolioStore({
     };
   });
   const actions = Object.entries(store.getState()).filter(([, value]) => typeof value === "function");
+  const recoveryActions = new Set(["resetAffectedStorage", "readRecoveryCopies"]);
+  // A change whose rollback also failed leaves its journal for the next start
+  // to replay. Nothing more may be saved until then, or the replay would undo it (#654).
+  function stopForPendingJournal(error: unknown): never {
+    if (error instanceof AssetGraphJournalPendingError && !store.getState().storageRecovery) {
+      store.setState({ storageRecovery: { incidents: [pendingAssetGraphIncident(now)] } });
+    }
+    throw error;
+  }
   function bindActions(epoch: number): Partial<PortfolioStoreState> {
     return Object.fromEntries(actions.map(([key, value]) => [key, (...args: unknown[]) => {
       if (store.getState().restoreEpoch !== epoch) {
         throw new Error("The portfolio was restored. Reopen this screen before saving.");
       }
-      if (key !== "resetAffectedStorage" && store.getState().storageRecovery) {
+      if (!recoveryActions.has(key) && store.getState().storageRecovery) {
         throw new Error("Resolve local data recovery before changing the portfolio.");
       }
-      return (value as (...input: unknown[]) => unknown)(...args);
+      let result: unknown;
+      try {
+        result = (value as (...input: unknown[]) => unknown)(...args);
+      } catch (error) {
+        stopForPendingJournal(error);
+      }
+      return result instanceof Promise ? result.catch(stopForPendingJournal) : result;
     }])) as Partial<PortfolioStoreState>;
   }
   store.setState(bindActions(0));

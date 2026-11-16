@@ -10,6 +10,15 @@ appId: ${APP_ID}
 - takeScreenshot: .expo/secondary-screens/recovery-${SIZE}
 - scrollUntilVisible:
     element:
+      id: export-recovery-copies
+    direction: DOWN
+- tapOn:
+    id: export-recovery-copies
+- assertVisible:
+    id: export-recovery-copies-status
+    text: "Saved 1 recovery file: CogVest-recovery-synthetic.txt."
+- scrollUntilVisible:
+    element:
       id: start-storage-reset
     direction: DOWN
 - tapOn:
@@ -37,5 +46,7 @@ appId: ${APP_ID}
     id: start-storage-reset
 - assertNotVisible:
     id: confirm-storage-reset
+- assertNotVisible:
+    id: export-recovery-copies
 - takeScreenshot: .expo/secondary-screens/recovery-no-copy-${SIZE}
 - openLink: "${SCHEME}:///"

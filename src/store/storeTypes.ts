@@ -144,6 +144,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
     input: TransactionImportCommandInput,
   ) => TransactionImportCommandResult;
   previewTradeDeletion: (tradeIds: string[]) => TradeDeletionPreview;
+  /** The kept copy of each recovered value, for export from the Recovery screen. */
+  readRecoveryCopies: () => StorageRecoveryCopy[];
   resetAffectedStorage: () => void;
   storageRecovery?: StorageRecoveryState;
   updateAsset: (asset: Asset) => void;
@@ -458,6 +460,9 @@ export type StorageRecoveryIncident = {
   recoveryKey: string;
   sourceKey: string;
 };
+
+/** A kept copy; `legacy` marks one saved by a version before #654 under its fixed key. */
+export type StorageRecoveryCopy = { incident: StorageRecoveryIncident; rawValue: string; legacy?: true };
 
 export type StorageRecoveryState = {
   incidents: StorageRecoveryIncident[];

@@ -38,6 +38,7 @@ import {
   type PortfolioStoreState,
   quoteCacheStorageKey,
   type RawPortfolioSnapshot,
+  type StorageRecoveryCopy,
   type StorageRecoveryIncident,
   storageRecoveryKeyPrefix,
   type StorageRecoveryReason,
@@ -124,6 +125,24 @@ export type PersistedReadResult<T> = {
   incident?: StorageRecoveryIncident;
 };
 
+function contentHash(text: string) {
+  const fnv1a = (seed: number) => {
+    let hash = seed >>> 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, "0");
+  };
+  return `${fnv1a(0x811c9dc5)}${fnv1a(0x050c5d1f)}`;
+}
+
+/**
+ * Keeps a copy of unreadable data before anything replaces it. Each distinct
+ * value gets its own key, so a second incident never overwrites the first
+ * (#654); the same value found again on a later start reuses its copy and
+ * keeps the time it was first found.
+ */
 export function quarantineRawValue(
   storage: JsonStorage,
   sourceKey: string,
@@ -132,18 +151,23 @@ export function quarantineRawValue(
   reason: StorageRecoveryReason,
   now: () => Date,
 ): StorageRecoveryIncident {
-  const recoveryKey = `${storageRecoveryKeyPrefix}:${sourceKey}`;
+  const recoveryKey = `${storageRecoveryKeyPrefix}:${sourceKey}:${contentHash(rawValue)}`;
   const metadataKey = `${recoveryKey}:metadata`;
-  const detectedAt = now().toISOString();
+  let detectedAt = now().toISOString();
   let preserved = false;
 
   try {
-    storage.setRawItem(recoveryKey, rawValue);
-    storage.setItem(metadataKey, {
-      detectedAt,
-      reason,
-      sourceKey,
-    });
+    const existing = storage.getItem<{ detectedAt?: JsonValue }>(metadataKey);
+    if (storage.getRawItem(recoveryKey) === rawValue && typeof existing?.detectedAt === "string") {
+      detectedAt = existing.detectedAt;
+    } else {
+      storage.setRawItem(recoveryKey, rawValue);
+      storage.setItem(metadataKey, {
+        detectedAt,
+        reason,
+        sourceKey,
+      });
+    }
     preserved = true;
   } catch {
     // Recovery remains blocking when the storage device cannot preserve a copy.
@@ -158,6 +182,49 @@ export function quarantineRawValue(
     recoveryKey,
     sourceKey,
   };
+}
+
+/**
+ * Copies saved before #654, one per source under a fixed key, which nothing
+ * else reads. They are offered for export and never deleted automatically.
+ */
+export function readLegacyRecoveryCopies(storage: JsonStorage): StorageRecoveryCopy[] {
+  const sources: Array<[string, string]> = [
+    [portfolioStorageKey, "Portfolio records"],
+    [quoteCacheStorageKey, "Current quote cache"],
+    [historicalQuoteCacheStorageKey, "Historical quote cache"],
+    [assetGraphJournalStorageKey, "Interrupted asset change"],
+  ];
+  return sources.flatMap(([sourceKey, displayName]) => {
+    const recoveryKey = `${storageRecoveryKeyPrefix}:${sourceKey}`;
+    const metadataKey = `${recoveryKey}:metadata`;
+    try {
+      const rawValue = storage.getRawItem(recoveryKey);
+      if (rawValue === null) return [];
+      let metadata: { detectedAt?: JsonValue; reason?: JsonValue } | null = null;
+      try {
+        metadata = storage.getItem<{ detectedAt?: JsonValue; reason?: JsonValue }>(metadataKey);
+      } catch {
+        // A copy without readable metadata is still worth exporting.
+      }
+      const reason = metadata?.reason;
+      return [{
+        incident: {
+          detectedAt: typeof metadata?.detectedAt === "string" ? metadata.detectedAt : "",
+          displayName,
+          metadataKey,
+          preserved: true,
+          reason: reason === "invalid-json" || reason === "invalid-shape" ? reason : "migration-failed",
+          recoveryKey,
+          sourceKey,
+        },
+        legacy: true as const,
+        rawValue,
+      }];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export function migratePortfolioSnapshot(
@@ -442,17 +509,16 @@ export function recoverPendingAssetGraphTransition(
 
   const parsed = parseAssetGraphJournal(rawValue);
   if ("reason" in parsed) {
-    return {
-      ...quarantineRawValue(
-        storage,
-        assetGraphJournalStorageKey,
-        "Interrupted asset change",
-        rawValue,
-        parsed.reason,
-        now,
-      ),
-      preserved: false,
-    };
+    // Nothing can be restored from it. Once its copy is kept, a reset may
+    // discard it and keep the saved data as it is (#654).
+    return quarantineRawValue(
+      storage,
+      assetGraphJournalStorageKey,
+      "Interrupted asset change",
+      rawValue,
+      parsed.reason,
+      now,
+    );
   }
 
   try {
@@ -507,10 +573,32 @@ export function persistAssetGraphTransition({
       restoreAssetGraphJournal(storage, previous);
       storage.removeItem(assetGraphJournalStorageKey);
     } catch {
-      // The journal remains durable and is replayed before the next read.
+      // The journal remains and is replayed at the next start. A later write in
+      // this session would be undone by that replay, so the store stops here (#654).
+      throw new AssetGraphJournalPendingError(error);
     }
     throw error;
   }
+}
+
+/** A failed asset change whose rollback also failed: its journal is still pending. */
+export class AssetGraphJournalPendingError extends Error {
+  constructor(cause: unknown) {
+    super("CogVest could not finish or undo the last change. Free device storage, then restart CogVest.", { cause });
+    this.name = "AssetGraphJournalPendingError";
+  }
+}
+
+export function pendingAssetGraphIncident(now: () => Date): StorageRecoveryIncident {
+  return {
+    detectedAt: now().toISOString(),
+    displayName: "Interrupted asset change - restart CogVest after freeing device storage",
+    metadataKey: assetGraphJournalStorageKey,
+    preserved: false,
+    reason: "migration-failed",
+    recoveryKey: assetGraphJournalStorageKey,
+    sourceKey: assetGraphJournalStorageKey,
+  };
 }
 
 

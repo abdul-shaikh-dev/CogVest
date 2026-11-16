@@ -18,6 +18,7 @@ import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/componen
 import { RecoveryScreen } from "@/src/features/recovery";
 import { useScreenCaptureProtection } from "@/src/hooks/useScreenCaptureProtection";
 import { getPortfolioStore } from "@/src/store";
+import { exportRecoveryCopies } from "@/src/services/backup";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
@@ -167,6 +168,8 @@ function RootContents() {
             affectedAreas={recovery.incidents.map(
               (incident) => incident.displayName,
             )}
+            hasRecoveryCopies={store.getState().readRecoveryCopies().length > 0}
+            onExport={exportRecoveryCopies}
             onReset={() => store.getState().resetAffectedStorage()}
             recoveryCopiesPreserved={recovery.incidents.every(
               (incident) => incident.preserved,
