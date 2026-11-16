@@ -11,6 +11,7 @@ import {
   MASKED_INR_VALUE,
   PremiumCard,
   ScreenContainer,
+  ScreenList,
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
@@ -67,7 +68,17 @@ export function PayoutsScreen({ assetId, now = new Date(), onAddPayout, onBack, 
   }
 
   return (
-    <ScreenContainer scroll testID="payouts-screen">
+    <ScreenList
+      data={payouts}
+      footer={(
+        <View style={[styles.footer, payouts.length > 0 && styles.footerAfterRows]}>
+          {payouts.length > 0 ? (
+            <AppText color="secondary" style={styles.footerNote} variant="caption">Amounts are after tax withheld.</AppText>
+          ) : null}
+          <AppButton onPress={onAddPayout} testID="payouts-add" title="Add payout" />
+        </View>
+      )}
+      header={(
       <View style={styles.content}>
         <ScreenHeader
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={onBack} testID="payouts-back" />}
@@ -112,33 +123,40 @@ export function PayoutsScreen({ assetId, now = new Date(), onAddPayout, onBack, 
             </View>
           )}
         </PremiumCard>
-        <PremiumCard section testID="payouts-list">
+        <View style={styles.listHeader} testID="payouts-list">
           <SectionHeader title="Recorded payouts" />
           <AppText color="secondary" variant="caption" testID="payouts-summary">
             {payoutsSummary(snapshot.distributions, coverage, assetId)}
           </AppText>
-          {payouts.map((item) => (
-            <GroupedListRow
-              key={item.id}
-              meta={`${treatmentLabel[item.treatment]}${item.taxWithheld ? ` · tax ${masked ? MASKED_INR_VALUE : formatINR(item.taxWithheld)}` : ""}`}
-              onPress={() => onReviewPayout(item.id)}
-              testID={`payout-row-${item.id}`}
-              title={formatDate(item.paidOn)}
-              value={masked ? MASKED_INR_VALUE : formatINR(payoutNet(item))}
-            />
-          ))}
-          {payouts.length > 0 ? (
-            <AppText color="secondary" variant="caption">Amounts are after tax withheld.</AppText>
-          ) : null}
-        </PremiumCard>
-        <AppButton onPress={onAddPayout} testID="payouts-add" title="Add payout" />
+        </View>
       </View>
-    </ScreenContainer>
+      )}
+      itemGap={spacing.md}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <View style={styles.row}>
+          <GroupedListRow
+            meta={`${treatmentLabel[item.treatment]}${item.taxWithheld ? ` · tax ${masked ? MASKED_INR_VALUE : formatINR(item.taxWithheld)}` : ""}`}
+            onPress={() => onReviewPayout(item.id)}
+            testID={`payout-row-${item.id}`}
+            title={formatDate(item.paidOn)}
+            value={masked ? MASKED_INR_VALUE : formatINR(payoutNet(item))}
+          />
+        </View>
+      )}
+      testID="payouts-screen"
+    />
   );
 }
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
+  // The recorded-payouts section keeps the open section card's spacing.
+  footer: { gap: spacing.cardGap, paddingHorizontal: spacing.xs },
+  footerAfterRows: { paddingTop: spacing.md },
+  footerNote: { marginBottom: spacing.md },
+  listHeader: { gap: spacing.md, marginBottom: spacing.md, paddingHorizontal: spacing.xs, paddingTop: spacing.md },
+  row: { paddingHorizontal: spacing.xs },
   error: { color: colors.loss },
 }));

@@ -207,6 +207,18 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   holdingsList: {
     backgroundColor: colors.background,
   },
+  // The list content keeps the old scroll content's padding (#664).
+  listContent: {
+    paddingBottom: spacing.lg + spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  listGap: {
+    marginTop: spacing.sm,
+  },
+  listHeaderContent: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   insightCard: {
     flex: 1,
     gap: spacing.xs,

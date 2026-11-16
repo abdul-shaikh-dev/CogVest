@@ -65,7 +65,11 @@ describe("TradeHistoryScreen", () => {
     await fireEvent.press(screen.getByTestId("start-transaction-selection"));
     await fireEvent.press(screen.getByTestId("select-all-transactions"));
     expect(screen.getByTestId("transaction-selection-count")).toHaveTextContent("60 selected");
-    expect(screen.getByTestId("review-trade-trade-59")).toHaveProp("accessibilityState", { checked: true });
+    expect(screen.getByTestId("review-trade-trade-0")).toHaveProp("accessibilityState", { checked: true });
+    // The list is virtualised: rows far below the screen are not mounted yet (#664).
+    expect(screen.queryByTestId("review-trade-trade-59")).toBeNull();
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    expect(screen.getByText("All 60 transactions shown on this screen are selected.")).toBeTruthy();
     expect(store.getState().trades).toHaveLength(60);
   });
 

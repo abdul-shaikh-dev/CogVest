@@ -11,6 +11,7 @@ import {
   MetricGroup,
   PremiumCard,
   ScreenContainer,
+  ScreenList,
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
@@ -191,8 +192,18 @@ export function CashScreen({
 
   return (
     <>
-    <ScreenContainer scroll testID="cash-screen">
-      <View style={[styles.content, styles.overview]}>
+    <ScreenList
+      data={entries}
+      empty={(
+        <View style={styles.empty}>
+          <EmptyState
+            message="Add broker or bank cash only when it should count toward portfolio value."
+            title="No cash movement yet"
+          />
+        </View>
+      )}
+      header={(
+      <View style={styles.listHeader}>
         <ScreenHeader compact title="Cash Ledger" />
 
         <View style={styles.balanceSection}>
@@ -247,40 +258,35 @@ export function CashScreen({
           </>}
         </View>
 
-        {entries.length === 0 ? (
-          <EmptyState
-            message="Add broker or bank cash only when it should count toward portfolio value."
-            title="No cash movement yet"
-          />
-        ) : (
-          <View style={styles.history}>
-            <SectionHeader title="Recent cash ledger" />
-            {entries.map((entry, index) => (
-              <View key={entry.id}>
-                {index === 0 || entries[index - 1].date.slice(0, 7) !== entry.date.slice(0, 7) ? (
-                  <AppText color="secondary" variant="caption" weight="bold" style={[styles.monthHeading, index === 0 && styles.firstMonthHeading]} testID={`cash-month-${entry.date.slice(0, 7)}`}>
-                    {formatMonthYear(new Date(`${entry.date.slice(0, 7)}-01T12:00:00`))}
-                  </AppText>
-                ) : null}
-                <CashEntryRow
-                  accessibilityHint={isLinkedCashEntry(entry)
-                    ? "Opens its linked movement for review"
-                    : undefined}
-                  correctionHint={
-                    isLinkedCashEntry(entry)
-                      ? entry.linkedFutures ? "Correct in Futures" : "Linked investment"
-                      : undefined
-                  }
-                  entry={entry}
-                  masked={maskWealthValues}
-                  onPress={onCorrectEntry ? () => onCorrectEntry(entry.id) : undefined}
-                />
-              </View>
-            ))}
-          </View>
-        )}
+        {entries.length > 0 ? <SectionHeader title="Recent cash ledger" /> : null}
       </View>
-    </ScreenContainer>
+      )}
+      keyExtractor={(entry) => entry.id}
+      listStyle={styles.list}
+      renderItem={({ index, item: entry }) => (
+        <View>
+          {index === 0 || entries[index - 1].date.slice(0, 7) !== entry.date.slice(0, 7) ? (
+            <AppText color="secondary" variant="caption" weight="bold" style={[styles.monthHeading, index === 0 && styles.firstMonthHeading]} testID={`cash-month-${entry.date.slice(0, 7)}`}>
+              {formatMonthYear(new Date(`${entry.date.slice(0, 7)}-01T12:00:00`))}
+            </AppText>
+          ) : null}
+          <CashEntryRow
+            accessibilityHint={isLinkedCashEntry(entry)
+              ? "Opens its linked movement for review"
+              : undefined}
+            correctionHint={
+              isLinkedCashEntry(entry)
+                ? entry.linkedFutures ? "Correct in Futures" : "Linked investment"
+                : undefined
+            }
+            entry={entry}
+            masked={maskWealthValues}
+            onPress={onCorrectEntry ? () => onCorrectEntry(entry.id) : undefined}
+          />
+        </View>
+      )}
+      testID="cash-screen"
+    />
 
     <Modal animationType="none" visible={isEntryVisible} onRequestClose={handleEntryBackRequest} testID="cash-entry-modal">
       {/* Android Modal already uses adjustResize; a second height adjustment leaves stale keyboard space. */}
@@ -459,11 +465,10 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   formRowField: {
     flex: 1,
   },
-  history: {
-    gap: 0,
-  },
+  empty: { marginTop: spacing.cardGap },
+  list: { paddingBottom: spacing.lg + spacing.xl, paddingTop: spacing.sm },
+  listHeader: { gap: spacing.cardGap },
   balanceSection: { gap: spacing.sm },
-  overview: { paddingTop: spacing.sm },
   quietMetrics: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md, rowGap: spacing.xs },
   activitySection: { gap: spacing.xs },
   monthHeading: { paddingTop: spacing.lg, paddingBottom: spacing.xs },

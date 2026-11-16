@@ -23,7 +23,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
 import type { Asset, BuyTrade, PpfAccount } from "@/src/types";
-import { getAllByComponentType, getByComponentType } from "@/src/testing/componentQueries";
+import { getByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("@/src/hooks/useReducedMotionPreference", () => ({
   useReducedMotionPreference: jest.fn(() => true),
@@ -267,10 +267,9 @@ describe("HoldingsScreen", () => {
     const thirtyScreen = await render(
       <HoldingsScreen store={seedListHoldings(30)} />,
     );
-    // The first commit renders one batch; the rest arrive in the next task (#138).
-    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(24);
-    await act(() => jest.advanceTimersByTime(0));
-    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(30);
+    // The list is virtualised: the first commit mounts one screenful, not all 30 (#664).
+    expect(thirtyScreen.getAllByTestId(/^holding-row-/)).toHaveLength(12);
+    // A holding that is not mounted yet is still found by search.
     await fireEvent.changeText(
       thirtyScreen.getByTestId("holdings-search-input"),
       "List holding 30",
@@ -1006,9 +1005,7 @@ describe("HoldingsScreen", () => {
     ).toBe(true);
     await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     await act(() => {
-      getAllByComponentType(screen, Modal)
-        .find((modal) => modal.props.testID === "holding-detail-modal")!
-        .props.onRequestClose();
+      screen.getByTestId("holding-detail-modal").props.onRequestClose();
     });
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
     expect(screen.getByTestId("holdings-search-input").props.value).toBe(

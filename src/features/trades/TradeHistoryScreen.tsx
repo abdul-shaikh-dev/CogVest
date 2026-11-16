@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { StoreApi } from "zustand/vanilla";
@@ -13,9 +13,9 @@ import {
   MASKED_AMOUNT,
   MASKED_INR_VALUE,
   MaskedValue,
-  PremiumCard,
   ScreenContainer,
   ScreenHeader,
+  ScreenList,
   SectionHeader,
 } from "@/src/components/common";
 import { formatCurrency, formatDate } from "@/src/domain/formatters";
@@ -24,7 +24,9 @@ import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { compareCodeUnits } from "@/src/domain/ordering";
-import { usePortfolioFields } from "@/src/hooks";
+import { useLatestCallback, usePortfolioFields } from "@/src/hooks";
+import { formatLocalCalendarDate } from "@/src/domain/dates";
+import type { Asset, Trade } from "@/src/types";
 
 type TradeHistoryScreenProps = {
   assetId: string;
@@ -34,6 +36,101 @@ type TradeHistoryScreenProps = {
   now?: Date;
 };
 
+type TradeHistoryRowProps = {
+  gain: number | null | undefined;
+  index: number;
+  isSelecting: boolean;
+  masked: boolean;
+  onPress: (tradeId: string) => void;
+  selected: boolean;
+  singleHolding: boolean;
+  stackValues: boolean;
+  total: number;
+  trade: Trade;
+  tradeAsset: Asset | undefined;
+};
+
+const TradeHistoryRow = memo(function TradeHistoryRow({
+  gain,
+  index,
+  isSelecting,
+  masked,
+  onPress,
+  selected,
+  singleHolding,
+  stackValues,
+  total,
+  trade,
+  tradeAsset,
+}: TradeHistoryRowProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+    const isManual = isManualTrade(trade);
+        const currency = tradeAsset?.currency;
+    const title = isManual
+      ? trade.type === "buy" ? "Purchase" : "Sale"
+      : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
+    let description = masked
+      ? "values masked"
+      : isManual
+        ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}`
+        : `${
+            trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
+              ? `Acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
+              : "no execution price"
+          }`;
+    if (trade.type === "sell" && !masked) {
+            description += gain == null || !currency
+        ? "\nRealized gain unavailable: incomplete or unsupported history"
+        : `\nRealized gain ${gain >= 0 ? "+" : ""}${formatCurrency(gain, currency)} · after fees`;
+    }
+    // Masking hides amounts; quantities stay visible, as Settings says.
+    const selectionDetails = masked
+      ? `${trade.quantity} units, amount hidden`
+      : isManual
+        ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}, total ${currency ? formatCurrency(trade.totalValue, currency) : "unavailable"}`
+        : `${trade.quantity} units, ${
+            trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
+              ? `acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
+              : "no execution price"
+          }`;
+
+    return (
+      <Pressable
+        accessibilityLabel={isSelecting
+          ? `${selected ? "Selected" : "Not selected"}, ${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}, transaction ${index + 1} of ${total}`
+          : `${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}${trade.type === "sell" ? `, ${description}` : ""}`}
+        accessibilityRole={isSelecting ? "checkbox" : "button"}
+        accessibilityState={isSelecting ? { checked: selected } : undefined}
+                android_ripple={androidRipple()}
+        style={({ pressed }) => [styles.transactionRow, isSelecting && selected && styles.selectedRow, getPressedStateStyle({ pressed })]}
+        testID={`review-trade-${trade.id}`}
+        onPress={() => onPress(trade.id)}
+      >
+        {isSelecting ? <Ionicons accessible={false} name={selected ? "checkbox" : "square-outline"} size={22} color={selected ? colors.primary : colors.text.secondary} /> : null}
+        <View style={styles.rowContent}>
+          <View style={[styles.rowHeading, stackValues && styles.stacked]}>
+            <View style={styles.rowIdentity}>
+              <AppText weight="bold">{singleHolding ? title : tradeAsset?.name ?? "Unknown holding"}</AppText>
+              <AppText color="secondary" variant="caption">{singleHolding ? "" : `${title} · `}{formatDate(trade.date)}</AppText>
+            </View>
+            <MaskedValue
+              masked={masked && isManual && Boolean(currency)}
+              maskedText={currency === "INR" ? MASKED_INR_VALUE : MASKED_AMOUNT}
+              style={styles.rowValue}
+              testID={`transaction-value-${trade.id}`}
+              value={isManual
+                ? currency ? `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}` : "Currency unavailable"
+                : `${trade.quantity} units`}
+              weight="bold"
+            />
+          </View>
+          <AppText color="secondary" variant="caption">{description}</AppText>
+        </View>
+      </Pressable>
+    );
+});
+
 export function TradeHistoryScreen({
   assetId,
   onBack,
@@ -41,28 +138,32 @@ export function TradeHistoryScreen({
   store = getPortfolioStore(),
   now = new Date(),
 }: TradeHistoryScreenProps) {
-  const { colors } = useTheme();
   const styles = useStyles();
   const snapshot = usePortfolioFields(store, ["assets", "openingPositions", "preferences", "trades"]);
   const { fontScale } = useWindowDimensions();
   const stackValues = getAdaptiveLayoutMode(fontScale) !== "standard";
-  const asset = snapshot.assets.find((item) => item.id === assetId);
-  const trades = snapshot.trades
+  const asOf = formatLocalCalendarDate(now);
+  // Worked out once per record change, not on every selection tap (#664).
+  const assetsById = useMemo(() => new Map(snapshot.assets.map((item) => [item.id, item])), [snapshot.assets]);
+  const asset = assetId ? assetsById.get(assetId) : undefined;
+  const trades = useMemo(() => snapshot.trades
     .filter((trade) => !assetId || trade.assetId === assetId)
-    .sort((left, right) => compareCodeUnits(right.date, left.date));
-  const gains = calculateRecordedSaleGains({
+    .sort((left, right) => compareCodeUnits(right.date, left.date)), [assetId, snapshot.trades]);
+  const gains = useMemo(() => calculateRecordedSaleGains({
     assets: snapshot.assets.filter((item) => !assetId || item.id === assetId),
     openingPositions: snapshot.openingPositions,
     trades: snapshot.trades,
     now,
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the calendar day (asOf), not the per-render Date.
+  }), [assetId, asOf, snapshot.assets, snapshot.openingPositions, snapshot.trades]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedTradeIds, setSelectedTradeIds] = useState<Set<string>>(() => new Set());
   const [isReviewingDeletion, setIsReviewingDeletion] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   // The tone is set where the message is, never inferred from its text (#667).
   const [deletionMessage, setDeletionMessage] = useState<{ tone: "success" | "error"; text: string }>();
-  const selectedIds = [...selectedTradeIds].filter((id) => trades.some((trade) => trade.id === id));
+  const shownTradeIds = useMemo(() => new Set(trades.map((trade) => trade.id)), [trades]);
+  const selectedIds = [...selectedTradeIds].filter((id) => shownTradeIds.has(id));
   const deletionPreview = isReviewingDeletion
     ? store.getState().previewTradeDeletion(selectedIds)
     : undefined;
@@ -81,6 +182,9 @@ export function TradeHistoryScreen({
       return next;
     });
   }
+
+  const onRowPress = useLatestCallback((tradeId: string) =>
+    isSelecting ? toggleSelection(tradeId) : onReviewTrade(tradeId));
 
   function reviewDeletion() {
     setDeletionMessage(undefined);
@@ -122,155 +226,114 @@ export function TradeHistoryScreen({
     );
   }
 
+  const header = (
+    <View style={styles.header}>
+      <AppButton
+        style={styles.backButton}
+        title={isSelecting ? "Cancel selection" : "Back to Holdings"}
+        variant="ghost"
+        onPress={isSelecting ? leaveSelection : onBack}
+        testID={isSelecting ? "cancel-transaction-selection" : "trade-history-back"}
+      />
+      <ScreenHeader
+        title="Transactions"
+        subtitle={asset
+          ? asset.name
+          : "All holdings"}
+      />
+      {deletionMessage ? (
+        <AppText
+          accessibilityLiveRegion="polite"
+          color={deletionMessage.tone === "success" ? "secondary" : undefined}
+          style={deletionMessage.tone === "error" ? styles.errorText : undefined}
+          testID="transaction-deletion-message"
+        >
+          {deletionMessage.text}
+        </AppText>
+      ) : null}
+      {trades.length > 0 ? (
+        <View style={styles.historyHeader}>
+          <View accessibilityLiveRegion={isSelecting ? "polite" : "none"} testID={isSelecting ? "transaction-selection-count" : undefined}>
+            <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : `${trades.length} ${trades.length === 1 ? "record" : "records"}`} />
+          </View>
+          {isSelecting ? (
+            <View style={styles.selectionActions}>
+              <AppButton
+                disabled={selectedIds.length === trades.length}
+                onPress={() => setSelectedTradeIds(new Set(trades.map((trade) => trade.id)))}
+                testID="select-all-transactions"
+                title={`Select all ${trades.length} shown`}
+                variant="secondary"
+              />
+              <AppButton
+                disabled={selectedIds.length === 0}
+                onPress={() => setSelectedTradeIds(new Set())}
+                testID="clear-transaction-selection"
+                title="Clear selection"
+                variant="ghost"
+              />
+              <AppButton
+                disabled={selectedIds.length === 0}
+                onPress={reviewDeletion}
+                testID="review-selected-transaction-deletion"
+                title={`Review deletion${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`}
+                variant="destructive"
+              />
+            </View>
+          ) : (
+            <AppButton
+              onPress={() => {
+                setDeletionMessage(undefined);
+                setIsSelecting(true);
+              }}
+              testID="start-transaction-selection"
+              title="Select transactions"
+              variant="secondary"
+            />
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
-    <ScreenContainer scroll testID="trade-history-screen">
-      <View style={styles.content}>
-        <AppButton
-          style={styles.backButton}
-          title={isSelecting ? "Cancel selection" : "Back to Holdings"}
-          variant="ghost"
-          onPress={isSelecting ? leaveSelection : onBack}
-          testID={isSelecting ? "cancel-transaction-selection" : "trade-history-back"}
-        />
-        <ScreenHeader
-          title="Transactions"
-          subtitle={asset
-            ? asset.name
-            : "All holdings"}
-        />
-        {deletionMessage ? (
-          <AppText
-            accessibilityLiveRegion="polite"
-            color={deletionMessage.tone === "success" ? "secondary" : undefined}
-            style={deletionMessage.tone === "error" ? styles.errorText : undefined}
-            testID="transaction-deletion-message"
-          >
-            {deletionMessage.text}
-          </AppText>
-        ) : null}
-        {trades.length === 0 ? (
+    <ScreenList
+      data={trades}
+      empty={(
+        <View style={styles.empty}>
           <EmptyState
             message="Opening positions are reviewed separately from later purchases and sales."
             title="No transactions yet"
           />
-        ) : (
-          <PremiumCard section style={styles.historyCard}>
-            <View accessibilityLiveRegion={isSelecting ? "polite" : "none"} testID={isSelecting ? "transaction-selection-count" : undefined}>
-              <SectionHeader title={isSelecting ? `${selectedIds.length} selected` : `${trades.length} ${trades.length === 1 ? "record" : "records"}`} />
-            </View>
-            {isSelecting ? (
-              <View style={styles.selectionActions}>
-                <AppButton
-                  disabled={selectedIds.length === trades.length}
-                  onPress={() => setSelectedTradeIds(new Set(trades.map((trade) => trade.id)))}
-                  testID="select-all-transactions"
-                  title={`Select all ${trades.length} shown`}
-                  variant="secondary"
-                />
-                <AppButton
-                  disabled={selectedIds.length === 0}
-                  onPress={() => setSelectedTradeIds(new Set())}
-                  testID="clear-transaction-selection"
-                  title="Clear selection"
-                  variant="ghost"
-                />
-                <AppButton
-                  disabled={selectedIds.length === 0}
-                  onPress={reviewDeletion}
-                  testID="review-selected-transaction-deletion"
-                  title={`Review deletion${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`}
-                  variant="destructive"
-                />
-              </View>
-            ) : (
-              <AppButton
-                onPress={() => {
-                  setDeletionMessage(undefined);
-                  setIsSelecting(true);
-                }}
-                testID="start-transaction-selection"
-                title="Select transactions"
-                variant="secondary"
-              />
-            )}
-            {trades.map((trade, index) => (
-              (() => {
-                const isManual = isManualTrade(trade);
-                const tradeAsset = snapshot.assets.find((item) => item.id === trade.assetId);
-                const currency = tradeAsset?.currency;
-                const title = isManual
-                  ? trade.type === "buy" ? "Purchase" : "Sale"
-                  : trade.type === "transferIn" ? "Transfer in" : "Transfer out";
-                let description = snapshot.preferences.maskWealthValues
-                  ? "values masked"
-                  : isManual
-                    ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}`
-                    : `${
-                        trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
-                          ? `Acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
-                          : "no execution price"
-                      }`;
-                if (trade.type === "sell" && !snapshot.preferences.maskWealthValues) {
-                  const gain = gains[trade.id];
-                  description += gain == null || !currency
-                    ? "\nRealized gain unavailable: incomplete or unsupported history"
-                    : `\nRealized gain ${gain >= 0 ? "+" : ""}${formatCurrency(gain, currency)} · after fees`;
-                }
-                // Masking hides amounts; quantities stay visible, as Settings says.
-                const selectionDetails = snapshot.preferences.maskWealthValues
-                  ? `${trade.quantity} units, amount hidden`
-                  : isManual
-                    ? `${trade.quantity} units at ${currency ? formatCurrency(trade.pricePerUnit, currency) : "currency unavailable"}, total ${currency ? formatCurrency(trade.totalValue, currency) : "unavailable"}`
-                    : `${trade.quantity} units, ${
-                        trade.type === "transferIn" && trade.acquisitionCostPerUnit !== undefined
-                          ? `acquisition basis ${currency ? formatCurrency(trade.acquisitionCostPerUnit, currency) : "currency unavailable"} per unit`
-                          : "no execution price"
-                      }`;
-
-                return (
-                  <Pressable
-                    accessibilityLabel={isSelecting
-                      ? `${selectedTradeIds.has(trade.id) ? "Selected" : "Not selected"}, ${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}, transaction ${index + 1} of ${trades.length}`
-                      : `${tradeAsset?.name ?? "Unknown holding"}, ${title}, ${formatDate(trade.date)}, ${selectionDetails}${trade.type === "sell" ? `, ${description}` : ""}`}
-                    accessibilityRole={isSelecting ? "checkbox" : "button"}
-                    accessibilityState={isSelecting ? { checked: selectedTradeIds.has(trade.id) } : undefined}
-                    key={trade.id}
-                    android_ripple={androidRipple()}
-                    style={({ pressed }) => [styles.transactionRow, isSelecting && selectedTradeIds.has(trade.id) && styles.selectedRow, getPressedStateStyle({ pressed })]}
-                    testID={`review-trade-${trade.id}`}
-                    onPress={() => isSelecting ? toggleSelection(trade.id) : onReviewTrade(trade.id)}
-                  >
-                    {isSelecting ? <Ionicons accessible={false} name={selectedTradeIds.has(trade.id) ? "checkbox" : "square-outline"} size={22} color={selectedTradeIds.has(trade.id) ? colors.primary : colors.text.secondary} /> : null}
-                    <View style={styles.rowContent}>
-                      <View style={[styles.rowHeading, stackValues && styles.stacked]}>
-                        <View style={styles.rowIdentity}>
-                          <AppText weight="bold">{asset ? title : tradeAsset?.name ?? "Unknown holding"}</AppText>
-                          <AppText color="secondary" variant="caption">{asset ? "" : `${title} · `}{formatDate(trade.date)}</AppText>
-                        </View>
-                        <MaskedValue
-                          masked={snapshot.preferences.maskWealthValues && isManual && Boolean(currency)}
-                          maskedText={currency === "INR" ? MASKED_INR_VALUE : MASKED_AMOUNT}
-                          style={styles.rowValue}
-                          testID={`transaction-value-${trade.id}`}
-                          value={isManual
-                            ? currency ? `${trade.type === "sell" ? "Net " : ""}${formatCurrency(trade.totalValue, currency)}` : "Currency unavailable"
-                            : `${trade.quantity} units`}
-                          weight="bold"
-                        />
-                      </View>
-                      <AppText color="secondary" variant="caption">{description}</AppText>
-                    </View>
-                  </Pressable>
-                );
-              })()
-            ))}
-          </PremiumCard>
-        )}
-        <AppText color="secondary" variant="caption">
+        </View>
+      )}
+      footer={(
+        <AppText color="secondary" style={styles.footer} variant="caption">
           Purchases and sales keep cash records in sync. Imported transfers cannot be edited; use reviewed deletion to remove them.
           {" "}Realized gains use recorded weighted-average cost, not tax lots.
         </AppText>
-      </View>
+      )}
+      header={header}
+      itemGap={spacing.md}
+      keyExtractor={(trade) => trade.id}
+      listStyle={styles.content}
+      renderItem={({ index, item }) => (
+        <TradeHistoryRow
+          gain={gains[item.id]}
+          index={index}
+          isSelecting={isSelecting}
+          masked={snapshot.preferences.maskWealthValues}
+          onPress={onRowPress}
+          selected={selectedTradeIds.has(item.id)}
+          singleHolding={Boolean(asset)}
+          stackValues={stackValues}
+          total={trades.length}
+          trade={item}
+          tradeAsset={assetsById.get(item.assetId)}
+        />
+      )}
+      testID="trade-history-screen"
+    >
       <Modal
         animationType="fade"
         onRequestClose={() => setIsReviewingDeletion(false)}
@@ -339,7 +402,7 @@ export function TradeHistoryScreen({
           </View>
         </View>
       </Modal>
-    </ScreenContainer>
+    </ScreenList>
   );
 }
 
@@ -365,11 +428,14 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     alignSelf: "flex-start",
   },
   content: {
-    gap: spacing.cardGap,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.lg + spacing.xl,
   },
-  transactionRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xs, minHeight: interaction.minimumTouchTarget, borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth },
+  empty: { marginTop: spacing.cardGap },
+  footer: { marginTop: spacing.md + spacing.cardGap },
+  header: { gap: spacing.cardGap },
+  historyHeader: { gap: spacing.md, marginBottom: spacing.md, paddingHorizontal: spacing.xs, paddingTop: spacing.md },
+  transactionRow: { marginHorizontal: spacing.xs, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xs, minHeight: interaction.minimumTouchTarget, borderTopColor: colors.border.subtle, borderTopWidth: StyleSheet.hairlineWidth },
   selectedRow: { backgroundColor: colors.surface.elevated, borderRadius: radii.button },
   rowContent: { flex: 1, minWidth: 0, gap: spacing.sm },
   rowHeading: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
@@ -377,7 +443,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   rowValue: { flexShrink: 1, fontVariant: ["tabular-nums"] },
   stacked: { flexDirection: "column" },
   errorText: { color: colors.loss },
-  historyCard: { gap: spacing.md },
   impactRow: { borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingBottom: spacing.sm },
   modalActions: { gap: spacing.sm },
   modalBackdrop: { backgroundColor: colors.scrim, flex: 1, justifyContent: "center", padding: spacing.lg },
