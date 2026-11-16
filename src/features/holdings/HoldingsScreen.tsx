@@ -1,21 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import {
-  type FlatList,
-  Keyboard,
-  PanResponder,
-  Pressable,
-  RefreshControl,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { type FlatList, Keyboard, RefreshControl, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
-  AppButton,
   AppText,
-  CategoryIcon,
   EmptyState,
   IconButton,
   PremiumCard,
@@ -34,7 +22,15 @@ import { assetXirrSummary } from "./assetXirr";
 import { HoldingDetailModal } from "./HoldingDetails";
 import { SelectableHoldingRow } from "./HoldingRow";
 import { EpfAccountsSection, PpfAccountsSection } from "./HoldingsAccountSections";
-import { DestinationTab, FilterRow } from "./HoldingsFilters";
+import { DestinationTab } from "./HoldingsFilters";
+import {
+  HoldingsSearchField,
+  MarketListControls,
+  NoHoldingsState,
+  PendingValuationsRow,
+  QuoteHealthRow,
+  ResumeSetupRow,
+} from "./HoldingsHeaderSections";
 import {
   AddHoldingsPanel,
   HoldingsOptionsPanel,
@@ -54,12 +50,12 @@ import {
 import { useStyles } from "./holdingsStyles";
 import {
   getFilterCounts,
-  getFilterLabel,
   getHoldingsSubtitle,
   getQuoteStatus,
 } from "./holdingsViewModel";
 import { useHoldings } from "./useHoldings";
-import { destinationAfterSwipe, isHorizontalIntent, type HoldingsDestination } from "./destinationSwipe";
+import type { HoldingsDestination } from "./destinationSwipe";
+import { useDestinationSwipe } from "./useDestinationSwipe";
 
 type RefreshQuotes = (input: RefreshQuotesInput) => Promise<QuoteRefreshResult>;
 
@@ -124,7 +120,6 @@ export function HoldingsScreen({
   const { colors } = useTheme();
   const styles = useStyles();
   const observedAt = now ?? new Date();
-  const { width, fontScale } = useWindowDimensions();
   const [activePanel, setActivePanel] = useState<HoldingsPanel>();
   const [selectedDestination, setSelectedDestination] =
     useState<HoldingsDestination>(destinationRequest?.destination ?? "market");
@@ -135,7 +130,6 @@ export function HoldingsScreen({
   }
   const scrollRef = useRef<FlatList<HoldingReviewItem>>(null);
   const detailScrollOffsetRef = useRef(0);
-  const verticalGesture = useRef(false);
   useEffect(() => {
     if (openAddMenu) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot route param, consumed then cleared by onAddMenuOpened.
@@ -214,35 +208,11 @@ export function HoldingsScreen({
     setSelectedDestination(destination);
     scrollRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
-  // PanResponder.create only stores these handlers; they read the ref on touch, never during render.
-  // eslint-disable-next-line react-hooks/refs
-  const destinationGesture = PanResponder.create({
-    onStartShouldSetPanResponderCapture: (_, gesture) => {
-      verticalGesture.current = gesture.numberActiveTouches !== 1;
-      return false;
-    },
-    onMoveShouldSetPanResponderCapture: (_, gesture) => {
-      if (gesture.numberActiveTouches > 1 ||
-          (Math.abs(gesture.dy) > 12 && Math.abs(gesture.dy) >= Math.abs(gesture.dx))) {
-        verticalGesture.current = true;
-      }
-      return destinations.length > 1 && !activePanel &&
-        !selectedAssetId && !verticalGesture.current && gesture.numberActiveTouches === 1 &&
-        isHorizontalIntent(gesture.dx, gesture.dy);
-    },
-    onPanResponderMove: (_, gesture) => {
-      if (gesture.numberActiveTouches > 1 ||
-          Math.abs(gesture.dy) >= Math.abs(gesture.dx)) {
-        verticalGesture.current = true;
-      }
-    },
-    onPanResponderTerminate: () => { verticalGesture.current = true; },
-    onPanResponderRelease: (_, gesture) => {
-      const destination = destinationAfterSwipe(gesture.dx, gesture.dy, destinations, activeDestination);
-      if (destination && !verticalGesture.current && destinations.length > 1 &&
-          !activePanel && !selectedAssetId) selectDestination(destination);
-    },
-    onPanResponderTerminationRequest: () => true,
+  const destinationGesture = useDestinationSwipe({
+    active: activeDestination,
+    blocked: Boolean(activePanel || selectedAssetId),
+    destinations,
+    onSelect: selectDestination,
   });
   const allocationAvailable = allocationHoldings.every(
     (holding) => holding.valuation.status !== "pending",
@@ -430,98 +400,32 @@ export function HoldingsScreen({
         ) : null}
 
         {hasMarketHoldings && activeDestination === "market" ? (
-          <View style={styles.searchField}>
-            <Ionicons
-              accessible={false}
-              name="search-outline"
-              size={20}
-              color={colors.text.secondary}
-            />
-            <TextInput
-              accessibilityLabel="Search holdings"
-              onChangeText={setSearchQuery}
-              placeholder="Find a holding"
-              placeholderTextColor={colors.text.secondary}
-              style={styles.searchInput}
-              testID="holdings-search-input"
-              value={searchQuery}
-            />
-          </View>
+          <HoldingsSearchField onChange={setSearchQuery} value={searchQuery} />
         ) : null}
 
         {quickSetupSavedCount > 0 &&
         onQuickSetup &&
         (holdings.length > 0 || ppfSummary.accounts.length > 0) ? (
-          <View style={styles.resumeRow} testID="holdings-continue-setup">
-            <View style={styles.flex}>
-              <AppText weight="bold">Resume setup</AppText>
-              <AppText color="secondary" variant="caption">
-                {quickSetupSavedCount} saved locally.
-              </AppText>
-            </View>
-            <AppButton
-              onPress={onQuickSetup}
-              testID="holdings-continue-setup-button"
-              title="Resume"
-              variant="secondary"
-            />
-          </View>
+          <ResumeSetupRow onResume={onQuickSetup} savedCount={quickSetupSavedCount} />
         ) : null}
 
         {hasMarketHoldings &&
         activeDestination === "market" &&
         pendingValuations === 0 &&
         (isRefreshing || failed.length > 0 || timedOut.length > 0) ? (
-          <View
-            accessibilityLiveRegion={quoteStatus.prominent ? "polite" : "none"}
-            style={[
-              styles.quoteStatus,
-              quoteStatus.prominent && styles.quoteStatusProminent,
-            ]}
-            testID="holdings-quote-health"
-          >
-            <CategoryIcon assetClass="neutral" size={18} />
-            <View style={styles.quoteStatusCopy}>
-              <AppText
-                style={quoteStatus.prominent ? styles.warningText : undefined}
-                variant="caption"
-                weight="bold"
-              >
-                {quoteStatus.title}
-              </AppText>
-            </View>
-            <AppButton
-              onPress={() => setActivePanel("quotes")}
-              style={styles.quoteDetailsAction}
-              title="Details"
-              variant="ghost"
-            />
-          </View>
+          <QuoteHealthRow
+            onShowDetails={() => setActivePanel("quotes")}
+            quoteStatus={quoteStatus}
+          />
         ) : null}
 
         {activeDestination === "market" && pendingValuations > 0 ? (
-          <View
-            style={[styles.pendingValuationRow, (width < 400 || fontScale > 1.15) && styles.stackedContent]}
-            testID="holdings-pending-valuations"
-          >
-            <View style={styles.pendingValuationCopy}>
-              <AppText weight="bold">
-                {pendingValuations} valuation
-                {pendingValuations === 1 ? "" : "s"} pending
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                Invested values remain available. Current totals and allocation
-                are incomplete.
-              </AppText>
-            </View>
-            <AppButton
-              title="Refresh prices"
-              testID="holdings-refresh-pending-prices"
-              onPress={() => {
-                void refresh();
-              }}
-            />
-          </View>
+          <PendingValuationsRow
+            count={pendingValuations}
+            onRefresh={() => {
+              void refresh();
+            }}
+          />
         ) : null}
 
         {activeDestination === "ppf" && hasPpfDestination ? (
@@ -548,97 +452,23 @@ export function HoldingsScreen({
         ) : null}
 
         {!hasMarketHoldings && !hasPpfDestination && !hasEpfDestination ? (
-          <EmptyState
-            actionLabel={
-              onQuickSetup
-                ? quickSetupSavedCount > 0
-                  ? "Continue portfolio setup"
-                  : "Set up your portfolio"
-                : onAddTrade
-                  ? "Add Holding"
-                  : undefined
-            }
-            actionTestID={
-              onQuickSetup ? "quick-setup-button" : "add-trade-button"
-            }
-            message={
-              quickSetupSavedCount > 0
-                ? `${quickSetupSavedCount} confirmed ${quickSetupSavedCount === 1 ? "holding is" : "holdings are"} saved locally.`
-                : onQuickSetup
-                  ? "Choose manual entry or import holdings and transaction history."
-                  : "Holdings are created automatically from your portfolio entries."
-            }
-            title="No holdings yet"
-            onAction={onQuickSetup ? () => setActivePanel("add") : onAddTrade}
-            onSecondaryAction={onQuickSetup ? onAddTrade : undefined}
-            secondaryActionLabel={onQuickSetup ? "Add one holding" : undefined}
-            secondaryActionTestID="add-trade-button"
+          <NoHoldingsState
+            onAddTrade={onAddTrade}
+            onOpenAddPanel={() => setActivePanel("add")}
+            onQuickSetup={onQuickSetup}
+            savedCount={quickSetupSavedCount}
           />
         ) : activeDestination === "market" ? (
-          <>
-            <View style={styles.listHeading}>
-              <AppText
-                color="secondary"
-                testID="holdings-allocation-scope"
-                variant="caption"
-              >
-                Value order · Weight excludes cash and PPF
-              </AppText>
-              <View style={styles.listActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${filtersVisible ? "Hide" : "Show"} holding filters. Current filter: ${getFilterLabel(effectiveFilter)}`}
-                  accessibilityState={{ expanded: filtersVisible }}
-                  onPress={() => setFiltersVisible((visible) => !visible)}
-                  style={styles.listAction}
-                  testID="holdings-filter-toggle"
-                >
-                  <Ionicons
-                    accessible={false}
-                    name="options-outline"
-                    size={18}
-                    color={colors.text.primary}
-                  />
-                  <AppText variant="caption" weight="bold">
-                    {effectiveFilter === "all"
-                      ? "Filter"
-                      : getFilterLabel(effectiveFilter)}
-                  </AppText>
-                </Pressable>
-                {!isMinimalMode ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Portfolio insights"
-                  onPress={() => setActivePanel("insights")}
-                  style={styles.listAction}
-                  testID="holdings-insights-button"
-                >
-                  <AppText variant="caption">Portfolio insights</AppText>
-                  <Ionicons
-                    accessible={false}
-                    name="chevron-forward"
-                    size={16}
-                    color={colors.text.primary}
-                  />
-                </Pressable>
-                ) : null}
-              </View>
-            </View>
-
-            {filtersVisible ? (
-              <FilterRow
-                allocationAvailable={allocationAvailable}
-                counts={filterCounts}
-                onSelect={(filter) => {
-                  if (filter !== "high-allocation" || allocationAvailable) {
-                    setSelectedFilter(filter);
-                  }
-                }}
-                selected={effectiveFilter}
-              />
-            ) : null}
-
-          </>
+          <MarketListControls
+            allocationAvailable={allocationAvailable}
+            filter={effectiveFilter}
+            filterCounts={filterCounts}
+            filtersVisible={filtersVisible}
+            minimal={isMinimalMode}
+            onOpenInsights={() => setActivePanel("insights")}
+            onSelectFilter={setSelectedFilter}
+            onToggleFilters={() => setFiltersVisible((visible) => !visible)}
+          />
         ) : null}
       </View>
       )}
