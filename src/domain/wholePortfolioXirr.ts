@@ -1,14 +1,15 @@
 import { calculateCashBalance, calculateHoldings } from "./calculations/holdings";
-import { calendarDateToLocalDate, getCalendarDatePart, parseCalendarDate } from "./dates";
+import { calendarDateToLocalDate, formatLocalCalendarDate, getCalendarDatePart, parseCalendarDate } from "./dates";
 import { distributionNetAmount } from "./distributions";
 import { calculateEpfLedger } from "./epf/calculations";
 import { decimal, sumFinancialValues } from "./precision";
+import { getOpeningPositionHistoryDate } from "./openingPositions";
 import { epfXirrFlows, futuresXirrFlows, ppfXirrFlows, type AccountXirrOutcome } from "./xirrAccountFlows";
 import {
   compareFlows, terminalQuoteIssue, tradeFlow,
   type InvestmentsXirrInput, type PayoutCoverageGap, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
 } from "./xirrInputs";
-import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
+import type { MeasurementBasis, MonthlySnapshot, OpeningPosition } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
 
 /**
@@ -119,6 +120,8 @@ export function measurementBasisProblems(basis: Pick<MeasurementBasis, "startDat
 /**
  * The automatic start (#610): the earliest stored month-end snapshot whose
  * month has ended, at that month's last day and value. Null without one.
+ * `confirmedAt` holds when the app generated that snapshot, if it did, which
+ * says what records its value could include (#653).
  */
 export function automaticMeasurementBasis(snapshots: readonly MonthlySnapshot[], today: string): MeasurementBasis | null {
   const starts = snapshots.flatMap((snapshot) => {
@@ -126,12 +129,38 @@ export function automaticMeasurementBasis(snapshots: readonly MonthlySnapshot[],
     if (!match || !Number.isFinite(snapshot.portfolioValue) || snapshot.portfolioValue < 0) return [];
     const lastDay = new Date(Date.UTC(Number(match[1]), Number(match[2]), 0)).getUTCDate();
     const startDate = `${snapshot.month}-${String(lastDay).padStart(2, "0")}`;
-    return startDate < today ? [{ startDate, value: decimal(snapshot.portfolioValue).toDecimalPlaces(2).toNumber() }] : [];
+    const generatedAt = snapshot.generated?.source === "auto" ? snapshot.generated.generatedAt : "";
+    return startDate < today ? [{ startDate, generatedAt, value: decimal(snapshot.portfolioValue).toDecimalPlaces(2).toNumber() }] : [];
   }).sort((a, b) => compareCodeUnits(a.startDate, b.startDate));
   const first = starts[0];
   if (!first) return null;
   return { startDate: first.startDate, kind: "openingValue", openingValueInr: first.value,
-    openingBreakdown: [{ label: "Month-end snapshot", valueInr: first.value }], confirmedAt: "", evidenceDigest: null };
+    openingBreakdown: [{ label: "Month-end snapshot", valueInr: first.value }], confirmedAt: first.generatedAt, evidenceDigest: null };
+}
+
+/**
+ * The date an opening outside the start value counts as bought, or null when
+ * the start value includes it (#653).
+ *
+ * A confirmed start includes what was recorded by confirmation. The automatic
+ * start's snapshot includes, like its generator, openings whose history date
+ * (measured, bought, then recorded) is on or before the start, if they were
+ * recorded by the time it was generated: at month end when that's unknown.
+ * A legacy opening with no recording date is taken as included.
+ */
+function openingOutsideStartValue(opening: OpeningPosition, basis: MeasurementBasis, automatic: boolean) {
+  const recordedAt = Date.parse(opening.recordedAt ?? "");
+  const recordedOn = getCalendarDatePart(opening.recordedOn ?? "") ??
+    (Number.isFinite(recordedAt) ? formatLocalCalendarDate(new Date(recordedAt)) : null);
+  const setAt = Date.parse(basis.confirmedAt);
+  const recordedAfter = (time: number) => Number.isFinite(recordedAt) ? recordedAt > time
+    : recordedOn !== null && recordedOn > formatLocalCalendarDate(new Date(time));
+  if (!automatic) return Number.isFinite(setAt) && recordedAfter(setAt) ? recordedOn : null;
+  const history = getOpeningPositionHistoryDate(opening);
+  const afterSnapshot = Number.isFinite(setAt) ? recordedAfter(setAt) : recordedOn !== null && recordedOn > basis.startDate;
+  const dates = [afterSnapshot ? recordedOn : null, history !== null && history > basis.startDate ? history : null]
+    .filter((date): date is string => date !== null).sort();
+  return dates.at(-1) ?? null;
 }
 
 export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): XirrInputResult {
@@ -232,6 +261,20 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     if (!cost.isZero()) flows.push({ date, amountInr: cost.negated().toString(), source: "trade", id: opening.id });
     limitations.push({ assetId: opening.assetId, limitation: "opening-after-start-at-cost", recordId: opening.id });
   }
+  // An opening dated at or before the start, or undated, that the start value
+  // leaves out because it was recorded later (#653). Counted as bought at its
+  // average cost on the day it was recorded, so it isn't taken as return.
+  if (!inception) {
+    for (const opening of input.openingPositions) {
+      const date = opening.date === null ? null : getCalendarDatePart(opening.date);
+      if (date !== null && date > start) continue;
+      const boughtOn = openingOutsideStartValue(opening, basis, input.automaticBasis === true);
+      if (!boughtOn || boughtOn < start || boughtOn > end) continue;
+      const cost = decimal(opening.quantity).times(opening.averageCostPrice);
+      if (!cost.isZero()) flows.push({ date: boughtOn, amountInr: cost.negated().toString(), source: "trade", id: opening.id });
+      limitations.push({ assetId: opening.assetId, limitation: "opening-recorded-after-start", recordId: opening.id });
+    }
+  }
 
   // Payouts: only those paid outside leave the portfolio. Reinvested and Cash payouts stay inside.
   for (const payout of input.distributions) {
@@ -303,7 +346,7 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   const accounts: AccountXirrOutcome[] = [
     ppfXirrFlows(input.ppfAccounts, input.ppfLedgerEntries, end),
     epfXirrFlows(input.epf, end, input.today),
-    futuresXirrFlows(input.futuresAccounts, input.cashEntries, end, input.valuationTime),
+    futuresXirrFlows(input.futuresAccounts, input.cashEntries, end),
   ];
   for (const account of accounts) {
     // A problem tied to a record before the period is covered by the opening value.

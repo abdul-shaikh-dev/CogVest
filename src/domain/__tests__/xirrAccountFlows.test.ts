@@ -9,7 +9,7 @@ const endDate = "2026-01-01";
 const empty: InvestmentsXirrInput = {
   assets: [], trades: [], openingPositions: [], quotes: {}, distributions: [], distributionCoverage: [],
   ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
-  endDate, today: endDate, valuationTime: "2026-01-01T12:00:00Z",
+  endDate, today: endDate,
 };
 const input = (overrides: Partial<InvestmentsXirrInput>) => ({ ...empty, ...overrides });
 const reasons = (overrides: Partial<InvestmentsXirrInput>) => {
@@ -120,8 +120,24 @@ describe("Investments XIRR across accounts (D8)", () => {
 
     it("blocks without a current reconciled valuation", () => {
       expect(reasons({ futuresAccounts: [{ ...account, valuation: undefined }] })).toEqual(["futures-not-valued"]);
-      expect(reasons({ futuresAccounts: [account], endDate: "2026-01-20", today: "2026-01-20", valuationTime: "2026-01-01T00:00:00Z" }))
+      expect(reasons({ futuresAccounts: [account], endDate: "2026-01-20", today: "2026-01-20" }))
         .toEqual(["futures-stale-valuation"]);
+    });
+
+    it("counts a valuation up to 7 days old, replayed at its own time (#653)", () => {
+      // Its wallet, mark and rate are 2 and then 7 days older than the end date: past the live 24-hour rule.
+      for (const end of ["2026-01-03", "2026-01-08"]) {
+        const summary = rate({ futuresAccounts: [account], endDate: end, today: end });
+        expect(summary.flows.at(-1)).toMatchObject({ date: end, amountInr: "11000" });
+        expect(summary.valueAsOf).toBe("2026-01-01");
+      }
+      expect(reasons({ futuresAccounts: [account], endDate: "2026-01-09", today: "2026-01-09" })).toEqual(["futures-stale-valuation"]);
+    });
+
+    it("blocks a valuation recorded before the account's latest event", () => {
+      const later: UsdmFuturesAccount = { ...account,
+        events: [...account.events, { type: "funding", id: "late", at: "2026-01-02T00:00:00Z", amountUsdt: "1", contract: "BTCUSDT" }] };
+      expect(reasons({ futuresAccounts: [later], endDate: "2026-01-03", today: "2026-01-03" })).toEqual(["futures-not-valued"]);
     });
   });
 });

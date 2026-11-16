@@ -4,7 +4,9 @@ import {
   automaticMeasurementBasis, buildWholePortfolioXirrInput, measurementBasisProblems, measurementEvidenceDigest, type WholePortfolioXirrInput,
 } from "@/src/domain/wholePortfolioXirr";
 import { summariseXirr } from "@/src/domain/xirrSummary";
-import type { Asset, BuyTrade, CashEntry, Distribution, MeasurementBasis, MonthlySnapshot, PpfAccount, PpfLedgerEntry } from "@/src/types";
+import type {
+  Asset, BuyTrade, CashEntry, Distribution, MeasurementBasis, MonthlySnapshot, OpeningPosition, PpfAccount, PpfLedgerEntry,
+} from "@/src/types";
 
 // Every scenario turns 10,000 put in on 1 Jan 2025 into 11,000 on 1 Jan 2026: exactly 10% a year.
 const endDate = "2026-01-01";
@@ -15,7 +17,7 @@ const inception: MeasurementBasis = { startDate: "2025-01-01", kind: "inception"
 const empty: WholePortfolioXirrInput = {
   assets: [], trades: [], openingPositions: [], quotes: {}, distributions: [], distributionCoverage: [],
   ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
-  endDate, today: endDate, valuationTime: "2026-01-01T12:00:00Z", basis: inception,
+  endDate, today: endDate, basis: inception,
 };
 const deposit: CashEntry = { id: "dep", amount: 10000, date: "2025-01-01", label: "Deposit", purpose: "capitalContribution", type: "addition" };
 const buy: BuyTrade = { id: "buy", assetId: "stock", type: "buy", date: "2025-01-01", quantity: 100, pricePerUnit: 100, totalValue: 10000 };
@@ -269,6 +271,73 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
 
       expect(result.status).toBe("ready");
       if (result.status === "ready") expect(result.flows.filter((flow) => flow.date === "2025-01-31").map((flow) => flow.id)).toEqual(["portfolio"]);
+    });
+  });
+
+  describe("openings recorded after the start value was set (#653)", () => {
+    const snapshot: MonthlySnapshot = { id: "2024-12", month: "2024-12", portfolioValue: 10000, equityValue: 10000, debtValue: 0,
+      cryptoValue: 0, cashValue: 0, investedValue: 10000, monthlyInvestment: 0 };
+    const basis = automaticMeasurementBasis([snapshot], endDate);
+    // ₹10,000 held at the start; later the user adds an older holding: 50 more units bought at 100, now worth 5,500.
+    const records = { ...market, trades: [{ ...buy, date: "2024-06-01" }], cashEntries: [] };
+    const older: OpeningPosition = { id: "older", assetId: "stock", quantity: 50, averageCostPrice: 100, date: null, recordedOn: "2025-06-30" };
+    const note = "1 opening position added after the start is counted as bought at average cost on the day it was added.";
+
+    it("counts an undated opening added after the automatic start as bought on the day it was added", () => {
+      const summary = rate({ ...records, openingPositions: [older], basis, automaticBasis: true });
+
+      expect(summary.flows.map((flow) => [flow.date, flow.amountInr])).toEqual([
+        ["2024-12-31", "-10000"], ["2025-06-30", "-5000"], ["2026-01-01", "16500"],
+      ]);
+      // The later 5,000 gains 500 in six months, so about 12% overall; counted as return it would be about 65%.
+      expect(summary.rate).toBeCloseTo(0.12, 2);
+      expect(summary.notes).toContain(note);
+    });
+
+    it("does the same for an opening dated before the start but added after it", () => {
+      const summary = rate({ ...records, openingPositions: [{ ...older, date: "2024-03-01" }], basis, automaticBasis: true });
+
+      expect(summary.flows).toContainEqual(expect.objectContaining({ date: "2025-06-30", amountInr: "-5000", id: "older" }));
+    });
+
+    it("uses the recorded time when there is no recorded date", () => {
+      const { recordedOn: _recordedOn, ...timed } = older;
+      const summary = rate({ ...records, openingPositions: [{ ...timed, recordedAt: "2025-06-30T06:00:00Z" }], basis, automaticBasis: true });
+
+      expect(summary.flows).toContainEqual(expect.objectContaining({ date: "2025-06-30", amountInr: "-5000" }));
+    });
+
+    it("leaves an opening recorded by the start, or with no recording date, in the start value", () => {
+      for (const opening of [{ ...older, recordedOn: "2024-12-31" }, { ...older, recordedOn: undefined }]) {
+        const result = buildWholePortfolioXirrInput(input({ ...records, openingPositions: [opening], basis, automaticBasis: true }));
+        expect(result.status === "ready" && result.flows.some((flow) => flow.id === "older")).toBe(false);
+      }
+    });
+
+    it("follows the generated snapshot: it includes openings recorded before it was generated and dated by the start", () => {
+      const generated = (generatedAt: string) => automaticMeasurementBasis([{ ...snapshot,
+        generated: { generatedAt, priceBasis: "historical-close", source: "auto", warnings: [] } }], endDate);
+      const flowsFor = (opening: OpeningPosition, generatedAt: string) => {
+        const result = buildWholePortfolioXirrInput(input({ ...records, openingPositions: [opening], basis: generated(generatedAt), automaticBasis: true }));
+        return result.status === "ready" ? result.flows.filter((flow) => flow.id === "older").map((flow) => flow.date) : null;
+      };
+      const datedEarly = { ...older, date: "2024-03-01" };
+
+      // Generated in August, after it was recorded: the snapshot already counts it.
+      expect(flowsFor(datedEarly, "2025-08-01T00:00:00Z")).toEqual([]);
+      // Generated in January, before it was recorded: bought on the day it was recorded.
+      expect(flowsFor(datedEarly, "2025-01-01T00:00:00Z")).toEqual(["2025-06-30"]);
+      // Undated, so its history date is the day it was recorded, after the start: never in the snapshot.
+      expect(flowsFor(older, "2025-08-01T00:00:00Z")).toEqual(["2025-06-30"]);
+    });
+
+    it("for a confirmed start, counts only openings recorded after confirmation", () => {
+      const confirmed = { ...openingBasis(records, "2024-12-31"), confirmedAt: "2025-03-01T00:00:00Z" };
+      const before = buildWholePortfolioXirrInput(input({ ...records, openingPositions: [{ ...older, recordedOn: "2025-02-01" }], basis: confirmed }));
+      const after = rate({ ...records, openingPositions: [older], basis: confirmed });
+
+      expect(before.status === "ready" && before.flows.some((flow) => flow.id === "older")).toBe(false);
+      expect(after.flows).toContainEqual(expect.objectContaining({ date: "2025-06-30", amountInr: "-5000", id: "older" }));
     });
   });
 

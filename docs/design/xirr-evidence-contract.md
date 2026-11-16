@@ -161,8 +161,9 @@ judgement):
   note.
 - EPF needs `historyCompleteThrough` on or after the end date.
 - Futures needs the reconciled valuation that the Dashboard already uses, no
-  more than 7 days old. Negative equity is a negative terminal flow, never
-  dropped.
+  more than 7 days old. Its equity is replayed at the valuation's own time, so
+  the Dashboard's 24-hour freshness rule doesn't apply (#653). Negative equity
+  is a negative terminal flow, never dropped.
 - Cash-class holdings are outside the boundary and are skipped, not blocking.
 
 ### Whole-portfolio XIRR
@@ -261,6 +262,10 @@ filled. This supersedes the blocking rules above where they conflict.
     unknown destination: money taken out;
   - a price older than 7 days: used as is; no price: valued at what was paid;
   - an opening position dated after the start: bought at its average cost;
+  - an opening position that is undated or dated by the start but left out of
+    the opening value because it was recorded later (after confirmation, or
+    after the automatic start's snapshot was generated): bought at its
+    average cost on the day it was recorded (#653);
   - an account opened after the start: its starting balance is money put in;
   - records before a confirmed start changed, and incomplete EPF history.
 - **Still blocking:** no start at all, records before a lifetime start,

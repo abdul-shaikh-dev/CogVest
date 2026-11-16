@@ -148,7 +148,7 @@ describe("XIRR from built inputs", () => {
     const portfolio = buildInvestmentsXirrInput({
       assets: [btc, eth], trades, openingPositions: [], quotes, distributions: [], distributionCoverage: [],
       ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
-      endDate, today: endDate, valuationTime: `${endDate}T12:00:00Z`,
+      endDate, today: endDate,
     });
     if (portfolio.status !== "ready") throw new Error("expected ready input");
     const combined = rateOf(portfolio.flows);
