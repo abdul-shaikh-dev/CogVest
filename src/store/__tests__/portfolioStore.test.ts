@@ -3073,6 +3073,31 @@ describe("portfolio store", () => {
     expect(third.getState().storageRecovery!.incidents[0]).toEqual(secondIncident);
   });
 
+  it("offers copies saved by earlier versions under their fixed keys for export (#654)", () => {
+    const storage = createMemoryJsonStorage();
+    const legacyKey = `${storageRecoveryKeyPrefix}:${portfolioStorageKey}`;
+    storage.setRawItem(legacyKey, "{old-incident");
+    storage.setItem(`${legacyKey}:metadata`, { detectedAt: "2026-05-01T08:00:00.000Z", reason: "invalid-json", sourceKey: portfolioStorageKey });
+    storage.setRawItem(`${storageRecoveryKeyPrefix}:${quoteCacheStorageKey}`, "[old-quotes]");
+    storage.setRawItem(portfolioStorageKey, "{new-incident");
+
+    const store = createPortfolioStore({ now: () => new Date("2026-07-22T10:00:00.000Z"), storage });
+    const copies = store.getState().readRecoveryCopies();
+
+    expect(copies.map((copy) => [copy.incident.sourceKey, copy.rawValue, copy.legacy ?? false])).toEqual([
+      [portfolioStorageKey, "{new-incident", false],
+      [portfolioStorageKey, "{old-incident", true],
+      [quoteCacheStorageKey, "[old-quotes]", true],
+    ]);
+    expect(copies[1].incident).toMatchObject({ detectedAt: "2026-05-01T08:00:00.000Z", reason: "invalid-json", recoveryKey: legacyKey });
+    // A copy whose metadata is missing is still offered, without a time.
+    expect(copies[2].incident).toMatchObject({ detectedAt: "", reason: "migration-failed" });
+
+    // Reset leaves them in place: nothing says they were exported.
+    store.getState().resetAffectedStorage();
+    expect(storage.getRawItem(legacyKey)).toBe("{old-incident");
+  });
+
   it("lists no copy to export when none could be kept", () => {
     const baseStorage = createMemoryJsonStorage();
     baseStorage.setRawItem(portfolioStorageKey, "{broken-portfolio");

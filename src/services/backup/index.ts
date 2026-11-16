@@ -160,9 +160,10 @@ export function createBackupService(runtime: BackupRuntime) {
       const directory = await runtime.selectDirectory();
       if (!directory) return undefined;
       const names: string[] = [];
-      for (const { incident, rawValue } of copies) {
+      for (const { incident, legacy, rawValue } of copies) {
         const area = incident.sourceKey.replace(/[^a-z0-9]+/giu, "-").replace(/^-|-$/gu, "");
-        const name = `CogVest-recovery-${area}-${incident.detectedAt.replace(/[:.]/gu, "-")}.txt`;
+        const time = incident.detectedAt ? incident.detectedAt.replace(/[:.]/gu, "-") : "undated";
+        const name = `CogVest-recovery-${legacy ? "legacy-" : ""}${area}-${time}.txt`;
         const file = directory.createFile(name, "text/plain");
         created.push(file);
         await file.write(rawValue);

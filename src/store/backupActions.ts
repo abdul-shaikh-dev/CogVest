@@ -15,7 +15,7 @@ import {
   type PortfolioStoreState,
   quoteCacheStorageKey,
 } from "./storeTypes";
-import { createEmptyPortfolioSnapshot, selectRawSnapshot } from "./persistence";
+import { createEmptyPortfolioSnapshot, readLegacyRecoveryCopies, selectRawSnapshot } from "./persistence";
 
 type BackupActions = Pick<PortfolioStoreState,
   | "getBackupRevision"
@@ -93,11 +93,15 @@ export function createBackupActions(context: StoreContext): BackupActions {
         ...bindActions(restoreEpoch),
       });
     },
-    readRecoveryCopies: () => (get().storageRecovery?.incidents ?? []).flatMap((incident) => {
-      if (!incident.preserved) return [];
-      const rawValue = storage.getRawItem(incident.recoveryKey);
-      return rawValue === null ? [] : [{ incident, rawValue }];
-    }),
+    readRecoveryCopies: () => [
+      ...(get().storageRecovery?.incidents ?? []).flatMap((incident) => {
+        if (!incident.preserved) return [];
+        const rawValue = storage.getRawItem(incident.recoveryKey);
+        return rawValue === null ? [] : [{ incident, rawValue }];
+      }),
+      // Copies from earlier versions, which nothing else can reach (#654).
+      ...readLegacyRecoveryCopies(storage),
+    ],
     resetAffectedStorage: () => {
       const recoveryIncidents = get().storageRecovery?.incidents ?? [];
 

@@ -38,6 +38,7 @@ import {
   type PortfolioStoreState,
   quoteCacheStorageKey,
   type RawPortfolioSnapshot,
+  type StorageRecoveryCopy,
   type StorageRecoveryIncident,
   storageRecoveryKeyPrefix,
   type StorageRecoveryReason,
@@ -181,6 +182,49 @@ export function quarantineRawValue(
     recoveryKey,
     sourceKey,
   };
+}
+
+/**
+ * Copies saved before #654, one per source under a fixed key, which nothing
+ * else reads. They are offered for export and never deleted automatically.
+ */
+export function readLegacyRecoveryCopies(storage: JsonStorage): StorageRecoveryCopy[] {
+  const sources: Array<[string, string]> = [
+    [portfolioStorageKey, "Portfolio records"],
+    [quoteCacheStorageKey, "Current quote cache"],
+    [historicalQuoteCacheStorageKey, "Historical quote cache"],
+    [assetGraphJournalStorageKey, "Interrupted asset change"],
+  ];
+  return sources.flatMap(([sourceKey, displayName]) => {
+    const recoveryKey = `${storageRecoveryKeyPrefix}:${sourceKey}`;
+    const metadataKey = `${recoveryKey}:metadata`;
+    try {
+      const rawValue = storage.getRawItem(recoveryKey);
+      if (rawValue === null) return [];
+      let metadata: { detectedAt?: JsonValue; reason?: JsonValue } | null = null;
+      try {
+        metadata = storage.getItem<{ detectedAt?: JsonValue; reason?: JsonValue }>(metadataKey);
+      } catch {
+        // A copy without readable metadata is still worth exporting.
+      }
+      const reason = metadata?.reason;
+      return [{
+        incident: {
+          detectedAt: typeof metadata?.detectedAt === "string" ? metadata.detectedAt : "",
+          displayName,
+          metadataKey,
+          preserved: true,
+          reason: reason === "invalid-json" || reason === "invalid-shape" ? reason : "migration-failed",
+          recoveryKey,
+          sourceKey,
+        },
+        legacy: true as const,
+        rawValue,
+      }];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export function migratePortfolioSnapshot(

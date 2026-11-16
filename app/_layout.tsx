@@ -168,7 +168,7 @@ function RootContents() {
             affectedAreas={recovery.incidents.map(
               (incident) => incident.displayName,
             )}
-            hasRecoveryCopies={recovery.incidents.some((incident) => incident.preserved)}
+            hasRecoveryCopies={store.getState().readRecoveryCopies().length > 0}
             onExport={exportRecoveryCopies}
             onReset={() => store.getState().resetAffectedStorage()}
             recoveryCopiesPreserved={recovery.incidents.every(

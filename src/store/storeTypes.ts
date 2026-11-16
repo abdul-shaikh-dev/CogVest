@@ -461,7 +461,8 @@ export type StorageRecoveryIncident = {
   sourceKey: string;
 };
 
-export type StorageRecoveryCopy = { incident: StorageRecoveryIncident; rawValue: string };
+/** A kept copy; `legacy` marks one saved by a version before #654 under its fixed key. */
+export type StorageRecoveryCopy = { incident: StorageRecoveryIncident; rawValue: string; legacy?: true };
 
 export type StorageRecoveryState = {
   incidents: StorageRecoveryIncident[];

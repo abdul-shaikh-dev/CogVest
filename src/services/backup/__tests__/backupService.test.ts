@@ -279,6 +279,27 @@ describe("recovery copy export (#654)", () => {
     expect(store.getState().storageRecovery?.incidents).toHaveLength(2);
   });
 
+  it("marks a copy saved by an earlier version as legacy in its file name", async () => {
+    const storage = createMemoryJsonStorage();
+    storage.setRawItem(`cogvest:recovery:${quoteCacheStorageKey}`, "[old-quotes]");
+    storage.setRawItem(portfolioStorageKey, "{unreadable-portfolio");
+    const store = createPortfolioStore({ storage, now });
+    const contents: string[] = [];
+    const service = createBackupService({
+      store, digest, now, appVersion: "1.0.1", uniqueId: () => "unique", selectFile: jest.fn(), onRestored: jest.fn(),
+      selectDirectory: async () => ({ createFile: () => {
+        let written = "";
+        return { write: async (text: string) => { written = text; contents.push(text); }, text: async () => written, delete: () => undefined };
+      } }),
+    });
+
+    await expect(service.exportRecoveryCopies()).resolves.toEqual([
+      "CogVest-recovery-cogvest-v1-portfolio-2026-09-10T10-00-00-000Z.txt",
+      "CogVest-recovery-legacy-cogvest-v1-quote-cache-undated.txt",
+    ]);
+    expect(contents).toEqual(["{unreadable-portfolio", "[old-quotes]"]);
+  });
+
   it("treats a cancelled folder picker as no action", async () => {
     const { createFile, runtime, service } = recoveringHarness();
     runtime.selectDirectory.mockResolvedValue(undefined);
