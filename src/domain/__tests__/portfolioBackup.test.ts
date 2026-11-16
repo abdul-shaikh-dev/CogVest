@@ -257,6 +257,20 @@ describe("portable portfolio backup", () => {
     repeated.portfolio.trades.push(fill("fill-1", "1000001", 1), { ...fill("fill-2", " 1000001 ", 2) });
     await expect(createPortfolioBackup(repeated, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("have the same source identity");
 
+    // A Zerodha trade number reused by the exchange on another day or exchange is another trade (#655).
+    const scoped = (id: string, exchange: string, executedAt: string, originalRowNumber: number) => {
+      const base = fill(id, "1000001", originalRowNumber);
+      return { ...base, date: executedAt, importProvenance: { ...base.importProvenance, fingerprint: `fp-${id}`,
+        sourceExchange: exchange, sourceExecutedAt: executedAt, sourceSegment: "EQ" } };
+    };
+    const reused = payload();
+    reused.portfolio.trades.push(scoped("day-1", "NSE", "2026-01-02T10:00:00", 1), scoped("day-2", "NSE", "2026-01-05T10:00:00", 2),
+      scoped("bse", "BSE", "2026-01-02T10:00:00", 3));
+    await expect(createPortfolioBackup(reused, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).resolves.toEqual(expect.any(String));
+    const sameDay = payload();
+    sameDay.portfolio.trades.push(scoped("day-1", "NSE", "2026-01-02T10:00:00", 1), scoped("again", "NSE", "2026-01-02T15:00:00", 2));
+    await expect(createPortfolioBackup(sameDay, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("have the same source identity");
+
     const invalidTime = payload();
     invalidTime.portfolio.trades.push({ ...fill("fill-1", "1000001", 1), date: "2026-01-02T24:00:00" });
     await expect(createPortfolioBackup(invalidTime, { appVersion: "1", createdAt: "2026-09-10T10:00:00.000Z" }, digest)).rejects.toThrow("trade date is not a valid date");

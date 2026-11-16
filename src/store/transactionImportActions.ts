@@ -6,6 +6,7 @@ import {
 } from "@/src/domain/stockSplitCatalog";
 import { normalizeAssetMetadata } from "@/src/domain/assets";
 import { normalizeTrade } from "@/src/domain/financialRecords";
+import { importExternalIdentityKey } from "@/src/domain/importIdentity";
 import {
   formatLocalCalendarDate,
   getCalendarDatePart,
@@ -221,15 +222,9 @@ export function createTransactionImportActions(context: StoreContext): Transacti
       for (const transaction of [...state.trades, ...normalizedTransactions]) {
         const provenance = transaction.importProvenance;
         if (!provenance) continue;
-        const keys = provenance.externalId
-          ? [
-              [
-                  "external",
-                  provenance.sourceFormat,
-                  provenance.account?.trim().toUpperCase() ?? "",
-                  provenance.externalId.trim().toUpperCase(),
-              ].join("|"),
-            ]
+        const externalKey = importExternalIdentityKey(provenance);
+        const keys = externalKey
+          ? [`external|${externalKey}`]
           : provenance.fingerprint
             ? [
                 [

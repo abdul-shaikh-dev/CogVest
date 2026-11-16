@@ -856,4 +856,45 @@ describe("transaction import planner", () => {
       }),
     ]);
   });
+
+  describe("Zerodha trade numbers reused by the exchange (#655)", () => {
+    function zerodhaRow(input: { date: string; exchange?: "NSE" | "BSE"; tradeId?: string; account?: string }) {
+      const item = resolution(csvRow({ date: input.date, externalId: input.tradeId ?? "1000001", price: "120", quantity: "2", type: "buy",
+        ...(input.account ? { account: input.account } : {}) }));
+      const executedAt = `${input.date}T10:00:00`;
+      item.row = { ...item.row, tradeDate: executedAt, source: {
+        exchange: input.exchange ?? "NSE", executedAt, format: "zerodha-tradebook", orderId: `order-${input.date}-${input.exchange ?? "NSE"}`,
+        segment: "EQ", symbol: "EXAMPLE", version: "eq-v1",
+      } };
+      return item;
+    }
+    const imported = (item: TransactionCsvResolution) =>
+      plan({ mode: "supplemental", resolutions: [item], sharedCutover: "2025-03-01" }).command!.transactions[0];
+
+    it("imports the same trade number on another day or exchange as a new trade", () => {
+      const earlier = imported(zerodhaRow({ date: "2025-04-01" }));
+
+      for (const row of [zerodhaRow({ date: "2025-04-02" }), zerodhaRow({ date: "2025-04-01", exchange: "BSE" })]) {
+        const result = plan({ mode: "supplemental", resolutions: [row], sharedCutover: "2025-03-01", trades: [earlier] });
+        expect(result.errors).toEqual([]);
+        expect(result.command?.transactions).toHaveLength(1);
+      }
+    });
+
+    it("still recognises a trade imported earlier when the same file is imported again", () => {
+      const earlier = imported(zerodhaRow({ date: "2025-04-01" }));
+      const result = plan({ mode: "supplemental", resolutions: [zerodhaRow({ date: "2025-04-01" })], sharedCutover: "2025-03-01", trades: [earlier] });
+
+      expect(result.errors).toEqual([]);
+      expect(result.command).toBeUndefined();
+    });
+
+    it("keeps one file's rows apart when they share a trade number across days", () => {
+      const result = plan({ mode: "supplemental", sharedCutover: "2025-03-01",
+        resolutions: [zerodhaRow({ date: "2025-04-01" }), zerodhaRow({ date: "2025-04-02" })] });
+
+      expect(result.errors).toEqual([]);
+      expect(result.command?.transactions).toHaveLength(2);
+    });
+  });
 });

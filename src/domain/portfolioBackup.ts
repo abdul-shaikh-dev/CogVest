@@ -11,6 +11,7 @@ import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { assertCatalogSplits, assertSplitSourceIdentities } from "@/src/domain/stockSplitCatalog";
 import { camsKfinCasSourceFormat } from "@/src/domain/camsKfinCas";
 import { getCalendarDatePart, parseCalendarDate } from "@/src/domain/dates";
+import { importExternalIdentityKey } from "@/src/domain/importIdentity";
 import { getOpeningPositionHistoryDate, isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { decimal, isWithinQuantum, moneyQuantum } from "@/src/domain/precision";
 import { comparePpfLedgerEntries, calculatePpfConfirmedBalance, validatePpfAccount, validatePpfLedgerEntryForAccount } from "@/src/domain/ppf";
@@ -265,9 +266,11 @@ function validateGraph(payload: BackupPayload) {
     if (!provenance?.fingerprint) continue;
     // Like the importer, a broker trade ID identifies a fill; partial fills of one
     // order share every other field, so the fingerprint applies only without one.
-    const externalId = provenance.externalId?.trim().toUpperCase();
-    const key = externalId ? `id\u0000${externalId}` : `fingerprint\u0000${provenance.fingerprint}`;
-    const identity = `${provenance.sourceFormat}\u0000${provenance.account?.trim().toUpperCase() ?? ""}\u0000${key}`;
+    // A Zerodha trade ID is scoped by exchange, segment and date (#655).
+    const externalKey = importExternalIdentityKey(provenance);
+    const identity = externalKey
+      ? `id\u0000${externalKey}`
+      : `fingerprint\u0000${provenance.sourceFormat}\u0000${provenance.account?.trim().toUpperCase() ?? ""}\u0000${provenance.fingerprint}`;
     if (importFingerprints.has(identity)) {
       fail(`two imported ${provenance.sourceSymbol ?? "trade"} records on ${getCalendarDatePart(trade.date)} have the same source identity`);
     }
