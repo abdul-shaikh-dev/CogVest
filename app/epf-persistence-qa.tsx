@@ -8,7 +8,7 @@ import { calculateEpfLedger } from "@/src/domain/epf";
 import { createPortfolioBackup, parsePortfolioBackup } from "@/src/domain/portfolioBackup";
 import { ReviewCashEntryScreen } from "@/src/features/cash";
 import { createMmkvJsonStorage } from "@/src/services/storage";
-import { createEmptyPortfolioSnapshot, createPortfolioStore, portfolioSchemaVersion, portfolioStorageKey } from "@/src/store";
+import { createEmptyPortfolioSnapshot, createPortfolioStore, portfolioSchemaVersion, portfolioStorageKey, preferencesStorageKey } from "@/src/store";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 
 const now = () => new Date("2026-10-05T10:00:00Z");
@@ -86,6 +86,8 @@ function EnabledQa({ page }: { page?: string }) {
       } = createEmptyPortfolioSnapshot();
       storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...legacy, schemaVersion: 15,
         cashEntries: [{ id: "opening", amount: 2000, date: "2026-01-01", type: "addition", purpose: "capitalContribution", label: "Synthetic Cash" }] }));
+      // Earlier versions kept preferences only inside the portfolio record (#665).
+      storage.removeItem(preferencesStorageKey);
       setStatus("Legacy staged; restart required");
     }} />
     <AppButton testID="epf-qa-run" title="Check migration and restore" disabled={busy} onPress={() => void run()} />

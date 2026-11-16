@@ -13,6 +13,7 @@ import {
   historicalQuoteCacheStorageKey,
   portfolioStorageKey,
   type PortfolioStoreState,
+  preferencesStorageKey,
   quoteCacheStorageKey,
 } from "./storeTypes";
 import { createEmptyPortfolioSnapshot, readLegacyRecoveryCopies, selectRawSnapshot } from "./persistence";
@@ -63,6 +64,8 @@ export function createBackupActions(context: StoreContext): BackupActions {
       try {
         commitBackupRestore(storage, {
           [portfolioStorageKey]: JSON.stringify(candidate.portfolio),
+          // The backup's preferences are inside its portfolio record (#665).
+          [preferencesStorageKey]: null,
           [quoteCacheStorageKey]: JSON.stringify(candidate.quoteCache),
           [historicalQuoteCacheStorageKey]: JSON.stringify(candidate.historicalQuoteCache),
           [casFolioSaltStorageKey]: candidate.casFolioSalt,
@@ -122,6 +125,8 @@ export function createBackupActions(context: StoreContext): BackupActions {
       for (const incident of recoveryIncidents) {
         storage.removeItem(incident.sourceKey);
       }
+      // Resetting the portfolio resets its preferences too, as before #665.
+      if (resetPortfolio) storage.removeItem(preferencesStorageKey);
 
       set({
         ...(resetPortfolio ? createEmptyPortfolioSnapshot() : {}),

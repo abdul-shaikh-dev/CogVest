@@ -1,10 +1,14 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { backupRestoreJournalKey } from "@/src/services/storage/backupKeys";
+import {
+  backupRestoreJournalKey,
+  casFolioSaltStorageKey,
+  quickSetupStorageKey,
+} from "@/src/services/storage/backupKeys";
 import { createMmkvJsonStorage } from "@/src/services/storage";
 import { withoutOrphanQuotes } from "@/src/domain/quoteCacheIntegrity";
 import type { HistoricalQuoteCache, QuoteCache } from "@/src/types";
 
-import { captureBackupStorage, recoverBackupRestore } from "./backupPersistence";
+import { recoverBackupRestore } from "./backupPersistence";
 import type { StoreContext } from "./storeContext";
 import { createBackupActions } from "./backupActions";
 import { createQuoteActions } from "./quoteActions";
@@ -36,9 +40,9 @@ import {
   persistQuoteCache,
   readHistoricalQuoteCache,
   readPortfolioSnapshot,
+  readPreferences,
   readQuoteCache,
   recoverPendingAssetGraphTransition,
-  selectRawSnapshot,
 } from "./persistence";
 
 export {
@@ -55,6 +59,7 @@ export {
   historicalQuoteCacheStorageKey,
   portfolioSchemaVersion,
   portfolioStorageKey,
+  preferencesStorageKey,
   quoteCacheStorageKey,
   storageRecoveryKeyPrefix,
   type AssetCorrectionResult,
@@ -121,14 +126,19 @@ export function createPortfolioStore({
   const snapshotResult = restoreRecoveryIncident ? { data: createEmptyPortfolioSnapshot() } : readPortfolioSnapshot(storage, now, migrate);
   const quoteCacheResult = restoreRecoveryIncident ? { data: {} as QuoteCache } : readQuoteCache(storage, now);
   const historicalQuoteCacheResult = restoreRecoveryIncident ? { data: {} as HistoricalQuoteCache } : readHistoricalQuoteCache(storage, now);
+  const preferencesResult = restoreRecoveryIncident ? { data: undefined } : readPreferences(storage, now);
   const incidents = [
     restoreRecoveryIncident,
     assetGraphRecoveryIncident,
     snapshotResult.incident,
     quoteCacheResult.incident,
     historicalQuoteCacheResult.incident,
+    preferencesResult.incident,
   ].filter((incident): incident is StorageRecoveryIncident => Boolean(incident));
-  const snapshot = snapshotResult.data;
+  // Separately saved preferences replace the portfolio record's copy (#665).
+  const snapshot = preferencesResult.data
+    ? { ...snapshotResult.data, preferences: preferencesResult.data }
+    : snapshotResult.data;
   let quoteCache = quoteCacheResult.data;
   let historicalQuoteCache = historicalQuoteCacheResult.data;
   if (incidents.length === 0) {
@@ -144,13 +154,16 @@ export function createPortfolioStore({
     historicalQuoteCache = keptHistoricalQuotes;
   }
 
+  // Counts store changes, so a revision is cheap to take (#665). Every
+  // portfolio, quote and preference write goes through the store; the two
+  // keys written outside it are small and read directly.
+  let changeCount = 0;
   function revision(state: PortfolioStoreState) {
     return JSON.stringify({
-      raw: captureBackupStorage(storage),
-      portfolio: selectRawSnapshot(state),
-      quoteCache: state.quoteCache,
-      historicalQuoteCache: state.historicalQuoteCache,
+      casFolioSalt: storage.getRawItem(casFolioSaltStorageKey),
+      changes: changeCount,
       epoch: state.restoreEpoch,
+      quickSetup: storage.getRawItem(quickSetupStorageKey),
     });
   }
 
@@ -216,6 +229,9 @@ export function createPortfolioStore({
     }])) as Partial<PortfolioStoreState>;
   }
   store.setState(bindActions(0));
+  store.subscribe(() => {
+    changeCount += 1;
+  });
   return store;
 }
 

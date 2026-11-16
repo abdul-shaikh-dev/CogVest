@@ -1,5 +1,9 @@
 import type { JsonStorage } from "@/src/services/storage";
-import { backupRestoreJournalKey, backupRestoreKeys } from "@/src/services/storage/backupKeys";
+import {
+  backupRestoreJournalKey,
+  backupRestoreKeys,
+  backupRestoreKeysAddedLater,
+} from "@/src/services/storage/backupKeys";
 
 export type BackupStorageImage = Record<(typeof backupRestoreKeys)[number], string | null>;
 
@@ -28,10 +32,13 @@ function parseJournal(raw: string): BackupStorageImage {
   if (Object.keys(journal).length !== 2 || journal.version !== 1 || !journal.original ||
       typeof journal.original !== "object" || Array.isArray(journal.original)) throw new Error("Invalid restore journal.");
   const original = journal.original as Record<string, unknown>;
-  if (Object.keys(original).length !== backupRestoreKeys.length ||
-      backupRestoreKeys.some((key) => !Object.hasOwn(original, key) ||
-        (original[key] !== null && typeof original[key] !== "string"))) throw new Error("Invalid restore journal.");
-  return original as BackupStorageImage;
+  const knownKeys: ReadonlySet<string> = new Set(backupRestoreKeys);
+  if (Object.keys(original).some((key) => !knownKeys.has(key)) ||
+      backupRestoreKeys.some((key) => Object.hasOwn(original, key)
+        ? original[key] !== null && typeof original[key] !== "string"
+        : !backupRestoreKeysAddedLater.has(key))) throw new Error("Invalid restore journal.");
+  // A key the earlier version did not have was absent before its restore.
+  return Object.fromEntries(backupRestoreKeys.map((key) => [key, original[key] ?? null])) as BackupStorageImage;
 }
 
 export function recoverBackupRestore(storage: JsonStorage) {

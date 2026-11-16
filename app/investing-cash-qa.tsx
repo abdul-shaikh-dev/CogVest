@@ -9,7 +9,7 @@ import { DashboardScreen } from "@/src/features/dashboard";
 import { ProgressScreen } from "@/src/features/progress";
 import { ReviewSnapshotScreen } from "@/src/features/progress/ReviewSnapshotScreen";
 import { createMemoryJsonStorage, createMmkvJsonStorage } from "@/src/services/storage";
-import { createPortfolioStore, portfolioStorageKey, quoteCacheStorageKey, historicalQuoteCacheStorageKey } from "@/src/store";
+import { createPortfolioStore, portfolioStorageKey, preferencesStorageKey, quoteCacheStorageKey, historicalQuoteCacheStorageKey } from "@/src/store";
 import { canUseVisualQaHarness, seedVisualQaPortfolio } from "@/src/testing/visualQaSeed";
 
 const now = new Date("2026-08-01T10:00:00Z");
@@ -51,6 +51,8 @@ function EnabledQa({ page }: { page?: string }) {
         legacy.cashEntries[0].purpose = "income";
         legacy.monthlySnapshots.forEach((snapshot: Record<string, unknown>) => { snapshot.salary = 165000; snapshot.monthlyExpense = 50000; });
         storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));
+        // Earlier versions kept preferences only inside the portfolio record (#665).
+        storage.removeItem(preferencesStorageKey);
         storage.setRawItem(quoteCacheStorageKey, JSON.stringify(payload.quoteCache));
         storage.setRawItem(historicalQuoteCacheStorageKey, JSON.stringify(payload.historicalQuoteCache));
         setStaged(true);

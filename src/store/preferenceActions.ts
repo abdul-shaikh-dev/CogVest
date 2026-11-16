@@ -1,19 +1,17 @@
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
-import { persistPortfolio } from "./persistence";
+import { persistPreferences } from "./persistence";
 
 type PreferenceActions = Pick<PortfolioStoreState, "updatePreferences" | "acknowledgeNudge">;
 
 export function createPreferenceActions({ get, set, storage }: StoreContext): PreferenceActions {
   return {
-    updatePreferences: (preferences) => {
-      set((state) => ({
-        preferences: {
-          ...state.preferences,
-          ...preferences,
-        },
-      }));
-      persistPortfolio(storage, get());
+    // Preferences have their own key, so a toggle never rewrites the portfolio (#665).
+    // The state changes only after the write succeeds.
+    updatePreferences: (changes) => {
+      const preferences = { ...get().preferences, ...changes };
+      persistPreferences(storage, preferences);
+      set({ preferences });
     },
     acknowledgeNudge: (kind, version) => {
       if (!Number.isInteger(version) || version < 1) return;
@@ -25,7 +23,7 @@ export function createPreferenceActions({ get, set, storage }: StoreContext): Pr
         nudgeVersions: { ...state.preferences.nudgeVersions, [kind]: version },
       };
       // Do not claim dismissal is saved if local storage rejected the write.
-      persistPortfolio(storage, { ...state, preferences });
+      persistPreferences(storage, preferences);
       set({ preferences });
     },
   };
