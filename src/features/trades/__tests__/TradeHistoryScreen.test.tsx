@@ -1,11 +1,12 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { Modal } from "react-native";
+import { Modal, StyleSheet } from "react-native";
 
 import { TradeHistoryScreen } from "@/src/features/trades";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import type { Asset, Trade } from "@/src/types";
 import { getByComponentType } from "@/src/testing/componentQueries";
+import { colors } from "@/src/theme";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -202,7 +203,28 @@ describe("TradeHistoryScreen", () => {
     await waitFor(() => expect(store.getState().trades).toEqual([]));
     expect(store.getState().cashEntries).toEqual([expect.objectContaining({ id: "cash" })]);
     expect(screen.getByText(/1 transaction removed/u)).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId("transaction-deletion-message").props.style).color).toBe(colors.text.secondary);
     expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed deletion in the error style, though its text says \"removed\" (#667)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(trade);
+    store.setState({ deleteTrades: () => { throw new Error("storage full"); } });
+    const screen = await render(<TradeHistoryScreen assetId={asset.id} onBack={jest.fn()} onReviewTrade={jest.fn()} store={store} />);
+
+    await fireEvent.press(screen.getByTestId("start-transaction-selection"));
+    await fireEvent.press(screen.getByTestId(`review-trade-${trade.id}`));
+    await fireEvent.press(screen.getByTestId("review-selected-transaction-deletion"));
+    await fireEvent.press(screen.getByTestId("confirm-delete-selected-transactions"));
+
+    const failure = "The selected transactions could not be removed safely. Nothing was changed.";
+    const message = await screen.findByTestId("transaction-deletion-message");
+    expect(message.props.children).toBe(failure);
+    expect(StyleSheet.flatten(message.props.style).color).toBe(colors.loss);
+    expect(screen.getByTestId("transaction-deletion-modal-error").props.children).toBe(failure);
+    expect(store.getState().trades).toHaveLength(1);
   });
 
   it("clears selection without navigating and labels select-all scope", async () => {

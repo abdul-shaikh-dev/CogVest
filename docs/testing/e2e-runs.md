@@ -4,6 +4,33 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-16: Smoke tier for the deletion message tone (#667), 15 passed, 13m 51s
+
+- Commit: fix/667-delete-failure-style 734d2bf, version 1.0.31. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, E2E APK
+  (R8 on, x86_64) freshly built from 734d2bf, SHA-256 prefix d9bb7b465793bb47,
+  Metro stopped, Gradle daemons stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 13m 51s, within the 15-minute budget.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 00s |
+| record-purchase | Pass | 0m 50s |
+| payouts | Pass | 0m 49s |
+| xirr-holding | Pass | 0m 36s |
+| cash | Pass | 0m 54s |
+| trade-correction | Pass | 2m 00s |
+| holdings-csv-import | Pass | 1m 15s |
+| epf-accounts | Pass | 1m 05s |
+| ppf-account | Pass | 1m 20s |
+| progress-snapshot-history | Pass | 0m 39s |
+| value-masking | Pass | 1m 06s |
+| persistence | Pass | 0m 37s |
+| backup-roundtrip | Pass | 1m 07s |
+
 ## 2026-11-16: Smoke tier and Recovery flow for storage recovery (#654), 15 passed, 13m 24s
 
 - Commit: fix/654-storage-recovery 7abbd63, version 1.0.31. AVD
