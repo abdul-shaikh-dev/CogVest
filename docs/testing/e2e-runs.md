@@ -4,6 +4,42 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-17: Smoke tier for the review stack (#662-#666), 15 passed, 18m 00s
+
+- Commit: refactor/666-boundaries 2250a57, the tip of the stacked branches for
+  #662, #663, #665, #664 and #666, version 1.0.31. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, E2E APK (R8 on, x86_64) freshly built
+  from 2250a57, SHA-256 prefix 3b3f338af2763c7f, Metro stopped, Gradle daemons
+  stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 18m 00s, over the 15-minute budget. The host
+  had just run an APK build and frame probes; no flow failed or retried.
+- Screenshots inspected: Holdings on the 250-asset fixture, Add EPF account,
+  and Monthly History month detail.
+- #664 frame probe: Holdings scroll on the 250-asset fixture
+  (`scripts/measure-android-frames.ps1 -Mode scroll`, 3 runs each). Janky
+  frames went from 99.3-100% (main af7d23e) to 79.9-87.0% (2250a57), and slow
+  UI-thread frames from 78-84 to 54-76. p90 was 150 ms in every run because
+  emulator GPU emulation dominates, so these numbers compare builds only.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 16s |
+| navigation | Pass | 0m 26s |
+| add-holding-lookup | Pass | 1m 14s |
+| record-purchase | Pass | 1m 06s |
+| payouts | Pass | 1m 08s |
+| xirr-holding | Pass | 0m 49s |
+| cash | Pass | 1m 09s |
+| trade-correction | Pass | 2m 36s |
+| holdings-csv-import | Pass | 1m 31s |
+| epf-accounts | Pass | 1m 22s |
+| ppf-account | Pass | 1m 42s |
+| progress-snapshot-history | Pass | 0m 53s |
+| value-masking | Pass | 1m 26s |
+| persistence | Pass | 0m 52s |
+| backup-roundtrip | Pass | 1m 30s |
+
 ## 2026-11-17: Full tier after review phases 1-3 (#675), 64 passed, 1 flaky, 1h 30m 49s
 
 - Commit: main af7d23e, version 1.0.31. AVD CogVest_UX_Proof, API 36,
