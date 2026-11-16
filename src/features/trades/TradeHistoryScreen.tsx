@@ -59,7 +59,8 @@ export function TradeHistoryScreen({
   const [selectedTradeIds, setSelectedTradeIds] = useState<Set<string>>(() => new Set());
   const [isReviewingDeletion, setIsReviewingDeletion] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deletionMessage, setDeletionMessage] = useState<string>();
+  // The tone is set where the message is, never inferred from its text (#667).
+  const [deletionMessage, setDeletionMessage] = useState<{ tone: "success" | "error"; text: string }>();
   const selectedIds = [...selectedTradeIds].filter((id) => trades.some((trade) => trade.id === id));
   const deletionPreview = isReviewingDeletion
     ? store.getState().previewTradeDeletion(selectedIds)
@@ -91,14 +92,17 @@ export function TradeHistoryScreen({
     try {
       const result = store.getState().deleteTrades(selectedIds);
       if (result.status === "rejected") {
-        setDeletionMessage(deletionFailureMessage(result.reason, result.blockingAssetIds, snapshot));
+        setDeletionMessage({ tone: "error", text: deletionFailureMessage(result.reason, result.blockingAssetIds, snapshot) });
         return;
       }
       const count = result.impact.transactions;
       leaveSelection();
-      setDeletionMessage(`${count} ${count === 1 ? "transaction" : "transactions"} removed. Portfolio and automatic history updated.`);
+      setDeletionMessage({
+        tone: "success",
+        text: `${count} ${count === 1 ? "transaction" : "transactions"} removed. Portfolio and automatic history updated.`,
+      });
     } catch {
-      setDeletionMessage("The selected transactions could not be removed safely. Nothing was changed.");
+      setDeletionMessage({ tone: "error", text: "The selected transactions could not be removed safely. Nothing was changed." });
     } finally {
       setIsDeleting(false);
     }
@@ -134,8 +138,13 @@ export function TradeHistoryScreen({
             : "All holdings"}
         />
         {deletionMessage ? (
-          <AppText accessibilityLiveRegion="polite" color={deletionMessage.includes("removed") ? "secondary" : undefined} style={deletionMessage.includes("removed") ? undefined : styles.errorText} testID="transaction-deletion-message">
-            {deletionMessage}
+          <AppText
+            accessibilityLiveRegion="polite"
+            color={deletionMessage.tone === "success" ? "secondary" : undefined}
+            style={deletionMessage.tone === "error" ? styles.errorText : undefined}
+            testID="transaction-deletion-message"
+          >
+            {deletionMessage.text}
           </AppText>
         ) : null}
         {trades.length === 0 ? (
@@ -314,7 +323,11 @@ export function TradeHistoryScreen({
                 <AppText color="secondary" variant="caption">No transaction or linked record has been changed.</AppText>
                 </>
               ) : null}
-              {deletionMessage && deletionPreview?.status === "ready" ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{deletionMessage}</AppText> : null}
+              {deletionMessage?.tone === "error" && deletionPreview?.status === "ready" ? (
+                <AppText accessibilityLiveRegion="polite" style={styles.errorText} testID="transaction-deletion-modal-error">
+                  {deletionMessage.text}
+                </AppText>
+              ) : null}
             </ScrollView>
             <View style={styles.modalActions}>
               <AppButton disabled={isDeleting} onPress={() => setIsReviewingDeletion(false)} title={deletionPreview?.status === "ready" ? "Keep transactions" : "Close"} variant="secondary" />
