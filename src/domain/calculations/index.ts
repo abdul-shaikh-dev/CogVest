@@ -1,4 +1,9 @@
 export {
+  calculateMonthlyInvestmentMetrics,
+  combineFuturesWithRollupTotals,
+} from "./dashboardTotals";
+export type { FuturesContribution, MonthlyInvestmentMetrics } from "./dashboardTotals";
+export {
   analyseConviction,
   analysePatienceFromSells,
   analyseTradeFrequency,

@@ -1,6 +1,7 @@
 import type {
   Asset,
   AssetClass,
+  BuyTrade,
   CashEntry,
   Holding,
   HoldingValuation,
@@ -509,13 +510,38 @@ export function calculateCashBalance(
   return balance.toNumber();
 }
 
-function isSameMonth(isoDate: string, now: Date) {
+/** True when the record's date is in `now`'s calendar month and not after `now`. */
+export function isInMonthToDate(isoDate: string, now: Date) {
   const recordMonth = getCalendarDatePart(isoDate)?.slice(0, 7);
   const currentMonth = `${now.getFullYear()}-${String(
     now.getMonth() + 1,
   ).padStart(2, "0")}`;
 
-  return recordMonth === currentMonth;
+  return recordMonth === currentMonth && isEffectiveCalendarDate(isoDate, now);
+}
+
+/**
+ * This month's cash-funded buys that fall after their holding's opening
+ * cutover. Opening positions are grouped by holding once, rather than
+ * filtered again for every trade (#663).
+ */
+export function monthToDateCashPurchases(
+  trades: readonly Trade[],
+  openingPositions: readonly OpeningPosition[],
+  now: Date,
+) {
+  const openingsByAsset = new Map<string, OpeningPosition[]>();
+  for (const position of openingPositions) {
+    const group = openingsByAsset.get(position.assetId);
+    if (group) group.push(position);
+    else openingsByAsset.set(position.assetId, [position]);
+  }
+  return trades.filter(
+    (trade): trade is BuyTrade =>
+      isTradeCashPurchase(trade) &&
+      isInMonthToDate(trade.date, now) &&
+      isTransactionAfterOpeningCutover(trade.date, openingsByAsset.get(trade.assetId) ?? []),
+  );
 }
 
 export function calculateCashMonthlyMetrics({
@@ -529,10 +555,7 @@ export function calculateCashMonthlyMetrics({
   openingPositions: OpeningPosition[];
   trades: Trade[];
 }): CashMonthlyMetrics {
-  const monthlyEntries = cashEntries.filter(
-    (entry) =>
-      isEffectiveCalendarDate(entry.date, now) && isSameMonth(entry.date, now),
-  );
+  const monthlyEntries = cashEntries.filter((entry) => isInMonthToDate(entry.date, now));
   const contributions = sumFinancialValues(
     monthlyEntries
       .filter(
@@ -551,19 +574,7 @@ export function calculateCashMonthlyMetrics({
       )
       .map((entry) => entry.amount),
   );
-  const monthlyBuyTrades = trades
-    .filter(isTradeCashPurchase)
-    .filter(
-      (trade) =>
-        isEffectiveCalendarDate(trade.date, now) &&
-        isSameMonth(trade.date, now) &&
-        isTransactionAfterOpeningCutover(
-          trade.date,
-          openingPositions.filter(
-            (position) => position.assetId === trade.assetId,
-          ),
-        ),
-    );
+  const monthlyBuyTrades = monthToDateCashPurchases(trades, openingPositions, now);
   const allBuyTradeIds = new Set(
     trades.filter(isTradeCashPurchase).map((trade) => trade.id),
   );
