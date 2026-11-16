@@ -4,6 +4,89 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-17: Full tier after review phases 1-3 (#675), 64 passed, 1 flaky, 1h 30m 49s
+
+- Commit: main af7d23e, version 1.0.31. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, E2E APK (R8 on, x86_64) freshly built
+  from af7d23e, SHA-256 prefix 3a44eb632decd3eb, Metro stopped, Gradle daemons
+  stopped. Command: `npm run maestro:test` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Full tier: 65 flows, 64 passed, 1 failed, 1h 30m 49s of flow time.
+- `settings-preference-hierarchy` failed at `assertVisible: "Newest price update
+  date"`. The failure screenshot shows the scroll stopping with the price-date
+  row behind the bottom tab bar: the element counted as found, but its text was
+  not on screen. The flow passed alone on the same APK (1m 01s). This branch
+  makes that scroll bring the row fully into view; the changed flow then passed
+  (1m 02s). Not an app defect.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 19s |
+| navigation | Pass | 0m 22s |
+| dashboard-valuation-basis | Pass | 0m 35s |
+| add-trade | Pass | 1m 07s |
+| add-holding-lookup | Pass | 1m 04s |
+| add-holding-back | Pass | 1m 06s |
+| add-holding-manual-semantics | Pass | 1m 18s |
+| add-holding-pending-valuation | Pass | 1m 30s |
+| add-holding-unknown-date | Pass | 0m 59s |
+| add-holding-edited-quote | Pass | 0m 47s |
+| add-holding-asset-switch | Pass | 1m 27s |
+| add-holding-asset-class | Pass | 1m 19s |
+| add-holding-review-hierarchy | Pass | 1m 11s |
+| quick-portfolio-setup | Pass | 2m 41s |
+| sell-quote-context | Pass | 0m 56s |
+| holdings-csv-import | Pass | 1m 15s |
+| transactions-csv-import | Pass | 1m 30s |
+| cas-native-import | Pass | 2m 36s |
+| cas-native-fresh-portfolio | Pass | 1m 41s |
+| zerodha-tradebook-import | Pass | 2m 48s |
+| futures-manual-wallet | Pass | 3m 26s |
+| futures-draft-protection | Pass | 2m 36s |
+| futures-timestamp-evidence | Pass | 3m 58s |
+| futures-cash-funding | Pass | 2m 21s |
+| investing-cash-migration | Pass | 0m 39s |
+| epf-persistence | Pass | 0m 33s |
+| epf-reporting | Pass | 0m 28s |
+| epf-accounts | Pass | 1m 11s |
+| epf-entries | Pass | 1m 40s |
+| epf-corrections | Pass | 1m 18s |
+| epf-matrix | Pass | 0m 53s |
+| epf-progress-empty | Pass | 0m 51s |
+| epf-year-summary | Pass | 1m 25s |
+| holdings | Pass | 1m 05s |
+| holdings-list-first | Pass | 1m 47s |
+| holdings-list-first-layout | Pass | 0m 40s |
+| ppf-account | Pass | 1m 25s |
+| ppf-history-fallback | Pass | 2m 11s |
+| opening-position-correction | Pass | 1m 28s |
+| trade-correction | Pass | 3m 16s |
+| bulk-transaction-delete | Pass | 0m 51s |
+| asset-correction | Pass | 3m 30s |
+| cash | Pass | 1m 11s |
+| cash-entry-focus | Pass | 1m 52s |
+| funded-buy-cash | Pass | 2m 08s |
+| record-purchase | Pass | 1m 08s |
+| payouts | Pass | 1m 07s |
+| xirr-holding | Pass | 0m 54s |
+| xirr-whole | Pass | 0m 31s |
+| payout-coverage | Pass | 0m 43s |
+| snapshot-review | Pass | 0m 25s |
+| progress-chart-range | Pass | 1m 11s |
+| progress-chart-month-navigation | Pass | 1m 16s |
+| progress-snapshot-history | Pass | 0m 55s |
+| value-masking | Pass | 1m 31s |
+| minimal-mode | Pass | 1m 11s |
+| insight-details | Pass | 0m 59s |
+| holding-duration | Pass | 0m 49s |
+| contextual-nudges | Pass | 2m 42s |
+| persistence | Pass | 1m 17s |
+| backup-roundtrip | Pass | 1m 35s |
+| privacy-settings | Pass | 0m 25s |
+| settings-preference-hierarchy | Fail (see notes; passed on rerun) | 1m 19s |
+| shared-ui-hierarchy | Pass | 0m 47s |
+| workflow-exit-navigation | Pass | 0m 50s |
+
 ## 2026-11-16: Smoke tier for compact values and chart axis labels (#668), 15 passed, 13m 45s
 
 - Commit: fix/668-compact-inr 2149001, version 1.0.31. AVD CogVest_UX_Proof,
