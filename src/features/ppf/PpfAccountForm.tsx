@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   AccessibilityInfo,
-  BackHandler,
   findNodeHandle,
   KeyboardAvoidingView,
   type ScrollViewInstance,
@@ -42,6 +41,7 @@ import {
   statusLabel,
   statusOptions,
 } from "./ppfAccountViewModel";
+import { useBackHandler } from "@/src/hooks";
 
 export function PpfAccountForm({
   account,
@@ -132,14 +132,7 @@ export function PpfAccountForm({
     onBack();
   }
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      requestBack();
-      return true;
-    });
-    return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
-  }, [confirmExit, isDirty, reviewAccount]);
+  useBackHandler(requestBack);
 
   function clearFieldError(field: PpfAccountField) {
     setFieldErrors((current) => {

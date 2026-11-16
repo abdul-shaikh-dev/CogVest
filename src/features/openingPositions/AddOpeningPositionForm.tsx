@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  BackHandler,
   Keyboard,
   KeyboardAvoidingView,
   type ScrollViewInstance,
@@ -18,7 +17,7 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { useLatestCallback } from "@/src/hooks";
+import { useBackHandler, useLatestCallback } from "@/src/hooks";
 import type { Asset } from "@/src/types";
 import type { OpeningPositionCommandResult } from "@/src/store";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -182,7 +181,6 @@ export function AddOpeningPositionForm({
       notes.trim() || intendedHoldDays.trim() || conviction || date || dateUnknown,
   );
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the back effect below re-registers each render on purpose.
   function requestExit() {
     if (isSaving) return;
     if (hasUnfinishedDraft) {
@@ -203,7 +201,6 @@ export function AddOpeningPositionForm({
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentPhase]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the back effect below re-registers each render on purpose.
   function goBack() {
     if (isSaving) return;
     if (!savedAssetId && currentPhase !== "asset") {
@@ -214,23 +211,10 @@ export function AddOpeningPositionForm({
     }
   }
 
-  useEffect(() => {
-    if (!hardwareBackEnabled || !onCancel) {
-      return undefined;
-    }
-
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        if (quickSetup) requestExit();
-        else goBack();
-
-        return true;
-      },
-    );
-
-    return () => subscription.remove();
-  }, [hardwareBackEnabled, onCancel, quickSetup, requestExit, goBack]);
+  useBackHandler(() => {
+    if (quickSetup) requestExit();
+    else goBack();
+  }, hardwareBackEnabled && Boolean(onCancel));
 
   return (
     <KeyboardAvoidingView behavior="height" style={styles.flex}>

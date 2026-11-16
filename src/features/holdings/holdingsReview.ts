@@ -7,6 +7,7 @@ import {
 } from "@/src/domain/precision";
 import type { AssetClass, Holding, OpeningPosition, Trade } from "@/src/types";
 import { getCalendarDatePart } from "@/src/domain/dates";
+import type { HoldingWithQuoteMetadata } from "@/src/hooks/useQuoteRefresh";
 
 /** Earliest recorded purchase, not the acquisition date of remaining disposal lots. */
 export function getFirstRecordedPurchase(
@@ -23,9 +24,7 @@ export function getFirstRecordedPurchase(
   return (dates as string[]).sort()[0];
 }
 
-export type HoldingWithQuoteMetadata = Holding & {
-  quoteSource?: string;
-};
+export type { HoldingWithQuoteMetadata } from "@/src/hooks/useQuoteRefresh";
 
 export type HoldingReviewItem = {
   allocationPct: number;

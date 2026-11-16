@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  BackHandler,
   type FlatList,
   Keyboard,
   PanResponder,
@@ -26,7 +25,7 @@ import {
 import { calculateConsolidatedHoldingRows } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
-import { useLatestCallback } from "@/src/hooks";
+import { useBackHandler, useLatestCallback } from "@/src/hooks";
 import type { QuoteRefreshResult, RefreshQuotesInput } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { useTheme } from "@/src/theme";
@@ -302,18 +301,7 @@ export function HoldingsScreen({
     setSelectedRecordsVisible(false);
     setSelectedAssetId(undefined);
   }
-  useEffect(() => {
-    if (!isActive || !selectedAssetId) return;
-
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        closeDetail();
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [isActive, selectedAssetId]);
+  useBackHandler(closeDetail, isActive && Boolean(selectedAssetId));
 
   const selectHolding = useLatestCallback((assetId: string) => {
     Keyboard.dismiss();

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   AccessibilityInfo,
-  BackHandler,
   findNodeHandle,
   KeyboardAvoidingView,
   Pressable,
@@ -35,7 +34,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import type { FundingSource, PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
-import { usePortfolioFields } from "@/src/hooks";
+import { useBackHandler, usePortfolioFields } from "@/src/hooks";
 
 type EntryType = PpfLedgerEntry["type"];
 type EntryField = "amount" | "date" | "reason";
@@ -126,14 +125,7 @@ export function PpfEntryScreen({
     onBack();
   }
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      requestBack();
-      return true;
-    });
-    return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
-  }, [confirmExit, isDirty, reviewEntry]);
+  useBackHandler(requestBack);
 
   if (!account || (entryId && !existing)) {
     return (

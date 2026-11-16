@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -15,25 +15,21 @@ import {
   type PpfPortfolioSummary,
 } from "@/src/domain/ppf";
 import {
-  refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
   type QuoteRefreshTimeout,
   type QuoteFreshnessSummary,
-  type RefreshQuotesInput,
   summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { Asset, DisplayMode, Holding, OpeningPosition, Trade } from "@/src/types";
-import { usePortfolioFields } from "@/src/hooks";
-
-type RefreshQuotes = (
-  input: RefreshQuotesInput,
-) => Promise<QuoteRefreshResult>;
-
-type HoldingWithQuoteMetadata = Holding & {
-  quoteSource?: string;
-};
+import type { Asset, DisplayMode, OpeningPosition, Trade } from "@/src/types";
+import {
+  type HoldingWithQuoteMetadata,
+  type RefreshQuotes,
+  usePortfolioFields,
+  useQuoteRefresh,
+  withQuoteMetadata,
+} from "@/src/hooks";
 
 type UseHoldingsInput = {
   now?: Date;
@@ -65,37 +61,13 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return usePortfolioFields(store, ["assets", "cashEntries", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
-function withQuoteMetadata(
-  holdings: Holding[],
-  quoteCache: PortfolioStoreState["quoteCache"],
-): HoldingWithQuoteMetadata[] {
-  return holdings.map((holding) => {
-    const quote = quoteCache[holding.asset.id];
-
-    return {
-      ...holding,
-      dayChangePct: quote?.dayChangePct,
-      lastUpdated:
-        quote?.asOf ??
-        (holding.valuation.status === "manual"
-          ? holding.valuation.asOf ?? undefined
-          : undefined),
-      quoteSource:
-        quote?.source ??
-        (holding.valuation.status === "manual" ? "manual" : undefined),
-    };
-  });
-}
-
 export function useHoldings({
   now = new Date(),
-  refreshQuotes = defaultRefreshQuotes,
+  refreshQuotes,
   store = getPortfolioStore(),
 }: UseHoldingsInput = {}): UseHoldingsResult {
   const snapshot = usePortfolioSnapshot(store);
-  const [failed, setFailed] = useState<QuoteRefreshFailure[]>([]);
-  const [timedOut, setTimedOut] = useState<QuoteRefreshTimeout[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { failed, isRefreshing, refresh, timedOut } = useQuoteRefresh({ now, refreshQuotes, store });
   const asOf = formatLocalCalendarDate(now);
   // Tab focus and local UI updates do not change the financial replay inputs.
   // Calendar-based accounting rolls over daily; quote freshness below stays live.
@@ -143,46 +115,6 @@ export function useHoldings({
     snapshot.quoteCache,
     now,
   );
-
-  async function refresh() {
-    setIsRefreshing(true);
-
-    try {
-      const currentState = store.getState();
-      const currentAsOf = formatLocalCalendarDate(now);
-      const currentLinkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
-        currentState.ppfAccounts,
-        currentAsOf,
-      );
-      const heldAssetIds = new Set(
-        calculateHoldings({
-          assets: currentState.assets,
-          openingPositions: currentState.openingPositions,
-          quoteCache: currentState.quoteCache,
-          trades: currentState.trades,
-          now,
-        })
-          .filter((holding) => !currentLinkedLegacyAssetIds.has(holding.asset.id))
-          .map((holding) => holding.asset.id),
-      );
-      const result = await refreshQuotes({
-        assets: currentState.assets.filter((asset) =>
-          heldAssetIds.has(asset.id),
-        ),
-        cachedQuotes: currentState.quoteCache,
-      });
-
-      if (store.getState().restoreEpoch !== currentState.restoreEpoch) return result;
-      store.getState().upsertQuotes(Object.values(result.quoteCache));
-
-      setFailed(result.failed);
-      setTimedOut(result.timedOut);
-
-      return result;
-    } finally {
-      setIsRefreshing(false);
-    }
-  }
 
   function toggleMaskWealthValues() {
     store.getState().updatePreferences({

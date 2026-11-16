@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
-  BackHandler,
   KeyboardAvoidingView,
   Linking,
   type ScrollViewInstance,
@@ -57,7 +56,7 @@ import {
 } from "./epfAccountForm";
 import { eventAmountLabel, eventTitle } from "./epfEntryForm";
 import { compareCodeUnits } from "@/src/domain/ordering";
-import { usePortfolioFields } from "@/src/hooks";
+import { useBackHandler, usePortfolioFields } from "@/src/hooks";
 
 type EpfAccountScreenProps = {
   accountId?: string;
@@ -430,14 +429,7 @@ function EpfAccountForm({ account, now, onBack, onComplete, store }: {
     onBack();
   }
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      requestBack();
-      return true;
-    });
-    return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
-  }, [confirmExit, isDirty, review]);
+  useBackHandler(requestBack);
 
   function update<Key extends keyof EpfAccountDraft>(key: Key, value: EpfAccountDraft[Key]) {
     setDraft((current) => ({ ...current, [key]: value }));

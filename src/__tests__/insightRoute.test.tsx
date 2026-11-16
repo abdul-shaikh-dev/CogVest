@@ -8,6 +8,10 @@ const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
 let mockParams: { kind?: string | string[] } = { kind: "conviction" };
 let mockProps: { kind: string; onClose: () => void };
+jest.mock("expo-router/react-navigation", () => ({
+  useFocusEffect: (callback: () => () => void) =>
+    require("react").useEffect(callback, [callback]),
+}));
 jest.mock("expo-router", () => ({
   router: { back: mockBack, replace: mockReplace, canGoBack: mockCanGoBack },
   useLocalSearchParams: () => mockParams,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useFocusEffect, usePreventRemove } from "expo-router/react-navigation";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { usePreventRemove } from "expo-router/react-navigation";
 
 import {
   AppButton,
@@ -13,6 +13,7 @@ import {
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { spacing, createThemedStyles } from "@/src/theme";
+import { useFocusedBackHandler } from "@/src/hooks";
 
 export type BackupReview = {
   appVersion: string;
@@ -87,13 +88,7 @@ export function BackupScreen({
   }, [onBack, restoreStep]);
 
   usePreventRemove(isBusy || restoreStep === "confirmation" || restoreStep === "preview", handleBack);
-  useFocusEffect(useCallback(() => {
-    const listener = BackHandler.addEventListener("hardwareBackPress", () => {
-      handleBack();
-      return true;
-    });
-    return () => listener.remove();
-  }, [handleBack]));
+  useFocusedBackHandler(handleBack);
 
   useEffect(() => {
     isMounted.current = true;
