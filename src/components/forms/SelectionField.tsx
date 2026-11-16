@@ -46,7 +46,7 @@ export function SelectionField<T extends string>({
       <Pressable
         accessibilityHint={`Select ${label.toLowerCase()}`}
         accessibilityLabel={label}
-        accessibilityValue={compact ? { text: selectedOption?.label ?? value } : undefined}
+        accessibilityValue={{ text: selectedOption?.label ?? value }}
         accessibilityRole="button"
         onPress={() => setIsOpen(true)}
         style={({ pressed }) => [
@@ -159,7 +159,9 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   field: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.strong,
     borderRadius: radii.button,
+    borderWidth: 1,
     flexDirection: "row",
     minHeight: interaction.minimumTouchTarget,
     paddingHorizontal: spacing.md,

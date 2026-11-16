@@ -17,7 +17,7 @@ describe("DatePickerField", () => {
       />,
     );
 
-    expect(getByLabelText("Choose Date acquired")).toBeTruthy();
+    expect(getByLabelText(/^Choose Date acquired, /)).toBeTruthy();
     expect(queryByTestId("date-field-picker")).toBeNull();
 
     await fireEvent.press(getByTestId("date-field"));

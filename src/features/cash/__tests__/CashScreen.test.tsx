@@ -76,7 +76,7 @@ describe("CashScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = await render(<CashScreen store={store} />);
     await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(screen.getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(screen.getByLabelText("Amount, in rupees"), "1000");
     await fireEvent.press(screen.getByTestId("save-cash-entry-button"));
     await waitFor(() => expect(store.getState().cashEntries[0]).toMatchObject({ amount: 1000, label: "Cash added", purpose: "capitalContribution" }));
   });
@@ -99,7 +99,7 @@ describe("CashScreen", () => {
     const { getAllByText, getByLabelText, getByTestId, getByText } = await render(<CashScreen store={store} />);
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "1000");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "Broker cash");
     await selectDate(getByTestId, "2026-04-20");
     await fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -120,7 +120,7 @@ describe("CashScreen", () => {
     expect(() => getByTestId("cash-entry-form")).toThrow();
 
     await fireEvent.press(getByText("Withdraw"));
-    await fireEvent.changeText(getByLabelText("Amount"), "250");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "250");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "Emergency withdrawal");
     await selectDate(getByTestId, "2026-04-21");
     await fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -182,7 +182,7 @@ describe("CashScreen", () => {
     );
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "1250");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "1250");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "April salary");
     expect(getByTestId("cash-notes-toggle").props.accessibilityState).toEqual({
       expanded: false,
@@ -199,7 +199,7 @@ describe("CashScreen", () => {
     await fireEvent.press(getByTestId("cash-entry-deposit"));
 
     expect(getByTestId("cash-entry-modal")).toBeTruthy();
-    expect(getByLabelText("Amount")).toHaveProp("value", "1250");
+    expect(getByLabelText("Amount, in rupees")).toHaveProp("value", "1250");
     expect(getByLabelText("Label (optional)")).toHaveProp("value", "April salary");
     expect(getByLabelText("Note (optional)")).toHaveProp(
       "value",
@@ -216,7 +216,7 @@ describe("CashScreen", () => {
     );
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "1000");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "Do not reinterpret");
     await fireEvent.press(getByTestId("close-cash-entry-button"));
     await fireEvent.press(getByTestId("cash-entry-withdraw"));
@@ -231,14 +231,14 @@ describe("CashScreen", () => {
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
     expect(getByText("Deposit cash")).toBeTruthy();
-    expect(getByLabelText("Amount")).toHaveProp("value", "1000");
+    expect(getByLabelText("Amount, in rupees")).toHaveProp("value", "1000");
     expect(getByLabelText("Label (optional)")).toHaveProp("value", "Do not reinterpret");
     await fireEvent.press(getByTestId("close-cash-entry-button"));
     await fireEvent.press(getByTestId("cash-entry-withdraw"));
     await fireEvent.press(getByTestId("cash-discard-draft-button"));
 
     expect(getByText("Withdraw cash")).toBeTruthy();
-    expect(getByLabelText("Amount")).toHaveProp("value", "");
+    expect(getByLabelText("Amount, in rupees")).toHaveProp("value", "");
     expect(getByLabelText("Label (optional)")).toHaveProp("value", "");
     expect(store.getState().cashEntries).toEqual([]);
   });
@@ -248,7 +248,7 @@ describe("CashScreen", () => {
     const screen = await render(<CashScreen store={store} />);
 
     await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+    await fireEvent.changeText(screen.getByLabelText("Amount, in rupees"), "900");
     await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Back draft");
 
     await act(() => {
@@ -259,7 +259,7 @@ describe("CashScreen", () => {
     expect(store.getState().cashEntries).toEqual([]);
 
     await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
+    expect(screen.getByLabelText("Amount, in rupees")).toHaveProp("value", "900");
     expect(screen.getByLabelText("Label (optional)")).toHaveProp("value", "Back draft");
   });
 
@@ -278,7 +278,7 @@ describe("CashScreen", () => {
       const screen = await render(<CashScreen store={store} />);
 
       await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-      await fireEvent.changeText(screen.getByLabelText("Amount"), "900");
+      await fireEvent.changeText(screen.getByLabelText("Amount, in rupees"), "900");
       await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Keyboard draft");
 
       await act(() => {
@@ -288,7 +288,7 @@ describe("CashScreen", () => {
       expect(keyboardVisibility).toHaveBeenCalled();
       expect(keyboardDismiss).toHaveBeenCalled();
       expect(screen.getByTestId("cash-entry-modal")).toBeTruthy();
-      expect(screen.getByLabelText("Amount")).toHaveProp("value", "900");
+      expect(screen.getByLabelText("Amount, in rupees")).toHaveProp("value", "900");
       expect(screen.getByLabelText("Label (optional)")).toHaveProp(
         "value",
         "Keyboard draft",
@@ -332,7 +332,7 @@ describe("CashScreen", () => {
     const { getByLabelText, getByTestId } = await render(<CashScreen store={store} />);
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "50000");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "50000");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "Salary");
     await selectDate(getByTestId, "2026-05-01");
     await fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -355,7 +355,7 @@ describe("CashScreen", () => {
     const { getByLabelText, getByTestId } = screen;
 
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "1000");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "One deposit");
     const save = getPressHandler(screen, "save-cash-entry-button");
     await act(() => {
@@ -388,7 +388,7 @@ describe("CashScreen", () => {
       originalSetItem(key, value);
     };
     await fireEvent.press(getByTestId("cash-entry-deposit"));
-    await fireEvent.changeText(getByLabelText("Amount"), "1000");
+    await fireEvent.changeText(getByLabelText("Amount, in rupees"), "1000");
     await fireEvent.changeText(getByLabelText("Label (optional)"), "Retry deposit");
     await fireEvent.press(getByTestId("save-cash-entry-button"));
 
@@ -401,7 +401,7 @@ describe("CashScreen", () => {
     });
     expect(store.getState().cashEntries).toEqual([]);
     expect(getByTestId("cash-entry-modal")).toBeTruthy();
-    expect(getByLabelText("Amount")).toHaveProp("value", "1000");
+    expect(getByLabelText("Amount, in rupees")).toHaveProp("value", "1000");
 
     storage.setItem = originalSetItem;
     await fireEvent.press(getByTestId("save-cash-entry-button"));
@@ -669,7 +669,7 @@ describe("CashScreen", () => {
     expect(screen.queryByTestId("cash-record-income")).toBeNull();
     await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
     expect(screen.queryByTestId("cash-purpose-income")).toBeNull();
-    await fireEvent.changeText(screen.getByLabelText("Amount"), "50000");
+    await fireEvent.changeText(screen.getByLabelText("Amount, in rupees"), "50000");
     await fireEvent.changeText(screen.getByLabelText("Label (optional)"), "Salary");
     await fireEvent.press(screen.getByTestId("save-cash-entry-button"));
 

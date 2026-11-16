@@ -301,7 +301,7 @@ describe("AddOpeningPositionForm", () => {
       await fireEvent.press(ui.getByTestId("continue-position-button"));
       await togglePositionOptions(ui.getByTestId);
       await fireEvent.changeText(ui.getByLabelText("Quantity"), "2");
-      await fireEvent.changeText(ui.getByLabelText("Average cost"), "100");
+      await fireEvent.changeText(ui.getByLabelText("Average cost, in rupees"), "100");
       await fireEvent.press(ui.getByLabelText("First purchase date unknown"));
       await fireEvent.press(ui.getByTestId("review-holding-button"));
       expect(ui.getByTestId("add-holding-phase-review")).toBeTruthy();
@@ -312,7 +312,7 @@ describe("AddOpeningPositionForm", () => {
       await back();
       expect(ui.getByTestId("add-holding-phase-position")).toBeTruthy();
       await fireEvent.changeText(ui.getByLabelText("Quantity"), "17");
-      await fireEvent.changeText(ui.getByLabelText("Average cost"), "1200");
+      await fireEvent.changeText(ui.getByLabelText("Average cost, in rupees"), "1200");
       await fireEvent.changeText(ui.getByTestId("notes-input"), "Keep this draft");
       await back();
       expect(ui.getByTestId("add-holding-phase-class")).toBeTruthy();
@@ -321,7 +321,7 @@ describe("AddOpeningPositionForm", () => {
       await fireEvent.press(ui.getByTestId("continue-class-button"));
       await fireEvent.press(ui.getByTestId("continue-position-button"));
       expect(ui.getByLabelText("Quantity")).toHaveProp("value", "17");
-      expect(ui.getByLabelText("Average cost")).toHaveProp("value", "1200");
+      expect(ui.getByLabelText("Average cost, in rupees")).toHaveProp("value", "1200");
       expect(ui.getByTestId("notes-input")).toHaveProp("value", "Keep this draft");
       expect(onCancel).not.toHaveBeenCalled();
       expect(store.getState().openingPositions).toHaveLength(0);
@@ -561,8 +561,8 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-phase-position")).toBeTruthy();
 
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
     await selectDate(getByTestId, "date-input", "2026-04-15");
     await fireEvent.press(getByText("Review and save"));
 
@@ -639,8 +639,8 @@ describe("AddOpeningPositionForm", () => {
     await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
     await togglePositionOptions(getByTestId);
     await fireEvent.press(getByTestId("conviction-4"));
     await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "0");
@@ -656,7 +656,11 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("intended-hold-days-input")).toBeTruthy();
     expect(getByText("Planned holding period must be whole days.")).toBeTruthy();
 
-    await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "365");
+    // The error is spoken with the field it belongs to (#669).
+    await fireEvent.changeText(
+      getByLabelText("Planned holding period (days), Error: Planned holding period must be whole days."),
+      "365",
+    );
     await fireEvent.press(getByText("Review and save"));
     expect(getByTestId("derived-preview")).toBeTruthy();
     await toggleReviewDetails(getByTestId);
@@ -689,8 +693,8 @@ describe("AddOpeningPositionForm", () => {
     await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "2");
-    await fireEvent.changeText(getByLabelText("Average cost"), "100");
-    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "100");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "120");
     await fireEvent.press(getByText("I don't know"));
     await fireEvent.press(getByText("Review and save"));
 
@@ -707,8 +711,8 @@ describe("AddOpeningPositionForm", () => {
     await openManualConfirmDetails(getByLabelText, getByTestId, getByText);
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "2");
-    await fireEvent.changeText(getByLabelText("Average cost"), "100");
-    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "100");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "120");
     await togglePositionOptions(getByTestId);
     await fireEvent.press(getByTestId("conviction-3"));
     await fireEvent.changeText(getByLabelText("Planned holding period (days)"), "180");
@@ -784,8 +788,8 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("review-holding-button")).toBeTruthy();
 
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
     await selectDate(getByTestId, "date-input", "2026-04-15");
     await togglePositionOptions(getByTestId);
     await fireEvent.press(getByTestId("conviction-4"));
@@ -880,8 +884,8 @@ describe("AddOpeningPositionForm", () => {
       }
       await fireEvent.press(getByText("Continue to position"));
       await fireEvent.changeText(getByLabelText("Quantity"), "25");
-      await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-      await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+      await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+      await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
       await selectDate(getByTestId, "date-input", "2026-04-15");
       await fireEvent.press(getByText("Review and save"));
       await fireEvent.press(getByText("Save Holding"));
@@ -942,8 +946,8 @@ describe("AddOpeningPositionForm", () => {
     await selectOption(getByTestId, "sector-type", "technology");
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
     await selectDate(getByTestId, "date-input", "2026-04-15");
 
     await fireEvent.press(getByText("Review and save"));
@@ -987,8 +991,8 @@ describe("AddOpeningPositionForm", () => {
     await fireEvent.press(getByText("Continue to confirm details"));
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "2");
-    await fireEvent.changeText(getByLabelText("Average cost"), "100");
-    await fireEvent.changeText(getByLabelText("Current price"), "120");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "100");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "120");
     await fireEvent.press(getByLabelText("First purchase date unknown"));
     await fireEvent.press(getByText("Review and save"));
     await fireEvent.press(getByText("Save Holding"));
@@ -1032,7 +1036,7 @@ describe("AddOpeningPositionForm", () => {
     expect(queryByTestId("conviction-1")).toBeNull();
     expect(queryByTestId("notes-input")).toBeNull();
     await fireEvent.changeText(getByLabelText("Quantity"), "2");
-    await fireEvent.changeText(getByLabelText("Average cost"), "100");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "100");
     await fireEvent.press(getByLabelText("First purchase date unknown"));
     await fireEvent.press(getByText("Review and save"));
     await fireEvent.press(getByTestId("quick-setup-save-add-next"));
@@ -1393,8 +1397,8 @@ describe("AddOpeningPositionForm", () => {
     await selectOption(getByTestId, "instrument-type", "bond");
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "10");
-    await fireEvent.changeText(getByLabelText("Average cost"), "5300");
-    await fireEvent.changeText(getByLabelText("Current price"), "5711");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "5300");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "5711");
     await selectDate(getByTestId, "date-input", "2026-04-15");
 
     await fireEvent.press(getByText("Review and save"));
@@ -1425,8 +1429,8 @@ describe("AddOpeningPositionForm", () => {
     await fireEvent.press(getByTestId("asset-class-crypto"));
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "0.05");
-    await fireEvent.changeText(getByLabelText("Average cost"), "5000000");
-    await fireEvent.changeText(getByLabelText("Current price"), "5800000");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "5000000");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "5800000");
     await selectDate(getByTestId, "date-input", "2026-04-15");
 
     await fireEvent.press(getByText("Review and save"));
@@ -1521,10 +1525,10 @@ describe("AddOpeningPositionForm", () => {
     expect(getByTestId("add-holding-step-class")).toBeTruthy();
     expect(getByTestId("provider-metadata-review-copy")).toBeTruthy();
     await fireEvent.press(getByText("Continue to position"));
-    expect(getByLabelText("Current price")).toHaveProp("value", "1678.25");
+    expect(getByLabelText("Current price, in rupees")).toHaveProp("value", "1678.25");
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1700");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1700");
     await selectDate(getByTestId, "date-input", "2026-04-15");
     await fireEvent.press(getByText("Review and save"));
 
@@ -1569,7 +1573,7 @@ describe("AddOpeningPositionForm", () => {
       await fireEvent.press(getByText("Continue to confirm details"));
       await fireEvent.press(getByText("Continue to position"));
       await fireEvent.changeText(getByLabelText("Quantity"), "25");
-      await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+      await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
       await selectDate(getByTestId, "date-input", "2026-04-15");
       await fireEvent.press(getByText("Review and save"));
 
@@ -1609,7 +1613,7 @@ describe("AddOpeningPositionForm", () => {
     await fireEvent.press(getByText("Continue to confirm details"));
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
     await fireEvent.press(getByText("Review and save"));
 
     const reviewPosition = getByTestId("review-position");
@@ -1879,8 +1883,8 @@ describe("AddOpeningPositionForm", () => {
     await selectOption(getByTestId, "sector-type", "financialServices");
     await fireEvent.press(getByText("Continue to position"));
     await fireEvent.changeText(getByLabelText("Quantity"), "25");
-    await fireEvent.changeText(getByLabelText("Average cost"), "1450");
-    await fireEvent.changeText(getByLabelText("Current price"), "1678.25");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "1450");
+    await fireEvent.changeText(getByLabelText("Current price, in rupees"), "1678.25");
     await selectDate(getByTestId, "date-input", "2026-04-15");
 
     await fireEvent.press(getByText("Review and save"));
@@ -2037,9 +2041,9 @@ describe("AddOpeningPositionForm", () => {
     expect(getByText("BTC • bitcoin • CoinGecko suggestion")).toBeTruthy();
     await fireEvent.press(getByText("Continue to confirm details"));
     await fireEvent.press(getByText("Continue to position"));
-    expect(getByLabelText("Current price")).toHaveProp("value", "");
+    expect(getByLabelText("Current price, in rupees")).toHaveProp("value", "");
     await fireEvent.changeText(getByLabelText("Quantity"), "2");
-    await fireEvent.changeText(getByLabelText("Average cost"), "5000000");
+    await fireEvent.changeText(getByLabelText("Average cost, in rupees"), "5000000");
     await fireEvent.press(getByText("I don't know"));
     await fireEvent.press(getByText("Review and save"));
     expect(getAllByText("Valuation pending").length).toBeGreaterThan(1);

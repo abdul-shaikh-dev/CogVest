@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 
 import { AppText } from "@/src/components/common";
+import { fieldAccessibilityLabel } from "./FormTextField";
 import {
   calendarDateToLocalDate,
   formatLocalCalendarDate,
@@ -63,7 +64,8 @@ export function DatePickerField({
         {label}
       </AppText>
       <Pressable
-        accessibilityLabel={`Choose ${label}`}
+        accessibilityHint="Opens the calendar"
+        accessibilityLabel={fieldAccessibilityLabel(`Choose ${label}`, formatDisplayDate(value), error)}
         accessibilityRole="button"
         accessibilityState={{ expanded: isOpen }}
         onPress={() => setIsOpen(true)}
@@ -93,7 +95,7 @@ export function DatePickerField({
         />
       ) : null}
       {error ? (
-        <AppText selectable style={styles.errorText} variant="caption">
+        <AppText accessibilityLiveRegion="polite" selectable style={styles.errorText} variant="caption">
           {error}
         </AppText>
       ) : null}
@@ -111,7 +113,9 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   field: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.strong,
     borderRadius: radii.button,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     minHeight: interaction.minimumTouchTarget,
@@ -120,7 +124,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   invalid: {
     borderColor: colors.loss,
-    borderWidth: 1,
   },
   pressed: {
     opacity: 0.8,

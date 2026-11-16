@@ -18,7 +18,7 @@ import {
   getAdaptiveLayoutMode,
   useSensitiveValueReveal,
 } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { radii, spacing, createThemedStyles } from "@/src/theme";
@@ -167,9 +167,9 @@ export function SellRedeemScreen({
               />
             </View>
             <View style={styles.formField}>
-              <FormTextField
+              <MoneyField
+                currency={holding.asset.currency}
                 error={flow.errors.sellPrice}
-                keyboardType="decimal-pad"
                 label="Actual execution price"
                 onChangeText={flow.setSellPrice}
                 placeholder="1700"
@@ -189,9 +189,9 @@ export function SellRedeemScreen({
           </AppText>
           <View style={[styles.formRow, stackFields && styles.stacked]}>
             <View style={styles.formField}>
-              <FormTextField
+              <MoneyField
+                currency={holding.asset.currency}
                 error={flow.errors.fees}
-                keyboardType="decimal-pad"
                 label="Fees"
                 onChangeText={flow.setFees}
                 placeholder="0"

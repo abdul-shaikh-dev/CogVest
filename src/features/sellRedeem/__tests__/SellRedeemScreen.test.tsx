@@ -112,8 +112,8 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "5");
-    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
-    await fireEvent.changeText(getByLabelText("Fees"), "100");
+    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(getByLabelText("Fees, in rupees"), "100");
     await selectDate(getByTestId, "2026-05-20");
 
     await waitFor(() => {
@@ -147,7 +147,7 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "1");
-    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
+    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
     await selectDate(getByTestId, "2026-05-20");
 
     expect(getByText("Net proceeds to Cash")).toBeTruthy();
@@ -163,7 +163,7 @@ describe("SellRedeemScreen", () => {
     );
 
     await fireEvent.changeText(getByLabelText("Quantity"), "26");
-    await fireEvent.changeText(getByLabelText("Actual execution price"), "1700");
+    await fireEvent.changeText(getByLabelText("Actual execution price, in rupees"), "1700");
 
     expect(getByText("Sell quantity exceeds available units.")).toBeTruthy();
     expect(queryByTestId("sell-redeem-cash-amount-input")).toBeNull();
@@ -213,8 +213,8 @@ describe("SellRedeemScreen", () => {
     expect(screen.queryByText("₹41.95K")).toBeNull();
 
     await fireEvent.changeText(screen.getByLabelText("Quantity"), "5");
-    await fireEvent.changeText(screen.getByLabelText("Actual execution price"), "1700");
-    await fireEvent.changeText(screen.getByLabelText("Fees"), "100");
+    await fireEvent.changeText(screen.getByLabelText("Actual execution price, in rupees"), "1700");
+    await fireEvent.changeText(screen.getByLabelText("Fees, in rupees"), "100");
     await selectDate(screen.getByTestId, "2026-05-20");
     expect(screen.queryByText("₹8,400.00")).toBeNull();
     expect(screen.getByTestId("sell-redeem-net-proceeds")).toHaveProp("accessibilityLabel", "Amount hidden");

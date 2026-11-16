@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Pressable, View } from "react-native";
 
 import { AppButton, AppText, CategoryIcon, PremiumCard, SectionHeader } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { ContextualNudge } from "@/src/features/onboarding/ContextualNudge";
 
 import { useStyles } from "./addHoldingStyles";
@@ -79,9 +79,9 @@ export function AddHoldingPositionPhase({
             />
           </View>
           <View style={styles.flex}>
-            <FormTextField
+            <MoneyField
+              currency={"INR"}
               error={errors.averageCostPrice}
-              keyboardType="decimal-pad"
               label="Average cost"
               onChangeText={(value) => {
                 setAverageCostPrice(value);
@@ -95,9 +95,9 @@ export function AddHoldingPositionPhase({
         </View>
         <View style={styles.secondaryPositionFields}>
           <View>
-            <FormTextField
+            <MoneyField
+              currency={"INR"}
               error={errors.currentPrice}
-              keyboardType="decimal-pad"
               label="Current price"
               onChangeText={(value) => {
                 setCurrentPrice(value);

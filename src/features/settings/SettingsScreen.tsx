@@ -445,6 +445,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   switchOn: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   switchThumb: {
     backgroundColor: colors.text.primary,
@@ -456,10 +457,13 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     backgroundColor: colors.text.inverse,
     alignSelf: "flex-end",
   },
+  // The off track's 1dp outline meets non-text contrast (#669).
   switchTrack: {
     flexShrink: 0,
     backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.strong,
     borderRadius: radii.pill,
+    borderWidth: 1,
     justifyContent: "center",
     padding: 3,
     width: 44,
