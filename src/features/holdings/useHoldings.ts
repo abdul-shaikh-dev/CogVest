@@ -172,9 +172,7 @@ export function useHoldings({
       });
 
       if (store.getState().restoreEpoch !== currentState.restoreEpoch) return result;
-      for (const quote of Object.values(result.quoteCache)) {
-        store.getState().upsertQuote(quote);
-      }
+      store.getState().upsertQuotes(Object.values(result.quoteCache));
 
       setFailed(result.failed);
       setTimedOut(result.timedOut);
