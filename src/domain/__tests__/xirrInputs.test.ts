@@ -22,7 +22,7 @@ function investmentsInput(overrides: Partial<InvestmentsXirrInput> = {}): Invest
   return {
     assets: [btc, eth, stock], trades: [buy, sell], openingPositions: [], quotes: { btc: quote() },
     distributions: [], distributionCoverage: [], ppfAccounts: [], ppfLedgerEntries: [], epf: { accounts: [], events: [] }, futuresAccounts: [], cashEntries: [],
-    endDate: "2026-01-01", today: "2026-01-01", valuationTime: "2026-01-01T12:00:00Z", ...overrides,
+    endDate: "2026-01-01", today: "2026-01-01", ...overrides,
   };
 }
 const reasons = (result: ReturnType<typeof buildAssetXirrInput>) =>

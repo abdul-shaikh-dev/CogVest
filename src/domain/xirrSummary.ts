@@ -98,6 +98,7 @@ const limitationNotes: Record<XirrLimitation, (n: number) => string> = {
   "ppf-funding-assumed": (n) => `${count(n, "PPF entry is", "PPF entries are")} counted as paid from outside CogVest.`,
   "epf-withdrawal-assumed": (n) => `${count(n, "EPF withdrawal is", "EPF withdrawals are")} counted as money taken out.`,
   "opening-after-start-at-cost": (n) => `${count(n, "opening position", "opening positions")} after the start ${n === 1 ? "is" : "are"} counted as bought at average cost.`,
+  "opening-recorded-after-start": (n) => `${count(n, "opening position", "opening positions")} added after the start ${n === 1 ? "is" : "are"} counted as bought at average cost on the day ${n === 1 ? "it was" : "they were"} added.`,
   "account-opened-after-start": (n) => `${count(n, "account", "accounts")} opened after the start count their starting balance as money put in.`,
   "basis-records-changed": () => "Records before your start date changed after you confirmed it.",
   "epf-history-incomplete": () => "EPF history isn't confirmed complete, so EPF may be missing contributions.",

@@ -124,15 +124,20 @@ export function epfXirrFlows(epf: Pick<EpfLedger, "accounts" | "events">, endDat
  * Futures: the starting wallet at its recorded rate, transfers at their Cash
  * amount or event-date rate, and reconciled net equity at the end. Notional
  * exposure and margin are never flows.
+ *
+ * The equity is replayed at the valuation's own time (#653): its marks, rate
+ * and wallet are checked against when the user recorded them, not against now,
+ * so a valuation up to 7 days old still counts. The 24-hour freshness rule
+ * stays with the live Futures value.
  */
 export function futuresXirrFlows(accounts: readonly UsdmFuturesAccount[], cashEntries: readonly CashEntry[],
-  endDate: string, valuationTime: string): AccountXirrOutcome {
+  endDate: string): AccountXirrOutcome {
   const outcome = emptyOutcome();
   for (const account of accounts) {
     const ref = `futures:${account.id}`;
-    const valuation = calculateUsdmPortfolioContribution(account, valuationTime, [...cashEntries]);
+    const valuation = account.valuation ? replayAtValuation(account, cashEntries) : null;
     const valuedOn = account.valuation ? account.valuation.asOf.slice(0, 10) : null;
-    if (valuation.status !== "ready" || valuation.equityInr === null || !valuedOn) {
+    if (!valuation || valuation.status !== "ready" || valuation.equityInr === null || !valuedOn) {
       outcome.reasons.push({ assetId: ref, reason: "futures-not-valued" });
       continue;
     }
@@ -168,4 +173,13 @@ export function futuresXirrFlows(accounts: readonly UsdmFuturesAccount[], cashEn
     if (!equity.isZero()) outcome.terminals.push({ amountInr: equity.toString(), valueAsOf: valuedOn, id: ref });
   }
   return outcome;
+}
+
+function replayAtValuation(account: UsdmFuturesAccount, cashEntries: readonly CashEntry[]) {
+  try {
+    return calculateUsdmPortfolioContribution(account, account.valuation!.asOf, [...cashEntries]);
+  } catch {
+    // An event recorded after the valuation can't be replayed at it.
+    return null;
+  }
 }

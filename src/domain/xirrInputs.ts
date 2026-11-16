@@ -39,7 +39,8 @@ export type XirrUnavailableReason =
  */
 export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirrLimitation
   | "payouts-not-recorded" | "funding-assumed-external" | "cash-purpose-assumed" | "stale-price" | "price-missing-at-cost"
-  | "ppf-funding-assumed" | "epf-withdrawal-assumed" | "opening-after-start-at-cost" | "account-opened-after-start"
+  | "ppf-funding-assumed" | "epf-withdrawal-assumed" | "opening-after-start-at-cost" | "opening-recorded-after-start"
+  | "account-opened-after-start"
   | "basis-records-changed" | "epf-history-incomplete";
 
 export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string };
@@ -257,9 +258,8 @@ export type InvestmentsXirrInput = {
   /** Futures transfers inside the boundary use their linked Cash amount. */
   cashEntries: readonly CashEntry[];
   endDate: string;
-  /** Today's date and the current time, for EPF validation and the Futures valuation. */
+  /** Today's date, for EPF validation. */
   today: string;
-  valuationTime: string;
 };
 
 /**
@@ -309,7 +309,7 @@ export function buildInvestmentsXirrInput(input: InvestmentsXirrInput): XirrInpu
   const accounts: AccountXirrOutcome[] = [
     ppfXirrFlows(input.ppfAccounts, input.ppfLedgerEntries, input.endDate),
     epfXirrFlows(input.epf, input.endDate, input.today),
-    futuresXirrFlows(input.futuresAccounts, input.cashEntries, input.endDate, input.valuationTime),
+    futuresXirrFlows(input.futuresAccounts, input.cashEntries, input.endDate),
   ];
   const openings: Array<{ date: string; id: string }> = [];
   for (const account of accounts) {

@@ -59,7 +59,6 @@ function xirrRecords(state: XirrState, now: Date): InvestmentsXirrInput {
     cashEntries: state.cashEntries,
     endDate: today,
     today,
-    valuationTime: now.toISOString(),
   };
 }
 
