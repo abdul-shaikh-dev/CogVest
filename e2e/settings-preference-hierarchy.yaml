@@ -67,8 +67,7 @@ appId: ${APP_ID}
     element:
       id: settings-newest-price-date
     direction: DOWN
-    # The row can stop behind the tab bar while still counting as visible.
-    centerElement: true
+    # Partly visible counted as found while the label sat behind the tab bar.
     visibilityPercentage: 100
 - assertVisible: "Newest price update date"
 - takeScreenshot: .expo/ux14-prices

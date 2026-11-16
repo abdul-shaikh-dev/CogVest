@@ -16,8 +16,9 @@ the run cadence.
   date"`. The failure screenshot shows the scroll stopping with the price-date
   row behind the bottom tab bar: the element counted as found, but its text was
   not on screen. The flow passed alone on the same APK (1m 01s). This branch
-  makes that scroll bring the row fully into view; the changed flow then passed
-  (1m 02s). Not an app defect.
+  makes that scroll require the whole row on screen
+  (`visibilityPercentage: 100`); the changed flow then passed twice (1m 00s
+  each). Not an app defect.
 
 | Flow | Result | Duration |
 | --- | --- | --- |
