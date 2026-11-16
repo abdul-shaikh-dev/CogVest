@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import { AmountLine, Choice, EntryErrors, EntryField, Explainer, Money, TimeFiel
 import { useStyles } from "./futuresStyles";
 import { spacing } from "@/src/theme";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 
 type EventKind = "execution" | "funding" | "transfer";
 type EventDraft = {
@@ -88,7 +89,7 @@ const valuationLabels: Record<ReturnType<typeof replayUsdmFutures>["valuationSta
 
 export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack: () => void; store?: StoreApi<PortfolioStoreState> }) {
   const styles = useStyles();
-  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const state = usePortfolioFields(store, ["cashEntries", "futuresAccounts", "preferences"]);
   const account = state.futuresAccounts.find((item) => item.id === ACCOUNT_ID);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const contentRef = useRef<ViewInstance>(null);

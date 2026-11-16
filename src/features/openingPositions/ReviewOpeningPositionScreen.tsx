@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -24,6 +24,7 @@ import {
   validateOpeningPositionForm,
 } from "./openingPositionForm";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
+import { usePortfolioFields } from "@/src/hooks";
 
 type ReviewOpeningPositionScreenProps = {
   now?: Date;
@@ -43,7 +44,7 @@ type CorrectionErrors = Partial<
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "openingPositions", "preferences"]);
 }
 
 function saveFailureMessage(reason?: string) {

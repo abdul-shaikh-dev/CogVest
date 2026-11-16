@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -18,6 +18,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { automaticMeasurementBasis } from "@/src/domain/wholePortfolioXirr";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 import {
   basisKindOptions,
@@ -36,7 +37,7 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["cashEntries", "distributions", "epf", "futuresAccounts", "measurementBasis", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "trades"]);
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
   const [draft, setDraft] = useState<BasisDraft>(() => initialBasisDraft(snapshot, now));
   const [message, setMessage] = useState("");

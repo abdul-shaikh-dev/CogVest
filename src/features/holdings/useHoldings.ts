@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Asset, DisplayMode, Holding, OpeningPosition, Trade } from "@/src/types";
+import { usePortfolioFields } from "@/src/hooks";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -61,7 +62,7 @@ export type UseHoldingsResult = {
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "cashEntries", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
 function withQuoteMetadata(

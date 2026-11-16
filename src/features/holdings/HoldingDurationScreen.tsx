@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 import {
@@ -19,6 +19,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 export function HoldingDurationScreen({
   onClose,
@@ -30,11 +31,7 @@ export function HoldingDurationScreen({
   now?: Date;
 }) {
   const styles = useStyles();
-  const state = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const state = usePortfolioFields(store, ["assets", "openingPositions", "preferences", "quoteCache", "trades", "updatePreferences"]);
   const [sourceError, setSourceError] = useState(false);
   const masked = state.preferences.maskWealthValues;
   const minimal = state.preferences.displayMode === "minimal";

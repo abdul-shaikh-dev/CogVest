@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -22,6 +22,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
+import { usePortfolioFields } from "@/src/hooks";
 
 type ReviewTradeScreenProps = {
   backLabel?: string;
@@ -59,7 +60,7 @@ export function ReviewTradeScreen({
   tradeId,
 }: ReviewTradeScreenProps) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "cashEntries", "preferences", "trades"]);
   const currentTrade = snapshot.trades.find((item) => item.id === tradeId);
   const [trade] = useState(currentTrade);
   const editableTrade = trade && isManualTrade(trade) ? trade : undefined;

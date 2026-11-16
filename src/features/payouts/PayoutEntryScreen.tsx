@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { BackHandler, KeyboardAvoidingView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -18,6 +18,7 @@ import { formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 
 import {
   buildPayoutInput,
@@ -42,7 +43,7 @@ export function PayoutEntryScreen({ assetId, distributionId, now = new Date(), o
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "distributions", "preferences", "trades"]);
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
   const existing = distributionId ? snapshot.distributions.find((item) => item.id === distributionId) : undefined;
   const asset = snapshot.assets.find((item) => item.id === (existing?.assetId ?? assetId));

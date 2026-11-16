@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   BackHandler,
@@ -35,6 +35,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import type { FundingSource, PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 
 type EntryType = PpfLedgerEntry["type"];
 type EntryField = "amount" | "date" | "reason";
@@ -63,7 +64,7 @@ export function PpfEntryScreen({
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["ppfAccounts", "ppfLedgerEntries", "preferences"]);
   const account = snapshot.ppfAccounts.find((item) => item.id === accountId);
   const existing = snapshot.ppfLedgerEntries.find((item) => item.id === entryId);
   const [type, setType] = useState<EntryType>(existing?.type ?? "contribution");

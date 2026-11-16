@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import { normalizeIsin } from "@/src/domain/assets";
@@ -47,6 +47,10 @@ import {
   resolveTransactionRows,
 } from "./transactionImportResolution";
 import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
+import { usePortfolioSlice } from "@/src/hooks";
+
+/** This flow plans against most of the portfolio, so it follows every store change (#662). */
+const wholePortfolioState = (state: PortfolioStoreState) => state;
 
 export { transactionCsvMaxBytes };
 export type { PickedTransactionCsv, SelectedTransactionImportFile };
@@ -83,11 +87,7 @@ export function useTransactionImport({
   searchAssetLookupResults = searchAssetLookupResultsService,
   store = getPortfolioStore(),
 }: UseTransactionImportOptions) {
-  const snapshot = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const snapshot = usePortfolioSlice(store, wholePortfolioState);
   const [batchId, setBatchId] = useState(() => createId("transactions-csv"));
   const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const analysisIdRef = useRef(0);

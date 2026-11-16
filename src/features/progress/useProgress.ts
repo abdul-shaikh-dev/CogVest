@@ -13,6 +13,7 @@ import {
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { usePortfolioFields } from "@/src/hooks";
 
 import {
   getSnapshotAutomationProgress,
@@ -47,7 +48,7 @@ export type {
 } from "./progressSnapshotModel";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "cashEntries", "historicalQuoteCache", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
 type UseProgressInput = {

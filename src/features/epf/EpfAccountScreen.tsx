@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -57,6 +57,7 @@ import {
 } from "./epfAccountForm";
 import { eventAmountLabel, eventTitle } from "./epfEntryForm";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { usePortfolioFields } from "@/src/hooks";
 
 type EpfAccountScreenProps = {
   accountId?: string;
@@ -94,7 +95,7 @@ export function EpfAccountScreen({
   store = getPortfolioStore(),
 }: EpfAccountScreenProps) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "epf", "preferences"]);
   const [savedAccountId, setSavedAccountId] = useState<string>();
   const resolvedId = accountId ?? savedAccountId;
   const existing = snapshot.epf.accounts.find((account) => account.id === resolvedId);
@@ -155,7 +156,7 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
   store: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "epf", "preferences"]);
   const { fontScale, width } = useWindowDimensions();
   const stacked = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const masked = snapshot.preferences.maskWealthValues;
@@ -288,7 +289,7 @@ function LegacyHoldingSection({ account, store }: {
   account: EpfAccount; store: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "epf", "preferences"]);
   const [choosing, setChoosing] = useState(false);
   const [pendingAssetId, setPendingAssetId] = useState<string>();
   const [error, setError] = useState("");

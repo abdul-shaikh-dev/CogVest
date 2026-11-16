@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -19,6 +19,7 @@ import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntry, CashEntryType } from "@/src/types";
+import { usePortfolioFields } from "@/src/hooks";
 
 import {
   type CashEntryFormErrors,
@@ -42,7 +43,7 @@ const standardManualPurposes: { label: string; value: ManualCashPurpose }[] = [
 ];
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "cashEntries", "futuresAccounts", "preferences", "trades"]);
 }
 
 function getInitialPurpose(entry?: CashEntry): ManualCashPurpose {

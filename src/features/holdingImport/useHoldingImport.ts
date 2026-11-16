@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -22,6 +22,7 @@ import {
   type PortfolioStoreState,
 } from "@/src/store";
 import { createId } from "@/src/utils";
+import { usePortfolioSlice } from "@/src/hooks";
 
 import {
   assetFromLookupResult,
@@ -31,6 +32,9 @@ import {
   lookupQueryForCsvRow,
   type HoldingsCsvResolution,
 } from "./holdingImport";
+
+/** This flow plans against most of the portfolio, so it follows every store change (#662). */
+const wholePortfolioState = (state: PortfolioStoreState) => state;
 
 export const holdingsCsvMaxBytes = 1_000_000;
 
@@ -84,11 +88,7 @@ export function useHoldingImport({
   searchAssetLookupResults = searchAssetLookupResultsService,
   store = getPortfolioStore(),
 }: UseHoldingImportOptions) {
-  const snapshot = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const snapshot = usePortfolioSlice(store, wholePortfolioState);
   const [batchId, setBatchId] = useState(() => createId("holdings-csv"));
   const restoreEpochRef = useRef(store.getState().restoreEpoch);
   const selectionGenerationRef = useRef(0);

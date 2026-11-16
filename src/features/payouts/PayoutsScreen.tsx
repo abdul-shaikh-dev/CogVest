@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -20,6 +20,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getFirstRecordedPurchase } from "@/src/features/holdings/holdingsReview";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 import { canRecordPayouts, payoutNet, payoutsSummary, sortedPayouts, treatmentLabel } from "./payoutForm";
 
@@ -33,7 +34,7 @@ export function PayoutsScreen({ assetId, now = new Date(), onAddPayout, onBack, 
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "distributionCoverage", "distributions", "openingPositions", "preferences", "trades"]);
   const asset = snapshot.assets.find((item) => item.id === assetId);
   const coverage = snapshot.distributionCoverage.find((item) => item.assetId === assetId);
   const firstPurchase = getFirstRecordedPurchase(

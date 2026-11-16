@@ -1,9 +1,10 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 import { AppButton, AppText } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 type Kind = "metadata" | "minimal" | "insights";
 // Increment only when the teaching content materially changes, not for styling.
@@ -20,11 +21,7 @@ export function ContextualNudge({
   hasConviction?: boolean;
   hasPlan?: boolean;
 }) {
-  const state = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const state = usePortfolioFields(store, ["openingPositions", "preferences", "trades"]);
   const [hidden, setHidden] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const records = [
