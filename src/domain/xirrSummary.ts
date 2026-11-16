@@ -1,3 +1,5 @@
+import { decimal } from "@/src/domain/precision";
+
 import { calculateXirr, type XirrUnavailable } from "./xirr";
 import type { XirrFlow, XirrInputResult, XirrLimitation, XirrUnavailableReason } from "./xirrInputs";
 
@@ -164,4 +166,19 @@ export function summariseXirr(input: XirrInputResult): XirrSummary {
     payoutGapAssetIds: [...new Set(input.limitations
       .filter((item) => item.limitation === "payouts-not-recorded").map((item) => item.assetId))],
   };
+}
+
+/** Totals of the flows behind the rate, so the result can be checked without listing every trade. */
+export function xirrFlowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
+  let paidIn = decimal(0);
+  let returned = decimal(0);
+  let current = decimal(0);
+  for (const flow of summary.flows) {
+    const amount = decimal(flow.amountInr);
+    if (flow.source === "terminal") current = current.plus(amount);
+    else if (amount.isNegative()) paidIn = paidIn.minus(amount);
+    else returned = returned.plus(amount);
+  }
+  return { count: summary.flows.filter((flow) => flow.source !== "terminal").length,
+    paidIn: paidIn.toNumber(), returned: returned.toNumber(), current: current.toNumber() };
 }

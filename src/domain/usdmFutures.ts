@@ -181,6 +181,15 @@ function contract(value: string) {
   }
 }
 
+/**
+ * Notional divided by reported leverage, to two decimals: an indication only,
+ * not Binance maintenance margin. Null without a mark or leverage (#666).
+ */
+export function indicativeMarginUsdt(position: Pick<UsdmPosition, "leverage" | "notionalUsdt">): string | null {
+  if (!position.notionalUsdt || !position.leverage) return null;
+  return decimal(position.notionalUsdt).dividedBy(position.leverage).toFixed(2);
+}
+
 export function parseUsdmTimestamp(value: string): number {
   return timestamp(value, "Date and time");
 }

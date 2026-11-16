@@ -15,14 +15,7 @@ import { AppButton, AppText, DisclosureButton, IconButton, PremiumCard, ScreenCo
 import { useDraftExit } from "./useDraftExit";
 import { futuresEntryErrors, type FuturesEntryField } from "@/src/domain/futuresEntry";
 import { decimal } from "@/src/domain/precision";
-import {
-  calculateUsdmPortfolioContribution,
-  replayUsdmFutures,
-  type UsdmEventRate,
-  type UsdmFuturesAccount,
-  type UsdmFuturesEvent,
-  type UsdmMark,
-} from "@/src/domain/usdmFutures";
+import { calculateUsdmPortfolioContribution, replayUsdmFutures, type UsdmEventRate, type UsdmFuturesAccount, type UsdmFuturesEvent, type UsdmMark, indicativeMarginUsdt } from "@/src/domain/usdmFutures";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { AmountLine, Choice, EntryErrors, EntryField, Explainer, Money, TimeField, displayTime, type EntryTarget } from "./FuturesFields";
 import { useStyles } from "./futuresStyles";
@@ -444,7 +437,7 @@ export function FuturesScreen({ onBack, store = getPortfolioStore() }: { onBack:
               ]} />
               <AppText>{position.leverage ?? "?"}× reported leverage</AppText>
               <View style={styles.metric}><AppText color="secondary">Notional exposure</AppText><Money masked={masked} value={position.notionalUsdt === null ? "Mark price needed" : `${position.notionalUsdt} USDT`} /></View>
-              <View style={styles.metric}><AppText color="secondary">Indicative margin at mark</AppText><Money masked={masked} value={position.notionalUsdt && position.leverage ? `${decimal(position.notionalUsdt).dividedBy(position.leverage).toFixed(2)} USDT` : "Leverage and mark needed"} /></View>
+              <View style={styles.metric}><AppText color="secondary">Indicative margin at mark</AppText><Money masked={masked} value={indicativeMarginUsdt(position) === null ? "Leverage and mark needed" : `${indicativeMarginUsdt(position)} USDT`} /></View>
               {position.reportedMarginUsdt !== null ? <AmountLine masked={masked} parts={[{ label: "Binance-reported position margin:", value: `${position.reportedMarginUsdt} USDT` }]} /> : null}
               {position.unrealizedPnlUsdt === null ? <AppText>Unrealized: mark needed</AppText>
                 : <AmountLine masked={masked} parts={[{ label: "Unrealized:", value: `${position.unrealizedPnlUsdt} USDT` }]} />}
