@@ -1,9 +1,11 @@
 import {
+  formatCompactAxisValue,
   formatCompactINR,
   formatCurrency,
   formatDate,
   formatINR,
   formatPercentage,
+  formatPrice,
 } from "@/src/domain/formatters";
 
 describe("formatters", () => {
@@ -72,5 +74,45 @@ describe("formatters", () => {
       numberConstructor.mockRestore();
       dateConstructor.mockRestore();
     }
+  });
+
+  describe("compact values round before choosing the unit (#668)", () => {
+    it.each([
+      [999.49, "₹999"],
+      [999.5, "₹1K"],
+      [99_994.99, "₹99.99K"],
+      [99_995, "₹1L"],
+      [99_999.99, "₹1L"],
+      [100_000, "₹1L"],
+      [99_99_499, "₹99.99L"],
+      [99_99_500, "₹1Cr"],
+      [99_99_999, "₹1Cr"],
+      [-99_999.99, "-₹1L"],
+    ])("shows %p as %s", (value, expected) => {
+      expect(formatCompactINR(value)).toBe(expected);
+    });
+  });
+
+  describe("chart axis values (#668)", () => {
+    it("uses lakh and crore for INR, rounding before the unit", () => {
+      expect(formatCompactAxisValue(0.12345, "INR")).toBe("₹0.123");
+      expect(formatCompactAxisValue(950, "INR")).toBe("₹950");
+      expect(formatCompactAxisValue(99_960, "INR")).toBe("₹1.0L");
+      expect(formatCompactAxisValue(2_50_00_000, "INR")).toBe("₹2.5Cr");
+    });
+
+    it("uses K, M and B for USD, never lakh or crore", () => {
+      expect(formatCompactAxisValue(98_500, "USD")).toBe("$98.5K");
+      expect(formatCompactAxisValue(99_960, "USD")).toBe("$100.0K");
+      expect(formatCompactAxisValue(999_960, "USD")).toBe("$1.0M");
+      expect(formatCompactAxisValue(2_500_000_000, "USD")).toBe("$2.5B");
+      expect(formatCompactAxisValue(-1_500, "USD")).toBe("-$1.5K");
+    });
+  });
+
+  it("formats prices in their own currency and grouping, with more digits below one", () => {
+    expect(formatPrice(123456.789, "INR")).toBe("₹1,23,456.79");
+    expect(formatPrice(123456.789, "USD")).toBe("$123,456.79");
+    expect(formatPrice(0.00012345, "USD")).toBe("$0.000123");
   });
 });

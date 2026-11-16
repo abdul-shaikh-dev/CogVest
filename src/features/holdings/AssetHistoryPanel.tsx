@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import { AppButton, AppText, SectionHeader } from "@/src/components/common";
 import { buildAssetHistory } from "@/src/domain/calculations/assetHistory";
-import { formatDate } from "@/src/domain/formatters";
+import { formatCompactAxisValue, formatDate, formatPrice } from "@/src/domain/formatters";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import { spacing, useTheme, createThemedStyles } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
@@ -104,24 +104,8 @@ export function AssetHistoryPanel({
       ? (latestValue / firstValue - 1) * 100
       : null;
   const visiblePriceScale = mode === "price" ? { yAxisOffset: model.yDomain[0] } : null;
-  const format = useCallback((value: number) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: asset.currency,
-      maximumFractionDigits: value < 1 ? 6 : 2,
-    }).format(value), [asset.currency]);
-  const axisFormat = useCallback((amount: number) => {
-    const prefix = asset.currency === "INR" ? "₹" : "$";
-    const abbreviated =
-      Math.abs(amount) >= 1e7
-        ? `${(amount / 1e7).toFixed(1)}Cr`
-        : Math.abs(amount) >= 1e5
-          ? `${(amount / 1e5).toFixed(1)}L`
-          : Math.abs(amount) >= 1e3
-            ? `${(amount / 1e3).toFixed(1)}K`
-            : amount.toFixed(amount > 0 && amount < 1 ? 3 : 0);
-    return `${prefix}${abbreviated}`;
-  }, [asset.currency]);
+  const format = useCallback((value: number) => formatPrice(value, asset.currency), [asset.currency]);
+  const axisFormat = useCallback((amount: number) => formatCompactAxisValue(amount, asset.currency), [asset.currency]);
   // A two-digit year ("Nov 16") reads as a day, so long spans show the full
   // year and short spans show day and month.
   const spanMs = (model.data.at(-1)?.x ?? 0) - (model.data[0]?.x ?? 0);
