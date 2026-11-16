@@ -133,7 +133,7 @@ export function ReviewOpeningPositionScreen({
       <ScreenContainer testID="review-opening-position-screen">
         <View style={styles.content}>
           <ScreenHeader
-            title="Review Opening Position"
+            title="Review holding"
             subtitle={`${positionAsset.name} · values masked`}
           />
           <PremiumCard>
@@ -282,7 +282,7 @@ export function ReviewOpeningPositionScreen({
     <ScreenContainer scroll testID="review-opening-position-screen">
       <View style={styles.content}>
         <ScreenHeader
-          title="Review Opening Position"
+          title="Review holding"
           subtitle={positionAsset.name}
         />
 

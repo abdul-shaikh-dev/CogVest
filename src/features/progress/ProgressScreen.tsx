@@ -123,7 +123,7 @@ export function ProgressScreen({
           title="Monthly Progress"
           action={<IconButton
             plain
-            accessibilityLabel={progress.preferences.maskWealthValues ? "Show values" : "Mask values"}
+            accessibilityLabel={progress.preferences.maskWealthValues ? "Show values" : "Hide values"}
             icon={progress.preferences.maskWealthValues ? "eye-off-outline" : "eye-outline"}
             onPress={() => store.getState().updatePreferences({ maskWealthValues: !progress.preferences.maskWealthValues })}
             testID="progress-mask-toggle"

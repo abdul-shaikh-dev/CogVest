@@ -3,7 +3,7 @@ appId: ${APP_ID}
 - runFlow: appearance-configure.yaml
 - openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Portfolio value"
-- assertVisible: "Mask values"
+- assertVisible: "Hide values"
 - takeScreenshot: .expo/appearance-completion/${SHOT}/dashboard
 - tapOn:
     id: dashboard-mask-toggle

@@ -352,9 +352,7 @@ export function HoldingsScreen({
               {onAddTrade || onAddPpfAccount || onRecordPurchase || onOpenFutures ? (
                 <IconButton
                   plain
-                  accessibilityLabel={
-                    onQuickSetup ? "Add holdings" : "Add Holding"
-                  }
+                  accessibilityLabel="Add Holding"
                   icon="add-outline"
                   onPress={() => setActivePanel("add")}
                   testID="holdings-add-button"

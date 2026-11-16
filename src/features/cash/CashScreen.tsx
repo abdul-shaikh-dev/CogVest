@@ -303,7 +303,7 @@ export function CashScreen({
           />
           <View style={styles.entryHeader}>
             <View style={styles.entryHeaderCopy}>
-              <AppText variant="title" weight="bold">{modeCopy.title}</AppText>
+              <AppText accessibilityRole="header" variant="title" weight="bold">{modeCopy.title}</AppText>
               <AppText color="secondary" variant="caption">
                 {modeCopy.description}
               </AppText>
@@ -401,7 +401,7 @@ export function CashScreen({
     >
       <View style={styles.confirmBackdrop}>
         <PremiumCard>
-          <AppText variant="title" weight="bold">Discard this draft?</AppText>
+          <AppText accessibilityRole="header" variant="title" weight="bold">Discard this draft?</AppText>
           <AppText color="secondary">Start a new {pendingMode === "addition" ? "deposit" : "withdrawal"} instead? Your unsaved {mode === "addition" ? "deposit" : "withdrawal"} will be removed.</AppText>
           <AppButton
             onPress={keepDraft}

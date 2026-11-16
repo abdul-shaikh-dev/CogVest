@@ -170,7 +170,7 @@ export function SellRedeemScreen({
               <MoneyField
                 currency={holding.asset.currency}
                 error={flow.errors.sellPrice}
-                label="Actual execution price"
+                label="Price received per unit"
                 onChangeText={flow.setSellPrice}
                 placeholder="1700"
                 testID="sell-redeem-price-input"

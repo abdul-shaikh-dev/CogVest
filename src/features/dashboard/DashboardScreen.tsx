@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWindowDimensions, View } from "react-native";
+import { RefreshControl, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -14,6 +14,7 @@ import type {
   RefreshQuotesInput,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { useTheme } from "@/src/theme";
 
 import { useDashboard } from "./useDashboard";
 import { InsightCards } from "@/src/features/insights";
@@ -68,6 +69,7 @@ export function DashboardScreen({
   store = getPortfolioStore(),
 }: DashboardScreenProps) {
   const styles = useStyles();
+  const { colors } = useTheme();
   const currentDate = now ?? new Date();
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [showPerformance, setShowPerformance] = useState(false);
@@ -101,7 +103,19 @@ export function DashboardScreen({
   }
 
   return (
-    <ScreenContainer scroll testID="dashboard-screen">
+    <ScreenContainer
+      refreshControl={
+        <RefreshControl
+          refreshing={dashboard.isRefreshing}
+          tintColor={colors.primary}
+          onRefresh={() => {
+            void dashboard.refresh();
+          }}
+        />
+      }
+      scroll
+      testID="dashboard-screen"
+    >
       <View style={styles.content}>
         <ScreenHeader
           compact
@@ -111,7 +125,7 @@ export function DashboardScreen({
               <IconButton
                 plain
                 accessibilityLabel={
-                  dashboard.maskWealthValues ? "Show values" : "Mask values"
+                  dashboard.maskWealthValues ? "Show values" : "Hide values"
                 }
                 icon={dashboard.maskWealthValues ? "eye-off-outline" : "eye-outline"}
                 onPress={dashboard.toggleMaskWealthValues}
@@ -119,7 +133,8 @@ export function DashboardScreen({
               />
               <IconButton
                 plain
-                accessibilityLabel="Refresh quotes"
+                accessibilityLabel={dashboard.isRefreshing ? "Refreshing quotes" : "Refresh quotes"}
+                busy={dashboard.isRefreshing}
                 icon="refresh-outline"
                 onPress={() => {
                   void dashboard.refresh();

@@ -24,7 +24,7 @@ import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { compareCodeUnits } from "@/src/domain/ordering";
-import { useLatestCallback, usePortfolioFields } from "@/src/hooks";
+import { useBackHandler, useLatestCallback, useModalAnimation, usePortfolioFields } from "@/src/hooks";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type { Asset, Trade } from "@/src/types";
 
@@ -138,6 +138,7 @@ export function TradeHistoryScreen({
   store = getPortfolioStore(),
   now = new Date(),
 }: TradeHistoryScreenProps) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const snapshot = usePortfolioFields(store, ["assets", "openingPositions", "preferences", "trades"]);
   const { fontScale } = useWindowDimensions();
@@ -173,6 +174,9 @@ export function TradeHistoryScreen({
     setSelectedTradeIds(new Set());
     setIsReviewingDeletion(false);
   }
+
+  // Android Back leaves selection mode instead of leaving the screen (#670).
+  useBackHandler(leaveSelection, isSelecting);
 
   function toggleSelection(tradeId: string) {
     setSelectedTradeIds((current) => {
@@ -335,7 +339,7 @@ export function TradeHistoryScreen({
       testID="trade-history-screen"
     >
       <Modal
-        animationType="fade"
+        animationType={modalAnimation}
         onRequestClose={() => setIsReviewingDeletion(false)}
         transparent
         visible={isReviewingDeletion}

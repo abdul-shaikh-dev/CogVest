@@ -214,7 +214,7 @@ export function HoldingsOptionsPanel({
           onClose();
         }}
         testID="holdings-mask-toggle"
-        title={maskWealthValues ? "Show values" : "Mask values"}
+        title={maskWealthValues ? "Show values" : "Hide values"}
         variant="secondary"
       />
       <AppButton

@@ -36,7 +36,7 @@ import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
-import { usePortfolioFields } from "@/src/hooks";
+import { useModalAnimation, usePortfolioFields } from "@/src/hooks";
 
 type ReviewAssetScreenProps = {
   assetId: string;
@@ -86,6 +86,7 @@ function ChoiceGroup<T extends string>({
   testIDPrefix: string;
   value: T;
 }) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel =
@@ -111,12 +112,17 @@ function ChoiceGroup<T extends string>({
         <AppText color="secondary">›</AppText>
       </Pressable>
       <Modal
-        animationType="fade"
+        animationType={modalAnimation}
         onRequestClose={() => setIsOpen(false)}
         transparent
         visible={isOpen}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setIsOpen(false)}>
+        <Pressable
+          accessibilityLabel={`Close ${label.toLowerCase()} options`}
+          accessibilityRole="button"
+          onPress={() => setIsOpen(false)}
+          style={styles.modalBackdrop}
+        >
           <View style={styles.optionSheet}>
             <SectionHeader title={`Choose ${label.toLowerCase()}`} />
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -165,6 +171,7 @@ export function ReviewAssetScreen({
   onComplete,
   store = getPortfolioStore(),
 }: ReviewAssetScreenProps) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const snapshot = usePortfolioFields(store, ["assets", "cashEntries", "historicalQuoteCache", "monthlySnapshots", "openingPositions", "quoteCache", "trades"]);
   const { fontScale, width } = useWindowDimensions();
@@ -382,7 +389,7 @@ export function ReviewAssetScreen({
         </PremiumCard>
 
         <Modal
-          animationType="fade"
+          animationType={modalAnimation}
           onRequestClose={dismissDeleteConfirmation}
           statusBarTranslucent
           testID="asset-deletion-confirmation"

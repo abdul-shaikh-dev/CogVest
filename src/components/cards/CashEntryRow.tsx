@@ -92,7 +92,6 @@ export function CashEntryRow({
         </View>
         <View style={[styles.trailing, stacked && styles.stackedTrailing]}><MaskedValue
           masked={masked}
-          style={isAddition ? styles.addition : styles.withdrawal}
           value={formatCashAmount(entry)}
           weight="bold"
         />
@@ -129,9 +128,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   stackedTrailing: { alignSelf: "flex-end" },
   stackedRow: { flexDirection: "column", alignItems: "stretch" },
   stackedDetails: { flexGrow: 0, flexShrink: 0, flexBasis: "auto" },
-  addition: {
-    color: colors.profit,
-  },
   details: {
     flex: 1,
     gap: spacing.xs,
@@ -145,8 +141,5 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     paddingHorizontal: spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border.subtle,
-  },
-  withdrawal: {
-    color: colors.loss,
   },
 }));

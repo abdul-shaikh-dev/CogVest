@@ -80,7 +80,9 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
       <View style={styles.content}>
         <ScreenHeader title={flow.phase === "review" ? "Review purchase" : "Record purchase"} subtitle={flow.phase === "review" ? undefined : "From Cash to investment"}
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={back} testID="purchase-back" />} />
-        <EntryProgress label="Record purchase progress" step={flow.phase === "asset" ? 1 : flow.phase === "details" ? 2 : 3} total={3} />
+        <EntryProgress label="Record purchase progress" step={flow.phase === "asset" ? 1 : flow.phase === "details" ? 2 : 3}
+          stepName={flow.phase === "asset" ? "Choose asset" : flow.phase === "details" ? "Purchase details" : "Review"}
+          total={3} />
         {flow.phase === "asset" ? <PremiumCard testID="purchase-phase-asset">
           <AssetSearchField value={query} testID="purchase-search" onChangeText={(value) => {
             operation.current?.abort(); setSearching(false); setQuery(value); setLookup(undefined);

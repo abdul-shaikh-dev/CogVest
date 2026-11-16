@@ -2,12 +2,15 @@ import { StyleSheet, View } from "react-native";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { AppText } from "./AppText";
 
-export function EntryProgress({ label, step, total, testID }: {
-  label: string; step: number; total: number; testID?: string;
+export function EntryProgress({ label, step, stepName, total, testID }: {
+  label: string; step: number;
+  /** What the current step is for, announced after "Step n of m" (#670). */
+  stepName?: string;
+  total: number; testID?: string;
 }) {
   const styles = useStyles();
   return <View accessible accessibilityRole="progressbar" accessibilityLabel={label}
-    accessibilityValue={{ min: 1, max: total, now: step, text: `Step ${step} of ${total}${step === 1 ? ": Choose asset" : ""}` }}
+    accessibilityValue={{ min: 1, max: total, now: step, text: `Step ${step} of ${total}${stepName ? `: ${stepName}` : ""}` }}
     style={styles.progress} testID={testID}>
     <AppText color="secondary" variant="caption">{step} of {total}</AppText>
     <View style={styles.track}>

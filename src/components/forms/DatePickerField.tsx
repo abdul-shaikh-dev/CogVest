@@ -126,6 +126,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     borderColor: colors.loss,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: interaction.pressedOpacity,
   },
 }));

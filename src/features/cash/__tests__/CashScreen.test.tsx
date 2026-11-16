@@ -6,6 +6,7 @@ import { CashScreen } from "@/src/features/cash";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
 import { getAllByComponentType, getPressHandler, queryByComponentType } from "@/src/testing/componentQueries";
+import { colors } from "@/src/theme";
 
 async function selectDate(
   getByTestId: Awaited<ReturnType<typeof render>>["getByTestId"],
@@ -130,6 +131,11 @@ describe("CashScreen", () => {
       expect(getByText("Emergency withdrawal")).toBeTruthy();
       expect(getByText("Cash withdrawal")).toBeTruthy();
       expect(getByText("-₹250.00")).toBeTruthy();
+      // Cash movements are not gains or losses: the sign and arrow carry direction (#670).
+      for (const amount of ["+₹1,000.00", "-₹250.00"]) {
+        expect(getByText(amount)).not.toHaveStyle({ color: colors.profit });
+        expect(getByText(amount)).not.toHaveStyle({ color: colors.loss });
+      }
       expect(store.getState().cashEntries).toEqual([
         expect.objectContaining({
           amount: 1000,

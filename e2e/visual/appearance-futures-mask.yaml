@@ -2,7 +2,7 @@ appId: ${APP_ID}
 ---
 - runFlow: appearance-configure.yaml
 - openLink: "${SCHEME}:///dashboard"
-- assertVisible: "Mask values"
+- assertVisible: "Hide values"
 - tapOn:
     id: dashboard-mask-toggle
 - openLink: "${SCHEME}:///futures"

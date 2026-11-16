@@ -76,7 +76,7 @@ function EnabledQa({ page }: { page?: string }) {
     <AppButton title="Stage synthetic legacy data" testID="qa-stage-legacy" onPress={stageLegacy} />
     <AppButton title="Minimal mode" onPress={() => state.updatePreferences({ displayMode: "minimal" })} />
     <AppButton title="Standard mode" onPress={() => state.updatePreferences({ displayMode: "standard" })} />
-    <AppButton title="Mask values" onPress={() => state.updatePreferences({ maskWealthValues: true })} />
+    <AppButton title="Hide values" onPress={() => state.updatePreferences({ maskWealthValues: true })} />
     <AppButton title="Show values" onPress={() => state.updatePreferences({ maskWealthValues: false })} />
   </ScreenContainer>;
 }

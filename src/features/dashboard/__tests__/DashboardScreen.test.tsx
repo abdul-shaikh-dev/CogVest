@@ -464,7 +464,7 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    await fireEvent.press(screen.getByLabelText("Mask values"));
+    await fireEvent.press(screen.getByLabelText("Hide values"));
     expect(store.getState().preferences.maskWealthValues).toBe(true);
 
     await act(async () => {

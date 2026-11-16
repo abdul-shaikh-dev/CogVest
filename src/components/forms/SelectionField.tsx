@@ -9,6 +9,7 @@ import {
 
 import { AppText, SectionHeader } from "@/src/components/common";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
+import { useModalAnimation } from "@/src/hooks";
 
 export type SelectionOption<T extends string> = {
   label: string;
@@ -36,6 +37,7 @@ export function SelectionField<T extends string>({
   testIDPrefix,
   value,
 }: SelectionFieldProps<T>) {
+  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption =
@@ -75,7 +77,7 @@ export function SelectionField<T extends string>({
       </Pressable>
 
       <Modal
-        animationType="fade"
+        animationType={modalAnimation}
         onRequestClose={() => setIsOpen(false)}
         transparent
         visible={isOpen}

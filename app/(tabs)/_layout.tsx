@@ -51,7 +51,7 @@ function TabLabel({ color, routeName }: { color: ColorValue; routeName: string }
     <AppText
       adjustsFontSizeToFit
       maxFontSizeMultiplier={1.5}
-      minimumFontScale={0.85}
+      minimumFontScale={0.92}
       numberOfLines={1}
       style={[styles.tabLabel, { color }]}
     >
@@ -147,8 +147,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     paddingTop: 10,
   },
   tabLabel: {
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: "center",
   },
 }));

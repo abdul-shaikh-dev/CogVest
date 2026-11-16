@@ -3,8 +3,8 @@ import test from "node:test";
 import { inspectControlBounds } from "./control-bounds.mjs";
 
 const screen = { width: 1080, height: 2400, density: 480 };
-const options = { testId: "progress-mask-toggle", expectedLabel: "Mask values", screen };
-const node = (bounds, label = "Mask values") =>
+const options = { testId: "progress-mask-toggle", expectedLabel: "Hide values", screen };
+const node = (bounds, label = "Hide values") =>
   `<node resource-id="progress-mask-toggle" content-desc="${label}" clickable="true" enabled="true" bounds="${bounds}"/>`;
 
 test("accepts a complete 48dp control at the 16dp content inset", () => {
