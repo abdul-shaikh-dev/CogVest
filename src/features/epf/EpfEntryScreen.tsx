@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 import { applyEpfChange } from "./EpfAccountScreen";
 import { EpfCheckRow } from "./EpfCheckRow";
 import { epfEvidenceOptions, type EpfFieldErrors } from "./epfAccountForm";
@@ -112,7 +113,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["epf", "preferences"]);
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
   const existing = entryId ? snapshot.epf.events.find((event) => event.id === entryId) : undefined;
   // A transfer is one record owned by its source account, whichever side opened it.

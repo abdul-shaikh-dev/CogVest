@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -22,6 +22,7 @@ import type {
   TradeType,
 } from "@/src/types";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 
 import { validateTradeForm } from "./tradeForm";
 
@@ -30,7 +31,7 @@ type FieldErrors = Partial<Record<string, string>>;
 const manualAssetId = "__manual_asset__";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "openingPositions", "quoteCache", "trades"]);
 }
 
 export function useAddTrade({

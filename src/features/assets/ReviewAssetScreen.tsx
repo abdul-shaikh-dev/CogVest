@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   findNodeHandle,
@@ -36,6 +36,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { Asset, AssetClass, AssetExchange, InstrumentType, SectorType } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
+import { usePortfolioFields } from "@/src/hooks";
 
 type ReviewAssetScreenProps = {
   assetId: string;
@@ -165,7 +166,7 @@ export function ReviewAssetScreen({
   store = getPortfolioStore(),
 }: ReviewAssetScreenProps) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "cashEntries", "historicalQuoteCache", "monthlySnapshots", "openingPositions", "quoteCache", "trades"]);
   const { fontScale, width } = useWindowDimensions();
   const stackActions = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const currentAsset = snapshot.assets.find((asset) => asset.id === assetId);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -27,6 +27,7 @@ import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
+import { usePortfolioFields } from "@/src/hooks";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
 
@@ -52,7 +53,7 @@ export function PpfImportScreen({
   now = () => new Date(),
 }: PpfImportScreenProps) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["ppfAccounts", "ppfLedgerEntries", "preferences"]);
   const { fontScale, width } = useWindowDimensions();
   const stackRows = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const account = snapshot.ppfAccounts.find((item) => item.id === accountId);

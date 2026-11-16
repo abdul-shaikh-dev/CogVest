@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -24,6 +24,7 @@ import {
   type PortfolioStoreState,
 } from "@/src/store";
 import { spacing } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 import {
   getQuickSetupSessionStore,
@@ -64,11 +65,7 @@ export function QuickPortfolioSetupScreen({
   store = getPortfolioStore(),
 }: QuickPortfolioSetupScreenProps) {
   const setup = useQuickSetupSession(sessionStore);
-  const portfolio = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const portfolio = usePortfolioFields(store, ["openingPositions", "ppfAccounts"]);
   const dashboard = useDashboard({ store });
   const [showEntryChoice, setShowEntryChoice] = useState(true);
 

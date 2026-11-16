@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { summarizeEpfForReporting, includeEpfInPortfolioTotals, epfContributionsForMonth, type EpfReportingSummary } from "@/src/domain/epf/reporting";
 import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import type { StoreApi } from "zustand/vanilla";
@@ -56,6 +56,7 @@ import {
   getLinkedLegacyPpfAssetIds,
 } from "@/src/domain/ppf";
 import { calculateUsdmPortfolioContribution, type UsdmPortfolioContribution } from "@/src/domain/usdmFutures";
+import { usePortfolioFields } from "@/src/hooks";
 
 type RefreshQuotes = (
   input: RefreshQuotesInput,
@@ -112,7 +113,7 @@ export type DashboardState = {
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "cashEntries", "distributionCoverage", "distributions", "epf", "futuresAccounts", "measurementBasis", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
 function withQuoteMetadata(
@@ -149,7 +150,7 @@ function isSameMonth(isoDate: string, now: Date) {
 }
 
 function calculateMonthlyMetrics(
-  state: PortfolioStoreState,
+  state: Pick<PortfolioStoreState, "cashEntries" | "epf" | "openingPositions" | "ppfLedgerEntries" | "trades">,
   now: Date,
   supportedAssetIds: Set<string>,
 ): DashboardMonthlyMetrics {

@@ -1,10 +1,10 @@
-import { useSyncExternalStore } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { DisplayMode, Quote } from "@/src/types";
 import type { AppearancePreference } from "@/src/types/preferences";
+import { usePortfolioFields } from "@/src/hooks";
 
 type UseSettingsInput = {
   store?: StoreApi<PortfolioStoreState>;
@@ -35,7 +35,7 @@ export type SettingsQuoteStatus = {
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["preferences", "quoteCache"]);
 }
 
 function getLatestQuote(quotes: Quote[]) {

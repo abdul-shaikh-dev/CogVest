@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 import { findCanonicalAsset } from "@/src/domain/assets";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
@@ -7,12 +7,13 @@ import { normalizeMoney } from "@/src/domain/precision";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Asset, BuyTrade } from "@/src/types";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 import { validateTradeForm } from "./tradeForm";
 
 export function useRecordPurchase({ initialAssetId, now = new Date(), store = getPortfolioStore() }: {
   initialAssetId?: string; now?: Date; store?: StoreApi<PortfolioStoreState>;
 }) {
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "cashEntries", "openingPositions", "preferences", "quoteCache", "trades"]);
   const [asset, setAsset] = useState<Asset | undefined>(() => snapshot.assets.find((item) => item.id === initialAssetId));
   const [phase, setPhase] = useState<"asset" | "details" | "review">(asset ? "details" : "asset");
   const [values, setValues] = useState({ quantity: "", pricePerUnit: "", fees: "", date: formatLocalCalendarDate(now), notes: "" });

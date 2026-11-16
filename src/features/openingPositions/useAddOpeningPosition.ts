@@ -1,10 +1,5 @@
 import * as Haptics from "expo-haptics";
-import {
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useMemo, useRef, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -41,6 +36,7 @@ import type {
 } from "@/src/types";
 import { createId } from "@/src/utils";
 import type { JsonStorage } from "@/src/services/storage";
+import { usePortfolioSlice } from "@/src/hooks";
 
 import { validateOpeningPositionForm } from "./openingPositionForm";
 import {
@@ -56,6 +52,9 @@ import {
   getPositionPhaseErrors,
 } from "./addOpeningPositionModel";
 import { useAssetDiscovery } from "./useAssetDiscovery";
+
+/** This flow plans against most of the portfolio, so it follows every store change (#662). */
+const wholePortfolioState = (state: PortfolioStoreState) => state;
 
 export type AddHoldingPhase = "asset" | "class" | "position" | "review";
 export type FieldErrors = Partial<Record<string, string>>;
@@ -89,7 +88,7 @@ export const phases: Array<{ key: AddHoldingPhase; label: string }> = [
 ];
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioSlice(store, wholePortfolioState);
 }
 
 export function useAddOpeningPosition({

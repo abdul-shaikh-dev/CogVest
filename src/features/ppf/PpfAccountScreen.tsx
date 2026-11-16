@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Pressable, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -30,6 +30,7 @@ import {
 } from "@/src/domain/ppf";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { PpfAccount } from "@/src/types";
+import { usePortfolioFields } from "@/src/hooks";
 
 import { Detail, Metric } from "./PpfAccountDetails";
 import { PpfAccountForm } from "./PpfAccountForm";
@@ -50,7 +51,7 @@ type PpfAccountScreenProps = {
 };
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["ppfAccounts", "ppfLedgerEntries", "preferences"]);
 }
 
 export function PpfAccountScreen({

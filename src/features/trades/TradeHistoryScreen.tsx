@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { StoreApi } from "zustand/vanilla";
@@ -24,6 +24,7 @@ import { isManualTrade } from "@/src/domain/transactionSemantics";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { usePortfolioFields } from "@/src/hooks";
 
 type TradeHistoryScreenProps = {
   assetId: string;
@@ -42,7 +43,7 @@ export function TradeHistoryScreen({
 }: TradeHistoryScreenProps) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "openingPositions", "preferences", "trades"]);
   const { fontScale } = useWindowDimensions();
   const stackValues = getAdaptiveLayoutMode(fontScale) !== "standard";
   const asset = snapshot.assets.find((item) => item.id === assetId);
@@ -345,7 +346,7 @@ export function TradeHistoryScreen({
 function deletionFailureMessage(
   reason: string,
   blockingAssetIds: string[] | undefined,
-  snapshot: PortfolioStoreState,
+  snapshot: Pick<PortfolioStoreState, "assets">,
 ) {
   if (reason === "oversold") {
     const names = blockingAssetIds?.map((id) => snapshot.assets.find((asset) => asset.id === id)?.name).filter(Boolean).join(", ");

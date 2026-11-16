@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 import { applyEpfChange } from "./EpfAccountScreen";
 import { EpfCheckRow } from "./EpfCheckRow";
 import {
@@ -54,7 +55,7 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["epf", "preferences"]);
   const account = snapshot.epf.accounts.find((item) => item.id === accountId);
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
   const [draft, setDraft] = useState({ employee: "", employer: "", date: formatLocalCalendarDate(now), reason: "Annual statement" });

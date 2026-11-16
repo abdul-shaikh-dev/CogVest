@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -19,6 +19,7 @@ import {
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles, useTheme } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 import { noPayoutEntries, payoutCoverageRows, type PayoutCoverageRow } from "./payoutCoverageModel";
 
@@ -36,7 +37,7 @@ export function PayoutCoverageScreen({ now = new Date(), onBack, onReviewHolding
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "cashEntries", "distributionCoverage", "distributions", "epf", "futuresAccounts", "measurementBasis", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "quoteCache", "trades"]);
   const { confirmable, withPayouts } = payoutCoverageRows(snapshot, now);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [reviewing, setReviewing] = useState(false);

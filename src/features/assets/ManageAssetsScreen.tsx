@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -26,6 +26,7 @@ import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
+import { usePortfolioFields } from "@/src/hooks";
 
 type ManageAssetsScreenProps = {
   onBack: () => void;
@@ -34,7 +35,7 @@ type ManageAssetsScreenProps = {
 };
 
 function remainingUnits(
-  state: PortfolioStoreState,
+  state: Pick<PortfolioStoreState, "assets" | "openingPositions" | "trades">,
   assetId: string,
   demergerAdjustments: readonly DemergerAdjustment[],
 ) {
@@ -68,7 +69,7 @@ export function ManageAssetsScreen({
 }: ManageAssetsScreenProps) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const snapshot = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const snapshot = usePortfolioFields(store, ["assets", "openingPositions", "trades"]);
   const demergerAdjustments = projectDemergers({
     assets: snapshot.assets,
     openingPositions: snapshot.openingPositions,

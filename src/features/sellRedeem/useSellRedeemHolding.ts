@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -32,6 +26,7 @@ import { StockSplitError } from "@/src/domain/stockSplits";
 import { getHoldingQuoteContext, type QuoteContext } from "@/src/services/quotes";
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
+import { usePortfolioFields } from "@/src/hooks";
 
 type UseSellRedeemHoldingInput = {
   assetId: string;
@@ -84,7 +79,7 @@ function parseOptionalNumber(value: string) {
 }
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return usePortfolioFields(store, ["assets", "openingPositions", "preferences", "quoteCache", "trades"]);
 }
 
 export function useSellRedeemHolding({
