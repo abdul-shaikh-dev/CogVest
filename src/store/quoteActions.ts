@@ -1,6 +1,6 @@
 import { normalizeQuote } from "@/src/domain/financialRecords";
 import { getV1QuoteCurrencyIssue } from "@/src/domain/portfolioCurrency";
-import { historicalQuoteCacheKey } from "@/src/types";
+import { type Asset, historicalQuoteCacheKey, type Quote } from "@/src/types";
 
 import type { StoreContext } from "./storeContext";
 import {
@@ -14,9 +14,53 @@ type QuoteActions = Pick<PortfolioStoreState,
   | "clearQuoteCache"
   | "clearHistoricalQuoteCache"
   | "upsertHistoricalQuote"
-  | "upsertQuote">;
+  | "upsertQuote"
+  | "upsertQuotes">;
+
+/** Checks one quote and returns it normalised. Throws when it is invalid. */
+function validQuote(quote: Quote, assetsById: Map<string, Asset>) {
+  if (
+    !Number.isFinite(quote.price) ||
+    (quote.dayChangeAbs !== undefined &&
+      !Number.isFinite(quote.dayChangeAbs)) ||
+    (quote.dayChangePct !== undefined &&
+      !Number.isFinite(quote.dayChangePct))
+  ) {
+    throw new Error("Quote financial values must be finite.");
+  }
+  const normalizedQuote = normalizeQuote(quote);
+  if (normalizedQuote.price <= 0) {
+    throw new Error("Quote price is below supported precision.");
+  }
+  const asset = assetsById.get(normalizedQuote.assetId);
+  // A quote refresh can finish after its holding was deleted (#651).
+  if (!asset) return undefined;
+  const currencyIssue = getV1QuoteCurrencyIssue(asset, normalizedQuote);
+
+  if (currencyIssue) {
+    throw new Error(currencyIssue);
+  }
+  return normalizedQuote;
+}
 
 export function createQuoteActions({ get, set, storage }: StoreContext): QuoteActions {
+  /**
+   * Checks every quote before writing any, then saves the cache once (#661).
+   * One invalid quote leaves the cache unchanged.
+   */
+  function upsertQuotes(quotes: readonly Quote[]) {
+    const assetsById = new Map(get().assets.map((asset) => [asset.id, asset]));
+    const accepted = quotes.flatMap((quote) => validQuote(quote, assetsById) ?? []);
+    if (accepted.length === 0) return;
+
+    const quoteCache = { ...get().quoteCache };
+    for (const quote of accepted) {
+      quoteCache[quote.assetId] = quote;
+    }
+    persistQuoteCache(storage, quoteCache);
+    set({ quoteCache });
+  }
+
   return {
     clearQuoteCache: () => {
       storage.removeItem(quoteCacheStorageKey);
@@ -57,37 +101,7 @@ export function createQuoteActions({ get, set, storage }: StoreContext): QuoteAc
       persistHistoricalQuoteCache(storage, historicalQuoteCache);
       set({ historicalQuoteCache });
     },
-    upsertQuote: (quote) => {
-      if (
-        !Number.isFinite(quote.price) ||
-        (quote.dayChangeAbs !== undefined &&
-          !Number.isFinite(quote.dayChangeAbs)) ||
-        (quote.dayChangePct !== undefined &&
-          !Number.isFinite(quote.dayChangePct))
-      ) {
-        throw new Error("Quote financial values must be finite.");
-      }
-      const normalizedQuote = normalizeQuote(quote);
-      if (normalizedQuote.price <= 0) {
-        throw new Error("Quote price is below supported precision.");
-      }
-      const asset = get().assets.find(
-        (currentAsset) => currentAsset.id === normalizedQuote.assetId,
-      );
-      // A quote refresh can finish after its holding was deleted (#651).
-      if (!asset) return;
-      const currencyIssue = getV1QuoteCurrencyIssue(asset, normalizedQuote);
-
-      if (currencyIssue) {
-        throw new Error(currencyIssue);
-      }
-
-      const quoteCache = {
-        ...get().quoteCache,
-        [normalizedQuote.assetId]: normalizedQuote,
-      };
-      persistQuoteCache(storage, quoteCache);
-      set({ quoteCache });
-    },
+    upsertQuote: (quote) => upsertQuotes([quote]),
+    upsertQuotes: (quotes) => upsertQuotes(quotes),
   };
 }

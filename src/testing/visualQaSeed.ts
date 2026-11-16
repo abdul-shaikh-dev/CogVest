@@ -542,5 +542,5 @@ export function seedVisualQaPortfolio(
           } }
         : snapshot,
     ));
-  visualQaQuotes.forEach((quote) => state.upsertQuote(quote));
+  state.upsertQuotes(visualQaQuotes);
 }

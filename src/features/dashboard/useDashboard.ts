@@ -337,9 +337,7 @@ export function useDashboard({
       });
 
       if (store.getState().restoreEpoch !== currentState.restoreEpoch) return result;
-      for (const quote of Object.values(result.quoteCache)) {
-        store.getState().upsertQuote(quote);
-      }
+      store.getState().upsertQuotes(Object.values(result.quoteCache));
 
       setQuoteFailed(result.failed);
       setQuoteTimedOut(result.timedOut);

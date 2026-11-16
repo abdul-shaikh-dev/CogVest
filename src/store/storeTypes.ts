@@ -157,6 +157,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   updateTrade: (trade: Trade) => void;
   upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
   upsertQuote: (quote: Quote) => void;
+  /** Saves several quotes in one write; one invalid quote saves none. */
+  upsertQuotes: (quotes: readonly Quote[]) => void;
 };
 
 export type LinkedTradeCommandInput = {
