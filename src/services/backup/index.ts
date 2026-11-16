@@ -148,7 +148,38 @@ export function createBackupService(runtime: BackupRuntime) {
     runtime.onRestored();
   }
 
-  return { exportPortfolioBackup, selectPortfolioBackup, restorePortfolioBackup };
+  /**
+   * Saves each kept recovery copy, exactly as it was stored, to a folder the
+   * user picks (#654). Returns the file names, or undefined when cancelled.
+   */
+  async function exportRecoveryCopies() {
+    const copies = runtime.store.getState().readRecoveryCopies();
+    if (!copies.length) throw new Error("No recovery copy is available to export.");
+    const created: WritableBackupFile[] = [];
+    try {
+      const directory = await runtime.selectDirectory();
+      if (!directory) return undefined;
+      const names: string[] = [];
+      for (const { incident, rawValue } of copies) {
+        const area = incident.sourceKey.replace(/[^a-z0-9]+/giu, "-").replace(/^-|-$/gu, "");
+        const name = `CogVest-recovery-${area}-${incident.detectedAt.replace(/[:.]/gu, "-")}.txt`;
+        const file = directory.createFile(name, "text/plain");
+        created.push(file);
+        await file.write(rawValue);
+        if (await file.text() !== rawValue) throw new Error("Recovery copy verification failed.");
+        names.push(name);
+      }
+      return names;
+    } catch (error) {
+      for (const file of created) {
+        try { file.delete(); } catch { /* The error below asks the user to check the folder. */ }
+      }
+      if (isCancellation(error)) return undefined;
+      throw new Error("Recovery copies could not be saved. Check folder access and free space, then try again. Remove any partial CogVest-recovery files from that folder.");
+    }
+  }
+
+  return { exportPortfolioBackup, exportRecoveryCopies, selectPortfolioBackup, restorePortfolioBackup };
 }
 
 let service: ReturnType<typeof createBackupService> | undefined;
@@ -183,5 +214,6 @@ function getService() {
 }
 
 export const exportPortfolioBackup = (signal?: AbortSignal) => getService().exportPortfolioBackup(signal);
+export const exportRecoveryCopies = () => getService().exportRecoveryCopies();
 export const selectPortfolioBackup = (signal?: AbortSignal) => getService().selectPortfolioBackup(signal);
 export const restorePortfolioBackup = (review: PreparedRestore, signal?: AbortSignal) => getService().restorePortfolioBackup(review, signal);

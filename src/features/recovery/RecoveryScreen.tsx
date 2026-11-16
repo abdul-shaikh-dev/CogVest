@@ -11,17 +11,37 @@ import { spacing, createThemedStyles } from "@/src/theme";
 
 type RecoveryScreenProps = {
   affectedAreas: string[];
+  /** True when at least one recovery copy was kept and can be exported. */
+  hasRecoveryCopies: boolean;
   recoveryCopiesPreserved: boolean;
+  onExport: () => Promise<string[] | undefined>;
   onReset: () => void;
 };
 
 export function RecoveryScreen({
   affectedAreas,
+  hasRecoveryCopies,
   recoveryCopiesPreserved,
+  onExport,
   onReset,
 }: RecoveryScreenProps) {
   const styles = useStyles();
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string>();
+
+  async function exportCopies() {
+    setIsExporting(true);
+    setExportMessage(undefined);
+    try {
+      const names = await onExport();
+      if (names) setExportMessage(`Saved ${names.length === 1 ? "1 recovery file" : `${names.length} recovery files`}: ${names.join(", ")}.`);
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : "Recovery copies could not be saved.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <ScreenContainer scroll testID="storage-recovery-screen">
@@ -44,7 +64,7 @@ export function RecoveryScreen({
           </AppText>
           <AppText color="secondary" variant="caption">
             {recoveryCopiesPreserved
-              ? "A recovery copy remains on this device. Your portfolio and monthly snapshot updates are paused until you decide how to continue."
+              ? "A recovery copy remains on this device. Export it to a folder you choose to keep it outside CogVest. Your portfolio and monthly snapshot updates are paused until you decide how to continue."
               : "CogVest could not create a recovery copy. Do not reset the affected data; restart the app or seek support before continuing."}
           </AppText>
           <View style={styles.affectedAreas}>
@@ -58,6 +78,23 @@ export function RecoveryScreen({
             ))}
           </View>
         </PremiumCard>
+
+        {hasRecoveryCopies ? (
+          <View style={styles.exportBlock}>
+            <AppButton
+              disabled={isExporting}
+              onPress={() => void exportCopies()}
+              testID="export-recovery-copies"
+              title={isExporting ? "Exporting…" : "Export recovery copies"}
+              variant="secondary"
+            />
+            {exportMessage ? (
+              <AppText accessibilityLiveRegion="polite" color="secondary" testID="export-recovery-copies-status" variant="caption">
+                {exportMessage}
+              </AppText>
+            ) : null}
+          </View>
+        ) : null}
 
         {!recoveryCopiesPreserved ? null : isConfirmingReset ? (
           <PremiumCard elevated>
@@ -115,6 +152,9 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   areaLabel: {
     flex: 1,
+  },
+  exportBlock: {
+    gap: spacing.sm,
   },
   content: {
     flexGrow: 1,

@@ -21,6 +21,7 @@ type BackupActions = Pick<PortfolioStoreState,
   | "getBackupRevision"
   | "captureBackup"
   | "replaceFromBackup"
+  | "readRecoveryCopies"
   | "resetAffectedStorage">;
 
 export function createBackupActions(context: StoreContext): BackupActions {
@@ -92,6 +93,11 @@ export function createBackupActions(context: StoreContext): BackupActions {
         ...bindActions(restoreEpoch),
       });
     },
+    readRecoveryCopies: () => (get().storageRecovery?.incidents ?? []).flatMap((incident) => {
+      if (!incident.preserved) return [];
+      const rawValue = storage.getRawItem(incident.recoveryKey);
+      return rawValue === null ? [] : [{ incident, rawValue }];
+    }),
     resetAffectedStorage: () => {
       const recoveryIncidents = get().storageRecovery?.incidents ?? [];
 

@@ -628,7 +628,7 @@ describe("portfolio store", () => {
     };
 
     expect(() => store.getState().deleteAsset(asset.id)).toThrow(
-      "simulated interrupted asset transition",
+      "CogVest could not finish or undo the last change. Free device storage, then restart CogVest.",
     );
     expect(storage.getItem(assetGraphJournalStorageKey)).not.toBeNull();
 
@@ -647,15 +647,67 @@ describe("portfolio store", () => {
 
     const store = createPortfolioStore({ storage });
 
-    expect(store.getState().storageRecovery?.incidents[0]).toMatchObject({
+    const incident = store.getState().storageRecovery?.incidents[0];
+    expect(incident).toMatchObject({
       displayName: "Interrupted asset change",
-      preserved: false,
+      preserved: true,
       reason: "invalid-json",
       sourceKey: assetGraphJournalStorageKey,
     });
     expect(storage.getRawItem(assetGraphJournalStorageKey)).toBe(
       "{broken-journal",
     );
+    expect(storage.getRawItem(incident!.recoveryKey)).toBe("{broken-journal");
+
+    // Its copy is kept, so a reset may discard it and keep the saved portfolio (#654).
+    store.getState().resetAffectedStorage();
+
+    expect(store.getState().storageRecovery).toBeUndefined();
+    expect(storage.getRawItem(assetGraphJournalStorageKey)).toBeNull();
+    expect(storage.getRawItem(incident!.recoveryKey)).toBe("{broken-journal");
+    expect(createPortfolioStore({ storage }).getState().storageRecovery).toBeUndefined();
+  });
+
+  it("stops further saves when a failed asset change can't be undone, so the next start loses nothing (#654)", () => {
+    const storage = createMemoryJsonStorage();
+    const now = new Date("2026-07-22T10:00:00.000Z");
+    const store = createPortfolioStore({ now: () => now, storage });
+    store.getState().addAsset(asset);
+    store.getState().upsertQuote(quote);
+    const originalSetItem = storage.setItem;
+    const originalSetRawItem = storage.setRawItem;
+    storage.setItem = (key, value) => {
+      if (key === historicalQuoteCacheStorageKey) throw new Error("storage full");
+      originalSetItem(key, value);
+    };
+    storage.setRawItem = () => {
+      throw new Error("storage full");
+    };
+
+    expect(() => store.getState().deleteAsset(asset.id)).toThrow("Free device storage, then restart CogVest.");
+    expect(store.getState().storageRecovery?.incidents).toEqual([{
+      detectedAt: now.toISOString(),
+      displayName: "Interrupted asset change - restart CogVest after freeing device storage",
+      metadataKey: assetGraphJournalStorageKey,
+      preserved: false,
+      reason: "migration-failed",
+      recoveryKey: assetGraphJournalStorageKey,
+      sourceKey: assetGraphJournalStorageKey,
+    }]);
+
+    // The user frees space and tries to add a trade: refused, not silently lost at the next start.
+    storage.setItem = originalSetItem;
+    storage.setRawItem = originalSetRawItem;
+    expect(() => store.getState().addTrade({ ...trade, assetId: asset.id })).toThrow(
+      "Resolve local data recovery before changing the portfolio.",
+    );
+    store.getState().resetAffectedStorage();
+    expect(store.getState().storageRecovery).toBeDefined();
+
+    const restarted = createPortfolioStore({ storage });
+    expect(restarted.getState().storageRecovery).toBeUndefined();
+    expect(restarted.getState().assets).toEqual([asset]);
+    expect(restarted.getState().quoteCache[asset.id]).toEqual(quote);
   });
 
   it("blocks safely when an interrupted asset transition still cannot replay", () => {
@@ -675,7 +727,7 @@ describe("portfolio store", () => {
     };
 
     expect(() => store.getState().deleteAsset(asset.id)).toThrow(
-      "simulated interrupted asset transition",
+      "Free device storage, then restart CogVest.",
     );
 
     const recoveringStore = createPortfolioStore({ storage });
@@ -2894,14 +2946,14 @@ describe("portfolio store", () => {
 
     const store = createPortfolioStore({ now: () => now, storage });
     const incident = store.getState().storageRecovery?.incidents[0];
-    const recoveryKey = `${storageRecoveryKeyPrefix}:${portfolioStorageKey}`;
+    const recoveryKey = incident!.recoveryKey;
 
+    expect(recoveryKey).toMatch(new RegExp(`^${storageRecoveryKeyPrefix}:${portfolioStorageKey}:[0-9a-f]{16}$`, "u"));
     expect(incident).toMatchObject({
       detectedAt: now.toISOString(),
       displayName: "Portfolio records",
       preserved: true,
       reason,
-      recoveryKey,
       sourceKey: portfolioStorageKey,
     });
     expect(storage.getRawItem(portfolioStorageKey)).toBe(rawValue);
@@ -2954,7 +3006,7 @@ describe("portfolio store", () => {
     });
     expect(storage.getRawItem(portfolioStorageKey)).toBe(originalRaw);
     expect(
-      storage.getRawItem(`${storageRecoveryKeyPrefix}:${portfolioStorageKey}`),
+      storage.getRawItem(store.getState().storageRecovery!.incidents[0].recoveryKey),
     ).toBe(originalRaw);
   });
 
@@ -2966,7 +3018,7 @@ describe("portfolio store", () => {
     storage.setRawItem(quoteCacheStorageKey, corruptQuoteCache);
 
     const store = createPortfolioStore({ storage });
-    const recoveryKey = `${storageRecoveryKeyPrefix}:${quoteCacheStorageKey}`;
+    const recoveryKey = store.getState().storageRecovery!.incidents[0].recoveryKey;
 
     store.getState().resetAffectedStorage();
 
@@ -2983,7 +3035,7 @@ describe("portfolio store", () => {
     storage.setRawItem(portfolioStorageKey, corruptPortfolio);
 
     const store = createPortfolioStore({ storage });
-    const recoveryKey = `${storageRecoveryKeyPrefix}:${portfolioStorageKey}`;
+    const recoveryKey = store.getState().storageRecovery!.incidents[0].recoveryKey;
 
     store.getState().resetAffectedStorage();
 
@@ -2998,6 +3050,35 @@ describe("portfolio store", () => {
     expect(store.getState().storageRecovery).toBeUndefined();
     expect(storage.getRawItem(portfolioStorageKey)).toBeNull();
     expect(storage.getRawItem(recoveryKey)).toBe(corruptPortfolio);
+  });
+
+  it("keeps a separate copy for each unreadable value instead of overwriting the first (#654)", () => {
+    const storage = createMemoryJsonStorage();
+    storage.setRawItem(portfolioStorageKey, "{first-incident");
+    const first = createPortfolioStore({ now: () => new Date("2026-07-01T10:00:00.000Z"), storage });
+    const firstIncident = first.getState().storageRecovery!.incidents[0];
+    first.getState().resetAffectedStorage();
+
+    storage.setRawItem(portfolioStorageKey, "{second-incident");
+    const second = createPortfolioStore({ now: () => new Date("2026-07-02T10:00:00.000Z"), storage });
+    const secondIncident = second.getState().storageRecovery!.incidents[0];
+
+    expect(secondIncident.recoveryKey).not.toBe(firstIncident.recoveryKey);
+    expect(storage.getRawItem(firstIncident.recoveryKey)).toBe("{first-incident");
+    expect(storage.getRawItem(secondIncident.recoveryKey)).toBe("{second-incident");
+    expect(second.getState().readRecoveryCopies()).toEqual([{ incident: secondIncident, rawValue: "{second-incident" }]);
+
+    // The same value found again on a later start reuses its copy and its first time.
+    const third = createPortfolioStore({ now: () => new Date("2026-07-03T10:00:00.000Z"), storage });
+    expect(third.getState().storageRecovery!.incidents[0]).toEqual(secondIncident);
+  });
+
+  it("lists no copy to export when none could be kept", () => {
+    const baseStorage = createMemoryJsonStorage();
+    baseStorage.setRawItem(portfolioStorageKey, "{broken-portfolio");
+    const store = createPortfolioStore({ storage: { ...baseStorage, setRawItem: () => { throw new Error("storage full"); } } });
+
+    expect(store.getState().readRecoveryCopies()).toEqual([]);
   });
 
   it("refuses reset when a recovery copy could not be preserved", () => {

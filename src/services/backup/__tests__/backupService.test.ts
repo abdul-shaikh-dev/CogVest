@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { createBackupService } from "../index";
-import { createPortfolioStore } from "@/src/store";
+import { createPortfolioStore, portfolioStorageKey, quoteCacheStorageKey } from "@/src/store";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioBackup, parsePortfolioBackup, backupMaxBytes } from "@/src/domain/portfolioBackup";
 
@@ -238,5 +238,69 @@ describe("backup file service", () => {
     await expect(service.restorePortfolioBackup(other)).rejects.toThrow(
       "Restore did not finish. Restart CogVest if local data recovery is required, then select the backup again.");
     expect(runtime.onRestored).not.toHaveBeenCalled();
+  });
+});
+
+describe("recovery copy export (#654)", () => {
+  function recoveringHarness() {
+    const storage = createMemoryJsonStorage();
+    storage.setRawItem(portfolioStorageKey, "{unreadable-portfolio");
+    storage.setRawItem(quoteCacheStorageKey, "[unreadable-quotes]");
+    const store = createPortfolioStore({ storage, now });
+    const files = new Map<string, { contents: string; deleted: boolean }>();
+    const createFile = jest.fn((name: string) => {
+      const entry = { contents: "", deleted: false };
+      files.set(name, entry);
+      return {
+        write: jest.fn(async (text: string) => { entry.contents = text; }),
+        text: jest.fn(async () => entry.contents),
+        delete: jest.fn(() => { entry.deleted = true; }),
+      };
+    });
+    const runtime = {
+      store, digest, now, appVersion: "1.0.1", uniqueId: () => "unique", selectFile: jest.fn(),
+      selectDirectory: jest.fn(async (): Promise<{ createFile: typeof createFile } | undefined> => ({ createFile })),
+      onRestored: jest.fn(),
+    };
+    return { store, files, createFile, runtime, service: createBackupService(runtime) };
+  }
+
+  it("saves each kept copy exactly as stored, named by area and time, while recovery is open", async () => {
+    const { store, files, service } = recoveringHarness();
+    expect(store.getState().storageRecovery?.incidents).toHaveLength(2);
+
+    const names = await service.exportRecoveryCopies();
+
+    expect(names).toEqual([
+      "CogVest-recovery-cogvest-v1-portfolio-2026-09-10T10-00-00-000Z.txt",
+      "CogVest-recovery-cogvest-v1-quote-cache-2026-09-10T10-00-00-000Z.txt",
+    ]);
+    expect([...files.values()].map((file) => file.contents)).toEqual(["{unreadable-portfolio", "[unreadable-quotes]"]);
+    expect(store.getState().storageRecovery?.incidents).toHaveLength(2);
+  });
+
+  it("treats a cancelled folder picker as no action", async () => {
+    const { createFile, runtime, service } = recoveringHarness();
+    runtime.selectDirectory.mockResolvedValue(undefined);
+
+    await expect(service.exportRecoveryCopies()).resolves.toBeUndefined();
+    expect(createFile).not.toHaveBeenCalled();
+  });
+
+  it("removes the files it created when a write fails", async () => {
+    const { files, createFile, service } = recoveringHarness();
+    createFile.mockImplementationOnce((name: string) => {
+      files.set(name, { contents: "", deleted: false });
+      return { write: jest.fn(async (_text: string) => { throw new Error("disk full"); }), text: jest.fn(async () => ""),
+        delete: jest.fn(() => { files.get(name)!.deleted = true; }) };
+    });
+
+    await expect(service.exportRecoveryCopies()).rejects.toThrow("Recovery copies could not be saved.");
+    expect([...files.values()].every((file) => file.deleted)).toBe(true);
+  });
+
+  it("refuses when no copy was kept", async () => {
+    const { service } = harness();
+    await expect(service.exportRecoveryCopies()).rejects.toThrow("No recovery copy is available to export.");
   });
 });

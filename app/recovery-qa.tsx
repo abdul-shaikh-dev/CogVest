@@ -18,7 +18,9 @@ function RecoveryFixture({ preserved }: { preserved: boolean }) {
           "Monthly snapshots and historical valuation evidence",
           "Current quote cache",
         ]}
+        hasRecoveryCopies={preserved}
         recoveryCopiesPreserved={preserved}
+        onExport={async () => ["CogVest-recovery-synthetic.txt"]}
         onReset={() => setResets((count) => count + 1)}
       />
     </View>
