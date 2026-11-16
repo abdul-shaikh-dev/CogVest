@@ -15,7 +15,7 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore } from "@/src/types";
 
@@ -232,8 +232,8 @@ export function ReviewOpeningPositionScreen({
       onComplete(
         result.pendingMonths.length > 0 ? "openingPositionSavedHistoryRefresh" : "openingPositionSaved",
       );
-    } catch {
-      setErrors({ save: saveFailureMessage() });
+    } catch (error) {
+      setErrors({ save: describeSaveFailure(error, saveFailureMessage()) });
     } finally {
       if (!completed) {
         actionInFlightRef.current = false;
@@ -266,9 +266,9 @@ export function ReviewOpeningPositionScreen({
       onComplete(
         result.pendingMonths.length > 0 ? "openingPositionRemovedHistoryRefresh" : "openingPositionRemoved",
       );
-    } catch {
+    } catch (error) {
       setErrors({
-        save: "This opening position could not be removed safely. Try again.",
+        save: describeSaveFailure(error, "This opening position could not be removed safely. Try again."),
       });
     } finally {
       if (!completed) {

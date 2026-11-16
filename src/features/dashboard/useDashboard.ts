@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { summarizeEpfForReporting, includeEpfInPortfolioTotals, type EpfReportingSummary } from "@/src/domain/epf/reporting";
 import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import type { StoreApi } from "zustand/vanilla";
@@ -29,12 +29,10 @@ import {
   type PortfolioCurrencyIssue,
 } from "@/src/domain/portfolioCurrency";
 import {
-  refreshQuotes as defaultRefreshQuotes,
   type QuoteRefreshFailure,
   type QuoteRefreshResult,
   type QuoteRefreshTimeout,
   type QuoteFreshnessSummary,
-  type RefreshQuotesInput,
   summarizeQuoteFreshness,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -47,15 +45,12 @@ import {
   getLinkedLegacyPpfAssetIds,
 } from "@/src/domain/ppf";
 import { calculateUsdmPortfolioContribution, type UsdmPortfolioContribution } from "@/src/domain/usdmFutures";
-import { usePortfolioFields } from "@/src/hooks";
-
-type RefreshQuotes = (
-  input: RefreshQuotesInput,
-) => Promise<QuoteRefreshResult>;
-
-type DashboardHolding = Holding & {
-  quoteSource?: string;
-};
+import {
+  type RefreshQuotes,
+  usePortfolioFields,
+  useQuoteRefresh,
+  withQuoteMetadata,
+} from "@/src/hooks";
 
 type UseDashboardInput = {
   now?: Date;
@@ -103,37 +98,18 @@ function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
   return usePortfolioFields(store, ["assets", "cashEntries", "distributionCoverage", "distributions", "epf", "futuresAccounts", "measurementBasis", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
-function withQuoteMetadata(
-  holdings: Holding[],
-  quoteCache: PortfolioStoreState["quoteCache"],
-): DashboardHolding[] {
-  return holdings.map((holding) => {
-    const quote = quoteCache[holding.asset.id];
-
-    return {
-      ...holding,
-      dayChangePct: quote?.dayChangePct,
-      lastUpdated:
-        quote?.asOf ??
-        (holding.valuation.status === "manual"
-          ? holding.valuation.asOf ?? undefined
-          : undefined),
-      quoteSource:
-        quote?.source ??
-        (holding.valuation.status === "manual" ? "manual" : undefined),
-    };
-  });
-}
-
 export function useDashboard({
   now = new Date(),
-  refreshQuotes = defaultRefreshQuotes,
+  refreshQuotes,
   store = getPortfolioStore(),
 }: UseDashboardInput = {}): DashboardState {
   const snapshot = usePortfolioSnapshot(store);
-  const [quoteFailed, setQuoteFailed] = useState<QuoteRefreshFailure[]>([]);
-  const [quoteTimedOut, setQuoteTimedOut] = useState<QuoteRefreshTimeout[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const {
+    failed: quoteFailed,
+    isRefreshing,
+    refresh,
+    timedOut: quoteTimedOut,
+  } = useQuoteRefresh({ now, refreshQuotes, store });
   const asOf = formatLocalCalendarDate(now);
   const {
     assets, cashEntries, distributionCoverage, distributions, epf, futuresAccounts, measurementBasis,
@@ -229,45 +205,6 @@ export function useDashboard({
     quoteCache,
     now,
   );
-
-  async function refresh() {
-    setIsRefreshing(true);
-
-    try {
-      const currentState = store.getState();
-      const currentLinkedLegacyAssetIds = getLinkedLegacyPpfAssetIds(
-        currentState.ppfAccounts,
-        formatLocalCalendarDate(now),
-      );
-      const heldAssetIds = new Set(
-        calculateHoldings({
-          assets: currentState.assets,
-          openingPositions: currentState.openingPositions,
-          quoteCache: currentState.quoteCache,
-          trades: currentState.trades,
-          now,
-        })
-          .filter((holding) => !currentLinkedLegacyAssetIds.has(holding.asset.id))
-          .map((holding) => holding.asset.id),
-      );
-      const result = await refreshQuotes({
-        assets: currentState.assets.filter((asset) =>
-          heldAssetIds.has(asset.id),
-        ),
-        cachedQuotes: currentState.quoteCache,
-      });
-
-      if (store.getState().restoreEpoch !== currentState.restoreEpoch) return result;
-      store.getState().upsertQuotes(Object.values(result.quoteCache));
-
-      setQuoteFailed(result.failed);
-      setQuoteTimedOut(result.timedOut);
-
-      return result;
-    } finally {
-      setIsRefreshing(false);
-    }
-  }
 
   function toggleMaskWealthValues() {
     store.getState().updatePreferences({

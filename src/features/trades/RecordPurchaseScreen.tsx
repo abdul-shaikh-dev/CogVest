@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Keyboard, KeyboardAvoidingView, Modal, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useFocusEffect, usePreventRemove } from "expo-router/react-navigation";
+import { useEffect, useRef, useState } from "react";
+import { Keyboard, KeyboardAvoidingView, Modal, StyleSheet, View, useWindowDimensions } from "react-native";
+import { usePreventRemove } from "expo-router/react-navigation";
 import type { StoreApi } from "zustand/vanilla";
 import { AppButton, AppText, IconButton, MaskedValue, PremiumCard, ScreenContainer, ScreenHeader, SectionHeader, getAdaptiveLayoutMode } from "@/src/components/common";
 import { DatePickerField, FormTextField } from "@/src/components/forms";
@@ -15,6 +15,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 import { useRecordPurchase } from "./useRecordPurchase";
+import { useFocusedBackHandler } from "@/src/hooks";
 
 type Props = {
   initialAssetId?: string; now?: Date; onCancel: () => void; onSaved: () => void;
@@ -51,11 +52,7 @@ export function RecordPurchaseScreen({ initialAssetId, now = new Date(), onCance
     else requestExit();
   }
   usePreventRemove(!exitAllowed && !flow.saved && dirty, back);
-  useFocusEffect(useCallback(() => {
-    const listener = BackHandler.addEventListener("hardwareBackPress", () => { back(); return true; });
-    return () => listener.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- back reads only flow.phase and dirty, like the other back handlers.
-  }, [flow.phase, dirty]));
+  useFocusedBackHandler(back);
   useEffect(() => { if (exitAllowed) onCancel(); }, [exitAllowed, onCancel]);
   useEffect(() => { if (flow.saved) onSaved(); }, [flow.saved, onSaved]);
   useEffect(() => () => operation.current?.abort(), []);

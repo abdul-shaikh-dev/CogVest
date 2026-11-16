@@ -7,6 +7,10 @@ const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
 let mockClose: () => void;
+jest.mock("expo-router/react-navigation", () => ({
+  useFocusEffect: (callback: () => () => void) =>
+    require("react").useEffect(callback, [callback]),
+}));
 jest.mock("expo-router", () => ({
   router: { back: mockBack, replace: mockReplace, canGoBack: mockCanGoBack },
   useFocusEffect: (callback: () => () => void) =>

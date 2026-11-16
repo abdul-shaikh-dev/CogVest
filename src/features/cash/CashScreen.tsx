@@ -19,7 +19,7 @@ import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { useSingleBackRequest } from "@/src/hooks";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntryType } from "@/src/types";
@@ -180,9 +180,9 @@ export function CashScreen({
       Keyboard.dismiss();
       setIsEntryVisible(false);
       setMode(null);
-    } catch {
+    } catch (error) {
       setErrors({
-        save: "This cash entry could not be saved safely. Review it and try again.",
+        save: describeSaveFailure(error, "This cash entry could not be saved safely. Review it and try again."),
       });
     } finally {
       isSavingRef.current = false;

@@ -5,7 +5,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { decimal } from "@/src/domain/precision";
 import type { CashEntry } from "@/src/types";
 
-import { parsePersistedPortfolio } from "./persistedPortfolioSchema";
+import { parsePersistedPortfolio } from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition, selectRawSnapshot } from "./persistence";

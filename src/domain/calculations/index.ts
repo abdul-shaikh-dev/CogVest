@@ -92,3 +92,9 @@ export type {
   SellRedeemPreview,
   SellRedeemPreviewInput,
 } from "./sellRedeem";
+export {
+  percentageChange,
+  snapshotAssetClasses,
+  snapshotAssetClassValues,
+  type SnapshotAssetClassValue,
+} from "./monthComparison";

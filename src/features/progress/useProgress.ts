@@ -12,7 +12,7 @@ import {
 } from "@/src/domain/calculations";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { usePortfolioFields } from "@/src/hooks";
 
 import {
@@ -210,8 +210,8 @@ export function useProgress({
       } else {
         store.getState().addMonthlySnapshot(candidate);
       }
-    } catch {
-      setErrors({ portfolioValue: "Snapshot could not be saved. Your stored values are unchanged. Free device storage and try again." });
+    } catch (error) {
+      setErrors({ portfolioValue: describeSaveFailure(error, "Snapshot could not be saved. Your stored values are unchanged. Review the values and try again.") });
       return false;
     }
 

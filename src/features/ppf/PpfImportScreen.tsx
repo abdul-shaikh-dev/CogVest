@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -24,10 +24,10 @@ import {
   type PpfCsvImportPlan,
 } from "@/src/domain/ppfCsvImport";
 import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import type { PpfLedgerEntry } from "@/src/types";
-import { usePortfolioFields } from "@/src/hooks";
+import { useBackHandler, usePortfolioFields } from "@/src/hooks";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
 
@@ -92,18 +92,14 @@ export function PpfImportScreen({
     };
   }, []);
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (preview) {
-        setPreview(undefined);
-        setPreviewInput(undefined);
-        return true;
-      }
-      onCancel();
-      return true;
-    });
-    return () => subscription.remove();
-  }, [onCancel, preview]);
+  useBackHandler(() => {
+    if (preview) {
+      setPreview(undefined);
+      setPreviewInput(undefined);
+      return;
+    }
+    onCancel();
+  });
 
   if (!account) {
     return (
@@ -229,8 +225,8 @@ export function PpfImportScreen({
       } else if ("reason" in result) {
         setError(result.reason);
       }
-    } catch {
-      setError("The import could not be saved. Your PPF records are unchanged. Generate a fresh preview and try again.");
+    } catch (error) {
+      setError(describeSaveFailure(error, "The import could not be saved. Your PPF records are unchanged. Generate a fresh preview and try again."));
     } finally {
       if (mounted.current) setIsSaving(false);
     }

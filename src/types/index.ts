@@ -6,6 +6,7 @@ export type {
   InstrumentType,
   SectorType,
 } from "./asset";
+export type { DailyPriceEntry, DailyPricePoint, DailyPriceRequest } from "./dailyPrice";
 export type { DemergerLink } from "./demerger";
 export type { Distribution, DistributionCoverage, DistributionTreatment } from "./distribution";
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";

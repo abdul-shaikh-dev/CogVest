@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
-  BackHandler,
   KeyboardAvoidingView,
   StyleSheet,
   type TextInputInstance,
@@ -28,8 +27,8 @@ import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
-import { usePortfolioFields } from "@/src/hooks";
-import { applyEpfChange } from "./EpfAccountScreen";
+import { useBackHandler, usePortfolioFields } from "@/src/hooks";
+import { applyEpfChange } from "./epfChange";
 import { EpfCheckRow } from "./EpfCheckRow";
 import {
   buildEpfBalanceUpdate,
@@ -76,14 +75,7 @@ export function EpfBalanceUpdateScreen({ accountId, now = new Date(), onBack, on
     onBack();
   }
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      requestBack();
-      return true;
-    });
-    return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
-  }, [confirmExit, isDirty, review]);
+  useBackHandler(requestBack);
 
   if (!account) {
     return (

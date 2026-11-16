@@ -4,7 +4,7 @@ import { findCanonicalAsset } from "@/src/domain/assets";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { normalizeMoney } from "@/src/domain/precision";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Asset, BuyTrade } from "@/src/types";
 import { createId } from "@/src/utils";
 import { usePortfolioFields } from "@/src/hooks";
@@ -70,8 +70,8 @@ export function useRecordPurchase({ initialAssetId, now = new Date(), store = ge
       }
       setSaved(true);
       return true;
-    } catch {
-      setErrors({ save: "Purchase was not saved. Your records are unchanged. Free device storage and try again." });
+    } catch (error) {
+      setErrors({ save: describeSaveFailure(error, "Purchase was not saved. Your records are unchanged. Review it and try again.") });
       return false;
     }
   }

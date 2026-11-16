@@ -20,7 +20,6 @@ const mockReadAsStringAsync = jest.fn(async (uri: string, options: { length: num
   if (text === undefined) throw new Error("missing file");
   return Buffer.from(text, "utf8").subarray(options.position, options.position + options.length).toString("base64");
 });
-const mockOnRestored = jest.fn();
 
 jest.mock("expo-file-system", () => ({
   Directory: { pickDirectoryAsync: (...args: unknown[]) => mockPickDirectoryAsync(...args) },
@@ -39,9 +38,6 @@ jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { 
 jest.mock("@/src/store", () => ({
   ...jest.requireActual("@/src/store"),
   getPortfolioStore: () => mockStore,
-}));
-jest.mock("@/src/features/quickSetup/quickSetupSession", () => ({
-  resetQuickSetupSessionAfterRestore: () => mockOnRestored(),
 }));
 
 // Imported after the mocks so getService binds to them.
@@ -127,9 +123,11 @@ describe("backup service native wiring (#671)", () => {
     expect(prepared!.review.counts).toContainEqual({
       label: "Cash entries", current: backedUp.length + 1, backup: backedUp.length,
     });
+    const epoch = mockStore.getState().restoreEpoch;
     await restorePortfolioBackup(prepared!);
     expect(mockStore.getState().cashEntries).toEqual(backedUp);
-    expect(mockOnRestored).toHaveBeenCalledTimes(1);
+    // Screens reset their in-memory state from the new restore epoch (#666).
+    expect(mockStore.getState().restoreEpoch).toBe(epoch + 1);
   });
 
   it("treats a dismissed file picker as no action", async () => {

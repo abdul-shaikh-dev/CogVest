@@ -44,6 +44,7 @@ import {
   readQuoteCache,
   recoverPendingAssetGraphTransition,
 } from "./persistence";
+import { StoreWriteBlockedError } from "./saveFailure";
 
 export {
   selectAssetById,
@@ -99,6 +100,7 @@ export {
 } from "./storeTypes";
 export { createDefaultPreferences, createEmptyPortfolioSnapshot } from "./persistence";
 export { wouldOversellAsset } from "./tradeRules";
+export { describeSaveFailure, StoreWriteBlockedError, storageFullMessage } from "./saveFailure";
 
 export function createPortfolioStore({
   migratePortfolioSnapshot: migrate = migratePortfolioSnapshot,
@@ -214,10 +216,10 @@ export function createPortfolioStore({
   function bindActions(epoch: number): Partial<PortfolioStoreState> {
     return Object.fromEntries(actions.map(([key, value]) => [key, (...args: unknown[]) => {
       if (store.getState().restoreEpoch !== epoch) {
-        throw new Error("The portfolio was restored. Reopen this screen before saving.");
+        throw new StoreWriteBlockedError("The portfolio was restored. Reopen this screen before saving.");
       }
       if (!recoveryActions.has(key) && store.getState().storageRecovery) {
-        throw new Error("Resolve local data recovery before changing the portfolio.");
+        throw new StoreWriteBlockedError("Resolve local data recovery before changing the portfolio.");
       }
       let result: unknown;
       try {

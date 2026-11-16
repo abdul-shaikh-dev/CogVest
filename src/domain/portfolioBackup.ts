@@ -19,8 +19,8 @@ import { getRecordValidationReference } from "@/src/domain/recordValidationRefer
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 import { reconcileTransactions } from "@/src/domain/transactionReconciliation";
 import { getTradeQuantityDelta, isTradeAcquisition } from "@/src/domain/transactionSemantics";
-import { parsePersistedHistoricalQuoteCache, parsePersistedPortfolio, parsePersistedQuoteCache } from "@/src/store/persistedPortfolioSchema";
-import type { RawPortfolioSnapshot } from "@/src/store";
+import { parsePersistedHistoricalQuoteCache, parsePersistedPortfolio, parsePersistedQuoteCache } from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
+import type { RawPortfolioSnapshot } from "@/src/domain/portfolioSnapshot";
 import type { CashEntry, HistoricalQuoteCache, QuoteCache, Trade } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
 

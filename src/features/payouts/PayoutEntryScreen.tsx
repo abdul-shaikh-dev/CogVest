@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { BackHandler, KeyboardAvoidingView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -18,7 +18,7 @@ import { formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
-import { usePortfolioFields } from "@/src/hooks";
+import { useBackHandler, usePortfolioFields } from "@/src/hooks";
 
 import {
   buildPayoutInput,
@@ -61,14 +61,7 @@ export function PayoutEntryScreen({ assetId, distributionId, now = new Date(), o
     onBack();
   }
 
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      requestBack();
-      return true;
-    });
-    return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- lists exactly the state requestBack reads; re-registering on every render would reorder BackHandler listeners.
-  }, [confirm, isDirty]);
+  useBackHandler(requestBack);
 
   if (!asset || !canRecordPayouts(asset) || (distributionId && !existing)) {
     return (

@@ -1,8 +1,10 @@
 import { createMemoryJsonStorage } from "@/src/services/storage";
+import { createPortfolioStore } from "@/src/store";
 
 import {
   createQuickSetupSessionStore,
   quickSetupStorageKey,
+  resetSessionOnRestore,
 } from "../quickSetupSession";
 
 describe("Quick Portfolio Setup session", () => {
@@ -91,5 +93,22 @@ describe("Quick Portfolio Setup session", () => {
 
     expect(store.getState().session).toBeNull();
     expect(storage.getRawItem(quickSetupStorageKey)).toBeNull();
+  });
+
+  it("drops the in-memory session when the portfolio is restored (#666)", () => {
+    const storage = createMemoryJsonStorage();
+    const portfolio = createPortfolioStore({ now, storage });
+    const sessionStore = createQuickSetupSessionStore({ now, storage });
+    const stop = resetSessionOnRestore(sessionStore, portfolio);
+    sessionStore.getState().start();
+
+    portfolio.getState().updatePreferences({ maskWealthValues: true });
+    expect(sessionStore.getState().session).not.toBeNull();
+
+    const { payload, revision } = portfolio.getState().captureBackup();
+    portfolio.getState().replaceFromBackup(payload, revision);
+    expect(sessionStore.getState().session).toBeNull();
+    expect(storage.getRawItem(quickSetupStorageKey)).toBeNull();
+    stop();
   });
 });

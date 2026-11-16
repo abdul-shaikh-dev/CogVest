@@ -3,26 +3,10 @@ import { Pressable, View } from "react-native";
 
 import { AppButton, AppText, MaskedValue } from "@/src/components/common";
 import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
-import { decimal } from "@/src/domain/precision";
-import type { XirrSummary } from "@/src/domain/xirrSummary";
+import { type XirrSummary, xirrFlowTotals } from "@/src/domain/xirrSummary";
 
 import { useStyles } from "./dashboardStyles";
 import { DashboardXirrBlockers } from "./DashboardXirrBlockers";
-
-/** Totals of the flows behind the rate, so the result can be checked without listing every trade. */
-function flowTotals(summary: Extract<XirrSummary, { status: "rate" }>) {
-  let paidIn = decimal(0);
-  let returned = decimal(0);
-  let current = decimal(0);
-  for (const flow of summary.flows) {
-    const amount = decimal(flow.amountInr);
-    if (flow.source === "terminal") current = current.plus(amount);
-    else if (amount.isNegative()) paidIn = paidIn.minus(amount);
-    else returned = returned.plus(amount);
-  }
-  return { count: summary.flows.filter((flow) => flow.source !== "terminal").length,
-    paidIn: paidIn.toNumber(), returned: returned.toNumber(), current: current.toNumber() };
-}
 
 /**
  * Annualised portfolio return (#535, simplified in #610) inside the Invested &
@@ -116,7 +100,7 @@ export function DashboardXirr({ masked, names = {}, onConfirmPayouts, onReviewPa
 }
 
 function XirrRateDetails({ masked, summary }: { masked: boolean; summary: Extract<XirrSummary, { status: "rate" }> }) {
-  const totals = flowTotals(summary);
+  const totals = xirrFlowTotals(summary);
   return (
     <>
       <AppText color="secondary" testID="dashboard-xirr-period" variant="caption">

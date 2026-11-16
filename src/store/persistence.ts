@@ -30,7 +30,7 @@ import {
   parsePersistedPreferences,
   parsePersistedQuoteCache,
   type PersistedPortfolioSnapshot,
-} from "./persistedPortfolioSchema";
+} from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
 import {
   assetGraphJournalStorageKey,
   historicalQuoteCacheStorageKey,

@@ -1,4 +1,4 @@
-import { parsePersistedPortfolio } from "@/src/store/persistedPortfolioSchema";
+import { parsePersistedPortfolio } from "@/src/domain/persistedSchemas/persistedPortfolioSchema";
 
 const asset = {
   assetClass: "stock",
