@@ -67,6 +67,8 @@ appId: ${APP_ID}
     element:
       id: settings-newest-price-date
     direction: DOWN
+    # Partly visible counted as found while the label sat behind the tab bar.
+    visibilityPercentage: 100
 - assertVisible: "Newest price update date"
 - takeScreenshot: .expo/ux14-prices
 - scrollUntilVisible:
