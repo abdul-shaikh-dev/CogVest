@@ -23,7 +23,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
 import type { Asset, BuyTrade, PpfAccount } from "@/src/types";
-import { getAllByComponentType, getByComponentType } from "@/src/testing/componentQueries";
+import { getByComponentType } from "@/src/testing/componentQueries";
 
 jest.mock("@/src/hooks/useReducedMotionPreference", () => ({
   useReducedMotionPreference: jest.fn(() => true),
@@ -1005,9 +1005,7 @@ describe("HoldingsScreen", () => {
     ).toBe(true);
     await fireEvent.press(screen.getByTestId(`holding-row-${asset.id}`));
     await act(() => {
-      getAllByComponentType(screen, Modal)
-        .find((modal) => modal.props.testID === "holding-detail-modal")!
-        .props.onRequestClose();
+      screen.getByTestId("holding-detail-modal").props.onRequestClose();
     });
     expect(screen.queryByTestId("holding-detail-modal")).toBeNull();
     expect(screen.getByTestId("holdings-search-input").props.value).toBe(
