@@ -99,7 +99,7 @@ Check the project:
 npm run test:verify
 ```
 
-This runs TypeScript, Jest, and Expo doctor.
+This runs TypeScript, ESLint, the Maestro selector lint, Jest, and Expo doctor.
 
 ## Common Commands
 
@@ -108,14 +108,19 @@ npm run typecheck       # TypeScript only
 npm run lint            # ESLint, no warnings allowed
 npm test                # Jest / React Native Testing Library
 npm run doctor          # Expo doctor
-npm run test:verify     # typecheck + lint + tests + doctor
+npm run test:verify     # typecheck + lint + maestro:lint + tests + doctor
 npm run start:clear     # start Metro with a clean cache
 npm run android         # local native Android build/install
 npm run android:doctor  # PC Android tooling readiness check
 npm run android:smoke   # emulator/package smoke check
 npm run test:v1:pc      # checks + emulator/package readiness, not APK freshness
+npm run android:apk:emulator # local x86_64 APK for the emulator
+npm run android:e2e     # local x86_64 E2E-package APK for Maestro
 npm run maestro:check   # optional Maestro readiness check
+npm run maestro:lint    # Maestro selector-policy lint
+npm run maestro:smoke   # Maestro smoke tier
 npm run maestro:test    # optional full Maestro E2E suite
+npm run release:check-harness # release bundle has no QA harness
 ```
 
 Default GitHub PR CI runs the lightweight checks only. Emulator, APK, and
