@@ -6,6 +6,8 @@ import { AppText } from "@/src/components/common";
 import { radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 type FormTextFieldProps = {
+  /** Spoken after the label, for example the currency a prefix shows. */
+  accessibilityLabelSuffix?: string;
   error?: string;
   inputRef?: Ref<TextInputInstance>;
   keyboardType?: KeyboardTypeOptions;
@@ -16,13 +18,24 @@ type FormTextFieldProps = {
   onFocus?: () => void;
   onSubmitEditing?: () => void;
   placeholder?: string;
+  /** Shown inside the field before the value, for example a currency symbol. */
+  prefix?: string;
   returnKeyType?: ReturnKeyTypeOptions;
   secureTextEntry?: boolean;
   testID?: string;
   value: string;
 };
 
+/**
+ * The spoken name of a field: its label, then anything the prefix shows, then
+ * the current error, so TalkBack reads the error with the field (#669).
+ */
+export function fieldAccessibilityLabel(label: string, suffix?: string, error?: string) {
+  return [label, suffix, error ? `Error: ${error}` : undefined].filter(Boolean).join(", ");
+}
+
 export function FormTextField({
+  accessibilityLabelSuffix,
   error,
   inputRef,
   keyboardType,
@@ -33,6 +46,7 @@ export function FormTextField({
   onFocus,
   onSubmitEditing,
   placeholder,
+  prefix,
   returnKeyType,
   secureTextEntry = false,
   testID,
@@ -45,25 +59,45 @@ export function FormTextField({
       <AppText color="secondary" variant="caption" weight="medium">
         {label}
       </AppText>
-      <TextInput
-        accessibilityLabel={label}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        onBlur={onBlur}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        onSubmitEditing={onSubmitEditing}
-        placeholder={placeholder}
-        placeholderTextColor={colors.text.secondary}
-        ref={inputRef}
-        returnKeyType={returnKeyType}
-        secureTextEntry={secureTextEntry}
-        style={[styles.input, multiline && styles.multiline, error && styles.invalid]}
-        testID={testID}
-        value={value}
-      />
+      <View style={[styles.field, multiline && styles.multiline, error && styles.invalid]}>
+        {prefix ? (
+          <AppText
+            accessible={false}
+            color="secondary"
+            importantForAccessibility="no"
+            style={styles.prefix}
+            testID={testID ? `${testID}-prefix` : undefined}
+            weight="medium"
+          >
+            {prefix}
+          </AppText>
+        ) : null}
+        <TextInput
+          accessibilityLabel={fieldAccessibilityLabel(label, accessibilityLabelSuffix, error)}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          onBlur={onBlur}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          onSubmitEditing={onSubmitEditing}
+          placeholder={placeholder}
+          placeholderTextColor={colors.text.secondary}
+          ref={inputRef}
+          returnKeyType={returnKeyType}
+          secureTextEntry={secureTextEntry}
+          style={[styles.input, multiline && styles.multilineInput]}
+          testID={testID}
+          value={value}
+        />
+      </View>
       {error ? (
-        <AppText selectable style={styles.errorText} variant="caption">
+        <AppText
+          accessibilityLiveRegion="polite"
+          selectable
+          style={styles.errorText}
+          testID={testID ? `${testID}-error` : undefined}
+          variant="caption"
+        >
           {error}
         </AppText>
       ) : null}
@@ -75,23 +109,39 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
-  input: {
+  // A 1dp outline keeps the field's edge visible on every surface (#669).
+  field: {
+    alignItems: "center",
     backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.strong,
     borderRadius: radii.button,
-    color: colors.text.primary,
+    borderWidth: 1,
+    flexDirection: "row",
     minHeight: 48,
     paddingHorizontal: spacing.md,
-    paddingVertical: 7,
+  },
+  input: {
+    color: colors.text.primary,
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 0,
+    paddingVertical: 6,
   },
   invalid: {
     borderColor: colors.loss,
-    borderWidth: 1,
   },
   errorText: {
     color: colors.loss,
   },
   multiline: {
+    alignItems: "flex-start",
     minHeight: 88,
+  },
+  multilineInput: {
+    minHeight: 86,
     textAlignVertical: "top",
+  },
+  prefix: {
+    marginRight: spacing.xs,
   },
 }));

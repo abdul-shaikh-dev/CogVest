@@ -38,7 +38,7 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
       onPress={() => { Keyboard.dismiss(); setExact(!exact); }} testID={`${testID}-exact-toggle`} />
     {exact ? <FormTextField label={`${label} · exact timestamp with timezone`} value={value} onChangeText={onChange}
       error={error} testID={testID} />
-      : error ? <AppText accessibilityRole="alert" style={styles.error} variant="caption">{error}</AppText> : null}
+      : error ? <AppText accessibilityLiveRegion="polite" accessibilityRole="alert" style={styles.error} variant="caption">{error}</AppText> : null}
     {mode ? <DateTimePicker mode={mode} display={mode === "date" ? "calendar" : "clock"} value={selected ?? now}
       onChange={change} testID={`${testID}-picker`} is24Hour /> : null}
   </View>;
@@ -46,6 +46,6 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: { gap: spacing.xs }, buttons: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  button: { minHeight: 48, justifyContent: "center", backgroundColor: colors.surface.elevated, borderRadius: radii.button, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  button: { minHeight: 48, justifyContent: "center", backgroundColor: colors.surface.elevated, borderColor: colors.border.strong, borderRadius: radii.button, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   invalid: { borderWidth: 1, borderColor: colors.loss }, error: { color: colors.loss },
 }));

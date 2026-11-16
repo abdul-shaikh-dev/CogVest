@@ -15,7 +15,7 @@ import {
   ScreenHeader,
   SectionHeader,
 } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { useSingleBackRequest } from "@/src/hooks";
@@ -320,9 +320,9 @@ export function CashScreen({
           </View>
           <View style={styles.formFields}>
             <View style={styles.formRowField}>
-              <FormTextField
+              <MoneyField
+                currency={"INR"}
                 error={errors.amount}
-                keyboardType="decimal-pad"
                 label="Amount"
                 onChangeText={setAmount}
                 placeholder="1000"

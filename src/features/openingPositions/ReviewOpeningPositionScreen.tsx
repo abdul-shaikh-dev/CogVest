@@ -13,7 +13,7 @@ import {
   SectionHeader,
   useSensitiveValueReveal,
 } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
@@ -296,17 +296,17 @@ export function ReviewOpeningPositionScreen({
             testID="opening-correction-quantity-input"
             value={quantity}
           />
-          <FormTextField
+          <MoneyField
+            currency={positionAsset.currency}
             error={errors.averageCostPrice}
-            keyboardType="decimal-pad"
             label="Average cost"
             onChangeText={setAverageCostPrice}
             testID="opening-correction-average-cost-input"
             value={averageCostPrice}
           />
-          <FormTextField
+          <MoneyField
+            currency={positionAsset.currency}
             error={errors.currentPrice}
-            keyboardType="decimal-pad"
             label="Manual fallback price (optional)"
             onChangeText={setCurrentPrice}
             testID="opening-correction-current-price-input"

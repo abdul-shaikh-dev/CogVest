@@ -1,6 +1,7 @@
 export { DatePickerField } from "./DatePickerField";
 export { DateTimeField } from "./DateTimeField";
-export { FormTextField } from "./FormTextField";
+export { fieldAccessibilityLabel, FormTextField } from "./FormTextField";
+export { MoneyField } from "./MoneyField";
 export {
   SelectionField,
   type SelectionOption,

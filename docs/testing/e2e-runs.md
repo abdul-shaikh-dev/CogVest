@@ -4,6 +4,37 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-17: Smoke tier for the shared money field (#669), 15 passed, 18m 18s
+
+- Commit: ux/669-money-field 7e47c4d, version 1.0.31. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0, E2E APK (R8 on, x86_64) freshly
+  built from 7e47c4d, SHA-256 prefix 48c37eb87b1c9ec0, Metro stopped, Gradle
+  daemons stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 18m 18s, over the 15-minute budget. No other
+  host work ran; the emulator had been up for many hours, and every flow ran
+  about 10-20% slower than in the 2026-11-16 runs. No flow failed or retried.
+- Screenshots inspected (light and dark): the Cash deposit form with an amount
+  error, and the Settings value-masking and screenshot switches.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 16s |
+| navigation | Pass | 0m 28s |
+| add-holding-lookup | Pass | 1m 17s |
+| record-purchase | Pass | 1m 08s |
+| payouts | Pass | 1m 08s |
+| xirr-holding | Pass | 0m 50s |
+| cash | Pass | 1m 10s |
+| trade-correction | Pass | 2m 37s |
+| holdings-csv-import | Pass | 1m 28s |
+| epf-accounts | Pass | 1m 26s |
+| ppf-account | Pass | 1m 43s |
+| progress-snapshot-history | Pass | 0m 52s |
+| value-masking | Pass | 1m 27s |
+| persistence | Pass | 0m 55s |
+| backup-roundtrip | Pass | 1m 34s |
+
 ## 2026-11-17: Smoke tier for the review stack (#662-#666), 15 passed, 18m 00s
 
 - Commit: refactor/666-boundaries 2250a57, the tip of the stacked branches for

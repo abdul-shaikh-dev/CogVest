@@ -13,7 +13,7 @@ import {
   SectionHeader,
   useSensitiveValueReveal,
 } from "@/src/components/common";
-import { DatePickerField, FormTextField } from "@/src/components/forms";
+import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -384,9 +384,9 @@ export function ReviewCashEntryScreen({
             </View>
           ) : null}
 
-          <FormTextField
+          <MoneyField
+            currency={"INR"}
             error={errors.amount}
-            keyboardType="decimal-pad"
             label="Amount"
             onChangeText={setAmount}
             testID="cash-correction-amount-input"
