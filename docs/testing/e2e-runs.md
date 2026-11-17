@@ -4,6 +4,35 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-17: Smoke tier for the load-time write guard (#712), 15 passed, 13m 39s
+
+- Commit: fix/712-ppf-linked-asset, version 1.0.32. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, freshly booted. E2E APK (R8 on, x86_64)
+  freshly built from the branch, SHA-256 prefix 86b3cca87a57b2f6, Metro stopped.
+  Command: `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 13m 39s, within the 15-minute budget. Every
+  save in these flows now runs the load-time schema check first; no flow was
+  refused or slowed noticeably. The earlier 18-20 minute runs were on an
+  emulator that had been up for many hours.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 02s |
+| record-purchase | Pass | 0m 49s |
+| payouts | Pass | 0m 48s |
+| xirr-holding | Pass | 0m 34s |
+| cash | Pass | 0m 53s |
+| trade-correction | Pass | 1m 55s |
+| holdings-csv-import | Pass | 1m 12s |
+| epf-accounts | Pass | 1m 03s |
+| ppf-account | Pass | 1m 20s |
+| progress-snapshot-history | Pass | 0m 39s |
+| value-masking | Pass | 1m 07s |
+| persistence | Pass | 0m 38s |
+| backup-roundtrip | Pass | 1m 06s |
+
 ## 2026-11-17: Smoke tier for the low-impact polish (#670), 15 passed, 20m 34s
 
 - Commit: ux/670-polish add4d01. AVD CogVest_UX_Proof, API 36, 1280x2856 at
