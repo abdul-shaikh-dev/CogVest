@@ -70,6 +70,9 @@ function failureMessage(reason?: string) {
   if (reason === "linkedEpf") {
     return "This holding is linked to an EPF account. Remove that link before deleting it or changing its type or currency.";
   }
+  if (reason === "linkedPpf") {
+    return "This holding keeps the earlier history of a PPF account. It can't be deleted or changed from the PPF type.";
+  }
   return "Check the asset details before saving.";
 }
 

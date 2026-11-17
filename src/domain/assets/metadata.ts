@@ -153,8 +153,11 @@ export function normalizeAssetMetadata(asset: Asset): Asset {
       : undefined
   );
 
+  // An ISIN that is not 12 letters or digits is dropped, never saved (#712).
+  const { isin: _rawIsin, ...rest } = asset;
+
   return {
-    ...asset,
+    ...rest,
     instrumentType,
     ...(isin === undefined ? {} : { isin }),
     ...(quoteSourceId === undefined ? {} : { quoteSourceId }),

@@ -277,6 +277,8 @@ describe("holdings CSV import planning", () => {
 
     expect(plan.errors).toEqual([]);
     expect(plan.command?.items).toHaveLength(21);
+    // A CSV price date is saved as a full timestamp, so the import reopens (#712).
+    expect(plan.command!.items.find((item) => item.openingPosition.manualValuation)?.openingPosition.manualValuation?.asOf).toBe(new Date(2026, 7, 1, 12).toISOString());
     importedStore.getState().recordOpeningPositionBatch(plan.command!);
     for (const item of plan.command!.items) {
       manualStore.getState().recordOpeningPosition(item);

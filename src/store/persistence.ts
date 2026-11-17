@@ -25,6 +25,7 @@ import type {
 } from "@/src/types";
 
 import {
+  isLoadablePortfolio,
   parsePersistedHistoricalQuoteCache,
   parsePersistedPortfolio,
   parsePersistedPreferences,
@@ -444,6 +445,7 @@ export function persistPortfolio(
   validateSplitInventory(state);
   validateDistributionGraph(state);
   validatePpfCashLinks(state.ppfLedgerEntries, state.cashEntries);
+  assertLoadablePortfolio(selectRawSnapshot(state));
   storage.setItem(portfolioStorageKey, selectRawSnapshot(state) as JsonValue);
 }
 
@@ -465,11 +467,13 @@ export function persistPortfolioTransition(
   validateFuturesCashLinks(transition.cashEntries ?? state.cashEntries, transition.futuresAccounts ?? state.futuresAccounts);
   validateDistributionGraph({ ...selectRawSnapshot(state), ...transition });
   validatePpfCashLinks(transition.ppfLedgerEntries ?? state.ppfLedgerEntries, transition.cashEntries ?? state.cashEntries);
-  storage.setItem(portfolioStorageKey, {
+  const next = {
     ...selectRawSnapshot(state),
     ...transition,
     schemaVersion: portfolioSchemaVersion,
-  } as JsonValue);
+  };
+  assertLoadablePortfolio(next);
+  storage.setItem(portfolioStorageKey, next as JsonValue);
 }
 
 
@@ -595,6 +599,7 @@ export function persistAssetGraphTransition({
   // Payout and PPF Cash links must stay valid; fail before any write rather than store a graph that would be quarantined.
   validateDistributionGraph(portfolio);
   validatePpfCashLinks(portfolio.ppfLedgerEntries, portfolio.cashEntries);
+  assertLoadablePortfolio(portfolio);
   const previous = {
     historical: storage.getRawItem(historicalQuoteCacheStorageKey),
     portfolio: storage.getRawItem(portfolioStorageKey),
@@ -618,6 +623,20 @@ export function persistAssetGraphTransition({
       throw new AssetGraphJournalPendingError(error);
     }
     throw error;
+  }
+}
+
+/** A change that would leave records the app could not reopen; nothing was saved (#712). */
+export class UnloadablePortfolioError extends Error {
+  constructor() {
+    super("This change would leave records CogVest could not reopen, so nothing was saved. Your portfolio is unchanged.");
+    this.name = "UnloadablePortfolioError";
+  }
+}
+
+function assertLoadablePortfolio(snapshot: Omit<RawPortfolioSnapshot, "schemaVersion">) {
+  if (!isLoadablePortfolio({ ...snapshot, schemaVersion: portfolioSchemaVersion })) {
+    throw new UnloadablePortfolioError();
   }
 }
 
