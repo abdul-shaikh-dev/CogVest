@@ -149,6 +149,7 @@ export function HoldingsScreen({
     ppfSummary,
     quoteFreshness,
     refresh,
+    refreshError,
     rollupRows,
     timedOut,
     toggleMaskWealthValues,
@@ -249,6 +250,7 @@ export function HoldingsScreen({
     failed: failed.length,
     isRefreshing,
     quoteFreshness,
+    refreshError,
     timedOut: timedOut.length,
   });
   const pendingValuations = marketHoldings.filter(
@@ -410,7 +412,7 @@ export function HoldingsScreen({
         {hasMarketHoldings &&
         activeDestination === "market" &&
         pendingValuations === 0 &&
-        (isRefreshing || failed.length > 0 || timedOut.length > 0) ? (
+        (isRefreshing || refreshError || failed.length > 0 || timedOut.length > 0) ? (
           <QuoteHealthRow
             onShowDetails={() => setActivePanel("quotes")}
             quoteStatus={quoteStatus}
