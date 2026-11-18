@@ -150,13 +150,15 @@ describe("backup restore and the preferences key (#665)", () => {
   it("applies the backup's preferences and clears the saved ones", () => {
     const { storage, store } = storeWithCash();
     const backup = store.getState().captureBackup().payload;
-    store.getState().updatePreferences({ maskWealthValues: true });
+    store.getState().updatePreferences({ displayMode: "minimal", maskWealthValues: true });
 
     store.getState().replaceFromBackup(backup, store.getState().captureBackup().revision);
 
-    expect(store.getState().preferences.maskWealthValues).toBe(false);
+    // Display preferences come from the backup; masking stays this device's (#718).
+    expect(store.getState().preferences).toMatchObject({ displayMode: backup.portfolio.preferences.displayMode, maskWealthValues: true });
     expect(storage.getRawItem(preferencesStorageKey)).toBeNull();
-    expect(createPortfolioStore({ storage, now }).getState().preferences.maskWealthValues).toBe(false);
+    expect(createPortfolioStore({ storage, now }).getState().preferences)
+      .toMatchObject({ displayMode: backup.portfolio.preferences.displayMode, maskWealthValues: true });
   });
 
   it("puts the saved preferences back when a restore fails part-way", () => {

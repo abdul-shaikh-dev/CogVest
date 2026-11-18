@@ -4,7 +4,8 @@ appId: ${APP_ID}
 # The runner empties Documents/CogVest-QA before this flow. It backs up the
 # seeded portfolio with values masked, clears the app, restores that file into
 # the empty app, and checks the stored records, derived totals and preferences
-# through e2e-evidence, again after a cold start.
+# through e2e-evidence, again after a cold start. Masking stays as this device
+# has it (#718); the backup's appearance is restored.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -16,12 +17,22 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: Visual QA portfolio seeded.
     timeout: 30000
-# A non-default preference, so the restore has to bring it back.
+# A non-default display preference, so the restore has to bring it back, and
+# masking on, which the restore must not carry over (#718).
 - openLink: "${SCHEME}:///settings"
 - tapOn:
     id: value-mask-toggle
 - assertVisible:
     id: value-mask-toggle
+    checked: true
+- scrollUntilVisible:
+    element:
+      id: appearance-light
+    direction: DOWN
+- tapOn:
+    id: appearance-light
+- assertVisible:
+    id: appearance-light
     checked: true
 
 # Export into Documents/CogVest-QA.
@@ -128,6 +139,14 @@ appId: ${APP_ID}
 - runFlow:
     file: helpers/backup-restored-evidence.yaml
 - openLink: "${SCHEME}:///settings"
+# This device's masking stays off (#718); the backup's appearance comes back.
 - assertVisible:
     id: value-mask-toggle
+    checked: false
+- scrollUntilVisible:
+    element:
+      id: appearance-light
+    direction: DOWN
+- assertVisible:
+    id: appearance-light
     checked: true

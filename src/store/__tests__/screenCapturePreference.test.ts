@@ -10,13 +10,20 @@ describe("screenshot blocking preference", () => {
     expect(store.getState().captureBackup().payload.portfolio.preferences).not.toHaveProperty("blockScreenCapture");
   });
 
-  it("survives a backup and restore when turned on", () => {
+  it("follows this device, not the backup, across a restore (#718)", () => {
     const source = createPortfolioStore({ storage: createMemoryJsonStorage() });
     source.getState().updatePreferences({ blockScreenCapture: true });
-    const target = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const backup = source.getState().captureBackup().payload;
+    expect(backup.portfolio.preferences.blockScreenCapture).toBe(true);
 
-    target.getState().replaceFromBackup(source.getState().captureBackup().payload, target.getState().getBackupRevision());
+    const unprotected = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    unprotected.getState().replaceFromBackup(backup, unprotected.getState().getBackupRevision());
+    expect(unprotected.getState().preferences.blockScreenCapture).toBeUndefined();
 
-    expect(target.getState().preferences.blockScreenCapture).toBe(true);
+    const protectedDevice = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    protectedDevice.getState().updatePreferences({ blockScreenCapture: true });
+    source.getState().updatePreferences({ blockScreenCapture: false });
+    protectedDevice.getState().replaceFromBackup(source.getState().captureBackup().payload, protectedDevice.getState().getBackupRevision());
+    expect(protectedDevice.getState().preferences.blockScreenCapture).toBe(true);
   });
 });

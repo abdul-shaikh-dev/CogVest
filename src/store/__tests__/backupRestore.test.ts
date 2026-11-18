@@ -41,6 +41,8 @@ function destination() {
 describe("portfolio backup replacement", () => {
   it("replaces rather than merges, cold opens identically, and revokes captured old actions", () => {
     const { store, storage } = destination();
+    // Restore keeps this device's masking (#718); match the backup's so the round trip is exact.
+    store.getState().updatePreferences({ maskWealthValues: true });
     const oldAction = store.getState().updatePreferences;
     const original = store.getState().captureBackup();
     store.getState().replaceFromBackup(payload(), original.revision);
@@ -237,5 +239,34 @@ describe("portfolio backup replacement", () => {
     expect(repeatPlan.command).toBeUndefined();
     expect(restoredStore.getState().assets).toEqual(beforeAssets);
     expect(restoredStore.getState().trades).toEqual(beforeTrades);
+  });
+});
+
+describe("restore and this device's privacy settings (#718)", () => {
+  it("keeps masking and screenshot blocking on when the backup has them off or missing", () => {
+    const { store, storage } = destination();
+    store.getState().updatePreferences({ blockScreenCapture: true, maskWealthValues: true });
+    const weaker = payload();
+    weaker.portfolio.preferences = { ...weaker.portfolio.preferences, maskWealthValues: false };
+
+    store.getState().replaceFromBackup(weaker, store.getState().captureBackup().revision);
+
+    expect(store.getState().preferences).toMatchObject({
+      appearance: "dark", blockScreenCapture: true, displayMode: "minimal", maskWealthValues: true,
+    });
+    // A cold start reads the same settings back.
+    expect(createPortfolioStore({ storage, now }).getState().preferences)
+      .toMatchObject({ blockScreenCapture: true, maskWealthValues: true });
+  });
+
+  it("does not turn protections on that this device has off", () => {
+    const { store } = destination();
+    store.getState().updatePreferences({ blockScreenCapture: false, maskWealthValues: false });
+    const stricter = payload();
+    stricter.portfolio.preferences = { ...stricter.portfolio.preferences, blockScreenCapture: true, maskWealthValues: true };
+
+    store.getState().replaceFromBackup(stricter, store.getState().captureBackup().revision);
+
+    expect(store.getState().preferences).toMatchObject({ blockScreenCapture: false, maskWealthValues: false });
   });
 });

@@ -28,6 +28,10 @@ The owner approved complete replacement restore, not portfolio merging.
   identities within an incoming portfolio are invalid, not merge candidates.
 - After success, route to Dashboard, clear obsolete form/session state, and
   apply restored preferences. Do not strand the user in the restore review.
+- Restore keeps this device's privacy settings, value masking and screenshot
+  blocking, whatever the backup holds (#718). An older backup, or one made with
+  masking off, must not turn a protection off. Other display preferences come
+  from the backup, and the restore review says so.
 
 No cloud sync, scheduled backups, arbitrary Excel imports, broker adapters,
 encryption implementation, or new dependencies are authorized by this contract.
