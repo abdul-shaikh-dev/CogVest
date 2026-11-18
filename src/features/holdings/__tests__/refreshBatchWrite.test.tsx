@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react-native";
 
 import { useDashboard } from "@/src/features/dashboard/useDashboard";
 import { useHoldings } from "@/src/features/holdings/useHoldings";
+import { quoteSaveFailureMessage } from "@/src/hooks/useQuoteRefresh";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { quoteCacheStorageKey } from "@/src/store/storeTypes";
@@ -61,8 +62,11 @@ describe.each(hooks)("%s quote refresh (#661)", (_name, useHook) => {
     const { result } = await renderHook(() => useHook({ refreshQuotes, store }));
 
     await act(async () => {
-      await expect(result.current.refresh()).rejects.toThrow("Quote financial values must be finite.");
+      await result.current.refresh();
     });
+
+    // #717: the failed save is reported instead of rejecting the refresh.
+    expect(result.current.refreshError).toBe(quoteSaveFailureMessage);
 
     expect(store.getState().quoteCache).toEqual({});
     expect(setItem.mock.calls.filter(([key]) => key === quoteCacheStorageKey)).toHaveLength(0);

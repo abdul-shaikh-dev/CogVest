@@ -50,6 +50,7 @@ export type UseHoldingsResult = {
   ppfSummary: PpfPortfolioSummary;
   refresh: () => Promise<QuoteRefreshResult>;
   quoteFreshness: QuoteFreshnessSummary;
+  refreshError?: string;
   timedOut: QuoteRefreshTimeout[];
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
@@ -67,7 +68,7 @@ export function useHoldings({
   store = getPortfolioStore(),
 }: UseHoldingsInput = {}): UseHoldingsResult {
   const snapshot = usePortfolioSnapshot(store);
-  const { failed, isRefreshing, refresh, timedOut } = useQuoteRefresh({ now, refreshQuotes, store });
+  const { failed, isRefreshing, refresh, refreshError, timedOut } = useQuoteRefresh({ now, refreshQuotes, store });
   const asOf = formatLocalCalendarDate(now);
   // Tab focus and local UI updates do not change the financial replay inputs.
   // Calendar-based accounting rolls over daily; quote freshness below stays live.
@@ -133,6 +134,7 @@ export function useHoldings({
     openingPositions: snapshot.openingPositions,
     ppfSummary,
     refresh,
+    refreshError,
     quoteFreshness,
     rollupRows,
     rollupTotals,

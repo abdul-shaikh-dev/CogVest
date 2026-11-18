@@ -75,6 +75,14 @@ describe("holdings subtitle", () => {
 });
 
 describe("quote status", () => {
+  it("puts a failed save ahead of the refresh counts (#717)", () => {
+    const status = getQuoteStatus({
+      failed: 1, isRefreshing: false, quoteFreshness: freshness(), refreshError: "Prices were fetched but not saved.", timedOut: 0,
+    });
+    expect(status).toMatchObject({ prominent: true, title: "Prices not saved" });
+    expect(status.detail).toContain("Prices were fetched but not saved.");
+  });
+
   it("reports a partial refresh while saved prices remain usable", () => {
     const status = getQuoteStatus({
       failed: 1,

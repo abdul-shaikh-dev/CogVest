@@ -421,7 +421,12 @@ Recognized but unsupported event types, such as dividends, splits, bonuses,
 interest, cash movements, and corporate actions, are surfaced by row and skipped
 only after explicit dry-run review. CogVest never guesses an equivalent supported event. Current prices
 from the quote service or an explicit manual valuation are used for current
-value; transaction CSV data never overwrites current prices.
+value; transaction CSV data never overwrites current prices. When both exist,
+the one with the later as-of time is used: a manual price saved after the cached
+quote wins, and a newer fetched quote wins over an older manual price. The holding
+shows which price it uses and its date. A quote refresh saves only the quotes it
+fetched, skips an asset whose record or cached quote changed during the request,
+and reports a failed save instead of failing silently.
 
 Verified stock-split events from a bounded reviewed catalog apply during import
 with a change summary and final batch confirmation, not per-event confirmation.

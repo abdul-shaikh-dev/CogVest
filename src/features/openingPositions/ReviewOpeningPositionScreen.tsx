@@ -311,14 +311,14 @@ export function ReviewOpeningPositionScreen({
           <MoneyField
             currency={positionAsset.currency}
             error={errors.currentPrice}
-            label="Manual fallback price (optional)"
+            label="Manual price (optional)"
             onChangeText={setCurrentPrice}
             testID="opening-correction-current-price-input"
             value={currentPrice}
           />
           <AppText color="secondary" variant="caption">
-            Leave blank to rely on live quotes. If a quote is unavailable, the
-            holding remains saved with valuation pending.
+            Used when it is newer than the last fetched quote. Leave blank to
+            rely on live quotes; with neither, valuation stays pending.
           </AppText>
           {dateUnknown ? (
             <AppText color="secondary">
