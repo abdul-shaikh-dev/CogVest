@@ -284,8 +284,11 @@ as INR using a current exchange rate.
 ### Core Tracking Accounting (#317)
 
 - Holdings use moving weighted-average cost, not FIFO tax lots. Purchase fees
-  increase acquisition basis; sale fees reduce net proceeds. Partial disposals
-  retain the same average cost for remaining units; a full exit clears basis.
+  increase acquisition basis; sale fees reduce net proceeds. An imported trade
+  keeps its fees and taxes in its import record; a correction shows them
+  read-only and counts them once, so fees cannot be typed on top. Partial
+  disposals retain the same average cost for remaining units; a full exit
+  clears basis.
 - "Invested" in current holdings means the cost basis of remaining units, not
   lifetime cash contributed. Unrealized gain compares current value with that
   remaining basis. Transaction history shows realized gain per recorded sale:

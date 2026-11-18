@@ -17,7 +17,7 @@ import {
 import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
 import { formatCurrency, formatINR } from "@/src/domain/formatters";
-import { isManualTrade } from "@/src/domain/transactionSemantics";
+import { getImportedTradeCharges, isManualTrade } from "@/src/domain/transactionSemantics";
 import { describeSaveFailure, getPortfolioStore, type InventoryRejection, type PortfolioStoreState } from "@/src/store";
 import { inventoryRejectionMessage } from "./inventoryRejection";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
@@ -47,6 +47,7 @@ function failureMessage(reason?: string, rejection?: InventoryRejection, trades:
     return inventoryRejectionMessage(rejection, trades, "transaction");
   }
   if (reason === "notFound") return "This transaction is no longer available.";
+  if (reason === "importedCharges") return "Charges on an imported transaction come from its import and can't be edited here.";
   if (reason === "insufficientCash") return "Cash available on this date is not enough for the corrected purchase.";
   if (reason === "oversold") return "This correction would sell more units than were held on that date.";
   if (reason === "inconsistentLink") return "The linked cash movement is inconsistent. The transaction was not changed.";
@@ -163,11 +164,18 @@ export function ReviewTradeScreen({
     (entry) => entry.linkedTradeId === stableTrade.id,
   );
 
+  // An imported trade keeps its fees and taxes in the import record (#716).
+  // They are read-only here and count once; any fee an earlier correction
+  // typed on top is dropped when this is saved.
+  const importedCharges = getImportedTradeCharges(stableTrade).toNumber();
+  const hasImportedCharges = importedCharges > 0;
+  const duplicatedFees = hasImportedCharges ? stableTrade.fees ?? 0 : 0;
   const parsedQuantity = parsePositive(quantity);
   const parsedPrice = parsePositive(price);
-  const parsedFees = fees.trim() === "" ? 0 : Number(fees);
+  const parsedFees = hasImportedCharges ? 0 : fees.trim() === "" ? 0 : Number(fees);
+  const charges = parsedFees + importedCharges;
   const previewTotal = parsedQuantity && parsedPrice && Number.isFinite(parsedFees)
-    ? (parsedQuantity * parsedPrice) + (stableTrade.type === "buy" ? parsedFees : -parsedFees)
+    ? (parsedQuantity * parsedPrice) + (stableTrade.type === "buy" ? charges : -charges)
     : null;
 
   function validate() {
@@ -268,7 +276,34 @@ export function ReviewTradeScreen({
             <View style={styles.flex}><FormTextField error={errors.quantity} keyboardType="decimal-pad" label="Quantity" onChangeText={setQuantity} testID="trade-correction-quantity-input" value={quantity} /></View>
             <View style={styles.flex}><FormTextField error={errors.price} keyboardType="decimal-pad" label="Price per unit" onChangeText={setPrice} testID="trade-correction-price-input" value={price} /></View>
           </View>
-          <FormTextField error={errors.fees} keyboardType="decimal-pad" label="Fees" onChangeText={setFees} testID="trade-correction-fees-input" value={fees} />
+          {hasImportedCharges ? (
+            <View style={styles.importedCharges} testID="trade-correction-imported-charges">
+              <AppText color="secondary" variant="caption">Charges from import</AppText>
+              <AppText weight="bold">
+                {formatCurrency(importedCharges, asset.currency)}
+              </AppText>
+              <AppText color="secondary" variant="caption">
+                Fees {formatCurrency(stableTrade.importProvenance?.fees ?? 0, asset.currency)}
+                {" · "}taxes {formatCurrency(stableTrade.importProvenance?.taxes ?? 0, asset.currency)}.
+                {" "}These come from the imported file and can't be edited here.
+              </AppText>
+              {duplicatedFees > 0 ? (
+                <AppText color="secondary" testID="trade-correction-duplicate-fees" variant="caption">
+                  An earlier correction also added {formatCurrency(duplicatedFees, asset.currency)} as fees.
+                  {" "}Saving removes it so these charges count once.
+                </AppText>
+              ) : null}
+            </View>
+          ) : (
+            <FormTextField
+              error={errors.fees}
+              keyboardType="decimal-pad"
+              label="Fees"
+              onChangeText={setFees}
+              testID="trade-correction-fees-input"
+              value={fees}
+            />
+          )}
           <DatePickerField error={errors.date} label="Transaction date" maximumDate={now} onChange={setDate} testID="trade-correction-date-input" value={date} />
         </PremiumCard>
         <PremiumCard elevated>
@@ -348,6 +383,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   errorText: { color: colors.loss },
   flex: { flex: 1 },
   identityRow: { flexDirection: "row", gap: spacing.xl, justifyContent: "space-between" },
+  importedCharges: { gap: spacing.xs },
   pressed: { opacity: interaction.pressedOpacity },
   row: { flexDirection: "row", gap: spacing.sm },
   stacked: { flexDirection: "column" },

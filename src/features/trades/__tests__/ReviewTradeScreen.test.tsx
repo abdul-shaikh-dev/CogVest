@@ -49,6 +49,49 @@ function createStore() {
 }
 
 describe("ReviewTradeScreen", () => {
+  describe("imported trade charges (#716)", () => {
+    const imported: BuyTrade = {
+      assetId: asset.id, date: "2026-04-10", id: "trade-imported", pricePerUnit: 100, quantity: 10, totalValue: 1000, type: "buy",
+      importProvenance: { fees: 20, importBatchId: "batch", originalRowNumber: 1, sourceFormat: "zerodha-tradebook", sourceVersion: "1", taxes: 5 },
+    };
+    const renderImported = async (stored: BuyTrade) => {
+      const { store } = createStore();
+      store.setState({ cashEntries: [contribution], trades: [stored] });
+      const onComplete = jest.fn();
+      const screen = await render(
+        <ReviewTradeScreen onCancel={jest.fn()} onComplete={onComplete} store={store} tradeId={stored.id} />,
+      );
+      return { onComplete, screen, store };
+    };
+
+    it("shows the import charges read-only and counts them in the total", async () => {
+      const { onComplete, screen, store } = await renderImported(imported);
+
+      expect(screen.queryByTestId("trade-correction-fees-input")).toBeNull();
+      expect(screen.getByTestId("trade-correction-imported-charges")).toHaveTextContent(/₹25/);
+      expect(screen.getByTestId("trade-correction-total")).toHaveTextContent("₹1,025.00");
+      await fireEvent.changeText(screen.getByTestId("trade-correction-quantity-input"), "12");
+      expect(screen.getByTestId("trade-correction-total")).toHaveTextContent("₹1,225.00");
+
+      await fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+      await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+      expect(store.getState().trades[0]).toMatchObject({
+        fees: 0, importProvenance: { fees: 20, taxes: 5 }, quantity: 12, totalValue: 1200,
+      });
+    });
+
+    it("explains and drops a fee an earlier correction added on top", async () => {
+      const { onComplete, screen, store } = await renderImported({ ...imported, fees: 25, totalValue: 1025 });
+
+      expect(screen.getByTestId("trade-correction-duplicate-fees")).toHaveTextContent(/₹25/);
+      expect(screen.getByTestId("trade-correction-total")).toHaveTextContent("₹1,025.00");
+
+      await fireEvent.press(screen.getByTestId("save-trade-correction-button"));
+      await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+      expect(store.getState().trades[0]).toMatchObject({ fees: 0, totalValue: 1000 });
+    });
+  });
+
   it("preserves optional drafts when context is collapsed before saving", async () => {
     const { store } = createStore();
     const onComplete = jest.fn();
