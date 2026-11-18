@@ -15,9 +15,10 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
-import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type InventoryRejection, type PortfolioStoreState } from "@/src/store";
+import { inventoryRejectionMessage } from "@/src/features/trades/inventoryRejection";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
-import type { ConvictionScore } from "@/src/types";
+import type { ConvictionScore, Trade } from "@/src/types";
 
 import {
   type OpeningPositionFormValues,
@@ -44,10 +45,13 @@ type CorrectionErrors = Partial<
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return usePortfolioFields(store, ["assets", "openingPositions", "preferences"]);
+  return usePortfolioFields(store, ["assets", "openingPositions", "preferences", "trades"]);
 }
 
-function saveFailureMessage(reason?: string) {
+function saveFailureMessage(reason?: string, rejection?: InventoryRejection, trades: Trade[] = []) {
+  if (rejection && (reason === "oversold" || reason === "hidesTrades")) {
+    return inventoryRejectionMessage(rejection, trades, "openingPosition");
+  }
   if (reason === "notFound") {
     return "This opening position is no longer available.";
   }
@@ -223,7 +227,7 @@ export function ReviewOpeningPositionScreen({
       });
 
       if (result.status === "rejected") {
-        setErrors({ save: saveFailureMessage(result.reason) });
+        setErrors({ save: saveFailureMessage(result.reason, "dependentTradeIds" in result ? result : undefined, store.getState().trades) });
         return;
       }
 
@@ -257,7 +261,7 @@ export function ReviewOpeningPositionScreen({
         .deleteOpeningPosition(position.id);
 
       if (result.status === "rejected") {
-        setErrors({ save: saveFailureMessage(result.reason) });
+        setErrors({ save: saveFailureMessage(result.reason, "dependentTradeIds" in result ? result : undefined, store.getState().trades) });
         return;
       }
 

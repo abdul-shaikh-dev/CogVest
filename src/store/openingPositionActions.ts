@@ -9,6 +9,7 @@ import type { Quote } from "@/src/types";
 
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
+import { assetInventoryProblem } from "./tradeRules";
 import {
   persistAssetGraphTransition,
   persistPortfolioTransition,
@@ -113,6 +114,8 @@ export function createOpeningPositionActions(context: StoreContext): OpeningPosi
       const openingPositions = state.openingPositions.map((position) =>
         position.id === normalizedPosition.id ? normalizedPosition : position,
       );
+      const inventoryProblem = assetInventoryProblem(state, normalizedPosition.assetId, { openingPositions });
+      if (inventoryProblem) return { ...inventoryProblem, status: "rejected" };
       const history = rebuildPortfolioSnapshots({
         earliestAffectedMonth,
         now: currentDate,
@@ -156,6 +159,8 @@ export function createOpeningPositionActions(context: StoreContext): OpeningPosi
       const openingPositions = state.openingPositions.filter(
         (position) => position.id !== openingPositionId,
       );
+      const inventoryProblem = assetInventoryProblem(state, existingPosition.assetId, { openingPositions });
+      if (inventoryProblem) return { ...inventoryProblem, status: "rejected" };
       const history = rebuildPortfolioSnapshots({
         earliestAffectedMonth,
         now: now(),

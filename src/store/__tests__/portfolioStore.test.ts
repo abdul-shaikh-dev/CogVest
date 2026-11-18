@@ -2249,6 +2249,7 @@ describe("portfolio store", () => {
       quantity: 6,
     };
     expect(store.getState().correctTrade(correction)).toEqual({
+      dependentTradeIds: [sell.id],
       reason: "oversold",
       status: "rejected",
     });

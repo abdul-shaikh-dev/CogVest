@@ -289,8 +289,8 @@ export function assetQuantityEvents(
   return events;
 }
 
-/** Checks the complete dated inventory timeline, including measured cutovers. */
-export function wouldOversellAsset(
+/** The first event that takes the asset's dated inventory below zero, or null. */
+function firstOversoldEventId(
   assetId: string,
   openingPositions: OpeningPosition[],
   trades: Trade[],
@@ -301,10 +301,65 @@ export function wouldOversellAsset(
   let units = decimal(0);
   for (const event of events) {
     units = event.split ? splitQuantity(units, event.split) : units.plus(event.delta);
-    if (isAtOrBeyondNegativeQuantum(units, quantityQuantum)) return true;
+    if (isAtOrBeyondNegativeQuantum(units, quantityQuantum)) return event.id;
   }
 
-  return false;
+  return null;
+}
+
+/** Checks the complete dated inventory timeline, including measured cutovers. */
+export function wouldOversellAsset(
+  assetId: string,
+  openingPositions: OpeningPosition[],
+  trades: Trade[],
+  stockSplits: import("@/src/types").StockSplitEvent[] = [],
+  demergerAdjustments: DemergerAdjustment[] = [],
+) {
+  return firstOversoldEventId(assetId, openingPositions, trades, stockSplits, demergerAdjustments) !== null;
+}
+
+export type AssetInventoryProblem = {
+  /** Trades the change would oversell or hide, for the message (#713). */
+  dependentTradeIds: string[];
+  reason: "oversold" | "hidesTrades";
+};
+
+/**
+ * Checks a change to one asset's opening positions or trades against the
+ * rules backup validation applies (#713): the dated inventory never goes
+ * below zero, and no trade that was counted ends up on or before an opening
+ * cutover, where Holdings would silently drop it while its Cash stays.
+ */
+export function assetInventoryProblem(
+  state: Pick<PortfolioStoreState, "assets" | "openingPositions" | "trades">,
+  assetId: string,
+  next: { openingPositions?: OpeningPosition[]; trades?: Trade[] },
+): AssetInventoryProblem | null {
+  const openingPositions = next.openingPositions ?? state.openingPositions;
+  const trades = next.trades ?? state.trades;
+  const beforeOpenings = state.openingPositions.filter((item) => item.assetId === assetId);
+  const afterOpenings = openingPositions.filter((item) => item.assetId === assetId);
+  const countedBefore = new Set(state.trades
+    .filter((trade) => trade.assetId === assetId && isTransactionAfterOpeningCutover(trade.date, beforeOpenings))
+    .map((trade) => trade.id));
+  const hidden = trades.filter((trade) => trade.assetId === assetId && countedBefore.has(trade.id) &&
+    !isTransactionAfterOpeningCutover(trade.date, afterOpenings));
+  if (hidden.length > 0) return { dependentTradeIds: hidden.map((trade) => trade.id), reason: "hidesTrades" };
+
+  let adjustments: DemergerAdjustment[];
+  try {
+    adjustments = projectDemergers({ assets: state.assets, openingPositions, trades })
+      .filter((event) => event.assetId === assetId);
+  } catch {
+    return { dependentTradeIds: [], reason: "oversold" };
+  }
+  const oversoldId = firstOversoldEventId(assetId, openingPositions, trades,
+    state.assets.find((asset) => asset.id === assetId)?.stockSplits, adjustments);
+  if (oversoldId === null) return null;
+  return {
+    dependentTradeIds: trades.some((trade) => trade.id === oversoldId) ? [oversoldId] : [],
+    reason: "oversold",
+  };
 }
 
 export function availableUnitsBeforeTrade(
