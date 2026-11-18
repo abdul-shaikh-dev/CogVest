@@ -146,7 +146,8 @@ describe("Record purchase", () => {
     await fireEvent.press(ui.getByTestId("purchase-review-button"));
     const raw = storage.getRawItem(portfolioStorageKey);
     await fireEvent.press(ui.getByTestId("purchase-confirm"));
-    expect(ui.getByTestId("purchase-save-error")).toHaveTextContent(/dated Cash funding/);
+    // #715: the message names the first date the dated balance goes negative.
+    expect(ui.getByTestId("purchase-save-error")).toHaveTextContent(/below zero on 10 Sept 2026/);
     expect(storage.getRawItem(portfolioStorageKey)).toBe(raw);
     expect(store.getState().trades).toHaveLength(0);
   });

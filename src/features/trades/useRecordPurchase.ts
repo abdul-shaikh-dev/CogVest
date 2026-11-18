@@ -4,7 +4,7 @@ import { findCanonicalAsset } from "@/src/domain/assets";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { normalizeMoney } from "@/src/domain/precision";
-import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { cashShortfallMessage, describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { Asset, BuyTrade } from "@/src/types";
 import { createId } from "@/src/utils";
 import { usePortfolioFields } from "@/src/hooks";
@@ -63,7 +63,9 @@ export function useRecordPurchase({ initialAssetId, now = new Date(), store = ge
         asset, trade: review, cashLabel: `${asset.name} purchase`, cashNotes: review.notes,
       });
       if (!result.isValid) {
-        setErrors({ save: result.reason === "insufficientCash"
+        setErrors({ save: result.reason === "insufficientCash" && result.shortfallDate
+          ? cashShortfallMessage(result.shortfallDate)
+          : result.reason === "insufficientCash"
           ? "Not enough Cash for this purchase and its fees. Add dated Cash funding or reduce the amount."
           : "Purchase could not be saved safely. Check the asset, date and Cash funding." });
         return false;

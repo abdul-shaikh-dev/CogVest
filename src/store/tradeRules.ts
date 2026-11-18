@@ -27,6 +27,7 @@ import {
   isTradeAcquisition,
 } from "@/src/domain/transactionSemantics";
 import { reconcileTransactions } from "@/src/domain/transactionReconciliation";
+import { formatDate } from "@/src/domain/formatters";
 import type {
   Asset,
   BuyTrade,
@@ -178,7 +179,8 @@ export function deriveTrade(input: TradeCorrectionInput): BuyTrade | SellTrade {
   });
 }
 
-export function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
+/** The first date on which the dated Cash balance goes below zero, or null. */
+export function firstNegativeCashDate(cashEntries: CashEntry[]): string | null {
   const orderedEntries = [...cashEntries].sort((left, right) => {
     const dateOrder = compareCodeUnits(getCalendarDatePart(left.date) ?? left.date, getCalendarDatePart(right.date) ?? right.date);
     if (dateOrder !== 0) return dateOrder;
@@ -192,10 +194,42 @@ export function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
       entry.type === "addition"
         ? balance.plus(entry.amount)
         : balance.minus(entry.amount);
-    if (isAtOrBeyondNegativeQuantum(balance, moneyQuantum)) return false;
+    if (isAtOrBeyondNegativeQuantum(balance, moneyQuantum)) {
+      return getCalendarDatePart(entry.date) ?? entry.date;
+    }
   }
 
-  return true;
+  return null;
+}
+
+export function hasNonnegativeCashTimeline(cashEntries: CashEntry[]) {
+  return firstNegativeCashDate(cashEntries) === null;
+}
+
+/**
+ * The shortfall date a manual Cash change would cause, or null (#715). A
+ * change is refused when it takes the dated balance below zero, or brings an
+ * existing shortfall earlier. A history that was already negative before this
+ * rule can still be repaired: changes that leave its first shortfall where it
+ * was, or move it later, are allowed.
+ */
+export function manualCashShortfall(before: CashEntry[], after: CashEntry[]): string | null {
+  const next = firstNegativeCashDate(after);
+  if (next === null) return null;
+  const previous = firstNegativeCashDate(before);
+  return previous === null || compareCodeUnits(next, previous) < 0 ? next : null;
+}
+
+/** A manual Cash change refused because the dated balance would go below zero (#715). */
+export class CashShortfallError extends Error {
+  constructor(readonly shortfallDate: string) {
+    super(cashShortfallMessage(shortfallDate));
+    this.name = "CashShortfallError";
+  }
+}
+
+export function cashShortfallMessage(shortfallDate: string) {
+  return `This would leave Cash below zero on ${formatDate(shortfallDate)}. Record the Cash that funds it first, or change the date or amount.`;
 }
 
 export type QuantityEvent = {

@@ -845,6 +845,7 @@ describe("portfolio store", () => {
       type: "withdrawal",
     };
 
+    store.getState().addCashEntry(cashEntry);
     store.getState().addCashEntry(linkedEntry);
 
     expect(
@@ -861,7 +862,7 @@ describe("portfolio store", () => {
       reason: "notFound",
       status: "rejected",
     });
-    expect(store.getState().cashEntries).toEqual([linkedEntry]);
+    expect(store.getState().cashEntries).toEqual([cashEntry, linkedEntry]);
   });
 
   it.each([
@@ -913,6 +914,7 @@ describe("portfolio store", () => {
       purpose: "purchaseFunding",
       type: "withdrawal",
     };
+    store.getState().addCashEntry(cashEntry);
     store.getState().addCashEntry(linkedEntry);
 
     expect(() => store.getState().removeCashEntry(linkedEntry.id)).toThrow(
@@ -923,7 +925,7 @@ describe("portfolio store", () => {
     ).toThrow(
       "Linked cash entries must be changed with their investment transaction.",
     );
-    expect(store.getState().cashEntries).toEqual([linkedEntry]);
+    expect(store.getState().cashEntries).toEqual([cashEntry, linkedEntry]);
   });
 
   it("keeps generic cash mutations unchanged when persistence fails", () => {

@@ -2,6 +2,7 @@ import { StorageWriteError } from "@/src/services/storage";
 
 import { BackupRecoveryRequiredError } from "./backupPersistence";
 import { AssetGraphJournalPendingError, UnloadablePortfolioError } from "./persistence";
+import { CashShortfallError } from "./tradeRules";
 
 /** The store refused a change because the portfolio was restored or needs recovery. */
 export class StoreWriteBlockedError extends Error {
@@ -24,6 +25,7 @@ export function describeSaveFailure(error: unknown, fallback: string): string {
     error instanceof StoreWriteBlockedError ||
     error instanceof AssetGraphJournalPendingError ||
     error instanceof UnloadablePortfolioError ||
+    error instanceof CashShortfallError ||
     error instanceof BackupRecoveryRequiredError
   ) {
     return error.message;

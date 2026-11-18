@@ -17,6 +17,7 @@ import {
   assetInventoryProblem,
   availableUnitsBeforeTrade,
   deriveTrade,
+  firstNegativeCashDate,
   hasNonnegativeCashTimeline,
   isConsistentTradeCashLink,
   isValidTradeRecord,
@@ -301,8 +302,9 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
       const cashEntries = [...state.cashEntries, cashEntry];
       const trades = [...state.trades, commandInput.trade];
 
-      if (!hasNonnegativeCashTimeline(cashEntries)) {
-        return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue };
+      const shortfallDate = firstNegativeCashDate(cashEntries);
+      if (shortfallDate) {
+        return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue, shortfallDate };
       }
 
       // A new asset rides on state so the rebuild can value it.

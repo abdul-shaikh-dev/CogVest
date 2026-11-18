@@ -15,7 +15,7 @@ import { DashboardScreen } from "@/src/features/dashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
-import type { Asset, Trade } from "@/src/types";
+import type { Asset, CashEntry, Trade } from "@/src/types";
 
 const asset: Asset = {
   assetClass: "stock",
@@ -779,7 +779,8 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
-    store.getState().addCashEntry({
+    // Negative Cash now only comes from records saved before #715.
+    seedLegacyCashEntry(store, {
       amount: 400,
       date: "2026-04-22",
       id: "cash-overdraft",
@@ -826,7 +827,8 @@ describe("DashboardScreen", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);
     store.getState().addTrade(buyTrade);
-    store.getState().addCashEntry({
+    // Negative Cash now only comes from records saved before #715.
+    seedLegacyCashEntry(store, {
       amount: 100,
       date: "2026-04-22",
       id: "cash-small-overdraft",
@@ -870,7 +872,8 @@ describe("DashboardScreen", () => {
   it("masks a cash-only liability without hiding its reconciliation state", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().updatePreferences({ maskWealthValues: true });
-    store.getState().addCashEntry({
+    // Negative Cash now only comes from records saved before #715.
+    seedLegacyCashEntry(store, {
       amount: 500,
       date: "2026-04-22",
       id: "cash-only-overdraft",
@@ -1061,4 +1064,11 @@ function indexOfText(textNodes: string[], expectedText: string) {
   expect(index).toBeGreaterThanOrEqual(0);
 
   return index;
+}
+
+function seedLegacyCashEntry(
+  store: ReturnType<typeof createPortfolioStore>,
+  entry: CashEntry,
+) {
+  store.setState((state) => ({ cashEntries: [...state.cashEntries, entry] }));
 }

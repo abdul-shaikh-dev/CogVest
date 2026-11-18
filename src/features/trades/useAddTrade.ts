@@ -10,7 +10,7 @@ import {
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { normalizeMoney } from "@/src/domain/precision";
 import { projectDemergers } from "@/src/domain/demergers";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { cashShortfallMessage, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type {
   Asset,
@@ -236,7 +236,9 @@ export function useAddTrade({
     if (!commandResult.isValid) {
       setErrors({
         cash:
-          commandResult.reason === "insufficientCash"
+          commandResult.reason === "insufficientCash" && commandResult.shortfallDate
+            ? cashShortfallMessage(commandResult.shortfallDate)
+            : commandResult.reason === "insufficientCash"
             ? `Not enough deployable cash. Available ₹${(
                 commandResult.availableCash ?? 0
               ).toFixed(2)}; required ₹${(

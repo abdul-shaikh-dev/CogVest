@@ -4,6 +4,42 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for dated Cash shortfalls (#715), 15 passed, 15m 23s (over budget)
+
+- Commit: fix/715-cash-timeline 1a103ef, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from 1a103ef, SHA-256 prefix 255908da160cd103, Metro
+  stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- First run: 15 passed, 0 failed, 17m 28s. record-purchase took 3m 22s with no
+  retried step. Run alone twice right after, it took 0m 54s and 0m 59s, so this
+  was a one-off emulator stall.
+- Second run (table): 15 passed, 0 failed, 15m 23s, 23s over the 15-minute
+  budget. Every flow was 1-5s slower than the #714 run on the same AVD. That
+  includes smoke-launch, navigation and add-holding-lookup, which do not touch
+  the changed Cash rules. The budget is unchanged. The overage is reported as is,
+  not explained away: rerun on a fresh emulator boot before the next release gate.
+- cash, record-purchase, payouts, ppf-account and trade-correction exercise the
+  changed Cash paths.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 15s |
+| navigation | Pass | 0m 22s |
+| add-holding-lookup | Pass | 1m 07s |
+| record-purchase | Pass | 0m 56s |
+| payouts | Pass | 0m 55s |
+| xirr-holding | Pass | 0m 40s |
+| cash | Pass | 0m 59s |
+| trade-correction | Pass | 2m 16s |
+| holdings-csv-import | Pass | 1m 18s |
+| epf-accounts | Pass | 1m 11s |
+| ppf-account | Pass | 1m 26s |
+| progress-snapshot-history | Pass | 0m 46s |
+| value-masking | Pass | 1m 15s |
+| persistence | Pass | 0m 43s |
+| backup-roundtrip | Pass | 1m 14s |
+
 ## 2026-11-19: Smoke tier for month-end snapshot refresh (#714), 15 passed, 14m 08s
 
 - Commit: fix/714-snapshot-refresh 196b17c, version 1.0.32. AVD
