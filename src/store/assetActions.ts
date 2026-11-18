@@ -73,6 +73,10 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
       const asset = normalizeAssetMetadata({ ...input, ...(existingAsset.stockSplits ? { stockSplits: existingAsset.stockSplits } : {}), ...(existingAsset.demerger ? { demerger: existingAsset.demerger } : {}) });
       if ((existingAsset.demerger || state.assets.some((item) => item.demerger?.childAssetId === existingAsset.id)) &&
           (asset.isin !== existingAsset.isin || asset.currency !== existingAsset.currency || asset.assetClass !== existingAsset.assetClass)) return { reason: "invalidAsset", status: "rejected" };
+      // A PPF account keeps its earlier history on a linked PPF holding (#712).
+      if (asset.instrumentType !== "ppf" && state.ppfAccounts.some((account) => account.legacyAssetId === asset.id)) {
+        return { reason: "linkedPpf", status: "rejected" };
+      }
       try {
         validateEpfLegacyLinks(state.epf.accounts, state.assets.map((item) => (item.id === asset.id ? asset : item)));
       } catch {
@@ -151,6 +155,7 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
       if (!asset) return { reason: "notFound", status: "rejected" };
       if (asset.demerger || state.assets.some((item) => item.demerger?.childAssetId === assetId)) return { reason: "linkedDemerger", status: "rejected" };
       if (state.epf.accounts.some((account) => account.legacyAssetId === assetId)) return { reason: "linkedEpf", status: "rejected" };
+      if (state.ppfAccounts.some((account) => account.legacyAssetId === assetId)) return { reason: "linkedPpf", status: "rejected" };
       if (state.distributions.some((item) => item.assetId === assetId)) return { reason: "linkedPayout", status: "rejected" };
 
       const removedTrades = state.trades.filter(

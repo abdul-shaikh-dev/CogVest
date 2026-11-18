@@ -286,7 +286,7 @@ export type AssetCorrectionResult =
       status: "applied";
     })
   | {
-      reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "linkedPayout" | "notFound";
+      reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "linkedPayout" | "linkedPpf" | "notFound";
       status: "rejected";
     };
 
@@ -305,7 +305,7 @@ export type AssetDeletionResult =
       impact: AssetDeletionImpact;
       status: "applied";
     })
-  | { reason: "insufficientCash" | "notFound" | "linkedDemerger" | "linkedEpf" | "linkedPayout"; status: "rejected" };
+  | { reason: "insufficientCash" | "notFound" | "linkedDemerger" | "linkedEpf" | "linkedPayout" | "linkedPpf"; status: "rejected" };
 
 export type ManualCashDeletionResult =
   | { entry: CashEntry; status: "applied" }

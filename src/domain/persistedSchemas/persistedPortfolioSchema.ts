@@ -299,6 +299,15 @@ function parseWithSchema<T>(
     : { reason: "invalid-shape", success: false };
 }
 
+/**
+ * Whether a portfolio record would pass the load-time checks. Every write
+ * runs this first, so a save can never leave records that quarantine the
+ * portfolio at the next start (#712).
+ */
+export function isLoadablePortfolio(value: unknown): boolean {
+  return persistedPortfolioSchema.safeParse(value).success;
+}
+
 export function parsePersistedPortfolio(
   rawValue: string,
 ): PersistedParseResult<PersistedPortfolioSnapshot> {

@@ -5,7 +5,7 @@ import {
   calculateHoldings,
   calculatePortfolioRollupTotals,
 } from "@/src/domain/calculations";
-import { formatLocalCalendarDate } from "@/src/domain/dates";
+import { calendarDateToLocalDate, formatLocalCalendarDate } from "@/src/domain/dates";
 import { getLinkedLegacyEpfAssetIds } from "@/src/domain/epf/legacyLinks";
 import { includeEpfInPortfolioTotals, summarizeEpfForReporting } from "@/src/domain/epf/reporting";
 import type { ParsedHoldingsCsvRow } from "@/src/domain/holdingsCsv";
@@ -211,7 +211,9 @@ function importedPosition(
       ? {}
       : {
           manualValuation: {
-            asOf: row.valuationAsOf!,
+            // Saved as a full timestamp like a manual price; a bare date
+            // fails the load-time check and quarantined the portfolio (#712).
+            asOf: calendarDateToLocalDate(row.valuationAsOf!)!.toISOString(),
             currency: asset.currency,
             price: row.currentPrice,
             provenance: "user" as const,
