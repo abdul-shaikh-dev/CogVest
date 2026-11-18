@@ -65,6 +65,7 @@ export function DashboardPortfolioHero({
     quoteFailed: dashboard.quoteFailed.length,
     quoteFreshness: dashboard.quoteFreshness,
     quoteTimedOut: dashboard.quoteTimedOut.length,
+    refreshError: dashboard.refreshError,
   });
 
   return (

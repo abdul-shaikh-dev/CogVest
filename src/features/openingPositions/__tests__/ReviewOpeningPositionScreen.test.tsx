@@ -124,7 +124,7 @@ describe("ReviewOpeningPositionScreen", () => {
       />,
     );
 
-    expect(getByText(/holding remains saved with valuation pending/)).toBeTruthy();
+    expect(getByText(/with neither, valuation stays pending/)).toBeTruthy();
     await fireEvent.changeText(
       getByTestId("opening-correction-quantity-input"),
       "30",

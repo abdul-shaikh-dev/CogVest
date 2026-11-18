@@ -87,6 +87,7 @@ export type DashboardState = {
   quoteFreshness: QuoteFreshnessSummary;
   quoteTimedOut: QuoteRefreshTimeout[];
   refresh: () => Promise<QuoteRefreshResult>;
+  refreshError?: string;
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
   sectorAllocation: MetadataAllocationItem[];
@@ -108,6 +109,7 @@ export function useDashboard({
     failed: quoteFailed,
     isRefreshing,
     refresh,
+    refreshError,
     timedOut: quoteTimedOut,
   } = useQuoteRefresh({ now, refreshQuotes, store });
   const asOf = formatLocalCalendarDate(now);
@@ -240,6 +242,7 @@ export function useDashboard({
     quoteFreshness,
     quoteTimedOut,
     refresh,
+    refreshError,
     rollupRows: derived.rollupRows,
     rollupTotals,
     sectorAllocation: derived.sectorAllocation,
