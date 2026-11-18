@@ -389,13 +389,23 @@ function replayHoldings({
 }: Required<Omit<CalculateHoldingsInput, "now">> & { through: string }) {
   // Only the calendar day matters below; local noon keeps it on that day.
   const now = new Date(`${through}T12:00:00`);
-  const demergerAdjustments = projectDemergers({ assets, openingPositions, trades }, through);
+  const demergerAdjustments = groupByAsset(projectDemergers({ assets, openingPositions, trades }, through));
+  // Grouped and indexed once rather than searched per asset (#720).
+  const openingsByAsset = groupByAsset(openingPositions);
+  const tradesByAsset = groupByAsset(trades);
+  const demergerChildrenByEvent = new Map<string, Set<string>>();
+  for (const parent of assets) {
+    if (!parent.demerger) continue;
+    const children = demergerChildrenByEvent.get(parent.demerger.eventId) ?? new Set<string>();
+    children.add(parent.demerger.childAssetId);
+    demergerChildrenByEvent.set(parent.demerger.eventId, children);
+  }
   return assets
     .map((asset) => {
       const rawQuote = quoteCache[asset.id];
-      const childEvent = demergerCatalog.find((event) =>
-        assets.some((parent) => parent.demerger?.eventId === event.id && parent.demerger.childAssetId === asset.id),
-      );
+      const childEvent = demergerChildrenByEvent.size === 0
+        ? undefined
+        : demergerCatalog.find((event) => demergerChildrenByEvent.get(event.id)?.has(asset.id));
       const parentEvent = asset.demerger
         ? demergerCatalog.find((event) => event.id === asset.demerger?.eventId)
         : undefined;
@@ -411,21 +421,16 @@ function replayHoldings({
         return null;
       }
 
-      const assetOpeningPositions = openingPositions.filter(
-        (position) =>
-          position.assetId === asset.id &&
-          isOpeningPositionEffective(position, now),
+      const assetOpeningPositions = (openingsByAsset.get(asset.id) ?? []).filter(
+        (position) => isOpeningPositionEffective(position, now),
       );
-      const assetTrades = trades.filter(
+      const assetTrades = (tradesByAsset.get(asset.id) ?? []).filter(
         (trade) =>
-          trade.assetId === asset.id &&
           isEffectiveCalendarDate(trade.date, now) &&
           isTransactionAfterOpeningCutover(trade.date, assetOpeningPositions),
       );
 
-      const assetDemergerAdjustments = demergerAdjustments.filter(
-        (event) => event.assetId === asset.id,
-      );
+      const assetDemergerAdjustments = demergerAdjustments.get(asset.id) ?? [];
       if (assetTrades.length === 0 && assetOpeningPositions.length === 0 && assetDemergerAdjustments.length === 0) {
         return null;
       }
