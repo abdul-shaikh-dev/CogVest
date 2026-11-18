@@ -1,5 +1,6 @@
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { projectDemergers } from "@/src/domain/demergers";
+import { groupByAsset } from "@/src/domain/groupByAsset";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { assertCatalogSplits, assertSplitSourceIdentities } from "@/src/domain/stockSplitCatalog";
 import { normalizeTrade } from "@/src/domain/financialRecords";
@@ -245,18 +246,22 @@ export type QuantityEvent = {
 export function validateSplitInventory(
   portfolio: Pick<RawPortfolioSnapshot, "assets" | "openingPositions" | "trades">,
 ) {
-  const adjustments = projectDemergers(portfolio);
+  const adjustments = groupByAsset(projectDemergers(portfolio));
+  // Grouped once: this runs on every save (#720).
+  const openingsByAsset = groupByAsset(portfolio.openingPositions);
+  const tradesByAsset = groupByAsset(portfolio.trades);
   for (const asset of portfolio.assets) {
+    const openings = openingsByAsset.get(asset.id) ?? [];
+    const trades = tradesByAsset.get(asset.id) ?? [];
+    const demergerAdjustments = adjustments.get(asset.id) ?? [];
     assertCatalogSplits(asset);
-    assertSplitSourceIdentities(asset, portfolio.trades);
-    const demergerAdjustments = adjustments.filter((event) => event.assetId === asset.id);
+    assertSplitSourceIdentities(asset, trades);
     if (demergerAdjustments.length) {
-      const openings = portfolio.openingPositions.filter((item) => item.assetId === asset.id);
       if (openings.length > 1 || !reconcileTransactions({ openingPosition: openings[0], openingMeasuredAsOf: openings[0]?.measuredAsOf,
-        transactions: portfolio.trades.filter((trade) => trade.assetId === asset.id && isTransactionAfterOpeningCutover(trade.date, openings)),
+        transactions: trades.filter((trade) => isTransactionAfterOpeningCutover(trade.date, openings)),
         stockSplits: asset.stockSplits, demergerAdjustments }).isExact) throw new Error("Demerged quantity or acquisition cost is unresolved.");
     }
-    if ((asset.stockSplits?.length || adjustments.some((event) => event.assetId === asset.id)) && wouldOversellAsset(asset.id, portfolio.openingPositions, portfolio.trades, asset.stockSplits, adjustments.filter((event) => event.assetId === asset.id))) {
+    if ((asset.stockSplits?.length || demergerAdjustments.length) && wouldOversellAsset(asset.id, openings, trades, asset.stockSplits, demergerAdjustments)) {
       throw new Error("Stock-split inventory does not reconcile.");
     }
   }

@@ -13,6 +13,7 @@ import type {
 } from "@/src/types";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { demergerCatalog, projectDemergers } from "@/src/domain/demergers";
+import { groupByAsset } from "@/src/domain/groupByAsset";
 import { positionEvents, splitQuantity } from "@/src/domain/stockSplits";
 import { isV1CompatibleQuote, isV1SupportedAsset } from "@/src/domain/portfolioCurrency";
 import { formatLocalCalendarDate, getCalendarDatePart, isEffectiveCalendarDate } from "@/src/domain/dates";
@@ -258,19 +259,20 @@ export function calculateRecordedSaleGains({
 }: { assets: Asset[]; openingPositions: OpeningPosition[]; trades: Trade[]; now?: Date }) {
   const gains: Record<string, number | null> = {};
   const through = formatLocalCalendarDate(now);
-  const demergerAdjustments = projectDemergers({ assets, openingPositions, trades }, through);
+  const demergerAdjustments = groupByAsset(projectDemergers({ assets, openingPositions, trades }, through));
+  // Grouped once rather than filtered per asset (#720).
+  const openingsByAsset = groupByAsset(openingPositions);
+  const tradesByAsset = groupByAsset(trades);
   for (const asset of assets) {
     if (!isV1SupportedAsset(asset)) continue;
     Object.assign(gains, calculatePositionAccounting({
       stockSplits: asset.stockSplits,
       through,
-      demergerAdjustments: demergerAdjustments.filter((event) => event.assetId === asset.id),
-      openingPositions: openingPositions.filter((position) =>
-        position.assetId === asset.id &&
-        (getOpeningPositionHistoryDate(position) === null || isOpeningPositionEffective(position, now))),
-      trades: trades.filter((trade) =>
-        trade.assetId === asset.id &&
-        (getCalendarDatePart(trade.date) === null || isEffectiveCalendarDate(trade.date, now))),
+      demergerAdjustments: demergerAdjustments.get(asset.id) ?? [],
+      openingPositions: (openingsByAsset.get(asset.id) ?? []).filter((position) =>
+        getOpeningPositionHistoryDate(position) === null || isOpeningPositionEffective(position, now)),
+      trades: (tradesByAsset.get(asset.id) ?? []).filter((trade) =>
+        getCalendarDatePart(trade.date) === null || isEffectiveCalendarDate(trade.date, now)),
     }).saleGains);
   }
   return gains;

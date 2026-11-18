@@ -1,19 +1,11 @@
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
 import { projectDemergers } from "@/src/domain/demergers";
+import { groupByAsset } from "@/src/domain/groupByAsset";
 import { isTransactionAfterOpeningCutover } from "@/src/domain/openingPositions";
 import { normalizeQuantity } from "@/src/domain/precision";
 import { positionQuantity, StockSplitError } from "@/src/domain/stockSplits";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
 
-function groupByAsset<Item extends { assetId: string }>(items: readonly Item[]) {
-  const groups = new Map<string, Item[]>();
-  for (const item of items) {
-    const group = groups.get(item.assetId);
-    if (group) group.push(item);
-    else groups.set(item.assetId, [item]);
-  }
-  return groups;
-}
 
 /**
  * Remaining units for every asset, worked out once per record change rather
