@@ -35,6 +35,7 @@ import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import type { FundingSource, PpfLedgerEntry } from "@/src/types";
 import { createId } from "@/src/utils";
 import { useBackHandler, usePortfolioFields } from "@/src/hooks";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 type EntryType = PpfLedgerEntry["type"];
 type EntryField = "amount" | "date" | "reason";
@@ -156,7 +157,7 @@ export function PpfEntryScreen({
   }
 
   function buildEntry() {
-    const parsedAmount = Number(amount);
+    const parsedAmount = parseDecimalInput(amount);
     const base = {
       accountId: account!.id,
       date,

@@ -123,7 +123,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   input: {
     color: colors.text.primary,
     flex: 1,
-    minHeight: 46,
+    // The input is the tap target, so it meets the 48 dp minimum itself (#719).
+    minHeight: 48,
     paddingHorizontal: 0,
     paddingVertical: 6,
   },

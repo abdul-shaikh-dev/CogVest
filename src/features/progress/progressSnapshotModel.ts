@@ -38,6 +38,7 @@ import {
 } from "@/src/types";
 import { createId } from "@/src/utils";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export function emptyProgressFormValues() {
   const now = new Date();
@@ -219,7 +220,8 @@ function parseNumberField(
   errors: ProgressFormErrors,
 ) {
   const value = values[field].trim();
-  const parsedValue = value.length > 0 ? Number(value) : Number.NaN;
+  // Snapshot values can be negative (a Cash shortfall), so a sign is allowed.
+  const parsedValue = parseDecimalInput(value, { allowNegative: true });
 
   if (!Number.isFinite(parsedValue)) {
     errors[field] = "Enter a valid amount.";

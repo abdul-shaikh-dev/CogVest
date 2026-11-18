@@ -8,6 +8,7 @@ import type {
   CashEntryType,
 } from "@/src/types";
 import { normalizeMoney } from "@/src/domain/precision";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export type ManualCashPurpose = Extract<
   CashEntryPurpose,
@@ -53,8 +54,7 @@ export function validateCashEntryForm({
 }) {
   const errors: CashEntryFormErrors = {};
   const trimmedAmount = amount.trim();
-  const parsedAmount =
-    trimmedAmount.length > 0 ? Number(trimmedAmount) : Number.NaN;
+  const parsedAmount = parseDecimalInput(trimmedAmount);
 
   if (!Number.isFinite(parsedAmount)) {
     errors.amount = "Amount must be a valid number.";

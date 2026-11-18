@@ -12,6 +12,7 @@ import {
 } from "@/src/domain/precision";
 import type { OpeningPosition, StockSplitEvent, Trade, TradeType } from "@/src/types";
 import type { DemergerAdjustment } from "@/src/domain/demergerEvents";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export type TradeFormValues = {
   assetId: string;
@@ -45,7 +46,8 @@ function parsePositiveNumber(value: unknown) {
   if (typeof value === "string") {
     const trimmedValue = value.trim();
 
-    return trimmedValue.length > 0 ? Number(trimmedValue) : Number.NaN;
+    // A minus parses so it gets the "greater than zero" message; it is still rejected.
+    return parseDecimalInput(trimmedValue, { allowNegative: true });
   }
 
   return Number.NaN;
