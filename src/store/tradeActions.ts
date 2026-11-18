@@ -7,7 +7,7 @@ import {
 import { normalizeTrade } from "@/src/domain/financialRecords";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { decimal } from "@/src/domain/precision";
-import { isManualTrade } from "@/src/domain/transactionSemantics";
+import { getImportedTradeCharges, isManualTrade } from "@/src/domain/transactionSemantics";
 
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
@@ -79,6 +79,12 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
         (input.fees !== undefined && !Number.isFinite(input.fees))
       ) {
         return { reason: "invalidEntry", status: "rejected" };
+      }
+      // An imported trade's charges live in its import record. Fees typed on
+      // top would count them twice, so only zero is accepted (#716); zero also
+      // repairs a trade an earlier correction double counted.
+      if (getImportedTradeCharges(existingTrade).greaterThan(0) && (input.fees ?? 0) !== 0) {
+        return { reason: "importedCharges", status: "rejected" };
       }
       const currentDate = now();
       // A correction keeps an external-funding marking unless it sets one itself.

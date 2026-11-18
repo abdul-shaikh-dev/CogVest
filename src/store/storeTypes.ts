@@ -375,6 +375,8 @@ export type DistributionCoverageResult =
 
 export type TradeMutationRejectionReason =
   | "assetMismatch"
+  /** Fees typed on an imported trade whose charges the import already holds (#716). */
+  | "importedCharges"
   | "linkedPayout"
   | "inconsistentLink"
   | "insufficientCash"
