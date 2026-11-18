@@ -265,7 +265,7 @@ export function BackupScreen({
             ))}
           </View>
           <AppText color="secondary">This replaces the portfolio on this device. It does not merge portfolios.</AppText>
-          <AppText color="secondary" variant="caption">Display mode and value masking preferences in this backup replace the settings on this device.</AppText>
+          <AppText color="secondary" variant="caption">Display preferences in this backup replace the settings on this device. Value masking and screenshot blocking stay as they are on this device.</AppText>
           <AppText color="secondary" variant="caption">Saved prices keep their source details. Prices may be out of date.</AppText>
           <AppButton disabled={isBusy} onPress={() => void backUpPortfolio()} testID="backup-current-data" title={isBusy ? "Saving backup..." : "Back up current data first"} variant="secondary" />
           <AppButton disabled={isBusy} onPress={() => setRestoreStep("confirmation")} testID="continue-restore-confirmation" title="Review replacement" />

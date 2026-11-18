@@ -144,7 +144,7 @@ describe("BackupScreen", () => {
     await fireEvent.press(getByTestId("choose-backup-file"));
     await waitFor(() => expect(getByTestId("backup-restore-preview")).toBeTruthy());
     expect(getByText(`Created ${formatBackupCreatedAt(prepared.review.createdAt)}`)).toBeTruthy();
-    expect(getByText("Display mode and value masking preferences in this backup replace the settings on this device.")).toBeTruthy();
+    expect(getByText("Display preferences in this backup replace the settings on this device. Value masking and screenshot blocking stay as they are on this device.")).toBeTruthy();
     expect(getByText("Saved prices keep their source details. Prices may be out of date.")).toBeTruthy();
     expect(getByText("CogVest version 1.0.1")).toBeTruthy();
     expect(getByTestId("backup-count-current-Holdings")).toHaveTextContent("1");

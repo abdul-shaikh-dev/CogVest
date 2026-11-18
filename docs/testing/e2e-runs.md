@@ -4,6 +4,34 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for restore privacy settings (#718), 14 passed, 14m 21s
+
+- Commit: fix/718-restore-privacy 71d056c, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from 71d056c, SHA-256 prefix 511a3d6e131fd88e, Metro stopped.
+  Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 14 passed, 1 failed, 14m 21s, within the 15-minute budget.
+  backup-roundtrip failed in this run because the main checkout was switched to another branch mid-run, so the runner read the old flow (which expects the backup's masking to be restored) against this APK. Rerun alone from the #718 checkout on the same installed APK, the updated backup-roundtrip passed in 1m 26s: masking stays off on the cleared device and the backup's Light appearance returns, before and after a cold start.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 11s |
+| navigation | Pass | 0m 22s |
+| add-holding-lookup | Pass | 1m 02s |
+| record-purchase | Pass | 0m 51s |
+| payouts | Pass | 0m 50s |
+| xirr-holding | Pass | 0m 36s |
+| cash | Pass | 0m 56s |
+| trade-correction | Pass | 2m 04s |
+| holdings-csv-import | Pass | 1m 15s |
+| epf-accounts | Pass | 1m 05s |
+| ppf-account | Pass | 1m 20s |
+| progress-snapshot-history | Pass | 0m 40s |
+| value-masking | Pass | 1m 07s |
+| persistence | Pass | 0m 37s |
+| backup-roundtrip | Fail (stale flow file); rerun alone: Pass | 1m 24s; rerun 1m 26s |
+
 ## 2026-11-19: Smoke tier for quote precedence and refresh writes (#717), 15 passed, 14m 04s
 
 - Commit: fix/717-quote-precedence 61abcee, version 1.0.32. AVD
