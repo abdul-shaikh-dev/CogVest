@@ -213,8 +213,12 @@ export function hasValidOpeningPositionDateState(
       ? hasValidRecordedAt && hasValidRecordedOn
       : acquisitionDate !== null &&
         !isFutureCalendarDate(openingPosition.date, now);
+  // A holding cannot be measured before it was bought; backup refuses it (#713).
+  const measuredAsOf = getCalendarDatePart(openingPosition.measuredAsOf ?? "");
+  const measuredAfterAcquisition =
+    acquisitionDate === null || measuredAsOf === null || measuredAsOf >= acquisitionDate;
 
-  return hasValidDateState;
+  return hasValidDateState && measuredAfterAcquisition;
 }
 
 export function hasSupportedOpeningPositionPrecision(

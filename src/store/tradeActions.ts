@@ -14,6 +14,7 @@ import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition } from "./persistence";
 import { cashBalance, rebuildPortfolioSnapshots } from "./recordValidation";
 import {
+  assetInventoryProblem,
   availableUnitsBeforeTrade,
   deriveTrade,
   hasNonnegativeCashTimeline,
@@ -103,9 +104,8 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
       const trades = state.trades.map((item) =>
         item.id === trade.id ? trade : item,
       );
-      if (wouldOversellAsset(trade.assetId, state.openingPositions, trades, state.assets.find((asset) => asset.id === trade.assetId)?.stockSplits, projectDemergers({ ...state, trades }).filter((event) => event.assetId === trade.assetId))) {
-        return { reason: "oversold", status: "rejected" };
-      }
+      const inventoryProblem = assetInventoryProblem(state, trade.assetId, { trades });
+      if (inventoryProblem) return { ...inventoryProblem, status: "rejected" };
 
       const linkedEntry = linkedEntries[0];
       const correctedCashEntry = linkedEntry

@@ -170,7 +170,7 @@ describe("core accounting invariants", () => {
 
     expect(
       store.getState().correctTrade({ ...buy("buy-1", "2026-01-02", 7) }),
-    ).toEqual({ reason: "oversold", status: "rejected" });
+    ).toEqual({ dependentTradeIds: ["sale-1"], reason: "oversold", status: "rejected" });
     expect(store.getState().deleteTrade("buy-1")).toEqual({
       reason: "oversold",
       status: "rejected",

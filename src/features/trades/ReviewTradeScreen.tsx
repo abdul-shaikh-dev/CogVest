@@ -18,9 +18,10 @@ import { DatePickerField, FormTextField } from "@/src/components/forms";
 import { getCalendarDatePart, isFutureCalendarDate } from "@/src/domain/dates";
 import { formatCurrency, formatINR } from "@/src/domain/formatters";
 import { isManualTrade } from "@/src/domain/transactionSemantics";
-import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { describeSaveFailure, getPortfolioStore, type InventoryRejection, type PortfolioStoreState } from "@/src/store";
+import { inventoryRejectionMessage } from "./inventoryRejection";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
-import type { ConvictionScore } from "@/src/types";
+import type { ConvictionScore, Trade } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
 import { usePortfolioFields } from "@/src/hooks";
 
@@ -41,7 +42,10 @@ function parsePositive(value: string) {
   return value.trim() && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function failureMessage(reason?: string) {
+function failureMessage(reason?: string, rejection?: InventoryRejection, trades: Trade[] = []) {
+  if (rejection && (reason === "oversold" || reason === "hidesTrades")) {
+    return inventoryRejectionMessage(rejection, trades, "transaction");
+  }
   if (reason === "notFound") return "This transaction is no longer available.";
   if (reason === "insufficientCash") return "Cash available on this date is not enough for the corrected purchase.";
   if (reason === "oversold") return "This correction would sell more units than were held on that date.";
@@ -214,7 +218,7 @@ export function ReviewTradeScreen({
         whyThisTrade: rationale.trim() || undefined,
       });
       if (result.status === "rejected") {
-        setErrors({ save: failureMessage(result.reason) });
+        setErrors({ save: failureMessage(result.reason, "dependentTradeIds" in result ? result : undefined, store.getState().trades) });
         return;
       }
       await Promise.resolve();

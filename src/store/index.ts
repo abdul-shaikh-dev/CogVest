@@ -79,6 +79,7 @@ export {
   type OpeningPositionBatchCommandResult,
   type OpeningPositionCommandInput,
   type OpeningPositionCommandResult,
+  type InventoryRejection,
   type OpeningPositionCorrectionResult,
   type OpeningPositionDeletionResult,
   type PortfolioStoreState,

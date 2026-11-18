@@ -333,7 +333,15 @@ export type OpeningPositionCorrectionResult =
   | {
       reason: "assetMismatch" | "invalidEntry" | "notFound";
       status: "rejected";
-    };
+    }
+  | InventoryRejection;
+
+/** A change that would oversell the holding or hide counted trades (#713). */
+export type InventoryRejection = {
+  dependentTradeIds: string[];
+  reason: "hidesTrades" | "oversold";
+  status: "rejected";
+};
 
 export type OpeningPositionDeletionResult =
   | {
@@ -343,7 +351,8 @@ export type OpeningPositionDeletionResult =
       refreshedMonths: string[];
       status: "applied";
     }
-  | { reason: "notFound"; status: "rejected" };
+  | { reason: "notFound"; status: "rejected" }
+  | InventoryRejection;
 
 export type DistributionMutationResult =
   | { status: "applied"; distribution?: Distribution }
@@ -421,7 +430,8 @@ export type TradeCorrectionResult =
       status: "applied";
       trade: Trade;
     })
-  | { reason: TradeMutationRejectionReason; status: "rejected" };
+  | { reason: Exclude<TradeMutationRejectionReason, "oversold">; status: "rejected" }
+  | InventoryRejection;
 
 export type TradeDeletionResult =
   | (TradeHistoryResult & {
