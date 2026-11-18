@@ -3,7 +3,7 @@ import { normalizeCashEntry as normalizeCashRecord } from "@/src/domain/financia
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition } from "./persistence";
-import { isLinkedCashEntry, isValidManualCashEntry } from "./recordValidation";
+import { isLinkedCashEntry, isValidManualCashEntry, refreshSnapshotsForChange } from "./recordValidation";
 
 type CashActions = Pick<PortfolioStoreState,
   | "addCashEntry"
@@ -29,9 +29,11 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
         throw new Error("Cash entry amount is below supported precision.");
       }
       const cashEntries = [...state.cashEntries, normalizedCashEntry];
+      const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
+      const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 
-      persistPortfolioTransition(storage, state, { cashEntries });
-      set({ cashEntries });
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
     },
     correctManualCashEntry: (cashEntry) => {
       const state = get();
@@ -58,9 +60,11 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
       const cashEntries = state.cashEntries.map((entry) =>
         entry.id === normalizedEntry.id ? normalizedEntry : entry,
       );
+      const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
+      const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 
-      persistPortfolioTransition(storage, state, { cashEntries });
-      set({ cashEntries });
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
 
       return { entry: normalizedEntry, status: "applied" };
     },
@@ -81,9 +85,11 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
       const cashEntries = state.cashEntries.filter(
         (entry) => entry.id !== cashEntryId,
       );
+      const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
+      const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 
-      persistPortfolioTransition(storage, state, { cashEntries });
-      set({ cashEntries });
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
 
       return { entry: existingEntry, status: "applied" };
     },

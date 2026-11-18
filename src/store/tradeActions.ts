@@ -12,7 +12,7 @@ import { isManualTrade } from "@/src/domain/transactionSemantics";
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition } from "./persistence";
-import { cashBalance, rebuildPortfolioSnapshots } from "./recordValidation";
+import { cashBalance, rebuildPortfolioSnapshots, refreshSnapshotsForChange } from "./recordValidation";
 import {
   assetInventoryProblem,
   availableUnitsBeforeTrade,
@@ -305,8 +305,13 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
         return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue };
       }
 
-      persistPortfolioTransition(storage, state, { assets, cashEntries, trades });
-      set({ assets, cashEntries, trades });
+      // A new asset rides on state so the rebuild can value it.
+      const history = refreshSnapshotsForChange({ cashEntries, now: currentDate, state: { ...state, assets }, trades });
+      const transition = history
+        ? { assets, cashEntries, monthlySnapshots: history.monthlySnapshots, trades }
+        : { assets, cashEntries, trades };
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
 
       return { cashEntry, isValid: true, trade: commandInput.trade };
     },
@@ -366,8 +371,12 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
       const cashEntry = linkedCashEntry(normalizedInput, "saleProceeds");
       const cashEntries = [...state.cashEntries, cashEntry];
 
-      persistPortfolioTransition(storage, state, { cashEntries, trades });
-      set({ cashEntries, trades });
+      const history = refreshSnapshotsForChange({ cashEntries, now: currentDate, state, trades });
+      const transition = history
+        ? { cashEntries, monthlySnapshots: history.monthlySnapshots, trades }
+        : { cashEntries, trades };
+      persistPortfolioTransition(storage, state, transition);
+      set(transition);
 
       return { cashEntry, isValid: true, trade: normalizedInput.trade };
     },

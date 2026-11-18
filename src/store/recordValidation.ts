@@ -23,6 +23,7 @@ import type {
   Asset,
   CashEntry,
   Currency,
+  Distribution,
   OpeningPosition,
   PpfAccount,
   PpfLedgerEntry,
@@ -278,6 +279,7 @@ export function prepareOpeningPositionForWrite(
 export function rebuildPortfolioSnapshots({
   assets,
   cashEntries,
+  distributions,
   earliestAffectedMonth,
   now,
   openingPositions,
@@ -288,6 +290,7 @@ export function rebuildPortfolioSnapshots({
 }: {
   assets?: Asset[];
   cashEntries?: CashEntry[];
+  distributions?: Distribution[];
   earliestAffectedMonth: string;
   now: Date;
   openingPositions?: OpeningPosition[];
@@ -331,7 +334,7 @@ export function rebuildPortfolioSnapshots({
     const result = buildGeneratedMonthEndSnapshot({
       assets: nextAssets,
       cashEntries: nextCashEntries,
-      distributions: state.distributions,
+      distributions: distributions ?? state.distributions,
       existingSnapshots: monthlySnapshots,
       historicalQuotes: state.historicalQuoteCache,
       now,
@@ -372,6 +375,61 @@ export function rebuildPortfolioSnapshots({
       .map((snapshot) => snapshot.month),
     refreshedMonths,
   };
+}
+
+/** Records whose date may have changed: added, removed or replaced (compared by reference). */
+function changedRecordDates<T>(before: T[], after: T[], dateOf: (record: T) => string | undefined) {
+  const kept = new Set(after);
+  const previous = new Set(before);
+  return [
+    ...before.filter((record) => !kept.has(record)),
+    ...after.filter((record) => !previous.has(record)),
+  ].map(dateOf);
+}
+
+/**
+ * Rebuilds automatic month-end snapshots after a change to Cash, trades or
+ * payouts dated in a completed month (#714), so a backdated record is never
+ * absorbed into the next new snapshot as market movement. Returns null when
+ * no saved automatic snapshot is at or after the earliest affected month.
+ */
+export function refreshSnapshotsForChange({
+  cashEntries,
+  distributions,
+  now,
+  state,
+  trades,
+}: {
+  cashEntries?: CashEntry[];
+  distributions?: Distribution[];
+  now: Date;
+  state: PortfolioStoreState;
+  trades?: Trade[];
+}) {
+  const currentMonth = formatLocalCalendarDate(now).slice(0, 7);
+  const months = [
+    ...(cashEntries ? changedRecordDates(state.cashEntries, cashEntries, (entry) => entry.date) : []),
+    ...(trades ? changedRecordDates(state.trades, trades, (trade) => trade.date) : []),
+    ...(distributions ? changedRecordDates(state.distributions, distributions, (item) => item.paidOn) : []),
+  ]
+    .map((date) => getCalendarDatePart(date ?? "")?.slice(0, 7))
+    .filter((month): month is string => month !== undefined && month < currentMonth)
+    .sort();
+  if (months.length === 0) return null;
+  // Only saved automatic snapshots go stale; creating history that was never
+  // generated stays with Progress automation.
+  if (!state.monthlySnapshots.some((snapshot) =>
+    snapshot.month >= months[0] && snapshot.generated?.source === "auto")) {
+    return null;
+  }
+  return rebuildPortfolioSnapshots({
+    cashEntries,
+    distributions,
+    earliestAffectedMonth: months[0],
+    now,
+    state,
+    trades,
+  });
 }
 
 export function assetRecordMonth(state: PortfolioStoreState, assetId: string) {
