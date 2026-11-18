@@ -4,6 +4,98 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Full tier after the #721 hardening issues, 56 passed, 9 failed (environment), all 9 passed on rerun, 76m 00s
+
+- Commit: main 8d4f9f7, version 1.0.32. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on, x86_64) freshly built
+  from 8d4f9f7, SHA-256 prefix 9274d13c890c522c, Metro stopped. Command:
+  `npm run maestro:test` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`,
+  run from the G:\cv build worktree at the tested commit.
+- Full tier: 65 flows, 56 passed, 9 failed, 76m 00s.
+- The 9 failures are one environmental event. During `cas-native-import`,
+  while Maestro was typing the synthetic CAS password, the Maestro driver
+  connection dropped (`UNAVAILABLE: End of stream`). Every assertion before that
+  had passed, including the import's data evidence before and after a relaunch.
+  The emulator's Android system services then restarted:
+  - `adb push` failed with "Transport endpoint is not connected", so the
+    fixture setup for `cas-native-fresh-portfolio` and
+    `zerodha-tradebook-import` failed.
+  - Maestro's driver install failed with "Can't find service: package".
+  - The four futures flows failed on `tcp:7001: closed`.
+  - `investing-cash-migration` and `epf-persistence` failed at app launch.
+
+  The 39 flows after that passed. Alone, on the same APK and emulator session,
+  all 9 failed flows passed (wall times below include fixture setup). Not an
+  app defect.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 22s |
+| dashboard-valuation-basis | Pass | 0m 30s |
+| add-trade | Pass | 1m 08s |
+| add-holding-lookup | Pass | 1m 04s |
+| add-holding-back | Pass | 1m 07s |
+| add-holding-manual-semantics | Pass | 1m 18s |
+| add-holding-pending-valuation | Pass | 1m 29s |
+| add-holding-unknown-date | Pass | 0m 57s |
+| add-holding-edited-quote | Pass | 0m 47s |
+| add-holding-asset-switch | Pass | 1m 28s |
+| add-holding-asset-class | Pass | 1m 20s |
+| add-holding-review-hierarchy | Pass | 1m 12s |
+| quick-portfolio-setup | Pass | 2m 42s |
+| sell-quote-context | Pass | 0m 57s |
+| holdings-csv-import | Pass | 1m 14s |
+| transactions-csv-import | Pass | 1m 26s |
+| cas-native-import | Fail (environment); rerun pass 3m 51s | 3m 47s |
+| cas-native-fresh-portfolio | Fail (environment); rerun pass 1m 58s | 0m 00s |
+| zerodha-tradebook-import | Fail (environment); rerun pass 3m 14s | 0m 00s |
+| futures-manual-wallet | Fail (environment); rerun pass 4m 26s | 0m 04s |
+| futures-draft-protection | Fail (environment); rerun pass 3m 19s | 0m 04s |
+| futures-timestamp-evidence | Fail (environment); rerun pass 5m 26s | 0m 05s |
+| futures-cash-funding | Fail (environment); rerun pass 3m 16s | 0m 07s |
+| investing-cash-migration | Fail (environment); rerun pass 0m 54s | 0m 05s |
+| epf-persistence | Fail (environment); rerun pass 0m 45s | 0m 15s |
+| epf-reporting | Pass | 1m 04s |
+| epf-accounts | Pass | 1m 30s |
+| epf-entries | Pass | 2m 03s |
+| epf-corrections | Pass | 1m 36s |
+| epf-matrix | Pass | 0m 56s |
+| epf-progress-empty | Pass | 0m 59s |
+| epf-year-summary | Pass | 1m 44s |
+| holdings | Pass | 1m 21s |
+| holdings-list-first | Pass | 2m 19s |
+| holdings-list-first-layout | Pass | 0m 59s |
+| ppf-account | Pass | 1m 44s |
+| ppf-history-fallback | Pass | 2m 49s |
+| opening-position-correction | Pass | 1m 48s |
+| trade-correction | Pass | 2m 38s |
+| bulk-transaction-delete | Pass | 0m 46s |
+| asset-correction | Pass | 3m 24s |
+| cash | Pass | 1m 11s |
+| cash-entry-focus | Pass | 1m 51s |
+| funded-buy-cash | Pass | 2m 02s |
+| record-purchase | Pass | 1m 09s |
+| payouts | Pass | 1m 05s |
+| xirr-holding | Pass | 0m 48s |
+| xirr-whole | Pass | 0m 30s |
+| payout-coverage | Pass | 0m 43s |
+| snapshot-review | Pass | 0m 24s |
+| progress-chart-range | Pass | 1m 04s |
+| progress-chart-month-navigation | Pass | 1m 04s |
+| progress-snapshot-history | Pass | 0m 53s |
+| value-masking | Pass | 1m 25s |
+| minimal-mode | Pass | 1m 09s |
+| insight-details | Pass | 0m 56s |
+| holding-duration | Pass | 0m 49s |
+| contextual-nudges | Pass | 2m 08s |
+| persistence | Pass | 0m 55s |
+| backup-roundtrip | Pass | 1m 34s |
+| privacy-settings | Pass | 0m 27s |
+| settings-preference-hierarchy | Pass | 1m 01s |
+| shared-ui-hierarchy | Pass | 0m 46s |
+| workflow-exit-navigation | Pass | 0m 49s |
+
 ## 2026-11-19: Smoke tier for per-asset grouping in replays (#720), 15 passed, 14m 30s
 
 - Commit: fix/720-group-by-asset 1370053, version 1.0.32. AVD
