@@ -4,6 +4,34 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-18: Smoke tier for inventory-safe corrections (#713), 15 passed, 13m 53s
+
+- Commit: fix/713-inventory-corrections a158dfb, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from a158dfb, SHA-256 prefix 0ea339eeb58ebc46, Metro
+  stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 13m 53s, within the 15-minute budget.
+  trade-correction exercises the corrected store path.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 01s |
+| record-purchase | Pass | 0m 48s |
+| payouts | Pass | 0m 48s |
+| xirr-holding | Pass | 0m 35s |
+| cash | Pass | 0m 53s |
+| trade-correction | Pass | 1m 57s |
+| holdings-csv-import | Pass | 1m 14s |
+| epf-accounts | Pass | 1m 04s |
+| ppf-account | Pass | 1m 20s |
+| progress-snapshot-history | Pass | 0m 42s |
+| value-masking | Pass | 1m 10s |
+| persistence | Pass | 0m 41s |
+| backup-roundtrip | Pass | 1m 07s |
+
 ## 2026-11-18: Smoke tier for the Expo SDK 58 patch releases, 15 passed, 14m 09s
 
 - Commit: chore/expo-58-patches (expo 58.0.26, expo-router 58.0.32, jest-expo
