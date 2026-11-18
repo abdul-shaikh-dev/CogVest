@@ -4,6 +4,34 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for per-asset grouping in replays (#720), 15 passed, 14m 30s
+
+- Commit: fix/720-group-by-asset 1370053, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from 1370053, SHA-256 prefix f8f3027ed9193a47, Metro stopped.
+  Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 14m 30s, within the 15-minute budget.
+  Run from the G:\cv build worktree at the tested commit. No behaviour change is intended; every flow that reads holdings, sale gains or saves exercises the regrouped paths.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 11s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 03s |
+| record-purchase | Pass | 0m 53s |
+| payouts | Pass | 0m 52s |
+| xirr-holding | Pass | 0m 37s |
+| cash | Pass | 0m 57s |
+| trade-correction | Pass | 2m 08s |
+| holdings-csv-import | Pass | 1m 15s |
+| epf-accounts | Pass | 1m 07s |
+| ppf-account | Pass | 1m 23s |
+| progress-snapshot-history | Pass | 0m 40s |
+| value-masking | Pass | 1m 09s |
+| persistence | Pass | 0m 40s |
+| backup-roundtrip | Pass | 1m 12s |
+
 ## 2026-11-19: Smoke tier for strict decimal input and 48 dp targets (#719), 15 passed, 14m 27s
 
 - Commit: fix/719-strict-decimals 4312a9e, version 1.0.32. AVD
