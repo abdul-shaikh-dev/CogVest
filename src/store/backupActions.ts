@@ -6,6 +6,7 @@ import {
   quickSetupStorageKey,
 } from "@/src/services/storage/backupKeys";
 import { refreshFuturesCashSnapshotHistory } from "@/src/domain/calculations";
+import type { Preferences } from "@/src/types";
 
 import { BackupRecoveryRequiredError, commitBackupRestore } from "./backupPersistence";
 import type { StoreContext } from "./storeContext";
@@ -59,6 +60,7 @@ export function createBackupActions(context: StoreContext): BackupActions {
         portfolio: {
           ...validated.portfolio,
           monthlySnapshots: refreshFuturesCashSnapshotHistory(validated.portfolio),
+          preferences: withDevicePrivacy(validated.portfolio.preferences, state.preferences),
         },
       };
       try {
@@ -135,5 +137,19 @@ export function createBackupActions(context: StoreContext): BackupActions {
         storageRecovery: undefined,
       });
     },
+  };
+}
+
+/**
+ * A restore keeps this device's privacy settings (#718). An older backup, or
+ * one made with masking off, must not quietly turn value masking or screenshot
+ * blocking off here. Other display preferences come from the backup.
+ */
+function withDevicePrivacy(backup: Preferences, device: Preferences): Preferences {
+  const { blockScreenCapture: _backupBlock, ...rest } = backup;
+  return {
+    ...rest,
+    maskWealthValues: device.maskWealthValues,
+    ...(device.blockScreenCapture === undefined ? {} : { blockScreenCapture: device.blockScreenCapture }),
   };
 }
