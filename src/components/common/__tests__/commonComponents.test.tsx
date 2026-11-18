@@ -214,10 +214,10 @@ describe("common UI primitives", () => {
     );
 
     expect(getByTestId("mask-toggle")).toHaveStyle({
-      height: 46,
+      height: 48,
       minHeight: interaction.minimumTouchTarget,
       minWidth: interaction.minimumTouchTarget,
-      width: 46,
+      width: 48,
     });
     expect(getByComponentType({ container }, Ionicons).props.accessible).toBe(false);
   });

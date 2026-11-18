@@ -1,4 +1,5 @@
 import type { Currency } from "@/src/types";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export const transactionCsvVersion = "1";
 export const transactionCsvSourceFormat = "cogvest-transactions";
@@ -276,12 +277,10 @@ function parseNumber(
   { nonNegative = false, required = false } = {},
 ) {
   const trimmed = value.trim();
-  const validDecimal = /^(?:\d+\.?\d*|\.\d+)$/u.test(trimmed);
 
   if (!trimmed && !required) return undefined;
-  const number = Number(trimmed);
+  const number = parseDecimalInput(trimmed);
   const valid =
-    validDecimal &&
     Number.isFinite(number) &&
     (nonNegative ? number >= 0 : number > 0);
 

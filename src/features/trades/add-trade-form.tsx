@@ -356,7 +356,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     borderRadius: radii.pill,
     flex: 1,
     justifyContent: "center",
-    minHeight: 44,
+    // DESIGN.md: every interactive control is at least 48 dp (#719).
+    minHeight: 48,
   },
   convictionChipActive: {
     backgroundColor: colors.primary,

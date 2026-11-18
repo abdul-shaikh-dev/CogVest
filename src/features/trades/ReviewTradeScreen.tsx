@@ -24,6 +24,7 @@ import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { ConvictionScore, Trade } from "@/src/types";
 import type { HoldingsStatus } from "@/src/features/holdings/holdingsStatus";
 import { usePortfolioFields } from "@/src/hooks";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 type ReviewTradeScreenProps = {
   backLabel?: string;
@@ -38,7 +39,7 @@ type Errors = Partial<Record<"conviction" | "date" | "fees" | "holdDays" | "pric
 const convictionScores: ConvictionScore[] = [1, 2, 3, 4, 5];
 
 function parsePositive(value: string) {
-  const parsed = Number(value.trim());
+  const parsed = parseDecimalInput(value);
   return value.trim() && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
@@ -172,7 +173,7 @@ export function ReviewTradeScreen({
   const duplicatedFees = hasImportedCharges ? stableTrade.fees ?? 0 : 0;
   const parsedQuantity = parsePositive(quantity);
   const parsedPrice = parsePositive(price);
-  const parsedFees = hasImportedCharges ? 0 : fees.trim() === "" ? 0 : Number(fees);
+  const parsedFees = hasImportedCharges ? 0 : fees.trim() === "" ? 0 : parseDecimalInput(fees);
   const charges = parsedFees + importedCharges;
   const previewTotal = parsedQuantity && parsedPrice && Number.isFinite(parsedFees)
     ? (parsedQuantity * parsedPrice) + (stableTrade.type === "buy" ? charges : -charges)

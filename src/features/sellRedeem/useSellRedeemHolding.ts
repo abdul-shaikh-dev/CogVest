@@ -27,6 +27,7 @@ import { getHoldingQuoteContext, type QuoteContext } from "@/src/services/quotes
 import type { CashEntry, Holding, Trade } from "@/src/types";
 import { createId } from "@/src/utils";
 import { usePortfolioFields } from "@/src/hooks";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 type UseSellRedeemHoldingInput = {
   assetId: string;
@@ -69,13 +70,13 @@ export type UseSellRedeemHoldingResult = {
 function parseNumber(value: string) {
   const trimmed = value.trim();
 
-  return trimmed.length > 0 ? Number(trimmed) : Number.NaN;
+  return parseDecimalInput(trimmed);
 }
 
 function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
 
-  return trimmed.length > 0 ? Number(trimmed) : 0;
+  return trimmed.length > 0 ? parseDecimalInput(trimmed) : 0;
 }
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {

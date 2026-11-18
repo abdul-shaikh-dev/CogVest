@@ -4,6 +4,34 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for strict decimal input and 48 dp targets (#719), 15 passed, 14m 27s
+
+- Commit: fix/719-strict-decimals 4312a9e, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from 4312a9e, SHA-256 prefix c99b3b09d60e4923, Metro stopped.
+  Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 14m 27s, within the 15-minute budget.
+  Run from the G:\cv build worktree at the tested commit. cash, record-purchase, trade-correction, holdings-csv-import and ppf-account exercise the stricter parsing; the resized controls appear across the tier.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 05s |
+| record-purchase | Pass | 0m 53s |
+| payouts | Pass | 0m 52s |
+| xirr-holding | Pass | 0m 38s |
+| cash | Pass | 0m 57s |
+| trade-correction | Pass | 2m 05s |
+| holdings-csv-import | Pass | 1m 16s |
+| epf-accounts | Pass | 1m 07s |
+| ppf-account | Pass | 1m 24s |
+| progress-snapshot-history | Pass | 0m 41s |
+| value-masking | Pass | 1m 10s |
+| persistence | Pass | 0m 40s |
+| backup-roundtrip | Pass | 1m 09s |
+
 ## 2026-11-19: Smoke tier for restore privacy settings (#718), 14 passed, 14m 21s
 
 - Commit: fix/718-restore-privacy 71d056c, version 1.0.32. AVD
