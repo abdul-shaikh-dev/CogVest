@@ -400,12 +400,12 @@ function replayHoldings({
       const minimumValuationDate = childEvent?.availableFrom ??
         (parentEvent && parentEvent.exDate <= through ? parentEvent.exDate : undefined);
       const quoteDate = rawQuote ? getCalendarDatePart(rawQuote.asOf) : null;
-      const quote = rawQuote && (
+      const validQuote = rawQuote && (
         (childEvent && (!quoteDate || quoteDate < childEvent.availableFrom)) ||
         (parentEvent && parentEvent.exDate <= through && (!quoteDate || quoteDate < parentEvent.exDate))
       ) ? undefined : rawQuote;
 
-      if (!isV1CompatibleQuote(asset, quote)) {
+      if (!isV1CompatibleQuote(asset, validQuote)) {
         return null;
       }
 
@@ -448,6 +448,11 @@ function replayHoldings({
         .sort((left, right) =>
           compareCodeUnits(getOpeningPositionHistoryDate(right) ?? "", getOpeningPositionHistoryDate(left) ?? ""),
         )[0]?.currentPrice;
+      // A cached quote never expires, so a manual price saved after it wins
+      // (#717); otherwise the quote stays ahead of the manual price.
+      const quote = isManualValuationNewer(latestManualValuation?.asOf ?? undefined, validQuote?.asOf)
+        ? undefined
+        : validQuote;
       const currentPrice =
         quote?.price ??
         latestManualValuation?.price ??
@@ -491,6 +496,14 @@ function replayHoldings({
       return holding.totalUnits > 0 ? holding : null;
     })
     .filter((holding): holding is Holding => holding !== null);
+}
+
+/** True when a manual price's as-of instant is strictly after the cached quote's (#717). */
+export function isManualValuationNewer(manualAsOf: string | undefined, quoteAsOf: string | undefined) {
+  if (!manualAsOf || !quoteAsOf) return false;
+  const manualTime = Date.parse(manualAsOf);
+  const quoteTime = Date.parse(quoteAsOf);
+  return Number.isFinite(manualTime) && Number.isFinite(quoteTime) && manualTime > quoteTime;
 }
 
 export function calculateCashBalance(

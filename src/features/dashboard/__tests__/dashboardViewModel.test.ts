@@ -34,6 +34,14 @@ function quoteStatus(
   });
 }
 
+describe("dashboard quote status (#717)", () => {
+  it("shows a failed quote save prominently", () => {
+    const status = quoteStatus({ quoteFailed: 1, refreshError: "Prices were fetched but not saved." });
+    expect(status).toMatchObject({ prominent: true, title: "Prices not saved" });
+    expect(status.detail).toContain("Prices were fetched but not saved.");
+  });
+});
+
 describe("dashboard value formatting", () => {
   it("signs gains but not losses or zero", () => {
     expect(formatSignedINR(1500)).toMatch(/^\+/);
