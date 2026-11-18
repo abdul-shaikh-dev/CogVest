@@ -14,6 +14,7 @@ import type { MeasurementBasis } from "@/src/types";
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition } from "./persistence";
+import { refreshSnapshotsForChange } from "./recordValidation";
 import { hasNonnegativeCashTimeline } from "./tradeRules";
 
 type ReturnActions = Pick<PortfolioStoreState,
@@ -31,7 +32,10 @@ export function createReturnActions({ get, now, set, storage }: StoreContext): R
         recordedAt: now().toISOString(), today: formatLocalCalendarDate(now()) });
       if (plan.status === "rejected") return plan;
       if (!hasNonnegativeCashTimeline(plan.cashEntries)) return { reason: "insufficientCash", status: "rejected" };
-      const transition = { distributions: plan.distributions, cashEntries: plan.cashEntries };
+      const history = refreshSnapshotsForChange({ cashEntries: plan.cashEntries, distributions: plan.distributions, now: now(), state });
+      const transition = history
+        ? { cashEntries: plan.cashEntries, distributions: plan.distributions, monthlySnapshots: history.monthlySnapshots }
+        : { cashEntries: plan.cashEntries, distributions: plan.distributions };
       persistPortfolioTransition(storage, state, transition);
       set(transition);
       return { distribution: plan.distribution, status: "applied" };
@@ -43,7 +47,10 @@ export function createReturnActions({ get, now, set, storage }: StoreContext): R
       if (plan.status === "rejected") return plan;
       // Removing payout Cash must not leave later Cash spending unfunded.
       if (!hasNonnegativeCashTimeline(plan.cashEntries)) return { reason: "insufficientCash", status: "rejected" };
-      const transition = { distributions: plan.distributions, cashEntries: plan.cashEntries };
+      const history = refreshSnapshotsForChange({ cashEntries: plan.cashEntries, distributions: plan.distributions, now: now(), state });
+      const transition = history
+        ? { cashEntries: plan.cashEntries, distributions: plan.distributions, monthlySnapshots: history.monthlySnapshots }
+        : { cashEntries: plan.cashEntries, distributions: plan.distributions };
       persistPortfolioTransition(storage, state, transition);
       set(transition);
       return { status: "applied" };

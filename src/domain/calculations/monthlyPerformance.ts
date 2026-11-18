@@ -24,7 +24,8 @@ export type MonthlyPerformanceUnavailableReason =
   | "manual-snapshot"
   | "ppf-reconciliation"
   | "unknown-opening-position-date"
-  | "missing-previous-snapshot";
+  | "missing-previous-snapshot"
+  | "non-consecutive-snapshot";
 
 export type MonthlyPerformanceResult = {
   denominator: number | null;
@@ -245,6 +246,14 @@ export function buildMonthlyPerformanceBasis({
   };
 }
 
+/** The calendar month before a `YYYY-MM` month. */
+function previousCalendarMonth(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return monthNumber === 1
+    ? `${year - 1}-12`
+    : `${year}-${String(monthNumber - 1).padStart(2, "0")}`;
+}
+
 export function calculateMonthlyPerformance(
   previousSnapshot: MonthlySnapshot | undefined,
   snapshot: MonthlySnapshot,
@@ -266,6 +275,20 @@ export function calculateMonthlyPerformance(
   );
   const totalValueChange = normalizeMoney(totalValueChangeDecimal);
   const basis = snapshot.performanceBasis;
+
+  // The flow basis covers only this month; across a gap, deposits in the
+  // missing months would be counted as market movement (#714).
+  if (previousSnapshot.month !== previousCalendarMonth(snapshot.month)) {
+    return {
+      denominator: null,
+      marketMovement: null,
+      marketMovementPct: null,
+      netExternalFlow: null,
+      reason: "non-consecutive-snapshot",
+      status: "unavailable",
+      totalValueChange,
+    };
+  }
 
   if (!basis) {
     return {

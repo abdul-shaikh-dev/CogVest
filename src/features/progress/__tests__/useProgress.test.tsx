@@ -557,7 +557,13 @@ describe("useProgress", () => {
 
     expect(store.getState().monthlySnapshots[0]).not.toHaveProperty("salary");
     expect(store.getState().monthlySnapshots).toHaveLength(1);
-    expect(store.getState().monthlySnapshots[0]).toEqual(originalSnapshot);
+    // The backdated deposit refreshes the saved July snapshot in place (#714).
+    expect(store.getState().monthlySnapshots[0]).toMatchObject({
+      cashValue: 150000,
+      id: originalSnapshot.id,
+      month: "2026-07",
+      performanceBasis: { netExternalFlow: 150000 },
+    });
   });
 
   it("backfills every missing completed month oldest-first with month-specific prices", async () => {
