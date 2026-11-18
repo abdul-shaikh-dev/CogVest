@@ -67,12 +67,14 @@ export function getQuoteStatus({
   quoteFailed,
   quoteFreshness,
   quoteTimedOut,
+  refreshError,
 }: {
   hasFutures: boolean;
   isRefreshing: boolean;
   quoteFailed: number;
   quoteFreshness: QuoteFreshnessSummary;
   quoteTimedOut: number;
+  refreshError?: string;
 }) {
   const counts = `Current ${quoteFreshness.current} · Stale ${quoteFreshness.stale} · Manual ${quoteFreshness.manual} · Missing ${quoteFreshness.missing}`;
 
@@ -82,6 +84,10 @@ export function getQuoteStatus({
       prominent: false,
       title: "Refreshing quotes...",
     };
+  }
+
+  if (refreshError) {
+    return { detail: `${counts}. ${refreshError}`, prominent: true, title: "Prices not saved" };
   }
 
   if (quoteFailed > 0 || quoteTimedOut > 0) {
