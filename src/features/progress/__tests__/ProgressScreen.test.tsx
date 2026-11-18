@@ -410,14 +410,15 @@ describe("ProgressScreen", () => {
       id: "opening-negative-net",
       quantity: 10,
     });
-    store.getState().addCashEntry({
+    // Negative Cash now only comes from records saved before #715.
+    store.setState((state) => ({ cashEntries: [...state.cashEntries, {
       amount: 20000,
       date: "2026-07-16T00:00:00.000Z",
       id: "cash-negative-net",
       label: "Temporary overdraft",
       purpose: "withdrawal",
       type: "withdrawal",
-    });
+    }] }));
 
     const { getByText } = await render(
       <ProgressScreen

@@ -133,6 +133,7 @@ describe("ReviewCashEntryScreen", () => {
 
   it("changes a deposit into a withdrawal with the correct purpose", async () => {
     const { store } = createStore();
+    store.getState().addCashEntry({ ...manualEntry, amount: 5000, date: "2026-07-01", id: "cash-funding" });
     const { getByTestId } = await render(
       <ReviewCashEntryScreen
         entryId={manualEntry.id}
@@ -152,6 +153,27 @@ describe("ReviewCashEntryScreen", () => {
         type: "withdrawal",
       });
     });
+  });
+
+  it("refuses a withdrawal correction that leaves Cash below zero and names the date (#715)", async () => {
+    const { store } = createStore();
+    const onComplete = jest.fn();
+    const { getByTestId, findByText } = await render(
+      <ReviewCashEntryScreen
+        entryId={manualEntry.id}
+        now={new Date(2026, 6, 22, 12)}
+        onCancel={jest.fn()}
+        onComplete={onComplete}
+        store={store}
+      />,
+    );
+
+    await fireEvent.press(getByTestId("cash-correction-type-withdrawal"));
+    await fireEvent.press(getByTestId("save-cash-correction-button"));
+
+    expect(await findByText(/below zero on 20 Jul 2026/)).toBeTruthy();
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(store.getState().cashEntries[0]).toMatchObject({ type: "addition" });
   });
 
   it("requires confirmation before deleting a manual entry", async () => {

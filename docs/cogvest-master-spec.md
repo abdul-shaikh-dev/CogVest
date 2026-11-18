@@ -299,6 +299,14 @@ as INR using a current exchange rate.
 - A linked sale must preserve nonnegative inventory throughout the dated record
   timeline, not merely leave a positive balance today. Corrections and deletions
   continue to rebuild from raw records under the same policy.
+- Cash follows the same rule: every Cash change, manual or linked, must keep the
+  dated Cash balance at or above zero on every date, not only today. A manual
+  withdrawal, correction or deletion that would push any date below zero is
+  refused, and the message names the first date that goes negative. A timeline
+  that is already negative (recorded before this rule) stays loadable: a manual
+  change is allowed when it does not move the first negative date earlier, so
+  the person can repair the gap by recording the missing funding. Cash-funded
+  purchases stay strict and name the shortfall date when they are refused.
 - Basic duration keeps its existing supported single-known-acquisition scope;
   multiple acquisitions, aggregate acquisition dates, or dispositions do not
   imply a guessed age for the remaining units. Advanced tax reporting (#25) is

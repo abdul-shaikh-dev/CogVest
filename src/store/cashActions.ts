@@ -3,6 +3,7 @@ import { normalizeCashEntry as normalizeCashRecord } from "@/src/domain/financia
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPortfolioTransition } from "./persistence";
+import { CashShortfallError, manualCashShortfall } from "./tradeRules";
 import { isLinkedCashEntry, isValidManualCashEntry, refreshSnapshotsForChange } from "./recordValidation";
 
 type CashActions = Pick<PortfolioStoreState,
@@ -29,6 +30,8 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
         throw new Error("Cash entry amount is below supported precision.");
       }
       const cashEntries = [...state.cashEntries, normalizedCashEntry];
+      const shortfallDate = manualCashShortfall(state.cashEntries, cashEntries);
+      if (shortfallDate) throw new CashShortfallError(shortfallDate);
       const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
       const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 
@@ -60,6 +63,8 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
       const cashEntries = state.cashEntries.map((entry) =>
         entry.id === normalizedEntry.id ? normalizedEntry : entry,
       );
+      const shortfallDate = manualCashShortfall(state.cashEntries, cashEntries);
+      if (shortfallDate) return { reason: "insufficientCash", shortfallDate, status: "rejected" };
       const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
       const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 
@@ -85,6 +90,8 @@ export function createCashActions({ get, now, set, storage }: StoreContext): Cas
       const cashEntries = state.cashEntries.filter(
         (entry) => entry.id !== cashEntryId,
       );
+      const shortfallDate = manualCashShortfall(state.cashEntries, cashEntries);
+      if (shortfallDate) return { reason: "insufficientCash", shortfallDate, status: "rejected" };
       const history = refreshSnapshotsForChange({ cashEntries, now: now(), state });
       const transition = history ? { cashEntries, monthlySnapshots: history.monthlySnapshots } : { cashEntries };
 

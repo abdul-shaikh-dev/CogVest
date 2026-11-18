@@ -200,6 +200,10 @@ describe("ReviewAssetScreen", () => {
       type: "withdrawal",
     };
     store.getState().addTrade(trade);
+    store.getState().addCashEntry({
+      amount: 200, date: trade.date, id: "cash-funding", label: "Funding",
+      purpose: "capitalContribution", type: "addition",
+    });
     store.getState().addCashEntry(linkedCash);
     const originalDeletion = store.getState().deleteAsset;
     const deletionSpy = jest.fn(originalDeletion);
@@ -225,7 +229,8 @@ describe("ReviewAssetScreen", () => {
     expect(deletionSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().assets).toEqual([]);
     expect(store.getState().trades).toEqual([]);
-    expect(store.getState().cashEntries).toEqual([]);
+    // Only the linked purchase Cash goes; the manual funding stays.
+    expect(store.getState().cashEntries.map((entry) => entry.id)).toEqual(["cash-funding"]);
   });
 
   it("reports duplicate identity without losing entered values", async () => {

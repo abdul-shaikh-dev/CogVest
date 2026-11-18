@@ -189,6 +189,8 @@ export type LinkedTradeCommandResult =
         | "invalidTradeType";
       requiredCash?: number;
       requiredUnits?: number;
+      /** First date the dated Cash balance would go below zero (#715). */
+      shortfallDate?: string;
     };
 
 export type OpeningPositionCommandInput = {
@@ -271,7 +273,15 @@ export type ManualCashCorrectionResult =
   | {
       reason: "invalidEntry" | "linkedEntry" | "notFound";
       status: "rejected";
-    };
+    }
+  | CashShortfallRejection;
+
+/** A manual Cash change refused because the dated balance would go below zero (#715). */
+export type CashShortfallRejection = {
+  reason: "insufficientCash";
+  shortfallDate: string;
+  status: "rejected";
+};
 
 export type AssetHistoryResult = {
   pendingMonths: string[];
@@ -312,7 +322,8 @@ export type ManualCashDeletionResult =
   | {
       reason: "linkedEntry" | "notFound";
       status: "rejected";
-    };
+    }
+  | CashShortfallRejection;
 
 export type OpeningPositionCommandResult = {
   asset: Asset;

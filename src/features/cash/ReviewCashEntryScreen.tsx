@@ -16,7 +16,12 @@ import {
 import { DatePickerField, FormTextField, MoneyField } from "@/src/components/forms";
 import { getCalendarDatePart } from "@/src/domain/dates";
 import { formatDate } from "@/src/domain/formatters";
-import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import {
+  cashShortfallMessage,
+  describeSaveFailure,
+  getPortfolioStore,
+  type PortfolioStoreState,
+} from "@/src/store";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 import type { CashEntry, CashEntryType } from "@/src/types";
 import { usePortfolioFields } from "@/src/hooks";
@@ -56,7 +61,11 @@ function getInitialPurpose(entry?: CashEntry): ManualCashPurpose {
   return "capitalContribution";
 }
 
-function getSaveFailureMessage(reason?: string) {
+function getSaveFailureMessage(reason?: string, shortfallDate?: string) {
+  if (reason === "insufficientCash" && shortfallDate) {
+    return cashShortfallMessage(shortfallDate);
+  }
+
   if (reason === "linkedEntry") {
     return "This movement is managed with its investment transaction and cannot be changed here.";
   }
@@ -252,7 +261,12 @@ export function ReviewCashEntryScreen({
       });
 
       if (result.status === "rejected") {
-        setErrors({ save: getSaveFailureMessage(result.reason) });
+        setErrors({
+          save: getSaveFailureMessage(
+            result.reason,
+            "shortfallDate" in result ? result.shortfallDate : undefined,
+          ),
+        });
         return;
       }
 
@@ -282,7 +296,12 @@ export function ReviewCashEntryScreen({
       const result = store.getState().deleteManualCashEntry(manualEntry.id);
 
       if (result.status === "rejected") {
-        setErrors({ save: getSaveFailureMessage(result.reason) });
+        setErrors({
+          save: getSaveFailureMessage(
+            result.reason,
+            "shortfallDate" in result ? result.shortfallDate : undefined,
+          ),
+        });
         return;
       }
 

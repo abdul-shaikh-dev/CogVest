@@ -100,7 +100,7 @@ export {
   type TransactionImportCommandResult,
 } from "./storeTypes";
 export { createDefaultPreferences, createEmptyPortfolioSnapshot } from "./persistence";
-export { wouldOversellAsset } from "./tradeRules";
+export { cashShortfallMessage, wouldOversellAsset } from "./tradeRules";
 export { describeSaveFailure, StoreWriteBlockedError, storageFullMessage } from "./saveFailure";
 
 export function createPortfolioStore({
