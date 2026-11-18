@@ -4,6 +4,34 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for imported trade charges (#716), 15 passed, 13m 32s
+
+- Commit: fix/716-imported-trade-charges d852267, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, cold-booted
+  just before this run. E2E APK (R8 on, x86_64) freshly built from d852267,
+  SHA-256 prefix 845e267125888a07, Metro stopped. Command: `npm run maestro:smoke`
+  with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 13m 32s, within the 15-minute budget.
+  trade-correction exercises the changed correction screen.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 01s |
+| record-purchase | Pass | 0m 49s |
+| payouts | Pass | 0m 47s |
+| xirr-holding | Pass | 0m 36s |
+| cash | Pass | 0m 53s |
+| trade-correction | Pass | 1m 56s |
+| holdings-csv-import | Pass | 1m 10s |
+| epf-accounts | Pass | 1m 04s |
+| ppf-account | Pass | 1m 16s |
+| progress-snapshot-history | Pass | 0m 39s |
+| value-masking | Pass | 1m 05s |
+| persistence | Pass | 0m 38s |
+| backup-roundtrip | Pass | 1m 06s |
+
 ## 2026-11-19: Smoke tier for dated Cash shortfalls (#715), 15 passed, 15m 23s (over budget)
 
 - Commit: fix/715-cash-timeline 1a103ef, version 1.0.32. AVD
@@ -39,34 +67,6 @@ the run cadence.
 | value-masking | Pass | 1m 15s |
 | persistence | Pass | 0m 43s |
 | backup-roundtrip | Pass | 1m 14s |
-
-## 2026-11-19: Smoke tier for imported trade charges (#716), 15 passed, 13m 32s
-
-- Commit: fix/716-imported-trade-charges d852267, version 1.0.32. AVD
-  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, cold-booted
-  just before this run. E2E APK (R8 on, x86_64) freshly built from d852267,
-  SHA-256 prefix 845e267125888a07, Metro stopped. Command: `npm run maestro:smoke`
-  with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
-- Smoke tier: 15 passed, 0 failed, 13m 32s, within the 15-minute budget.
-  trade-correction exercises the changed correction screen.
-
-| Flow | Result | Duration |
-| --- | --- | --- |
-| smoke-launch | Pass | 0m 12s |
-| navigation | Pass | 0m 21s |
-| add-holding-lookup | Pass | 1m 01s |
-| record-purchase | Pass | 0m 49s |
-| payouts | Pass | 0m 47s |
-| xirr-holding | Pass | 0m 36s |
-| cash | Pass | 0m 53s |
-| trade-correction | Pass | 1m 56s |
-| holdings-csv-import | Pass | 1m 10s |
-| epf-accounts | Pass | 1m 04s |
-| ppf-account | Pass | 1m 16s |
-| progress-snapshot-history | Pass | 0m 39s |
-| value-masking | Pass | 1m 05s |
-| persistence | Pass | 0m 38s |
-| backup-roundtrip | Pass | 1m 06s |
 
 ## 2026-11-19: Smoke tier for month-end snapshot refresh (#714), 15 passed, 14m 08s
 
