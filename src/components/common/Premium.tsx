@@ -471,9 +471,10 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface.elevated,
     borderRadius: 13,
-    height: 46,
+    // DESIGN.md: every interactive control is at least 48 x 48 dp (#719).
+    height: 48,
     justifyContent: "center",
-    width: 46,
+    width: 48,
   },
   metricCell: {
     flex: 1,

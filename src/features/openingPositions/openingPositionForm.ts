@@ -13,6 +13,7 @@ import {
   normalizeQuantity,
   normalizeUnitPrice,
 } from "@/src/domain/precision";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export type OpeningPositionFormValues = {
   assetClass: AssetClass;
@@ -60,7 +61,7 @@ export type OpeningPositionFormResult =
     };
 
 function parsePositiveNumber(value: string) {
-  const parsed = Number(value);
+  const parsed = parseDecimalInput(value);
 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }

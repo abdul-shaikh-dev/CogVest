@@ -25,6 +25,7 @@ import { createId } from "@/src/utils";
 import { usePortfolioFields } from "@/src/hooks";
 
 import { validateTradeForm } from "./tradeForm";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 type FieldErrors = Partial<Record<string, string>>;
 
@@ -186,7 +187,7 @@ export function useAddTrade({
     }
 
     const asset = selectedAsset ?? buildManualAsset();
-    const parsedFeeValue = fees.trim().length > 0 ? Number(fees) : 0;
+    const parsedFeeValue = fees.trim().length > 0 ? parseDecimalInput(fees) : 0;
 
     if (!Number.isFinite(parsedFeeValue) || parsedFeeValue < 0) {
       setErrors({ fees: "Fees must be zero or greater." });

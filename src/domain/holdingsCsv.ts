@@ -13,6 +13,7 @@ import type {
   InstrumentType,
   SectorType,
 } from "@/src/types";
+import { parseDecimalInput } from "@/src/domain/decimalInput";
 
 export const holdingsCsvVersion = "1";
 export const holdingsCsvMaxRows = 500;
@@ -153,7 +154,7 @@ function parsePositiveNumber(
   const trimmed = value.trim();
   if (column === "current_price" && trimmed.length === 0) return undefined;
 
-  const number = Number(trimmed);
+  const number = parseDecimalInput(trimmed);
   if (!trimmed || !Number.isFinite(number) || number <= 0) {
     errors.push({
       code: "invalidNumber",
