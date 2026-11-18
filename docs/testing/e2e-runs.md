@@ -4,6 +4,35 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-19: Smoke tier for month-end snapshot refresh (#714), 15 passed, 14m 08s
+
+- Commit: fix/714-snapshot-refresh 196b17c, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from 196b17c, SHA-256 prefix 7dc8dd08b369fada, Metro
+  stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 14m 08s, within the 15-minute budget.
+  progress-snapshot-history, cash, payouts and record-purchase exercise the
+  changed store paths.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 12s |
+| navigation | Pass | 0m 21s |
+| add-holding-lookup | Pass | 1m 02s |
+| record-purchase | Pass | 0m 52s |
+| payouts | Pass | 0m 48s |
+| xirr-holding | Pass | 0m 37s |
+| cash | Pass | 0m 55s |
+| trade-correction | Pass | 2m 04s |
+| holdings-csv-import | Pass | 1m 15s |
+| epf-accounts | Pass | 1m 06s |
+| ppf-account | Pass | 1m 21s |
+| progress-snapshot-history | Pass | 0m 40s |
+| value-masking | Pass | 1m 08s |
+| persistence | Pass | 0m 40s |
+| backup-roundtrip | Pass | 1m 07s |
+
 ## 2026-11-18: Smoke tier for inventory-safe corrections (#713), 15 passed, 13m 53s
 
 - Commit: fix/713-inventory-corrections a158dfb, version 1.0.32. AVD
