@@ -18,10 +18,13 @@ jest.mock("expo-router", () => {
 
   return {
     Stack,
-    router: { navigate: (path: string) => mockNavigate(path) },
+    get router() {
+      return mockGlobalRouter;
+    },
     useNavigationContainerRef: () => mockNavigationRef,
     usePathname: () => mockPathname,
     useRootNavigationState: () => mockRootState,
+    useRouter: () => mockBoundRouter,
   };
 });
 
@@ -40,6 +43,8 @@ const mockNavigationRef: { current: string | null } & Record<string, unknown> = 
 };
 
 const mockNavigate = jest.fn();
+const mockGlobalRouter: Record<string, unknown> = { navigate: (path: string) => mockNavigate(path) };
+let mockBoundRouter: Record<string, unknown> = {};
 const mockTakeStartupLinkPath = jest.fn<string | undefined, []>();
 let mockRootState: { key: string } | undefined = { key: "root" };
 
@@ -104,6 +109,7 @@ describe("RootLayout storage recovery boundary", () => {
     mockRootNavigationState = { routes: [{ name: "(tabs)" }] };
     mockCanGoBack = false;
     mockNavigationRef.current = null;
+    mockBoundRouter = {};
   });
 
   describe("returning after a font-size relaunch (#529)", () => {
@@ -128,19 +134,29 @@ describe("RootLayout storage recovery boundary", () => {
     });
 
     it("keeps global navigation working after the old surface unmounts", async () => {
+      const navigateBefore = mockGlobalRouter.navigate;
       // Android starts the relaunched surface before it stops the old one.
       mockNavigationRef.current = "old container";
+      mockBoundRouter = { push: () => "old surface" };
       const oldSurface = await render(<RootLayout />);
       await waitFor(() => expect(oldSurface.getByTestId("app-stack")).toBeTruthy());
 
       mockNavigationRef.current = "new container";
+      mockBoundRouter = { push: () => "new surface" };
       const newSurface = await render(<RootLayout />);
       await waitFor(() => expect(newSurface.getByTestId("app-stack")).toBeTruthy());
 
-      // The old container's ref cleanup empties the shared ref.
+      // The old tree's cleanup empties the shared ref and unbinds the router.
       mockNavigationRef.current = null;
+      mockGlobalRouter.push = () => {
+        throw new Error("The imperative router is unavailable before the first render has finished.");
+      };
       await oldSurface.unmount();
+
       expect(mockNavigationRef.current).toBe("new container");
+      expect((mockGlobalRouter.push as () => string)()).toBe("new surface");
+      delete mockGlobalRouter.push;
+      mockGlobalRouter.navigate = navigateBefore;
     });
 
     it("starts on the launch route when nothing was remembered", async () => {

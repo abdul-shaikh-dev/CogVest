@@ -1,58 +1,73 @@
-import { createNavigationOwnership } from "../navigationOwnership";
+import { createNavigationOwnership, type NavigationGlobals } from "../navigationOwnership";
+
+const unbound = () => {
+  throw new Error("The imperative router is unavailable before the first render has finished.");
+};
+
+function createGlobals() {
+  const ref: { current: unknown } = { current: null };
+  const router: { push: (href: string) => string } = { push: unbound };
+  return { globals: { ref, router } as NavigationGlobals & { ref: typeof ref; router: typeof router }, ref, router };
+}
 
 describe("navigation ownership (#529)", () => {
-  it("hands the ref back to the newer container when the older mount goes away", () => {
+  it("hands the ref and router back to the newer mount when the older one goes away", () => {
     const ownership = createNavigationOwnership();
-    const ref: { current: string | null } = { current: "old container" };
-    const oldMount = ownership.claim(ref);
+    const { globals, ref, router } = createGlobals();
+    const oldRouter = { push: (href: string) => `old ${href}` };
+    const newRouter = { push: (href: string) => `new ${href}` };
 
+    ref.current = "old container";
+    const oldMount = ownership.claim(globals, { container: "old container", router: oldRouter });
     ref.current = "new container";
-    const newMount = ownership.claim(ref);
+    const newMount = ownership.claim(globals, { container: "new container", router: newRouter });
     expect(ownership.isOwner(oldMount)).toBe(false);
     expect(ownership.isOwner(newMount)).toBe(true);
 
-    // The old container's cleanup clears the shared ref after the new one set it.
+    // The old tree's cleanup empties the shared ref and unbinds the router.
     ref.current = null;
-    ownership.release(oldMount, ref);
+    router.push = unbound;
+    ownership.release(oldMount, globals);
+
     expect(ref.current).toBe("new container");
+    expect(router.push("/backup")).toBe("new /backup");
   });
 
-  it("fills a ref the old surface already emptied when the new mount arrives late", () => {
+  it("fills a ref the old tree already emptied when the new mount arrives late", () => {
     const ownership = createNavigationOwnership();
-    const ref: { current: string | null } = { current: "old container" };
-    const oldMount = ownership.claim(ref, "old container");
+    const { globals, ref } = createGlobals();
+    ref.current = "old container";
+    const oldMount = ownership.claim(globals, { container: "old container" });
 
-    // The old surface unmounted before this mount rendered (e.g. fonts still loading).
+    // The old tree unmounted before this mount rendered (e.g. fonts still loading).
     ref.current = null;
-    ownership.release(oldMount, ref);
+    ownership.release(oldMount, globals);
     expect(ref.current).toBeNull();
 
-    ownership.claim(ref, "new container");
+    ownership.claim(globals, { container: "new container" });
     expect(ref.current).toBe("new container");
   });
 
   it("leaves a ref that is still set alone", () => {
     const ownership = createNavigationOwnership();
-    const ref: { current: string | null } = { current: "old container" };
-    const oldMount = ownership.claim(ref);
-    ref.current = "new container";
-    ownership.claim(ref);
+    const { globals, ref } = createGlobals();
+    const oldMount = ownership.claim(globals, { container: "old container" });
+    ownership.claim(globals, { container: "new container" });
 
-    const assigned = jest.fn();
-    const watched = {
-      get current() { return "new container"; },
-      set current(value: string | null) { assigned(value); },
-    };
-    ownership.release(oldMount, watched);
-    expect(assigned).not.toHaveBeenCalled();
+    ref.current = "current container";
+    ownership.release(oldMount, globals);
+    expect(ref.current).toBe("current container");
   });
 
-  it("does not revive the ref when the only mount goes away", () => {
+  it("does not revive the globals when the only mount goes away", () => {
     const ownership = createNavigationOwnership();
-    const ref: { current: string | null } = { current: "container" };
-    const only = ownership.claim(ref);
+    const { globals, ref, router } = createGlobals();
+    const only = ownership.claim(globals, { container: "container", router: { push: () => "bound" } });
+
     ref.current = null;
-    ownership.release(only, ref);
+    router.push = unbound;
+    ownership.release(only, globals);
     expect(ref.current).toBeNull();
+    expect(() => router.push("/backup")).toThrow("imperative router is unavailable");
   });
 });

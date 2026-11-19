@@ -5,6 +5,7 @@ import {
   router,
   useNavigationContainerRef,
   useRootNavigationState,
+  useRouter,
   type Href,
 } from "expo-router";
 import { NavigationContainerRefContext } from "expo-router/react-navigation";
@@ -75,12 +76,14 @@ function NavigationMemoryRestore() {
   const ownerId = useRef(0);
 
   const container = useContext(NavigationContainerRefContext);
+  const boundRouter = useRouter();
 
   useEffect(() => {
-    const id = navigationOwnership.claim(navigation, container);
+    const globals = { ref: navigation, router };
+    const id = navigationOwnership.claim(globals, { container, router: boundRouter });
     ownerId.current = id;
-    return () => navigationOwnership.release(id, navigation);
-  }, [container, navigation]);
+    return () => navigationOwnership.release(id, globals);
+  }, [boundRouter, container, navigation]);
 
   useEffect(() => {
     if (!launchSettled || restored.current) return;
