@@ -29,7 +29,7 @@ import { getPortfolioStore } from "@/src/store";
 import { exportRecoveryCopies } from "@/src/services/backup";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
-import { sessionMemory } from "@/src/services/session";
+import { navigationOwnership, sessionMemory } from "@/src/services/session";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
 import { useModalAnimation } from "@/src/hooks";
@@ -67,18 +67,28 @@ function NavigationMemoryRestore() {
   const rootKey = useRootNavigationState()?.key;
   const pathname = usePathname();
   const launchSettled = Boolean(rootKey) && pathname !== "/";
+  type RootState = Parameters<typeof navigation.reset>[0];
+  // Taken at mount, before this launch's own redirect can be remembered.
+  const [remembered] = useState(() => sessionMemory.take<RootState>("navigation"));
   const restored = useRef(false);
+  const ownerId = useRef(0);
+
+  useEffect(() => {
+    const id = navigationOwnership.claim(navigation);
+    ownerId.current = id;
+    return () => navigationOwnership.release(id, navigation);
+  }, [navigation]);
 
   useEffect(() => {
     if (!launchSettled || restored.current) return;
     restored.current = true;
-    type RootState = Parameters<typeof navigation.reset>[0];
-    const state = sessionMemory.take<RootState>("navigation");
-    if (state) navigation.reset(state);
-  }, [launchSettled, navigation]);
+    if (remembered) navigation.reset(remembered);
+  }, [launchSettled, navigation, remembered]);
 
   useEffect(() => navigation.addListener("state", () => {
-    if (restored.current) sessionMemory.write("navigation", navigation.getRootState());
+    if (restored.current && navigationOwnership.isOwner(ownerId.current)) {
+      sessionMemory.write("navigation", navigation.getRootState());
+    }
   }), [navigation]);
 
   // Back that leaves the app is a deliberate exit: reopening starts fresh,

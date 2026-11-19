@@ -28,7 +28,8 @@ jest.mock("expo-router", () => {
 const mockStateListeners: (() => void)[] = [];
 let mockRootNavigationState: object = { routes: [{ name: "(tabs)" }] };
 let mockCanGoBack = false;
-const mockNavigationRef = {
+const mockNavigationRef: { current: string | null } & Record<string, unknown> = {
+  current: null,
   addListener: jest.fn((_event: "state", listener: () => void) => {
     mockStateListeners.push(listener);
     return () => mockStateListeners.splice(mockStateListeners.indexOf(listener), 1);
@@ -102,6 +103,7 @@ describe("RootLayout storage recovery boundary", () => {
     mockStateListeners.length = 0;
     mockRootNavigationState = { routes: [{ name: "(tabs)" }] };
     mockCanGoBack = false;
+    mockNavigationRef.current = null;
   });
 
   describe("returning after a font-size relaunch (#529)", () => {
@@ -123,6 +125,22 @@ describe("RootLayout storage recovery boundary", () => {
       await rerender(<RootLayout />);
       expect(mockNavigationRef.reset).toHaveBeenCalledTimes(1);
       expect(sessionMemory.read("navigation")).toBeUndefined();
+    });
+
+    it("keeps global navigation working after the old surface unmounts", async () => {
+      // Android starts the relaunched surface before it stops the old one.
+      mockNavigationRef.current = "old container";
+      const oldSurface = await render(<RootLayout />);
+      await waitFor(() => expect(oldSurface.getByTestId("app-stack")).toBeTruthy());
+
+      mockNavigationRef.current = "new container";
+      const newSurface = await render(<RootLayout />);
+      await waitFor(() => expect(newSurface.getByTestId("app-stack")).toBeTruthy());
+
+      // The old container's ref cleanup empties the shared ref.
+      mockNavigationRef.current = null;
+      await oldSurface.unmount();
+      expect(mockNavigationRef.current).toBe("new container");
     });
 
     it("starts on the launch route when nothing was remembered", async () => {
