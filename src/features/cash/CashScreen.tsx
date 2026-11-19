@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard, Modal, Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -19,6 +19,7 @@ import { DatePickerField, FormTextField, MoneyField } from "@/src/components/for
 import { formatLocalCalendarDate, formatMonthYear } from "@/src/domain/dates";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import { useSingleBackRequest } from "@/src/hooks";
+import { sessionMemory } from "@/src/services/session";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { createId } from "@/src/utils";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
@@ -38,6 +39,17 @@ type CashScreenProps = {
 };
 
 type CashEntryMode = CashEntryType;
+
+type CashEntryDraft = {
+  amount: string;
+  areNotesExpanded: boolean;
+  date: string;
+  entryId: string;
+  isEntryVisible: boolean;
+  label: string;
+  mode: CashEntryMode;
+  notes: string;
+};
 function getCashEntryModeLabel(mode: CashEntryMode) {
   return mode === "addition" ? "Deposit" : "Withdraw";
 }
@@ -76,18 +88,35 @@ export function CashScreen({
     maskWealthValues,
     monthlyMetrics,
   } = useCash({ now, store });
-  const [mode, setMode] = useState<CashEntryMode | null>(null);
-  const [isEntryVisible, setIsEntryVisible] = useState(false);
+  // An unsaved entry outlives the remount Android causes for a system
+  // font-size change (#529). It is kept in memory only, never saved.
+  const [initialDraft] = useState(() => sessionMemory.read<CashEntryDraft>("cashEntryDraft"));
+  const [mode, setMode] = useState<CashEntryMode | null>(initialDraft?.mode ?? null);
+  const [isEntryVisible, setIsEntryVisible] = useState(initialDraft?.isEntryVisible ?? false);
   const [pendingMode, setPendingMode] = useState<CashEntryMode | null>(null);
-  const [amount, setAmount] = useState("");
-  const [label, setLabel] = useState("");
-  const [date, setDate] = useState(() => formatLocalCalendarDate(now));
-  const [notes, setNotes] = useState("");
-  const [areNotesExpanded, setAreNotesExpanded] = useState(false);
+  const [amount, setAmount] = useState(initialDraft?.amount ?? "");
+  const [label, setLabel] = useState(initialDraft?.label ?? "");
+  const [date, setDate] = useState(() => initialDraft?.date ?? formatLocalCalendarDate(now));
+  const [notes, setNotes] = useState(initialDraft?.notes ?? "");
+  const [areNotesExpanded, setAreNotesExpanded] = useState(initialDraft?.areNotesExpanded ?? false);
   const [errors, setErrors] = useState<CashEntryFormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
-  const entryIdRef = useRef(createId("cash"));
+  // The same entry id keeps a retried save of a remembered draft idempotent.
+  const entryIdRef = useRef(initialDraft?.entryId ?? createId("cash"));
+
+  useEffect(() => {
+    sessionMemory.write<CashEntryDraft>("cashEntryDraft", mode ? {
+      amount,
+      areNotesExpanded,
+      date,
+      entryId: entryIdRef.current,
+      isEntryVisible,
+      label,
+      mode,
+      notes,
+    } : undefined);
+  }, [amount, areNotesExpanded, date, isEntryVisible, label, mode, notes]);
   const modeCopy = mode ? getCashEntryModeCopy(mode) : null;
   const compactActivity = !maskWealthValues && monthlyMetrics.added === 0 && monthlyMetrics.invested === 0;
 

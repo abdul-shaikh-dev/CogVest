@@ -3,6 +3,7 @@ import { Keyboard, KeyboardAvoidingView, Modal } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
 import { CashScreen } from "@/src/features/cash";
+import { sessionMemory } from "@/src/services/session";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore, portfolioStorageKey } from "@/src/store";
 import { getAllByComponentType, getPressHandler, queryByComponentType } from "@/src/testing/componentQueries";
@@ -23,6 +24,31 @@ async function selectDate(
 }
 
 describe("CashScreen", () => {
+  it("keeps an unsaved entry when Android remounts the app for a font-size change (#529)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const first = await render(<CashScreen store={store} />);
+    await fireEvent.press(first.getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(first.getByTestId("cash-amount-input"), "1234.56");
+    await fireEvent.changeText(first.getByTestId("cash-label-input"), "Font transition draft");
+    await first.unmount();
+
+    const second = await render(<CashScreen store={store} />);
+    expect(second.getByTestId("cash-amount-input")).toHaveProp("value", "1234.56");
+    expect(second.getByTestId("cash-label-input")).toHaveProp("value", "Font transition draft");
+    expect(store.getState().cashEntries).toHaveLength(0);
+
+    await fireEvent.press(second.getByTestId("save-cash-entry-button"));
+    await waitFor(() => expect(store.getState().cashEntries).toHaveLength(1));
+    expect(store.getState().cashEntries[0]).toMatchObject({
+      amount: 1234.56,
+      label: "Font transition draft",
+      type: "addition",
+    });
+    await waitFor(() => expect(second.queryByTestId("cash-amount-input")).toBeNull());
+    // A saved entry is not offered again after the next remount.
+    expect(sessionMemory.read("cashEntryDraft")).toBeUndefined();
+  });
+
   it("lets the Android modal resize without a second keyboard height owner", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = await render(<CashScreen store={store} />);

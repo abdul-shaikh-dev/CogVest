@@ -1,9 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, usePathname, router, useRootNavigationState, type Href } from "expo-router";
+import {
+  Stack,
+  usePathname,
+  router,
+  useNavigationContainerRef,
+  useRootNavigationState,
+  type Href,
+} from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
   Pressable,
   StyleSheet,
@@ -21,6 +29,7 @@ import { getPortfolioStore } from "@/src/store";
 import { exportRecoveryCopies } from "@/src/services/backup";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
+import { sessionMemory } from "@/src/services/session";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
 import { useModalAnimation } from "@/src/hooks";
@@ -44,6 +53,43 @@ function StartupLinkReplay() {
     const path = takeStartupLinkPath();
     if (path) router.navigate(path as Href);
   }, [launchSettled]);
+
+  return null;
+}
+
+// Returns the user to where they were when Android relaunches the activity for
+// a system font-size change (#529). It waits for the launch redirect like
+// StartupLinkReplay, restores once per mount, and only then starts
+// remembering, so launch states never overwrite the remembered one. It sits
+// outside the restore-keyed tree, so a backup restore still opens Dashboard.
+function NavigationMemoryRestore() {
+  const navigation = useNavigationContainerRef();
+  const rootKey = useRootNavigationState()?.key;
+  const pathname = usePathname();
+  const launchSettled = Boolean(rootKey) && pathname !== "/";
+  const restored = useRef(false);
+
+  useEffect(() => {
+    if (!launchSettled || restored.current) return;
+    restored.current = true;
+    type RootState = Parameters<typeof navigation.reset>[0];
+    const state = sessionMemory.take<RootState>("navigation");
+    if (state) navigation.reset(state);
+  }, [launchSettled, navigation]);
+
+  useEffect(() => navigation.addListener("state", () => {
+    if (restored.current) sessionMemory.write("navigation", navigation.getRootState());
+  }), [navigation]);
+
+  // Back that leaves the app is a deliberate exit: reopening starts fresh,
+  // without the remembered screen or unsaved input.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (!navigation.canGoBack()) sessionMemory.forgetAll();
+      return false;
+    });
+    return () => subscription.remove();
+  }, [navigation]);
 
   return null;
 }
@@ -204,6 +250,8 @@ function RootContents() {
             )}
           </View>
         ) : (
+          <>
+          <NavigationMemoryRestore />
           <Fragment key={restoreEpoch}>
             <StartupLinkReplay />
             <MonthEndSnapshotAutomation
@@ -279,6 +327,7 @@ function RootContents() {
               />
             </Stack>
           </Fragment>
+          </>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

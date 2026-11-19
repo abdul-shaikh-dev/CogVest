@@ -42,7 +42,9 @@ jest.mock("expo-router", () => {
 
   return { Stack, usePathname: () => "/dashboard", router: {
     canDismiss: () => true, dismissAll: () => mockDismissAll(), replace: (path: string) => mockReplace(path),
-  }, useRootNavigationState: () => undefined };
+  }, useNavigationContainerRef: () => ({
+    addListener: () => () => undefined, canGoBack: () => true, getRootState: () => undefined, reset: () => undefined,
+  }), useRootNavigationState: () => undefined };
 });
 
 jest.mock("expo-status-bar", () => {
