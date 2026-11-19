@@ -17,6 +17,20 @@ describe("navigation ownership (#529)", () => {
     expect(ref.current).toBe("new container");
   });
 
+  it("fills a ref the old surface already emptied when the new mount arrives late", () => {
+    const ownership = createNavigationOwnership();
+    const ref: { current: string | null } = { current: "old container" };
+    const oldMount = ownership.claim(ref, "old container");
+
+    // The old surface unmounted before this mount rendered (e.g. fonts still loading).
+    ref.current = null;
+    ownership.release(oldMount, ref);
+    expect(ref.current).toBeNull();
+
+    ownership.claim(ref, "new container");
+    expect(ref.current).toBe("new container");
+  });
+
   it("leaves a ref that is still set alone", () => {
     const ownership = createNavigationOwnership();
     const ref: { current: string | null } = { current: "old container" };

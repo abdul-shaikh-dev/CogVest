@@ -7,8 +7,9 @@ import {
   useRootNavigationState,
   type Href,
 } from "expo-router";
+import { NavigationContainerRefContext } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -73,11 +74,13 @@ function NavigationMemoryRestore() {
   const restored = useRef(false);
   const ownerId = useRef(0);
 
+  const container = useContext(NavigationContainerRefContext);
+
   useEffect(() => {
-    const id = navigationOwnership.claim(navigation);
+    const id = navigationOwnership.claim(navigation, container);
     ownerId.current = id;
     return () => navigationOwnership.release(id, navigation);
-  }, [navigation]);
+  }, [container, navigation]);
 
   useEffect(() => {
     if (!launchSettled || restored.current) return;
