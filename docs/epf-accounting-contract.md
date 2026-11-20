@@ -40,6 +40,7 @@ from PPF.
 | Financial-year summary (#568) | Add the period's contributions and interest by component on its end date; must then equal its passbook closing | Add its contributions only if prior capital is known | Owns its period; flows reported in the end month |
 | Transfer from untracked EPF | Add evidenced amount | Add evidenced transferred capital only if both bases are known | Origin-history limitation remains explicit |
 | Matched tracked transfer | Debit source, credit destination | Move evidenced capital, never create it | One record owns both legs; no Cash write |
+| Claim transfer (#735, design) | Source: credits before the claim leave on their own dates; the claim adds its interest and empties the account. Destination: each credit lands on its own date | Moves with the first credit only when both sides know it; interest never becomes capital | Source must end at ₹0 with no later entry; settlement interest is return in the claim month; internal otherwise |
 | Reconciliation | Replace with absolute confirmed value | Explicit evidenced capital or unknown | Reason required; difference is not classified as gain or deposit |
 | Provider reversal | Inverse of referenced contribution, interest or withdrawal | Inverse of its known capital effect; unknown stays unknown | Explicit reason and original event required; return-flow review |
 
@@ -109,6 +110,96 @@ reconciliation with return limitation.
 Persistence #544 must retain an audit record of edits/removals and apply the
 validated candidate atomically. This helper does not write or retain audit history.
 
+## Transfer settled as a claim (#735)
+
+Status: design for approval. Not implemented yet; until it ships, record such a
+move as described in #735's "Problem".
+
+EPFO moves a balance between member IDs as a claim on the old account and
+separate credits on the new one. The old account's `DR Claim` pays out the whole
+balance plus interest up to the claim date. The new account receives the money
+as one or more `TRANSFER IN` credits that cite the old member ID, typically the
+balance first and an interest-only credit months later. The first credit can be
+posted before the claim date. The credits add up to the claim, by component.
+
+### Record
+
+One `claimTransfer` event owns the whole move. There are no separately editable
+legs; a correction replaces the record and a removal deletes all of it.
+
+| Field | Meaning |
+| --- | --- |
+| `sourceId`, `destinationId` | Two different tracked EPF accounts |
+| `effectiveDate` | The claim date on the old passbook; `postedDate` and `evidence` as other events |
+| `payout` | The claim amount (balance plus interest), by component when known |
+| `interest` | Interest paid inside the claim, from the old passbook's interest line, as #566 |
+| `credits` | One or more `{ date, postedDate, amount }` from the new passbook, in date order |
+| `status` | `inTransit` while credits are still due; `completed` when they add up to `payout` |
+
+### Replay and the counting rule
+
+Steps run by date with the existing same-day ordering; on the claim date the
+claim step runs after the source's other entries, like a settlement.
+
+- **Credit before the claim** (owner's decision): the money counts in the new
+  account from that credit's date. The same amount leaves the old account on
+  that date, so it is counted once. If it exceeds the old account's balance on
+  that date, by component, the record is rejected.
+- **Claim:** the old account is credited `interest`, then pays out what
+  remains. That remainder plus the credits already received must equal
+  `payout`, by component when known, or the record is rejected. The old account
+  ends at ₹0, like a final settlement, and any later entry on it is rejected.
+  What the credits have not delivered yet is in transit.
+- **Credit after the claim:** moves its amount from in transit to the new
+  account on its date. In-transit money is included once in totals and
+  disclosed, as for tracked transfers.
+- A `completed` record's credits must add up to `payout` exactly, by component.
+  An `inTransit` record's credits may add up to less, never more.
+
+### Capital
+
+Capital moves only when both accounts know it. All of the old account's
+capital moves on the first credit's date, provided that credit, by total,
+is at least that capital; otherwise the new account's capital becomes unknown
+rather than guessed. Interest, including `interest` paid inside the claim,
+never becomes capital. After the claim the old account's capital is ₹0.
+
+### History and XIRR
+
+Both accounts are tracked, so the move is internal: no contribution,
+withdrawal or transfer-in flow is reported for it. `interest` is reported as
+interest (return) in the claim month, as for a final settlement. Month-end
+values follow the replay above, so the money is never counted in both
+accounts. In XIRR it is a source outflow and destination inflows at their
+evidenced dates, internal when both accounts are in the boundary.
+
+### Validation
+
+Rejected, with a message naming the problem:
+- credits that do not add up to `payout` on a `completed` record, or add up to
+  more on an `inTransit` one, in total or by component;
+- a payout that does not equal the old balance plus `interest`;
+- a credit before the claim that is larger than the old account's balance then;
+- any entry on the old account after the claim, except a reversal of that
+  claim, which is not offered;
+- a claim or credit on or before either account's checkpoint, or overlapping a
+  financial-year summary on the new account that would already include it;
+- dates in the future, and the same account on both sides.
+
+### Storage
+
+The new event type is added to the EPF event union, as #568 added
+`yearSummary`. Existing records, backups and restores are unchanged and need no
+migration. A backup containing a `claimTransfer` is rejected as a whole by an
+older app version, rather than partly restored.
+
+### Entry
+
+The EPF account screen gets "Moved to another EPF account (claim)" on the old
+account. It asks for the destination account, claim date, payout and interest by
+component, and each credit's date and amount, and previews both accounts'
+balances before saving.
+
 ## Historical value and return coverage
 
 Effective date is evidenced separately from posting date, recording timestamp
@@ -173,6 +264,7 @@ exclude EPF, so it is never counted twice. The link editor ships with #546.
 | Financial-year summary contributions | Aggregate period inflow, not an exact dated flow | Same; coverage reason `summarizedFlows`. #533 excludes the period from exact XIRR or shows a labelled approximation |
 | Financial-year summary interest | Internal earnings on the period end (exact) | Internal earnings |
 | Tracked EPF transfer | Source outflow and destination inflow at evidenced dates | Internal when both sides belong to the boundary; transit must reconcile |
+| Claim transfer (#735, design) | Source outflow on early credits and the claim; destination inflow on each credit; claim interest is internal earnings | Internal when both accounts are in the boundary; in-transit money must reconcile |
 | Untracked-origin transfer | Account inflow with unknown prior history | Boundary/origin evidence needed; cannot assume complete lifetime flow |
 | Withdrawal | Account outflow | External only if outside boundary; unknown destination blocks classification |
 | Reconciliation | Unclassified correction | Unclassified correction; never synthesize a return flow |
