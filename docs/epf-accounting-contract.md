@@ -40,7 +40,7 @@ from PPF.
 | Financial-year summary (#568) | Add the period's contributions and interest by component on its end date; must then equal its passbook closing | Add its contributions only if prior capital is known | Owns its period; flows reported in the end month |
 | Transfer from untracked EPF | Add evidenced amount | Add evidenced transferred capital only if both bases are known | Origin-history limitation remains explicit |
 | Matched tracked transfer | Debit source, credit destination | Move evidenced capital, never create it | One record owns both legs; no Cash write |
-| Claim transfer (#735, design) | Source: credits before the claim leave on their own dates; the claim adds its interest and empties the account. Destination: each credit lands on its own date | Moves with the first credit only when both sides know it; interest never becomes capital | Source must end at ₹0 with no later entry; settlement interest is return in the claim month; internal otherwise |
+| Claim transfer (#735) | Source: credits before the claim leave on their own dates; the claim adds its interest and empties the account. Destination: each credit lands on its own date | Moves with the first credit only when both sides know it; interest never becomes capital | Source must end at ₹0 with no later entry; settlement interest is return in the claim month; internal otherwise |
 | Reconciliation | Replace with absolute confirmed value | Explicit evidenced capital or unknown | Reason required; difference is not classified as gain or deposit |
 | Provider reversal | Inverse of referenced contribution, interest or withdrawal | Inverse of its known capital effect; unknown stays unknown | Explicit reason and original event required; return-flow review |
 
@@ -112,8 +112,7 @@ validated candidate atomically. This helper does not write or retain audit histo
 
 ## Transfer settled as a claim (#735)
 
-Status: design for approval. Not implemented yet; until it ships, record such a
-move as described in #735's "Problem".
+Status: implemented (#735).
 
 EPFO moves a balance between member IDs as a claim on the old account and
 separate credits on the new one. The old account's `DR Claim` pays out the whole
@@ -182,9 +181,12 @@ Rejected, with a message naming the problem:
 - a credit before the claim that is larger than the old account's balance then;
 - any entry on the old account after the claim, except a reversal of that
   claim, which is not offered;
-- a claim or credit on or before either account's checkpoint, or overlapping a
-  financial-year summary on the new account that would already include it;
+- a claim or credit on or before either account's checkpoint;
 - dates in the future, and the same account on both sides.
+
+A financial-year summary on the new account does not conflict with a credit
+inside its period: summaries record contributions and interest only, never
+money moved in, so the credit still counts once.
 
 ### Storage
 
@@ -195,8 +197,9 @@ older app version, rather than partly restored.
 
 ### Entry
 
-The EPF account screen gets "Moved to another EPF account (claim)" on the old
-account. It asks for the destination account, claim date, payout and interest by
+Add EPF entry offers "Moved to another EPF account (claim)"; the account it is
+opened from is the old account, and the record is edited as one entry from either
+side. It asks for the destination account, claim date, payout and interest by
 component, and each credit's date and amount, and previews both accounts'
 balances before saving.
 
@@ -264,7 +267,7 @@ exclude EPF, so it is never counted twice. The link editor ships with #546.
 | Financial-year summary contributions | Aggregate period inflow, not an exact dated flow | Same; coverage reason `summarizedFlows`. #533 excludes the period from exact XIRR or shows a labelled approximation |
 | Financial-year summary interest | Internal earnings on the period end (exact) | Internal earnings |
 | Tracked EPF transfer | Source outflow and destination inflow at evidenced dates | Internal when both sides belong to the boundary; transit must reconcile |
-| Claim transfer (#735, design) | Source outflow on early credits and the claim; destination inflow on each credit; claim interest is internal earnings | Internal when both accounts are in the boundary; in-transit money must reconcile |
+| Claim transfer (#735) | Source outflow on early credits and the claim; destination inflow on each credit; claim interest is internal earnings | Internal when both accounts are in the boundary; in-transit money must reconcile |
 | Untracked-origin transfer | Account inflow with unknown prior history | Boundary/origin evidence needed; cannot assume complete lifetime flow |
 | Withdrawal | Account outflow | External only if outside boundary; unknown destination blocks classification |
 | Reconciliation | Unclassified correction | Unclassified correction; never synthesize a return flow |

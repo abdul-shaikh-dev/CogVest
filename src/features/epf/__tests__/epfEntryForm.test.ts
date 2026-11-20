@@ -215,3 +215,44 @@ describe("financial year summary", () => {
       "Correct the summary instead, or shorten its period first.");
   });
 });
+
+describe("a move settled as a claim (#735)", () => {
+  const credit = (date: string, amount: string, employee = "", employer = "") => ({ date, amount, employee, employer });
+  const claimDraft = (patch: Partial<EpfEntryDraft> = {}) => draft({ kind: "claimTransfer", targetAccountId: "b", date: "2026-06-15",
+    amount: "142100", employee: "101500", employer: "40600", settlementInterest: "2100",
+    settlementInterestEmployee: "1500", settlementInterestEmployer: "600", transferStatus: "completed",
+    credits: [credit("2026-06-01", "140000", "100000", "40000"), credit("2026-09-10", "2100", "1500", "600")], ...patch });
+
+  test("builds one record that round-trips through the editor and labels both sides", () => {
+    const { event, effect } = plan(claimDraft());
+    expect(event).toMatchObject({ type: "claimTransfer", sourceId: "a", destinationId: "b", payout: { total: 142100 },
+      interest: { total: 2100, components: { employee: 1500, employer: 600 } }, status: "completed" });
+    expect(effect).toMatchObject({ totalBefore: 140000, totalAfter: 142100, inTransitAfter: 0 });
+    expect(eventTitle(event)).toBe("Moved to another account (claim)");
+    expect(eventAmountLabel(event, "a")).toBe("−₹1,42,100.00");
+    expect(eventAmountLabel(event, "b")).toBe("+₹1,42,100.00");
+    const restored = draftFromEpfEvent(event, "a", false, now);
+    expect(plan({ ...restored, postedDate: restored.date }).event).toEqual(event);
+  });
+
+  test("names the field that is wrong before replaying the ledger", () => {
+    const result = buildEpfEntry(claimDraft({ targetAccountId: "", settlementInterest: "", employer: "40000",
+      credits: [credit("2026-09-10", "2100"), credit("2026-06-01", "0")] }), context());
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.errors).toEqual({
+      targetAccountId: "Choose the EPF account that received the money.",
+      employer: "The two parts must add up to the claim.",
+      settlementInterest: "Enter the interest paid with the claim, or 0 if none.",
+      credit1Date: "List the credits in date order.",
+      credit1Amount: "Enter the credit from the new passbook, above zero.",
+    });
+  });
+
+  test("an in-transit claim may wait for credits but not exceed the claim", () => {
+    expect(plan(claimDraft({ transferStatus: "inTransit", credits: [credit("2026-06-01", "140000", "100000", "40000")] }))
+      .effect.inTransitAfter).toBe(2100);
+    const over = buildEpfEntry(claimDraft({ transferStatus: "inTransit",
+      credits: [credit("2026-06-01", "140000", "100000", "40000"), credit("2026-09-10", "2200", "1500", "700")] }), context());
+    expect(!over.ok && over.message).toBe("The new account's credits cannot add up to more than the claim.");
+  });
+});

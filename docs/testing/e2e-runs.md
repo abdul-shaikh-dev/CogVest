@@ -4,6 +4,43 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new claim-transfer flow for recording a move settled as a claim (#735), 14 passed, 1 failed (pre-existing), 23m 41s
+
+- Commit: feat/735-epf-claim-transfer 2fb58f3 app code (flow added in ec104be with
+  no app change), version 1.0.32. AVD CogVest_UX_Proof, API 36, 1280x2856 at
+  480 dpi, font scale 1.0. E2E APK (R8 on, x86_64) freshly built from 2fb58f3; its
+  SHA-256 was not recorded before a later `main` build replaced it. Metro stopped.
+  Command: `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`,
+  from the G:\cv build worktree.
+- New flow `epf-claim-transfer`: Pass, 1m 47s. It records a claim with its interest
+  and two credits through the real screens, then re-reads the persisted ledger:
+  EPF 142100, nothing moving, one entry, Cash unchanged; the old account shows
+  ₹0 and "Moved in full to Beta".
+- Smoke tier: 14 passed, 1 failed. Over the 15-minute budget because jest ran on
+  the same host during the run.
+- `holdings-csv-import` fails at the lookup candidate for row 3 with "This CSV
+  could not be read". It failed the same way when rerun alone, and on an e2e APK
+  freshly built from `main` b16c3e9, so it predates this change, which doesn't
+  touch holdings import. It passed on 2026-11-20; the cause is not yet known.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 18s |
+| navigation | Pass | 0m 29s |
+| add-holding-lookup | Pass | 1m 30s |
+| record-purchase | Pass | 3m 26s |
+| payouts | Pass | 1m 21s |
+| xirr-holding | Pass | 1m 01s |
+| cash | Pass | 1m 21s |
+| trade-correction | Pass | 3m 13s |
+| holdings-csv-import | Fail (pre-existing, also fails on main) | 1m 23s |
+| epf-accounts | Pass | 1m 40s |
+| ppf-account | Pass | 2m 01s |
+| progress-snapshot-history | Pass | 0m 58s |
+| value-masking | Pass | 1m 59s |
+| persistence | Pass | 1m 07s |
+| backup-roundtrip | Pass | 1m 53s |
+
 ## 2026-11-20: Smoke tier for keeping navigation working after a font-size change (#529), 15 passed, 14m 04s
 
 - Commit: fix/529-restore-after-font-change c6695a2, version 1.0.32. AVD

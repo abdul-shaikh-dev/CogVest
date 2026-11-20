@@ -32,6 +32,7 @@ const defaultFlows = [
   "e2e/epf-reporting.yaml",
   "e2e/epf-accounts.yaml",
   "e2e/epf-entries.yaml",
+  "e2e/epf-claim-transfer.yaml",
   "e2e/epf-corrections.yaml",
   "e2e/epf-matrix.yaml",
   "e2e/epf-progress-empty.yaml",

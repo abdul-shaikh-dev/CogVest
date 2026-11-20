@@ -91,6 +91,15 @@ export const epfEventSchema = z.discriminatedUnion("type", [
     status: z.enum(["requested", "inTransit", "completed"]),
     creditDate: epfDateSchema.nullable(),
   }).strict(),
+  // A move between member IDs that EPFO settles as a claim (#735). effectiveDate
+  // is the old account's claim date; payout includes interest paid inside it.
+  // Credits on the new account may be posted before the claim.
+  z.object({ ...base, type: z.literal("claimTransfer"), sourceId: id, destinationId: id,
+    payout: epfBalanceSchema, interest: epfBalanceSchema,
+    credits: z.array(z.object({ date: epfDateSchema, postedDate: epfDateSchema, amount: epfBalanceSchema }).strict())
+      .min(1).max(20),
+    status: z.enum(["inTransit", "completed"]),
+  }).strict(),
 ]);
 
 export const epfLedgerSchema = z.object({
@@ -102,3 +111,8 @@ export type EpfBalance = z.infer<typeof epfBalanceSchema>;
 export type EpfAccount = z.infer<typeof epfAccountSchema>;
 export type EpfEvent = z.infer<typeof epfEventSchema>;
 export type EpfLedger = z.infer<typeof epfLedgerSchema>;
+export type EpfClaimTransfer = Extract<EpfEvent, { type: "claimTransfer" }>;
+/** Events that move money between two tracked EPF accounts. */
+export type EpfAccountMove = Extract<EpfEvent, { type: "transfer" | "claimTransfer" }>;
+export const isEpfAccountMove = (event: EpfEvent): event is EpfAccountMove =>
+  event.type === "transfer" || event.type === "claimTransfer";

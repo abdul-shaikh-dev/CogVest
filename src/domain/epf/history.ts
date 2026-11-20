@@ -66,8 +66,13 @@ function flowsForMonth(events: readonly EpfEvent[], month: string): EpfMonthFlow
   let reconciled = false;
   let summarized = false;
   for (const event of events) {
-    // Tracked EPF-to-EPF transfers are internal and never appear as a flow.
+    // Tracked EPF-to-EPF transfers are internal and never appear as a flow. A
+    // claim transfer's interest is still return, in the claim month (#735).
     if (event.type === "transfer" || event.effectiveDate.slice(0, 7) !== month) continue;
+    if (event.type === "claimTransfer") {
+      interest = interest.plus(event.interest.total);
+      continue;
+    }
     if (event.type === "contribution") contributions = contributions.plus(event.amount);
     else if (event.type === "interest") interest = interest.plus(event.amount.total);
     else if (event.type === "withdrawal") {
