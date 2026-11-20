@@ -5,8 +5,8 @@
 // them empty after the new tree has bound them: global router calls then do
 // nothing or throw "The imperative router is unavailable" for the rest of the
 // session. The newest mount owns both: it fills an empty ref with the
-// container it lives in, and an older mount that goes away later hands the
-// ref and the router back to the newest mount.
+// container it lives in and binds the router to itself, and an older mount
+// that goes away later hands the ref and the router back to the newest mount.
 
 export type NavigationRefLike<T> = { current: T | null };
 
@@ -24,7 +24,10 @@ export type NavigationMount = {
 };
 
 export type NavigationOwnership = {
-  /** Records this mount as the owner and fills an empty ref; returns its id. */
+  /**
+   * Records this mount as the owner, fills an empty ref and binds the router
+   * to this mount; returns its id.
+   */
   claim: (globals: NavigationGlobals, mount: NavigationMount) => number;
   isOwner: (id: number) => boolean;
   /** Called when a mount goes away; hands the globals back to a newer owner. */
@@ -42,6 +45,9 @@ export function createNavigationOwnership(): NavigationOwnership {
       if (globals.ref.current == null && latest.container != null) {
         globals.ref.current = latest.container;
       }
+      // The old tree may already have unbound the router before this mount
+      // rendered (the root layout waits for fonts), so bind it again now.
+      if (latest.router) Object.assign(globals.router, latest.router);
       return latestId;
     },
     isOwner: (id) => id === latestId,

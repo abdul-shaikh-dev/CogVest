@@ -33,19 +33,27 @@ describe("navigation ownership (#529)", () => {
     expect(router.push("/backup")).toBe("new /backup");
   });
 
-  it("fills a ref the old tree already emptied when the new mount arrives late", () => {
+  it("rebinds the ref and router the old tree already cleared when the new mount arrives late", () => {
     const ownership = createNavigationOwnership();
-    const { globals, ref } = createGlobals();
+    const { globals, ref, router } = createGlobals();
     ref.current = "old container";
-    const oldMount = ownership.claim(globals, { container: "old container" });
+    const oldMount = ownership.claim(globals, {
+      container: "old container",
+      router: { push: (href: string) => `old ${href}` },
+    });
 
     // The old tree unmounted before this mount rendered (e.g. fonts still loading).
     ref.current = null;
+    router.push = unbound;
     ownership.release(oldMount, globals);
     expect(ref.current).toBeNull();
 
-    ownership.claim(globals, { container: "new container" });
+    ownership.claim(globals, {
+      container: "new container",
+      router: { push: (href: string) => `new ${href}` },
+    });
     expect(ref.current).toBe("new container");
+    expect(router.push("/backup")).toBe("new /backup");
   });
 
   it("leaves a ref that is still set alone", () => {
