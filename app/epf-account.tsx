@@ -15,6 +15,7 @@ export default function EpfAccountRoute() {
       }}
       onComplete={(accountId) => router.replace({ pathname: "/epf-account", params: { accountId } })}
       onUpdateBalance={(accountId) => router.push({ pathname: "/epf-update", params: { accountId } })}
+      onImportPassbooks={() => router.push("/epf-import")}
       onOpenEntry={(accountId, entryId) => router.push({ pathname: "/epf-entry", params: { accountId, ...(entryId ? { entryId } : {}) } })}
     />
   );

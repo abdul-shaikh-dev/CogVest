@@ -41,6 +41,23 @@ async function addAccount(store: ReturnType<typeof setup>["store"], employee = "
 }
 
 describe("Add EPF account", () => {
+  it("offers importing EPFO passbooks instead, only when adding a new account", async () => {
+    const { store } = setup();
+    const onImportPassbooks = jest.fn();
+    const screen = await render(<EpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()}
+      onImportPassbooks={onImportPassbooks} onUpdateBalance={jest.fn()} store={store} />);
+    await fireEvent.press(screen.getByTestId("import-epf-passbooks"));
+    expect(onImportPassbooks).toHaveBeenCalledTimes(1);
+    await screen.unmount();
+
+    seedAccount(store);
+    const editing = await render(<EpfAccountScreen accountId="acme" now={now} onBack={jest.fn()} onComplete={jest.fn()}
+      onImportPassbooks={onImportPassbooks} onUpdateBalance={jest.fn()} store={store} />);
+    await fireEvent.press(editing.getByTestId("edit-epf-account"));
+    expect(editing.getByTestId("epf-account-form-screen")).toBeTruthy();
+    expect(editing.queryByTestId("import-epf-passbooks")).toBeNull();
+  });
+
   it("lets a fresh user add EPF from statement balances only and updates Debt and wealth", async () => {
     const { store } = setup();
     const screen = await render(<EpfAccountScreen now={now} onBack={jest.fn()} onComplete={jest.fn()} onUpdateBalance={jest.fn()} store={store} />);
