@@ -4,6 +4,37 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-20: Smoke tier for keeping navigation working after a font-size change (#529), 15 passed, 14m 04s
+
+- Commit: fix/529-restore-after-font-change c6695a2, version 1.0.32. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on,
+  x86_64) freshly built from c6695a2, SHA-256 prefix 7ddf1c3dbe91586e, Metro stopped.
+  Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- Smoke tier: 15 passed, 0 failed, 14m 04s, within the 15-minute budget.
+  Run from the G:\cv build worktree at the tested commit, on a freshly booted emulator.
+  The root layout now keeps expo-router's navigation ref and router bound to the
+  newest app tree, and the Cash screen keeps an unsaved entry in memory; every
+  flow navigates through both, and `cash` and `backup-roundtrip` exercise them directly.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 11s |
+| navigation | Pass | 0m 20s |
+| add-holding-lookup | Pass | 0m 59s |
+| record-purchase | Pass | 0m 52s |
+| payouts | Pass | 0m 48s |
+| xirr-holding | Pass | 0m 34s |
+| cash | Pass | 0m 53s |
+| trade-correction | Pass | 2m 00s |
+| holdings-csv-import | Pass | 1m 10s |
+| epf-accounts | Pass | 1m 03s |
+| ppf-account | Pass | 1m 16s |
+| progress-snapshot-history | Pass | 0m 39s |
+| value-masking | Pass | 1m 02s |
+| persistence | Pass | 0m 36s |
+| backup-roundtrip | Pass | 1m 40s |
+
 ## 2026-11-19: Full tier after the #721 hardening issues, 56 passed, 9 failed (environment), all 9 passed on rerun, 76m 00s
 
 - Commit: main 8d4f9f7, version 1.0.32. AVD CogVest_UX_Proof, API 36,
