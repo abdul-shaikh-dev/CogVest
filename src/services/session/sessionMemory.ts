@@ -1,11 +1,10 @@
 // Android relaunches MainActivity when the system font size changes (#529).
 // The app process and its JavaScript runtime survive, but React remounts the
-// app from the launch route: the user lands on the Dashboard and unsaved input
-// is gone. Session memory keeps that transient UI state in JavaScript memory
-// only, never in storage, so the remounted app can return to it. A new process
-// starts empty, as before.
+// app, so unsaved input is gone. Session memory keeps that transient UI state
+// in JavaScript memory only, never in storage, so the remounted screen can
+// pick it up again. A new process starts empty, as before.
 
-export type SessionMemoryKey = "cashEntryDraft" | "navigation";
+export type SessionMemoryKey = "cashEntryDraft";
 
 export type SessionMemory = {
   /** Clears everything, e.g. when Back is about to leave the app. */

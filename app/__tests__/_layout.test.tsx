@@ -28,18 +28,10 @@ jest.mock("expo-router", () => {
   };
 });
 
-const mockStateListeners: (() => void)[] = [];
-let mockRootNavigationState: object = { routes: [{ name: "(tabs)" }] };
 let mockCanGoBack = false;
-const mockNavigationRef: { current: string | null } & Record<string, unknown> = {
+const mockNavigationRef: { current: string | null; canGoBack: () => boolean } = {
   current: null,
-  addListener: jest.fn((_event: "state", listener: () => void) => {
-    mockStateListeners.push(listener);
-    return () => mockStateListeners.splice(mockStateListeners.indexOf(listener), 1);
-  }),
   canGoBack: () => mockCanGoBack,
-  getRootState: () => mockRootNavigationState,
-  reset: jest.fn(),
 };
 
 const mockNavigate = jest.fn();
@@ -105,34 +97,12 @@ describe("RootLayout storage recovery boundary", () => {
     mockPathname = "/dashboard";
     mockRootState = { key: "root" };
     mockTakeStartupLinkPath.mockReturnValue(undefined);
-    mockStateListeners.length = 0;
-    mockRootNavigationState = { routes: [{ name: "(tabs)" }] };
     mockCanGoBack = false;
     mockNavigationRef.current = null;
     mockBoundRouter = {};
   });
 
-  describe("returning after a font-size relaunch (#529)", () => {
-    const progressState = { routes: [{ name: "(tabs)", state: { index: 2 } }] };
-
-    it("returns once to the remembered screen after the launch redirect", async () => {
-      sessionMemory.write("navigation", progressState);
-      mockPathname = "/";
-
-      const { getByTestId, rerender } = await render(<RootLayout />);
-      await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
-      expect(mockNavigationRef.reset).not.toHaveBeenCalled();
-
-      mockPathname = "/dashboard";
-      await rerender(<RootLayout />);
-      await waitFor(() => expect(mockNavigationRef.reset).toHaveBeenCalledWith(progressState));
-
-      mockPathname = "/progress";
-      await rerender(<RootLayout />);
-      expect(mockNavigationRef.reset).toHaveBeenCalledTimes(1);
-      expect(sessionMemory.read("navigation")).toBeUndefined();
-    });
-
+  describe("after a font-size relaunch (#529)", () => {
     it("keeps global navigation working after the old surface unmounts", async () => {
       const navigateBefore = mockGlobalRouter.navigate;
       // Android starts the relaunched surface before it stops the old one.
@@ -159,30 +129,7 @@ describe("RootLayout storage recovery boundary", () => {
       mockGlobalRouter.navigate = navigateBefore;
     });
 
-    it("starts on the launch route when nothing was remembered", async () => {
-      const { getByTestId } = await render(<RootLayout />);
-
-      await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
-      expect(mockNavigationRef.reset).not.toHaveBeenCalled();
-    });
-
-    it("remembers navigation only after the launch has settled", async () => {
-      mockPathname = "/";
-      const { getByTestId, rerender } = await render(<RootLayout />);
-      await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
-
-      // A launch-route state must not replace what the next mount restores.
-      mockStateListeners.forEach((listener) => listener());
-      expect(sessionMemory.read("navigation")).toBeUndefined();
-
-      mockPathname = "/dashboard";
-      await rerender(<RootLayout />);
-      mockRootNavigationState = progressState;
-      mockStateListeners.forEach((listener) => listener());
-      expect(sessionMemory.read("navigation")).toEqual(progressState);
-    });
-
-    it("forgets the screen and unsaved input when Back leaves the app", async () => {
+    it("forgets unsaved input when Back leaves the app", async () => {
       type BackHandlerListener = Parameters<typeof BackHandler.addEventListener>[1];
       const handlers: BackHandlerListener[] = [];
       const addListener = jest.spyOn(BackHandler, "addEventListener")
@@ -193,18 +140,16 @@ describe("RootLayout storage recovery boundary", () => {
       try {
         const { getByTestId } = await render(<RootLayout />);
         await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
-        sessionMemory.write("navigation", progressState);
         sessionMemory.write("cashEntryDraft", { amount: "1" });
 
         mockCanGoBack = true;
         const press = () => handlers.forEach((handler) =>
           expect(handler({} as Parameters<BackHandlerListener>[0])).toBe(false));
         press();
-        expect(sessionMemory.read("navigation")).toEqual(progressState);
+        expect(sessionMemory.read("cashEntryDraft")).toEqual({ amount: "1" });
 
         mockCanGoBack = false;
         press();
-        expect(sessionMemory.read("navigation")).toBeUndefined();
         expect(sessionMemory.read("cashEntryDraft")).toBeUndefined();
       } finally {
         addListener.mockRestore();

@@ -59,46 +59,24 @@ function StartupLinkReplay() {
   return null;
 }
 
-// Returns the user to where they were when Android relaunches the activity for
-// a system font-size change (#529). It waits for the launch redirect like
-// StartupLinkReplay, restores once per mount, and only then starts
-// remembering, so launch states never overwrite the remembered one. It sits
-// outside the restore-keyed tree, so a backup restore still opens Dashboard.
-function NavigationMemoryRestore() {
+// Android relaunches the activity for a system font-size change (#529) and
+// briefly runs the old and new app trees side by side. This keeps expo-router's
+// global navigation ref and router bound to the newest tree after the old one
+// unmounts, so in-app links keep working. It sits outside the restore-keyed
+// tree, which a backup restore remounts on purpose.
+function FontRelaunchNavigationGuard() {
   const navigation = useNavigationContainerRef();
-  const rootKey = useRootNavigationState()?.key;
-  const pathname = usePathname();
-  const launchSettled = Boolean(rootKey) && pathname !== "/";
-  type RootState = Parameters<typeof navigation.reset>[0];
-  // Taken at mount, before this launch's own redirect can be remembered.
-  const [remembered] = useState(() => sessionMemory.take<RootState>("navigation"));
-  const restored = useRef(false);
-  const ownerId = useRef(0);
-
   const container = useContext(NavigationContainerRefContext);
   const boundRouter = useRouter();
 
   useEffect(() => {
     const globals = { ref: navigation, router };
     const id = navigationOwnership.claim(globals, { container, router: boundRouter });
-    ownerId.current = id;
     return () => navigationOwnership.release(id, globals);
   }, [boundRouter, container, navigation]);
 
-  useEffect(() => {
-    if (!launchSettled || restored.current) return;
-    restored.current = true;
-    if (remembered) navigation.reset(remembered);
-  }, [launchSettled, navigation, remembered]);
-
-  useEffect(() => navigation.addListener("state", () => {
-    if (restored.current && navigationOwnership.isOwner(ownerId.current)) {
-      sessionMemory.write("navigation", navigation.getRootState());
-    }
-  }), [navigation]);
-
   // Back that leaves the app is a deliberate exit: reopening starts fresh,
-  // without the remembered screen or unsaved input.
+  // without unsaved input kept for a font-size relaunch.
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (!navigation.canGoBack()) sessionMemory.forgetAll();
@@ -267,7 +245,7 @@ function RootContents() {
           </View>
         ) : (
           <>
-          <NavigationMemoryRestore />
+          <FontRelaunchNavigationGuard />
           <Fragment key={restoreEpoch}>
             <StartupLinkReplay />
             <MonthEndSnapshotAutomation
