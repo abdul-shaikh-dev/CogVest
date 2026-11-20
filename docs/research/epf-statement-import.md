@@ -215,7 +215,7 @@ Neither side is overwritten.
 
 To be reviewed and approved as their own issue before any adapter is built.
 
-**Prerequisite (separate issue):** a transfer-by-settlement model. A source
+**Prerequisite (#735):** a transfer-by-settlement model. A source
 final settlement with interest paid inside the claim. One or more credits
 whose sum equals the payout, by component. A credit may be posted before the
 source claim date, with an explicit rule for the in-between period, so money
@@ -290,7 +290,7 @@ transcription errors. More usefully, it gives a repeatable yearly refresh.
 
 Recommended order:
 
-1. **First, fix the model gap** (the transfer-by-settlement prerequisite above).
+1. **First, fix the model gap** (#735, the transfer-by-settlement prerequisite above).
    It is a correctness problem that manual entry already meets, independent
    of import.
 2. **Then build a narrow importer**: EPFO layouts A and B, year-summary
