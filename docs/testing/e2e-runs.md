@@ -4,6 +4,44 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new passbook-import flow for importing EPFO passbook PDFs (#740), 12 passed, 3 failed (1 pre-existing, 2 flaky), 38m 00s
+
+- Commit: feat/740-epf-passbook-import c7d73af app code (flow, fixtures and docs
+  added in 420a987 with no app change), version 1.0.32. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK (R8 on, x86_64) freshly
+  built from c7d73af, SHA-256 993c154aed0a1d8119966ebf8d2f523e5e16b0f7e283bd9e072e86a944cc99b5.
+  Metro stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- New flow `epf-passbook-import`: Pass, 4m 23s. It picks three synthetic passbook
+  PDFs (two member IDs, with a final claim) in the system picker, so the
+  on-device extractor reads them. It checks the member grouping and the review
+  (₹0.00 → ₹35,560.00, no warnings), saves, relaunches the app and finds
+  ₹35,560 across both new accounts in Holdings.
+- Smoke tier: 12 passed, 3 failed, over the 15-minute budget on a slow host.
+- `ppf-account` (back to Dashboard) and `progress-snapshot-history` (scroll to a
+  seeded month) failed in the tier but passed when rerun alone on the same APK
+  (6m 19s, 4m 28s). Neither touches EPF import. Treated as flaky; not a regression.
+- `holdings-csv-import` failed, this time earlier: the CSV wasn't listed in the
+  Downloads picker. It has failed every recent run (#741).
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 0m 30s |
+| navigation | Pass | 0m 50s |
+| add-holding-lookup | Pass | 2m 13s |
+| record-purchase | Pass | 1m 56s |
+| payouts | Pass | 2m 00s |
+| xirr-holding | Pass | 1m 31s |
+| cash | Pass | 1m 49s |
+| trade-correction | Pass | 7m 37s |
+| holdings-csv-import | Fail (#741) | 2m 36s |
+| epf-accounts | Pass | 2m 24s |
+| ppf-account | Fail (passed alone) | 3m 42s |
+| progress-snapshot-history | Fail (passed alone) | 2m 19s |
+| value-masking | Pass | 4m 06s |
+| persistence | Pass | 1m 38s |
+| backup-roundtrip | Pass | 2m 50s |
+
 ## 2026-11-21: Smoke tier and new claim-transfer flow for recording a move settled as a claim (#735), 14 passed, 1 failed (pre-existing), 23m 41s
 
 - Commit: feat/735-epf-claim-transfer 2fb58f3 app code (flow added in ec104be with
