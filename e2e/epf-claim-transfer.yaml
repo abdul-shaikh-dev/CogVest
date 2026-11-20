@@ -1,0 +1,106 @@
+appId: ${APP_ID}
+---
+# Records a move that EPFO settled as a claim (#735) on an isolated synthetic
+# database: the claim with its interest, two credits on the new account, then
+# re-reads the persisted ledger and clears that database.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=seed-entries"
+- tapOn:
+    id: epf-accounts-qa-seed-entries
+- assertVisible: "PASS: seeded Acme 140000 and Beta 0"
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: epf-account-total
+    text: "₹1,40,000.00"
+
+- scrollUntilVisible:
+    element:
+      id: add-epf-entry
+    direction: DOWN
+- tapOn:
+    id: add-epf-entry
+- tapOn:
+    id: epf-entry-kind-picker
+- tapOn:
+    id: epf-entry-kind-claimTransfer
+- tapOn:
+    id: epf-claim-target-picker
+- tapOn:
+    id: epf-claim-target-beta
+- tapOn:
+    id: epf-claim-amount-input
+- inputText: "142100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-claim-interest-input
+    direction: DOWN
+- tapOn:
+    id: epf-claim-interest-input
+- inputText: "2100"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-claim-credit-0-amount-input
+    direction: DOWN
+- tapOn:
+    id: epf-claim-credit-0-amount-input
+- inputText: "140000"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: epf-claim-add-credit
+    direction: DOWN
+- tapOn:
+    id: epf-claim-add-credit
+- scrollUntilVisible:
+    element:
+      id: epf-claim-credit-1-amount-input
+    direction: DOWN
+- tapOn:
+    id: epf-claim-credit-1-amount-input
+- inputText: "2100"
+- hideKeyboard
+- takeScreenshot: .expo/epf-735-claim/credits
+- scrollUntilVisible:
+    element:
+      id: review-epf-entry
+    direction: DOWN
+- tapOn:
+    id: review-epf-entry
+- assertVisible:
+    id: epf-entry-effect-acme
+    text: "₹1,40,000.00 → ₹0.00"
+- assertVisible:
+    id: epf-entry-effect-beta
+    text: "₹0.00 → ₹1,42,100.00"
+- assertVisible:
+    id: epf-entry-effect-total
+    text: "₹1,40,000.00 → ₹1,42,100.00"
+- takeScreenshot: .expo/epf-735-claim/review
+- tapOn:
+    id: save-epf-entry
+- assertVisible:
+    id: epf-account-total
+    text: "₹0.00"
+- assertVisible:
+    id: epf-account-evidence
+    text: "Moved in full to Beta on .*"
+- takeScreenshot: .expo/epf-735-claim/old-account
+
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=state"
+- tapOn:
+    id: epf-accounts-qa-state
+- assertVisible: "STATE: EPF 142100; moving 0; entries 1; Cash 0; links 0"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
