@@ -4,6 +4,9 @@ Research for issue #548, parent #542. This is a feasibility report, not an
 implementation plan or approval. No parser, fixture file or import option is
 added by it.
 
+Status: implemented by #740. The behaviour that shipped is in the "Passbook
+import" section of `docs/epf-accounting-contract.md`.
+
 ## Evidence and privacy
 
 The owner supplied their EPFO member passbooks and asked to pursue import. They

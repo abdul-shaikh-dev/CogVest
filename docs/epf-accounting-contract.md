@@ -203,6 +203,38 @@ side. It asks for the destination account, claim date, payout and interest by
 component, and each credit's date and amount, and previews both accounts'
 balances before saving.
 
+## Passbook import (#740)
+
+Status: implemented (#740). EPFO Member Passbook PDFs (layouts A and B) are read
+on the device and only produce the records above; there is no import-only model.
+
+- **Reading.** A passbook is accepted only when its rows add up to its printed
+  totals and its opening plus flows equals its closing, for each of the
+  employee, employer and pension columns. Pension (EPS) is reported as left
+  out, never valued. Name, date of birth and UAN are not read.
+- **Accounts.** The user chooses an account for each member ID, shown by its
+  last four digits. The member ID is used only to group years and is never
+  stored. Import event IDs are `epf-import-{accountId}-fy{year}-{role}`, so a
+  repeated import replaces its own records and nothing else.
+- **Years.** Each closed year becomes one year summary, except a year with a
+  final claim, which keeps its contributions as separate entries so credits
+  before the claim date stay within the old balance. Years must be consecutive,
+  each opening equal to the previous closing; a gap or break blocks that year
+  and every later one for the account. The year still open when printed is
+  imported as contributions only, with no interest or closing, and is replaced
+  by the closed-year passbook later.
+- **Moves.** A claim whose credits appear on another imported member ID becomes
+  one claim transfer (#735). Without that passbook it is a final settlement
+  with an unknown destination, with a warning. Credits from a member ID that
+  was not imported are external transfer-ins with unknown capital.
+- **Merging.** Entries recorded by hand are never changed. A passbook earlier
+  than an account's starting balance replaces that starting point only when
+  the account has no hand-recorded entries; a later passbook must continue
+  the replayed balance. Unchanged records are skipped, whatever their field
+  order in storage.
+- **Saving.** Every change is saved as one `batch` command with one audit
+  entry, validated on the final state: it all applies or nothing does.
+
 ## Historical value and return coverage
 
 Effective date is evidenced separately from posting date, recording timestamp

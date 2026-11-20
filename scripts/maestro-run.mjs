@@ -33,6 +33,7 @@ const defaultFlows = [
   "e2e/epf-accounts.yaml",
   "e2e/epf-entries.yaml",
   "e2e/epf-claim-transfer.yaml",
+  "e2e/epf-passbook-import.yaml",
   "e2e/epf-corrections.yaml",
   "e2e/epf-matrix.yaml",
   "e2e/epf-progress-empty.yaml",
@@ -162,6 +163,7 @@ const transactionsCsvFlow = "e2e/transactions-csv-import.yaml";
 const transactionsCsvFixture = "e2e/fixtures/transactions-import-v1.csv";
 const casNativeFlow = "e2e/cas-native-import.yaml";
 const casNativeFreshPortfolioFlow = "e2e/cas-native-fresh-portfolio.yaml";
+const epfPassbookImportFlow = "e2e/epf-passbook-import.yaml";
 const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
 const backupRoundtripFlow = "e2e/backup-roundtrip.yaml";
 // The flow exports into this shared folder and restores from it; see #671.
@@ -233,6 +235,11 @@ function prepareFlow(flow) {
     [zerodhaTradebookFlow]: zerodhaTradebookFixtures,
     [casNativeFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
     [casNativeFreshPortfolioFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
+    [epfPassbookImportFlow]: [
+      "e2e/fixtures/epf-passbook-old-2021.pdf",
+      "e2e/fixtures/epf-passbook-old-2022.pdf",
+      "e2e/fixtures/epf-passbook-new-2022.pdf",
+    ],
   }[normalized];
   if (!fixtures) return null;
   const adbPath = findExecutable("adb");

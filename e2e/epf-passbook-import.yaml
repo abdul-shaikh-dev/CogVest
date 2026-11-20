@@ -1,0 +1,97 @@
+appId: ${APP_ID}
+---
+# #740: import three synthetic EPFO passbook PDFs (two member IDs, with a final
+# claim moving the old balance to the new account) from the Add EPF account
+# screen. The runner pushes e2e/fixtures/epf-passbook-*.pdf to Downloads; they
+# come from scripts/fixtures/generate-epf-passbook-pdfs.py. Data is invented.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///epf-accounts-qa?token=cogvest-local-visual-qa&page=cleanup"
+- tapOn:
+    id: epf-accounts-qa-cleanup
+- assertVisible: "PASS: synthetic database cleared"
+- openLink: "${SCHEME}:///epf-account"
+- tapOn:
+    id: import-epf-passbooks
+- tapOn:
+    id: choose-epf-passbooks
+- runFlow: standalone/helpers/open-downloads.yaml
+# Long-press starts multi-select in the system picker; taps then add files.
+- longPressOn: epf-passbook-new-2022.pdf
+- tapOn: epf-passbook-old-2021.pdf
+- tapOn: epf-passbook-old-2022.pdf
+- assertVisible: "3 selected"
+- tapOn: "Select"
+- extendedWaitUntil:
+    visible:
+      id: epf-import-member-1
+    timeout: 30000
+# Oldest member ID first, shown only by its last four digits.
+- assertVisible: "Member ID ending 0001"
+- assertVisible: "FY 2021-22, FY 2022-23"
+- assertVisible: "Member ID ending 0002"
+- assertVisible: "FY 2022-23"
+- scrollUntilVisible:
+    element:
+      id: review-epf-import
+    direction: DOWN
+- tapOn:
+    id: review-epf-import
+- extendedWaitUntil:
+    visible:
+      id: epf-import-review-screen
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: reveal-epf-import
+    commands:
+      - tapOn:
+          id: reveal-epf-import
+- assertVisible:
+    id: epf-import-account-1-balance
+    text: "New → ₹35,560.00"
+- scrollUntilVisible:
+    element:
+      id: epf-import-total
+    direction: DOWN
+- assertVisible:
+    id: epf-import-total
+    text: "₹0.00 → ₹35,560.00"
+- assertNotVisible:
+    id: epf-import-warnings
+- scrollUntilVisible:
+    element:
+      id: save-epf-import
+    direction: DOWN
+- tapOn:
+    id: save-epf-import
+# Saving opens the new account, which holds the whole balance after the move.
+- extendedWaitUntil:
+    visible:
+      id: epf-account-total
+    timeout: 10000
+- assertVisible:
+    id: epf-account-total
+    text: "₹35,560.00"
+# Relaunch: the import is saved in the app's own store, not only on screen.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///holdings"
+- scrollUntilVisible:
+    element:
+      id: holdings-epf-total-value
+    direction: DOWN
+- assertVisible:
+    id: holdings-epf-total-value
+    text: ".*35,560.*"
+- assertVisible: "EPF 0001"
+- assertVisible: "EPF 0002"
