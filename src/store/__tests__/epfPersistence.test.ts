@@ -292,3 +292,47 @@ describe("EPF durable account records", () => {
     expect(target.store.getState()).toBe(before);
   });
 });
+
+describe("an all-or-nothing EPF batch (#740)", () => {
+  const interest = (id: string, date: string, total: number): EpfEvent => ({ id, type: "interest", accountId: "a",
+    effectiveDate: date, postedDate: date, recordedAt: "2026-02-02T00:00:00Z", evidence: "EPFO passbook",
+    amount: { total, components: { employee: total, employer: 0 } } });
+
+  test("applies every change together, records each previous version, and survives backup and reload", async () => {
+    const { store, storage, apply } = harness();
+    apply({ type: "accountPut", account: account() });
+    apply({ type: "eventPut", event: interest("one", "2026-01-15", 100), cash: null });
+    const renamed = { ...account(), nickname: "First job" };
+    expect(apply({ type: "batch", changes: [
+      { type: "accountPut", account: renamed },
+      { type: "eventPut", event: interest("one", "2026-01-15", 150) },
+      { type: "eventPut", event: interest("two", "2026-02-15", 200) },
+    ] }, "import")).toBe("applied");
+    const { epf } = store.getState();
+    expect(epf.accounts).toEqual([renamed]);
+    expect(epf.events.map((event) => event.id).sort()).toEqual(["one", "two"]);
+    expect(epf.audit.at(-1)).toMatchObject({ commandId: "import", previousBatch: [account(), interest("one", "2026-01-15", 100), null] });
+    expect(createPortfolioStore({ storage, now }).getState().epf).toEqual(epf);
+    const backup = await createPortfolioBackup(store.getState().captureBackup().payload,
+      { appVersion: "1.0.0", createdAt: now().toISOString() }, digest);
+    expect((await parsePortfolioBackup(backup, digest)).payload.portfolio.epf).toEqual(epf);
+  });
+
+  test("changes nothing when the final state is invalid, and replays the same command once", () => {
+    const { store, apply } = harness();
+    apply({ type: "accountPut", account: account() });
+    const before = store.getState().epf;
+    const overdrawn = { ...withdrawal, amount: { total: 500000, components: { employee: 400000, employer: 100000 } } };
+    expect(() => apply({ type: "batch", changes: [
+      { type: "eventPut", event: interest("one", "2026-01-15", 100) },
+      { type: "eventPut", event: overdrawn },
+    ] })).toThrow();
+    expect(store.getState().epf).toBe(before);
+    const change: EpfChange = { type: "batch", changes: [{ type: "eventPut", event: interest("one", "2026-01-15", 100) }] };
+    expect(apply(change, "same")).toBe("applied");
+    expect(apply(change, "same")).toBe("alreadyApplied");
+    expect(() => apply({ type: "batch", changes: [{ type: "eventRemove", id: "missing" }] })).toThrow("EPF event was not found.");
+    expect(() => apply({ type: "batch", changes: [{ type: "eventPut", event: interest("x", "2026-01-15", 1) },
+      { type: "eventRemove", id: "x" }] })).toThrow("A batch can change each EPF record only once.");
+  });
+});
