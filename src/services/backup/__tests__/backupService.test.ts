@@ -45,6 +45,33 @@ describe("backup file service", () => {
     await service.restorePortfolioBackup(prepared);
     expect(store.getState().epf).toEqual(saved.portfolio.epf);
   });
+  it("keeps a move settled as a claim through backup, restore and a reload (#735)", async () => {
+    const { service, store, file, storage } = harness();
+    const epfAccount = (id: string, total: number) => ({ id, nickname: id, provider: "epfo" as const, status: "active" as const,
+      currency: "INR" as const, historyCompleteThrough: null,
+      checkpoint: { date: "2026-01-01", balance: { total, components: null }, capital: null,
+        source: "epfoStatement" as const, recordedAt: "2026-01-02T00:00:00Z" } });
+    for (const account of [epfAccount("old", 1000), epfAccount("new", 0)]) {
+      store.getState().applyEpfCommand({ commandId: `put-${account.id}`, reason: "Statement", change: { type: "accountPut", account } },
+        store.getState().getBackupRevision());
+    }
+    const outcome = store.getState().applyEpfCommand({ commandId: "claim", reason: "Add EPF entry", change: { type: "eventPut", cash: null, event: {
+      id: "claim", type: "claimTransfer", recordedAt: "2026-09-10T00:00:00Z", evidence: "EPFO passbook",
+      effectiveDate: "2026-03-05", postedDate: "2026-03-05", sourceId: "old", destinationId: "new",
+      payout: { total: 1050, components: null }, interest: { total: 50, components: null }, status: "completed",
+      credits: [{ date: "2026-02-10", postedDate: "2026-02-10", amount: { total: 1000, components: null } },
+        { date: "2026-04-20", postedDate: "2026-04-20", amount: { total: 50, components: null } }],
+    } } }, store.getState().getBackupRevision());
+    expect(outcome).toBe("applied");
+    const saved = store.getState().captureBackup().payload;
+    await file.write(await createPortfolioBackup(saved, meta, digest));
+    store.getState().applyEpfCommand({ commandId: "remove-claim", reason: "Remove", change: { type: "eventRemove", id: "claim" } },
+      store.getState().getBackupRevision());
+    await service.restorePortfolioBackup((await service.selectPortfolioBackup())!);
+    expect(store.getState().epf.events).toEqual(saved.portfolio.epf.events);
+    const reloaded = createPortfolioStore({ storage, now });
+    expect(reloaded.getState().epf.events).toEqual([expect.objectContaining({ id: "claim", type: "claimTransfer", status: "completed" })]);
+  });
   it("names the record that blocks a restorable backup", async () => {
     const { service, store, file } = harness();
     store.setState({ monthlySnapshots: [{ id: "snapshot-2025-10", month: "2025-10", cashValue: 100, cryptoValue: 0, debtValue: 0,

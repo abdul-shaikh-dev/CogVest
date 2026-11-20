@@ -22,13 +22,15 @@ import {
 } from "@/src/components/common";
 import { DatePickerField, FormTextField, SelectionField } from "@/src/components/forms";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
-import type { EpfEvent } from "@/src/domain/epf";
+import { isEpfAccountMove, type EpfEvent } from "@/src/domain/epf";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, createThemedStyles } from "@/src/theme";
 import { createId } from "@/src/utils";
 import { useBackHandler, usePortfolioFields } from "@/src/hooks";
 import { applyEpfChange } from "./epfChange";
+import { claimCreditField } from "./epfClaimTransferForm";
+import { EpfClaimTransferFields } from "./EpfClaimTransferFields";
 import { EpfCheckRow } from "./EpfCheckRow";
 import { epfEvidenceOptions, type EpfFieldErrors } from "./epfAccountForm";
 import {
@@ -52,6 +54,11 @@ const fieldOrder: EpfEntryField[] = ["amount", "employee", "employer", "settleme
   "settlementInterestEmployer", "contributionEmployee", "contributionEmployer", "interestEmployee", "interestEmployer",
   "closingEmployee", "closingEmployer", "targetAccountId", "periodStart", "date", "postedDate", "creditDate"];
 
+/** Claim credits sit below the claim fields, in the order they are shown. */
+const orderedFields = (credits: number): EpfEntryField[] => [...fieldOrder.slice(0, 6),
+  ...Array.from({ length: credits }, (_, index) => (["Date", "Amount", "Employee", "Employer"] as const)
+    .map((part) => claimCreditField(index, part))).flat(), ...fieldOrder.slice(6)];
+
 const summaryFields: Array<{ field: "contributionEmployee" | "contributionEmployer" | "interestEmployee" | "interestEmployer"
   | "closingEmployee" | "closingEmployer"; label: string; testID: string }> = [
   { field: "contributionEmployee", label: "Employee contributions (INR)", testID: "epf-summary-contribution-employee-input" },
@@ -70,6 +77,7 @@ const dateLabel: Record<EpfEntryKind, string> = {
   transferOut: "Left this account on",
   transferIn: "Received on",
   yearSummary: "Period ends on",
+  claimTransfer: "Claim settled on",
 };
 
 function roleCopy(plan: EpfEntryPlan, draft: EpfEntryDraft) {
@@ -99,6 +107,12 @@ function roleCopy(plan: EpfEntryPlan, draft: EpfEntryDraft) {
       return `Contributions count as money put in and interest as return, all on ${formatDate(plan.event.effectiveDate)}. ` +
         (plan.event.type === "yearSummary" && plan.event.closing ? "The result matches the passbook closing balance. " : "") +
         "Progress shows no EPF value for months inside the period, only at its end.";
+    case "claimTransfer":
+      return plan.event.type === "claimTransfer"
+        ? `Moves the whole balance to the new account and counts it once. The ${formatINR(plan.event.interest.total)} interest paid with the claim counts as return, ` +
+          "and the old account ends at ₹0." +
+          (plan.effect.inTransitAfter > 0 ? ` ${formatINR(plan.effect.inTransitAfter)} is counted as moving until it is credited.` : "")
+        : "";
   }
 }
 
@@ -116,7 +130,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
   const { isRevealed, reveal } = useSensitiveValueReveal(snapshot.preferences.maskWealthValues);
   const existing = entryId ? snapshot.epf.events.find((event) => event.id === entryId) : undefined;
   // A transfer is one record owned by its source account, whichever side opened it.
-  const ownerId = existing?.type === "transfer" ? existing.sourceId : accountId;
+  const ownerId = existing && isEpfAccountMove(existing) ? existing.sourceId : accountId;
   const account = snapshot.epf.accounts.find((item) => item.id === ownerId);
   const link = existing ? snapshot.epf.cashLinks.find((item) => item.eventId === existing.id) : undefined;
   const editable = !existing || (existing.type !== "reconciliation" && existing.type !== "reversal");
@@ -176,6 +190,14 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
       return next;
     });
   }
+  function clearError(field: EpfEntryField) {
+    setErrors((current) => {
+      if (!(field in current)) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
 
   function submit() {
     setMessage("");
@@ -184,7 +206,7 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
     if (!result.ok) {
       setErrors(result.errors);
       setMessage(result.message ?? "");
-      const first = fieldOrder.find((field) => result.errors[field]);
+      const first = orderedFields(draft.credits.length).find((field) => result.errors[field]);
       const target = first ? inputRefs.current[first] : undefined;
       if (target && "focus" in target) requestAnimationFrame(() => target.focus());
       return;
@@ -294,6 +316,10 @@ export function EpfEntryScreen({ accountId, entryId, now = new Date(), onBack, o
                         onChangeText={(value) => update(field, value)} testID={testID} value={draft[field]} />
                     ))}
                   </>
+                ) : draft.kind === "claimTransfer" ? (
+                  <EpfClaimTransferFields clearError={clearError} draft={draft} errors={errors} now={now}
+                    registerField={(field, node) => { inputRefs.current[field] = node; }}
+                    otherAccounts={otherAccounts} update={update} />
                 ) : (
                   <FormTextField error={errors.amount} inputRef={(node) => { inputRefs.current.amount = node; }}
                     keyboardType="decimal-pad" label="Amount (INR)" onChangeText={(value) => update("amount", value)}
@@ -425,7 +451,7 @@ function ExistingEntryActions({ event, linkedCash, now, onDone, store }: {
       <PremiumCard testID="delete-epf-entry-confirmation">
         <AppText weight="bold">Delete this entry?</AppText>
         <AppText color="secondary" variant="caption" testID="delete-epf-entry-impact">
-          {event.type === "transfer" ? "Both EPF accounts change back. " : ""}
+          {isEpfAccountMove(event) ? "Both EPF accounts change back. " : ""}
           {linkedCash ? "The linked Cash entry is removed too. " : ""}
           Use this for an entry recorded by mistake. If your provider reversed it, record a reversal instead.
         </AppText>

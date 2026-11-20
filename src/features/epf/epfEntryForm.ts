@@ -1,9 +1,17 @@
 import { formatLocalCalendarDate, parseCalendarDate } from "@/src/domain/dates";
-import { calculateEpfLedger, changeEpfEvent, type EpfAccount, type EpfBalance, type EpfEvent } from "@/src/domain/epf";
+import { calculateEpfLedger, changeEpfEvent, isEpfAccountMove, type EpfAccount, type EpfBalance, type EpfEvent } from "@/src/domain/epf";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 import { parseInrAmount, type EpfEvidence, type EpfFieldErrors } from "./epfAccountForm";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import {
+  buildEpfClaimTransfer,
+  claimCreditedTotal,
+  claimDraftFromEvent,
+  emptyClaimCredit,
+  type EpfClaimCreditDraft,
+  type EpfClaimCreditField,
+} from "./epfClaimTransferForm";
 
 export type EpfEntryKind =
   | "employeeContribution"
@@ -11,6 +19,7 @@ export type EpfEntryKind =
   | "interest"
   | "withdrawal"
   | "transferOut"
+  | "claimTransfer"
   | "transferIn"
   | "yearSummary";
 
@@ -20,6 +29,7 @@ export const epfEntryKindOptions: Array<{ label: string; value: EpfEntryKind }> 
   { label: "Official interest", value: "interest" },
   { label: "Withdrawal", value: "withdrawal" },
   { label: "Transfer to another tracked EPF account", value: "transferOut" },
+  { label: "Moved to another EPF account (claim)", value: "claimTransfer" },
   { label: "Transfer in from an untracked account", value: "transferIn" },
   { label: "Financial year summary (passbook totals)", value: "yearSummary" },
 ];
@@ -59,11 +69,14 @@ export type EpfEntryDraft = {
   interestEmployer: string;
   closingEmployee: string;
   closingEmployer: string;
+  /** A claim transfer's credits on the new account's passbook (#735). */
+  credits: EpfClaimCreditDraft[];
 };
 export type EpfSummaryField = "periodStart" | "contributionEmployee" | "contributionEmployer" | "interestEmployee"
   | "interestEmployer" | "closingEmployee" | "closingEmployer";
 export type EpfEntryField = "amount" | "employee" | "employer" | "settlementInterest" | "settlementInterestEmployee"
-  | "settlementInterestEmployer" | "date" | "postedDate" | "targetAccountId" | "creditDate" | EpfSummaryField;
+  | "settlementInterestEmployer" | "date" | "postedDate" | "targetAccountId" | "creditDate" | EpfSummaryField
+  | EpfClaimCreditField;
 
 export function emptyEpfEntryDraft(now: Date): EpfEntryDraft {
   const today = formatLocalCalendarDate(now);
@@ -72,7 +85,7 @@ export function emptyEpfEntryDraft(now: Date): EpfEntryDraft {
     settlement: false, settlementInterest: "", settlementInterestEmployee: "", settlementInterestEmployer: "",
     targetAccountId: "", transferStatus: "completed", creditDate: today, periodStart: today,
     contributionEmployee: "", contributionEmployer: "", interestEmployee: "", interestEmployer: "",
-    closingEmployee: "", closingEmployer: "" };
+    closingEmployee: "", closingEmployer: "", credits: [emptyClaimCredit(today)] };
 }
 
 const startOfFinancialYear = (date: string) => `${Number(date.slice(0, 4)) - (date.slice(5, 7) < "04" ? 1 : 0)}-04-01`;
@@ -132,6 +145,8 @@ export function draftFromEpfEvent(event: EpfEvent, accountId: string, cashLinked
         targetAccountId: event.sourceId === accountId ? event.destinationId : event.sourceId,
         transferStatus: event.status === "completed" ? "completed" : "inTransit",
         creditDate: event.creditDate ?? base.creditDate };
+    case "claimTransfer":
+      return { ...common, kind: "claimTransfer", ...claimDraftFromEvent(event) };
     case "yearSummary":
       return { ...common, kind: "yearSummary", periodStart: event.periodStart,
         contributionEmployee: String(event.contributions.employee), contributionEmployer: String(event.contributions.employer),
@@ -183,6 +198,11 @@ export function buildEpfEntry(
 ): EpfEntryResult {
   if (draft.kind === "yearSummary") return buildYearSummary(draft, context);
   const today = formatLocalCalendarDate(context.now);
+  if (draft.kind === "claimTransfer") {
+    const claim = buildEpfClaimTransfer(draft, { account: context.account, accounts: context.accounts,
+      id: context.existing?.id ?? context.id, now: context.now, evidence: evidenceLabel(draft, context.account) });
+    return claim.ok ? planEntry(claim.event, null, context, today) : { ok: false, errors: claim.errors };
+  }
   const errors: EpfFieldErrors<EpfEntryField> = {};
   const amount = parseInrAmount(draft.amount);
   if (amount === null || amount <= 0) errors.amount = "Enter the amount from your statement, above zero.";
@@ -242,8 +262,7 @@ export function buildEpfEntry(
   }
   if (Object.keys(errors).length || amount === null) return { ok: false, errors };
 
-  const evidence = draft.evidence === "ownRecord" ? "Own record"
-    : context.account.provider === "epfo" ? "EPFO passbook" : "Employer trust statement";
+  const evidence = evidenceLabel(draft, context.account);
   const base = { id: context.existing?.id ?? context.id, recordedAt: context.now.toISOString(),
     effectiveDate: draft.date, postedDate: draft.kind === "interest" ? draft.postedDate : draft.date, evidence };
   const balance: EpfBalance = { total: amount, components };
@@ -280,15 +299,22 @@ export function buildEpfEntry(
   return planEntry(event, cash, context, today);
 }
 
+function evidenceLabel(draft: EpfEntryDraft, account: EpfAccount) {
+  return draft.evidence === "ownRecord" ? "Own record"
+    : account.provider === "epfo" ? "EPFO passbook" : "Employer trust statement";
+}
+
 function planEntry(event: EpfEvent, cash: EpfEntryPlan["cash"], context: EpfLedgerContext, today: string): EpfEntryResult {
   const ledger = { accounts: [...context.accounts], events: [...context.events] };
   const before = calculateEpfLedger(ledger, today, today);
   const after = changeEpfEvent(ledger, { type: "put", event }, today);
   if (!before.ok || !after.ok) {
-    return { ok: false, errors: {}, message: explainWithdrawalConflict(event, context, today) || explainSummaryConflict(event, context, today)
+    // A claim's replay messages already name the part that does not add up.
+    const claimMessage = event.type === "claimTransfer" && before.ok && !after.ok ? after.errors[0] : null;
+    return { ok: false, errors: {}, message: claimMessage || explainWithdrawalConflict(event, context, today) || explainSummaryConflict(event, context, today)
       || "This entry conflicts with other recorded EPF activity, for example by making a balance negative. Check the amount and date." };
   }
-  const affected = event.type === "transfer" ? [event.sourceId, event.destinationId] : [context.account.id];
+  const affected = isEpfAccountMove(event) ? [event.sourceId, event.destinationId] : [context.account.id];
   const value = (result: typeof before, id: string) => result.ok
     ? result.accounts.find((item) => item.accountId === id)?.balance.total ?? null : null;
   return { ok: true, plan: { event, cash, effect: {
@@ -364,7 +390,7 @@ function explainSummaryConflict(event: EpfEvent, context: EpfLedgerContext, toda
       : null;
   }
   if (event.type !== "yearSummary") return null;
-  const inside = others.filter((item) => item.type !== "transfer" && item.accountId === context.account.id && (
+  const inside = others.filter((item) => !isEpfAccountMove(item) && item.accountId === context.account.id && (
     ((item.type === "contribution" || item.type === "interest" || item.type === "reconciliation") &&
       item.effectiveDate >= event.periodStart && item.effectiveDate <= event.effectiveDate) ||
     (item.type === "yearSummary" && item.periodStart <= event.effectiveDate && item.effectiveDate >= event.periodStart)))
@@ -398,7 +424,7 @@ function explainWithdrawalConflict(event: EpfEvent, context: EpfLedgerContext, t
   if (event.type !== "withdrawal") return null;
   const others = context.events.filter((item) => item.id !== event.id);
   if (event.settlement) {
-    const later = others.filter((item) => (item.type === "transfer"
+    const later = others.filter((item) => (isEpfAccountMove(item)
       ? [item.sourceId, item.destinationId] : [item.accountId]).includes(context.account.id) && item.effectiveDate > event.effectiveDate)
       .sort((left, right) => compareCodeUnits(left.effectiveDate, right.effectiveDate))[0];
     if (later) {
@@ -433,7 +459,7 @@ export function buildEpfReversal(
   const dateError = validDate(draft.date, today);
   if (dateError) errors.date = dateError;
   else if (draft.date < original.effectiveDate) errors.date = "A reversal cannot come before the entry it reverses.";
-  if (Object.keys(errors).length || original.type === "transfer" || original.type === "reconciliation" || original.type === "reversal") {
+  if (Object.keys(errors).length || isEpfAccountMove(original) || original.type === "reconciliation" || original.type === "reversal") {
     return { ok: false, errors, ...(Object.keys(errors).length ? {} : { message: "This entry cannot be reversed." }) };
   }
   const event: EpfEvent = { id: context.id, type: "reversal", accountId: original.accountId, reversesId: original.id,
@@ -451,6 +477,7 @@ export function eventTitle(event: EpfEvent) {
     case "withdrawal": return event.settlement ? "Final settlement" : "Withdrawal";
     case "externalTransferIn": return "Transfer in";
     case "transfer": return "Transfer between accounts";
+    case "claimTransfer": return "Moved to another account (claim)";
     case "reversal": return "Provider reversal";
     case "yearSummary": return `FY ${financialYearLabel(event.effectiveDate)} summary`;
   }
@@ -467,6 +494,11 @@ export function eventAmountLabel(event: EpfEvent, accountId: string) {
     case "transfer":
       return event.sourceId === accountId ? `−${formatINR(event.amount.total)}`
         : event.status === "completed" ? `+${formatINR(event.amount.total)}` : "Arriving";
+    case "claimTransfer": {
+      if (event.sourceId === accountId) return `−${formatINR(event.payout.total)}`;
+      const credited = claimCreditedTotal(event);
+      return credited > 0 ? `+${formatINR(credited)}` : "Arriving";
+    }
     case "reversal": return "Reversal";
     case "yearSummary":
       return `+${formatINR(decimal(event.contributions.employee).plus(event.contributions.employer)

@@ -1,7 +1,7 @@
 import { decimal } from "@/src/domain/precision";
 
-import { epfDateSchema, epfLedgerSchema } from "./model";
-import type { EpfAccount, EpfBalance, EpfEvent, EpfLedger } from "./model";
+import { epfDateSchema, epfLedgerSchema, isEpfAccountMove } from "./model";
+import type { EpfAccount, EpfBalance, EpfClaimTransfer, EpfEvent, EpfLedger } from "./model";
 import { compareCodeUnits } from "@/src/domain/ordering";
 
 export type EpfAccountValue = {
@@ -52,7 +52,76 @@ function shiftCapital(value: number | null, amount: number | null, sign: 1 | -1)
 const financialYear = (date: string) => Number(date.slice(0, 4)) - (date.slice(5, 7) < "04" ? 1 : 0);
 
 function references(event: EpfEvent) {
-  return event.type === "transfer" ? [event.sourceId, event.destinationId] : [event.accountId];
+  return isEpfAccountMove(event) ? [event.sourceId, event.destinationId] : [event.accountId];
+}
+
+/** Dates on which an event changes the given account's balance. */
+function datesOn(event: EpfEvent, accountId: string): string[] {
+  if (event.type === "claimTransfer") {
+    const dates = event.sourceId === accountId
+      // Credits before the claim leave the old account on their own dates.
+      ? [event.effectiveDate, ...event.credits.filter((credit) => credit.date < event.effectiveDate).map((credit) => credit.date)]
+      : [];
+    return event.destinationId === accountId ? [...dates, ...event.credits.map((credit) => credit.date)] : dates;
+  }
+  if (event.type === "transfer") {
+    return [
+      ...(event.sourceId === accountId ? [event.effectiveDate] : []),
+      ...(event.destinationId === accountId ? [event.creditDate ?? event.effectiveDate] : []),
+    ];
+  }
+  return event.accountId === accountId ? [event.effectiveDate] : [];
+}
+
+const sameBalance = (a: EpfBalance, b: EpfBalance) => decimal(a.total).equals(b.total) &&
+  (!a.components || !b.components || (decimal(a.components.employee).equals(b.components.employee) &&
+    decimal(a.components.employer).equals(b.components.employer)));
+
+function sumBalances(balances: EpfBalance[]): EpfBalance {
+  return balances.reduce<EpfBalance>((total, item) => ({
+    total: add(total.total, item.total),
+    components: total.components && item.components ? {
+      employee: add(total.components.employee, item.components.employee),
+      employer: add(total.components.employer, item.components.employer),
+    } : null,
+  }), { total: 0, components: { employee: 0, employer: 0 } });
+}
+
+/** True when a exceeds b in total or, when both are known, in a component. */
+const exceeds = (a: EpfBalance, b: EpfBalance) => decimal(a.total).greaterThan(b.total) ||
+  Boolean(a.components && b.components && (decimal(a.components.employee).greaterThan(b.components.employee) ||
+    decimal(a.components.employer).greaterThan(b.components.employer)));
+
+function validateClaimTransfer(claim: EpfClaimTransfer, ledger: EpfLedger, accounts: Map<string, EpfAccount>, today: string) {
+  const errors: string[] = [];
+  if (claim.sourceId === claim.destinationId) errors.push("Transfer accounts must differ.");
+  const dates = claim.credits.map((credit) => credit.date);
+  if (dates.some((date, index) => index > 0 && date < dates[index - 1])) {
+    errors.push("List the new account's credits in date order.");
+  }
+  if (claim.credits.some((credit) => credit.date > today || credit.postedDate > today)) {
+    errors.push("Event dates cannot be in the future.");
+  }
+  if (claim.credits.some((credit) => credit.amount.total <= 0) || claim.payout.total <= 0) {
+    errors.push("Event amounts must be positive.");
+  }
+  if (exceeds(claim.interest, claim.payout)) errors.push("The claim interest cannot be more than the claim.");
+  const credited = sumBalances(claim.credits.map((credit) => credit.amount));
+  if (claim.status === "completed" && !sameBalance(credited, claim.payout)) {
+    errors.push("The new account's credits must add up to the claim, by part.");
+  } else if (claim.status === "inTransit" && exceeds(credited, claim.payout)) {
+    errors.push("The new account's credits cannot add up to more than the claim.");
+  }
+  for (const [accountId, label] of [[claim.sourceId, "old"], [claim.destinationId, "new"]] as const) {
+    const account = accounts.get(accountId);
+    if (account && datesOn(claim, accountId).some((date) => date <= account.checkpoint.date)) {
+      errors.push(`The claim and its credits must follow the ${label} account's starting balance.`);
+    }
+  }
+  const later = ledger.events.some((other) => other.id !== claim.id &&
+    datesOn(other, claim.sourceId).some((date) => date > claim.effectiveDate));
+  if (later) errors.push("The claim closes the old account; remove entries recorded on it after the claim date.");
+  return errors;
 }
 
 function validate(ledger: EpfLedger, today: string) {
@@ -85,7 +154,7 @@ function validate(ledger: EpfLedger, today: string) {
       if (event.capitalReduction !== null) errors.push("A final settlement empties the account; leave its capital reduction unset.");
       const settlement = event;
       const later = ledger.events.some((other) => other.id !== settlement.id &&
-        references(other).includes(settlement.accountId) && other.effectiveDate > settlement.effectiveDate &&
+        datesOn(other, settlement.accountId).some((date) => date > settlement.effectiveDate) &&
         !(other.type === "reversal" && other.reversesId === settlement.id));
       if (later) errors.push("A final settlement must be the last entry in its account.");
     }
@@ -102,7 +171,7 @@ function validate(ledger: EpfLedger, today: string) {
         errors.push("A financial year summary must start after the account's starting balance.");
       }
       const inside = (date: string) => date >= summary.periodStart && date <= summary.effectiveDate;
-      const owned = ledger.events.some((other) => other.id !== summary.id && other.type !== "transfer" &&
+      const owned = ledger.events.some((other) => other.id !== summary.id && !isEpfAccountMove(other) &&
         other.accountId === summary.accountId && (
           // A balance update inside would be replaced by, then added to, the period totals.
           ((other.type === "contribution" || other.type === "interest" || other.type === "reconciliation") && inside(other.effectiveDate)) ||
@@ -125,6 +194,7 @@ function validate(ledger: EpfLedger, today: string) {
       if (reversedIds.has(event.reversesId)) errors.push("An event cannot be reversed twice.");
       reversedIds.add(event.reversesId);
     }
+    if (event.type === "claimTransfer") errors.push(...validateClaimTransfer(event, ledger, accounts, today));
     if (event.type === "transfer") {
       if (event.sourceId === event.destinationId) errors.push("Transfer accounts must differ.");
       if ((event.status === "completed") !== (event.creditDate !== null)) {
@@ -135,7 +205,8 @@ function validate(ledger: EpfLedger, today: string) {
       }
     }
     const amount = event.type === "contribution" ? event.amount
-      : event.type === "reconciliation" || event.type === "reversal" || event.type === "yearSummary" ? null : event.amount.total;
+      : event.type === "reconciliation" || event.type === "reversal" || event.type === "yearSummary" ||
+        event.type === "claimTransfer" ? null : event.amount.total;
     if (amount !== null && amount <= 0) errors.push("Event amounts must be positive.");
   }
   return errors;
@@ -169,22 +240,90 @@ export function calculateEpfLedger(input: unknown, asOf: string, today: string):
   // A passbook closing balance is struck after the day's other activity, so a
   // summary replays after same-day entries. A settlement empties its account,
   // so it comes later still, followed only by its own reversal.
-  const settlementIds = new Set(ledger.events.flatMap((event) => event.type === "withdrawal" && event.settlement ? [event.id] : []));
-  const dayRank = (event: EpfEvent) => event.type === "yearSummary" ? 1 : settlementIds.has(event.id) ? 2
-    : event.type === "reversal" && settlementIds.has(event.reversesId) ? 3 : 0;
-  const steps = ledger.events.flatMap((event) => {
-    const debit = { date: event.effectiveDate, event, credit: false };
+  // A claim transfer's claim also empties its account, like a settlement; a
+  // credit on the claim date arrives after it. Later credits replay as ordinary
+  // same-day activity, so a 31 Mar closing balance includes them.
+  const settlementIds = new Set(ledger.events.flatMap((event) => (event.type === "withdrawal" && event.settlement) ||
+    event.type === "claimTransfer" ? [event.id] : []));
+  type Step = { date: string; event: EpfEvent; credit: boolean; creditIndex: number };
+  const dayRank = (step: Step) => step.event.type === "claimTransfer" && step.credit
+    ? (step.date === step.event.effectiveDate ? 4 : 0)
+    : step.event.type === "yearSummary" ? 1 : settlementIds.has(step.event.id) ? 2
+      : step.event.type === "reversal" && settlementIds.has(step.event.reversesId) ? 3 : 0;
+  const steps = ledger.events.flatMap((event): Step[] => {
+    const debit = { date: event.effectiveDate, event, credit: false, creditIndex: -1 };
+    if (event.type === "claimTransfer") {
+      return [debit, ...event.credits.map((credit, creditIndex) => ({ date: credit.date, event, credit: true, creditIndex }))];
+    }
     return event.type === "transfer" && event.creditDate
-      ? [debit, { date: event.creditDate, event, credit: true }] : [debit];
-  }).sort((a, b) => compareCodeUnits(a.date, b.date) || dayRank(a.event) - dayRank(b.event) ||
+      ? [debit, { date: event.creditDate, event, credit: true, creditIndex: 0 }] : [debit];
+  }).sort((a, b) => compareCodeUnits(a.date, b.date) || dayRank(a) - dayRank(b) ||
     Date.parse(a.event.recordedAt) - Date.parse(b.event.recordedAt) || compareCodeUnits(a.event.id, b.event.id) ||
-    Number(a.credit) - Number(b.credit));
+    Number(a.credit) - Number(b.credit) || a.creditIndex - b.creditIndex);
   const transit = new Map<string, { value: number; capital: number | null }>();
+  // Claim transfers: what the claim left in transit, by part, and the old
+  // account's capital still waiting to move with the first credit.
+  const claimTransit = new Map<string, EpfBalance>();
+  const pendingCapital = new Map<string, number | null>();
   const applied = new Set<string>();
   try {
     for (const step of steps) {
       if (step.date > asOf) continue;
       const event = step.event;
+      if (event.type === "claimTransfer") {
+        const source = states.get(event.sourceId)!;
+        const destination = states.get(event.destinationId)!;
+        if (!step.credit) {
+          const due = shift(source.balance, event.interest, 1);
+          const credited = sumBalances(event.credits.filter((credit) => credit.date < event.effectiveDate)
+            .map((credit) => credit.amount));
+          if (!sameBalance(sumBalances([due, credited]), event.payout)) {
+            throw new Error("The claim must pay out the old account's whole balance, including the interest paid with it.");
+          }
+          source.balance = { total: 0, components: due.components ? { employee: 0, employer: 0 } : null };
+          source.lastEvidenceDate = event.effectiveDate;
+          // Capital that has not moved yet waits in transit for the first credit.
+          if (!pendingCapital.has(event.id)) pendingCapital.set(event.id, source.capital);
+          source.capital = 0;
+          claimTransit.set(event.id, due);
+          if (due.total > 0) transit.set(event.id, { value: due.total, capital: pendingCapital.get(event.id) ?? null });
+          continue;
+        }
+        const credit = event.credits[step.creditIndex];
+        const early = credit.date < event.effectiveDate;
+        if (early) {
+          if (exceeds(credit.amount, source.balance)) {
+            throw new Error("A credit before the claim cannot be more than the old account's balance on that date.");
+          }
+          source.balance = shift(source.balance, credit.amount, -1);
+          source.lastEvidenceDate = credit.date;
+        } else {
+          const remaining = claimTransit.get(event.id)!;
+          if (exceeds(credit.amount, remaining)) {
+            throw new Error("The new account's credits cannot add up to more than the claim.");
+          }
+          claimTransit.set(event.id, shift(remaining, credit.amount, -1));
+        }
+        destination.balance = shift(destination.balance, credit.amount, 1);
+        destination.lastEvidenceDate = credit.date;
+        if (step.creditIndex === 0) {
+          // All of the old account's capital moves with the first credit, when
+          // both sides know it and the credit covers it. Interest never does.
+          const capital = early ? source.capital : pendingCapital.get(event.id) ?? null;
+          const moves = capital !== null && destination.capital !== null && credit.amount.total >= capital;
+          destination.capital = moves ? shiftCapital(destination.capital, capital, 1) : null;
+          if (early) {
+            pendingCapital.set(event.id, moves ? 0 : null);
+            if (moves) source.capital = 0;
+          } else pendingCapital.set(event.id, 0);
+        }
+        if (!early) {
+          const left = claimTransit.get(event.id)!;
+          if (left.total === 0) transit.delete(event.id);
+          else transit.set(event.id, { value: left.total, capital: pendingCapital.get(event.id) ?? null });
+        }
+        continue;
+      }
       if (event.type === "transfer") {
         if (event.status === "requested") continue;
         const state = states.get(step.credit ? event.destinationId : event.sourceId)!;

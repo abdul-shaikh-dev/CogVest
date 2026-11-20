@@ -4,7 +4,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { decimal } from "@/src/domain/precision";
 import type { CashEntry } from "@/src/types";
 import { calculateEpfLedger } from "./calculations";
-import { epfAccountSchema, epfEventSchema } from "./model";
+import { epfAccountSchema, epfEventSchema, isEpfAccountMove } from "./model";
 
 const id = z.string().min(1).max(200).refine((value) => value === value.trim());
 const cashDraft = z.object({ id, label: z.string().trim().min(1).max(200) }).strict();
@@ -82,13 +82,13 @@ export function validateEpfState(input: unknown, cashEntries: readonly CashEntry
 }
 
 export function previewEpfAccountDeletion(state: EpfState, accountId: string) {
-  const events = state.events.filter((event) => event.type === "transfer"
+  const events = state.events.filter((event) => isEpfAccountMove(event)
     ? event.sourceId === accountId || event.destinationId === accountId : event.accountId === accountId);
   return {
     accountId, exists: state.accounts.some((account) => account.id === accountId),
     canDelete: state.accounts.some((account) => account.id === accountId) && events.length === 0,
     eventIds: events.map((event) => event.id),
-    counterpartAccountIds: [...new Set(events.flatMap((event) => event.type === "transfer"
+    counterpartAccountIds: [...new Set(events.flatMap((event) => isEpfAccountMove(event)
       ? [event.sourceId, event.destinationId].filter((value) => value !== accountId) : []))],
     cashEntryIds: state.cashLinks.filter((link) => events.some((event) => event.id === link.eventId)).map((link) => link.cashEntryId),
   };

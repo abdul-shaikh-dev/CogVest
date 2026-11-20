@@ -24,7 +24,7 @@ import {
   useSensitiveValueReveal,
 } from "@/src/components/common";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
-import type { EpfAccount } from "@/src/domain/epf";
+import { isEpfAccountMove, type EpfAccount } from "@/src/domain/epf";
 import { summarizeEpfForReporting } from "@/src/domain/epf/reporting";
 import { formatDate, formatINR } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
@@ -129,14 +129,18 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
   const summary = useMemo(() => summarizeEpfForReporting(snapshot.epf, today), [snapshot.epf, today]);
   const value = summary.accounts.find((item) => item.accountId === account.id);
   const events = snapshot.epf.events
-    .filter((event) => event.type === "transfer"
+    .filter((event) => isEpfAccountMove(event)
       ? event.sourceId === account.id || event.destinationId === account.id : event.accountId === account.id)
     .sort((left, right) => compareCodeUnits(right.effectiveDate, left.effectiveDate) || compareCodeUnits(right.recordedAt, left.recordedAt));
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const components = value?.balance.components ?? null;
   const reversedIds = new Set(events.flatMap((event) => event.type === "reversal" ? [event.reversesId] : []));
-  const settlement = events.find((event) => event.type === "withdrawal" && event.settlement && !reversedIds.has(event.id));
+  // A final settlement or a claim that moved the balance away closes the account.
+  const settlement = events.find((event) => (event.type === "withdrawal" && event.settlement && !reversedIds.has(event.id)) ||
+    (event.type === "claimTransfer" && event.sourceId === account.id));
+  const movedTo = settlement?.type === "claimTransfer"
+    ? snapshot.epf.accounts.find((item) => item.id === settlement.destinationId)?.nickname ?? "another EPF account" : null;
 
   return (
     <ScreenContainer scroll testID="epf-account-screen">
@@ -145,7 +149,7 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
           action={<IconButton accessibilityLabel="Edit EPF account" icon="create-outline" onPress={onEdit} testID="edit-epf-account" />}
           leading={<IconButton accessibilityLabel="Back to Holdings" icon="arrow-back" onPress={onBack} testID="epf-account-back" />}
           subtitle={[epfProviderLabel(account.provider), account.employerLabel,
-            settlement ? `Settled on ${formatDate(settlement.effectiveDate)}` : epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
+            settlement ? `${movedTo ? "Moved" : "Settled"} on ${formatDate(settlement.effectiveDate)}` : epfStatusLabel(account.status)].filter(Boolean).join(" · ")}
           title={account.nickname}
         />
 
@@ -161,7 +165,8 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
             <AppText style={styles.balanceValue} testID="epf-account-total" weight="bold">Unavailable</AppText>
           )}
           <AppText color="secondary" variant="caption" testID="epf-account-evidence">
-            {settlement ? `Paid out in full on ${formatDate(settlement.effectiveDate)}`
+            {settlement ? movedTo ? `Moved in full to ${movedTo} on ${formatDate(settlement.effectiveDate)}`
+              : `Paid out in full on ${formatDate(settlement.effectiveDate)}`
               : value
                 ? `As of ${formatDate(value.lastEvidenceDate)} · ${value.historyComplete ? "all activity recorded" : "later activity not confirmed"}`
                 : "This account's records need review before a balance can be shown."}
@@ -197,7 +202,7 @@ function EpfAccountDetail({ account, now, onBack, onEdit, onUpdateBalance, onOpe
             <>
               <Row label="Invested capital" masked={masked} stacked={stacked} testID="epf-capital" value={formatINR(value.capital)} />
               <AppText color="secondary" variant="caption">
-                {settlement ? "Nothing remains invested after the final settlement."
+                {settlement ? movedTo ? `Nothing remains invested here; it moved to ${movedTo}.` : "Nothing remains invested after the final settlement."
                   : "Contributions recorded since this account started from ₹0. Interest is return, not invested capital."}
               </AppText>
             </>
@@ -326,7 +331,7 @@ function DeleteSection({ account, onDeleted, store }: {
     return <AppButton onPress={() => setConfirming(true)} testID="delete-epf-account" title="Delete EPF account" variant="ghost" />;
   }
   const preview = store.getState().previewEpfAccountDeletion(account.id);
-  const transfers = store.getState().epf.events.filter((event) => preview.eventIds.includes(event.id) && event.type === "transfer");
+  const transfers = store.getState().epf.events.filter((event) => preview.eventIds.includes(event.id) && isEpfAccountMove(event));
 
   function remove() {
     // Each step is a complete, validated state; a retry resumes safely by command ID.

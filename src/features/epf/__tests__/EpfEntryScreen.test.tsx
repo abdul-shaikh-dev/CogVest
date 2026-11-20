@@ -174,6 +174,85 @@ test("a 50,000 transfer keeps combined EPF unchanged in transit, completes from 
   expect(result.ok && result.accounts.map((item) => item.balance.total)).toEqual([90000, 50000]);
 });
 
+async function fillClaimCredit(screen: RenderedScreen, index: number, date: string, employee: string, employer: string) {
+  await setDate(screen, `epf-claim-credit-${index}-date`, date);
+  await fireEvent.changeText(screen.getByTestId(`epf-claim-credit-${index}-amount-input`), String(Number(employee) + Number(employer)));
+  await fireEvent.changeText(screen.getByTestId(`epf-claim-credit-${index}-employee-input`), employee);
+  await fireEvent.changeText(screen.getByTestId(`epf-claim-credit-${index}-employer-input`), employer);
+}
+
+// #735: the new account receives the balance before the claim, and the claim
+// interest after it. The money is counted once and the interest is return.
+test("a move settled as a claim counts the money once and completes when the last credit arrives", async () => {
+  const store = setup([account("acme", "Acme", 140000, 100000, 40000), account("beta", "Beta", 0)]);
+  await enter(store, async (screen) => {
+    await choose(screen, "epf-entry-kind", "claimTransfer");
+    await choose(screen, "epf-claim-target", "beta");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-amount-input"), "142100");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-employee-input"), "101500");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-employer-input"), "40600");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-interest-input"), "2100");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-interest-employee-input"), "1500");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-interest-employer-input"), "600");
+    await fillClaimCredit(screen, 0, "2026-06-01", "100000", "40000");
+    await choose(screen, "epf-claim-status", "inTransit");
+    await setDate(screen, "epf-entry-date", "2026-06-15");
+    await fireEvent.press(screen.getByTestId("review-epf-entry"));
+    expect(screen.getByTestId("epf-entry-effect-acme")).toHaveTextContent("₹1,40,000.00 → ₹0.00");
+    expect(screen.getByTestId("epf-entry-effect-beta")).toHaveTextContent("₹0.00 → ₹1,40,000.00");
+    expect(screen.getByTestId("epf-entry-effect-total")).toHaveTextContent("₹1,40,000.00 → ₹1,42,100.00");
+    expect(screen.getByTestId("epf-entry-role")).toHaveTextContent(/counts it once.*₹2,100.00 interest.*ends at ₹0.*₹2,100.00 is counted as moving/);
+    await fireEvent.press(screen.getByTestId("save-epf-entry"));
+  });
+  expect(total(store)).toMatchObject({ total: 142100, inTransit: 2100 });
+  const [claim] = store.getState().epf.events;
+
+  // Opened from the new account, the claim is still edited as one record.
+  const screen = await render(<EpfEntryScreen accountId="beta" entryId={claim.id} now={now} onBack={jest.fn()} onComplete={jest.fn()} store={store} />);
+  expect(screen.getByTestId("epf-claim-amount-input").props.value).toBe("142100");
+  await fireEvent.press(screen.getByTestId("epf-claim-add-credit"));
+  await fillClaimCredit(screen, 1, "2026-09-10", "1500", "600");
+  await choose(screen, "epf-claim-status", "completed");
+  await fireEvent.press(screen.getByTestId("review-epf-entry"));
+  expect(screen.getByTestId("epf-entry-effect-beta")).toHaveTextContent("₹1,40,000.00 → ₹1,42,100.00");
+  await fireEvent.press(screen.getByTestId("save-epf-entry"));
+  expect(store.getState().epf.events).toEqual([expect.objectContaining({ id: claim.id, type: "claimTransfer",
+    sourceId: "acme", destinationId: "beta", status: "completed" })]);
+  const result = total(store);
+  expect(result).toMatchObject({ total: 142100, inTransit: 0 });
+  expect(result.ok && result.accounts.map((item) => item.balance.total)).toEqual([0, 142100]);
+
+  const detail = await render(<EpfAccountScreen accountId="acme" now={now} onBack={jest.fn()} onComplete={jest.fn()}
+    onUpdateBalance={jest.fn()} store={store} />);
+  expect(detail.getByText("EPFO · Moved on 15 Jun 2026")).toBeTruthy();
+  expect(detail.getByTestId("epf-account-evidence")).toHaveTextContent("Moved in full to Beta on 15 Jun 2026");
+  expect(detail.queryByTestId("update-epf-balance")).toBeNull();
+});
+
+test("a claim whose credits do not add up explains which part is short", async () => {
+  const store = setup([account("acme", "Acme", 140000, 100000, 40000), account("beta", "Beta", 0)]);
+  await enter(store, async (screen) => {
+    await choose(screen, "epf-entry-kind", "claimTransfer");
+    await choose(screen, "epf-claim-target", "beta");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-amount-input"), "142100");
+    await fireEvent.changeText(screen.getByTestId("epf-claim-interest-input"), "2100");
+    await fillClaimCredit(screen, 0, "2026-06-01", "100000", "40000");
+    await setDate(screen, "epf-entry-date", "2026-06-15");
+    await fireEvent.press(screen.getByTestId("review-epf-entry"));
+    expect(screen.getByTestId("epf-entry-error")).toHaveTextContent("The new account's credits must add up to the claim, by part.");
+    expect(screen.queryByTestId("save-epf-entry")).toBeNull();
+  });
+  expect(store.getState().epf.events).toEqual([]);
+});
+
+test("asks for the new account first before recording a claim", async () => {
+  const store = setup();
+  await enter(store, async (screen) => {
+    await choose(screen, "epf-entry-kind", "claimTransfer");
+    expect(screen.getByTestId("epf-entry-no-target")).toHaveTextContent(/Add the new EPF account first/);
+  });
+});
+
 test("asks for the receiving account first when no other account is tracked", async () => {
   const store = setup();
   await enter(store, async (screen) => {
