@@ -53,6 +53,14 @@ describe("merging a passbook import into saved EPF records (#740)", () => {
     expect(again.changes).toEqual([]);
   });
 
+  test("a saved record whose fields come back in another order still counts as unchanged", () => {
+    const first = merge(empty, all);
+    const reorder = (value: unknown): unknown => Array.isArray(value) ? value.map(reorder)
+      : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).reverse().map(([key, item]) => [key, reorder(item)])) : value;
+    const saved = { accounts: first.ledger.accounts, events: first.ledger.events.map((event) => reorder(event) as EpfEvent) };
+    expect(merge(saved, all).changes).toEqual([]);
+  });
+
   test("a closed year replaces the in-progress year imported before, after showing the difference", () => {
     const openYear = passbookText({ memberId: NEW_MEMBER_ID, year: 2023, opening: "27,180 8,380 2,000", printed: "15-08-2023",
       rows: [...layoutBRows("2023-03"), ...layoutBRows("2023-04")],

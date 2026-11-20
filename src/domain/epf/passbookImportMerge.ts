@@ -30,7 +30,13 @@ const isImported = (event: EpfEvent, accountId: string) => event.id.startsWith(i
 const touches = (event: EpfEvent, accountId: string) => isEpfAccountMove(event)
   ? event.sourceId === accountId || event.destinationId === accountId : event.accountId === accountId;
 /** Same record apart from when it was recorded. */
-const sameRecord = (a: EpfEvent, b: EpfEvent) => JSON.stringify({ ...a, recordedAt: "" }) === JSON.stringify({ ...b, recordedAt: "" });
+/** Key order and absent optional fields don't matter: a saved record comes back through the persisted schema. */
+const canonical = (value: unknown): string => Array.isArray(value) ? `[${value.map(canonical).join(",")}]`
+  : value !== null && typeof value === "object"
+    ? `{${Object.entries(value).filter(([, item]) => item !== undefined).sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(",")}}`
+    : JSON.stringify(value);
+const sameRecord = (a: EpfEvent, b: EpfEvent) => canonical({ ...a, recordedAt: "" }) === canonical({ ...b, recordedAt: "" });
 const sameBalance = (a: EpfBalance, b: EpfBalance) => decimal(a.total).equals(b.total) &&
   (!a.components || !b.components || (decimal(a.components.employee).equals(b.components.employee) &&
     decimal(a.components.employer).equals(b.components.employer)));
