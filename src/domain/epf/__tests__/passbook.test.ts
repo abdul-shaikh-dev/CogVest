@@ -1,42 +1,9 @@
 import { readEpfoPassbook, type EpfoPassbook } from "@/src/domain/epf/passbook";
+import { NEW_MEMBER_ID, OLD_MEMBER_ID, passbookText } from "@/src/testing/epfPassbookFixture";
 
-// Synthetic passbooks. They copy the structure the on-device extractor produces
-// from real EPFO Member Passbooks (#740): unreadable legacy-font Hindi lines,
-// wrapped descriptions and three balance columns. Every name, ID and amount is
-// invented.
-const OLD_ID = "ABCDE00000000000000001";
-const NEW_ID = "ABCDE00000000000000002";
-
-function passbook({ memberId = OLD_ID, year = 2021, opening, rows, totals, interest, closing, printed = "15-08-2025" }: {
-  memberId?: string; year?: number; opening: string; rows: string[]; totals: [string, string, string];
-  interest: string; closing: string; printed?: string;
-}) {
-  return [
-    "dezpkjh Hkfo / Member Passbook",
-    "-".repeat(40),
-    "LFkkiuk | Establishment ID/Name XXXXX0000000000 / SYNTHETIC EMPLOYER",
-    `lnL; | Member ID/Name ${memberId} / SYNTHETIC MEMBER`,
-    "tUe frfFk | Date of Birth 01-01-1990",
-    ";w , u | UAN 100000000001",
-    `bZih,Q [ foRrh; o"kZ - ${year}-${year + 1} ] / EPF Passbook [ Financial Year - ${year}-${year + 1} ]`,
-    "fooj.k / Particulars Employee Employer Pension",
-    "Balance Balance Balance",
-    `OB Int. Updated upto 31/03/${year} ${opening}`,
-    "/ Transaction fooj.k / Wages va'knku / Contribution",
-    "Wage Month frfFk / / izdkj /",
-    "/ Date osru ,Q / EPF osru ,l / EPS",
-    "/ Type Employee Employer Pension",
-    ...rows,
-    `Total Contributions for the year [ ${year} ] ${totals[0]}`,
-    `Total Transfer-Ins/VDRs for the year [ ${year} ] ${totals[1]}`,
-    `Total Withdrawals for the year [ ${year} ] ${totals[2]}`,
-    `Int. Updated upto 31/03/${year + 1} ${interest}`,
-    `Closing Balance as on 31/03/${year + 1} ${closing}`,
-    `fooj.k dk vUr Of Statement---------------------- Printed On : ${printed} 10:00:00`,
-    "Page 1 of",
-    "1",
-  ].join("\n");
-}
+const OLD_ID = OLD_MEMBER_ID;
+const NEW_ID = NEW_MEMBER_ID;
+const passbook = (input: Omit<Parameters<typeof passbookText>[0], "year"> & { year?: number }) => passbookText({ year: 2021, ...input });
 
 const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
 const layoutARows = months.map((month, index) => {
