@@ -1,9 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, usePathname, router, useRootNavigationState, type Href } from "expo-router";
+import {
+  Stack,
+  usePathname,
+  router,
+  useNavigationContainerRef,
+  useRootNavigationState,
+  useRouter,
+  type Href,
+} from "expo-router";
+import { NavigationContainerRefContext } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
   Pressable,
   StyleSheet,
@@ -21,6 +31,7 @@ import { getPortfolioStore } from "@/src/store";
 import { exportRecoveryCopies } from "@/src/services/backup";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
+import { navigationOwnership, sessionMemory } from "@/src/services/session";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { spacing, useTheme, createThemedStyles, ThemeProvider } from "@/src/theme";
 import { useModalAnimation } from "@/src/hooks";
@@ -44,6 +55,35 @@ function StartupLinkReplay() {
     const path = takeStartupLinkPath();
     if (path) router.navigate(path as Href);
   }, [launchSettled]);
+
+  return null;
+}
+
+// Android relaunches the activity for a system font-size change (#529) and
+// briefly runs the old and new app trees side by side. This keeps expo-router's
+// global navigation ref and router bound to the newest tree after the old one
+// unmounts, so in-app links keep working. It sits outside the restore-keyed
+// tree, which a backup restore remounts on purpose.
+function FontRelaunchNavigationGuard() {
+  const navigation = useNavigationContainerRef();
+  const container = useContext(NavigationContainerRefContext);
+  const boundRouter = useRouter();
+
+  useEffect(() => {
+    const globals = { ref: navigation, router };
+    const id = navigationOwnership.claim(globals, { container, router: boundRouter });
+    return () => navigationOwnership.release(id, globals);
+  }, [boundRouter, container, navigation]);
+
+  // Back that leaves the app is a deliberate exit: reopening starts fresh,
+  // without unsaved input kept for a font-size relaunch.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (!navigation.canGoBack()) sessionMemory.forgetAll();
+      return false;
+    });
+    return () => subscription.remove();
+  }, [navigation]);
 
   return null;
 }
@@ -204,6 +244,8 @@ function RootContents() {
             )}
           </View>
         ) : (
+          <>
+          <FontRelaunchNavigationGuard />
           <Fragment key={restoreEpoch}>
             <StartupLinkReplay />
             <MonthEndSnapshotAutomation
@@ -279,6 +321,7 @@ function RootContents() {
               />
             </Stack>
           </Fragment>
+          </>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -111,3 +111,9 @@ jest.mock("victory-native", () => {
     }),
   };
 });
+
+// Session memory deliberately outlives React remounts (#529); keep each test
+// independent of input an earlier test left behind.
+afterEach(() => {
+  require("./src/services/session").sessionMemory.forgetAll();
+});

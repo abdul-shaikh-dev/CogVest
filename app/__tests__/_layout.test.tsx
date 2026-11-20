@@ -18,13 +18,25 @@ jest.mock("expo-router", () => {
 
   return {
     Stack,
-    router: { navigate: (path: string) => mockNavigate(path) },
+    get router() {
+      return mockGlobalRouter;
+    },
+    useNavigationContainerRef: () => mockNavigationRef,
     usePathname: () => mockPathname,
     useRootNavigationState: () => mockRootState,
+    useRouter: () => mockBoundRouter,
   };
 });
 
+let mockCanGoBack = false;
+const mockNavigationRef: { current: string | null; canGoBack: () => boolean } = {
+  current: null,
+  canGoBack: () => mockCanGoBack,
+};
+
 const mockNavigate = jest.fn();
+const mockGlobalRouter: Record<string, unknown> = { navigate: (path: string) => mockNavigate(path) };
+let mockBoundRouter: Record<string, unknown> = {};
 const mockTakeStartupLinkPath = jest.fn<string | undefined, []>();
 let mockRootState: { key: string } | undefined = { key: "root" };
 
@@ -71,6 +83,10 @@ jest.mock("@/src/store", () => ({
   }),
 }));
 
+import { BackHandler } from "react-native";
+
+import { sessionMemory } from "@/src/services/session";
+
 import RootLayout, { loadRequiredFonts } from "../_layout";
 
 describe("RootLayout storage recovery boundary", () => {
@@ -81,6 +97,64 @@ describe("RootLayout storage recovery boundary", () => {
     mockPathname = "/dashboard";
     mockRootState = { key: "root" };
     mockTakeStartupLinkPath.mockReturnValue(undefined);
+    mockCanGoBack = false;
+    mockNavigationRef.current = null;
+    mockBoundRouter = {};
+  });
+
+  describe("after a font-size relaunch (#529)", () => {
+    it("keeps global navigation working after the old surface unmounts", async () => {
+      const navigateBefore = mockGlobalRouter.navigate;
+      // Android starts the relaunched surface before it stops the old one.
+      mockNavigationRef.current = "old container";
+      mockBoundRouter = { push: () => "old surface" };
+      const oldSurface = await render(<RootLayout />);
+      await waitFor(() => expect(oldSurface.getByTestId("app-stack")).toBeTruthy());
+
+      mockNavigationRef.current = "new container";
+      mockBoundRouter = { push: () => "new surface" };
+      const newSurface = await render(<RootLayout />);
+      await waitFor(() => expect(newSurface.getByTestId("app-stack")).toBeTruthy());
+
+      // The old tree's cleanup empties the shared ref and unbinds the router.
+      mockNavigationRef.current = null;
+      mockGlobalRouter.push = () => {
+        throw new Error("The imperative router is unavailable before the first render has finished.");
+      };
+      await oldSurface.unmount();
+
+      expect(mockNavigationRef.current).toBe("new container");
+      expect((mockGlobalRouter.push as () => string)()).toBe("new surface");
+      delete mockGlobalRouter.push;
+      mockGlobalRouter.navigate = navigateBefore;
+    });
+
+    it("forgets unsaved input when Back leaves the app", async () => {
+      type BackHandlerListener = Parameters<typeof BackHandler.addEventListener>[1];
+      const handlers: BackHandlerListener[] = [];
+      const addListener = jest.spyOn(BackHandler, "addEventListener")
+        .mockImplementation((_event, handler) => {
+          handlers.push(handler);
+          return { remove: () => undefined };
+        });
+      try {
+        const { getByTestId } = await render(<RootLayout />);
+        await waitFor(() => expect(getByTestId("app-stack")).toBeTruthy());
+        sessionMemory.write("cashEntryDraft", { amount: "1" });
+
+        mockCanGoBack = true;
+        const press = () => handlers.forEach((handler) =>
+          expect(handler({} as Parameters<BackHandlerListener>[0])).toBe(false));
+        press();
+        expect(sessionMemory.read("cashEntryDraft")).toEqual({ amount: "1" });
+
+        mockCanGoBack = false;
+        press();
+        expect(sessionMemory.read("cashEntryDraft")).toBeUndefined();
+      } finally {
+        addListener.mockRestore();
+      }
+    });
   });
 
   it("opens a link that arrived before the navigator mounted", async () => {
