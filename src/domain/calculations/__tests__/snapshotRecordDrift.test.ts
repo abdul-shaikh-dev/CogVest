@@ -9,6 +9,7 @@ import {
   type SnapshotDriftRecords,
 } from "../snapshotRecordDrift";
 import { calculateMonthlyProgressSummaries } from "../holdings";
+import { bonusShareCatalog } from "@/src/domain/stockSplitCatalog";
 
 const stock: Asset = {
   assetClass: "stock", currency: "INR", id: "stock", instrumentType: "stock",
@@ -100,6 +101,31 @@ describe("saved months that no longer match records (#747)", () => {
     const unvalued = { ...now, assets: [] };
     expect(findSnapshotRecordDrift({ ...unvalued, monthlySnapshots: [february] }).size).toBe(0);
     expect(recalculateSavedSnapshot(unvalued, february)).toEqual({ ok: false, reason: expect.any(String) });
+  });
+
+  test("a month before a holding's later bonus or split is still checked, not skipped as unpriceable", () => {
+    // Before a later share adjustment only a reconciled close can value a month,
+    // so the neutral check must not depend on one being cached (#747 follow-up).
+    const bonus = bonusShareCatalog.find((event) => event.id === "RELIANCE-2024-10-28-bonus-v1")!;
+    const adjusted: Asset = { ...stock, isin: bonus.newIsin, stockSplits: [bonus] };
+    const reconciled: HistoricalQuoteCache = {
+      [historicalQuoteCacheKey(adjusted.id, "2024-06")]: {
+        assetId: adjusted.id, asOfMonth: "2024-06", basis: "reconciled-historical-close", currency: "INR",
+        fetchedAt: "2024-11-01T00:00:00.000Z", price: 120, source: "yahoo",
+      },
+    };
+    const lateDeposit: PpfLedgerEntry = { ...backfilled, date: "2024-05-10", id: "ppf-may" };
+    const before = records({
+      assets: [adjusted], historicalQuotes: reconciled,
+      openingPositions: [{ assetId: adjusted.id, averageCostPrice: 100, date: "2024-04-15", id: "open", quantity: 10 }],
+    });
+    const june = savedMonth("2024-06", before, {
+      generated: { ...savedMonth("2024-06", before).generated!, source: "manual" },
+    });
+    const now = { ...before, ppfLedgerEntries: [lateDeposit] };
+    expect(findSnapshotRecordDrift({ ...now, monthlySnapshots: [june] }).get("2024-06")?.fields)
+      .toEqual(["investedValue"]);
+    expect(findSnapshotRecordDrift({ ...before, monthlySnapshots: [june] }).size).toBe(0);
   });
 
   test("Month gain is unavailable for an out-of-date month and the month after it, never counting the gap as gain", () => {
