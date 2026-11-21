@@ -3,6 +3,8 @@ jest.mock("expo-router", () => ({ router: { navigate: mockNavigate, push: jest.f
 jest.mock("@/src/features/quickSetup", () => ({
   useQuickSetupSession: () => ({ session: null }),
 }));
+// The real status store needs native MMKV (#759).
+jest.mock("@/src/services/backup/backupStatus", () => ({ getBackupStatusStore: () => undefined }));
 
 const DashboardRoute = require("../../app/(tabs)/dashboard").default;
 
