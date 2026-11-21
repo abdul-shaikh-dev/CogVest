@@ -87,7 +87,7 @@ const unavailableReason: Record<MonthlyPerformanceUnavailableReason, string> = {
   "unknown-opening-position-date": "a starting holding has no known date",
   "missing-previous-snapshot": "there is no saved value for the month before",
   "non-consecutive-snapshot": "the month before has no saved value",
-  "out-of-date-snapshot": "this month or the one before was saved before later records were added",
+  "out-of-date-snapshot": "this month or the one before doesn't match your current records",
 };
 
 const signedCompact = (value: number) => (value > 0 ? `+${formatCompactINR(value)}` : formatCompactINR(value));

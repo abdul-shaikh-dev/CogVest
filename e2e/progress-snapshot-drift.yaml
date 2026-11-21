@@ -35,7 +35,7 @@ appId: ${APP_ID}
     visible:
       id: "snapshot-drift-notice"
     timeout: 30000
-- assertVisible: "Saved before later records were added"
+- assertVisible: "Doesn't match your records"
 - scrollUntilVisible:
     element:
       id: "recalculate-snapshot"

@@ -46,10 +46,11 @@ export function SnapshotDriftNotice({
 
   return (
     <View style={styles.driftNotice} testID="snapshot-drift-notice">
-      <AppText weight="bold">Saved before later records were added</AppText>
+      <AppText weight="bold">Doesn&apos;t match your records</AppText>
       <AppText color="secondary" variant="caption">
-        Records dated in or before this month were added or changed after it was saved, so its values don&apos;t
-        match your records. Month gain for this month and the next is unavailable until it&apos;s recalculated.
+        Its saved values differ from what your records give for this month, usually because records dated in or
+        before it were added or changed after it was saved. Month gain for this month and the next is unavailable
+        until it&apos;s recalculated.
       </AppText>
       {recalculated ? (
         <>

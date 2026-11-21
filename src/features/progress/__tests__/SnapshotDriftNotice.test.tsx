@@ -71,7 +71,7 @@ describe("a saved month that no longer matches records (#747)", () => {
     await openFebruary(store);
     expect(screen.getByTestId("snapshot-source")).toHaveTextContent("Values: Saved by you");
     const notice = within(await screen.findByTestId("snapshot-drift-notice"));
-    expect(notice.getByText("Saved before later records were added")).toBeTruthy();
+    expect(notice.getByText("Doesn't match your records")).toBeTruthy();
 
     await fireEvent.press(await screen.findByTestId("recalculate-snapshot"));
     expect(screen.getByTestId("snapshot-drift-saved-investedValue").props.accessibilityLabel).toBe("₹31,000.00");
@@ -117,7 +117,7 @@ test("the Progress QA scenario for Maestro shows July out of date and August's m
   const fixture = createProgressEdgeFixture("outdated", false);
   await render(<ProgressScreen historicalPriceFetcher={fixture.fetcher} now={progressEdgeNow} store={fixture.store} />);
   await fireEvent.press(screen.getByTestId("open-monthly-history"));
-  const heldBack = "Month gain unavailable: this month or the one before was saved before later records were added";
+  const heldBack = "Month gain unavailable: this month or the one before doesn't match your current records";
   await waitFor(() => expect(screen.getByTestId("snapshot-month-2026-08").props.accessibilityLabel).toContain(heldBack));
   expect(screen.getByTestId("snapshot-month-gain-2026-08")).toHaveTextContent("—");
   await fireEvent.press(screen.getByTestId("snapshot-month-2026-07"));
