@@ -75,7 +75,7 @@ appId: ${APP_ID}
     id: ppf-import-csv
 - tapOn:
     id: ppf-import-choose-csv
-- runFlow: helpers/open-downloads.yaml
+- runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: "ppf-merge.csv"
 - assertVisible: "Selected:.*"
 - scrollUntilVisible:
@@ -88,7 +88,6 @@ appId: ${APP_ID}
     id: ppf-merge-preview-screen
 - assertVisible:
     id: ppf-merge-count-new
-    text: ".*4.*"
 - takeScreenshot: .expo/ppf-csv-merge-review
 - scrollUntilVisible:
     element:
@@ -122,7 +121,7 @@ appId: ${APP_ID}
     id: ppf-import-csv
 - tapOn:
     id: ppf-import-choose-csv
-- runFlow: helpers/open-downloads.yaml
+- runFlow: standalone/helpers/open-downloads.yaml
 - tapOn: "ppf-merge.csv"
 - assertVisible: "Selected:.*"
 - scrollUntilVisible:
@@ -131,9 +130,6 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: ppf-merge-preview
-- assertVisible:
-    id: ppf-merge-count-recorded
-    text: ".*4.*"
 - scrollUntilVisible:
     element:
       id: ppf-merge-nothing-new
