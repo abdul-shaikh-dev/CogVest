@@ -1,0 +1,79 @@
+appId: ${APP_ID}
+---
+# #747: a saved month that no longer matches records. The QA route seeds July
+# 2026 as reviewed by the user, then a PPF contribution back-dated to June 2025.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 120000
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=outdated&mode=standard"
+- extendedWaitUntil:
+    visible:
+      id: "open-monthly-history"
+    timeout: 60000
+- tapOn:
+    id: "open-monthly-history"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "monthly-history-scroll"
+    timeout: 15000
+# August compares with the out-of-date July, so its month gain is held back.
+# Matched on the row's spoken label, which carries the reason.
+- extendedWaitUntil:
+    visible:
+      id: "snapshot-month-2026-08"
+      text: ".*Month gain unavailable: this month or the one before doesn.t match your current records.*"
+    timeout: 30000
+- assertNotVisible:
+    id: "snapshot-month-gain-amount-2026-08"
+- tapOn:
+    id: "snapshot-month-2026-07"
+- assertVisible:
+    id: "snapshot-source"
+    text: "Values: Saved by you"
+- extendedWaitUntil:
+    visible:
+      id: "snapshot-drift-notice"
+    timeout: 30000
+- assertVisible: "Doesn't match your records"
+- scrollUntilVisible:
+    element:
+      id: "recalculate-snapshot"
+    direction: DOWN
+- tapOn:
+    id: "recalculate-snapshot"
+- scrollUntilVisible:
+    element:
+      id: "snapshot-drift-recalculated-investedValue"
+    direction: DOWN
+- assertVisible:
+    id: "snapshot-drift-saved-investedValue"
+    text: "₹40,000.00"
+- assertVisible:
+    id: "snapshot-drift-recalculated-investedValue"
+    text: "₹90,000.00"
+- scrollUntilVisible:
+    element:
+      id: "confirm-recalculate-snapshot"
+    direction: DOWN
+- tapOn:
+    id: "confirm-recalculate-snapshot"
+# July now holds what records give, worked out by CogVest.
+- assertNotVisible:
+    id: "snapshot-drift-notice"
+- scrollUntilVisible:
+    element:
+      id: "snapshot-source"
+    direction: UP
+- assertVisible:
+    id: "snapshot-source"
+    text: "Values: (Automatic|Estimated)"
+- tapOn:
+    id: "history-back"
+- extendedWaitUntil:
+    visible:
+      id: "snapshot-month-gain-amount-2026-08"
+    timeout: 30000

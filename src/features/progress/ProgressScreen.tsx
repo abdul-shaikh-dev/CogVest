@@ -153,8 +153,10 @@ export function ProgressScreen({
                 months={progress.monthlySummaries.map(item => item.snapshot.month)}
                 value={selectedSummary.snapshot.month} onChange={setSummaryMonth} testID="progress-summary-month" />
               <MonthlyHistoryPanel
+                drift={progress.snapshotDrift}
                 maskWealthValues={progress.preferences.maskWealthValues}
                 minimal={isMinimalMode}
+                recalculation={progress.monthRecalculation}
                 summaries={progress.monthlySummaries}
               />
               </View>

@@ -898,8 +898,13 @@ export function calculatePortfolioRollupTotals(
   };
 }
 
+/**
+ * Months listed in outOfDateMonths no longer match current records (#747): their
+ * market change, and the next month's, would count the missing records as gain.
+ */
 export function calculateMonthlyProgressSummaries(
   snapshots: MonthlySnapshot[],
+  outOfDateMonths: ReadonlySet<string> = new Set(),
 ): MonthlyProgressSummary[] {
   const chronological = [...snapshots].sort((left, right) =>
     compareCodeUnits(left.month, right.month),
@@ -938,11 +943,25 @@ export function calculateMonthlyProgressSummaries(
 
       return {
         assetSnapshot,
-        performance: calculateMonthlyPerformance(previous, snapshot),
+        performance: outOfDateMonths.has(snapshot.month) || (previous && outOfDateMonths.has(previous.month))
+          ? outOfDatePerformance(previous, snapshot)
+          : calculateMonthlyPerformance(previous, snapshot),
         snapshot,
       };
     })
     .sort((left, right) => compareCodeUnits(right.snapshot.month, left.snapshot.month));
+}
+
+function outOfDatePerformance(previous: MonthlySnapshot | undefined, snapshot: MonthlySnapshot): MonthlyPerformanceResult {
+  return {
+    denominator: null,
+    marketMovement: null,
+    marketMovementPct: null,
+    netExternalFlow: null,
+    reason: "out-of-date-snapshot",
+    status: "unavailable",
+    totalValueChange: previous ? calculateMonthlyPerformance(previous, snapshot).totalValueChange : null,
+  };
 }
 
 export function calculateMetadataAllocation(

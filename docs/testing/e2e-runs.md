@@ -4,6 +4,47 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new snapshot-drift flow for saved months that no longer match records (#747), 14 passed, 1 failed (pre-existing), 23m 00s
+
+- Commit: feat/747-stale-snapshots 934adbe, based on `main` b047d6a, version
+  1.0.32. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0.
+  E2E APK (R8 on, x86_64) freshly built from 934adbe, SHA-256
+  cd63f721bdbad6c4fbf82abe1b02b0fa76a8cbefb322097073d9986ca3849321. Metro stopped.
+  Command: `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`,
+  plus `node scripts/maestro-run.mjs e2e/progress-snapshot-drift.yaml`.
+- New full-tier flow `progress-snapshot-drift` passed (0m 48s). It opens the
+  Progress QA `outdated` scenario: July 2026 saved by the user, then a PPF
+  contribution back-dated to June 2025. It asserts that August's month gain is
+  held back with the reason, July says "Saved by you" and "Doesn't match your
+  records", and the comparison shows invested ₹40,000.00 saved against
+  ₹90,000.00 from records. After the user confirms, it asserts the notice is
+  gone, July is automatic or estimated, and August's month gain is back. The
+  notice and comparison screens were reviewed by hand; the notice was changed
+  from a filled card to an outlined one so its button stands out.
+- An earlier run failed only because the flow asserted a "—" glyph that the
+  Windows runner passed mangled; the flow now matches the row's spoken label.
+- `holdings-csv-import` failed on the file-picker step, as tracked in #741.
+- 23m 00s is over the 15-minute budget, as on earlier runs on this host;
+  per-flow durations are in line with the #735 run.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 22s |
+| navigation | PASS | 0m 33s |
+| add-holding-lookup | PASS | 1m 26s |
+| record-purchase | PASS | 1m 22s |
+| payouts | PASS | 1m 37s |
+| xirr-holding | PASS | 1m 05s |
+| cash | PASS | 1m 25s |
+| trade-correction | PASS | 3m 16s |
+| holdings-csv-import | FAIL (#741) | 1m 21s |
+| epf-accounts | PASS | 1m 43s |
+| ppf-account | PASS | 2m 12s |
+| progress-snapshot-history | PASS | 1m 12s |
+| value-masking | PASS | 1m 54s |
+| persistence | PASS | 1m 15s |
+| backup-roundtrip | PASS | 2m 17s |
+
 ## 2026-11-21: Smoke tier with month gain in Monthly History (#743), 10 passed, 5 failed (1 pre-existing, 4 environmental), 69m 20s
 
 - Commit: feat/743-monthly-gain 8d2db53 app code, based on `main` 479f85c

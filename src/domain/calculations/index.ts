@@ -98,3 +98,16 @@ export {
   snapshotAssetClassValues,
   type SnapshotAssetClassValue,
 } from "./monthComparison";
+export {
+  createSnapshotDriftCheck,
+  findSnapshotRecordDrift,
+  isDriftCheckedSnapshot,
+  recalculateSavedSnapshot,
+  snapshotDriftFields,
+  snapshotSourceLabel,
+  type SavedSnapshotRecalculation,
+  type SnapshotDriftCheckRecords,
+  type SnapshotDriftField,
+  type SnapshotDriftRecords,
+  type SnapshotRecordDrift,
+} from "./snapshotRecordDrift";

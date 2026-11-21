@@ -24,6 +24,14 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   detailRowLabel: { flex: 1, minWidth: 0 },
   detailSection: { gap: spacing.xs, marginTop: spacing.md },
+  driftNotice: {
+    borderColor: colors.border.subtle,
+    borderWidth: 1,
+    borderRadius: radii.card,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  driftRow: { gap: spacing.xs, paddingVertical: spacing.xs, borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   columnToggle: {
     alignSelf: "flex-start",
     borderColor: colors.border.subtle,

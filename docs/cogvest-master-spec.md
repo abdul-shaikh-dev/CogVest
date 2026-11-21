@@ -229,6 +229,16 @@ All domain calculations must be pure functions under `src/domain/`.
   uses the previous portfolio value plus date-weighted external flow as the
   denominator. Missing, legacy, ambiguous, or non-positive-denominator inputs
   must show performance as unavailable rather than zero or a guessed return.
+- A saved month CogVest once generated from records (automatic, or reviewed and
+  saved by the user) is compared with what current records give for its
+  invested value, Cash and monthly investment, at neutral prices so price
+  updates never matter (#747). When they differ, the month says it doesn't
+  match the records, its market change and the next month's are unavailable,
+  and the user may recalculate it from records after a side-by-side comparison.
+  Nothing changes without confirmation; typed-in and estimated months are not
+  checked. The check runs in short slices so a long history never blocks the
+  screen. Month detail shows where values came from: saved by you, automatic or
+  estimated.
 - Historical Progress excludes Futures. Linked Cash-to-Futures withdrawals and
   Futures-to-Cash additions cross that report's boundary at their actual INR Cash
   amounts (including conversion costs). They remain internal movements for

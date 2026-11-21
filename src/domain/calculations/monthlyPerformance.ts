@@ -25,7 +25,9 @@ export type MonthlyPerformanceUnavailableReason =
   | "ppf-reconciliation"
   | "unknown-opening-position-date"
   | "missing-previous-snapshot"
-  | "non-consecutive-snapshot";
+  | "non-consecutive-snapshot"
+  /** This month or the month before no longer matches current records (#747). */
+  | "out-of-date-snapshot";
 
 export type MonthlyPerformanceResult = {
   denominator: number | null;
