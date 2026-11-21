@@ -1,12 +1,19 @@
 import { createHash } from "crypto";
-import { createBackupService } from "../index";
+import { createBackupService, type LockedRestore, type PreparedRestore } from "../index";
 import { createPortfolioStore, portfolioStorageKey, quoteCacheStorageKey } from "@/src/store";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioBackup, parsePortfolioBackup, backupMaxBytes } from "@/src/domain/portfolioBackup";
+import { encodeBase64, encryptedBackupMaxBytes, isEncryptedBackupText, type EncryptedBackupDeps } from "@/src/domain/encryptedBackup";
+import { nodeEncryptedBackupDeps } from "@/src/testing/encryptedBackupTestDeps";
 
 jest.mock("expo-file-system", () => ({ Directory: {}, File: {} }));
 
 const digest = async (text: string) => createHash("sha256").update(text).digest("hex");
+
+function ready(result: PreparedRestore | LockedRestore | undefined): PreparedRestore {
+  if (!result || !("review" in result)) throw new Error("Expected an ordinary backup review.");
+  return result;
+}
 const now = () => new Date("2026-09-10T10:00:00.000Z");
 const meta = { appVersion: "1.0.1", createdAt: now().toISOString() };
 
@@ -37,7 +44,7 @@ describe("backup file service", () => {
     await file.write(await createPortfolioBackup(saved, meta, digest));
     store.getState().applyEpfCommand({ commandId: "epf-delete", reason: "Remove test account", change: { type: "accountRemove", id: "epf" } }, store.getState().getBackupRevision());
     const before = store.getState();
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
     expect(prepared.review.counts).toEqual(expect.arrayContaining([
       { label: "EPF accounts", current: 0, backup: 1 }, { label: "EPF edit history", current: 2, backup: 1 },
     ]));
@@ -67,7 +74,7 @@ describe("backup file service", () => {
     await file.write(await createPortfolioBackup(saved, meta, digest));
     store.getState().applyEpfCommand({ commandId: "remove-claim", reason: "Remove", change: { type: "eventRemove", id: "claim" } },
       store.getState().getBackupRevision());
-    await service.restorePortfolioBackup((await service.selectPortfolioBackup())!);
+    await service.restorePortfolioBackup(ready(await service.selectPortfolioBackup()));
     expect(store.getState().epf.events).toEqual(saved.portfolio.epf.events);
     const reloaded = createPortfolioStore({ storage, now });
     expect(reloaded.getState().epf.events).toEqual([expect.objectContaining({ id: "claim", type: "claimTransfer", status: "completed" })]);
@@ -95,7 +102,7 @@ describe("backup file service", () => {
     const exported = store.getState().captureBackup();
     await file.write(await createPortfolioBackup(exported.payload, meta, digest));
     store.getState().addCashEntry({ id: "extra", type: "addition", purpose: "capitalContribution", label: "Other", date: "2026-01-02", amount: 200 });
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
     expect(prepared.review.counts.find((count) => count.label === "Cash entries")).toEqual({ label: "Cash entries", current: 2, backup: 1 });
     expect(prepared.review.counts.find((count) => count.label === "Futures accounts")).toEqual({ label: "Futures accounts", current: 0, backup: 0 });
     expect(store.getState().cashEntries).toHaveLength(2);
@@ -109,7 +116,7 @@ describe("backup file service", () => {
   it("does not trust a forged review token or accept changes after preview", async () => {
     const { service, store, file } = harness();
     await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
     await expect(service.restorePortfolioBackup({ ...prepared })).rejects.toThrow("Select the backup again");
     store.getState().updatePreferences({ displayMode: "minimal" });
     await expect(service.restorePortfolioBackup(prepared)).rejects.toThrow("portfolio changed");
@@ -125,7 +132,7 @@ describe("backup file service", () => {
       label: "Inconsistent legacy entry", date: "2026-01-02", amount: 200,
     }] });
     expect(() => store.getState().captureBackup()).toThrow();
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
     expect(store.getState().cashEntries).toHaveLength(2);
     await service.restorePortfolioBackup(prepared);
     expect(store.getState().captureBackup().payload).toEqual(original);
@@ -217,7 +224,7 @@ describe("backup file service", () => {
   it("checks size before reading and rejects unsupported or corrupt files without mutation", async () => {
     const { service, runtime, store } = harness();
     const read = jest.fn(async () => "bad");
-    runtime.selectFile.mockResolvedValue({ size: backupMaxBytes + 1, text: read });
+    runtime.selectFile.mockResolvedValue({ size: encryptedBackupMaxBytes + 1, text: read });
     const original = store.getState().captureBackup();
     await expect(service.selectPortfolioBackup()).rejects.toThrow("could not be read or validated");
     expect(read).not.toHaveBeenCalled();
@@ -229,7 +236,7 @@ describe("backup file service", () => {
   it("a canceled confirmation cannot mutate current data", async () => {
     const { service, store, file } = harness();
     await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
     const controller = new AbortController();
     controller.abort();
     const original = store.getState().captureBackup();
@@ -245,7 +252,7 @@ describe("backup file service", () => {
       recordedAt: "2026-03-02T00:00:00.000Z", taxWithheld: 0, treatment: "paidToCash",
     }] });
 
-    const prepared = (await service.selectPortfolioBackup())!;
+    const prepared = ready(await service.selectPortfolioBackup());
 
     expect(prepared.review.counts).toContainEqual({ label: "Dividends and payouts", current: 1, backup: 0 });
     expect(prepared.review.counts.map((count) => count.label)).not.toContain("Payout confirmations");
@@ -255,12 +262,12 @@ describe("backup file service", () => {
     const { service, store, file, runtime } = harness();
     await file.write(await createPortfolioBackup(store.getState().captureBackup().payload, meta, digest));
 
-    const recovery = (await service.selectPortfolioBackup())!;
+    const recovery = ready(await service.selectPortfolioBackup());
     const replace = jest.spyOn(store.getState(), "replaceFromBackup");
     replace.mockImplementationOnce(() => { throw new Error("Restart CogVest to finish local data recovery before continuing."); });
     await expect(service.restorePortfolioBackup(recovery)).rejects.toThrow("Restart CogVest to finish local data recovery");
 
-    const other = (await service.selectPortfolioBackup())!;
+    const other = ready(await service.selectPortfolioBackup());
     replace.mockImplementationOnce(() => { throw new Error("content://provider/secret/123 write failed"); });
     await expect(service.restorePortfolioBackup(other)).rejects.toThrow(
       "Restore did not finish. Restart CogVest if local data recovery is required, then select the backup again.");
@@ -352,3 +359,99 @@ describe("recovery copy export (#654)", () => {
     await expect(service.exportRecoveryCopies()).rejects.toThrow("No recovery copy is available to export.");
   });
 });
+describe("passphrase-protected backups (#760)", () => {
+  // Real PBKDF2 and AES-GCM; a low iteration count inside the stub keeps the suite fast.
+  const encryption: EncryptedBackupDeps = {
+    ...nodeEncryptedBackupDeps,
+    kdf: (password, salt, params) => nodeEncryptedBackupDeps.kdf(password, salt, { ...params, iterations: 1_000 }),
+  };
+  const passphrase = "orbit lantern basil 42";
+
+  function protectedHarness() {
+    const base = harness();
+    const created: string[] = [];
+    base.runtime.selectDirectory.mockImplementation(async () => ({
+      createFile: jest.fn((name: string) => { created.push(name); return base.file; }),
+    }));
+    return { ...base, created, service: createBackupService({ ...base.runtime, encryption }) };
+  }
+
+  it("saves a file that hides the portfolio and restores it with the passphrase", async () => {
+    const { service, store, file, created } = protectedHarness();
+    const saved = store.getState().captureBackup().payload;
+    const name = await service.exportPortfolioBackup(undefined, { passphrase });
+    expect(name).toBe("CogVest-backup-2026-09-10-unique-protected.json");
+    expect(created).toEqual([name]);
+    const contents = await file.text();
+    expect(isEncryptedBackupText(contents)).toBe(true);
+    expect(contents).not.toContain("Synthetic cash");
+    expect(contents).not.toContain("capitalContribution");
+
+    store.getState().addCashEntry({ id: "later", type: "addition", purpose: "capitalContribution", label: "Later cash", date: "2026-02-01", amount: 50 });
+    const handle = await service.selectPortfolioBackup();
+    expect(handle).toEqual({ locked: true });
+    const before = store.getState();
+    await expect(service.unlockPortfolioBackup(handle as { locked: true }, "orbit lantern basil 43"))
+      .rejects.toThrow("The passphrase is wrong, or the file has been changed. Your portfolio has not changed.");
+    expect(store.getState()).toBe(before);
+
+    const prepared = await service.unlockPortfolioBackup(handle as { locked: true }, passphrase);
+    expect(prepared.review.counts).toContainEqual({ label: "Cash entries", current: 2, backup: 1 });
+    expect(store.getState()).toBe(before);
+    await expect(service.unlockPortfolioBackup(handle as { locked: true }, passphrase)).rejects.toThrow("Select the backup again");
+    await service.restorePortfolioBackup(prepared);
+    expect(store.getState().cashEntries).toEqual(saved.portfolio.cashEntries);
+  });
+
+  it("keeps an ordinary backup readable without a passphrase", async () => {
+    const { service, file } = protectedHarness();
+    await service.exportPortfolioBackup();
+    expect(isEncryptedBackupText(await file.text())).toBe(false);
+    expect(ready(await service.selectPortfolioBackup()).review.counts).toContainEqual({ label: "Cash entries", current: 1, backup: 1 });
+  });
+
+  it("rejects a changed protected file and leaves the portfolio alone", async () => {
+    const { service, store, file } = protectedHarness();
+    await service.exportPortfolioBackup(undefined, { passphrase });
+    const raw = JSON.parse(await file.text());
+    const bytes = Uint8Array.from(atob(raw.ciphertext), (character) => character.charCodeAt(0));
+    bytes[5] ^= 1;
+    await file.write(JSON.stringify({ ...raw, ciphertext: encodeBase64(bytes) }));
+    const before = store.getState();
+    const handle = (await service.selectPortfolioBackup()) as { locked: true };
+    await expect(service.unlockPortfolioBackup(handle, passphrase)).rejects.toThrow("The passphrase is wrong, or the file has been changed.");
+    expect(store.getState()).toBe(before);
+  });
+
+  it("reports a damaged protected file before asking for its passphrase", async () => {
+    const { service, file } = protectedHarness();
+    await service.exportPortfolioBackup(undefined, { passphrase });
+    const raw = JSON.parse(await file.text());
+    await file.write(JSON.stringify({ ...raw, kdf: { ...raw.kdf, iterations: 1 } }));
+    await expect(service.selectPortfolioBackup()).rejects.toThrow("This backup could not be read or validated.");
+  });
+
+  it("asks for the file again when the portfolio changes before unlocking", async () => {
+    const { service, store } = protectedHarness();
+    await service.exportPortfolioBackup(undefined, { passphrase });
+    const handle = (await service.selectPortfolioBackup()) as { locked: true };
+    const prepared = await service.unlockPortfolioBackup(handle, passphrase);
+    store.getState().addCashEntry({ id: "later", type: "addition", purpose: "capitalContribution", label: "Later cash", date: "2026-02-01", amount: 50 });
+    await expect(service.restorePortfolioBackup(prepared)).rejects.toThrow("portfolio changed");
+  });
+
+  it("refuses a protected export when encryption is unavailable, without creating a file", async () => {
+    const { service, runtime } = harness();
+    await expect(service.exportPortfolioBackup(undefined, { passphrase })).rejects.toThrow("Backup could not be saved.");
+    expect(runtime.selectDirectory).not.toHaveBeenCalled();
+  });
+
+  it("reads a protected file larger than the ordinary limit only up to the protected limit", async () => {
+    const { service, runtime } = protectedHarness();
+    const read = jest.fn(async () => "bad");
+    runtime.selectFile.mockResolvedValue({ size: backupMaxBytes + 1, text: read });
+    await expect(service.selectPortfolioBackup()).rejects.toThrow("could not be read or validated");
+    expect(read).toHaveBeenCalled();
+  });
+});
+

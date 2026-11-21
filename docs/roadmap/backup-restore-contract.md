@@ -91,7 +91,7 @@ metadata. Invalid UTF-8 is rejected. Export uses a unique filename and verifies
 the saved bytes before reporting success. No temporary plaintext backup is
 created in CogVest's cache.
 
-The file is not encrypted. Before saving, explain that it contains sensitive
+An ordinary backup file is not encrypted. Before saving, explain that it contains sensitive
 financial information and must be stored somewhere the user trusts. The chosen
 Android document provider may itself sync files; do not claim all chosen
 destinations are device-local. No CogVest-owned upload or cloud account is added.
@@ -119,6 +119,39 @@ Supported legacy unlinked cash classifications (`purchaseFunding` withdrawals
 and `saleProceeds` additions) are preserved. They are not invented trade links.
 When a `linkedTradeId` is present, the referenced trade, amount, date, direction,
 and purpose must match. New purchase/sale commands continue using linked cash.
+
+## Passphrase-Protected Backups (#760)
+
+Export can optionally encrypt the backup with a passphrase. The protected file
+is a JSON envelope `cogvest-encrypted-backup`, format version 1:
+
+- `kdf`: PBKDF2-HMAC-SHA256 with 600,000 iterations (OWASP's 2023 figure) and
+  a random 16-byte salt. Reads accept 600,000 to 2,000,000 iterations. The
+  PBKDF2 password is the lowercase hex of the passphrase's NFC UTF-8 bytes:
+  Android's PBKDF2 takes characters and providers have encoded non-ASCII ones
+  differently, while hex is ASCII and maps one-to-one.
+- `cipher`: AES-256-GCM with a random 12-byte nonce and a 16-byte tag.
+- `ciphertext`: base64 of the encrypted ordinary backup text and its tag.
+
+The format, version, key settings, salt and nonce are bound to the
+ciphertext as GCM additional data in a fixed key order, so changing any of
+them fails decryption. The passphrase is normalized to NFC, must be 8 to 256
+characters, and is never stored or logged; the screen clears it after saving.
+Export checks the sealed text opens to the same backup before writing it.
+
+Restore detects a protected file by its format, checks the envelope before
+asking for the passphrase, and after decryption runs the ordinary parser and
+review unchanged. A wrong passphrase and a changed file are indistinguishable
+under GCM; both say so, keep the file selected for another try, and change
+nothing. A protected file is read up to the base64 size of a full backup plus
+1 KiB. Ordinary backups stay available and unchanged.
+
+Key derivation calls Android's `PBKDF2WithHmacSHA256` through the local
+`modules/cogvest-pbkdf2` Expo module; AES-GCM uses expo-crypto's native
+implementation. No cryptography is written in CogVest. A pure-JavaScript scrypt
+(N = 2^17) was tried first and took about 71 seconds under Hermes on the
+emulator, so the owner chose the native platform route. Where the module is
+absent, protection is unavailable rather than slow.
 
 ## Atomic Replacement and Recovery
 

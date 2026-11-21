@@ -5,15 +5,16 @@ import { backupMaxBytes } from "@/src/domain/portfolioBackup";
 export async function readBoundedBackupFile(
   uri: string,
   read = readPickedFileBase64,
+  maxBytes = backupMaxBytes,
 ) {
   const encoded = await read(uri, {
-    encoding: "base64", position: 0, length: backupMaxBytes + 1,
+    encoding: "base64", position: 0, length: maxBytes + 1,
   });
-  if (encoded.length > Math.ceil((backupMaxBytes + 1) / 3) * 4) {
+  if (encoded.length > Math.ceil((maxBytes + 1) / 3) * 4) {
     throw new Error("Backup exceeds the supported size.");
   }
   const binary = atob(encoded);
-  if (binary.length > backupMaxBytes) throw new Error("Backup exceeds the supported size.");
+  if (binary.length > maxBytes) throw new Error("Backup exceeds the supported size.");
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }

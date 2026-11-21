@@ -34,6 +34,7 @@ async function renderScreen(overrides: Partial<ComponentProps<typeof BackupScree
       onRestored={jest.fn()}
       restorePortfolioBackup={async () => undefined}
       selectPortfolioBackup={async () => prepared}
+      unlockPortfolioBackup={async () => prepared}
       {...overrides}
     />,
   );
@@ -263,5 +264,82 @@ describe("BackupScreen", () => {
     expect(receivedSignal?.aborted).toBe(true);
     finishExport?.("late-backup.json");
     await Promise.resolve();
+  });
+
+  it("encrypts with a confirmed passphrase and clears it after saving (#760)", async () => {
+    const exportPortfolioBackup = jest.fn(async () => "CogVest-backup-protected.json");
+    const view = await renderScreen({ exportPortfolioBackup, initialMode: "export" });
+    expect(view.queryByTestId("backup-passphrase-fields")).toBeNull();
+    await fireEvent.press(view.getByTestId("backup-protect"));
+    expect(view.getByText("This backup contains sensitive financial information. It will be encrypted with your passphrase.")).toBeTruthy();
+
+    await fireEvent.changeText(view.getByTestId("backup-passphrase"), "short");
+    await fireEvent.press(view.getByTestId("choose-backup-location"));
+    expect(view.getByText("Use at least 8 characters.")).toBeTruthy();
+    await fireEvent.changeText(view.getByTestId("backup-passphrase"), "orbit lantern basil");
+    await fireEvent.changeText(view.getByTestId("backup-passphrase-confirm"), "orbit lantern basin");
+    await fireEvent.press(view.getByTestId("choose-backup-location"));
+    expect(view.getByText("The passphrases do not match.")).toBeTruthy();
+    expect(exportPortfolioBackup).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByTestId("backup-passphrase-confirm"), "orbit lantern basil");
+    await fireEvent.press(view.getByTestId("choose-backup-location"));
+    await waitFor(() => expect(view.getByTestId("backup-status")).toHaveTextContent(
+      "CogVest-backup-protected.json saved. It opens only with its passphrase; CogVest does not keep a copy."));
+    expect(exportPortfolioBackup).toHaveBeenCalledWith(expect.anything(), { passphrase: "orbit lantern basil" });
+    expect(view.getByTestId("backup-passphrase").props.value).toBe("");
+    expect(view.getByTestId("backup-passphrase-confirm").props.value).toBe("");
+  });
+
+  it("saves an ordinary backup when protection is off", async () => {
+    const exportPortfolioBackup = jest.fn(async () => "plain.json");
+    const view = await renderScreen({ exportPortfolioBackup, initialMode: "export" });
+    await fireEvent.press(view.getByTestId("choose-backup-location"));
+    await waitFor(() => expect(exportPortfolioBackup).toHaveBeenCalledWith(expect.anything(), undefined));
+  });
+
+  it("asks for a protected backup's passphrase and retries a wrong one (#760)", async () => {
+    const unlockPortfolioBackup = jest.fn()
+      .mockRejectedValueOnce(new Error("The passphrase is wrong, or the file has been changed. Your portfolio has not changed."))
+      .mockResolvedValueOnce(prepared);
+    const view = await renderScreen({ selectPortfolioBackup: async () => ({ locked: true }), unlockPortfolioBackup });
+    await fireEvent.press(view.getByTestId("choose-backup-file"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-unlock")).toBeTruthy());
+    expect(view.getByTestId("backup-unlock").props.accessibilityState.disabled).toBe(true);
+
+    await fireEvent.changeText(view.getByTestId("backup-unlock-passphrase"), "wrong words here");
+    await fireEvent.press(view.getByTestId("backup-unlock"));
+    await waitFor(() => expect(view.getByTestId("backup-status")).toHaveTextContent(
+      "The passphrase is wrong, or the file has been changed. Your portfolio has not changed."));
+    expect(view.getByTestId("backup-restore-unlock")).toBeTruthy();
+
+    await fireEvent.changeText(view.getByTestId("backup-unlock-passphrase"), "orbit lantern basil");
+    await fireEvent.press(view.getByTestId("backup-unlock"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-preview")).toBeTruthy());
+    expect(unlockPortfolioBackup).toHaveBeenLastCalledWith({ locked: true }, "orbit lantern basil", expect.anything());
+    expect(view.queryByTestId("backup-restore-unlock")).toBeNull();
+  });
+
+  it("returns to choosing a file when a protected backup cannot be read", async () => {
+    const unlockPortfolioBackup = jest.fn(async () => {
+      throw new Error("This backup could not be read or validated. Choose an intact, supported CogVest backup. Your portfolio has not changed.");
+    });
+    const view = await renderScreen({ selectPortfolioBackup: async () => ({ locked: true }), unlockPortfolioBackup });
+    await fireEvent.press(view.getByTestId("choose-backup-file"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-unlock")).toBeTruthy());
+    await fireEvent.changeText(view.getByTestId("backup-unlock-passphrase"), "orbit lantern basil");
+    await fireEvent.press(view.getByTestId("backup-unlock"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-warning")).toBeTruthy());
+    expect(view.queryByTestId("backup-restore-unlock")).toBeNull();
+  });
+
+  it("goes back from the passphrase step to choosing a file", async () => {
+    const onBack = jest.fn();
+    const view = await renderScreen({ onBack, selectPortfolioBackup: async () => ({ locked: true }) });
+    await fireEvent.press(view.getByTestId("choose-backup-file"));
+    await waitFor(() => expect(view.getByTestId("backup-restore-unlock")).toBeTruthy());
+    await fireEvent.press(view.getByTestId("backup-back"));
+    expect(view.getByTestId("backup-restore-warning")).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
   });
 });

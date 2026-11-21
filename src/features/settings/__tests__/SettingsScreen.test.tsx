@@ -114,7 +114,7 @@ describe("SettingsScreen", () => {
     expect(mockPush).toHaveBeenNthCalledWith(3, "/futures");
 
     await fireEvent.press(getByTestId("privacy-details-toggle"));
-    expect(getByText("Backups are not encrypted: save them only somewhere you trust.")).toBeTruthy();
+    expect(getByText("Backups are not encrypted unless you protect them with a passphrase: save them only somewhere you trust.")).toBeTruthy();
   });
 
   it("shows collapsed privacy settings and toggles value masking", async () => {

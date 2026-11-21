@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 
-import { backupMaxBytes } from "@/src/domain/portfolioBackup";
+import { encryptedBackupMaxBytes } from "@/src/domain/encryptedBackup";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 
@@ -84,7 +84,7 @@ describe("backup service native wiring (#671)", () => {
     expect(created).toHaveLength(1);
     expect(created[0]).toMatchObject({ mime: "application/json", name });
     expect(mockReadAsStringAsync).toHaveBeenCalledWith(created[0].uri,
-      { encoding: "base64", length: backupMaxBytes + 1, position: 0 });
+      { encoding: "base64", length: encryptedBackupMaxBytes + 1, position: 0 });
     const saved = JSON.parse(mockFiles.get(created[0].uri)!) as { appVersion: string };
     expect(saved.appVersion).toBe("9.8.7");
   });
@@ -120,11 +120,11 @@ describe("backup service native wiring (#671)", () => {
     const prepared = await selectPortfolioBackup();
 
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "*/*");
-    expect(prepared!.review.counts).toContainEqual({
+    expect((prepared as { review: { counts: unknown[] } }).review.counts).toContainEqual({
       label: "Cash entries", current: backedUp.length + 1, backup: backedUp.length,
     });
     const epoch = mockStore.getState().restoreEpoch;
-    await restorePortfolioBackup(prepared!);
+    await restorePortfolioBackup(prepared as Parameters<typeof restorePortfolioBackup>[0]);
     expect(mockStore.getState().cashEntries).toEqual(backedUp);
     // Screens reset their in-memory state from the new restore epoch (#666).
     expect(mockStore.getState().restoreEpoch).toBe(epoch + 1);
@@ -138,13 +138,13 @@ describe("backup service native wiring (#671)", () => {
 
   it("rejects a picked file whose bounded read exceeds the limit, without reading it whole", async () => {
     const uri = "content://com.android.externalstorage.documents/document/provider/document/huge.json";
-    mockFiles.set(uri, "x".repeat(backupMaxBytes + 10));
+    mockFiles.set(uri, "x".repeat(encryptedBackupMaxBytes + 10));
     // The provider under-reports the size; the bounded read still catches it.
     mockPickFileAsync.mockResolvedValue({ size: 100, uri });
     const before = mockStore.getState();
 
     await expect(selectPortfolioBackup()).rejects.toThrow("This backup could not be read or validated.");
-    expect(mockReadAsStringAsync).toHaveBeenCalledWith(uri, expect.objectContaining({ length: backupMaxBytes + 1 }));
+    expect(mockReadAsStringAsync).toHaveBeenCalledWith(uri, expect.objectContaining({ length: encryptedBackupMaxBytes + 1 }));
     expect(mockStore.getState()).toBe(before);
   });
 });
