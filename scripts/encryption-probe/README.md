@@ -35,8 +35,11 @@ Fixtures remain for inspection. No automatic cleanup or app-data clearing runs.
 
 ## Evidence Boundary
 
-The APK pins `io.github.zhongwuzw:mmkv:2.4.0`, matching the installed
-`react-native-mmkv` 4.3.1 Android dependency. It uses Java JNI to the same core,
+The APK pins `io.github.zhongwuzw:mmkv:2.4.0` by default, the core that
+`react-native-mmkv` 4.3.x ships (its 2.4.1 artifact still reports core v2.4.0).
+To screen another release, build with `"-PmmkvArtifact=com.tencent:mmkv:2.4.3"`
+(quoted in PowerShell) and run with `MMKV_EXPECTED_VERSION=v2.4.3`; results go
+to `results-v2.4.3.json`. It uses Java JNI to the same core,
 explicit AES-256, single-process mode, and default recovery. It does **not** test
 the Nitro/React Native facade, SecureStore, Expo Crypto, production bootstrap,
 upgrade, recovery UI, or performance. Android SecureRandom supplies the proposed

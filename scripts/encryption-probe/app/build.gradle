@@ -18,4 +18,5 @@ android {
 }
 
 // Match react-native-mmkv/android/build.gradle, not upstream's latest version.
-dependencies { implementation 'io.github.zhongwuzw:mmkv:2.4.0' }
+// Override with -PmmkvArtifact=<group:name:version> to screen another release.
+dependencies { implementation(findProperty('mmkvArtifact') ?: 'io.github.zhongwuzw:mmkv:2.4.0') }
