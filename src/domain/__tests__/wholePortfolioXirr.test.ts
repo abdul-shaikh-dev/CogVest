@@ -43,6 +43,13 @@ function openingBasis(records: Partial<WholePortfolioXirrInput>, startDate = "20
 }
 
 describe("whole-portfolio XIRR (D9-D11)", () => {
+  it("is not blocked by a liquid-fund NAV published ahead for the weekend (#755)", () => {
+    const weekendNav = { ...quote, asOf: "2026-01-03T00:00:00.000Z", source: "amfi" as const };
+    expect(rate({ ...market, quotes: { stock: weekendNav } }).rate).toBeCloseTo(0.1, 9);
+    const tooFar = summariseXirr(buildWholePortfolioXirrInput(input({ ...market, quotes: { stock: { ...weekendNav, asOf: "2026-01-05T00:00:00.000Z" } } })));
+    expect(tooFar.status).not.toBe("rate");
+  });
+
   it("counts the Cash deposit, not the Cash-funded buy, and values holdings plus Cash at the end", () => {
     const summary = rate(market);
     expect(summary.rate).toBeCloseTo(0.1, 9);

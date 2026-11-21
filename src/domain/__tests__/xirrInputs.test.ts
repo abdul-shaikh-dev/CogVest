@@ -134,6 +134,13 @@ describe("per-asset XIRR input", () => {
     expect(manual.status === "ready" && manual.limitations).toEqual([{ assetId: "btc", limitation: "manual-price" }]);
   });
 
+  it("values a holding at an AMFI NAV published up to three days ahead for a weekend or holiday (#755)", () => {
+    const nav = (asOf: string) => quote({ asOf: `${asOf}T00:00:00.000Z`, source: "amfi" });
+    expect(buildAssetXirrInput(assetInput({ quote: nav("2026-01-03") }))).toMatchObject({ status: "ready", valueAsOf: "2026-01-03" });
+    expect(buildAssetXirrInput(assetInput({ quote: nav("2026-01-04") }))).toMatchObject({ status: "ready" });
+    expect(reasons(buildAssetXirrInput(assetInput({ quote: nav("2026-01-05") })))).toEqual(["quote-after-end"]);
+  });
+
   it("reports every invalid record instead of producing a partial series", () => {
     const result = buildAssetXirrInput(assetInput({ trades: [
       { ...buy, id: "dup" }, { ...buy, id: "dup" }, { ...buy, id: "bad-date", date: "not a date" },

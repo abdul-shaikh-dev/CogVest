@@ -1,3 +1,5 @@
+import { isAmfiNavPublishedAhead } from "@/src/domain/amfiNavDates";
+import { formatLocalCalendarDate, getCalendarDatePart } from "@/src/domain/dates";
 import type { Quote, QuoteCache } from "@/src/types";
 
 export const QUOTE_FRESHNESS_THRESHOLD_MS = 15 * 60 * 1000;
@@ -41,12 +43,20 @@ export function classifyQuoteFreshness(
 
   const age = now.getTime() - quoteTime;
 
-  if (age < 0) {
-    return "missing";
+  if (quote.source === "amfi") {
+    // A NAV carries its calendar date (stored as UTC midnight), so compare
+    // dates in local time: today's NAV, or one published ahead for the
+    // weekend or a holiday (#755), is current.
+    const navDate = getCalendarDatePart(quote.asOf);
+    const today = formatLocalCalendarDate(now);
+    if (navDate && navDate >= today) {
+      return navDate === today || isAmfiNavPublishedAhead(navDate, today) ? "current" : "missing";
+    }
+    return age >= 0 && age <= AMFI_QUOTE_FRESHNESS_THRESHOLD_MS ? "current" : "stale";
   }
 
-  if (quote.source === "amfi") {
-    return age <= AMFI_QUOTE_FRESHNESS_THRESHOLD_MS ? "current" : "stale";
+  if (age < 0) {
+    return "missing";
   }
 
   // Since #658 asOf is the market time and fetchedAt the fetch. A price is
