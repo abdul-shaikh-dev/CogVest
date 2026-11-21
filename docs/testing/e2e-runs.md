@@ -4,6 +4,44 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier with month gain in Monthly History (#743), 10 passed, 5 failed (1 pre-existing, 4 environmental), 69m 20s
+
+- Commit: feat/743-monthly-gain 8d2db53 app code, based on `main` 479f85c
+  (rebased onto e4ece1b afterwards, with no change to app code), version 1.0.32.
+  AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0. E2E APK
+  (R8 on, x86_64) freshly built from 8d2db53, SHA-256
+  4668736cf3293e6561b8a63c0e73bbf9687f9e85e4f77e16ca501f4842a718ff. Metro stopped.
+  Command: `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- `progress-snapshot-history` now checks the new default Month gain column
+  (May 2026: +₹13K, +0.67%, matching the month detail's Market change) and
+  switches to Vs invested and back. Light, dark and masked screenshots were
+  reviewed by hand.
+- The tier ran at 2-4 times the earlier flow durations: the host was short of
+  memory, with idle Gradle daemons from the APK builds holding about 4.5 GB.
+  `navigation`, `ppf-account`, `progress-snapshot-history` and
+  `backup-roundtrip` failed (two inside the Android file picker). After stopping
+  the daemons and rebooting the emulator, each passed alone on the same APK:
+  1m 23s, 2m 01s, 1m 09s and 1m 52s. Classified as environmental.
+- `holdings-csv-import` failed in the file picker ("Files in Documents"); see #741.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | Pass | 1m 12s |
+| navigation | Fail (passed alone after reboot) | 1m 43s |
+| add-holding-lookup | Pass | 4m 54s |
+| record-purchase | Pass | 6m 53s |
+| payouts | Pass | 4m 30s |
+| xirr-holding | Pass | 2m 40s |
+| cash | Pass | 3m 02s |
+| trade-correction | Pass | 8m 09s |
+| holdings-csv-import | Fail (#741) | 2m 43s |
+| epf-accounts | Pass | 11m 47s |
+| ppf-account | Fail (passed alone after reboot) | 8m 57s |
+| progress-snapshot-history | Fail (passed alone after reboot) | 3m 14s |
+| value-masking | Pass | 4m 43s |
+| persistence | Pass | 2m 40s |
+| backup-roundtrip | Fail (passed alone after reboot) | 2m 12s |
+
 ## 2026-11-21: Smoke tier and new passbook-import flow for importing EPFO passbook PDFs (#740), 12 passed, 3 failed (1 pre-existing, 2 flaky), 38m 00s
 
 - Commit: feat/740-epf-passbook-import c7d73af app code (flow, fixtures and docs
