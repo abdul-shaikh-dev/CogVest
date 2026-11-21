@@ -93,7 +93,7 @@ describe("Import holdings route", () => {
     mockPickFileAsync.mockResolvedValue({
       size: 123,
       text: () => Promise.resolve(csv),
-      uri: "content://holdings.csv",
+      uri: "content://com.android.externalstorage.documents/document/holdings.csv",
     });
     mockReadAsStringAsync.mockResolvedValue(base64(csv));
     await render(<ImportHoldingsRoute />);
@@ -132,7 +132,7 @@ describe("Import holdings route", () => {
       name: "too-large.csv",
       size: 1_000_001,
       text,
-      uri: "content://documents/too-large.csv",
+      uri: "content://com.android.externalstorage.documents/document/documents/too-large.csv",
     });
     await render(<ImportHoldingsRoute />);
 
@@ -149,7 +149,7 @@ describe("Import holdings route", () => {
 
   it("treats an under-reported file over 1 MB as too large (#659)", async () => {
     const text = jest.fn();
-    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size: 10, text, uri: "content://big.csv" });
+    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size: 10, text, uri: "content://com.android.externalstorage.documents/document/big.csv" });
     mockReadAsStringAsync.mockResolvedValue(base64("x".repeat(1_000_001)));
     await render(<ImportHoldingsRoute />);
 

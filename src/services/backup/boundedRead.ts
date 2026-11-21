@@ -1,11 +1,10 @@
-import { readAsStringAsync } from "expo-file-system/legacy";
+import { readPickedFileBase64 } from "@/src/services/import-export/pickedFileRead";
 import { backupMaxBytes } from "@/src/domain/portfolioBackup";
 
-// SDK 54 File.open() uses RandomAccessFile, which cannot open SAF content URIs.
-// The legacy base64 read supports a native byte bound for document-provider URIs.
+// Reads at most maxBytes + 1 bytes natively, for any picked document URI (#659, #772).
 export async function readBoundedBackupFile(
   uri: string,
-  read = readAsStringAsync,
+  read = readPickedFileBase64,
 ) {
   const encoded = await read(uri, {
     encoding: "base64", position: 0, length: backupMaxBytes + 1,

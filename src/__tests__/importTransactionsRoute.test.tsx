@@ -73,7 +73,7 @@ describe("Import transactions route", () => {
       name: "transactions.csv",
       size: text.length,
       text: () => Promise.resolve(text),
-      uri: "content://transactions.csv",
+      uri: "content://com.android.externalstorage.documents/document/transactions.csv",
     });
     mockReadAsStringAsync.mockResolvedValue(base64(text));
     await render(<ImportTransactionsRoute />);
@@ -87,7 +87,7 @@ describe("Import transactions route", () => {
     });
     expect(mockPickFileAsync).toHaveBeenCalledWith(undefined, "text/*");
     // A native read capped one byte past the limit (#659).
-    expect(mockReadAsStringAsync).toHaveBeenCalledWith("content://transactions.csv",
+    expect(mockReadAsStringAsync).toHaveBeenCalledWith("content://com.android.externalstorage.documents/document/transactions.csv",
       { encoding: "base64", length: 1_000_001, position: 0 });
 
     await act(() => {
@@ -110,7 +110,7 @@ describe("Import transactions route", () => {
       name: "too-large.csv",
       size: 1_000_001,
       text,
-      uri: "content://too-large.csv",
+      uri: "content://com.android.externalstorage.documents/document/too-large.csv",
     });
     await render(<ImportTransactionsRoute />);
 
@@ -127,7 +127,7 @@ describe("Import transactions route", () => {
 
   it.each([undefined, Number.NaN, 10])("treats a file over 1 MB as too large when its declared size is %p (#659)", async (size) => {
     const text = jest.fn();
-    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size, text, uri: "content://big.csv" });
+    mockPickFileAsync.mockResolvedValue({ name: "big.csv", size, text, uri: "content://com.android.externalstorage.documents/document/big.csv" });
     // The bounded read returns one byte more than the limit.
     mockReadAsStringAsync.mockResolvedValue(base64("x".repeat(1_000_001)));
     await render(<ImportTransactionsRoute />);
@@ -141,7 +141,7 @@ describe("Import transactions route", () => {
     mockPickFileAsync.mockResolvedValue({
       name: "private-statement.pdf",
       size: 4096,
-      uri: "content://private-statement.pdf",
+      uri: "content://com.android.externalstorage.documents/document/private-statement.pdf",
     });
     await render(<ImportTransactionsRoute />);
 
@@ -149,7 +149,7 @@ describe("Import transactions route", () => {
       (capturedProps?.pickCasStatement as () => Promise<unknown>)(),
     ).resolves.toEqual({
       size: 4096,
-      uri: "content://private-statement.pdf",
+      uri: "content://com.android.externalstorage.documents/document/private-statement.pdf",
     });
     expect(mockPickFileAsync).toHaveBeenCalledWith(
       undefined,
