@@ -33,7 +33,11 @@ appId: ${APP_ID}
     id: "snapshot-month-2026-05"
 # #743: the list opens on each month's gain; Vs invested is one tap away.
 - assertVisible:
-    id: "snapshot-month-gain-2026-05"
+    id: "snapshot-month-gain-amount-2026-05"
+    text: '\+₹13K'
+- assertVisible:
+    id: "snapshot-month-gain-percentage-2026-05"
+    text: '\+0.67%'
 - takeScreenshot: .expo/progress-743-month-gain
 - tapOn:
     id: "history-column-vsInvested"
