@@ -153,6 +153,20 @@ implementation. No cryptography is written in CogVest. A pure-JavaScript scrypt
 emulator, so the owner chose the native platform route. Where the module is
 absent, protection is unavailable rather than slow.
 
+## Backup Reminder (#759)
+
+- Each finished export is recorded on this phone under `cogvest:v1:backup-status`:
+  - the time of the export;
+  - a fingerprint of the saved records (display preferences excluded);
+  - the number of records it saved.
+- That key is device-only. Backups do not include it and a restore never writes it, so a restore does not count as a backup. An unreadable record starts afresh, which at worst shows the reminder again.
+- Settings shows "Last backup: <date>" or "No backup recorded on this phone yet.", and a reminder interval: Off, 7, 30 (default) or 90 days.
+- The Dashboard shows a dismissible note only when all of these hold:
+  - the portfolio has records;
+  - it differs from the last backup;
+  - the interval has passed since the last backup (or since tracking began, for a phone that never exported), or at least 25 records were added since the last backup.
+- "Not now" hides the note for one interval. In Minimal Mode it shows only after 90 days. The note is in-app only and never blocks tracking.
+
 ## Atomic Replacement and Recovery
 
 `src/store/index.ts` already journals portfolio/current-quote/historical-quote

@@ -57,6 +57,16 @@ appId: ${APP_ID}
 - copyTextFrom: ".*saved. Keep this unencrypted file somewhere you trust."
 - evalScript: ${output.backupName = maestro.copiedText.split(' saved.')[0]}
 
+# The export is recorded on this phone (#759).
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: backup-last-date
+    direction: DOWN
+- assertVisible:
+    id: backup-last-date
+    text: 'Last backup: \d{2} [A-Z][a-z]{2} \d{4}'
+
 # Start again from an empty app; the backup file stays in shared storage.
 - launchApp:
     clearState: true
@@ -150,3 +160,12 @@ appId: ${APP_ID}
 - assertVisible:
     id: appearance-light
     checked: true
+
+# A restore is not a backup (#759): this cleared phone still has none recorded.
+- scrollUntilVisible:
+    element:
+      id: backup-last-date
+    direction: DOWN
+- assertVisible:
+    id: backup-last-date
+    text: "No backup recorded on this phone yet."

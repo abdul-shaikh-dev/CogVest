@@ -99,7 +99,7 @@ export {
   type TransactionImportCommandInput,
   type TransactionImportCommandResult,
 } from "./storeTypes";
-export { createDefaultPreferences, createEmptyPortfolioSnapshot } from "./persistence";
+export { createDefaultPreferences, createEmptyPortfolioSnapshot, selectRawSnapshot } from "./persistence";
 export { cashShortfallMessage, wouldOversellAsset } from "./tradeRules";
 export { describeSaveFailure, StoreWriteBlockedError, storageFullMessage } from "./saveFailure";
 

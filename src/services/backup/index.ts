@@ -14,7 +14,9 @@ import {
   type EncryptedBackupDeps,
 } from "@/src/domain/encryptedBackup";
 import { createPortfolioBackup, parsePortfolioBackup, type BackupPayload } from "@/src/domain/portfolioBackup";
-import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import type { RawPortfolioSnapshot } from "@/src/domain/portfolioSnapshot";
+import { getPortfolioStore, selectRawSnapshot, type PortfolioStoreState } from "@/src/store";
+import { getBackupStatusStore } from "./backupStatus";
 import { readBoundedBackupFile } from "./boundedRead";
 import { expoEncryptedBackupDeps } from "./encryption";
 
@@ -40,6 +42,8 @@ type BackupRuntime = {
   selectDirectory: () => Promise<{ createFile: (name: string, mime: string) => WritableBackupFile } | undefined>;
   /** Passphrase protection; without it, protected exports and restores are unavailable. */
   encryption?: EncryptedBackupDeps;
+  /** Called with the saved portfolio after an export is written and verified (#759). */
+  onExported?: (portfolio: RawPortfolioSnapshot) => void;
   /** Called after a successful restore. The quick setup session resets itself on the restore (#666). */
   onRestored?: () => void;
 };
@@ -99,6 +103,8 @@ export function createBackupService(runtime: BackupRuntime) {
       if (runtime.store.getState().captureBackup().revision !== snapshot.revision) {
         throw new Error("Your portfolio changed. Please back it up again.");
       }
+      // The live records this file saves, as the reminder compares them later (#759).
+      const exportedPortfolio = selectRawSnapshot(runtime.store.getState());
       const protectedSuffix = passphrase !== undefined ? "-protected" : "";
       const filename = `CogVest-backup-${now.toISOString().slice(0, 10)}-${runtime.uniqueId()}${protectedSuffix}.json`;
       file = directory.createFile(filename, "application/json");
@@ -107,6 +113,8 @@ export function createBackupService(runtime: BackupRuntime) {
       if (await file.text() !== contents) throw new Error("Backup file verification failed.");
       assertActive(signal, epoch);
       writeCompleted = true;
+      // Reminder bookkeeping must never turn a saved backup into a failure.
+      try { runtime.onExported?.(exportedPortfolio); } catch { /* The file is saved. */ }
       return filename;
     } catch (error) {
       if (file && !writeCompleted) {
@@ -269,6 +277,7 @@ function getService() {
     store: getPortfolioStore(),
     digest: (value) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value),
     encryption: expoEncryptedBackupDeps,
+    onExported: (portfolio) => getBackupStatusStore().getState().recordExport(portfolio),
     now: () => new Date(),
     appVersion: Constants.expoConfig?.version ?? "unknown",
     uniqueId: Crypto.randomUUID,

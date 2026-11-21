@@ -14,6 +14,8 @@ import type {
   RefreshQuotesInput,
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { BackupReminderNote } from "@/src/features/backup/BackupReminderNote";
+import type { BackupStatusState } from "@/src/services/backup/backupStatus";
 import { useTheme } from "@/src/theme";
 
 import { useDashboard } from "./useDashboard";
@@ -51,6 +53,8 @@ type DashboardScreenProps = {
   quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
   store?: StoreApi<PortfolioStoreState>;
+  /** The backup reminder shows only when this is given (#759). */
+  backupStatusStore?: StoreApi<BackupStatusState>;
 };
 
 export function DashboardScreen({
@@ -67,6 +71,7 @@ export function DashboardScreen({
   quickSetupSavedCount = 0,
   refreshQuotes,
   store = getPortfolioStore(),
+  backupStatusStore,
 }: DashboardScreenProps) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -161,6 +166,15 @@ export function DashboardScreen({
           showPerformance={showPerformance}
           showPriceDetails={showPriceDetails}
         />
+
+        {backupStatusStore ? (
+          <BackupReminderNote
+            backupStatusStore={backupStatusStore}
+            minimalMode={isMinimalMode}
+            now={currentDate}
+            store={store}
+          />
+        ) : null}
 
         <DashboardEpfStatus dashboard={dashboard} onOpenEpf={onOpenEpf} />
 
