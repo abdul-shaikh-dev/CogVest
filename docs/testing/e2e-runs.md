@@ -45,6 +45,47 @@ the run cadence.
 | persistence | PASS | 0m 38s |
 | backup-roundtrip | PASS | 1m 10s |
 
+## 2026-11-21: Smoke tier and new protected-backup flow (#760), 13 passed + 2 failed (1 interference, 1 pre-existing #772), 12m 24s + 1m 33s
+
+- Commit: feat/760-encrypted-backup, built from 38a98fb (same tree as
+  c2aa42c), based on `main` 6b4b20d, version 1.0.33. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0, emulator cold-booted 35
+  minutes before the tier. E2E APK (R8 on, x86_64) freshly built, SHA-256
+  b3604d5e3a16b4f6399960db689ce2c7ba05349b9c97452a76ce4fe82218acfb. Metro
+  stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`, plus
+  `node scripts/maestro-run.mjs e2e/backup-protected.yaml`.
+- New full-tier flow `backup-protected` passed (1m 33s). It saves a backup
+  protected with a synthetic passphrase (the file name ends `-protected.json`),
+  clears the app, refuses a wrong passphrase, then restores with the right one
+  and checks the restored assets and cash entries. The protected save took
+  under 2.4 s.
+- `ppf-account` failed because a second Maestro run was started against the
+  same emulator during the tier; run alone, it passed (1m 19s).
+- `holdings-csv-import` fails on every APK built from a clean install of the
+  lockfile, including `main` 6b4b20d and a rebuild of the #757 commit, so it
+  is not caused by #760. A diagnostic build showed the legacy
+  `readAsStringAsync` rejecting the picker's Downloads URI
+  (`content://com.android.providers.downloads.documents/...`). Tracked in #772.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 12s |
+| navigation | PASS | 0m 20s |
+| add-holding-lookup | PASS | 1m 01s |
+| record-purchase | PASS | 0m 48s |
+| payouts | PASS | 0m 47s |
+| xirr-holding | PASS | 0m 35s |
+| cash | PASS | 0m 57s |
+| trade-correction | PASS | 2m 01s |
+| holdings-csv-import | FAIL (pre-existing, #772) | 0m 56s |
+| epf-accounts | PASS | 1m 04s |
+| ppf-account | FAIL (concurrent run), PASS alone | 0m 13s / 1m 19s |
+| progress-snapshot-history | PASS | 0m 43s |
+| value-masking | PASS | 1m 03s |
+| persistence | PASS | 0m 35s |
+| backup-roundtrip | PASS | 1m 08s |
+
 ## 2026-11-21: Smoke tier and new XIRR earliest-record flow (#757), 14 passed + 1 fixed and rerun, 15m 51s + 27s + 1m 43s
 
 - Commit: fix/757-name-earliest-record c107d0c (smoke) and ada4665 (rerun),
