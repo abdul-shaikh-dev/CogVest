@@ -11,7 +11,9 @@ appId: ${APP_ID}
 - openLink: "${SCHEME}:///progress"
 - tapOn:
     id: open-monthly-history
-- assertVisible: "Vs invested"
+- tapOn:
+    id: history-column-vsInvested
+- assertVisible: "Vs invested excludes cash"
 - takeScreenshot: .expo/history-invested/${SHOT}/overview
 - scrollUntilVisible:
     element:

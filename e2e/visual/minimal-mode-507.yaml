@@ -92,6 +92,8 @@ appId: ${APP_ID}
     direction: UP
 - tapOn:
     id: open-monthly-history
+- tapOn:
+    id: history-column-vsInvested
 - scrollUntilVisible:
     element:
       id: snapshot-invested-comparison-2026-04

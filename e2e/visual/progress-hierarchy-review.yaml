@@ -13,6 +13,8 @@ appId: ${APP_ID}
 - takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}
 - tapOn:
     id: open-monthly-history
+- tapOn:
+    id: history-column-vsInvested
 - assertVisible: "Vs invested excludes cash"
 - takeScreenshot: .expo/progress-hierarchy/${PHASE}/${SIZE}/${MODE}-history
 - tapOn:

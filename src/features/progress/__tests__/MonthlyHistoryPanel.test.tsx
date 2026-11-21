@@ -69,6 +69,7 @@ describe("MonthlyHistoryPanel", () => {
       createSummary("2026-02", { portfolioValue: 400000, cashValue: 200000, investedValue: 300000 }),
     ]} />);
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
     expect(screen.getByTestId("snapshot-invested-comparison-2026-01")).toHaveTextContent("+20.00%");
     expect(screen.getByTestId("snapshot-invested-comparison-2026-02")).toHaveTextContent("-33.33%");
     await fireEvent.press(screen.getByTestId("snapshot-month-2026-01"));
@@ -86,6 +87,7 @@ describe("MonthlyHistoryPanel", () => {
     ];
     const screen = await render(<MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />);
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
     const zero = screen.getByTestId("snapshot-invested-comparison-2026-01");
     expect(zero).toHaveTextContent("0.00%");
     expect(zero).not.toHaveStyle({ color: colors.profit });
@@ -106,6 +108,7 @@ describe("MonthlyHistoryPanel", () => {
       createSummary("2026-03", { portfolioValue: 0 }),
     ]} />);
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
     expect(screen.getByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toHaveStyle({ width: "50%" });
     expect(screen.getByTestId("history-bar-scale")).toHaveTextContent("Bars: portfolio value relative to 2026's highest month");
     expect(screen.getByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
@@ -125,6 +128,7 @@ describe("MonthlyHistoryPanel", () => {
       values.map((portfolioValue, index) => createSummary(`2026-0${index + 1}`, { portfolioValue }))
     } />);
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
     expect(screen.queryByTestId("snapshot-value-bar-2026-01", { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId("history-bar-scale")).toBeNull();
     expect(screen.queryByTestId("snapshot-value-bar-2026-02", { includeHiddenElements: true })).toBeNull();
@@ -148,6 +152,8 @@ describe("MonthlyHistoryPanel", () => {
     );
 
     await fireEvent.press(getByTestId("open-monthly-history"));
+
+    await fireEvent.press(getByTestId("history-column-vsInvested"));
 
     expect(getByText("+33.33%")).toHaveStyle({ color: colors.profit });
     expect(getByTestId("snapshot-month-2026-01").props.accessibilityLabel).toContain(
@@ -189,6 +195,7 @@ describe("MonthlyHistoryPanel", () => {
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
       await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.press(getByTestId("history-column-vsInvested"));
       await fireEvent.press(getByTestId("snapshot-month-2026-04"));
       expect(frames.size).toBe(1);
 
@@ -207,6 +214,7 @@ describe("MonthlyHistoryPanel", () => {
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
       await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.press(getByTestId("history-column-vsInvested"));
       await fireEvent.press(getByTestId("snapshot-month-2026-04"));
       await act(() => jest.runAllTimers());
       await fireEvent.press(getByTestId("history-back"));
@@ -225,6 +233,7 @@ describe("MonthlyHistoryPanel", () => {
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
       await fireEvent.press(getByTestId("open-monthly-history"));
+      await fireEvent.press(getByTestId("history-column-vsInvested"));
       await fireEvent.scroll(getByTestId("monthly-history-scroll"), {
         nativeEvent: { contentOffset: { x: 0, y: 300 } },
       });
@@ -258,6 +267,7 @@ describe("MonthlyHistoryPanel", () => {
         <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
       );
       await fireEvent.press(screen.getByTestId("open-monthly-history"));
+      await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
       await fireEvent.press(screen.getByTestId("snapshot-month-2026-04"));
       expect(screen.getByTestId("selected-snapshot-summary")).toBeTruthy();
 
@@ -276,17 +286,19 @@ describe("MonthlyHistoryPanel", () => {
   });
 
   it("opens newest year first and lists only stored months newest first", async () => {
-    const { getByTestId, getByText } = await render(
+    const { getAllByText, getByTestId, getByText } = await render(
       <MonthlyHistoryPanel maskWealthValues={false} minimal={false} summaries={summaries} />,
     );
 
     await fireEvent.press(getByTestId("open-monthly-history"));
 
+    await fireEvent.press(getByTestId("history-column-vsInvested"));
+
     expect(getByTestId("history-year-2026").props.accessibilityState).toEqual({ selected: true });
     expect(getByText("May")).toBeTruthy();
     expect(getByText("Apr")).toBeTruthy();
     expect(getByText("Mar")).toBeTruthy();
-    expect(getByText("Vs invested")).toBeTruthy();
+    expect(getAllByText("Vs invested")).toHaveLength(2); // the toggle and the column header
     expect(getByText("Vs invested excludes cash")).toBeTruthy();
     expect(() => getByTestId("snapshot-month-2026-02")).toThrow();
 
@@ -349,6 +361,8 @@ describe("MonthlyHistoryPanel", () => {
 
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
 
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
+
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText("+33.33%")).toBeTruthy();
     expect(within(january).queryByText(/vs December/u)).toBeNull();
@@ -391,6 +405,8 @@ describe("MonthlyHistoryPanel", () => {
     );
 
     await fireEvent.press(screen.getByTestId("open-monthly-history"));
+
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
     const january = screen.getByTestId("snapshot-month-2026-01");
     expect(within(january).getByText(MASKED_INR_VALUE)).toBeTruthy();
     expect(within(january).getByText("+33.33%")).toBeTruthy();
@@ -543,5 +559,67 @@ describe("MonthlyHistoryPanel", () => {
     await fireEvent.press(getByTestId("snapshot-month-2026-06"));
 
     expect(getAllByText("Unavailable").length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("Monthly History month gain (#743)", () => {
+  const gainSummaries = [
+    createSummary("2026-03", { performance: { marketMovement: 125_000, marketMovementPct: 2.5 } }),
+    createSummary("2026-02", { performance: { marketMovement: -40_000, marketMovementPct: -1.25 } }),
+    createSummary("2026-01", { performance: { marketMovement: 3_000, marketMovementPct: null, status: "partial",
+      reason: "invalid-denominator" } }),
+    createSummary("2025-12", { performance: { marketMovement: null, marketMovementPct: null, status: "unavailable",
+      reason: "missing-previous-snapshot" } }),
+  ];
+  const open = async (maskWealthValues = false) => {
+    const screen = await render(<MonthlyHistoryPanel maskWealthValues={maskWealthValues} minimal={false} summaries={gainSummaries} />);
+    await fireEvent.press(screen.getByTestId("open-monthly-history"));
+    return screen;
+  };
+
+  it("shows each month's market change by default, signed, with its percentage", async () => {
+    const screen = await open();
+    expect(screen.getByTestId("history-column-monthGain").props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId("history-column-note")).toHaveTextContent(/less money added or withdrawn/);
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-03")).toHaveTextContent("+₹1.25L");
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-03")).toHaveStyle({ color: colors.profit });
+    expect(screen.getByTestId("snapshot-month-gain-percentage-2026-03")).toHaveTextContent("+2.50%");
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-02")).toHaveTextContent("-₹40K");
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-02")).toHaveStyle({ color: colors.loss });
+    expect(screen.getByTestId("snapshot-month-gain-percentage-2026-02")).toHaveTextContent("-1.25%");
+    expect(screen.getByTestId("snapshot-month-2026-03").props.accessibilityLabel)
+      .toContain("Month gain +₹1,25,000.00, +2.50%, excluding money added or withdrawn");
+  });
+
+  it("shows the amount alone when the percentage can't be worked out, and explains an unavailable month", async () => {
+    const screen = await open();
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-01")).toHaveTextContent("+₹3K");
+    expect(screen.queryByTestId("snapshot-month-gain-percentage-2026-01")).toBeNull();
+
+    await fireEvent.press(screen.getByTestId("history-year-2025"));
+    expect(screen.getByTestId("snapshot-month-gain-2025-12")).toHaveTextContent("—");
+    expect(screen.getByTestId("snapshot-month-2025-12").props.accessibilityLabel)
+      .toContain("Month gain unavailable: there is no saved value for the month before");
+  });
+
+  it("hides amounts when values are masked but keeps percentages visible", async () => {
+    const screen = await open(true);
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-03")).toHaveTextContent(MASKED_INR_VALUE);
+    expect(screen.getByTestId("snapshot-month-gain-percentage-2026-03")).toHaveTextContent("+2.50%");
+    expect(screen.getByTestId("snapshot-month-2026-03").props.accessibilityLabel)
+      .toContain("Month gain +2.50%, excluding money added or withdrawn");
+    expect(screen.getByTestId("snapshot-month-2026-03").props.accessibilityLabel).not.toContain("1,25,000");
+  });
+
+  it("switches the column to Vs invested and back", async () => {
+    const screen = await open();
+    await fireEvent.press(screen.getByTestId("history-column-vsInvested"));
+    expect(screen.getByTestId("history-column-vsInvested").props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId("history-column-note")).toHaveTextContent("Vs invested excludes cash");
+    expect(screen.queryByTestId("snapshot-month-gain-2026-03")).toBeNull();
+    expect(screen.getByTestId("snapshot-invested-comparison-2026-03")).toHaveTextContent("+20.00%");
+
+    await fireEvent.press(screen.getByTestId("history-column-monthGain"));
+    expect(screen.getByTestId("snapshot-month-gain-amount-2026-03")).toHaveTextContent("+₹1.25L");
   });
 });
