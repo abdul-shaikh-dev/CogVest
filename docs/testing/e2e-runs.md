@@ -67,6 +67,13 @@ the run cadence.
   is not caused by #760. A diagnostic build showed the legacy
   `readAsStringAsync` rejecting the picker's Downloads URI
   (`content://com.android.providers.downloads.documents/...`). Tracked in #772.
+- After rebasing onto the #772 fix (`main` e027901), a fresh E2E APK from
+  c82ca0b (SHA-256
+  3641fc288d0b85ae19e2047d5d8423257d6e44fb1a7e6a16436b1b722729543e) passed
+  `backup-protected` (1m 43s), `backup-roundtrip` (1m 14s) and
+  `holdings-csv-import` (1m 16s). A protected backup copied to Downloads, picked
+  from the Downloads root, unlocked and previewed with 5 assets in a temporary
+  flow that was not kept (0m 48s).
 
 | Flow | Result | Duration |
 | --- | --- | --- |
