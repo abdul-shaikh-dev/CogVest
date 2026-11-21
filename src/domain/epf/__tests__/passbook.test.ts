@@ -19,10 +19,10 @@ const claimYear = passbook({ year: 2022, opening: "58,500 24,400 35,000",
   totals: ["0 0 0", "0 0 0", "60,000 25,000 0"], interest: "1,500 600 0", closing: "0 0 35,000" });
 
 const newAccount = passbook({ memberId: NEW_ID, year: 2022, opening: "0 0 0", printed: "15-02-2023", rows: [
-  "TRANSFER IN - SAME OFFICE", "(Old Member Id-", "Jun-2022 10-08-2022 CR 0 0 58,500 24,400 0", `:${OLD_ID}`, ")",
-  "Cont. for the Due-Month", "Aug-2022 01-09-2022 CR 12,000 12,000 1,440 440 1,000", "202209",
+  "TRANSFER IN - SAME OFFICE", "Jun-2022 10-08-2022 CR (Old Member Id-", `:${OLD_ID} 0 0 58,500 24,400 0`, ")",
+  "Aug-2022 01-09-2022 CR Cont. for the Due-Month", "202209 12,000 12,000 1,440 440 1,000",
   "TRANSFER IN - INTEREST", "AMOUNT ONLY (Old Member", "Jan-2023 20-01-2023 CR Id- 0 0 1,500 600 0", `:${OLD_ID}`, ")",
-  "Cont. for the Due-Month", "Jan-2023 01-02-2023 CR 12,000 12,000 1,440 440 1,000", "202302",
+  "Jan-2023 01-02-2023 CR Cont. for the Due-Month", "202302 12,000 12,000 1,440 440 1,000",
 ], totals: ["2,880 880 2,000", "60,000 25,000 0", "0 0 0"], interest: "0 0 0", closing: "62,880 25,880 2,000" });
 
 const read = (text: string, pages?: number): EpfoPassbook => {
@@ -47,7 +47,7 @@ describe("EPFO member passbook reading (#740)", () => {
       amounts: { employee: 1440, employer: 440, pension: 1000 } });
   });
 
-  test("reads layout B rows whose description wraps around them, and transfer-ins citing the old member ID", () => {
+  test("reads layout B rows whose amounts fall to the next line, and transfer-ins citing the old member ID", () => {
     const year = read(newAccount);
     expect(year).toMatchObject({ layout: "B", memberId: NEW_ID, open: true, printedOn: "2023-02-15" });
     expect(year.rows.map((row) => [row.kind, row.date, row.oldMemberId])).toEqual([
@@ -56,6 +56,21 @@ describe("EPFO member passbook reading (#740)", () => {
       ["transferInterest", "2023-01-20", OLD_ID],
       ["contribution", "2023-02-01", null],
     ]);
+  });
+
+  test("reads the headings and split rows as the device extractor lays them out, and the one-line form too", () => {
+    // PdfBox-Android puts "Employee Employer Pension" below "Type", and a wide
+    // row's amounts on their own line led by the due month or old member ID.
+    const year = read(newAccount);
+    expect(year.rows.map((row) => [row.line, row.amounts.employee])).toEqual([
+      [expect.any(Number), 58500], [expect.any(Number), 1440], [expect.any(Number), 1500], [expect.any(Number), 1440],
+    ]);
+    const oneLineHeadings = layoutA.replace("/ Date / Type osru ,Q / EPF osru ,l / EPS izdkj / Lkkuk / Lkkuk /\nEmployee Employer Pension",
+      "/ Type Employee Employer Pension");
+    expect(oneLineHeadings).not.toBe(layoutA);
+    expect(read(oneLineHeadings).rows).toHaveLength(12);
+    const noHeadings = layoutA.replace("\nEmployee Employer Pension\n", "\n");
+    expect(readEpfoPassbook(noHeadings)).toMatchObject({ ok: false, reason: "unknownLayout" });
   });
 
   test("reads a final claim year that closes at zero EPF while keeping the pension balance", () => {
@@ -80,9 +95,9 @@ describe("EPFO member passbook reading (#740)", () => {
     expect(rejection(layoutA.replace("Cont. for Due-Month 052021", "Arrears 052021"))?.reason).toBe("unknownRow");
     expect(rejection(newAccount.replace(`:${OLD_ID}`, ":unreadable"))).toEqual({ reason: "unknownRow",
       message: expect.stringContaining("transfer-in without the old member ID") });
-    const mixed = newAccount
-      .replace("Cont. for the Due-Month\nJan-2023 01-02-2023 CR", "Jan-2023 01-02-2023 CR Cont. for Due-Month 022023")
-      .replace("1,440 440 1,000\n202302", "1,440 440 1,000");
+    const mixed = newAccount.replace("Jan-2023 01-02-2023 CR Cont. for the Due-Month\n202302 12,000",
+      "Jan-2023 01-02-2023 CR Cont. for Due-Month 022023 12,000");
+    expect(mixed).not.toBe(newAccount);
     expect(rejection(mixed)?.reason).toBe("unknownLayout");
     expect(rejection(layoutA.replace(/^Closing Balance.*$/m, ""))?.reason).toBe("missingLine");
   });
