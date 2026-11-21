@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react-native";
 import * as calculations from "@/src/domain/calculations/holdings";
+import * as drift from "@/src/domain/calculations/snapshotRecordDrift";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { createAndroidScaleFixture } from "@/src/testing/androidScaleFixture";
@@ -12,6 +13,8 @@ it("does not replay scale holdings on range changes but invalidates financial in
   const fixture = createAndroidScaleFixture(now);
   const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
   store.setState({ ...fixture.portfolio, quoteCache: fixture.quoteCache });
+  // The saved-month check (#747) replays every saved month; it is counted on its own.
+  const driftChecks = jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue(() => null);
   const holdings = jest.spyOn(calculations, "calculateHoldings");
   const hook = await renderHook<ReturnType<typeof useProgress>, { date: Date }>(
     ({ date }) => useProgress({ store, now: date }), { initialProps: { date: now } });
@@ -21,10 +24,13 @@ it("does not replay scale holdings on range changes but invalidates financial in
   await act(() => hook.result.current.setAssetChartRange("3M"));
   await hook.rerender({ date: new Date(2026, 9, 1, 18) });
   expect(holdings).toHaveBeenCalledTimes(initialCalls);
+  expect(driftChecks).toHaveBeenCalledTimes(1);
   expect(hook.result.current.portfolioValue).toBe(initialValue);
   await act(() => store.setState({ quoteCache: { ...fixture.quoteCache,
     "v3-asset-001": { ...fixture.quoteCache["v3-asset-001"], price: 200 } } }));
   expect(holdings).toHaveBeenCalledTimes(initialCalls + 1);
+  // A price update never re-checks saved months: the check ignores prices.
+  expect(driftChecks).toHaveBeenCalledTimes(1);
   expect(hook.result.current.portfolioValue).toBe((initialValue ?? 0) + 750);
   await act(() => store.setState({ trades: [...fixture.portfolio.trades, {
     id: "future-buy", assetId: "v3-asset-001", date: "2026-10-02", type: "buy",
@@ -33,6 +39,8 @@ it("does not replay scale holdings on range changes but invalidates financial in
   expect(hook.result.current.portfolioValue).toBe((initialValue ?? 0) + 750);
   await hook.rerender({ date: new Date(2026, 9, 2, 12) });
   expect(holdings).toHaveBeenCalledTimes(initialCalls + 3);
+  // A new record does; a new day in the same month does not.
+  expect(driftChecks).toHaveBeenCalledTimes(2);
   expect(hook.result.current.portfolioValue).toBe((initialValue ?? 0) + 950);
   await act(() => store.setState({ openingPositions: [], assets: [], trades: [], cashEntries: [] }));
   expect(hook.result.current.portfolioValue).toBe(0);

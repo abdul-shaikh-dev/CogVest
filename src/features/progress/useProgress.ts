@@ -5,6 +5,8 @@ import type { StoreApi } from "zustand/vanilla";
 import {
   buildMonthlyProgressChartData,
   calculateMonthlyProgressSummaries,
+  recalculateSavedSnapshot,
+  type SavedSnapshotRecalculation,
   getDefaultMonthlyChartRange,
   getPreviousCompletedMonth,
   type MonthlyChartCustomRange,
@@ -14,6 +16,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import { resolveHistoricalPrice } from "@/src/services/quotes";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { usePortfolioFields } from "@/src/hooks";
+import type { MonthlySnapshot } from "@/src/types";
 
 import {
   getSnapshotAutomationProgress,
@@ -38,6 +41,7 @@ import {
   type ProgressFormValues,
   type SnapshotAutomationStatusState,
 } from "./progressSnapshotModel";
+import { useSnapshotDrift, type SnapshotDriftInput } from "./useSnapshotDrift";
 
 export type {
   ProgressFormErrors,
@@ -48,7 +52,7 @@ export type {
 } from "./progressSnapshotModel";
 
 function usePortfolioSnapshot(store: StoreApi<PortfolioStoreState>) {
-  return usePortfolioFields(store, ["assets", "cashEntries", "historicalQuoteCache", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
+  return usePortfolioFields(store, ["assets", "cashEntries", "distributions", "historicalQuoteCache", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries", "preferences", "quoteCache", "trades"]);
 }
 
 type UseProgressInput = {
@@ -142,9 +146,55 @@ export function useProgress({
     [snapshot.assets, snapshot.openingPositions, snapshot.trades, snapshot.quoteCache,
       snapshot.cashEntries, snapshot.ppfAccounts, snapshot.ppfLedgerEntries, asOf],
   );
+  // Saved months that no longer match current records (#747). Prices play no
+  // part, so quote updates don't restart the check.
+  const snapshotDriftInput = useMemo((): SnapshotDriftInput => ({
+    assets: snapshot.assets,
+    cashEntries: snapshot.cashEntries,
+    distributions: snapshot.distributions,
+    monthlySnapshots: snapshot.monthlySnapshots,
+    now: new Date(`${currentCalendarMonth}-15T12:00:00Z`),
+    openingPositions: snapshot.openingPositions,
+    ppfAccounts: snapshot.ppfAccounts,
+    ppfLedgerEntries: snapshot.ppfLedgerEntries,
+    trades: snapshot.trades,
+  }), [snapshot.assets, snapshot.cashEntries, snapshot.distributions, snapshot.monthlySnapshots,
+    snapshot.openingPositions, snapshot.ppfAccounts, snapshot.ppfLedgerEntries, snapshot.trades,
+    currentCalendarMonth]);
+  const snapshotDrift = useSnapshotDrift(snapshotDriftInput);
   const monthlySummaries = useMemo(() => calculateMonthlyProgressSummaries(
     snapshot.monthlySnapshots,
-  ), [snapshot.monthlySnapshots]);
+    new Set(snapshotDrift.keys()),
+  ), [snapshot.monthlySnapshots, snapshotDrift]);
+  const monthRecalculation = {
+    /** A saved month as current records and prices give it; nothing is saved. */
+    preview: (month: string): SavedSnapshotRecalculation => {
+      const state = store.getState();
+      const saved = state.monthlySnapshots.find((item) => item.month === month);
+      if (!saved) return { ok: false, reason: "This month is no longer saved." };
+      return recalculateSavedSnapshot({
+        assets: state.assets,
+        cashEntries: state.cashEntries,
+        distributions: state.distributions,
+        historicalQuotes: state.historicalQuoteCache,
+        now: new Date(`${currentCalendarMonth}-15T12:00:00Z`),
+        openingPositions: state.openingPositions,
+        ppfAccounts: state.ppfAccounts,
+        ppfLedgerEntries: state.ppfLedgerEntries,
+        quoteCache: state.quoteCache,
+        trades: state.trades,
+      }, saved);
+    },
+    /** Saves the recalculated month exactly as the user compared it. */
+    replace: (recalculated: MonthlySnapshot): { ok: true } | { ok: false; reason: string } => {
+      try {
+        store.getState().updateMonthlySnapshot(recalculated);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, reason: describeSaveFailure(error, "This month could not be recalculated. Its saved values are unchanged.") };
+      }
+    },
+  };
   const latestSummary = monthlySummaries[0];
   const portfolioChartData = buildMonthlyProgressChartData(
     chartSnapshots,
@@ -263,6 +313,7 @@ export function useProgress({
     portfolioChartRange,
     portfolioValue,
     preferences: snapshot.preferences,
+    monthRecalculation,
     saveSnapshot,
     saveSnapshotEdits: saveSnapshot,
     setAssetChartRange,
@@ -271,6 +322,7 @@ export function useProgress({
     setPortfolioChartRange,
     setPortfolioChartCustomRange,
     snapshotAutomationStatus: progressSnapshotAutomationStatus,
+    snapshotDrift,
     totalInvested,
   };
 }

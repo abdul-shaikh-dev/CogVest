@@ -59,6 +59,7 @@ const defaultFlows = [
   "e2e/progress-chart-range.yaml",
   "e2e/progress-chart-month-navigation.yaml",
   "e2e/progress-snapshot-history.yaml",
+  "e2e/progress-snapshot-drift.yaml",
   "e2e/value-masking.yaml",
   "e2e/minimal-mode.yaml",
   "e2e/insight-details.yaml",
