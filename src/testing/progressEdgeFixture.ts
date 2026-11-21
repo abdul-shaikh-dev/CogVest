@@ -21,7 +21,11 @@ function snapshot(month: string, value: number): MonthlySnapshot {
  * to June 2025 (#747): July no longer has it, while the estimated months
  * around it were rebuilt with it.
  */
-function seedOutdatedSavedMonth(store: StoreApi<PortfolioStoreState>) {
+/**
+ * Saved months reviewed by the user, then a PPF contribution back-dated to June
+ * 2025 that none of them has: each becomes out of date (#747, #751).
+ */
+function seedOutdatedSavedMonths(store: StoreApi<PortfolioStoreState>, months: readonly string[]) {
   const state = store.getState();
   state.addAsset({ id: "progress-edge", name: "Synthetic History Fund", symbol: "EDGE", ticker: "EDGE.NS", currency: "INR", assetClass: "stock" });
   state.addOpeningPosition({ id: "progress-edge-opening", assetId: "progress-edge", date: "2025-09-01", quantity: 10, averageCostPrice: 1000, currentPrice: 1000 });
@@ -29,16 +33,18 @@ function seedOutdatedSavedMonth(store: StoreApi<PortfolioStoreState>) {
     balanceAsOf: "2025-04-01", confirmedBalance: 30000, createdAt: "2026-08-01T00:00:00Z", id: "progress-edge-ppf",
     nickname: "Synthetic PPF", opening: { kind: "financialYear", financialYearStart: 2025 }, provider: "Synthetic Bank", status: "active",
   });
-  const records = store.getState();
-  const july = buildGeneratedMonthEndSnapshot({
-    assets: records.assets, cashEntries: [], existingSnapshots: [], historicalQuotes: {}, now: progressEdgeNow,
-    openingPositions: records.openingPositions, ppfAccounts: records.ppfAccounts, ppfLedgerEntries: [],
-    quoteCache: {}, targetMonth: "2026-07", trades: [],
-  }).snapshot;
-  if (!july) throw new Error("Synthetic July could not be built.");
-  const automatic = records.monthlySnapshots.find((item) => item.month === "2026-07");
-  if (automatic) store.getState().removeMonthlySnapshot(automatic.id);
-  store.getState().addMonthlySnapshot({ ...july, generated: { ...july.generated!, source: "manual" }, id: "progress-edge-2026-07" });
+  for (const month of months) {
+    const records = store.getState();
+    const saved = buildGeneratedMonthEndSnapshot({
+      assets: records.assets, cashEntries: [], existingSnapshots: [], historicalQuotes: {}, now: progressEdgeNow,
+      openingPositions: records.openingPositions, ppfAccounts: records.ppfAccounts, ppfLedgerEntries: [],
+      quoteCache: {}, targetMonth: month, trades: [],
+    }).snapshot;
+    if (!saved) throw new Error(`Synthetic ${month} could not be built.`);
+    const automatic = records.monthlySnapshots.find((item) => item.month === month);
+    if (automatic) store.getState().removeMonthlySnapshot(automatic.id);
+    store.getState().addMonthlySnapshot({ ...saved, generated: { ...saved.generated!, source: "manual" }, id: `progress-edge-${month}` });
+  }
   store.getState().addPpfLedgerEntry({
     accountId: "progress-edge-ppf", amount: 50000, date: "2025-06-10", fundingSource: "external",
     id: "progress-edge-ppf-june", recordedAt: "2026-08-15T00:00:00Z", type: "contribution",
@@ -60,7 +66,9 @@ export function createProgressEdgeFixture(scenario: string, minimal: boolean) {
       store.getState().addMonthlySnapshot(snapshot(month, value));
     }
   } else if (scenario === "outdated") {
-    seedOutdatedSavedMonth(store);
+    seedOutdatedSavedMonths(store, ["2026-07"]);
+  } else if (scenario === "outdated-many") {
+    seedOutdatedSavedMonths(store, ["2026-05", "2026-06", "2026-07"]);
   } else if (scenario === "zero") {
     store.getState().addMonthlySnapshot(snapshot("2026-07", 0));
     store.getState().addMonthlySnapshot(snapshot("2026-08", 0));

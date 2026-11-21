@@ -239,6 +239,11 @@ All domain calculations must be pure functions under `src/domain/`.
   checked. The check runs in short slices so a long history never blocks the
   screen. Month detail shows where values came from: saved by you, automatic or
   estimated.
+  Neutral prices include a neutral month-end close, so a month held before a
+  later bonus or split is still checked (#750). Monthly History counts the
+  out-of-date months and offers one review of all of them: each is listed with
+  its saved and recalculated value, ticked by default, and the ticked months are
+  replaced in one write, all or none (#751).
 - Historical Progress excludes Futures. Linked Cash-to-Futures withdrawals and
   Futures-to-Cash additions cross that report's boundary at their actual INR Cash
   amounts (including conversion costs). They remain internal movements for

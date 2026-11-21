@@ -144,6 +144,11 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   updateAsset: (asset: Asset) => void;
   updateCashEntry: (cashEntry: CashEntry) => void;
   updateMonthlySnapshot: (monthlySnapshot: MonthlySnapshot) => void;
+  /**
+   * Replaces several saved months in one write, each keeping its ID and month
+   * (#751). One invalid or unknown month saves none.
+   */
+  replaceMonthlySnapshots: (monthlySnapshots: readonly MonthlySnapshot[]) => void;
   updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
   acknowledgeNudge: (kind: "metadata" | "minimal" | "insights", version: number) => void;
