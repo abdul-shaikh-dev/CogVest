@@ -1,7 +1,7 @@
 import { Directory, File } from "expo-file-system";
-import { readAsStringAsync } from "expo-file-system/legacy";
 
 import { decodeBoundedBase64Text } from "./boundedTextFile";
+import { readPickedFileBase64 } from "./pickedFileRead";
 import {
   ppfCsvMaxBytes,
   ppfCsvByteLength,
@@ -50,7 +50,7 @@ export async function pickPpfCsvFile(): Promise<
       throw new Error(tooLargeMessage);
     }
 
-    const encoded = await readAsStringAsync(selected.uri, {
+    const encoded = await readPickedFileBase64(selected.uri, {
         encoding: "base64",
         length: ppfCsvMaxBytes + 1,
         position: 0,

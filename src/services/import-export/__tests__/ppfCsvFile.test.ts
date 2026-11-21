@@ -48,7 +48,7 @@ describe("PPF CSV file adapter", () => {
       name: "ppf.csv",
       size: new TextEncoder().encode(text).byteLength,
       text: jest.fn().mockResolvedValue(text),
-      uri: "content://provider/ppf.csv",
+      uri: "content://com.android.externalstorage.documents/document/provider/ppf.csv",
     };
     mockPickFileAsync.mockResolvedValueOnce(selected);
     mockReadAsStringAsync.mockResolvedValueOnce(btoa(text));
@@ -71,7 +71,7 @@ describe("PPF CSV file adapter", () => {
     const selected = {
       size: ppfCsvMaxBytes + 1,
       text: jest.fn(),
-      uri: "content://provider/too-large.csv",
+      uri: "content://com.android.externalstorage.documents/document/provider/too-large.csv",
     };
     mockPickFileAsync.mockResolvedValueOnce(selected);
 
@@ -85,7 +85,7 @@ describe("PPF CSV file adapter", () => {
     const originalDecoder = globalThis.TextDecoder;
     const originalEncoder = globalThis.TextEncoder;
     const text = "date,type,amount,note\n2026-03-31,interest,350,₹ ब्याज";
-    mockPickFileAsync.mockResolvedValueOnce({ uri: "content://provider/ppf.csv" });
+    mockPickFileAsync.mockResolvedValueOnce({ uri: "content://com.android.externalstorage.documents/document/provider/ppf.csv" });
     mockReadAsStringAsync.mockResolvedValueOnce(Buffer.from(text).toString("base64"));
     try {
       Object.assign(globalThis, { atob: undefined, TextDecoder: undefined, TextEncoder: undefined });
@@ -96,7 +96,7 @@ describe("PPF CSV file adapter", () => {
   });
 
   it("rejects invalid UTF-8 without returning partial content", async () => {
-    mockPickFileAsync.mockResolvedValueOnce({ uri: "content://provider/ppf.csv" });
+    mockPickFileAsync.mockResolvedValueOnce({ uri: "content://com.android.externalstorage.documents/document/provider/ppf.csv" });
     mockReadAsStringAsync.mockResolvedValueOnce("/w==");
     await expect(pickPpfCsvFile()).rejects.toThrow("could not be read");
   });
@@ -105,7 +105,7 @@ describe("PPF CSV file adapter", () => {
     const text = "account,entry\nPrimary,100\n";
     mockPickFileAsync.mockResolvedValueOnce({
       size: undefined,
-      uri: "content://provider/ppf%20history.csv",
+      uri: "content://com.android.externalstorage.documents/document/provider/ppf%20history.csv",
     });
     mockReadAsStringAsync.mockResolvedValueOnce(btoa(text));
 
@@ -115,7 +115,7 @@ describe("PPF CSV file adapter", () => {
       text,
     });
     expect(mockReadAsStringAsync).toHaveBeenCalledWith(
-      "content://provider/ppf%20history.csv",
+      "content://com.android.externalstorage.documents/document/provider/ppf%20history.csv",
       { encoding: "base64", length: ppfCsvMaxBytes + 1, position: 0 },
     );
   });
@@ -124,7 +124,7 @@ describe("PPF CSV file adapter", () => {
     const selected = {
       size: 1,
       text: jest.fn(),
-      uri: "content://provider/underreported.csv",
+      uri: "content://com.android.externalstorage.documents/document/provider/underreported.csv",
     };
     mockPickFileAsync.mockResolvedValueOnce(selected);
     mockReadAsStringAsync.mockResolvedValueOnce(
@@ -144,7 +144,7 @@ describe("PPF CSV file adapter", () => {
     const privateText = "private PPF balance";
     mockPickFileAsync.mockResolvedValueOnce({
       size: privateText.length,
-      uri: "content://provider/private.csv",
+      uri: "content://com.android.externalstorage.documents/document/provider/private.csv",
     });
     mockReadAsStringAsync.mockRejectedValueOnce(new Error(privateText));
     const error = jest.spyOn(console, "error").mockImplementation();

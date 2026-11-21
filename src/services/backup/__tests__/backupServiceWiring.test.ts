@@ -49,7 +49,7 @@ function pickedDirectory() {
     created,
     directory: {
       createFile: jest.fn((name: string, mime: string) => {
-        const uri = `content://provider/tree/qa/document/${name}`;
+        const uri = `content://com.android.externalstorage.documents/document/provider/tree/qa/document/${name}`;
         const file = {
           name, mime, uri,
           write: jest.fn(async (text: string) => { mockFiles.set(uri, text); }),
@@ -137,7 +137,7 @@ describe("backup service native wiring (#671)", () => {
   });
 
   it("rejects a picked file whose bounded read exceeds the limit, without reading it whole", async () => {
-    const uri = "content://provider/document/huge.json";
+    const uri = "content://com.android.externalstorage.documents/document/provider/document/huge.json";
     mockFiles.set(uri, "x".repeat(backupMaxBytes + 10));
     // The provider under-reports the size; the bounded read still catches it.
     mockPickFileAsync.mockResolvedValue({ size: 100, uri });

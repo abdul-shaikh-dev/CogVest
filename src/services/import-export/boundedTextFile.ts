@@ -1,4 +1,6 @@
-import { readAsStringAsync } from "expo-file-system/legacy";
+import type { readAsStringAsync } from "expo-file-system/legacy";
+
+import { readPickedFileBase64 } from "./pickedFileRead";
 
 export type BoundedTextRead =
   | { byteLength: number; status: "ok"; text: string }
@@ -34,12 +36,12 @@ export function decodeBoundedBase64Text(encoded: string, maxBytes: number): Boun
 /**
  * Reads at most maxBytes + 1 bytes of a picked file natively, so a file larger
  * than the limit never reaches JavaScript memory whatever size its provider
- * declared (#659). The legacy Base64 read supports SAF content URIs.
+ * declared (#659), whichever document provider served it (#772).
  */
 export async function readBoundedTextFile(
   uri: string,
   maxBytes: number,
-  read: typeof readAsStringAsync = readAsStringAsync,
+  read: typeof readAsStringAsync = readPickedFileBase64,
 ): Promise<BoundedTextRead> {
   const encoded = await read(uri, { encoding: "base64", length: maxBytes + 1, position: 0 });
   return decodeBoundedBase64Text(encoded, maxBytes);
@@ -54,7 +56,7 @@ export async function readBoundedTextFile(
 export async function readPickedCsvFile(
   selected: { size?: number; uri: string },
   maxBytes: number,
-  read: typeof readAsStringAsync = readAsStringAsync,
+  read: typeof readAsStringAsync = readPickedFileBase64,
 ): Promise<{ size: number; text: string }> {
   const declared = Number(selected.size);
   if (Number.isFinite(declared) && declared > maxBytes) return { size: declared, text: "" };
