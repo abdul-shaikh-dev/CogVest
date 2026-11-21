@@ -1,0 +1,5 @@
+Txn Date,Narration,Type,Amount,Closing Balance
+02-Apr-2025,Synthetic deposit,Deposit,"₹5,000",15000
+31/03/2026,Synthetic interest,Int,350,"15,350"
+02/04/2026,Synthetic withdrawal,Partial Withdrawal,"1,000","14,350"
+15-05-2026,Synthetic deposit,Subscription,"2,500","16,850"

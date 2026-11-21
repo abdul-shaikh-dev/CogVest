@@ -1,8 +1,9 @@
 import { formatLocalCalendarDate, parseCalendarDate } from "./dates";
-import { parsePpfCsv, type PpfCsvError } from "./ppfCsv";
+import { checkPpfCsvBalances, orderPpfCsvRows, parsePpfCsv, type PpfCsvError } from "./ppfCsv";
 import { calculatePpfConfirmedBalance, getFinancialYearStart, validatePpfAccount, validatePpfLedgerEntryForAccount } from "./ppf";
 import type { PpfAccount, PpfLedgerEntry } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { formatINR } from "./formatters";
 
 export type PpfCsvImportInput = {
   accountId: string;
@@ -64,6 +65,13 @@ export function planPpfCsvImport(input: PpfCsvImportInput, accounts: readonly Pp
   const parsed = parsePpfCsv(input.csv, now);
   result.errors.push(...parsed.errors);
   if (result.errors.length) return result;
+  // When the file's first row prints its balance, the opening balance follows from it (#748).
+  const implied = checkPpfCsvBalances(parsed.rows).opening;
+  if (implied && implied.before === orderPpfCsvRows(parsed.rows)[0]?.date && orderPpfCsvRows(parsed.rows)[0].balance !== undefined
+    && Math.round(implied.balance * 100) !== Math.round(input.openingBalance * 100)) {
+    error(`The file's first balance means the account held ${formatINR(implied.balance)} before it, but the opening balance entered is ${formatINR(input.openingBalance)}.`);
+    return result;
+  }
   let balance = Math.round(input.openingBalance * 100);
   let contributions = 0, interest = 0, withdrawals = 0;
   const seen = new Set<string>();

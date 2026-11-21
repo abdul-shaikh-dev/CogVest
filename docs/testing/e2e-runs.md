@@ -4,6 +4,54 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new PPF CSV add-to-existing flow (#748), 15 passed, 13m 43s + 1m 50s + 2m 25s
+
+- Commit: feat/748-ppf-csv-import c5c45c8, based on `main` 008292b, version
+  1.0.32. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  emulator cold-booted 43 minutes before the run. E2E APK (R8 on, x86_64)
+  freshly built from c5c45c8, SHA-256
+  661070e2cd108356a184a365b55ed4422e2a9eb197b42678d5368a4fbe3e201c. Metro stopped.
+  The later commit changes only the new flow file. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`, plus
+  `node scripts/maestro-run.mjs e2e/ppf-csv-merge.yaml` and
+  `e2e/standalone/ppf-csv-import.yaml`.
+- New full-tier flow `ppf-csv-merge` passed (1m 50s). It creates a PPF account
+  with ₹10,000 dated 2024 and adds `fixtures/ppf-merge.csv` (Txn Date and
+  Closing Balance headers, day-first dates, ₹ and Indian grouping, Deposit,
+  Int, Partial Withdrawal and Subscription types). It asserts the review offers
+  "Add 4 entries", that the saved balance is ₹16,850.00 and still is after a
+  restart, and that importing the file again shows nothing new with save
+  disabled. The review screen was checked by hand: 4 new, per-FY totals for
+  2025-26 and 2026-27, closing ₹16,850.00.
+- The updated replace flow `standalone/ppf-csv-import` (now tapping "Replace
+  the whole history instead") passed (2m 25s). A first attempt failed because
+  the fixture push from Git Bash had its `/sdcard` path rewritten; the file
+  never reached Downloads.
+- An earlier `ppf-csv-merge` run failed on the flow itself: a wrong helper path
+  and count assertions on a container that exposes no text. Both are fixed.
+- `holdings-csv-import` passed again after a cold boot, consistent with #741
+  being emulator uptime.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 13s |
+| navigation | PASS | 0m 24s |
+| add-holding-lookup | PASS | 1m 00s |
+| record-purchase | PASS | 0m 48s |
+| payouts | PASS | 0m 47s |
+| xirr-holding | PASS | 0m 35s |
+| cash | PASS | 0m 48s |
+| trade-correction | PASS | 1m 56s |
+| holdings-csv-import | PASS | 1m 10s |
+| epf-accounts | PASS | 1m 04s |
+| ppf-account | PASS | 1m 23s |
+| progress-snapshot-history | PASS | 0m 47s |
+| value-masking | PASS | 1m 04s |
+| persistence | PASS | 0m 37s |
+| backup-roundtrip | PASS | 1m 08s |
+| ppf-csv-merge (full tier) | PASS | 1m 50s |
+| standalone/ppf-csv-import | PASS | 2m 25s |
+
 ## 2026-11-21: Smoke tier and new fix-all-months flow (#750, #751), 15 passed after an emulator storage fault, 13m 13s + 7m 02s
 
 - Commit: feat/751-fix-all-months 247abc5 (contains #750's e787852), based on

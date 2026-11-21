@@ -53,6 +53,12 @@ appId: ${APP_ID}
     id: ppf-import-screen
 - scrollUntilVisible:
     element:
+      id: ppf-import-mode-replace
+    direction: DOWN
+- tapOn:
+    id: ppf-import-mode-replace
+- scrollUntilVisible:
+    element:
       id: ppf-import-balance-as-of
     direction: DOWN
 - tapOn:
@@ -140,6 +146,12 @@ appId: ${APP_ID}
 - runFlow: helpers/open-downloads.yaml
 - tapOn: "ppf-import.csv"
 - assertVisible: "Selected:.*"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-mode-replace
+    direction: DOWN
+- tapOn:
+    id: ppf-import-mode-replace
 - scrollUntilVisible:
     element:
       id: ppf-import-complete-through-today

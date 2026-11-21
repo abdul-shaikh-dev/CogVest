@@ -1,4 +1,4 @@
-# PPF CSV Import (#323)
+# PPF CSV Import (#323, #748)
 
 ## Contract
 
@@ -7,10 +7,56 @@ through existing PPF setup first; the import does not create duplicate accounts.
 Download the template and replace its synthetic example rows. Files stay on the
 device; there is no server upload or bank-statement parser.
 
-The CSV has exactly four columns: `date,type,amount,note`. Dates are YYYY-MM-DD,
-types are contribution/interest/withdrawal, amounts are positive INR with up to
-two decimal places and no grouping commas, and notes are optional. Existing PPF
+The CSV needs `date`, `type` and `amount` columns and may add `balance` and
+`note`, in any order and case (#748). Common passbook headers are read too:
+Txn Date, Transaction Date or Value Date; Amount or Amt; Closing or Running
+Balance; Narration, Description, Remarks or Particulars. Any other column is an
+error. Dates are YYYY-MM-DD or day first: DD/MM/YYYY, DD-MM-YYYY or DD-MMM-YYYY.
+Types are contribution, deposit or subscription; interest, int or interest
+credit; withdrawal or partial withdrawal. Amounts are positive INR with up to
+two decimal places, optionally with ₹, Rs or INR and Indian (1,50,000) or
+Western (150,000) grouping. Contributions are multiples of ₹50. Existing PPF
 validation still applies. Limits: 1,000 rows, 256 KiB, 500 characters per note.
+
+When a `balance` column is present, each printed balance must follow from the
+previous one and the row between them; the first mismatch names its row. Every
+problem in the file is listed at once with its row and column, and nothing is
+saved. When the header can't be matched, the first rows are shown as CogVest
+read them, so the user can see which column is wrong.
+
+## Adding to existing entries (#748)
+
+Adding is the default. The file is matched against the account's existing
+entries without changing anything until the user saves:
+
+- **Before your opening balance:** dated on or before the account's balance
+  date, which already includes it; skipped.
+- **Already recorded:** an entry of the same type and amount on the same date,
+  or within 3 days (a typed entry dated a little off); skipped. Exact matches
+  are claimed first, and each existing entry matches at most one row.
+- **Differs from your records:** an entry of the same type on the same date, or
+  failing that within 3 days, with another amount. Both amounts are shown side by side. The user's amount is kept
+  unless they choose "Use the file's amount". An entry linked to Cash is never
+  changed from an import.
+- **New:** nothing matches; saving adds it.
+
+The review shows per-financial-year deposits, interest, withdrawals and closing
+balance once saved, and warns (without blocking) when a year's deposits exceed
+₹1.5 lakh, when a completed year after the opening balance has no interest
+credit, or when a printed balance would not be reached by the records once
+saved. Repeated identical new rows need confirmation that they are separate
+deposits. Rows that would take the balance below zero block the save.
+
+Saving adds the new entries and the chosen corrections in one portfolio
+transition and rebuilds saved months from the earliest changed month. A
+preview made before the account changed is refused. Importing the same file
+again adds nothing.
+
+## Replacing the whole history
+
+"Replace the whole history instead" keeps the original checkpoint import below.
+If the first row has a balance, the opening balance it implies must equal the
+one entered.
 
 Use the effective/value date of an officially credited transaction. For example,
 interest posted on 1 April but value-dated 31 March is entered on 31 March. Do
@@ -66,13 +112,20 @@ otherwise Expo's precompiled binary ignores the source patch.
 ## Verification
 
 Automated coverage belongs in `ppfCsv.test.ts`, `ppfCsvImport.test.ts`,
-`ppfCsvFile.test.ts` and `PpfImportScreen.test.tsx`. Native verification must use
+`ppfCsvMerge.test.ts` (domain and store), `ppfCsvFile.test.ts`,
+`PpfImportScreen.test.tsx` and `PpfMergePreview.test.tsx`. Native verification must use
 a fresh locally built APK, the Android document picker and synthetic data.
 Record template save, CSV selection, preview, confirmed balance, duplicate
 re-import and cancellation. This is not satisfied by opening the import route
 without checking resulting ledger data.
 
-Repeat on a disposable emulator (the first flow resets synthetic app data):
+`e2e/ppf-csv-merge.yaml` (in the full tier; the runner copies
+`fixtures/ppf-merge.csv`) adds a passbook-style file to a new account, checks
+the saved balance after a restart, and checks that importing it again adds
+nothing.
+
+Repeat the replace flows on a disposable emulator (the first flow resets
+synthetic app data):
 
 ```powershell
 adb push e2e/fixtures/ppf-import.csv /sdcard/Download/ppf-import.csv

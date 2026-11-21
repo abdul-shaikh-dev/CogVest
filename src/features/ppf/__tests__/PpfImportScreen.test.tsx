@@ -50,7 +50,10 @@ async function renderScreen(overrides: Partial<React.ComponentProps<typeof PpfIm
     store: mocked.store,
     ...overrides,
   };
-  return { ...await render(<PpfImportScreen {...props} />), mocked, props };
+  const screen = await render(<PpfImportScreen {...props} />);
+  // These tests cover replacing the whole history, which is now an explicit choice (#748).
+  await fireEvent.press(screen.getByTestId("ppf-import-mode-replace"));
+  return { ...screen, mocked, props };
 }
 
 async function preview(screen: Awaited<ReturnType<typeof render>>) {
@@ -62,7 +65,7 @@ async function preview(screen: Awaited<ReturnType<typeof render>>) {
   await waitFor(() => expect(screen.getByTestId("ppf-import-preview-screen")).toBeTruthy());
 }
 
-describe("PpfImportScreen", () => {
+describe("PpfImportScreen, replacing the whole history", () => {
   it("shows repeated rows and resulting balance without pretending duplicates were skipped", async () => {
     const repeated = `${csv}2026-08-01,contribution,5000,August contribution\n`;
     const screen = await renderScreen({ pickCsvFile: jest.fn(async () => ({ name: "ppf.csv", size: repeated.length, text: repeated })) });

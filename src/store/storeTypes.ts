@@ -10,6 +10,7 @@ import {
   type RawPortfolioSnapshot,
 } from "@/src/domain/portfolioSnapshot";
 import type { PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
+import type { PpfMergeInput } from "@/src/domain/ppfCsvMerge";
 import type { JsonStorage } from "@/src/services/storage";
 import type {
   Asset,
@@ -70,6 +71,15 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
     confirmReplacement: boolean;
     confirmDuplicateRows: boolean;
   }) => { status: "applied" | "alreadyApplied" } | { status: "rejected"; reason: string };
+  /**
+   * Adds a reviewed CogVest PPF CSV to an account's existing entries (#748):
+   * new rows are added, chosen corrections applied, nothing else changes.
+   */
+  mergePpfCsv: (command: {
+    input: PpfMergeInput;
+    expectedState: string;
+    confirmDuplicateRows: boolean;
+  }) => { status: "applied"; added: number; corrected: number } | { status: "alreadyApplied" } | { status: "rejected"; reason: string };
   addPpfLedgerEntry: (entry: PpfLedgerEntry) => PpfLedgerMutationResult;
   addTrade: (trade: Trade) => void;
   /** Creates or corrects one payout (D2); a payout to Cash owns its Cash addition. */
