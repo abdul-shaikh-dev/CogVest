@@ -1,3 +1,4 @@
+import { isAmfiNavPublishedAhead } from "./amfiNavDates";
 import { getCalendarDatePart, parseCalendarDate } from "./dates";
 import { decimal, sumFinancialValues } from "./precision";
 import { distributionNetAmount } from "./distributions";
@@ -211,7 +212,10 @@ export function terminalQuoteIssue(quote: Quote | undefined, endDate: string): X
   const quoteDate = quote ? getCalendarDatePart(quote.asOf) : null;
   if (!quote || !quoteDate || !Number.isFinite(quote.price) || quote.price <= 0) return "missing-quote";
   if (quote.currency !== "INR") return "quote-currency";
-  if (quoteDate > endDate) return "quote-after-end";
+  // A weekend or holiday NAV published ahead (#755) is the current NAV.
+  if (quoteDate > endDate && !(quote.source === "amfi" && isAmfiNavPublishedAhead(quoteDate, endDate))) {
+    return "quote-after-end";
+  }
   if (daysBetween(quoteDate, endDate) > XIRR_MAX_QUOTE_AGE_DAYS) return "stale-quote";
   return null;
 }

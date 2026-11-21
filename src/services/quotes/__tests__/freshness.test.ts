@@ -132,3 +132,31 @@ describe("quote freshness", () => {
     ).toBe("partial");
   });
 });
+
+describe("AMFI NAVs published ahead for a weekend or holiday (#755)", () => {
+  // Local times, so the check holds in any time zone: Friday 20 Nov 2026, 9 pm.
+  const friday = new Date(2026, 10, 20, 21, 0);
+  const nav = (date: string) => quote("liquid", "amfi", `${date}T00:00:00.000Z`);
+
+  it("treats Saturday's and Sunday's NAVs, published on Friday, as current", () => {
+    expect(classifyQuoteFreshness(nav("2026-11-21"), friday)).toBe("current");
+    expect(classifyQuoteFreshness(nav("2026-11-22"), friday)).toBe("current");
+  });
+
+  it("treats a Monday holiday's NAV, three days ahead, as current", () => {
+    expect(classifyQuoteFreshness(nav("2026-11-23"), friday)).toBe("current");
+  });
+
+  it("still marks a NAV dated more than three days ahead missing", () => {
+    expect(classifyQuoteFreshness(nav("2026-11-24"), friday)).toBe("missing");
+  });
+
+  it("keeps today's NAV current before its UTC midnight has passed locally", () => {
+    expect(classifyQuoteFreshness(nav("2026-11-21"), new Date(2026, 10, 21, 1, 0))).toBe("current");
+  });
+
+  it("keeps an exchange price dated in the future missing", () => {
+    const ahead = { ...quote("stock", "yahoo", "2026-11-22T00:00:00.000Z"), fetchedAt: friday.toISOString() };
+    expect(classifyQuoteFreshness(ahead, friday)).toBe("missing");
+  });
+});
