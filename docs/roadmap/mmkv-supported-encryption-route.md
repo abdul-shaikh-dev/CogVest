@@ -2,7 +2,7 @@
 
 Decision date: 10 September 2026. The owner chose library-supported fail-closed
 opening rather than promoting CogVest's experimental format parser.
-Status: no supported route established. The owner declined publishing an
+Status: no supported route established (re-checked against v2.4.3 on 21 November 2026; see below). The owner declined publishing an
 upstream issue. No external report was submitted or follow-up scheduled.
 
 ## Support Check
@@ -30,6 +30,53 @@ Related discussions checked, not treated as fixes for this contract:
   semantics; existence must remain distinct from validity.
 - [Native #1597](https://github.com/Tencent/MMKV/issues/1597): read-only empty-file
   crash on another platform/version; do not claim it proves our Android outcome.
+
+## Re-check: MMKV 2.4.3 (21 November 2026)
+
+[MMKV v2.4.3](https://github.com/Tencent/MMKV/releases/tag/v2.4.3) (16 October
+2026) lists fixes to file-size validation, undersized-file handling and
+read-only recovery. The isolated probe ran its 16 default cases on the emulator
+(CogVest_UX_Proof, API 36, x86_64) against two builds:
+
+- `io.github.zhongwuzw:mmkv:2.4.1`, what `react-native-mmkv` 4.3.2 (the latest)
+  ships. Its native library reports core **v2.4.0**, so the app still runs the
+  core screened in September. Results match September: read-only `crc-flip`
+  returns the seeded records from a damaged store, read-only `data-truncate`
+  crashes, and every writable open of a damaged store rewrites its files.
+- `com.tencent:mmkv:2.4.3` (core v2.4.3, Tencent's own artifact; the zhongwuzw
+  build stops at 2.4.2).
+
+| Case | Core v2.4.0 | Core v2.4.3 |
+| --- | --- | --- |
+| Read-only, every fault (7) | Files kept; `crc-flip` serves the damaged store's records; `data-truncate` crashes | Files kept; no records served; no crash |
+| Writable, valid / wrong key / missing key | Files kept | Files kept |
+| Writable, `data-flip`, `crc-flip`, `crc-truncate` | CRC file rewritten | CRC file rewritten |
+| Writable, `data-truncate` | Data and CRC rewritten | Data and CRC rewritten |
+| Lifecycle `crc-flip` (read-only, then writable) | Read-only check passes, writable open rewrites the CRC | Read-only check finds no records, so the probe never opens writable (logged as a probe error by design) |
+
+Outcome:
+
+- The September read-only-to-writable failure is fixed in core v2.4.3: a
+  damaged store no longer passes a read-only check.
+- Still unmet: a writable open of a damaged store repairs or discards it, and a
+  damaged store opens as **empty success** rather than a distinguishable error,
+  in both modes.
+- A possible library-only route is to open read-only first, require a known
+  sentinel record, and refuse the writable open when it is absent while the
+  files exist. Before it could count as supported, that needs an owner decision
+  plus the guarded fault catalogue, a wrapper build carrying core v2.4.3, and
+  the remaining resume-gate checks.
+- `react-native-mmkv` does not ship core v2.4.3 yet. Forcing Tencent's artifact
+  under the wrapper would be the speculative version bump the gate forbids.
+
+The approved design assumed no plaintext migration because installs held only
+test data. Real portfolios now exist, so resuming also needs a migration from
+plaintext with a recoverable failure path.
+
+#218 stays blocked. Production encryption is not enabled.
+
+Raw results stay local in `.expo/encryption-probe/`. The probe build takes
+`-PmmkvArtifact=<group:name:version>` and the runner `MMKV_EXPECTED_VERSION`.
 
 ## Required Library Contract
 

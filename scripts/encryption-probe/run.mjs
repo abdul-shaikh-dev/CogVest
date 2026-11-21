@@ -19,6 +19,7 @@ const adb = (...args) => {
   return run.stdout.trim();
 };
 
+const expectedVersion = process.env.MMKV_EXPECTED_VERSION ?? 'v2.4.0';
 const results = [];
 for (const mode of guarded ? [guardMode] : ['readonly', 'writable', 'lifecycle']) {
   const faults = mode === 'lifecycle' ? ['valid', 'crc-flip']
@@ -33,7 +34,7 @@ for (const mode of guarded ? [guardMode] : ['readonly', 'writable', 'lifecycle']
       '-e', 'mode', mode, 'com.cogvest.encryptionprobe/.Probe');
     const json = raw.split(/\r?\n/).find(line => line.startsWith('{'));
     const result = json ? JSON.parse(json) : { mode, fault, probeError: raw };
-    if (json && (result.mode !== mode || result.fault !== fault || result.nativeVersion !== 'v2.4.0')) {
+    if (json && (result.mode !== mode || result.fault !== fault || result.nativeVersion !== expectedVersion)) {
       result.probeError = 'Unexpected probe identity or native version';
     }
     results.push(result);
@@ -50,7 +51,7 @@ const report = {
 };
 const directory = resolve('.expo/encryption-probe');
 mkdirSync(directory, { recursive: true });
-writeFileSync(resolve(directory, guarded ? `${guardMode}-results.json` : 'results.json'), JSON.stringify(report, null, 2) + '\n');
+writeFileSync(resolve(directory, `${guarded ? `${guardMode}-` : ''}results${process.env.MMKV_EXPECTED_VERSION ? `-${expectedVersion}` : ''}.json`), JSON.stringify(report, null, 2) + '\n');
 // Passing this lower-level probe is not approval for production integration.
 const failed = results.some(result => result.probeError || !result.dataUnchanged
   || !result.crcUnchanged || !result.plaintextMarkerAbsent
