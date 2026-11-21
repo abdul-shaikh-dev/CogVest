@@ -1,0 +1,62 @@
+appId: ${APP_ID}
+---
+# #757: a lifetime start after the only trade names that trade and its date,
+# and the Return start screen offers the trade's date as the start.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///xirr-qa?token=cogvest-local-visual-qa"
+- tapOn:
+    id: xirr-qa-reset-late-start
+- assertVisible:
+    id: xirr-qa-status
+    text: "Fixture ready"
+- tapOn:
+    id: xirr-qa-open-dashboard
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-reason
+    direction: DOWN
+# selector: the named record and its date are under test
+- assertVisible:
+    id: dashboard-xirr-reason
+    text: "Your earliest record is a trade on 01 Jan 2025.*"
+- takeScreenshot: .expo/xirr-start-earliest-dashboard
+- tapOn:
+    id: dashboard-xirr-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-fix-records-before-start
+    direction: DOWN
+- tapOn:
+    id: dashboard-xirr-fix-records-before-start
+- extendedWaitUntil:
+    visible:
+      id: measurement-basis-screen
+    timeout: 15000
+- assertVisible:
+    id: basis-earliest-record
+- takeScreenshot: .expo/xirr-start-earliest-basis
+- tapOn:
+    id: basis-use-earliest
+- assertNotVisible:
+    id: basis-earliest-record
+- tapOn:
+    id: save-basis
+# selector: the confirmed start shown to the user is under test
+- assertVisible:
+    id: measurement-basis-start
+    text: "Since 01 Jan 2025"
+- back
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-rate
+    direction: DOWN
+# selector: the lifetime rate is the value under test: -10,000 on 1 Jan 2025, +11,000 on 1 Jan 2026
+- assertVisible:
+    id: dashboard-xirr-rate
+    text: "\\+10.00% a year"
+- takeScreenshot: .expo/xirr-start-earliest-rate

@@ -26,6 +26,7 @@ import {
   buildBasisInput,
   draftTotal,
   initialBasisDraft,
+  lifetimeStartHint,
   snapshotStarts,
   type BasisDraft,
 } from "./measurementBasisForm";
@@ -49,6 +50,7 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
   const status = basisStatus(snapshot);
   const automatic = basis ? null : automaticMeasurementBasis(snapshot.monthlySnapshots, formatLocalCalendarDate(now));
   const total = draftTotal(draft);
+  const hint = lifetimeStartHint(snapshot, draft);
 
   const update = (next: Partial<BasisDraft>) => {
     setDraft((current) => ({ ...current, ...next }));
@@ -135,6 +137,19 @@ export function MeasurementBasisScreen({ now = new Date(), onBack, store = getPo
             />
             <DatePickerField label="Start date" maximumDate={now} onChange={(startDate) => { setSnapshotId("none"); update({ startDate }); }}
               testID="basis-start-date" value={draft.startDate} />
+            {hint ? (
+              <View style={styles.hint} testID="basis-earliest-record">
+                <AppText style={styles.warning} variant="caption">{hint.message}</AppText>
+                {hint.suggestedStart ? (
+                  <AppButton
+                    onPress={() => update({ startDate: hint.suggestedStart! })}
+                    testID="basis-use-earliest"
+                    title={`Start from ${formatDate(hint.suggestedStart)}`}
+                    variant="secondary"
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </PremiumCard>
           {draft.kind === "openingValue" ? (
             <PremiumCard section style={styles.formSection} testID="basis-opening-lines">
@@ -189,6 +204,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   error: { color: colors.loss },
   flex: { flex: 1 },
   formSection: { gap: spacing.sm, paddingVertical: spacing.sm },
+  hint: { gap: spacing.sm },
   line: { gap: spacing.xs },
   warning: { color: colors.warning },
 }));

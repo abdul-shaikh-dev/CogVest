@@ -52,7 +52,7 @@ function EnabledQa({ page }: { page?: string }) {
     return <PayoutsScreen assetId="xirr-qa-stock" now={now} onAddPayout={() => undefined}
       onBack={() => router.back()} onReviewPayout={() => undefined} store={store} />;
   }
-  function reset(payoutsConfirmed = false, manyHoldings = false) {
+  function reset(payoutsConfirmed = false, manyHoldings = false, lateLifetimeStart = false) {
     const state = store.getState();
     store.setState({ assets: [], cashEntries: [], distributionCoverage: [], distributions: [], measurementBasis: null,
       monthlySnapshots: [{ id: "xirr-qa-dec", month: "2024-12", portfolioValue: 0, equityValue: 0, debtValue: 0, cryptoValue: 0,
@@ -74,6 +74,8 @@ function EnabledQa({ page }: { page?: string }) {
       state.saveDistribution({ id: "xirr-qa-payout", assetId: "xirr-qa-stock", grossAmount: 200, taxWithheld: 0,
         paidOn: "2025-06-02", treatment: "paidOutside" });
     }
+    // A lifetime start two months after the only trade (#757).
+    if (lateLifetimeStart) state.setMeasurementBasis({ kind: "inception", startDate: "2025-03-01", openingBreakdown: [] });
     setReady(true);
   }
   return (
@@ -83,6 +85,7 @@ function EnabledQa({ page }: { page?: string }) {
       <AppButton testID="xirr-qa-reset" title="Reset fixture" onPress={() => reset()} />
       <AppButton testID="xirr-qa-reset-covered" title="Reset with payouts confirmed" onPress={() => reset(true)} />
       <AppButton testID="xirr-qa-reset-many" title="Reset with three unconfirmed holdings" onPress={() => reset(false, true)} />
+      <AppButton testID="xirr-qa-reset-late-start" title="Reset with a lifetime start after the trade" onPress={() => reset(true, false, true)} />
       <AppText testID="xirr-qa-coverage">
         Coverage: {coverage.map((item) => `${item.assetId} from ${item.from}`).sort().join("; ") || "none"}
       </AppText>

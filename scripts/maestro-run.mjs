@@ -55,6 +55,7 @@ const defaultFlows = [
   "e2e/payouts.yaml",
   "e2e/xirr-holding.yaml",
   "e2e/xirr-whole.yaml",
+  "e2e/xirr-start-earliest.yaml",
   "e2e/payout-coverage.yaml",
   "e2e/snapshot-review.yaml",
   "e2e/progress-chart-range.yaml",
@@ -182,6 +183,10 @@ function pushFixture(adbPath, fixture) {
   const destination = `/sdcard/Download/${fileName}`;
   const push = run(adbPath, ["push", fixture, destination]);
   if (push.status !== 0) return `unable to copy ${fileName} to Android Downloads`;
+  // adb push keeps the host file's date, and the picker lists newest first:
+  // date the fixture now so later fixtures cannot push it below the fold.
+  const touch = run(adbPath, ["shell", "touch", destination]);
+  if (touch.status !== 0) return `unable to date ${fileName} in Android Downloads`;
   const scan = run(adbPath, [
     "shell",
     "am",

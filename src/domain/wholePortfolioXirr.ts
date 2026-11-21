@@ -7,7 +7,7 @@ import { getOpeningPositionHistoryDate } from "./openingPositions";
 import { epfXirrFlows, futuresXirrFlows, ppfXirrFlows, type AccountXirrOutcome } from "./xirrAccountFlows";
 import {
   compareFlows, terminalQuoteIssue, tradeFlow,
-  type InvestmentsXirrInput, type PayoutCoverageGap, type XirrAssetIssue, type XirrFlow, type XirrInputResult, type XirrLimitation,
+  type InvestmentsXirrInput, type PayoutCoverageGap, type XirrAssetIssue, type XirrEarliestRecord, type XirrFlow, type XirrInputResult, type XirrLimitation,
 } from "./xirrInputs";
 import type { MeasurementBasis, MonthlySnapshot, OpeningPosition } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
@@ -62,6 +62,37 @@ function datedRecords(input: DigestRecords): DatedRecord[] {
     ]),
     ...input.distributions.map((item) => ({ key: `payout:${item.id}`, date: item.paidOn, record: item, holdsValue: true })),
   ];
+}
+
+const epfEventLabels: Record<string, string> = {
+  claimTransfer: "EPF claim transfer", contribution: "EPF contribution", externalTransferIn: "EPF transfer in",
+  interest: "EPF interest credit", reconciliation: "EPF balance update", reversal: "EPF reversal",
+  transfer: "EPF transfer", withdrawal: "EPF withdrawal", yearSummary: "EPF year summary",
+};
+const recordLabels: Record<string, string> = {
+  cash: "Cash entry", epf: "EPF account's starting balance", futures: "Futures account's starting balance",
+  "futures-event": "Futures transfer", opening: "opening position", payout: "payout",
+  ppf: "PPF account's opening balance", "ppf-entry": "PPF entry", trade: "trade",
+};
+
+/** What a stored record is, in the words the app uses for it. */
+function recordLabel(item: DatedRecord) {
+  const kind = item.key.slice(0, item.key.indexOf(":"));
+  if (kind === "epf-event") return epfEventLabels[(item.record as { type: string }).type] ?? "EPF entry";
+  return recordLabels[kind] ?? "record";
+}
+
+/**
+ * The earliest record that holds value and is dated before the start, or has
+ * no date (#757). A lifetime start must come on or before it. Undated records
+ * come first, since no start date can come before them.
+ */
+export function earliestRecordBeforeStart(input: DigestRecords, start: string): XirrEarliestRecord | null {
+  const blocking = datedRecords(input).filter((item) => item.holdsValue && (item.date === null || item.date < start))
+    .sort((a, b) => (a.date === b.date ? 0 : a.date === null ? -1 : b.date === null ? 1 : compareCodeUnits(a.date, b.date))
+      || compareCodeUnits(a.key, b.key));
+  const first = blocking[0];
+  return first ? { label: recordLabel(first), date: first.date } : null;
 }
 
 /** JSON with sorted keys, so a restored backup with reordered fields keeps its fingerprint. */
@@ -180,7 +211,6 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
     reasons.push({ assetId, reason, ...(recordId ? { recordId } : {}) });
   const limitations: Array<{ assetId: string; limitation: XirrLimitation; recordId?: string }> = [];
   const flows: XirrFlow[] = [];
-  const records = datedRecords(input);
   // Account problems name the PPF entry, EPF event or Futures event behind them.
   const recordDates = new Map<string, string>([
     ...input.ppfLedgerEntries.map((entry) => [entry.id, entry.date] as const),
@@ -189,7 +219,8 @@ export function buildWholePortfolioXirrInput(input: WholePortfolioXirrInput): Xi
   ]);
 
   if (inception) {
-    if (records.some((item) => item.holdsValue && (item.date === null || item.date < start))) issue(portfolio, "records-before-start");
+    const earliest = earliestRecordBeforeStart(input, start);
+    if (earliest) reasons.push({ assetId: portfolio, reason: "records-before-start", earliest });
   } else if (!input.automaticBasis && basis.evidenceDigest !== measurementEvidenceDigest(input.evidence ?? input, start)) {
     limitations.push({ assetId: portfolio, limitation: "basis-records-changed" });
   }

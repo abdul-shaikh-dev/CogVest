@@ -1,7 +1,7 @@
 import type { EpfAccount, EpfEvent } from "@/src/domain/epf";
 import { ppfCashLeg } from "@/src/domain/ppfCashLinks";
 import {
-  automaticMeasurementBasis, buildWholePortfolioXirrInput, measurementBasisProblems, measurementEvidenceDigest, type WholePortfolioXirrInput,
+  automaticMeasurementBasis, buildWholePortfolioXirrInput, earliestRecordBeforeStart, measurementBasisProblems, measurementEvidenceDigest, type WholePortfolioXirrInput,
 } from "@/src/domain/wholePortfolioXirr";
 import { summariseXirr } from "@/src/domain/xirrSummary";
 import type {
@@ -80,6 +80,29 @@ describe("whole-portfolio XIRR (D9-D11)", () => {
     const reordered = Object.fromEntries(Object.entries(earlyBuy).reverse()) as BuyTrade;
     expect(measurementEvidenceDigest(input({ trades: [reordered, { ...buy, id: "later", date: "2025-02-01" }] }), "2025-01-01"))
       .toBe(basis.evidenceDigest);
+  });
+
+  describe("naming the record a lifetime start leaves out (#757)", () => {
+    const summary = { id: "fy18", accountId: "epf", type: "yearSummary", effectiveDate: "2019-03-31", postedDate: "2019-03-31",
+      evidence: "EPFO passbook", recordedAt: "2026-11-21T00:00:00Z" } as unknown as EpfEvent;
+    const records = { ...empty, ...market, epf: { accounts: [], events: [summary] } };
+
+    it("names the earliest record before the start, of any kind", () => {
+      expect(earliestRecordBeforeStart(records, "2020-04-01")).toEqual({ label: "EPF year summary", date: "2019-03-31" });
+      expect(earliestRecordBeforeStart(records, "2019-03-31")).toBeNull();
+      expect(earliestRecordBeforeStart({ ...records, epf: { accounts: [], events: [] } }, "2025-02-01")).toEqual({ label: "Cash entry", date: "2025-01-01" });
+    });
+
+    it("names an undated opening position first, since no start can come before it", () => {
+      const undated = { id: "old", assetId: "stock", date: null, quantity: 1, averageCost: 100 } as unknown as OpeningPosition;
+      expect(earliestRecordBeforeStart({ ...records, openingPositions: [undated] }, "2020-04-01")).toEqual({ label: "opening position", date: null });
+    });
+
+    it("says which record blocks the return and when", () => {
+      const summaryResult = summariseXirr(buildWholePortfolioXirrInput(input({ ...records, basis: { ...inception, startDate: "2020-04-01" } })));
+      expect(summaryResult.status === "unavailable" && summaryResult.messages[0])
+        .toBe("Your earliest record is an EPF year summary on 31 Mar 2019. Choose a start on or before that date, or use the automatic start.");
+    });
   });
 
   it.each<[string, Partial<WholePortfolioXirrInput>, string]>([
