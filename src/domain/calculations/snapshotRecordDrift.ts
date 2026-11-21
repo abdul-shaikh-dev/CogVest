@@ -1,4 +1,5 @@
-import type { MonthlySnapshot, QuoteCache } from "@/src/types";
+import { historicalQuoteCacheKey } from "@/src/types";
+import type { HistoricalQuoteCache, MonthlySnapshot, QuoteCache } from "@/src/types";
 import { decimal } from "@/src/domain/precision";
 
 import {
@@ -79,9 +80,19 @@ export function createSnapshotDriftCheck(records: SnapshotDriftCheckRecords) {
   const neutralPrices: QuoteCache = Object.fromEntries(records.assets.map((asset) => [asset.id, {
     asOf: records.now.toISOString(), assetId: asset.id, currency: asset.currency, price: 1, source: "manual" as const,
   }]));
-  const priced: SnapshotDriftRecords = { ...records, historicalQuotes: {}, quoteCache: neutralPrices };
+  // Before a later bonus or split only a reconciled close can value a month, so
+  // each checked month also gets neutral closes; otherwise it would be skipped.
+  const neutralCloses = (month: string): HistoricalQuoteCache => Object.fromEntries(records.assets.map((asset) => [
+    historicalQuoteCacheKey(asset.id, month), {
+      asOfMonth: month, assetId: asset.id, basis: "reconciled-historical-close" as const, currency: asset.currency,
+      fetchedAt: records.now.toISOString(), price: 1, source: "manual" as const,
+    },
+  ]));
   return (saved: MonthlySnapshot): SnapshotRecordDrift | null => {
     if (!isDriftCheckedSnapshot(saved)) return null;
+    const priced: SnapshotDriftRecords = {
+      ...records, historicalQuotes: neutralCloses(saved.month), quoteCache: neutralPrices,
+    };
     const recalculation = recalculateSavedSnapshot(priced, saved);
     if (!recalculation.ok) return null;
     const fields = snapshotDriftFields.filter((field) =>
