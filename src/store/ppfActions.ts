@@ -1,5 +1,6 @@
 import { cashEntriesWithPpfLeg, isCashFundedPpfEntry } from "@/src/domain/ppfCashLinks";
 import { planPpfCsvImport } from "@/src/domain/ppfCsvImport";
+import { planPpfCsvMerge } from "@/src/domain/ppfCsvMerge";
 import { validatePpfAccount, validatePpfLedgerEntryForAccount } from "@/src/domain/ppf";
 
 import type { StoreContext } from "./storeContext";
@@ -14,6 +15,7 @@ import { hasNonnegativeCashTimeline } from "./tradeRules";
 
 type PpfActions = Pick<PortfolioStoreState,
   | "importPpfCsv"
+  | "mergePpfCsv"
   | "addPpfAccount"
   | "addPpfLedgerEntry"
   | "correctPpfAccount"
@@ -45,6 +47,30 @@ export function createPpfActions({ get, now, set, storage }: StoreContext): PpfA
       persistPortfolioTransition(storage, state, { ppfAccounts, ppfLedgerEntries, monthlySnapshots });
       set({ ppfAccounts, ppfLedgerEntries, monthlySnapshots });
       return { status: "applied" };
+    },
+    mergePpfCsv: ({ input, expectedState, confirmDuplicateRows }) => {
+      const state = get();
+      const currentDate = now();
+      const plan = planPpfCsvMerge(input, state.ppfAccounts, state.ppfLedgerEntries, currentDate);
+      if (plan.errors.length) return { status: "rejected", reason: "Correct the import errors before saving." };
+      if (expectedState !== plan.expectedState) return { status: "rejected", reason: "This account changed. Review the file again before saving." };
+      if (plan.additions.length === 0 && plan.corrections.length === 0) return { status: "alreadyApplied" };
+      if (plan.duplicateRows > 0 && confirmDuplicateRows !== true) {
+        return { status: "rejected", reason: "Confirm that the repeated rows are separate transactions." };
+      }
+      const account = state.ppfAccounts.find((item) => item.id === input.accountId)!;
+      const corrected = new Map(plan.corrections.map((entry) => [entry.id, entry]));
+      const ppfLedgerEntries = [...state.ppfLedgerEntries.map((entry) => corrected.get(entry.id) ?? entry), ...plan.additions];
+      if (!isValidPpfTimeline(account, ppfLedgerEntries.filter((entry) => entry.accountId === account.id), currentDate)) {
+        return { status: "rejected", reason: "Adding these rows would leave the account's history invalid." };
+      }
+      const changedDates = [...plan.additions, ...plan.corrections].map((entry) => entry.date);
+      const { monthlySnapshots } = rebuildPortfolioSnapshots({
+        earliestAffectedMonth: changedDates.sort()[0].slice(0, 7), now: currentDate, ppfLedgerEntries, state,
+      });
+      persistPortfolioTransition(storage, state, { monthlySnapshots, ppfLedgerEntries });
+      set({ monthlySnapshots, ppfLedgerEntries });
+      return { added: plan.additions.length, corrected: plan.corrections.length, status: "applied" };
     },
     addPpfAccount: (account) => {
       const state = get();

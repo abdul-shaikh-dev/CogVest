@@ -179,7 +179,13 @@ All domain calculations must be pure functions under `src/domain/`.
 - Stored entries are ordered deterministically by date, recorded time, and ID.
   Entries on or before the confirmed baseline date are rejected so the baseline
   cannot be counted twice.
-- Standardized PPF CSV import (#323) uses `date,type,amount,note` with a
+- PPF CSV import (#323, #748) reads `date,type,amount` plus optional
+  `balance` and `note` in any order, day-first dates, ₹ and Indian grouping,
+  and common bank type words; every file error is listed with its row and
+  column. By default it adds to existing entries: rows already recorded
+  (same type and amount within 3 days) or before the opening balance are
+  skipped, rows that differ keep the user's amount unless they choose the
+  file's, and entries linked to Cash are never changed. Replacing instead uses a
   user-confirmed opening checkpoint and complete subsequent history through
   today. Preview and reconciliation precede an atomic account-history update;
   conflicting existing history requires explicit replacement confirmation.

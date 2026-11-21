@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
 
 import {
@@ -24,10 +24,13 @@ import {
   type PpfCsvImportPlan,
 } from "@/src/domain/ppfCsvImport";
 import { ppfCsvMaxBytes } from "@/src/domain/ppfCsv";
+import { planPpfCsvMerge, type PpfMergePlan } from "@/src/domain/ppfCsvMerge";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
-import type { PpfLedgerEntry } from "@/src/types";
 import { useBackHandler, usePortfolioFields } from "@/src/hooks";
+
+import { PpfMergePreview } from "./PpfMergePreview";
+import { Checkbox, friendlyEntryType, Summary } from "./ppfImportParts";
 
 type PickedPpfCsv = { name: string; size: number; text: string };
 
@@ -80,6 +83,11 @@ export function PpfImportScreen({
   const [isPicking, setIsPicking] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Adding to existing entries is the default; replacing the whole history is a choice (#748).
+  const [mode, setMode] = useState<"add" | "replace">("add");
+  const [mergePlan, setMergePlan] = useState<PpfMergePlan>();
+  const [useFileAmounts, setUseFileAmounts] = useState<ReadonlySet<number>>(new Set());
+  const [mergeError, setMergeError] = useState<string>();
   const mounted = useRef(true);
   const pickingInFlight = useRef(false);
   const templateSaveInFlight = useRef(false);
@@ -93,6 +101,10 @@ export function PpfImportScreen({
   }, []);
 
   useBackHandler(() => {
+    if (mergePlan) {
+      setMergePlan(undefined);
+      return;
+    }
     if (preview) {
       setPreview(undefined);
       setPreviewInput(undefined);
@@ -149,6 +161,55 @@ export function PpfImportScreen({
     setConfirmReplacement(false);
     setVisibleRows(rowsPerPage);
     setError(next.errors[0]?.message);
+  }
+
+  function planMerge(rows: ReadonlySet<number>) {
+    if (!csv) return undefined;
+    return planPpfCsvMerge(
+      { accountId, csv, useFileAmounts: [...rows] },
+      store.getState().ppfAccounts,
+      store.getState().ppfLedgerEntries,
+      now(),
+    );
+  }
+
+  function createMergePreview() {
+    if (!csv) {
+      setError("Choose a CSV file before reviewing it.");
+      return;
+    }
+    const empty = new Set<number>();
+    setUseFileAmounts(empty);
+    setMergeError(undefined);
+    setError(undefined);
+    setMergePlan(planMerge(empty));
+  }
+
+  function toggleFileAmount(rowNumber: number) {
+    const next = new Set(useFileAmounts);
+    if (next.has(rowNumber)) next.delete(rowNumber);
+    else next.add(rowNumber);
+    setUseFileAmounts(next);
+    setMergePlan(planMerge(next));
+  }
+
+  function saveMerge(confirmDuplicateRows: boolean) {
+    if (!mergePlan || !csv || isSaving) return;
+    setIsSaving(true);
+    setMergeError(undefined);
+    try {
+      const result = store.getState().mergePpfCsv({
+        confirmDuplicateRows,
+        expectedState: mergePlan.expectedState,
+        input: { accountId, csv, useFileAmounts: [...useFileAmounts] },
+      });
+      if (result.status === "rejected") setMergeError(result.reason);
+      else onImported(accountId);
+    } catch (failure) {
+      setMergeError(describeSaveFailure(failure, "The file could not be saved. Your PPF records are unchanged. Review it again and retry."));
+    } finally {
+      if (mounted.current) setIsSaving(false);
+    }
   }
 
   function changeBalanceAsOf(value: string) {
@@ -230,6 +291,22 @@ export function PpfImportScreen({
     } finally {
       if (mounted.current) setIsSaving(false);
     }
+  }
+
+  if (mergePlan) {
+    return (
+      <PpfMergePreview
+        accountName={account.nickname}
+        error={mergeError}
+        isSaving={isSaving}
+        masked={masked}
+        onBack={() => setMergePlan(undefined)}
+        onSave={saveMerge}
+        onToggleFileAmount={toggleFileAmount}
+        plan={mergePlan}
+        useFileAmounts={useFileAmounts}
+      />
+    );
   }
 
   if (preview && previewInput) {
@@ -358,10 +435,35 @@ export function PpfImportScreen({
           {fileError ? <AppText accessibilityLiveRegion="polite" style={styles.error} testID="ppf-import-file-error">{fileError}</AppText> : null}
           {templateStatus ? <AppText color="secondary" testID="ppf-import-template-status" variant="caption">{templateStatus}</AppText> : null}
           <AppText color="secondary" variant="caption">
-            Columns: date, type, amount, note. Use contribution, interest or withdrawal,
-            positive INR amounts without commas, and YYYY-MM-DD dates. Up to 1,000 rows.
+            Columns: date, type and amount, and optionally balance and note, in any order. Dates such as
+            2026-04-01, 01/04/2026 or 01-Apr-2026 (day first). Amounts may use ₹ and commas, like 1,50,000.
+            Types: contribution or deposit, interest, withdrawal. Up to 1,000 rows.
           </AppText>
         </PremiumCard>
+        {mode === "add" ? (
+          <PremiumCard section>
+            <SectionHeader title="Add to your existing entries" />
+            <AppText color="secondary" variant="caption">
+              Rows already in your records, or included in the opening balance, are skipped. A row that differs
+              from your records is shown so you can decide. Nothing is saved until you review it.
+            </AppText>
+            <AppButton
+              onPress={() => { setMode("replace"); setError(undefined); }}
+              testID="ppf-import-mode-replace"
+              title="Replace the whole history instead"
+              variant="secondary"
+            />
+          </PremiumCard>
+        ) : (
+          <AppButton
+            onPress={() => { setMode("add"); setError(undefined); }}
+            testID="ppf-import-mode-add"
+            title="Add to existing entries instead"
+            variant="secondary"
+          />
+        )}
+        {mode === "replace" ? (
+        <>
 
         <PremiumCard section>
           <SectionHeader title="Opening checkpoint" />
@@ -400,36 +502,19 @@ export function PpfImportScreen({
             Replace every template example row with your official records. A reviewed import replaces, rather than appends to, this account's imported PPF checkpoint and ledger.
           </AppText>
         </PremiumCard>
+        </>
+        ) : null}
         {error ? <AppText style={styles.error} testID="ppf-import-error">{error}</AppText> : null}
         <View style={styles.actions}>
-          <AppButton disabled={busy} onPress={createPreview} testID="ppf-import-preview" title="Preview PPF import" />
+          {mode === "add" ? (
+            <AppButton disabled={busy} onPress={createMergePreview} testID="ppf-merge-preview" title="Review file" />
+          ) : (
+            <AppButton disabled={busy} onPress={createPreview} testID="ppf-import-preview" title="Preview PPF import" />
+          )}
           <AppButton disabled={busy} onPress={onCancel} title="Cancel" variant="secondary" />
         </View>
       </View>
     </ScreenContainer>
-  );
-}
-
-function Checkbox({ checked, label, onPress, testID }: { checked: boolean; label: string; onPress: () => void; testID: string }) {
-  const styles = useStyles();
-  return (
-    <Pressable accessibilityLabel={label} accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={styles.checkbox} testID={testID}>
-      <AppText color={checked ? "primary" : "secondary"} weight="bold">{checked ? "✓" : "○"}</AppText>
-      <AppText style={styles.checkboxText}>{label}</AppText>
-    </Pressable>
-  );
-}
-
-function Summary({ label, masked = false, value }: { label: string; masked?: boolean; value: number | string }) {
-  const styles = useStyles();
-  const { fontScale, width } = useWindowDimensions();
-  const fullWidth = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
-  const display = typeof value === "number" ? formatINR(value) : value;
-  return (
-    <View style={[styles.summaryItem, fullWidth && styles.fullWidth]}>
-      <AppText color="secondary" variant="caption">{label}</AppText>
-      <MaskedValue masked={masked} value={display} weight="bold" />
-    </View>
   );
 }
 
@@ -438,17 +523,8 @@ function hasFiniteSummary(summary: NonNullable<PpfCsvImportPlan["summary"]>) {
     .every(Number.isFinite);
 }
 
-function friendlyEntryType(type: PpfLedgerEntry["type"]) {
-  if (type === "interestCredit") return "Interest credited";
-  if (type === "contribution") return "Contribution";
-  if (type === "withdrawal") return "Withdrawal";
-  return "Balance reconciliation";
-}
-
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   actions: { gap: spacing.sm },
-  checkbox: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, minHeight: 48 },
-  checkboxText: { flex: 1 },
   content: { gap: spacing.cardGap, paddingTop: spacing.sm },
   error: { color: colors.loss },
   example: { gap: spacing.xs },
@@ -457,8 +533,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   row: { alignItems: "flex-start", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between", minHeight: 48, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle },
   rowDetails: { flexGrow: 1, flexBasis: "auto", flexShrink: 1, minWidth: 0, gap: spacing.xs },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  summaryItem: { flexGrow: 1, flexBasis: "42%", minWidth: 0, gap: spacing.xs },
-  fullWidth: { flexBasis: "100%" },
   result: { gap: spacing.md },
   stacked: { flexDirection: "column", alignItems: "stretch" },
 }));

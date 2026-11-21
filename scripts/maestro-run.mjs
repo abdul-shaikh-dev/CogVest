@@ -43,6 +43,7 @@ const defaultFlows = [
   "e2e/holdings-list-first-layout.yaml",
   "e2e/ppf-account.yaml",
   "e2e/ppf-history-fallback.yaml",
+  "e2e/ppf-csv-merge.yaml",
   "e2e/opening-position-correction.yaml",
   "e2e/trade-correction.yaml",
   "e2e/bulk-transaction-delete.yaml",
@@ -235,6 +236,7 @@ function prepareFlow(flow) {
     [holdingsCsvFlow]: [holdingsCsvFixture],
     [transactionsCsvFlow]: [transactionsCsvFixture],
     [zerodhaTradebookFlow]: zerodhaTradebookFixtures,
+    ["e2e/ppf-csv-merge.yaml"]: ["e2e/fixtures/ppf-merge.csv"],
     [casNativeFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
     [casNativeFreshPortfolioFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
     [epfPassbookImportFlow]: [

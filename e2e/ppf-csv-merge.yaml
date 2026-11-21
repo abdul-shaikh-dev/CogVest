@@ -1,0 +1,148 @@
+appId: ${APP_ID}
+---
+# Destructive synthetic-data test (#748); run only on a disposable emulator.
+# The runner copies fixtures/ppf-merge.csv, a passbook-style file with Indian
+# grouping, ₹, day-first dates and bank type words, into Downloads.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///ppf-account"
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "Merge PPF"
+- hideKeyboard
+- tapOn:
+    id: ppf-provider-input
+- inputText: "Synthetic bank"
+- hideKeyboard
+- tapOn:
+    id: ppf-opening-fy-input
+- eraseText
+- inputText: "2020"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "10000"
+- hideKeyboard
+# Date the opening balance in 2024 so every file row comes after it.
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-date
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-date
+- tapOn:
+    id: android:id/date_picker_header_year
+# selector: the year list in the Android date picker has no testID
+- scrollUntilVisible:
+    element:
+      text: "2024"
+    direction: UP
+# selector: the year list in the Android date picker has no testID
+- tapOn: "2024"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: ppf-fy-contribution-input
+    direction: DOWN
+- tapOn:
+    id: ppf-fy-contribution-input
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-confirmed-balance-card
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- tapOn:
+    id: ppf-import-choose-csv
+- runFlow: helpers/open-downloads.yaml
+- tapOn: "ppf-merge.csv"
+- assertVisible: "Selected:.*"
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-merge-preview
+- assertVisible:
+    id: ppf-merge-preview-screen
+- assertVisible:
+    id: ppf-merge-count-new
+    text: ".*4.*"
+- takeScreenshot: .expo/ppf-csv-merge-review
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-save
+    direction: DOWN
+- assertVisible:
+    id: ppf-merge-save
+    text: "Add 4 entries"
+- tapOn:
+    id: ppf-merge-save
+- assertVisible:
+    id: ppf-account-screen
+- assertVisible: "₹16,850.00"
+- takeScreenshot: .expo/ppf-csv-merge-saved
+# The entries survive a restart, and the same file again adds nothing.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "${SCHEME}:///holdings"
+# selector: the account id is generated, so its holdings row is found by name
+- tapOn: "Merge PPF"
+- assertVisible: "₹16,850.00"
+- scrollUntilVisible:
+    element:
+      id: ppf-import-csv
+    direction: DOWN
+- tapOn:
+    id: ppf-import-csv
+- tapOn:
+    id: ppf-import-choose-csv
+- runFlow: helpers/open-downloads.yaml
+- tapOn: "ppf-merge.csv"
+- assertVisible: "Selected:.*"
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-merge-preview
+- assertVisible:
+    id: ppf-merge-count-recorded
+    text: ".*4.*"
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-nothing-new
+    direction: DOWN
+- assertVisible:
+    id: ppf-merge-save
+    enabled: false
+- tapOn:
+    id: ppf-merge-cancel
+- tapOn:
+    id: ppf-import-back
+- assertVisible: "₹16,850.00"

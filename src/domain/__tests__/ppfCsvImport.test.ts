@@ -142,3 +142,24 @@ describe("PPF CSV import planning", () => {
     ]));
   });
 });
+
+describe("replacing history from a file with balances (#748)", () => {
+  const { planPpfCsvImport: plan } = jest.requireActual("../ppfCsvImport");
+  const today = new Date("2026-09-11T12:00:00Z");
+  const account = {
+    balanceAsOf: "2025-03-31", confirmedBalance: 0, createdAt: "2025-01-01T00:00:00Z", id: "replace",
+    nickname: "PPF", opening: { kind: "financialYear", financialYearStart: 2020 }, provider: "Bank", status: "active",
+  };
+  const input = (openingBalance: number) => ({
+    accountId: "replace", balanceAsOf: "2025-03-31", baselineFyContribution: 0, completeThrough: "2026-09-11",
+    csv: "date,type,amount,balance\n01/04/2025,deposit,5000,35000\n", openingBalance,
+  });
+  it("accepts the opening balance the file's first balance gives", () => {
+    expect(plan(input(30000), [account], [], today).errors).toEqual([]);
+  });
+  it("blocks an opening balance the file's first balance contradicts", () => {
+    expect(plan(input(25000), [account], [], today).errors).toEqual([{
+      message: "The file's first balance means the account held ₹30,000.00 before it, but the opening balance entered is ₹25,000.00.",
+    }]);
+  });
+});

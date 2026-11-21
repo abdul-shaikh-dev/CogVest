@@ -56,6 +56,12 @@ appId: ${APP_ID}
 - tapOn: "ppf-valid.csv"
 - scrollUntilVisible:
     element:
+      id: ppf-import-mode-replace
+    direction: DOWN
+- tapOn:
+    id: ppf-import-mode-replace
+- scrollUntilVisible:
+    element:
       id: ppf-import-complete-through-today
     direction: DOWN
 - tapOn:

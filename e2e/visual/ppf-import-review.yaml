@@ -4,6 +4,12 @@ appId: ${APP_ID}
 - tapOn: "ppf-invalid.csv"
 - scrollUntilVisible:
     element:
+      id: ppf-import-mode-replace
+    direction: DOWN
+- tapOn:
+    id: ppf-import-mode-replace
+- scrollUntilVisible:
+    element:
       id: ppf-import-baseline-contribution
     direction: DOWN
 - tapOn:

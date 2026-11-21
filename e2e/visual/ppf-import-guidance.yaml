@@ -10,6 +10,12 @@ appId: ${APP_ID}
 - tapOn: "Import CSV"
 - assertVisible:
     id: ppf-import-screen
+- scrollUntilVisible:
+    element:
+      id: ppf-import-mode-replace
+    direction: DOWN
+- tapOn:
+    id: ppf-import-mode-replace
 - assertVisible: "Opening balance stays separate"
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux-guidance/narrow-ppf-guidance-top
