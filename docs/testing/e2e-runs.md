@@ -4,6 +4,48 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new XIRR earliest-record flow (#757), 14 passed + 1 fixed and rerun, 15m 51s + 27s + 1m 43s
+
+- Commit: fix/757-name-earliest-record c107d0c (smoke) and ada4665 (rerun),
+  based on `main` 698bafc, version 1.0.32. AVD CogVest_UX_Proof, API 36,
+  1280x2856 at 480 dpi, font scale 1.0, emulator cold-booted 2h 47m before the
+  run. E2E APK (R8 on, x86_64) freshly built from 56316de, SHA-256
+  6a42595ac36ae12937c4a6db317fde5d3b39f338a174b47fec6a06011ce9872; later
+  commits change only flow and runner files. Metro stopped. Command:
+  `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`,
+  plus `node scripts/maestro-run.mjs e2e/xirr-start-earliest.yaml` and
+  `e2e/holdings-csv-import.yaml`.
+- New full-tier flow `xirr-start-earliest` passed (27s). A lifetime start of
+  01 Mar 2025 after the only trade (01 Jan 2025) shows "Your earliest record is
+  a trade on 01 Jan 2025"; the Return start screen offers that date, and after
+  saving the start reads "Since 01 Jan 2025" and the rate "+10.00% a year".
+- `holdings-csv-import` failed: `holdings-import-v1.csv` was not visible in the
+  picker. The picker lists Downloads newest first, and `adb push` keeps the
+  host file's date (15 Nov), so fixtures pushed today (EPF PDFs,
+  `ppf-merge.csv`) moved it below the fold. This, not emulator uptime, explains
+  #741. The runner now dates each pushed fixture to the push time (ada4665).
+  With the fixture backdated to 15 Nov again, the flow passed (1m 43s) and the
+  file was redated on push.
+- The tier took 15m 51s, over its 15m budget.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 13s |
+| navigation | PASS | 0m 21s |
+| add-holding-lookup | PASS | 1m 00s |
+| record-purchase | PASS | 0m 49s |
+| payouts | PASS | 0m 47s |
+| xirr-holding | PASS | 0m 35s |
+| cash | PASS | 0m 54s |
+| trade-correction | PASS | 2m 00s |
+| holdings-csv-import | FAIL, then PASS on rerun | 1m 09s / 1m 43s |
+| epf-accounts | PASS | 1m 12s |
+| ppf-account | PASS | 1m 28s |
+| progress-snapshot-history | PASS | 0m 50s |
+| value-masking | PASS | 1m 46s |
+| persistence | PASS | 1m 03s |
+| backup-roundtrip | PASS | 1m 45s |
+
 ## 2026-11-21: Smoke tier and new PPF CSV add-to-existing flow (#748), 15 passed, 13m 43s + 1m 50s + 2m 25s
 
 - Commit: feat/748-ppf-csv-import c5c45c8, based on `main` 008292b, version
