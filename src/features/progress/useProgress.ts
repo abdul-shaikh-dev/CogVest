@@ -194,6 +194,15 @@ export function useProgress({
         return { ok: false, reason: describeSaveFailure(error, "This month could not be recalculated. Its saved values are unchanged.") };
       }
     },
+    /** Saves the recalculated months exactly as the user reviewed them, in one write. */
+    replaceAll: (recalculated: readonly MonthlySnapshot[]): { ok: true } | { ok: false; reason: string } => {
+      try {
+        store.getState().replaceMonthlySnapshots(recalculated);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, reason: describeSaveFailure(error, "The months could not be replaced. Their saved values are unchanged.") };
+      }
+    },
   };
   const latestSummary = monthlySummaries[0];
   const portfolioChartData = buildMonthlyProgressChartData(

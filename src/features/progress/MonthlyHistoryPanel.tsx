@@ -27,6 +27,7 @@ import { spacing } from "@/src/theme";
 
 import { HistoryColumnToggle } from "./HistoryColumnToggle";
 import { MonthDetail } from "./MonthDetail";
+import { OutOfDateMonthsReview } from "./OutOfDateMonthsReview";
 import type { MonthRecalculation } from "./SnapshotDriftNotice";
 import { useStyles } from "./monthlyHistoryStyles";
 import {
@@ -61,6 +62,7 @@ export function MonthlyHistoryPanel({
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [column, setColumn] = useState<HistoryColumn>("monthGain");
+  const [isReviewing, setIsReviewing] = useState(false);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const overviewScrollOffsetRef = useRef(0);
   const isRestoringOverviewRef = useRef(false);
@@ -75,6 +77,7 @@ export function MonthlyHistoryPanel({
     ? summariesByMonth.get(selectedMonth)
     : undefined;
   const isDetailVisible = Boolean(selectedSummary);
+  const outOfDateCount = drift?.size ?? 0;
   const {
     barWidth,
     months: overviewSummaries,
@@ -126,6 +129,7 @@ export function MonthlyHistoryPanel({
   function openHistory() {
     setSelectedYear(years[0]);
     setSelectedMonth(null);
+    setIsReviewing(false);
     overviewScrollOffsetRef.current = 0;
     isRestoringOverviewRef.current = false;
     originMonthRef.current = null;
@@ -135,6 +139,7 @@ export function MonthlyHistoryPanel({
   function closeHistory() {
     setIsVisible(false);
     setSelectedMonth(null);
+    setIsReviewing(false);
     isRestoringOverviewRef.current = false;
   }
 
@@ -148,8 +153,15 @@ export function MonthlyHistoryPanel({
     setSelectedMonth(null);
   }
 
+  function stopReviewing() {
+    setIsReviewing(false);
+    scrollRef.current?.scrollTo({ animated: false, y: 0 });
+  }
+
   function requestClose() {
-    if (selectedMonth) {
+    if (isReviewing) {
+      stopReviewing();
+    } else if (selectedMonth) {
       showOverview();
     } else {
       closeHistory();
@@ -184,12 +196,12 @@ export function MonthlyHistoryPanel({
             ]}
           >
             <View style={styles.sheetHeader}>
-              {isDetailVisible ? (
+              {isDetailVisible || isReviewing ? (
                 <Pressable
                   accessibilityLabel="Back to monthly history"
                   accessibilityRole="button"
                   android_ripple={androidRipple()}
-                  onPress={showOverview}
+                  onPress={isReviewing ? stopReviewing : showOverview}
                   style={({ pressed }) => [styles.headerButton, getPressedStateStyle({ pressed })]}
                   testID="history-back"
                 >
@@ -199,7 +211,7 @@ export function MonthlyHistoryPanel({
                 <View style={styles.headerButton} />
               )}
               <AppText align="center" style={styles.sheetTitle} variant="title" weight="bold">
-                {selectedSummary ? formatMonth(selectedSummary.snapshot.month) : "Monthly History"}
+                {isReviewing ? "Out-of-date months" : selectedSummary ? formatMonth(selectedSummary.snapshot.month) : "Monthly History"}
               </AppText>
               <Pressable
                 accessibilityLabel="Close monthly history"
@@ -224,7 +236,14 @@ export function MonthlyHistoryPanel({
               scrollEventThrottle={16}
               testID="monthly-history-scroll"
             >
-              {selectedSummary ? (
+              {isReviewing && drift && recalculation ? (
+                <OutOfDateMonthsReview
+                  drift={drift}
+                  maskWealthValues={maskWealthValues}
+                  onDone={stopReviewing}
+                  recalculation={recalculation}
+                />
+              ) : selectedSummary ? (
                 <MonthDetail
                   drift={drift?.get(selectedSummary.snapshot.month)}
                   maskWealthValues={maskWealthValues}
@@ -235,6 +254,23 @@ export function MonthlyHistoryPanel({
                 />
               ) : (
                 <>
+                  {outOfDateCount > 0 && recalculation ? (
+                    <View style={styles.driftNotice} testID="out-of-date-months-notice">
+                      <AppText weight="bold">
+                        {outOfDateCount} saved {outOfDateCount === 1 ? "month doesn't" : "months don't"} match your records
+                      </AppText>
+                      <AppText color="secondary" variant="caption">
+                        Month gain is unavailable for {outOfDateCount === 1 ? "it" : "them"} and the month after each until
+                        {outOfDateCount === 1 ? " it's" : " they're"} recalculated.
+                      </AppText>
+                      <AppButton
+                        onPress={() => setIsReviewing(true)}
+                        testID="review-out-of-date-months"
+                        title="Review"
+                        variant="secondary"
+                      />
+                    </View>
+                  ) : null}
                   <HistoryColumnToggle onChange={setColumn} value={column} />
                   <AppText color="secondary" testID="history-column-note" variant="caption">
                     {column === "monthGain"

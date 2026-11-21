@@ -31,6 +31,18 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
   },
+  reviewRow: {
+    alignItems: "flex-start",
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: interaction.minimumTouchTarget,
+    paddingVertical: spacing.sm,
+  },
+  reviewRowCopy: { flex: 1, gap: 2, minWidth: 0 },
+  reviewSection: { gap: spacing.sm },
+  reviewValues: { flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   driftRow: { gap: spacing.xs, paddingVertical: spacing.xs, borderBottomColor: colors.border.subtle, borderBottomWidth: StyleSheet.hairlineWidth },
   columnToggle: {
     alignSelf: "flex-start",

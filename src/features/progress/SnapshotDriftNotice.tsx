@@ -14,6 +14,8 @@ export type MonthRecalculation = {
   preview: (month: string) => SavedSnapshotRecalculation;
   /** Saves the recalculated month exactly as the user compared it. */
   replace: (snapshot: MonthlySnapshot) => { ok: true } | { ok: false; reason: string };
+  /** Saves several recalculated months in one write: all of them, or none (#751). */
+  replaceAll: (snapshots: readonly MonthlySnapshot[]) => { ok: true } | { ok: false; reason: string };
 };
 
 const comparedRows = [

@@ -1,0 +1,67 @@
+appId: ${APP_ID}
+---
+# #751: review every out-of-date saved month at once. The QA route seeds May,
+# June and July 2026 as reviewed by the user, then a PPF contribution back-dated
+# to June 2025 that none of them has.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 120000
+- openLink: "${SCHEME}:///progress-edge-qa?token=cogvest-local-visual-qa&scenario=outdated-many&mode=standard"
+- extendedWaitUntil:
+    visible:
+      id: "open-monthly-history"
+    timeout: 60000
+- tapOn:
+    id: "open-monthly-history"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "out-of-date-months-notice"
+    timeout: 30000
+- assertVisible: "3 saved months don't match your records"
+- tapOn:
+    id: "review-out-of-date-months"
+- extendedWaitUntil:
+    visible:
+      id: "out-of-date-review"
+    timeout: 30000
+- assertVisible:
+    id: "out-of-date-recalculated-2026-07"
+    text: "₹.*"
+# Keep May's saved values; replace June and July.
+- tapOn:
+    id: "out-of-date-month-2026-05"
+- scrollUntilVisible:
+    element:
+      id: "confirm-replace-out-of-date-months"
+    direction: DOWN
+- assertVisible:
+    id: "confirm-replace-out-of-date-months"
+    text: "Replace 2 months"
+- tapOn:
+    id: "confirm-replace-out-of-date-months"
+# Back on the overview, only May is still out of date.
+- extendedWaitUntil:
+    visible: "1 saved month doesn't match your records"
+    timeout: 30000
+# July now holds what records give, worked out by CogVest.
+- scrollUntilVisible:
+    element:
+      id: "snapshot-month-2026-07"
+    direction: DOWN
+- tapOn:
+    id: "snapshot-month-2026-07"
+- assertVisible:
+    id: "snapshot-source"
+    text: "Values: (Automatic|Estimated)"
+- assertNotVisible:
+    id: "snapshot-drift-notice"
+- scrollUntilVisible:
+    element:
+      id: "snapshot-invested-percentage"
+    direction: DOWN
+# The recorded invested basis now includes the back-dated contribution.
+- assertVisible: "₹90,000.00"

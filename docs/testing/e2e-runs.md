@@ -4,6 +4,31 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and new fix-all-months flow (#750, #751), 15 passed after an emulator storage fault, 13m 13s + 7m 02s
+
+- Commit: feat/751-fix-all-months 247abc5 (contains #750's e787852), based on
+  `main` c518b66, version 1.0.32. AVD CogVest_UX_Proof, API 36, 1280x2856 at
+  480 dpi, font scale 1.0. E2E APK (R8 on, x86_64) freshly built from 247abc5,
+  SHA-256 5425795c272573dd3fe99ca821d01454c4dcfd8d2344db1b9d3ea9899331c290 (pulled from
+  the installed package). Metro stopped. Command: `npm run maestro:smoke` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`, plus `node scripts/maestro-run.mjs`
+  for the new flow and the failed flows.
+- New full-tier flow `progress-fix-all-months` passed (0m 44s), and
+  `progress-snapshot-drift` passed again (0m 55s). The new flow opens the
+  Progress QA `outdated-many` scenario, where May, June and July 2026 were saved
+  by the user before a back-dated PPF contribution. It asserts the notice "3
+  saved months don't match your records", unticks May and checks "Replace 2
+  months". After the replace it asserts "1 saved month doesn't match your
+  records", that July is automatic or estimated without the notice, and that
+  July's invested basis is ₹90,000.00.
+- First smoke pass: 8 passed. After `trade-correction`, Maestro lost its device
+  driver ("Not able to reach the gRPC server"), and `/sdcard` then reported
+  "Transport endpoint is not connected" after about 3h 47m of emulator uptime.
+  The remaining 7 flows failed within seconds without launching the app; this
+  was environmental. After a cold boot (font scale still 1.0, same APK) those 7
+  all passed in 7m 02s, including `holdings-csv-import`, which had failed on
+  earlier long-uptime runs (#741).
+
 ## 2026-11-21: Smoke tier and new snapshot-drift flow for saved months that no longer match records (#747), 14 passed, 1 failed (pre-existing), 23m 00s
 
 - Commit: feat/747-stale-snapshots 934adbe, based on `main` b047d6a, version
