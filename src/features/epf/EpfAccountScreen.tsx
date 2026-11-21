@@ -47,6 +47,8 @@ type EpfAccountScreenProps = {
   onComplete: (accountId: string) => void;
   onUpdateBalance: (accountId: string) => void;
   onOpenEntry?: (accountId: string, entryId?: string) => void;
+  /** Offered on a new account: import EPFO passbooks instead of typing a balance (#740). */
+  onImportPassbooks?: () => void;
   store?: StoreApi<PortfolioStoreState>;
 };
 
@@ -57,6 +59,7 @@ export function EpfAccountScreen({
   onComplete,
   onUpdateBalance,
   onOpenEntry,
+  onImportPassbooks,
   store = getPortfolioStore(),
 }: EpfAccountScreenProps) {
   const styles = useStyles();
@@ -94,6 +97,7 @@ export function EpfAccountScreen({
         account={existing}
         now={now}
         onBack={() => (existing ? setIsEditing(false) : onBack())}
+        onImportPassbooks={existing ? undefined : onImportPassbooks}
         onComplete={(id) => {
           setSavedAccountId(id);
           setIsEditing(false);

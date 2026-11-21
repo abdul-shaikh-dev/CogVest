@@ -9,11 +9,22 @@ import { epfAccountSchema, epfEventSchema, isEpfAccountMove } from "./model";
 const id = z.string().min(1).max(200).refine((value) => value === value.trim());
 const cashDraft = z.object({ id, label: z.string().trim().min(1).max(200) }).strict();
 const linkSchema = z.object({ eventId: id, cashEntryId: id }).strict();
+const accountPut = z.object({ type: z.literal("accountPut"), account: epfAccountSchema }).strict();
+const eventRemove = z.object({ type: z.literal("eventRemove"), id }).strict();
+// A batch puts accounts and events, or removes events, as one all-or-nothing
+// change validated on its final state, for example a passbook import (#740).
+// It never moves Cash and never deletes an account.
+const batchItem = z.discriminatedUnion("type", [
+  accountPut,
+  z.object({ type: z.literal("eventPut"), event: epfEventSchema }).strict(),
+  eventRemove,
+]);
 const changeSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("accountPut"), account: epfAccountSchema }).strict(),
+  accountPut,
   z.object({ type: z.literal("accountRemove"), id }).strict(),
   z.object({ type: z.literal("eventPut"), event: epfEventSchema, cash: cashDraft.nullable() }).strict(),
-  z.object({ type: z.literal("eventRemove"), id }).strict(),
+  eventRemove,
+  z.object({ type: z.literal("batch"), changes: z.array(batchItem).min(1).max(500) }).strict(),
 ]);
 const archivedCashSchema = z.object({
   id, label: z.string().min(1), amount: z.number().finite().positive(), date: z.string(),
@@ -25,6 +36,8 @@ const auditSchema = z.object({
   reason: z.string().trim().min(1).max(500), change: changeSchema,
   previousAccount: epfAccountSchema.nullable(), previousEvent: epfEventSchema.nullable(),
   previousCash: archivedCashSchema.nullable(),
+  // A batch's previous versions, one per change, in order (null when new).
+  previousBatch: z.array(z.union([epfAccountSchema, epfEventSchema, z.null()])).max(500).optional(),
 }).strict();
 export const epfStateSchema = z.object({
   accounts: z.array(epfAccountSchema).max(100), events: z.array(epfEventSchema).max(10000),
@@ -108,6 +121,29 @@ export function planEpfCommand(state: EpfState, cashEntries: CashEntry[], input:
   const next = epfStateSchema.parse(state);
   let nextCash = [...cashEntries];
   const change = command.change;
+  if (change.type === "batch") {
+    const previousBatch: Array<EpfState["accounts"][number] | EpfState["events"][number] | null> = [];
+    const ids = new Set<string>();
+    for (const item of change.changes) {
+      const key = item.type === "accountPut" ? `account:${item.account.id}` : `event:${item.type === "eventPut" ? item.event.id : item.id}`;
+      if (ids.has(key)) throw new Error("A batch can change each EPF record only once.");
+      ids.add(key);
+      if (item.type === "accountPut") {
+        previousBatch.push(next.accounts.find((account) => account.id === item.account.id) ?? null);
+        next.accounts = [...next.accounts.filter((account) => account.id !== item.account.id), item.account];
+        continue;
+      }
+      const eventId = item.type === "eventPut" ? item.event.id : item.id;
+      const previous = next.events.find((event) => event.id === eventId) ?? null;
+      if (item.type === "eventRemove" && !previous) throw new Error("EPF event was not found.");
+      if (next.cashLinks.some((link) => link.eventId === eventId)) throw new Error("A batch can't change an entry linked to Cash.");
+      previousBatch.push(previous);
+      next.events = next.events.filter((event) => event.id !== eventId);
+      if (item.type === "eventPut") next.events.push(item.event);
+    }
+    next.audit.push({ ...command, recordedAt, previousAccount: null, previousEvent: null, previousCash: null, previousBatch });
+    return { status: "applied" as const, epf: validateEpfState(next, nextCash, today), cashEntries: nextCash };
+  }
   const accountId = change.type === "accountPut" ? change.account.id : change.type === "accountRemove" ? change.id : null;
   const eventId = change.type === "eventPut" ? change.event.id : change.type === "eventRemove" ? change.id : null;
   const previousAccount = state.accounts.find((item) => item.id === accountId) ?? null;

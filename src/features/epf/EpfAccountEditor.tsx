@@ -48,11 +48,12 @@ import { useStyles } from "./epfAccountStyles";
 
 const fieldOrder: EpfAccountField[] = ["nickname", "employerLabel", "employee", "employer", "date"];
 
-export function EpfAccountForm({ account, now, onBack, onComplete, store }: {
+export function EpfAccountForm({ account, now, onBack, onComplete, onImportPassbooks, store }: {
   account?: EpfAccount;
   now: Date;
   onBack: () => void;
   onComplete: (accountId: string) => void;
+  onImportPassbooks?: () => void;
   store: StoreApi<PortfolioStoreState>;
 }) {
   const styles = useStyles();
@@ -169,6 +170,10 @@ export function EpfAccountForm({ account, now, onBack, onComplete, store }: {
             subtitle="Start with your latest statement balance"
             title={account ? "Edit EPF account" : "Add EPF account"}
           />
+          {!account && onImportPassbooks ? (
+            <AppButton onPress={onImportPassbooks} testID="import-epf-passbooks" title="Import EPFO passbooks instead"
+              variant="secondary" />
+          ) : null}
           <PremiumCard section style={styles.formSection}>
             <SectionHeader title="Account" />
             <FormTextField error={errors.nickname} inputRef={(node) => { inputRefs.current.nickname = node; }}
