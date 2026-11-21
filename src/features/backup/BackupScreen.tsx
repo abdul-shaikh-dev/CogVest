@@ -12,6 +12,9 @@ import {
   SectionHeader,
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
+import { FormTextField } from "@/src/components/forms";
+import { backupPassphraseProblem } from "@/src/domain/encryptedBackup";
+import { Checkbox } from "@/src/features/ppf/ppfImportParts";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { useFocusedBackHandler } from "@/src/hooks";
 
@@ -25,16 +28,20 @@ export type PreparedRestore = {
   review: BackupReview;
 };
 
+/** A picked backup that is protected with a passphrase (#760). */
+export type LockedRestore = { locked: true };
+
 type BackupScreenProps = {
-  exportPortfolioBackup: (signal?: AbortSignal) => Promise<string | undefined>;
+  exportPortfolioBackup: (signal?: AbortSignal, options?: { passphrase?: string }) => Promise<string | undefined>;
   initialMode?: "export" | "restore";
   onBack: () => void;
   onRestored: () => void;
   restorePortfolioBackup: (prepared: PreparedRestore, signal?: AbortSignal) => Promise<void>;
-  selectPortfolioBackup: (signal?: AbortSignal) => Promise<PreparedRestore | undefined>;
+  selectPortfolioBackup: (signal?: AbortSignal) => Promise<PreparedRestore | LockedRestore | undefined>;
+  unlockPortfolioBackup: (locked: LockedRestore, passphrase: string, signal?: AbortSignal) => Promise<PreparedRestore>;
 };
 
-type RestoreStep = "confirmation" | "preview" | "warning";
+type RestoreStep = "confirmation" | "preview" | "unlock" | "warning";
 
 export function formatBackupCreatedAt(createdAt: string) {
   const date = new Date(createdAt);
@@ -62,12 +69,19 @@ export function BackupScreen({
   onRestored,
   restorePortfolioBackup,
   selectPortfolioBackup,
+  unlockPortfolioBackup,
 }: BackupScreenProps) {
   const styles = useStyles();
   const { fontScale, width } = useWindowDimensions();
   const stackedCounts = width < 360 || getAdaptiveLayoutMode(fontScale) !== "standard";
   const [isBusy, setIsBusy] = useState(false);
   const [prepared, setPrepared] = useState<PreparedRestore>();
+  const [lockedBackup, setLockedBackup] = useState<LockedRestore>();
+  const [protect, setProtect] = useState(false);
+  const [passphrase, setPassphrase] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [passphraseError, setPassphraseError] = useState<string>();
+  const [unlockPassphrase, setUnlockPassphrase] = useState("");
   const [restoreStep, setRestoreStep] = useState<RestoreStep>("warning");
   const [status, setStatus] = useState<string>();
   const isMounted = useRef(true);
@@ -78,8 +92,10 @@ export function BackupScreen({
     if (restoreStep === "confirmation") {
       setStatus(undefined);
       setRestoreStep("preview");
-    } else if (restoreStep === "preview") {
+    } else if (restoreStep === "preview" || restoreStep === "unlock") {
       setPrepared(undefined);
+      setLockedBackup(undefined);
+      setUnlockPassphrase("");
       setStatus(undefined);
       setRestoreStep("warning");
     } else {
@@ -87,7 +103,7 @@ export function BackupScreen({
     }
   }, [onBack, restoreStep]);
 
-  usePreventRemove(isBusy || restoreStep === "confirmation" || restoreStep === "preview", handleBack);
+  usePreventRemove(isBusy || restoreStep !== "warning", handleBack);
   useFocusedBackHandler(handleBack);
 
   useEffect(() => {
@@ -118,14 +134,28 @@ export function BackupScreen({
     updateAfterAsync(() => setIsBusy(false));
   }
 
-  async function backUpPortfolio() {
+  async function backUpPortfolio(withPassphrase: boolean) {
+    if (withPassphrase) {
+      const problem = backupPassphraseProblem(passphrase)
+        ?? (confirmation !== passphrase ? "The passphrases do not match." : undefined);
+      setPassphraseError(problem);
+      if (problem) return;
+    }
     const operation = startOperation();
     if (!operation) return;
     setStatus(undefined);
     try {
-      const fileName = await exportPortfolioBackup(operation.signal);
+      const fileName = await exportPortfolioBackup(operation.signal, withPassphrase ? { passphrase } : undefined);
       updateAfterAsync(() => {
-        if (fileName) setStatus(`${fileName} saved. Keep this unencrypted file somewhere you trust.`);
+        if (!fileName) return;
+        if (withPassphrase) {
+          // Keep the passphrase on screen no longer than the export needs it.
+          setPassphrase("");
+          setConfirmation("");
+          setStatus(`${fileName} saved. It opens only with its passphrase; CogVest does not keep a copy.`);
+        } else {
+          setStatus(`${fileName} saved. Keep this unencrypted file somewhere you trust.`);
+        }
       });
     } catch (error) {
       updateAfterAsync(() => setStatus(safeErrorMessage(
@@ -144,10 +174,15 @@ export function BackupScreen({
     setPrepared(undefined);
     setRestoreStep("warning");
     try {
-      const nextPrepared = await selectPortfolioBackup(operation.signal);
+      const picked = await selectPortfolioBackup(operation.signal);
       updateAfterAsync(() => {
-        if (nextPrepared) {
-          setPrepared(nextPrepared);
+        if (!picked) return;
+        if ("locked" in picked) {
+          setLockedBackup(picked);
+          setUnlockPassphrase("");
+          setRestoreStep("unlock");
+        } else {
+          setPrepared(picked);
           setRestoreStep("preview");
         }
       });
@@ -156,6 +191,35 @@ export function BackupScreen({
         error,
         "This backup could not be reviewed. Your portfolio is unchanged. Choose another backup file.",
       )));
+    } finally {
+      finishOperation(operation);
+    }
+  }
+
+  async function unlockBackup() {
+    if (!lockedBackup || unlockPassphrase.length === 0) return;
+    const operation = startOperation();
+    if (!operation) return;
+    setStatus(undefined);
+    try {
+      const nextPrepared = await unlockPortfolioBackup(lockedBackup, unlockPassphrase, operation.signal);
+      updateAfterAsync(() => {
+        setLockedBackup(undefined);
+        setUnlockPassphrase("");
+        setPrepared(nextPrepared);
+        setRestoreStep("preview");
+      });
+    } catch (error) {
+      updateAfterAsync(() => {
+        const message = safeErrorMessage(error, "This backup could not be opened. Your portfolio has not changed.");
+        // A wrong passphrase can be tried again; anything else means choosing the file again.
+        if (!/passphrase is wrong/iu.test(message)) {
+          setLockedBackup(undefined);
+          setUnlockPassphrase("");
+          setRestoreStep("warning");
+        }
+        setStatus(message);
+      });
     } finally {
       finishOperation(operation);
     }
@@ -202,17 +266,58 @@ export function BackupScreen({
         <PremiumCard style={styles.card} testID="backup-export-warning">
           <SectionHeader title="Save a manual backup" />
           <AppText color="secondary">
-            This backup contains sensitive financial information and is not encrypted.
+            {protect
+              ? "This backup contains sensitive financial information. It will be encrypted with your passphrase."
+              : "This backup contains sensitive financial information and is not encrypted."}
           </AppText>
           <AppText color="secondary" variant="caption">
             Choose a location you trust. Your document provider may sync the file; CogVest does not upload it.
           </AppText>
+          <Checkbox
+            checked={protect}
+            disabled={isBusy}
+            label="Protect with a passphrase"
+            onPress={() => {
+              setProtect((value) => !value);
+              setPassphraseError(undefined);
+            }}
+            testID="backup-protect"
+          />
+          {protect ? (
+            <View style={styles.card} testID="backup-passphrase-fields">
+              <FormTextField
+                error={passphraseError}
+                label="Passphrase"
+                onChangeText={(value) => {
+                  setPassphrase(value);
+                  setPassphraseError(undefined);
+                }}
+                secureTextEntry
+                testID="backup-passphrase"
+                value={passphrase}
+              />
+              <FormTextField
+                label="Confirm passphrase"
+                onChangeText={(value) => {
+                  setConfirmation(value);
+                  setPassphraseError(undefined);
+                }}
+                secureTextEntry
+                testID="backup-passphrase-confirm"
+                value={confirmation}
+              />
+              <AppText color="secondary" testID="backup-passphrase-hint" variant="caption">
+                Use at least 8 characters; a few unrelated words work well. If you forget the passphrase,
+                this backup cannot be opened. CogVest does not store it.
+              </AppText>
+            </View>
+          ) : null}
           <AppButton
             accessibilityHint="Opens Android's file location picker."
             disabled={isBusy}
-            onPress={() => void backUpPortfolio()}
+            onPress={() => void backUpPortfolio(protect)}
             testID="choose-backup-location"
-            title={isBusy ? "Saving backup..." : "Choose backup location"}
+            title={isBusy ? (protect ? "Encrypting and saving..." : "Saving backup...") : "Choose backup location"}
           />
         </PremiumCard>
         ) : null}
@@ -224,7 +329,7 @@ export function BackupScreen({
             Selecting a file only checks it. Nothing is restored until you review and confirm replacement.
           </AppText>
           <AppText color="secondary" variant="caption">
-            Backups are not encrypted. Only choose a file from a source you trust.
+            Only choose a file from a source you trust. A passphrase-protected backup asks for its passphrase next.
           </AppText>
           <AppButton
             disabled={isBusy}
@@ -232,6 +337,32 @@ export function BackupScreen({
             testID="choose-backup-file"
             title={isBusy ? "Reviewing backup..." : "Choose backup file"}
           />
+        </PremiumCard>
+        ) : null}
+
+        {isRestore && lockedBackup && restoreStep === "unlock" ? (
+        <PremiumCard style={styles.card} testID="backup-restore-unlock">
+          <SectionHeader title="Enter the backup's passphrase" />
+          <AppText color="secondary">This backup is protected. Enter the passphrase used when it was saved.</AppText>
+          <FormTextField
+            label="Passphrase"
+            onChangeText={setUnlockPassphrase}
+            onSubmitEditing={() => void unlockBackup()}
+            returnKeyType="done"
+            secureTextEntry
+            testID="backup-unlock-passphrase"
+            value={unlockPassphrase}
+          />
+          <AppText color="secondary" variant="caption">
+            Unlocking only reads the file. Nothing changes until you review and confirm replacement.
+          </AppText>
+          <AppButton
+            disabled={isBusy || unlockPassphrase.length === 0}
+            onPress={() => void unlockBackup()}
+            testID="backup-unlock"
+            title={isBusy ? "Unlocking backup..." : "Unlock backup"}
+          />
+          <AppButton disabled={isBusy} onPress={handleBack} title="Choose another backup" variant="ghost" />
         </PremiumCard>
         ) : null}
 
@@ -267,7 +398,7 @@ export function BackupScreen({
           <AppText color="secondary">This replaces the portfolio on this device. It does not merge portfolios.</AppText>
           <AppText color="secondary" variant="caption">Display preferences in this backup replace the settings on this device. Value masking and screenshot blocking stay as they are on this device.</AppText>
           <AppText color="secondary" variant="caption">Saved prices keep their source details. Prices may be out of date.</AppText>
-          <AppButton disabled={isBusy} onPress={() => void backUpPortfolio()} testID="backup-current-data" title={isBusy ? "Saving backup..." : "Back up current data first"} variant="secondary" />
+          <AppButton disabled={isBusy} onPress={() => void backUpPortfolio(false)} testID="backup-current-data" title={isBusy ? "Saving backup..." : "Back up current data first"} variant="secondary" />
           <AppButton disabled={isBusy} onPress={() => setRestoreStep("confirmation")} testID="continue-restore-confirmation" title="Review replacement" />
           <AppButton disabled={isBusy} onPress={() => { setPrepared(undefined); setRestoreStep("warning"); }} title="Choose another backup" variant="ghost" />
         </PremiumCard>

@@ -282,7 +282,7 @@ export function SettingsScreen({
                   Records stay in app-private Android storage, protected by device security; CogVest adds no encryption of its own.
                 </AppText>
                 <AppText color="secondary" variant="caption">
-                  Backups are not encrypted: save them only somewhere you trust.
+                  Backups are not encrypted unless you protect them with a passphrase: save them only somewhere you trust.
                 </AppText>
                 <GroupedListRow
                   icon="cloud-offline-outline"

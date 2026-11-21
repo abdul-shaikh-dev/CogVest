@@ -2,12 +2,14 @@ import { router, useLocalSearchParams } from "expo-router";
 
 import {
   BackupScreen,
+  type LockedRestore,
   type PreparedRestore,
 } from "@/src/features/backup/BackupScreen";
 import {
   exportPortfolioBackup,
   restorePortfolioBackup,
   selectPortfolioBackup,
+  unlockPortfolioBackup,
 } from "@/src/services/backup";
 
 export default function BackupRoute() {
@@ -16,7 +18,7 @@ export default function BackupRoute() {
 
   return (
     <BackupScreen
-      exportPortfolioBackup={(signal) => exportPortfolioBackup(signal)}
+      exportPortfolioBackup={(signal, options) => exportPortfolioBackup(signal, options)}
       initialMode={initialMode}
       onBack={() => {
         if (router.canGoBack()) router.back();
@@ -30,6 +32,9 @@ export default function BackupRoute() {
         restorePortfolioBackup(prepared, signal)
       }
       selectPortfolioBackup={(signal) => selectPortfolioBackup(signal)}
+      unlockPortfolioBackup={(locked: LockedRestore, passphrase, signal) =>
+        unlockPortfolioBackup(locked, passphrase, signal)
+      }
     />
   );
 }
