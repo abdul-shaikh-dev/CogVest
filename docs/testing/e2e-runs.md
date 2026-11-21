@@ -4,6 +4,47 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-21: Smoke tier and Downloads-picked imports (#772), 15 passed, 14m 45s + 9m 54s + 1m 07s + 0m 45s
+
+- Commit: fix/772-downloads-picked-files e8492e1, based on `main` e23c9c5,
+  version 1.0.33. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font
+  scale 1.0, emulator cold-booted about 50 minutes before the runs. E2E APK
+  (R8 on, x86_64) freshly built from e8492e1, SHA-256
+  b234aea95c071daaee1fee39edcde0785f503b6c2fd27668ef113d45cd688167, installed
+  after uninstalling the previous build. Metro stopped. Command:
+  `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`,
+  plus the Downloads-picking flows listed below.
+- Every Downloads-picking flow passed on the fix APK: `holdings-csv-import`
+  (1m 09s), `transactions-csv-import` (1m 20s), `zerodha-tradebook-import`
+  (2m 41s), `ppf-csv-merge` (1m 50s) and `standalone/ppf-csv-import` (2m 12s).
+  Before the fix, `holdings-csv-import` failed on every APK built from a clean
+  install of the lockfile.
+- Restore from Downloads, checked with a temporary flow that was not kept: the
+  backup saved by `backup-roundtrip` (1m 07s) was copied to Downloads, then
+  picked from the Downloads root and previewed with 5 assets and 4 cash entries
+  (0m 45s).
+- `visual/backup-review-layout` was not run to completion: it needs a
+  hand-prepared `cogvest-synthetic-design.json` in Downloads, which is not a
+  repo fixture.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 12s |
+| navigation | PASS | 0m 22s |
+| add-holding-lookup | PASS | 1m 06s |
+| record-purchase | PASS | 0m 55s |
+| payouts | PASS | 0m 53s |
+| xirr-holding | PASS | 0m 39s |
+| cash | PASS | 0m 59s |
+| trade-correction | PASS | 2m 11s |
+| holdings-csv-import | PASS | 1m 15s |
+| epf-accounts | PASS | 1m 07s |
+| ppf-account | PASS | 1m 21s |
+| progress-snapshot-history | PASS | 0m 46s |
+| value-masking | PASS | 1m 10s |
+| persistence | PASS | 0m 38s |
+| backup-roundtrip | PASS | 1m 10s |
+
 ## 2026-11-21: Smoke tier and new XIRR earliest-record flow (#757), 14 passed + 1 fixed and rerun, 15m 51s + 27s + 1m 43s
 
 - Commit: fix/757-name-earliest-record c107d0c (smoke) and ada4665 (rerun),
