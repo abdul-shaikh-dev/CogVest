@@ -9,7 +9,8 @@ the run cadence.
 - Commit: feat/751-fix-all-months 247abc5 (contains #750's e787852), based on
   `main` c518b66, version 1.0.32. AVD CogVest_UX_Proof, API 36, 1280x2856 at
   480 dpi, font scale 1.0. E2E APK (R8 on, x86_64) freshly built from 247abc5,
-  SHA-256 . Metro stopped. Command: `npm run maestro:smoke` with
+  SHA-256 5425795c272573dd3fe99ca821d01454c4dcfd8d2344db1b9d3ea9899331c290 (pulled from
+  the installed package). Metro stopped. Command: `npm run maestro:smoke` with
   `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`, plus `node scripts/maestro-run.mjs`
   for the new flow and the failed flows.
 - New full-tier flow `progress-fix-all-months` passed (0m 44s), and
