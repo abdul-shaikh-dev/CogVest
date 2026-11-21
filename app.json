@@ -2,7 +2,7 @@
   "expo": {
     "name": "CogVest",
     "slug": "cogvest",
-    "version": "1.0.32",
+    "version": "1.0.33",
     "platforms": [
       "android"
     ],
@@ -12,7 +12,7 @@
     "scheme": "cogvest",
     "android": {
       "package": "com.abdulshaikh.cogvest",
-      "versionCode": 33,
+      "versionCode": 34,
       "icon": "./assets/brand/icon.png",
       "allowBackup": false,
       "adaptiveIcon": {
