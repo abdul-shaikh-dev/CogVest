@@ -360,10 +360,10 @@ describe("recovery copy export (#654)", () => {
   });
 });
 describe("passphrase-protected backups (#760)", () => {
-  // Real scrypt and AES-GCM; the lowest accepted cost keeps the suite fast.
+  // Real PBKDF2 and AES-GCM; a low iteration count inside the stub keeps the suite fast.
   const encryption: EncryptedBackupDeps = {
     ...nodeEncryptedBackupDeps,
-    kdf: (passphrase, salt, params) => nodeEncryptedBackupDeps.kdf(passphrase, salt, { ...params, logN: 15 }),
+    kdf: (password, salt, params) => nodeEncryptedBackupDeps.kdf(password, salt, { ...params, iterations: 1_000 }),
   };
   const passphrase = "orbit lantern basil 42";
 
@@ -427,7 +427,7 @@ describe("passphrase-protected backups (#760)", () => {
     const { service, file } = protectedHarness();
     await service.exportPortfolioBackup(undefined, { passphrase });
     const raw = JSON.parse(await file.text());
-    await file.write(JSON.stringify({ ...raw, kdf: { ...raw.kdf, logN: 30 } }));
+    await file.write(JSON.stringify({ ...raw, kdf: { ...raw.kdf, iterations: 1 } }));
     await expect(service.selectPortfolioBackup()).rejects.toThrow("This backup could not be read or validated.");
   });
 

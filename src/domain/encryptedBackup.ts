@@ -3,24 +3,28 @@ import { backupMaxBytes } from "@/src/domain/portfolioBackup";
 /**
  * Passphrase-protected backup files (#760).
  *
- * The protected file wraps the exact text of an ordinary backup: scrypt turns
- * the passphrase into a 256-bit key, and AES-256-GCM encrypts the backup text.
- * The header (format, version, scrypt settings, nonce) is bound to the
- * ciphertext as GCM additional data, so changing any of it fails decryption.
- * The decrypted text is then read by the ordinary backup parser, which keeps
- * every existing validation rule. The passphrase is never stored.
+ * The protected file wraps the exact text of an ordinary backup:
+ * PBKDF2-HMAC-SHA256 turns the passphrase into a 256-bit key, and AES-256-GCM
+ * encrypts the backup text. The header (format, version, key settings, salt,
+ * nonce) is bound to the ciphertext as GCM additional data, so changing any of
+ * it fails decryption. The decrypted text is then read by the ordinary backup
+ * parser, which keeps every existing validation rule. The passphrase is never
+ * stored.
+ *
+ * PBKDF2's password is the lowercase hex of the passphrase's NFC UTF-8 bytes.
+ * Android's PBKDF2 takes characters, and providers have differed on how they
+ * encode non-ASCII ones; hex is plain ASCII, so every implementation derives
+ * the same key, and it maps one-to-one, so it costs no strength.
  */
 export const encryptedBackupFormat = "cogvest-encrypted-backup";
 export const encryptedBackupFormatVersion = 1;
 export const encryptedBackupCipherName = "AES-256-GCM";
-export const encryptedBackupKdfName = "scrypt";
+export const encryptedBackupKdfName = "PBKDF2-HMAC-SHA256";
 
-/** Accepted scrypt cost (log2 N) when reading; caps memory at 128 MiB. */
-export const encryptedBackupMinLogN = 15;
-export const encryptedBackupMaxLogN = 17;
-export const encryptedBackupScryptR = 8;
-export const encryptedBackupScryptP = 1;
-export const encryptedBackupDefaultLogN = 17;
+/** OWASP's 2023 figure for PBKDF2-HMAC-SHA256. Reads accept up to the maximum. */
+export const encryptedBackupDefaultIterations = 600_000;
+export const encryptedBackupMinIterations = 600_000;
+export const encryptedBackupMaxIterations = 2_000_000;
 
 export const backupPassphraseMinLength = 8;
 export const backupPassphraseMaxLength = 256;
@@ -33,8 +37,6 @@ const keyBytes = 32;
 /** A protected file holds base64 of at most one full backup plus a small header. */
 export const encryptedBackupMaxBytes = Math.ceil((backupMaxBytes + tagBytes) / 3) * 4 + 1024;
 
-export type EncryptedBackupKdfParams = { logN: number; r: number; p: number };
-
 export type BackupCipher = {
   /** AES-256-GCM. Returns ciphertext followed by the 16-byte tag. */
   seal: (key: Uint8Array, nonce: Uint8Array, plaintext: Uint8Array, additionalData: Uint8Array) => Promise<Uint8Array>;
@@ -42,10 +44,11 @@ export type BackupCipher = {
   open: (key: Uint8Array, nonce: Uint8Array, sealed: Uint8Array, additionalData: Uint8Array) => Promise<Uint8Array>;
 };
 
+/** PBKDF2-HMAC-SHA256 over an ASCII password. */
 export type BackupKdf = (
-  passphrase: Uint8Array,
+  password: string,
   salt: Uint8Array,
-  params: EncryptedBackupKdfParams & { dkLen: number },
+  params: { iterations: number; dkLen: number },
 ) => Promise<Uint8Array>;
 
 export type EncryptedBackupDeps = {
@@ -66,7 +69,7 @@ export class EncryptedBackupError extends Error {
 type Header = {
   format: typeof encryptedBackupFormat;
   formatVersion: typeof encryptedBackupFormatVersion;
-  kdf: { name: typeof encryptedBackupKdfName; logN: number; r: number; p: number; salt: string };
+  kdf: { name: typeof encryptedBackupKdfName; iterations: number; salt: string };
   cipher: { name: typeof encryptedBackupCipherName; nonce: string };
 };
 
@@ -103,9 +106,10 @@ export function backupPassphraseProblem(passphrase: string) {
   return undefined;
 }
 
-function passphraseBytes(passphrase: string) {
+/** The PBKDF2 password: lowercase hex of the passphrase's NFC UTF-8 bytes. */
+export function backupKdfPassword(passphrase: string) {
   // NFC so the same passphrase typed on another keyboard derives the same key.
-  return encoder.encode(passphrase.normalize("NFC"));
+  return Array.from(encoder.encode(passphrase.normalize("NFC")), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /** Fixed key order: the bytes bound to the ciphertext must not depend on the file's key order. */
@@ -113,13 +117,15 @@ function additionalData(header: Header) {
   return encoder.encode(JSON.stringify({
     format: header.format,
     formatVersion: header.formatVersion,
-    kdf: { name: header.kdf.name, logN: header.kdf.logN, r: header.kdf.r, p: header.kdf.p, salt: header.kdf.salt },
+    kdf: { name: header.kdf.name, iterations: header.kdf.iterations, salt: header.kdf.salt },
     cipher: { name: header.cipher.name, nonce: header.cipher.nonce },
   }));
 }
 
-function deriveKey(deps: EncryptedBackupDeps, passphrase: string, salt: Uint8Array, params: EncryptedBackupKdfParams) {
-  return deps.kdf(passphraseBytes(passphrase), salt, { ...params, dkLen: keyBytes });
+async function deriveKey(deps: EncryptedBackupDeps, passphrase: string, salt: Uint8Array, iterations: number) {
+  const key = await deps.kdf(backupKdfPassword(passphrase), salt, { iterations, dkLen: keyBytes });
+  if (key.length !== keyBytes) throw new Error("Key derivation returned the wrong length.");
+  return key;
 }
 
 function requireExactKeys(value: unknown, keys: string[], label: string): asserts value is Record<string, unknown> {
@@ -152,22 +158,21 @@ export async function encryptBackupText(
   plainText: string,
   passphrase: string,
   deps: EncryptedBackupDeps,
-  logN = encryptedBackupDefaultLogN,
+  iterations = encryptedBackupDefaultIterations,
 ): Promise<EncryptedBackup> {
   const problem = backupPassphraseProblem(passphrase);
   if (problem) throw new EncryptedBackupError("invalid-passphrase", problem);
-  if (!Number.isInteger(logN) || logN < encryptedBackupMinLogN || logN > encryptedBackupMaxLogN) {
-    throw new Error("Unsupported scrypt cost.");
+  if (!Number.isInteger(iterations) || iterations < encryptedBackupMinIterations || iterations > encryptedBackupMaxIterations) {
+    throw new Error("Unsupported key iteration count.");
   }
   const salt = deps.randomBytes(saltBytes);
   const nonce = deps.randomBytes(nonceBytes);
   if (salt.length !== saltBytes || nonce.length !== nonceBytes) throw new Error("Random bytes unavailable.");
-  const params = { logN, r: encryptedBackupScryptR, p: encryptedBackupScryptP };
-  const key = await deriveKey(deps, passphrase, salt, params);
+  const key = await deriveKey(deps, passphrase, salt, iterations);
   const header: Header = {
     format: encryptedBackupFormat,
     formatVersion: encryptedBackupFormatVersion,
-    kdf: { name: encryptedBackupKdfName, ...params, salt: encodeBase64(salt) },
+    kdf: { name: encryptedBackupKdfName, iterations, salt: encodeBase64(salt) },
     cipher: { name: encryptedBackupCipherName, nonce: encodeBase64(nonce) },
   };
   const sealed = await deps.cipher.seal(key, nonce, encoder.encode(plainText), additionalData(header));
@@ -182,13 +187,12 @@ function parseEncryptedBackup(text: string): ParsedEncryptedBackup {
   try { raw = JSON.parse(text); } catch { throw invalidFile("file is not valid JSON"); }
   requireExactKeys(raw, ["format", "formatVersion", "kdf", "cipher", "ciphertext"], "envelope");
   if (raw.format !== encryptedBackupFormat || raw.formatVersion !== encryptedBackupFormatVersion) throw invalidFile("format version is unsupported");
-  requireExactKeys(raw.kdf, ["name", "logN", "r", "p", "salt"], "key settings");
+  requireExactKeys(raw.kdf, ["name", "iterations", "salt"], "key settings");
   requireExactKeys(raw.cipher, ["name", "nonce"], "cipher settings");
   const { kdf, cipher } = raw;
   if (kdf.name !== encryptedBackupKdfName || cipher.name !== encryptedBackupCipherName) throw invalidFile("encryption method is unsupported");
-  if (typeof kdf.logN !== "number" || !Number.isInteger(kdf.logN)
-    || kdf.logN < encryptedBackupMinLogN || kdf.logN > encryptedBackupMaxLogN
-    || kdf.r !== encryptedBackupScryptR || kdf.p !== encryptedBackupScryptP) {
+  if (typeof kdf.iterations !== "number" || !Number.isInteger(kdf.iterations)
+    || kdf.iterations < encryptedBackupMinIterations || kdf.iterations > encryptedBackupMaxIterations) {
     throw invalidFile("key settings are unsupported");
   }
   const salt = decodeBase64(kdf.salt, "salt", saltBytes);
@@ -199,7 +203,7 @@ function parseEncryptedBackup(text: string): ParsedEncryptedBackup {
     header: {
       format: encryptedBackupFormat,
       formatVersion: encryptedBackupFormatVersion,
-      kdf: { name: encryptedBackupKdfName, logN: kdf.logN, r: kdf.r, p: kdf.p, salt: kdf.salt as string },
+      kdf: { name: encryptedBackupKdfName, iterations: kdf.iterations, salt: kdf.salt as string },
       cipher: { name: encryptedBackupCipherName, nonce: cipher.nonce as string },
     },
     salt,
@@ -234,7 +238,7 @@ export async function decryptBackupText(text: string, passphrase: string, deps: 
   if (passphrase.length === 0 || [...passphrase].length > backupPassphraseMaxLength) {
     throw new EncryptedBackupError("wrong-passphrase", "The passphrase is wrong, or the file has been changed.");
   }
-  const key = await deriveKey(deps, passphrase, parsed.salt, parsed.header.kdf);
+  const key = await deriveKey(deps, passphrase, parsed.salt, parsed.header.kdf.iterations);
   return openWithKey(parsed, key, deps);
 }
 

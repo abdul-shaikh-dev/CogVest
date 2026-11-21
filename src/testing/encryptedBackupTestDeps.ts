@@ -1,5 +1,4 @@
-import { randomBytes as nodeRandomBytes, webcrypto } from "node:crypto";
-import { scryptAsync } from "@noble/hashes/scrypt.js";
+import { pbkdf2, randomBytes as nodeRandomBytes, webcrypto } from "node:crypto";
 
 import type { BackupCipher, EncryptedBackupDeps } from "@/src/domain/encryptedBackup";
 
@@ -22,8 +21,11 @@ export const nodeBackupCipher: BackupCipher = {
   },
 };
 
+/** Real PBKDF2-HMAC-SHA256 from Node, standing in for Android's in tests. */
 export const nodeEncryptedBackupDeps: EncryptedBackupDeps = {
   cipher: nodeBackupCipher,
-  kdf: (passphrase, salt, { logN, r, p, dkLen }) => scryptAsync(passphrase, salt, { N: 2 ** logN, r, p, dkLen }),
+  kdf: (password, salt, { iterations, dkLen }) => new Promise((resolve, reject) => {
+    pbkdf2(password, salt, iterations, dkLen, "sha256", (error, key) => (error ? reject(error) : resolve(new Uint8Array(key))));
+  }),
   randomBytes: (length) => new Uint8Array(nodeRandomBytes(length)),
 };

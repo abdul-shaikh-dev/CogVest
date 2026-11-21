@@ -1,16 +1,21 @@
-import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { AESEncryptionKey, AESSealedData, aesDecryptAsync, aesEncryptAsync, getRandomBytes } from "expo-crypto";
 
-import type { EncryptedBackupDeps } from "@/src/domain/encryptedBackup";
+import { isPbkdf2Available, pbkdf2Sha256Async } from "@/modules/cogvest-pbkdf2";
+import { encodeBase64, type EncryptedBackupDeps } from "@/src/domain/encryptedBackup";
 
 const tagLength = 16;
 
+function decodeBase64(value: string) {
+  return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+}
+
 /**
- * Native AES-256-GCM from expo-crypto, and scrypt from @noble/hashes (#760).
- * scryptAsync yields to the JS thread while it runs, so the screen stays
- * responsive during the deliberately slow key derivation.
+ * Native crypto for passphrase-protected backups (#760): Android's
+ * PBKDF2-HMAC-SHA256 through the local CogVestPbkdf2 module, and AES-256-GCM
+ * from expo-crypto. Undefined where the PBKDF2 module is absent, which turns
+ * protection off rather than falling back to a slow JavaScript derivation.
  */
-export const expoEncryptedBackupDeps: EncryptedBackupDeps = {
+export const expoEncryptedBackupDeps: EncryptedBackupDeps | undefined = isPbkdf2Available ? {
   cipher: {
     seal: async (key, nonce, plaintext, additionalData) => {
       const aesKey = await AESEncryptionKey.import(key);
@@ -26,6 +31,7 @@ export const expoEncryptedBackupDeps: EncryptedBackupDeps = {
       return aesDecryptAsync(AESSealedData.fromParts(nonce, sealed, tagLength), aesKey, { additionalData });
     },
   },
-  kdf: (passphrase, salt, { logN, r, p, dkLen }) => scryptAsync(passphrase, salt, { N: 2 ** logN, r, p, dkLen }),
+  kdf: async (password, salt, { iterations, dkLen }) =>
+    decodeBase64(await pbkdf2Sha256Async(password, encodeBase64(salt), iterations, dkLen)),
   randomBytes: (length) => getRandomBytes(length),
-};
+} : undefined;

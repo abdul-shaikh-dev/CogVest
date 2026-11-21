@@ -1,12 +1,16 @@
 import {
+  backupKdfPassword,
   backupPassphraseProblem,
   checkEncryptedBackupEnvelope,
   decryptBackupText,
   decryptBackupTextWithKey,
   encodeBase64,
   encryptBackupText,
+  encryptedBackupDefaultIterations,
   encryptedBackupFormat,
   encryptedBackupMaxBytes,
+  encryptedBackupMaxIterations,
+  encryptedBackupMinIterations,
   EncryptedBackupError,
   isEncryptedBackupText,
 } from "@/src/domain/encryptedBackup";
@@ -14,11 +18,9 @@ import { nodeEncryptedBackupDeps as deps } from "@/src/testing/encryptedBackupTe
 
 const plain = JSON.stringify({ format: "cogvest-portfolio-backup", note: "Synthetic ₹1,23,456.78 marker-7f3a" });
 const passphrase = "orbit lantern basil 42";
-// The lowest accepted cost keeps the suite fast; the cost itself is checked separately.
-const logN = 15;
 
 async function sealed() {
-  return (await encryptBackupText(plain, passphrase, deps, logN)).text;
+  return (await encryptBackupText(plain, passphrase, deps)).text;
 }
 
 async function expectKind(promise: Promise<unknown>, kind: string) {
@@ -42,10 +44,20 @@ describe("passphrase-protected backups (#760)", () => {
     expect(raw).toMatchObject({
       format: encryptedBackupFormat,
       formatVersion: 1,
-      kdf: { name: "scrypt", logN, r: 8, p: 1 },
+      kdf: { name: "PBKDF2-HMAC-SHA256", iterations: 600_000 },
       cipher: { name: "AES-256-GCM" },
     });
     await expect(decryptBackupText(text, passphrase, deps)).resolves.toBe(plain);
+  });
+
+  it("derives from the hex of the NFC UTF-8 passphrase with the stated settings", async () => {
+    expect(backupKdfPassword("café")).toBe("636166c3a9");
+    expect(backupKdfPassword("café")).toBe("636166c3a9");
+    const kdf = jest.fn(deps.kdf);
+    await encryptBackupText(plain, "café crème", { ...deps, kdf });
+    expect(kdf).toHaveBeenCalledWith(backupKdfPassword("café crème"), expect.any(Uint8Array),
+      { iterations: encryptedBackupDefaultIterations, dkLen: 32 });
+    expect(kdf.mock.calls[0][1]).toHaveLength(16);
   });
 
   it("uses a new salt and nonce for every file", async () => {
@@ -56,7 +68,7 @@ describe("passphrase-protected backups (#760)", () => {
   });
 
   it("lets the export check its own file with the derived key", async () => {
-    const result = await encryptBackupText(plain, passphrase, deps, logN);
+    const result = await encryptBackupText(plain, passphrase, deps);
     await expect(decryptBackupTextWithKey(result.text, result.key, deps)).resolves.toBe(plain);
   });
 
@@ -66,7 +78,7 @@ describe("passphrase-protected backups (#760)", () => {
     await expectKind(decryptBackupText(text, "", deps), "wrong-passphrase");
   });
 
-  it("rejects a changed ciphertext, salt, nonce or cost", async () => {
+  it("rejects a changed ciphertext, salt, nonce or iteration count", async () => {
     const text = await sealed();
     const flip = (value: string) => {
       const bytes = Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
@@ -77,7 +89,7 @@ describe("passphrase-protected backups (#760)", () => {
       edit(text, (raw) => { raw.ciphertext = flip(raw.ciphertext); }),
       edit(text, (raw) => { raw.kdf.salt = flip(raw.kdf.salt); }),
       edit(text, (raw) => { raw.cipher.nonce = flip(raw.cipher.nonce); }),
-      edit(text, (raw) => { raw.kdf.logN = 16; }),
+      edit(text, (raw) => { raw.kdf.iterations = 600_001; }),
     ]) {
       await expectKind(decryptBackupText(changed, passphrase, deps), "wrong-passphrase");
     }
@@ -88,7 +100,7 @@ describe("passphrase-protected backups (#760)", () => {
     const reordered = JSON.stringify({
       ciphertext: raw.ciphertext,
       cipher: { nonce: raw.cipher.nonce, name: raw.cipher.name },
-      kdf: { salt: raw.kdf.salt, p: raw.kdf.p, r: raw.kdf.r, logN: raw.kdf.logN, name: raw.kdf.name },
+      kdf: { salt: raw.kdf.salt, iterations: raw.kdf.iterations, name: raw.kdf.name },
       formatVersion: raw.formatVersion,
       format: raw.format,
     });
@@ -104,13 +116,12 @@ describe("passphrase-protected backups (#760)", () => {
       "[]",
       edit(text, (raw) => { raw.extra = true; }),
       edit(text, (raw) => { raw.formatVersion = 2; }),
-      edit(text, (raw) => { raw.kdf.name = "pbkdf2"; }),
+      edit(text, (raw) => { raw.kdf.name = "scrypt"; }),
       edit(text, (raw) => { raw.cipher.name = "AES-128-GCM"; }),
-      edit(text, (raw) => { raw.kdf.logN = 18; }),
-      edit(text, (raw) => { raw.kdf.logN = 14; }),
-      edit(text, (raw) => { raw.kdf.logN = 15.5; }),
-      edit(text, (raw) => { raw.kdf.r = 1; }),
-      edit(text, (raw) => { raw.kdf.p = 2; }),
+      edit(text, (raw) => { raw.kdf.iterations = encryptedBackupMinIterations - 1; }),
+      edit(text, (raw) => { raw.kdf.iterations = encryptedBackupMaxIterations + 1; }),
+      edit(text, (raw) => { raw.kdf.iterations = 600_000.5; }),
+      edit(text, (raw) => { raw.kdf.iterations = "600000"; }),
       edit(text, (raw) => { raw.kdf.extra = 1; }),
       edit(text, (raw) => { raw.kdf.salt = "AAAA"; }),
       edit(text, (raw) => { raw.cipher.nonce = "not base64!"; }),
@@ -122,12 +133,12 @@ describe("passphrase-protected backups (#760)", () => {
     }
     expect(kdf).not.toHaveBeenCalled();
     expect(() => checkEncryptedBackupEnvelope(text)).not.toThrow();
-    expect(() => checkEncryptedBackupEnvelope(edit(text, (raw) => { raw.kdf.logN = 18; }))).toThrow(EncryptedBackupError);
+    expect(() => checkEncryptedBackupEnvelope(edit(text, (raw) => { raw.kdf.iterations = 1; }))).toThrow(EncryptedBackupError);
   });
 
   it("derives the same key from either Unicode form of a passphrase", async () => {
     const composed = "café crème brûlée";
-    const text = (await encryptBackupText(plain, composed, deps, logN)).text;
+    const text = (await encryptBackupText(plain, composed, deps)).text;
     await expect(decryptBackupText(text, composed.normalize("NFD"), deps)).resolves.toBe(plain);
   });
 
@@ -137,12 +148,17 @@ describe("passphrase-protected backups (#760)", () => {
     expect(backupPassphraseProblem("seven77")).toBe("Use at least 8 characters.");
     expect(backupPassphraseProblem("eight888")).toBeUndefined();
     expect(backupPassphraseProblem("x".repeat(257))).toBe("Use at most 256 characters.");
-    await expectKind(encryptBackupText(plain, "short", deps, logN), "invalid-passphrase");
+    await expectKind(encryptBackupText(plain, "short", deps), "invalid-passphrase");
   });
 
-  it("refuses an unsupported cost when encrypting", async () => {
-    await expect(encryptBackupText(plain, passphrase, deps, 14)).rejects.toThrow("Unsupported scrypt cost.");
-    await expect(encryptBackupText(plain, passphrase, deps, 18)).rejects.toThrow("Unsupported scrypt cost.");
+  it("refuses an unsupported iteration count when encrypting", async () => {
+    await expect(encryptBackupText(plain, passphrase, deps, encryptedBackupMinIterations - 1)).rejects.toThrow("Unsupported key iteration count.");
+    await expect(encryptBackupText(plain, passphrase, deps, encryptedBackupMaxIterations + 1)).rejects.toThrow("Unsupported key iteration count.");
+  });
+
+  it("refuses a key of the wrong length", async () => {
+    await expect(encryptBackupText(plain, passphrase, { ...deps, kdf: async () => new Uint8Array(16) }))
+      .rejects.toThrow("Key derivation returned the wrong length.");
   });
 
   it("tells protected files from ordinary backups", async () => {
@@ -152,14 +168,16 @@ describe("passphrase-protected backups (#760)", () => {
     expect(isEncryptedBackupText("null")).toBe(false);
   });
 
-  it("produces the same file from the same salt, nonce and passphrase", async () => {
+  it("matches a fixed file, so the format cannot drift unnoticed", async () => {
     const fixed = {
       ...deps,
       randomBytes: (length: number) => new Uint8Array(length).fill(length === 16 ? 1 : 2),
     };
-    const first = await encryptBackupText("synthetic", "fixed passphrase", fixed, logN);
-    const second = await encryptBackupText("synthetic", "fixed passphrase", fixed, logN);
-    expect(first.text).toBe(second.text);
-    await expect(decryptBackupText(first.text, "fixed passphrase", deps)).resolves.toBe("synthetic");
+    const result = await encryptBackupText("synthetic", "fixed passphrase", fixed);
+    expect(result.text).toBe(KNOWN_FILE);
+    await expect(decryptBackupText(KNOWN_FILE, "fixed passphrase", deps)).resolves.toBe("synthetic");
   });
 });
+
+// Salt 0x01 x16, nonce 0x02 x12, passphrase "fixed passphrase", plaintext "synthetic".
+const KNOWN_FILE = '{"format":"cogvest-encrypted-backup","formatVersion":1,"kdf":{"name":"PBKDF2-HMAC-SHA256","iterations":600000,"salt":"AQEBAQEBAQEBAQEBAQEBAQ=="},"cipher":{"name":"AES-256-GCM","nonce":"AgICAgICAgICAgIC"},"ciphertext":"tjbB7SkOAgJ/D4TfeOQAO+Dckg+dnRdCJA=="}';

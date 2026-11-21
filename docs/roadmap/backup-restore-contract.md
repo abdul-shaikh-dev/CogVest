@@ -125,12 +125,15 @@ and purpose must match. New purchase/sale commands continue using linked cash.
 Export can optionally encrypt the backup with a passphrase. The protected file
 is a JSON envelope `cogvest-encrypted-backup`, format version 1:
 
-- `kdf`: scrypt with `logN` 17 (N = 2^17), r 8, p 1, and a random 16-byte salt.
-  Reads accept `logN` 15 to 17 only, capping memory at 128 MiB.
+- `kdf`: PBKDF2-HMAC-SHA256 with 600,000 iterations (OWASP's 2023 figure) and
+  a random 16-byte salt. Reads accept 600,000 to 2,000,000 iterations. The
+  PBKDF2 password is the lowercase hex of the passphrase's NFC UTF-8 bytes:
+  Android's PBKDF2 takes characters and providers have encoded non-ASCII ones
+  differently, while hex is ASCII and maps one-to-one.
 - `cipher`: AES-256-GCM with a random 12-byte nonce and a 16-byte tag.
 - `ciphertext`: base64 of the encrypted ordinary backup text and its tag.
 
-The format, version, scrypt settings, salt and nonce are bound to the
+The format, version, key settings, salt and nonce are bound to the
 ciphertext as GCM additional data in a fixed key order, so changing any of
 them fails decryption. The passphrase is normalized to NFC, must be 8 to 256
 characters, and is never stored or logged; the screen clears it after saving.
@@ -143,9 +146,12 @@ under GCM; both say so, keep the file selected for another try, and change
 nothing. A protected file is read up to the base64 size of a full backup plus
 1 KiB. Ordinary backups stay available and unchanged.
 
-Key derivation uses `@noble/hashes` (scrypt, pure JavaScript, owner-approved);
-AES-GCM uses expo-crypto's native implementation. No cryptography is written
-in CogVest.
+Key derivation calls Android's `PBKDF2WithHmacSHA256` through the local
+`modules/cogvest-pbkdf2` Expo module; AES-GCM uses expo-crypto's native
+implementation. No cryptography is written in CogVest. A pure-JavaScript scrypt
+(N = 2^17) was tried first and took about 71 seconds under Hermes on the
+emulator, so the owner chose the native platform route. Where the module is
+absent, protection is unavailable rather than slow.
 
 ## Atomic Replacement and Recovery
 

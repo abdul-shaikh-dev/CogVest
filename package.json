@@ -39,16 +39,10 @@
       "**/__tests__/**/*.test.ts",
       "**/__tests__/**/*.test.tsx"
     ],
-    "testTimeout": 15000,
-    "transformIgnorePatterns": [
-      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@noble))",
-      "/node_modules/react-native-reanimated/plugin/",
-      "/node_modules/@react-native/babel-preset/"
-    ]
+    "testTimeout": 15000
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "@noble/hashes": "2.4.0",
     "@react-native-community/datetimepicker": "9.2.1",
     "@shopify/react-native-skia": "2.14.0",
     "decimal.js-light": "^2.5.1",
