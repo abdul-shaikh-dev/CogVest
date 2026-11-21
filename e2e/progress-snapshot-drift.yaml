@@ -21,11 +21,14 @@ appId: ${APP_ID}
       id: "monthly-history-scroll"
     timeout: 15000
 # August compares with the out-of-date July, so its month gain is held back.
+# Matched on the row's spoken label, which carries the reason.
 - extendedWaitUntil:
     visible:
-      id: "snapshot-month-gain-2026-08"
-      text: "—"
+      id: "snapshot-month-2026-08"
+      text: ".*Month gain unavailable: this month or the one before doesn.t match your current records.*"
     timeout: 30000
+- assertNotVisible:
+    id: "snapshot-month-gain-amount-2026-08"
 - tapOn:
     id: "snapshot-month-2026-07"
 - assertVisible:

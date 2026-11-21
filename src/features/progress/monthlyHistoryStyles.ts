@@ -25,7 +25,8 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   detailRowLabel: { flex: 1, minWidth: 0 },
   detailSection: { gap: spacing.xs, marginTop: spacing.md },
   driftNotice: {
-    backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.subtle,
+    borderWidth: 1,
     borderRadius: radii.card,
     gap: spacing.sm,
     padding: spacing.md,
