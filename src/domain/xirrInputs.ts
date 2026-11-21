@@ -44,7 +44,10 @@ export type XirrLimitation = "fees-not-in-source" | "manual-price" | AccountXirr
   | "account-opened-after-start"
   | "basis-records-changed" | "epf-history-incomplete";
 
-export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string };
+/** A record that blocks a lifetime start: what it is and its date, or null when it has none (#757). */
+export type XirrEarliestRecord = { label: string; date: string | null };
+
+export type XirrAssetIssue = { assetId: string; reason: XirrUnavailableReason; recordId?: string; earliest?: XirrEarliestRecord };
 
 /** A holding counted in the return whose payouts aren't confirmed recorded from the date it needs. */
 export type PayoutCoverageGap = { assetId: string; requiredFrom: string };

@@ -110,7 +110,7 @@ describe("Dashboard portfolio XIRR", () => {
     const onSetBasis = jest.fn();
     const screen = await render(<DashboardScreen now={now} onSetBasis={onSetBasis} store={store} />);
     expect(screen.getByTestId("dashboard-xirr-reason"))
-      .toHaveTextContent("Records exist before your start date. Use the automatic start, or choose an earlier date.");
+      .toHaveTextContent("Your earliest record is a trade on 01 Jan 2025. Choose a start on or before that date, or use the automatic start.");
     expect(screen.getByTestId("dashboard-xirr-more")).toHaveTextContent("1 more to fix. Open Breakdown for the full list.");
     await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
     expect(screen.getByTestId("dashboard-xirr-blocker-transfer-without-value-extent")).toHaveTextContent("1 holding: Synthetic Income Fund");

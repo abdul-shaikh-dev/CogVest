@@ -1,7 +1,8 @@
 import { formatLocalCalendarDate, getCalendarDatePart } from "@/src/domain/dates";
 import { formatCompactINR } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
-import { measurementEvidenceDigest } from "@/src/domain/wholePortfolioXirr";
+import { earliestRecordBeforeStart, measurementEvidenceDigest } from "@/src/domain/wholePortfolioXirr";
+import { earliestRecordMessage } from "@/src/domain/xirrSummary";
 import type { MeasurementBasisInput, PortfolioStoreState } from "@/src/store";
 import type { MeasurementBasis, MonthlySnapshot } from "@/src/types";
 import { compareCodeUnits } from "@/src/domain/ordering";
@@ -31,6 +32,16 @@ export function earliestRecordDate(state: BasisState) {
     ...state.distributions.map((item) => item.paidOn),
   ].map((value) => getCalendarDatePart(value)).filter((value): value is string => Boolean(value));
   return dates.sort()[0] ?? null;
+}
+
+/**
+ * Why a lifetime start would leave a record out, and the start that includes
+ * it (#757): the earliest record's own date, or none when it has no date.
+ */
+export function lifetimeStartHint(state: BasisState, draft: BasisDraft) {
+  if (draft.kind !== "inception") return null;
+  const earliest = earliestRecordBeforeStart(state, draft.startDate);
+  return earliest ? { message: earliestRecordMessage(earliest), suggestedStart: earliest.date } : null;
 }
 
 export function initialBasisDraft(state: BasisState, now: Date): BasisDraft {

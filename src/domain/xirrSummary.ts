@@ -1,7 +1,8 @@
+import { formatDate } from "@/src/domain/formatters";
 import { decimal } from "@/src/domain/precision";
 
 import { calculateXirr, type XirrUnavailable } from "./xirr";
-import type { XirrFlow, XirrInputResult, XirrLimitation, XirrUnavailableReason } from "./xirrInputs";
+import type { XirrEarliestRecord, XirrFlow, XirrInputResult, XirrLimitation, XirrUnavailableReason } from "./xirrInputs";
 
 /**
  * Presentation-ready XIRR: either a rate with its period and the flows behind
@@ -128,15 +129,29 @@ const solverMessages: Record<XirrUnavailable, string> = {
   undetermined: NO_RATE,
 };
 
+/**
+ * Why a lifetime start is blocked, naming the record it must come before (#757):
+ * "Your earliest record is an EPF year summary on 31 Mar 2019. …".
+ */
+export function earliestRecordMessage(earliest: XirrEarliestRecord) {
+  const article = /^[aeiou]|^EPF/i.test(earliest.label) ? "an" : "a";
+  if (earliest.date === null) {
+    return `${article === "an" ? "An" : "A"} ${earliest.label} has no date, so no start date can come before it. Add its date, or use the automatic start.`;
+  }
+  return `Your earliest record is ${article} ${earliest.label} on ${formatDate(earliest.date)}. Choose a start on or before that date, or use the automatic start.`;
+}
+
 function noRate(message: string): XirrSummary {
   return { status: "unavailable", messages: [message], blockers: [{ reason: "calculation", message, unit: null, count: 0, assetIds: [] }] };
 }
 
 export function summariseXirr(input: XirrInputResult): XirrSummary {
   if (input.status === "unavailable") {
-    const blockers = inputMessages.flatMap(([reason, message]): XirrBlocker[] => {
+    const blockers = inputMessages.flatMap(([reason, fallback]): XirrBlocker[] => {
       const issues = input.reasons.filter((item) => item.reason === reason);
       if (!issues.length) return [];
+      const earliest = issues.find((item) => item.earliest)?.earliest;
+      const message = earliest ? earliestRecordMessage(earliest) : fallback;
       const assetIds = [...new Set(issues.map((item) => item.assetId))].filter((id) => id !== PORTFOLIO_ID);
       const unit = recordUnits[reason] ?? (assetIds.length ? "holdings" : null);
       const count = recordUnits[reason]

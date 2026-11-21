@@ -32,6 +32,19 @@ describe("MeasurementBasisScreen", () => {
     expect(screen.getByTestId("measurement-basis-start")).toHaveTextContent(/^Automatic: from 31 Dec 2024/);
   });
 
+  it("names the record a lifetime start leaves out and offers its date (#757)", async () => {
+    const store = seed();
+    store.getState().setMeasurementBasis({ kind: "inception", startDate: "2025-03-01", openingBreakdown: [] });
+    const screen = await screenFor(store);
+    expect(screen.getByTestId("basis-earliest-record"))
+      .toHaveTextContent("Your earliest record is a trade on 01 Jan 2025. Choose a start on or before that date, or use the automatic start.", { exact: false });
+    expect(screen.getByTestId("basis-use-earliest")).toHaveTextContent("Start from 01 Jan 2025");
+    await fireEvent.press(screen.getByTestId("basis-use-earliest"));
+    expect(screen.queryByTestId("basis-earliest-record")).toBeNull();
+    await fireEvent.press(screen.getByTestId("save-basis"));
+    expect(store.getState().measurementBasis).toMatchObject({ kind: "inception", startDate: "2025-01-01" });
+  });
+
   it("totals opening values, rejects an unnamed line, and flags changed evidence", async () => {
     const store = seed();
     const screen = await screenFor(store);
