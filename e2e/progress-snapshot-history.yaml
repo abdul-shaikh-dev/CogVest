@@ -31,6 +31,16 @@ appId: ${APP_ID}
 - assertVisible: "Monthly History"
 - assertVisible:
     id: "snapshot-month-2026-05"
+# #743: the list opens on each month's gain; Vs invested is one tap away.
+- assertVisible:
+    id: "snapshot-month-gain-2026-05"
+- takeScreenshot: .expo/progress-743-month-gain
+- tapOn:
+    id: "history-column-vsInvested"
+- assertVisible:
+    id: "snapshot-invested-comparison-2026-05"
+- tapOn:
+    id: "history-column-monthGain"
 - tapOn:
     id: "snapshot-month-2026-05"
 - assertVisible:
