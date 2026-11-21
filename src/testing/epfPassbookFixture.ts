@@ -1,7 +1,8 @@
 // Synthetic EPFO Member Passbook text (#740). It copies the structure the
-// on-device extractor produces from real passbooks: unreadable legacy-font
-// Hindi lines, wrapped descriptions and three balance columns. Every name, ID
-// and amount is invented.
+// on-device extractor (PdfBox-Android, sorted by position) produces from real
+// passbooks: unreadable legacy-font Hindi lines, the column headings split over
+// two lines, wide rows whose amounts fall to the next line, and three balance
+// columns. Every name, ID and amount is invented.
 
 export const OLD_MEMBER_ID = "ABCDE00000000000000001";
 export const NEW_MEMBER_ID = "ABCDE00000000000000002";
@@ -23,8 +24,8 @@ export function passbookText({ memberId = OLD_MEMBER_ID, year, opening, rows, to
     `OB Int. Updated upto 31/03/${year} ${opening}`,
     "/ Transaction fooj.k / Wages va'knku / Contribution",
     "Wage Month frfFk / / izdkj /",
-    "/ Date osru ,Q / EPF osru ,l / EPS",
-    "/ Type Employee Employer Pension",
+    "/ Date / Type osru ,Q / EPF osru ,l / EPS izdkj / Lkkuk / Lkkuk /",
+    "Employee Employer Pension",
     ...rows,
     `Total Contributions for the year [ ${year} ] ${totals[0]}`,
     `Total Transfer-Ins/VDRs for the year [ ${year} ] ${totals[1]}`,
@@ -47,12 +48,12 @@ export function layoutARow(wageMonth: string, amounts = "1,440 440 1,000") {
   return `${monthNames[month - 1]}-${year} 01-${due}-${dueYear} CR Cont. for Due-Month ${due}${dueYear} 12,000 12,000 ${amounts}`;
 }
 
-/** A layout B contribution row: the description wraps above and the due month below. */
+/** A layout B contribution row: the due month leads the amounts on the line below. */
 export function layoutBRows(wageMonth: string, amounts = "1,440 440 1,000") {
   const [year, month] = wageMonth.split("-").map(Number);
   const dueYear = month === 12 ? year + 1 : year;
   const due = String(month === 12 ? 1 : month + 1).padStart(2, "0");
-  return ["Cont. for the Due-Month", `${monthNames[month - 1]}-${year} 01-${due}-${dueYear} CR 12,000 12,000 ${amounts}`, `${dueYear}${due}`];
+  return [`${monthNames[month - 1]}-${year} 01-${due}-${dueYear} CR Cont. for the Due-Month`, `${dueYear}${due} 12,000 12,000 ${amounts}`];
 }
 
 const wageMonths = (year: number, from: number, count: number) => Array.from({ length: count }, (_, index) => {
@@ -74,7 +75,7 @@ export const passbookChain = {
     rows: [...wageMonths(2022, 3, 4).map((month) => layoutARow(month)), "Aug-2022 05-09-2022 DR Claim 0 0 24,000 7,400 0"],
     totals: ["5,760 1,760 4,000", "0 0 0", "24,000 7,400 0"], interest: "460 210 0", closing: "0 0 16,000" }),
   newFirstYear: passbookText({ memberId: NEW_MEMBER_ID, year: 2022, opening: "0 0 0", rows: [
-    "TRANSFER IN - SAME OFFICE", "(Old Member Id-", "Jul-2022 10-08-2022 CR 0 0 23,540 7,190 0", `:${OLD_MEMBER_ID}`, ")",
+    "TRANSFER IN - SAME OFFICE", "Jul-2022 10-08-2022 CR (Old Member Id-", `:${OLD_MEMBER_ID} 0 0 23,540 7,190 0`, ")",
     ...layoutBRows("2022-09"), ...layoutBRows("2022-10"),
     "TRANSFER IN - INTEREST", "AMOUNT ONLY (Old Member", "Dec-2022 20-01-2023 CR Id- 0 0 460 210 0", `:${OLD_MEMBER_ID}`, ")",
   ], totals: ["2,880 880 2,000", "24,000 7,400 0", "0 0 0"], interest: "300 100 0", closing: "27,180 8,380 2,000" }),

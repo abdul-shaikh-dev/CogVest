@@ -84,8 +84,33 @@ function columnLine(lines: readonly string[], label: RegExp) {
 /** Starts of descriptions that wrap above their row; the rest of a wrap follows its row. */
 const startsAbove = /^(Cont\. for the Due-Month|TRANSFER IN\b)/;
 
+/** A row's date, type and description with its amounts on the next line. */
+const rowHead = /^[A-Z][a-z]{2}-\d{4} \d{2}-\d{2}-\d{4} (CR|DR)\b.*$/;
+/** That next line: amounts, optionally led by the due month (layout B) or the old member ID (a transfer-in). */
+const amountsLine = new RegExp(String.raw`^(?:\S+ )?(?:${amount}) (?:${amount}) (?:${amount}) (?:${amount}) (?:${amount})$`);
+
+/**
+ * The device extractor puts a wide row's amounts on their own line below its
+ * date: layout B's due month, and a transfer-in's old member ID, lead that line.
+ * Join them so each entry is one line again.
+ */
+function joinSplitRows(lines: readonly string[]) {
+  const joined: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index];
+    const next = lines[index + 1];
+    if (next !== undefined && rowHead.test(text) && !rowPattern.test(text) && amountsLine.test(next)) {
+      joined.push(`${text} ${next}`);
+      joined.push("");
+      index += 1;
+    } else joined.push(text);
+  }
+  return joined;
+}
+
 export function readEpfoPassbook(text: string, pageCount = 1): PassbookReadResult {
-  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim());
+  // Joined rows leave a blank line behind, so line numbers still match the text.
+  const lines = joinSplitRows(text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()));
   const yearMatch = lines.join("\n").match(/EPF Passbook \[ Financial Year - (\d{4})-(\d{4}) \]/);
   const memberMatch = lines.find((line) => /\bMember ID\/Name\b/.test(line))?.match(memberIdPattern);
   if (!yearMatch || !memberMatch) {
@@ -135,7 +160,10 @@ export function readEpfoPassbook(text: string, pageCount = 1): PassbookReadResul
     lastRow = null;
     return null;
   };
-  const headings = lines.findIndex((line, index) => index < firstTotal && /\bType Employee Employer Pension$/.test(line));
+  // The headings end "Type Employee Employer Pension", or the device extractor
+  // puts "Employee Employer Pension" on a line of its own below "Type".
+  const headings = lines.findIndex((line, index) => index < firstTotal
+    && (/\bType Employee Employer Pension$/.test(line) || (line === "Employee Employer Pension" && /\bType\b/.test(lines[index - 1] ?? ""))));
   for (let index = headings + 1; index < firstTotal && headings >= 0; index += 1) {
     const text = lines[index];
     if (!text) continue;
