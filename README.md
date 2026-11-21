@@ -304,3 +304,8 @@ Domain rules:
 - V1 release checklist: `docs/release/v1-release-checklist.md`
 - V1 screen baseline: `docs/design/v1-screen-baseline.md`
 - Adversarial stabilization review: `docs/reviews/2026-07-11-adversarial-codebase-review.md`
+
+## License
+
+Copyright (c) 2026 Abdul Gaffar Shaikh. All rights reserved. The source is
+published for viewing only; see [LICENSE](LICENSE).
