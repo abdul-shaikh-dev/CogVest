@@ -1,0 +1,102 @@
+appId: ${APP_ID}
+---
+# Dashboard backup reminder (#759). Synthetic visual-QA data only.
+# The 30-holding seed has well over 25 records and no backup on this phone, so
+# the reminder is due at once. The flow checks that Not now hides it across a
+# cold start, that a new interval brings it back, and that Back up now leads to
+# an export after which the reminder is gone. The runner empties
+# Documents/CogVest-QA before this flow.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?holdings=30&token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+
+# Due at once: many records, never backed up.
+- openLink: "${SCHEME}:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-backup-reminder
+    direction: DOWN
+- assertVisible: Back up your portfolio
+- takeScreenshot:
+    path: backup-reminder-dashboard
+
+# Not now hides it, and the snooze survives a cold start.
+- tapOn:
+    id: dashboard-backup-reminder-dismiss
+- assertNotVisible:
+    id: dashboard-backup-reminder
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- assertNotVisible:
+    id: dashboard-backup-reminder
+
+# Choosing a new interval clears the snooze.
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: backup-reminder-7
+    direction: DOWN
+- tapOn:
+    id: backup-reminder-7
+- assertVisible:
+    id: backup-reminder-7
+    checked: true
+- assertVisible:
+    id: backup-last-date
+    text: No backup recorded on this phone yet.
+- openLink: "${SCHEME}:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-backup-reminder
+    direction: DOWN
+
+# Back up now opens the export, and a finished export clears the reminder.
+- tapOn:
+    id: dashboard-backup-reminder-backup
+- extendedWaitUntil:
+    visible:
+      id: backup-screen
+    timeout: 10000
+- tapOn:
+    id: choose-backup-location
+- runFlow:
+    when:
+      notVisible: Files in CogVest-QA
+    commands:
+      - scrollUntilVisible:
+          element: Documents
+          direction: DOWN
+      - tapOn: Documents
+      # selector: the QA folder's name in the Android folder picker
+      - tapOn: CogVest-QA
+- tapOn: USE THIS FOLDER
+- tapOn: ALLOW
+- extendedWaitUntil:
+    visible: ".*saved. Keep this unencrypted file somewhere you trust."
+    timeout: 15000
+- openLink: "${SCHEME}:///dashboard"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 10000
+- assertNotVisible:
+    id: dashboard-backup-reminder
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: backup-last-date
+    direction: DOWN
+- assertVisible:
+    id: backup-last-date
+    text: 'Last backup: \d{2} [A-Z][a-z]{2} \d{4}'

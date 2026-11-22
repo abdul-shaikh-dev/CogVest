@@ -71,6 +71,7 @@ const defaultFlows = [
   "e2e/persistence.yaml",
   "e2e/backup-roundtrip.yaml",
   "e2e/backup-protected.yaml",
+  "e2e/backup-reminder.yaml",
   "e2e/privacy-settings.yaml",
   "e2e/settings-preference-hierarchy.yaml",
   "e2e/shared-ui-hierarchy.yaml",
@@ -172,6 +173,7 @@ const epfPassbookImportFlow = "e2e/epf-passbook-import.yaml";
 const zerodhaTradebookFlow = "e2e/zerodha-tradebook-import.yaml";
 const backupRoundtripFlow = "e2e/backup-roundtrip.yaml";
 const backupProtectedFlow = "e2e/backup-protected.yaml";
+const backupReminderFlow = "e2e/backup-reminder.yaml";
 // The flow exports into this shared folder and restores from it; see #671.
 const backupQaFolder = "/sdcard/Documents/CogVest-QA";
 const zerodhaTradebookFixtures = [
@@ -232,7 +234,7 @@ if (allowlistAdbPath) {
 /** Copies the files a flow picks through the system picker; returns a setup error. */
 function prepareFlow(flow) {
   const normalized = flow.replaceAll("\\", "/");
-  if (normalized === backupRoundtripFlow || normalized === backupProtectedFlow) {
+  if (normalized === backupRoundtripFlow || normalized === backupProtectedFlow || normalized === backupReminderFlow) {
     // Start from an empty folder so earlier runs' backups never accumulate.
     const adbPath = findExecutable("adb");
     if (!adbPath) return "adb not found";
