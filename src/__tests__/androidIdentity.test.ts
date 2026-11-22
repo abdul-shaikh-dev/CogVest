@@ -32,7 +32,9 @@ describe("Android app identity", () => {
     expect(expo.android.versionCode).toBeGreaterThanOrEqual(1);
     expect(Number.isInteger(expo.android.versionCode)).toBe(true);
     expect(expo.android.allowBackup).toBe(false);
-    expect(expo.android.predictiveBackGestureEnabled).toBe(true);
+    // React Native 0.88 handles Back through the predictive-back callback only
+    // on Android 16+. Enabled on Android 13-15, Back closed the app (#780).
+    expect(expo.android.predictiveBackGestureEnabled).toBe(false);
   });
 
   it("records a strictly increasing distributable build identity", () => {

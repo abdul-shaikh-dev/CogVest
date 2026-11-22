@@ -4,6 +4,26 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Back on Android 13-15 (#780), emulator smoke 15 passed, Moto smoke 15 passed
+
+- Commit: test/780-moto-flows adfa0db, based on `main` f51617a, version 1.0.33.
+  `npm run test:verify`: 3,215 passed, doctor 18/18.
+- Build: E2E APK for arm64-v8a and x86_64 from adfa0db (manifest
+  `enableOnBackInvokedCallback="false"`), SHA-256
+  825adb0145a50f0fcc02a0235ce3bf2d3c8150a1f8c3889db7f7b5f1b2f4880f.
+- Cause: React Native 0.88 registers its back callback only on Android 16+.
+  With predictive back enabled, Back on the Moto (Android 14) closed the app.
+  Before the fix, Back from Settings went to the launcher on the Moto and stayed
+  in the app on the emulator; after it, Back stays in the app on both.
+- **Motorola Edge 30** (ZD2224Z7DY, Android 14, font scale 0.85, density 384):
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=ZD2224Z7DY npm run maestro:smoke`,
+  15 passed, 0 failed, 14m 08s. cash, ppf-account, backup-roundtrip and
+  holdings-csv-import, which failed before, all pass. The Maestro driver app had
+  been removed from the phone; `maestro test --reinstall-driver` restored it.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): the same command with `ANDROID_SERIAL=emulator-5554`, 15 passed,
+  0 failed, 14m 12s.
+
 ## 2026-11-22: Stable date text (#779), emulator smoke 15 passed, Moto date flows 2 of 4 passed
 
 - Commit: fix/779-stable-date-format 6d10a83, based on `main` dc55ac7, version

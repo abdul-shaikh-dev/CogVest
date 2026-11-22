@@ -20,7 +20,7 @@
         "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/brand/android-monochrome-icon.png"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": false
     },
     "plugins": [
       "expo-router",

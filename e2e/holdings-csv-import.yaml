@@ -38,9 +38,12 @@ appId: ${APP_ID}
 - tapOn:
     id: "select-holdings-csv"
 - runFlow: standalone/helpers/open-downloads.yaml
-- extendedWaitUntil:
-    visible: "holdings-import-v1.csv"
-    timeout: 10000
+# A real phone's Downloads lists its folders first, so the file can be below
+# the fold (#780).
+- scrollUntilVisible:
+    element: "holdings-import-v1.csv"
+    direction: DOWN
+    timeout: 20000
 - tapOn: "holdings-import-v1.csv"
 - runFlow:
     when:
