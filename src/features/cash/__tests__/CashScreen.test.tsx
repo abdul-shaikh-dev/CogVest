@@ -49,12 +49,26 @@ describe("CashScreen", () => {
     expect(sessionMemory.read("cashEntryDraft")).toBeUndefined();
   });
 
-  it("lets the Android modal resize without a second keyboard height owner", async () => {
+  it("opens entry in a bottom sheet without a second keyboard height owner", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const screen = await render(<CashScreen store={store} />);
     await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
-    expect(screen.getByTestId("cash-entry-root")).toHaveStyle({ flex: 1 });
+    expect(screen.getByTestId("cash-entry-sheet")).toBeTruthy();
     expect(queryByComponentType(screen, KeyboardAvoidingView)).toBeNull();
+  });
+
+  it("keeps the draft when the sheet is dragged or tapped closed (#784)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const screen = await render(<CashScreen store={store} />);
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    await fireEvent.changeText(screen.getByTestId("cash-amount-input"), "2500");
+
+    await fireEvent.press(screen.getByTestId("cash-entry-sheet-scrim", { includeHiddenElements: true }));
+    expect(screen.queryByTestId("cash-entry-sheet")).toBeNull();
+
+    await fireEvent.press(screen.getByTestId("cash-entry-deposit"));
+    expect(screen.getByTestId("cash-amount-input")).toHaveProp("value", "2500");
+    expect(store.getState().cashEntries).toHaveLength(0);
   });
   it.each(["standard", "minimal"] as const)("compacts zero metrics without implying no withdrawals in %s mode", async (displayMode) => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });

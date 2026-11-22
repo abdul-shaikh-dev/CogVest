@@ -26,7 +26,11 @@ function rootFiber(screen: Pick<RenderResult, "container">): Fiber | null {
   const host = screen.container.children.find((child) => typeof child !== "string");
   let fiber = (host && typeof host !== "string" ? host.unstable_fiber : null) as Fiber | null;
   while (fiber?.return) fiber = fiber.return;
-  return fiber;
+  // A host node can point at React's alternate (previous) tree. The root's
+  // `current` is the tree on screen, so a component mounted since the last
+  // commit, such as an opened bottom sheet (#784), is found.
+  const current = (fiber as { stateNode?: { current?: Fiber } } | null)?.stateNode?.current;
+  return current ?? fiber;
 }
 
 export function queryAllComponents(

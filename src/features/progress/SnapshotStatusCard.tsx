@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, View } from "react-native";
 
-import { AppButton, AppText } from "@/src/components/common";
+import { AppButton, AppText, BottomSheet } from "@/src/components/common";
 import { getMonthlySnapshotPriceConfidence } from "@/src/domain/calculations";
-import { useReducedMotionPreference } from "@/src/hooks";
-import { spacing } from "@/src/theme";
 
 import { useStyles } from "./progressStyles";
 import {
@@ -28,8 +25,6 @@ export function SnapshotStatusCard({
 }) {
   const styles = useStyles();
   const [open, setOpen] = useState(false);
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotionPreference();
   const priceConfidence = status.snapshot
     ? getMonthlySnapshotPriceConfidence(status.snapshot)
     : null;
@@ -98,11 +93,13 @@ export function SnapshotStatusCard({
           <AppText color="secondary" variant="caption">Details</AppText>
         </View>
       </Pressable>
-      <Modal visible={open} transparent animationType={reducedMotion ? "none" : "fade"} onRequestClose={() => setOpen(false)}>
-        <View style={[styles.monthPickerOverlay, { paddingBottom: insets.bottom + spacing.md, paddingTop: insets.top + spacing.md }]}>
-          <View style={styles.monthPickerSheet}>
-            <AppButton title="Close snapshot status" variant="secondary" onPress={() => setOpen(false)} />
-            <ScrollView>
+      <BottomSheet
+        closeLabel="Close snapshot status details"
+        onRequestClose={() => setOpen(false)}
+        testID="month-end-snapshot-status-sheet"
+        visible={open}
+      >
+        <AppButton title="Close snapshot status" variant="secondary" onPress={() => setOpen(false)} />
     <View
       style={styles.snapshotStatusCard}
       testID="month-end-snapshot-status-details"
@@ -150,10 +147,7 @@ export function SnapshotStatusCard({
         </AppText>
       ) : null}
     </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </>
   );
 }

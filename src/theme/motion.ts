@@ -10,6 +10,8 @@ export const motionDurations = {
   reveal: 200,
   /** Masked and unmasked amounts swapping. */
   mask: 160,
+  /** A bottom sheet sliding up, or settling back after a short drag (#784). */
+  sheet: 240,
 } as const;
 
 export type MotionKind = keyof typeof motionDurations;

@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { Modal, PanResponder, ScrollView, type GestureResponderEvent, type PanResponderGestureState } from "react-native";
+import { useReducedMotion, withTiming } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
@@ -14,7 +15,6 @@ import {
   MASKED_VALUE_ACCESSIBILITY_LABEL,
 } from "@/src/components/common";
 import { HoldingsScreen } from "@/src/features/holdings";
-import { useReducedMotionPreference } from "@/src/hooks/useReducedMotionPreference";
 import type {
   QuoteRefreshResult,
   RefreshQuotesInput,
@@ -773,13 +773,15 @@ describe("HoldingsScreen", () => {
   });
 
   it.each([true, false])("honors reduced motion (%s) for panels", async (reduced) => {
-    jest.mocked(useReducedMotionPreference).mockReturnValue(reduced);
+    jest.mocked(useReducedMotion).mockReturnValue(reduced);
+    jest.mocked(withTiming).mockClear();
     const screen = await render(<HoldingsScreen store={seedMixedHoldings()} />);
     await fireEvent.press(screen.getByTestId("holdings-more-button"));
-    expect(getByComponentType(screen, Modal).props.animationType).toBe(
-      reduced ? "none" : "fade",
-    );
-    jest.mocked(useReducedMotionPreference).mockReturnValue(true);
+    // The sheet slides itself (#784): the modal never animates, and with
+    // reduced motion the sheet is placed without a slide.
+    expect(getByComponentType(screen, Modal).props.animationType).toBe("none");
+    expect(jest.mocked(withTiming).mock.calls.length > 0).toBe(!reduced);
+    jest.mocked(useReducedMotion).mockReturnValue(false);
   });
 
   it("shows an empty state with an Add Holding action", async () => {
