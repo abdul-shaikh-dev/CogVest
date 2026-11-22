@@ -17,12 +17,16 @@ import {
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
+import { BackupReminderSettings } from "@/src/features/backup/BackupReminderSettings";
+import type { BackupStatusState } from "@/src/services/backup/backupStatus";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 import { useSettings } from "./useSettings";
 
 type SettingsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
+  /** Last backup and the reminder setting show only when this is given (#759). */
+  backupStatusStore?: StoreApi<BackupStatusState>;
 };
 
 const displayOptions = [
@@ -40,6 +44,7 @@ const displayOptions = [
 
 export function SettingsScreen({
   store = getPortfolioStore(),
+  backupStatusStore,
 }: SettingsScreenProps) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -236,7 +241,7 @@ export function SettingsScreen({
           <SectionHeader title="Portfolio backup" />
           <GroupedListRow
             icon="save-outline"
-            meta="Save an unencrypted manual copy to a location you choose."
+            meta="Save a copy to a location you choose, protected with a passphrase if you like."
             onPress={() => router.push("/backup?mode=export")}
             showChevron
             testID="backup-portfolio-action"
@@ -250,6 +255,7 @@ export function SettingsScreen({
             testID="restore-backup-action"
             title="Restore backup"
           />
+          {backupStatusStore ? <BackupReminderSettings backupStatusStore={backupStatusStore} /> : null}
         </PremiumCard>
 
         <View style={styles.informationGroup}>

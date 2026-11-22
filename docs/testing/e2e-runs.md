@@ -4,6 +4,42 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Smoke tier with the backup reminder (#759), 15 passed, 13m 18s
+
+- Commit: feat/759-backup-reminder 06fd142, based on `main` 8d0b7dc, version
+  1.0.33. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  emulator cold-booted before the runs. E2E APK (R8 on, x86_64) freshly built
+  from 06fd142, SHA-256
+  4aa9dd6e0872db795696314511fc3ef977916f5da74b5cf470789a42db7ff3a0, installed
+  after uninstalling the previous build. Metro stopped. Command:
+  `npm run maestro:smoke` with `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- `backup-roundtrip` now also opens Settings after the export and asserts
+  `backup-last-date` reads `Last backup: <dd Mon yyyy>`. After the clear and
+  restore it asserts "No backup recorded on this phone yet.", because the
+  cleared install starts a new device-only record and a restore never counts
+  as a backup. It passed on its own (1m 12s) and in the tier.
+- The Dashboard note itself is covered by unit tests only. Triggering it on the
+  emulator needs 30 days or 25 new records without a backup, and no smoke flow
+  seeds that much data.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 10s |
+| navigation | PASS | 0m 19s |
+| add-holding-lookup | PASS | 0m 58s |
+| record-purchase | PASS | 0m 47s |
+| payouts | PASS | 0m 44s |
+| xirr-holding | PASS | 0m 34s |
+| cash | PASS | 0m 52s |
+| trade-correction | PASS | 1m 55s |
+| holdings-csv-import | PASS | 1m 10s |
+| epf-accounts | PASS | 1m 03s |
+| ppf-account | PASS | 1m 17s |
+| progress-snapshot-history | PASS | 0m 41s |
+| value-masking | PASS | 1m 03s |
+| persistence | PASS | 0m 34s |
+| backup-roundtrip | PASS | 1m 11s |
+
 ## 2026-11-21: Smoke tier and Downloads-picked imports (#772), 15 passed, 14m 45s + 9m 54s + 1m 07s + 0m 45s
 
 - Commit: fix/772-downloads-picked-files e8492e1, based on `main` e23c9c5,

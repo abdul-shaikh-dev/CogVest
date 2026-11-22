@@ -56,7 +56,7 @@ describe("SettingsScreen", () => {
     expect(tools.getByTestId("open-futures-action")).toBeTruthy();
     expect(tools.queryByTestId("restore-backup-action")).toBeNull();
     expect(backup.queryByTestId("open-futures-action")).toBeNull();
-    expect(backup.getByText("Save an unencrypted manual copy to a location you choose.")).toBeTruthy();
+    expect(backup.getByText("Save a copy to a location you choose, protected with a passphrase if you like.")).toBeTruthy();
     expect(backup.getByText("Review a backup before it replaces this device's portfolio.")).toBeTruthy();
     const layout = JSON.stringify(view.toJSON());
     expect(layout.indexOf('"testID":"futures-settings-card"')).toBeLessThan(layout.indexOf('"testID":"backup-settings-card"'));

@@ -14,3 +14,10 @@ export const backupRestoreKeys = [
 
 /** Keys a restore journal saved by an earlier version may not list; they did not exist then (#665). */
 export const backupRestoreKeysAddedLater: ReadonlySet<string> = new Set(["cogvest:v1:preferences"]);
+
+/**
+ * When this phone last exported a backup, for the backup reminder (#759).
+ * Device-only: never written to a backup file and never touched by a restore,
+ * so a restore cannot count as a backup.
+ */
+export const backupStatusStorageKey = "cogvest:v1:backup-status";
