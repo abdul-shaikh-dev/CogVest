@@ -281,9 +281,12 @@ function runMaestro(flow) {
   const outputArgs = process.env.MAESTRO_TEST_OUTPUT_DIR
     ? [`--test-output-dir=${process.env.MAESTRO_TEST_OUTPUT_DIR}`]
     : [];
+  // With several devices attached, ANDROID_SERIAL picks one: adb reads it
+  // directly, and Maestro needs it passed as --device.
+  const deviceArgs = process.env.ANDROID_SERIAL ? ["--device", process.env.ANDROID_SERIAL] : [];
   return new Promise((resolve) => {
     let output = "";
-    const child = spawn(maestroPath, ["test", "-e", `APP_ID=${appId}`, "-e", `SCHEME=${scheme}`, flow, ...outputArgs], {
+    const child = spawn(maestroPath, [...deviceArgs, "test", "-e", `APP_ID=${appId}`, "-e", `SCHEME=${scheme}`, flow, ...outputArgs], {
       shell: process.platform === "win32" && /\.(cmd|bat)$/iu.test(maestroPath),
       stdio: ["inherit", "pipe", "pipe"],
     });

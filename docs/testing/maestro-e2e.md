@@ -92,6 +92,12 @@ $env:COGVEST_APP_ID = "com.abdulshaikh.cogvest.e2e"; npm run maestro:test
 `android:e2e` builds for the x86_64 emulator. Rebuild the APK after any change
 to `app/` or `src/`, since it does not load JavaScript from Metro.
 
+With more than one device attached, set `ANDROID_SERIAL` to the target's
+`adb devices` serial. The runner's own `adb` calls and Maestro (`--device`) then
+both use that device; without it, setup fails as soon as a second device
+appears. A physical phone needs an arm64 build
+(`-PreactNativeArchitectures=arm64-v8a`).
+
 ## Run Cadence
 
 - **Smoke tier** (`smokeFlows` in `scripts/maestro-run.mjs`): one flow per
