@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, ScrollView, View } from "react-native";
 
 import {
   AppButton,
   AppText,
+  BottomSheet,
   SectionHeader,
   androidRipple,
   getPressedStateStyle,
@@ -15,8 +15,8 @@ import {
   type MonthlyChartCustomRange,
   type MonthlyChartRange,
 } from "@/src/domain/calculations";
-import { useModalAnimation, useReducedMotionPreference, useSingleBackRequest } from "@/src/hooks";
-import { interaction, spacing } from "@/src/theme";
+import { useSingleBackRequest } from "@/src/hooks";
+import { interaction } from "@/src/theme";
 
 import { useStyles } from "./progressStyles";
 import { formatMonth, formatShortMonth } from "./progressViewModel";
@@ -90,7 +90,6 @@ export function MonthPickerField({
   testID: string;
   value: string;
 }) {
-  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -117,66 +116,58 @@ export function MonthPickerField({
           ⌄
         </AppText>
       </Pressable>
-      <Modal
-        animationType={modalAnimation}
+      <BottomSheet
+        closeLabel="Close month picker"
+        maxHeight="72%"
         onRequestClose={() => setIsOpen(false)}
-        transparent
+        scroll={false}
+        testID={`${testID}-sheet`}
         visible={isOpen}
       >
-        <View style={styles.monthPickerOverlay}>
-          <Pressable
-            accessibilityLabel="Close month picker"
-            accessibilityRole="button"
-            onPress={() => setIsOpen(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.monthPickerSheet}>
-            <View style={styles.monthPickerHeader}>
-              <AppText accessibilityRole="header" variant="title" weight="bold">
-                {label}
-              </AppText>
-              <AppText color="secondary" variant="caption">
-                Available completed months
-              </AppText>
-            </View>
-            <ScrollView
-              contentContainerStyle={styles.monthPickerOptions}
-              keyboardShouldPersistTaps="handled"
-            >
-              {months.map((month) => {
-                const isSelected = month === value;
-
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}
-                    key={month}
-                    onPress={() => {
-                      onChange(month);
-                      setIsOpen(false);
-                    }}
-                    style={({ pressed }) => [
-                      styles.monthPickerOption,
-                      isSelected ? styles.monthPickerOptionSelected : null,
-                      getPressedStateStyle({ pressed }),
-                    ]}
-                    testID={`${testID}-${month}`}
-                  >
-                    <AppText weight={isSelected ? "bold" : "medium"}>
-                      {formatMonth(month)}
-                    </AppText>
-                    {isSelected ? (
-                      <AppText style={styles.gainText} variant="caption">
-                        Selected
-                      </AppText>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+        <View style={styles.monthPickerHeader}>
+          <AppText accessibilityRole="header" variant="title" weight="bold">
+            {label}
+          </AppText>
+          <AppText color="secondary" variant="caption">
+            Available completed months
+          </AppText>
         </View>
-      </Modal>
+        <ScrollView
+          contentContainerStyle={styles.monthPickerOptions}
+          keyboardShouldPersistTaps="handled"
+        >
+          {months.map((month) => {
+            const isSelected = month === value;
+
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected }}
+                key={month}
+                onPress={() => {
+                  onChange(month);
+                  setIsOpen(false);
+                }}
+                style={({ pressed }) => [
+                  styles.monthPickerOption,
+                  isSelected ? styles.monthPickerOptionSelected : null,
+                  getPressedStateStyle({ pressed }),
+                ]}
+                testID={`${testID}-${month}`}
+              >
+                <AppText weight={isSelected ? "bold" : "medium"}>
+                  {formatMonth(month)}
+                </AppText>
+                {isSelected ? (
+                  <AppText style={styles.gainText} variant="caption">
+                    Selected
+                  </AppText>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }
@@ -197,8 +188,6 @@ export function CustomMonthRangeControls({
   testIDPrefix: string;
 }) {
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotionPreference();
   const [startMonth, setStartMonth] = useState(appliedRange.startMonth);
   const [endMonth, setEndMonth] = useState(appliedRange.endMonth);
   const [error, setError] = useState<string | null>(null);
@@ -284,184 +273,180 @@ export function CustomMonthRangeControls({
   const handleBackRequest = useSingleBackRequest(closeOrReturn);
 
   return (
-    <Modal
-      animationType={reducedMotion ? "none" : "fade"}
+    <BottomSheet
+      closeLabel="Close custom range"
+      maxHeight="72%"
+      modalTestID={`${testIDPrefix}-modal`}
       onRequestClose={handleBackRequest}
-      testID={`${testIDPrefix}-modal`}
-      transparent
+      scroll={false}
+      testID={`${testIDPrefix}-sheet`}
       visible
     >
-      <View style={[styles.monthPickerOverlay, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View
-          accessibilityViewIsModal
-          style={styles.monthPickerSheet}
-          testID={`${testIDPrefix}-panel`}
-        >
-          {activePicker ? (
-            <>
-              <View style={styles.monthPickerHeader}>
-                <AppText variant="title" weight="bold">{activeLabel}</AppText>
+      <View style={styles.monthPickerPanel} testID={`${testIDPrefix}-panel`}>
+        {activePicker ? (
+          <>
+            <View style={styles.monthPickerHeader}>
+              <AppText variant="title" weight="bold">{activeLabel}</AppText>
+              <AppText color="secondary" variant="caption">
+                Current selection: {activeValue ? formatMonth(activeValue) : "Not selected"}
+              </AppText>
+            </View>
+            {isChoosingYear ? (
+              <>
                 <AppText color="secondary" variant="caption">
-                  Current selection: {activeValue ? formatMonth(activeValue) : "Not selected"}
+                  Choose a year containing valid stored months.
                 </AppText>
-              </View>
-              {isChoosingYear ? (
-                <>
-                  <AppText color="secondary" variant="caption">
-                    Choose a year containing valid stored months.
-                  </AppText>
-                  <ScrollView contentContainerStyle={styles.yearPickerGrid}>
-                    {[...activeYears].reverse().map((year) => {
-                      const isSelected = year === activeYear;
-                      return (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: isSelected }}
-                          key={year}
-                          onPress={() => {
-                            setActiveYear(year);
-                            setIsChoosingYear(false);
-                          }}
-                          style={({ pressed }) => [
-                            styles.yearPickerOption,
-                            minimumTouchTargetStyle,
-                            isSelected ? styles.monthPickerOptionSelected : null,
-                            getPressedStateStyle({ pressed }),
-                          ]}
-                          testID={`${testIDPrefix}-${activePicker}-year-${year}`}
-                        >
-                          <AppText weight={isSelected ? "bold" : "medium"}>{year}</AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                  <AppButton
-                    onPress={() => setIsChoosingYear(false)}
-                    title="Back to months"
-                    variant="secondary"
-                  />
-                </>
-              ) : (
-                <>
-                  <View style={styles.yearNavigator}>
-                    <AppButton
-                      accessibilityLabel={`Show previous available year for ${activeLabel.toLowerCase()}`}
-                      disabled={activeYearIndex <= 0}
-                      onPress={() => setActiveYear(activeYears[activeYearIndex - 1] ?? activeYear)}
-                      testID={`${testIDPrefix}-${activePicker}-previous-year`}
-                      title="‹"
-                      variant="secondary"
-                    />
-                    <Pressable
-                      accessibilityLabel={`Choose year. Showing ${activeYear}`}
-                      accessibilityRole="button"
-                      onPress={() => setIsChoosingYear(true)}
-                      style={({ pressed }) => [styles.yearPickerButton, getPressedStateStyle({ pressed })]}
-                      testID={`${testIDPrefix}-${activePicker}-choose-year`}
-                    >
-                      <AppText color="secondary" variant="caption">Year</AppText>
-                      <AppText variant="title" weight="bold">{activeYear}</AppText>
-                    </Pressable>
-                    <AppButton
-                      accessibilityLabel={`Show next available year for ${activeLabel.toLowerCase()}`}
-                      disabled={activeYearIndex < 0 || activeYearIndex >= activeYears.length - 1}
-                      onPress={() => setActiveYear(activeYears[activeYearIndex + 1] ?? activeYear)}
-                      testID={`${testIDPrefix}-${activePicker}-next-year`}
-                      title="›"
-                      variant="secondary"
-                    />
-                  </View>
-                  <View style={styles.monthChoiceGrid}>
-                    {activeYearMonths.map((month) => {
-                      const isSelected = month === activeValue;
-                      return (
-                        <Pressable
-                          accessibilityLabel={formatMonth(month)}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: isSelected }}
-                          key={month}
-                          onPress={() => {
-                            if (activePicker === "start") changeStartMonth(month);
-                            else changeEndMonth(month);
-                            setActivePicker(null);
-                          }}
-                          style={({ pressed }) => [
-                            styles.monthChoice,
-                            minimumTouchTargetStyle,
-                            isSelected ? styles.monthPickerOptionSelected : null,
-                            getPressedStateStyle({ pressed }),
-                          ]}
-                          testID={`${testIDPrefix}-${activePicker}-${month}`}
-                        >
-                          <AppText align="center" weight={isSelected ? "bold" : "medium"}>
-                            {formatShortMonth(month)}
-                          </AppText>
-                          {isSelected ? (
-                            <AppText align="center" style={styles.gainText} variant="caption">Selected</AppText>
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  <AppButton onPress={() => setActivePicker(null)} title="Back to range" variant="secondary" />
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              <View style={styles.monthPickerHeader}>
-                <AppText variant="title" weight="bold">{chartTitle} range</AppText>
-                <AppText color="secondary" variant="caption">
-                  Choose completed months. The chart changes only after you apply.
-                </AppText>
-              </View>
-              <View style={styles.customRangeFields}>
-                {([
-                  { key: "start", label: "From month", value: startMonth },
-                  { key: "end", label: "To month", value: endMonth },
-                ] as const).map((field) => (
-                  <View key={field.key} style={styles.customRangeField}>
-                    <AppText color="secondary" variant="caption">{field.label}</AppText>
-                    <Pressable
-                      accessibilityLabel={`Choose ${field.label.toLowerCase()}`}
-                      accessibilityRole="button"
-                      onPress={() => openPicker(field.key)}
-                      style={({ pressed }) => [styles.monthPickerField, getPressedStateStyle({ pressed })]}
-                      testID={`${testIDPrefix}-${field.key}`}
-                    >
-                      <AppText variant="caption" weight="bold">
-                        {field.value ? formatMonth(field.value) : "Choose month"}
-                      </AppText>
-                      <AppText color="secondary" variant="caption">Change</AppText>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-              {error ? (
-                <AppText style={styles.lossText} testID={`${testIDPrefix}-error`} variant="caption">
-                  {error}
-                </AppText>
-              ) : null}
-              <View style={styles.customRangeActions}>
+                <ScrollView contentContainerStyle={styles.yearPickerGrid}>
+                  {[...activeYears].reverse().map((year) => {
+                    const isSelected = year === activeYear;
+                    return (
+                      <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                        key={year}
+                        onPress={() => {
+                          setActiveYear(year);
+                          setIsChoosingYear(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.yearPickerOption,
+                          minimumTouchTargetStyle,
+                          isSelected ? styles.monthPickerOptionSelected : null,
+                          getPressedStateStyle({ pressed }),
+                        ]}
+                        testID={`${testIDPrefix}-${activePicker}-year-${year}`}
+                      >
+                        <AppText weight={isSelected ? "bold" : "medium"}>{year}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
                 <AppButton
-                  onPress={onCancel}
-                  style={styles.customRangeAction}
-                  testID={`${testIDPrefix}-cancel`}
-                  title="Cancel"
+                  onPress={() => setIsChoosingYear(false)}
+                  title="Back to months"
                   variant="secondary"
                 />
-                <AppButton
-                  onPress={applyRange}
-                  style={styles.customRangeAction}
-                  testID={`${testIDPrefix}-apply`}
-                  title="Apply range"
-                />
-              </View>
-            </>
-          )}
-        </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.yearNavigator}>
+                  <AppButton
+                    accessibilityLabel={`Show previous available year for ${activeLabel.toLowerCase()}`}
+                    disabled={activeYearIndex <= 0}
+                    onPress={() => setActiveYear(activeYears[activeYearIndex - 1] ?? activeYear)}
+                    testID={`${testIDPrefix}-${activePicker}-previous-year`}
+                    title="‹"
+                    variant="secondary"
+                  />
+                  <Pressable
+                    accessibilityLabel={`Choose year. Showing ${activeYear}`}
+                    accessibilityRole="button"
+                    onPress={() => setIsChoosingYear(true)}
+                    style={({ pressed }) => [styles.yearPickerButton, getPressedStateStyle({ pressed })]}
+                    testID={`${testIDPrefix}-${activePicker}-choose-year`}
+                  >
+                    <AppText color="secondary" variant="caption">Year</AppText>
+                    <AppText variant="title" weight="bold">{activeYear}</AppText>
+                  </Pressable>
+                  <AppButton
+                    accessibilityLabel={`Show next available year for ${activeLabel.toLowerCase()}`}
+                    disabled={activeYearIndex < 0 || activeYearIndex >= activeYears.length - 1}
+                    onPress={() => setActiveYear(activeYears[activeYearIndex + 1] ?? activeYear)}
+                    testID={`${testIDPrefix}-${activePicker}-next-year`}
+                    title="›"
+                    variant="secondary"
+                  />
+                </View>
+                <View style={styles.monthChoiceGrid}>
+                  {activeYearMonths.map((month) => {
+                    const isSelected = month === activeValue;
+                    return (
+                      <Pressable
+                        accessibilityLabel={formatMonth(month)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                        key={month}
+                        onPress={() => {
+                          if (activePicker === "start") changeStartMonth(month);
+                          else changeEndMonth(month);
+                          setActivePicker(null);
+                        }}
+                        style={({ pressed }) => [
+                          styles.monthChoice,
+                          minimumTouchTargetStyle,
+                          isSelected ? styles.monthPickerOptionSelected : null,
+                          getPressedStateStyle({ pressed }),
+                        ]}
+                        testID={`${testIDPrefix}-${activePicker}-${month}`}
+                      >
+                        <AppText align="center" weight={isSelected ? "bold" : "medium"}>
+                          {formatShortMonth(month)}
+                        </AppText>
+                        {isSelected ? (
+                          <AppText align="center" style={styles.gainText} variant="caption">Selected</AppText>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <AppButton onPress={() => setActivePicker(null)} title="Back to range" variant="secondary" />
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <View style={styles.monthPickerHeader}>
+              <AppText variant="title" weight="bold">{chartTitle} range</AppText>
+              <AppText color="secondary" variant="caption">
+                Choose completed months. The chart changes only after you apply.
+              </AppText>
+            </View>
+            <View style={styles.customRangeFields}>
+              {([
+                { key: "start", label: "From month", value: startMonth },
+                { key: "end", label: "To month", value: endMonth },
+              ] as const).map((field) => (
+                <View key={field.key} style={styles.customRangeField}>
+                  <AppText color="secondary" variant="caption">{field.label}</AppText>
+                  <Pressable
+                    accessibilityLabel={`Choose ${field.label.toLowerCase()}`}
+                    accessibilityRole="button"
+                    onPress={() => openPicker(field.key)}
+                    style={({ pressed }) => [styles.monthPickerField, getPressedStateStyle({ pressed })]}
+                    testID={`${testIDPrefix}-${field.key}`}
+                  >
+                    <AppText variant="caption" weight="bold">
+                      {field.value ? formatMonth(field.value) : "Choose month"}
+                    </AppText>
+                    <AppText color="secondary" variant="caption">Change</AppText>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+            {error ? (
+              <AppText style={styles.lossText} testID={`${testIDPrefix}-error`} variant="caption">
+                {error}
+              </AppText>
+            ) : null}
+            <View style={styles.customRangeActions}>
+              <AppButton
+                onPress={onCancel}
+                style={styles.customRangeAction}
+                testID={`${testIDPrefix}-cancel`}
+                title="Cancel"
+                variant="secondary"
+              />
+              <AppButton
+                onPress={applyRange}
+                style={styles.customRangeAction}
+                testID={`${testIDPrefix}-apply`}
+                title="Apply range"
+              />
+            </View>
+          </>
+        )}
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 

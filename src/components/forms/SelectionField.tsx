@@ -1,15 +1,12 @@
 import { useState } from "react";
 import {
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 
-import { AppText, SectionHeader } from "@/src/components/common";
+import { AppText, BottomSheet, SectionHeader } from "@/src/components/common";
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
-import { useModalAnimation } from "@/src/hooks";
 
 export type SelectionOption<T extends string> = {
   label: string;
@@ -37,7 +34,6 @@ export function SelectionField<T extends string>({
   testIDPrefix,
   value,
 }: SelectionFieldProps<T>) {
-  const modalAnimation = useModalAnimation();
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption =
@@ -76,59 +72,50 @@ export function SelectionField<T extends string>({
         <AppText color="secondary">›</AppText>
       </Pressable>
 
-      <Modal
-        animationType={modalAnimation}
+      <BottomSheet
+        closeLabel={`Close ${label.toLowerCase()} options`}
+        maxHeight="84%"
         onRequestClose={() => setIsOpen(false)}
-        transparent
+        testID={`${testIDPrefix}-sheet`}
         visible={isOpen}
       >
-        <View style={styles.backdrop}>
-          <Pressable
-            accessibilityLabel={`Close ${label.toLowerCase()} options`}
-            accessibilityRole="button"
-            onPress={() => setIsOpen(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View accessibilityViewIsModal style={styles.sheet}>
-            <SectionHeader title={`Choose ${label.toLowerCase()}`} />
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {options.map((option, index) => {
-                const selected = option.value === value;
+        <SectionHeader title={`Choose ${label.toLowerCase()}`} />
+        <View>
+          {options.map((option, index) => {
+            const selected = option.value === value;
 
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    key={option.value}
-                    onPress={() => {
-                      onChange(option.value);
-                      setIsOpen(false);
-                    }}
-                    style={({ pressed }) => [
-                      styles.option,
-                      index < options.length - 1 && styles.divider,
-                      pressed && styles.pressed,
-                    ]}
-                    testID={`${testIDPrefix}-${option.value}`}
-                  >
-                    <AppText
-                      color={selected ? "primary" : "secondary"}
-                      weight={selected ? "bold" : "medium"}
-                    >
-                      {option.label}
-                    </AppText>
-                    {selected ? (
-                      <AppText color="primary" variant="caption" weight="bold">
-                        Selected
-                      </AppText>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={option.value}
+                onPress={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                style={({ pressed }) => [
+                  styles.option,
+                  index < options.length - 1 && styles.divider,
+                  pressed && styles.pressed,
+                ]}
+                testID={`${testIDPrefix}-${option.value}`}
+              >
+                <AppText
+                  color={selected ? "primary" : "secondary"}
+                  weight={selected ? "bold" : "medium"}
+                >
+                  {option.label}
+                </AppText>
+                {selected ? (
+                  <AppText color="primary" variant="caption" weight="bold">
+                    Selected
+                  </AppText>
+                ) : null}
+              </Pressable>
+            );
+          })}
         </View>
-      </Modal>
+      </BottomSheet>
     </>
   );
 }
@@ -143,12 +130,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   compactCopy: {
     flex: 0,
     flexShrink: 1,
-  },
-  backdrop: {
-    backgroundColor: colors.scrim,
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: spacing.md,
   },
   copy: {
     flex: 1,
@@ -178,11 +159,5 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   pressed: {
     opacity: interaction.pressedOpacity,
-  },
-  sheet: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.sheet,
-    maxHeight: "84%",
-    padding: spacing.md,
   },
 }));

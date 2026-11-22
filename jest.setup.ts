@@ -42,15 +42,27 @@ jest.mock("react-native-reanimated", () => {
     __esModule: true,
     default: Animated,
     ...Animated,
-    Easing: { out: (easing: unknown) => easing, quad: (value: number) => value },
+    Easing: { cubic: (value: number) => value, out: (easing: unknown) => easing, quad: (value: number) => value },
     FadeIn: fade(),
     ReduceMotion: { System: "system" },
     useReducedMotion: jest.fn(() => false),
+    // Bottom sheet motion (#784): styles compute once, timings land at once.
+    useAnimatedStyle: (style: () => unknown) => style(),
+    withTiming: jest.fn(<T,>(value: T) => value),
     useAnimatedReaction,
     useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
-    useSharedValue: <T,>(value: T) => ({ value }),
+    useSharedValue: <T,>(value: T) => {
+      const shared = { value, get: () => shared.value, set: (next: T) => { shared.value = next; } };
+      return shared;
+    },
   };
 });
+// The bottom sheet's drag (#784) runs on the UI thread. Jest renders the
+// detector's child; shouldCloseSheet covers the drag decision.
+jest.mock("react-native-gesture-handler", () => ({
+  ...jest.requireActual("react-native-gesture-handler"),
+  GestureDetector: ({ children }: { children: unknown }) => children,
+}));
 jest.mock("react-native-worklets", () => ({
   scheduleOnRN: (callback: (...args: unknown[]) => void, ...args: unknown[]) => callback(...args),
 }));

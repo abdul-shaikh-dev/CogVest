@@ -6,11 +6,11 @@ import { CashEntryRow } from "@/src/components/cards";
 import {
   AppButton,
   AppText,
+  BottomSheet,
   EmptyState,
   HeroMetric,
   MetricGroup,
   PremiumCard,
-  ScreenContainer,
   ScreenList,
   ScreenHeader,
   SectionHeader,
@@ -317,10 +317,17 @@ export function CashScreen({
       testID="cash-screen"
     />
 
-    <Modal animationType="none" visible={isEntryVisible} onRequestClose={handleEntryBackRequest} testID="cash-entry-modal">
-      {/* Android Modal already uses adjustResize; a second height adjustment leaves stale keyboard space. */}
-      <View style={styles.modalRoot} testID="cash-entry-root">
-        <ScreenContainer scroll testID="cash-entry-panel">
+    {/* A short task, so a bottom sheet (#784). Back, a drag down and Cancel
+        all keep the draft. Android Modal already uses adjustResize; a second
+        height adjustment leaves stale keyboard space. */}
+    <BottomSheet
+      closeLabel="Close cash entry, keeping the draft"
+      dismissible={!isSaving}
+      modalTestID="cash-entry-modal"
+      onRequestClose={handleEntryBackRequest}
+      testID="cash-entry-sheet"
+      visible={isEntryVisible}
+    >
         {mode && modeCopy ? (
           <View style={styles.content} testID="cash-entry-form" accessibilityViewIsModal>
           <AppButton
@@ -419,9 +426,7 @@ export function CashScreen({
           </AppText>
           </View>
         ) : null}
-        </ScreenContainer>
-      </View>
-    </Modal>
+    </BottomSheet>
     <Modal
       animationType="none"
       onRequestClose={keepDraft}
@@ -447,7 +452,6 @@ export function CashScreen({
 }
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
-  modalRoot: { flex: 1, backgroundColor: colors.background },
   confirmBackdrop: { flex: 1, justifyContent: "center", padding: spacing.screenHorizontal, backgroundColor: colors.scrim },
   content: {
     gap: spacing.cardGap,

@@ -1,11 +1,8 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScrollView, View } from "react-native";
 
-import { AppButton, AppText, GroupedListRow, PremiumCard, SectionHeader } from "@/src/components/common";
-import { useReducedMotionPreference } from "@/src/hooks";
+import { AppButton, AppText, BottomSheet, GroupedListRow, PremiumCard, SectionHeader } from "@/src/components/common";
 import { formatPercentage } from "@/src/domain/formatters";
-import { spacing } from "@/src/theme";
 
 import type { ExposureSegment, HoldingReviewItem, getHoldingReviewSummary } from "./holdingsReview";
 import { ExposurePanel, InsightCard } from "./HoldingsInsights";
@@ -25,66 +22,47 @@ export function HoldingsPanelSheet({
   setActivePanel: (panel?: HoldingsPanel) => void;
 }) {
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
-  const isReducedMotionEnabled = useReducedMotionPreference();
   return (
-    <Modal
-      animationType={isReducedMotionEnabled ? "none" : "fade"}
+    <BottomSheet
+      closeLabel="Close holdings panel"
       onRequestClose={() => setActivePanel(undefined)}
-      transparent
+      scroll={false}
+      testID="holdings-panel-sheet"
       visible={activePanel !== undefined}
     >
-      <View
-        style={[
-          styles.panelBackdrop,
-          {
-            paddingBottom: Math.max(insets.bottom, spacing.md),
-            paddingTop: Math.max(insets.top, spacing.md),
-          },
-        ]}
-      >
-        <Pressable
-          accessibilityLabel="Close holdings panel"
-          accessibilityRole="button"
+      <View style={styles.panelHeader}>
+        {activePanel === "quotes" ? (
+          <AppButton
+            onPress={() => setActivePanel("more")}
+            title="Back"
+            variant="ghost"
+          />
+        ) : null}
+        <AppText
+          accessibilityRole="header"
+          style={styles.panelTitle}
+          variant="title"
+          weight="bold"
+        >
+          {activePanel === "add"
+            ? "Add holdings"
+            : activePanel === "more"
+              ? "Holdings options"
+              : activePanel === "quotes"
+                ? "Valuation details"
+                : "Portfolio insights"}
+        </AppText>
+        <AppButton
           onPress={() => setActivePanel(undefined)}
-          style={StyleSheet.absoluteFill}
+          testID="holdings-panel-close"
+          title="Close"
+          variant="ghost"
         />
-        <View accessibilityViewIsModal style={styles.panelSheet}>
-          <View style={styles.panelHeader}>
-            {activePanel === "quotes" ? (
-              <AppButton
-                onPress={() => setActivePanel("more")}
-                title="Back"
-                variant="ghost"
-              />
-            ) : null}
-            <AppText
-              accessibilityRole="header"
-              style={styles.panelTitle}
-              variant="title"
-              weight="bold"
-            >
-              {activePanel === "add"
-                ? "Add holdings"
-                : activePanel === "more"
-                  ? "Holdings options"
-                  : activePanel === "quotes"
-                    ? "Valuation details"
-                    : "Portfolio insights"}
-            </AppText>
-            <AppButton
-              onPress={() => setActivePanel(undefined)}
-              testID="holdings-panel-close"
-              title="Close"
-              variant="ghost"
-            />
-          </View>
-          <ScrollView contentContainerStyle={styles.panelContent}>
-            {children}
-          </ScrollView>
-        </View>
       </View>
-    </Modal>
+      <ScrollView contentContainerStyle={styles.panelContent}>
+        {children}
+      </ScrollView>
+    </BottomSheet>
   );
 }
 

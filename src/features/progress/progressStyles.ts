@@ -187,18 +187,10 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.xs,
   },
-  monthPickerOverlay: {
-    backgroundColor: colors.scrim,
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: spacing.md,
-  },
-  monthPickerSheet: {
-    backgroundColor: colors.surface.card,
-    borderRadius: 22,
+  // Content of a month-picker bottom sheet (#784).
+  monthPickerPanel: {
+    flexShrink: 1,
     gap: spacing.sm,
-    maxHeight: "72%",
-    padding: spacing.md,
   },
   yearNavigator: {
     alignItems: "center",
