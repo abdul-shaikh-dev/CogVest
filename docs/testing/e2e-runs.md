@@ -4,6 +4,27 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Stable date text (#779), emulator smoke 15 passed, Moto date flows 2 of 4 passed
+
+- Commit: fix/779-stable-date-format 6d10a83, based on `main` dc55ac7, version
+  1.0.33. `npm run test:verify`: 3,215 passed, doctor 18/18.
+- **Motorola Edge 30** (Android 14, arm64 E2E APK from 6d10a83, SHA-256
+  a176bf18c633b60209c79033497f31c5553c722804093649bab3935b6b4bd958). Run with
+  `ANDROID_SERIAL=ZD2224Z7DY` on the four flows that failed on date text in the
+  #746 run:
+  - `payouts` passed in 0m 49s and `xirr-holding` in 0m 36s.
+  - `backup-roundtrip` now passes its "Last backup: dd Mon yyyy" check. It
+    then stops at the restore picker (1m 10s), a device difference tracked in
+    #780.
+  - `cash` failed in 1m 45s, on the step after Back from the review screen:
+    the same Moto Back-key behaviour as `ppf-account`, also #780.
+  - No date assertion failed.
+- **Emulator smoke tier** passed 15 of 15 in 13m 29s. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0. Fresh x86_64 E2E APK from
+  6d10a83, SHA-256
+  5fa9c2a6248d0d7ab4678cb2fba66d9bc42db5feb21632abee82e3fe87f20f36. Run with
+  `ANDROID_SERIAL=emulator-5554`, with the Moto still attached.
+
 ## 2026-11-22: Button label fix (#746) on the S23 FE, emulator smoke 15 passed, Moto smoke 9 passed
 
 - Commit: fix/746-button-label-clipping e3f66bc (app code as 4320593), based on
