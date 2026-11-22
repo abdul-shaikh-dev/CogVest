@@ -1,0 +1,28 @@
+diff --git a/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt b/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt
+index e5c56eb..2ba90ff 100644
+--- a/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt
++++ b/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt
+@@ -30,7 +30,14 @@ class SafeAreaView(context: Context?) :
+   }
+ 
+   fun setStateWrapper(stateWrapper: StateWrapper?) {
++    val changed = stateWrapper !== mStateWrapper
+     mStateWrapper = stateWrapper
++    // A new shadow node starts with empty insets. With view recycling, this view can keep insets it
++    // already computed, so maybeUpdateInsets() would see no change and never send them: the screen
++    // then lays out with zero insets. Send the known insets to the new state.
++    if (changed && stateWrapper != null) {
++      updateInsets()
++    }
+   }
+ 
+   private fun updateInsets() {
+@@ -134,6 +141,8 @@ class SafeAreaView(context: Context?) :
+     mProviderView?.viewTreeObserver?.removeOnPreDrawListener(this)
+     mProviderView = null
+     mLastSafeAreaInsets = null
++    // Recompute and send insets when attached again, possibly as a recycled view.
++    mInsets = null
+     mDispatchedInsets.clear()
+   }
+ 
