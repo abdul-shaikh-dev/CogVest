@@ -4,6 +4,7 @@ import { Pressable, View, useWindowDimensions } from "react-native";
 import {
   AppText,
   MaskedValue,
+  Skeleton,
   androidRipple,
   getPressedStateStyle,
 } from "@/src/components/common";
@@ -21,13 +22,18 @@ import {
 export function HoldingRow({
   allocationAvailable,
   item,
+  loadingPrice = false,
   masked,
   minimal,
   onPress,
 }: Pick<
   HoldingDetailsProps,
   "allocationAvailable" | "item" | "masked" | "minimal"
-> & { onPress: () => void }) {
+> & {
+  /** Quotes are loading and this holding has no price yet: show placeholders (#783). */
+  loadingPrice?: boolean;
+  onPress: () => void;
+}) {
   const styles = useStyles();
   const { holding } = item;
   const pending = holding.currentValue === null;
@@ -67,7 +73,9 @@ export function HoldingRow({
           </AppText>
         </View>
         <View style={[styles.valueColumn, stackIdentity && styles.stackedValue]}>
-          <MaskedValue
+          {pending && loadingPrice ? (
+            <Skeleton height={20} width={88} />
+          ) : <MaskedValue
             style={styles.holdingNumber}
             variant={pending ? "body" : "section"}
             exactValue={
@@ -80,7 +88,7 @@ export function HoldingRow({
                 : formatCompactINR(holding.currentValue!)
             }
             weight="bold"
-          />
+          />}
         </View>
       </View>
       <View style={styles.holdingMetrics}>
@@ -103,7 +111,7 @@ export function HoldingRow({
                 ]}
                 weight="bold"
               />
-          ) : (
+          ) : loadingPrice ? <Skeleton height={18} width={64} /> : (
             <AppText color="secondary" weight="bold">—</AppText>
           )}
         </View>
@@ -121,7 +129,7 @@ export function HoldingRow({
               >
                 {formatPercentage(holding.unrealisedPnLPct)}
               </AppText>
-          ) : (
+          ) : loadingPrice ? <Skeleton height={18} width={48} /> : (
             <AppText color="secondary" weight="bold">
               —
             </AppText>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 
-import { AppText, PremiumCard, SectionHeader } from "@/src/components/common";
+import { AppText, FadeInView, PremiumCard, SectionHeader, Skeleton } from "@/src/components/common";
 import type {
   MonthlyChartCustomRange,
   MonthlyChartRange,
@@ -16,6 +16,8 @@ import {
 } from "./ProgressChartRange";
 import { useStyles } from "./progressStyles";
 import { TrendChart } from "./ProgressTrendChart";
+
+const CHART_SKELETON_HEIGHTS = [36, 52, 44, 68, 60, 84];
 
 export function ProgressTrendCards({
   assetChartCustomRange,
@@ -59,11 +61,20 @@ export function ProgressTrendCards({
     return (
       <PremiumCard testID="progress-trends-building">
         <SectionHeader title="Trend history is still building" />
-        <View style={styles.chartPlaceholder}>
-          <AppText color="secondary" align="center">
-            Charts will appear when CogVest finishes checking the stored months.
-          </AppText>
+        {/* A still outline of the chart to come (#783). */}
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.chartSkeleton}
+          testID="progress-trends-skeleton"
+        >
+          {CHART_SKELETON_HEIGHTS.map((height, index) => (
+            <Skeleton height={height} key={index} style={styles.chartSkeletonBar} width="auto" />
+          ))}
         </View>
+        <AppText color="secondary" align="center">
+          Charts will appear when CogVest finishes checking the stored months.
+        </AppText>
       </PremiumCard>
     );
   }
@@ -87,7 +98,7 @@ export function ProgressTrendCards({
   }
 
   return (
-    <>
+    <FadeInView style={styles.chartReveal}>
       {ppfExcludedHistory ? (
         <PremiumCard testID="ppf-excluded-chart-notice">
           <SectionHeader title="Market and cash history" />
@@ -214,6 +225,6 @@ export function ProgressTrendCards({
           testIDPrefix="asset-custom-range"
         />
       ) : null}
-    </>
+    </FadeInView>
   );
 }

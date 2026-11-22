@@ -292,6 +292,9 @@ export function HoldingsScreen({
         }
         item={item}
         key={item.holding.asset.id}
+        // Only rows without a price change while quotes load, so the other
+        // memoised rows do not re-render.
+        loadingPrice={isRefreshing && item.holding.currentValue === null}
         masked={maskWealthValues}
         minimal={isMinimalMode}
         onSelect={selectHolding}

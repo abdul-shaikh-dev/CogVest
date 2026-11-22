@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { AppButton, AppText, SectionHeader } from "@/src/components/common";
+import { AppButton, AppText, FadeInView, SectionHeader, Skeleton } from "@/src/components/common";
 import { buildAssetHistory } from "@/src/domain/calculations/assetHistory";
 import { formatCompactAxisValue, formatDate, formatPrice } from "@/src/domain/formatters";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
@@ -202,6 +202,10 @@ export function AssetHistoryPanel({
           {history.entry ? "Refreshing history…" : "Loading history…"}
         </AppText>
       ) : null}
+      {history.loading && !history.entry ? (
+        // Holds the chart's place until the first history arrives (#783).
+        <Skeleton height={160} style={styles.chartSkeleton} />
+      ) : null}
       {history.message ? (
         <AppText color="secondary" testID="asset-history-message">
           {history.message}
@@ -244,6 +248,7 @@ export function AssetHistoryPanel({
             </AppText>
           ) : null}
           {available.length > 1 ? (
+            <FadeInView>
             <View
               accessible={false}
               importantForAccessibility="no-hide-descendants"
@@ -261,6 +266,7 @@ export function AssetHistoryPanel({
                 zoomed={window !== null}
               />
             </View>
+            </FadeInView>
           ) : null}
           {available.length > 1 ? (
             <View style={styles.zoomRow}>
@@ -353,6 +359,7 @@ export function AssetHistoryPanel({
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   section: { gap: spacing.md, paddingBottom: spacing.md },
+  chartSkeleton: { borderRadius: 18 },
   controls: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   range: { paddingHorizontal: 12 },
   readout: { gap: spacing.xs },

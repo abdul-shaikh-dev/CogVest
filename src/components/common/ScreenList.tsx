@@ -12,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { createThemedStyles, spacing } from "@/src/theme";
 
+import { FadeInView } from "./Motion";
+
 type ScreenListProps<Item> = {
   /** Overlays such as modals, rendered beside the list. */
   children?: ReactNode;
@@ -54,24 +56,26 @@ export function ScreenList<Item>({
   const styles = useStyles();
   return (
     <SafeAreaView style={styles.safe} testID={testID}>
-      <FlatList
-        ItemSeparatorComponent={itemGap ? () => <View style={{ height: itemGap }} /> : undefined}
-        ListEmptyComponent={empty}
-        ListFooterComponent={footer}
-        ListHeaderComponent={header}
-        contentContainerStyle={[styles.content, listStyle]}
-        data={data}
-        initialNumToRender={12}
-        keyExtractor={keyExtractor}
-        keyboardShouldPersistTaps="always"
-        maxToRenderPerBatch={12}
-        ref={listRef}
-        refreshControl={refreshControl}
-        renderItem={renderItem}
-        style={styles.list}
-        testID={listTestID}
-        windowSize={7}
-      />
+      <FadeInView kind="entry" style={styles.list}>
+        <FlatList
+          ItemSeparatorComponent={itemGap ? () => <View style={{ height: itemGap }} /> : undefined}
+          ListEmptyComponent={empty}
+          ListFooterComponent={footer}
+          ListHeaderComponent={header}
+          contentContainerStyle={[styles.content, listStyle]}
+          data={data}
+          initialNumToRender={12}
+          keyExtractor={keyExtractor}
+          keyboardShouldPersistTaps="always"
+          maxToRenderPerBatch={12}
+          ref={listRef}
+          refreshControl={refreshControl}
+          renderItem={renderItem}
+          style={styles.list}
+          testID={listTestID}
+          windowSize={7}
+        />
+      </FadeInView>
       {children}
     </SafeAreaView>
   );

@@ -37,6 +37,15 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     alignItems: "flex-end",
     gap: spacing.xs,
   },
+  // Trend cards fade in together and keep the screen's card gap (#783).
+  chartReveal: { gap: spacing.cardGap },
+  chartSkeleton: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 96,
+  },
+  chartSkeletonBar: { borderRadius: 6, flex: 1 },
   chartPlaceholder: {
     alignItems: "center",
     backgroundColor: colors.surface.elevated,

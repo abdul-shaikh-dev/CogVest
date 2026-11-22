@@ -53,3 +53,6 @@ export const shadows = {
     shadowOpacity: 0,
   },
 } as const;
+
+export { getMotionDuration, motionDurations } from "./motion";
+export type { MotionKind } from "./motion";

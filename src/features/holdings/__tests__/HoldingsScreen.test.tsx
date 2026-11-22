@@ -1434,6 +1434,36 @@ describe("HoldingsScreen", () => {
     expect(getList().queryByText("Public Provident Fund")).toBeNull();
   });
 
+  it("holds a price's place while quotes load, then says when it is still missing (#783)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    let finish: (result: QuoteRefreshResult) => void = () => undefined;
+    const refreshQuotes = jest
+      .fn<Promise<QuoteRefreshResult>, [RefreshQuotesInput]>()
+      .mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+
+    const view = await render(
+      <HoldingsScreen now={new Date("2026-04-21T10:05:00.000Z")} refreshQuotes={refreshQuotes} store={store} />,
+    );
+    const scrollView = getByComponentType(view, ScrollView);
+    let refreshing: Promise<void> = Promise.resolve();
+    await act(async () => {
+      refreshing = scrollView.props.refreshControl.props.onRefresh();
+    });
+
+    const row = () => within(view.getByTestId(`holding-row-${asset.id}`));
+    expect(row().getAllByTestId("skeleton-bar").length).toBeGreaterThan(0);
+    expect(row().queryByText("Valuation pending")).toBeNull();
+
+    await act(async () => {
+      finish({ failed: [{ assetId: asset.id, error: "Provider unavailable." }], quoteCache: {}, timedOut: [], updated: [] });
+      await refreshing;
+    });
+    expect(row().getByText("Valuation pending")).toBeTruthy();
+    expect(row().queryAllByTestId("skeleton-bar")).toHaveLength(0);
+  });
+
   it("refreshes holdings quotes from the screen action", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     store.getState().addAsset(asset);

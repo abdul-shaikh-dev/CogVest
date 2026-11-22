@@ -7,8 +7,10 @@ import {
   CategoryIcon,
   DisclosureButton,
   EmptyState,
+  FadeInView,
   MaskedValue,
   PremiumCard,
+  SkeletonRows,
   type AdaptiveLayoutMode,
 } from "@/src/components/common";
 import {
@@ -84,6 +86,18 @@ export function DashboardAllocation({
   const hasPositiveNetPortfolio =
     (dashboard.rollupTotals.totalCurrentValue ?? 0) > 0;
 
+  // Prices are on their way: hold the card's place instead of calling it
+  // unavailable (#783).
+  if (!hasAllocation && dashboard.isRefreshing && !hasCompleteValuation &&
+    !hasNegativeFuturesEquity && pendingFuturesCount === 0) {
+    return (
+      <PremiumCard section style={styles.compactSection} testID="dashboard-allocation-loading">
+        <AppText style={styles.allocationTitle} variant="title" weight="bold">Allocation</AppText>
+        <SkeletonRows accessibilityLabel="Loading allocation" rows={3} />
+      </PremiumCard>
+    );
+  }
+
   if (!hasAllocation) {
     return (
       <EmptyState
@@ -146,6 +160,7 @@ export function DashboardAllocation({
   }
 
   return (
+    <FadeInView>
     <PremiumCard section style={styles.compactSection} testID="dashboard-allocation-card">
       <View
         style={[
@@ -255,5 +270,6 @@ export function DashboardAllocation({
         ))}
       </View>
     </PremiumCard>
+    </FadeInView>
   );
 }

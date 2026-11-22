@@ -493,6 +493,7 @@ describe("ProgressScreen", () => {
     expect(await screen.findByText("Building monthly history")).toBeTruthy();
     expect(await screen.findByText(/0 of 2 months checked/u)).toBeTruthy();
     expect(screen.getByTestId("progress-trends-building")).toBeTruthy();
+    expect(screen.getByTestId("progress-trends-skeleton", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText("Portfolio Growth")).toBeNull();
     await fireEvent.press(screen.getByLabelText("Snapshot status details"));
     expect(screen.queryByLabelText("Review month-end snapshot")).toBeNull();
