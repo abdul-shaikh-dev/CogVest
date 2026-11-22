@@ -1,0 +1,40 @@
+appId: ${APP_ID}
+---
+# App lock on a phone without a screen lock (#761). The emulator has none, so
+# the setting must stay off, explain why, and leave the app unlocked across a
+# cold start. Unlocking with a real fingerprint or PIN is checked by hand on a
+# phone, because Maestro cannot pass the system prompt.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: app-lock-toggle
+    direction: DOWN
+- extendedWaitUntil:
+    visible:
+      id: app-lock-unavailable
+    timeout: 10000
+- assertVisible: "This phone has no screen lock. Set a PIN, pattern or password in the phone's settings to use App lock."
+- assertVisible:
+    id: app-lock-toggle
+    checked: false
+    enabled: false
+- tapOn:
+    id: app-lock-toggle
+- assertVisible:
+    id: app-lock-toggle
+    checked: false
+- takeScreenshot:
+    path: app-lock-unavailable
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- assertNotVisible:
+    id: app-lock-screen
