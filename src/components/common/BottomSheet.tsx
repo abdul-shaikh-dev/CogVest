@@ -11,6 +11,7 @@ import {
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   Easing,
+  useAnimatedKeyboard,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -103,7 +104,14 @@ function OpenBottomSheet({
       offset.set(duration === null ? 0 : withTiming(0, { duration }));
     });
 
-  const sheetMotion = useAnimatedStyle(() => ({ transform: [{ translateY: offset.get() }] }));
+  // The modal window does not resize for the keyboard, so the sheet grows by
+  // the keyboard's height: fields and the save action stay reachable.
+  const keyboard = useAnimatedKeyboard({ isStatusBarTranslucentAndroid: true });
+  const bottomPadding = Math.max(bottomInset, spacing.md);
+  const sheetMotion = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(bottomPadding, keyboard.height.get()),
+    transform: [{ translateY: offset.get() }],
+  }));
 
   const content = scroll ? (
     <ScrollView
@@ -137,7 +145,7 @@ function OpenBottomSheet({
           />
           <Animated.View
             accessibilityViewIsModal
-            style={[styles.sheet, { maxHeight, paddingBottom: Math.max(bottomInset, spacing.md) }, sheetMotion]}
+            style={[styles.sheet, { maxHeight }, sheetMotion]}
             testID={testID}
           >
             <GestureDetector gesture={drag}>
