@@ -21,3 +21,10 @@ export const backupRestoreKeysAddedLater: ReadonlySet<string> = new Set(["cogves
  * so a restore cannot count as a backup.
  */
 export const backupStatusStorageKey = "cogvest:v1:backup-status";
+
+/**
+ * The App lock setting (#761). Device-only like the backup status: a backup
+ * never carries it, so restoring onto a phone without a screen lock cannot
+ * lock anyone out.
+ */
+export const appLockStorageKey = "cogvest:v1:app-lock";

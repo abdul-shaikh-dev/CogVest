@@ -26,9 +26,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
+import { AppLockGate } from "@/src/features/security";
 import { useScreenCaptureProtection } from "@/src/hooks/useScreenCaptureProtection";
 import { getPortfolioStore } from "@/src/store";
 import { exportRecoveryCopies } from "@/src/services/backup";
+import { getAppLockStore } from "@/src/services/security/appLock";
 import { deleteStaleCasCacheFiles } from "@/src/services/import-export/casPdfExtraction";
 import { takeStartupLinkPath } from "@/src/services/linking";
 import { navigationOwnership, sessionMemory } from "@/src/services/session";
@@ -168,7 +170,11 @@ function RootContents() {
     () => store.getState().preferences.blockScreenCapture === true,
     () => store.getState().preferences.blockScreenCapture === true,
   );
-  useScreenCaptureProtection(blockScreenCapture);
+  const appLockStore = getAppLockStore();
+  const appLockEnabled = useSyncExternalStore(appLockStore.subscribe,
+    () => appLockStore.getState().settings.enabled, () => appLockStore.getState().settings.enabled);
+  // While App lock is on, the recent-apps preview must not show values (#761).
+  useScreenCaptureProtection(blockScreenCapture || appLockEnabled);
 
   // A statement copy left by an interrupted CAS import must not stay in the cache (#659).
   useEffect(() => {
@@ -196,6 +202,7 @@ function RootContents() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+        <AppLockGate appLockStore={appLockStore} />
         <Modal visible={showRestoreComplete} onRequestClose={() => setShowRestoreComplete(false)} animationType={modalAnimation}>
           <ScreenContainer scroll>
             <PremiumCard style={styles.restoreComplete}>

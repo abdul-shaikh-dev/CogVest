@@ -54,6 +54,7 @@
     "expo-font": "~58.0.11",
     "expo-haptics": "~58.0.8",
     "expo-linking": "~58.0.17",
+    "expo-local-authentication": "~58.0.3",
     "expo-pdf-text-extract": "^1.1.0",
     "expo-router": "~58.0.32",
     "expo-splash-screen": "~58.0.14",

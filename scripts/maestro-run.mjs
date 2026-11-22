@@ -73,6 +73,7 @@ const defaultFlows = [
   "e2e/backup-protected.yaml",
   "e2e/backup-reminder.yaml",
   "e2e/privacy-settings.yaml",
+  "e2e/app-lock-unavailable.yaml",
   "e2e/settings-preference-hierarchy.yaml",
   "e2e/shared-ui-hierarchy.yaml",
   "e2e/workflow-exit-navigation.yaml",

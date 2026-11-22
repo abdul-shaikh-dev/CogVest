@@ -19,6 +19,8 @@ import {
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { BackupReminderSettings } from "@/src/features/backup/BackupReminderSettings";
 import type { BackupStatusState } from "@/src/services/backup/backupStatus";
+import { AppLockSettings } from "@/src/features/security";
+import type { AppLockState } from "@/src/services/security/appLock";
 import { interaction, radii, spacing, useTheme, createThemedStyles } from "@/src/theme";
 
 import { useSettings } from "./useSettings";
@@ -27,6 +29,8 @@ type SettingsScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
   /** Last backup and the reminder setting show only when this is given (#759). */
   backupStatusStore?: StoreApi<BackupStatusState>;
+  /** The App lock setting shows only when this is given (#761). */
+  appLockStore?: StoreApi<AppLockState>;
 };
 
 const displayOptions = [
@@ -45,6 +49,7 @@ const displayOptions = [
 export function SettingsScreen({
   store = getPortfolioStore(),
   backupStatusStore,
+  appLockStore,
 }: SettingsScreenProps) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -161,6 +166,8 @@ export function SettingsScreen({
             <View style={[styles.switchThumb, blockScreenCapture && styles.switchThumbOn]} />
           </View>
         </Pressable>
+
+        {appLockStore ? <AppLockSettings appLockStore={appLockStore} /> : null}
 
         <PremiumCard section testID="appearance-settings">
           <SectionHeader title="Appearance" />

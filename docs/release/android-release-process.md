@@ -347,7 +347,13 @@ The "Block screenshots" setting uses the local
 no permission. Do not replace it with `expo-screen-capture`: that module
 registers a screenshot-detection callback on load, which needs
 `DETECT_SCREEN_CAPTURE` and crashes on Android 14+ without it.
+The optional App lock (#761) uses `expo-local-authentication`, which adds
+`android.permission.USE_BIOMETRIC` and `android.permission.USE_FINGERPRINT`
+(Android 8 and older use the latter). Both are normal permissions granted at
+install, with no prompt. They only let CogVest show the system's own
+fingerprint, face or screen-lock prompt; CogVest never sees biometric data.
 After a dependency change, check the built APK with
 `aapt dump permissions <apk>`. A release should list only
-`android.permission.INTERNET`, `android.permission.VIBRATE`, and the app's own
-`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` signature permission.
+`android.permission.INTERNET`, `android.permission.VIBRATE`,
+`android.permission.USE_BIOMETRIC`, `android.permission.USE_FINGERPRINT`, and
+the app's own `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` signature permission.

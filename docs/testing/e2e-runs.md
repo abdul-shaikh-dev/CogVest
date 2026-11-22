@@ -4,6 +4,51 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Smoke tier and App lock flows (#761), 15 passed, 10m 45s + 3m 04s + 0m 20s + PIN flow
+
+- Commit: feat/761-app-lock 689c25f (before rebasing onto `main` 3605663; the
+  rebase changed only the flow list and run log), version 1.0.33. AVD
+  CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0, emulator
+  cold-booted before the runs. E2E APK (R8 on, x86_64) freshly built from
+  2933ab1 (same app code), SHA-256
+  4fb41f906beeaf8b83157131750069e096b4de738521f0c7d204457790c2dded, installed
+  after uninstalling the previous build. `aapt dump permissions` lists INTERNET,
+  USE_BIOMETRIC, USE_FINGERPRINT, VIBRATE and the app's own receiver
+  permission.
+- Smoke tier: the first 12 flows passed. A phone attached over USB midway
+  (unauthorized) made the runner's `adb` calls ambiguous, so `value-masking`,
+  `persistence` and `backup-roundtrip` failed in setup without running. Rerun
+  pinned with `--device emulator-5554`, all three passed (1m 03s, 0m 35s,
+  1m 26s).
+- `app-lock-unavailable` (full tier) passed in 0m 20s. The emulator has no screen
+  lock, so the switch stays off and disabled and explains why.
+- `standalone/app-lock-pin` passed with a temporary emulator PIN, which was set
+  with `locksettings set-pin` and cleared afterwards. The flow checks:
+  - Turning App lock on and off needs the PIN.
+  - A cold start is locked, and cancelling the system prompt keeps it locked.
+  - A link opened while locked stays hidden, and unlocking shows it.
+  - Set to Immediately, Home and back locks again.
+- Screenshots taken while App lock is on are black, which confirms that
+  FLAG_SECURE is set.
+
+| Flow | Result | Duration |
+| --- | --- | --- |
+| smoke-launch | PASS | 0m 10s |
+| navigation | PASS | 0m 19s |
+| add-holding-lookup | PASS | 0m 59s |
+| record-purchase | PASS | 0m 48s |
+| payouts | PASS | 0m 49s |
+| xirr-holding | PASS | 0m 34s |
+| cash | PASS | 0m 54s |
+| trade-correction | PASS | 1m 55s |
+| holdings-csv-import | PASS | 1m 10s |
+| epf-accounts | PASS | 1m 02s |
+| ppf-account | PASS | 1m 16s |
+| progress-snapshot-history | PASS | 0m 42s |
+| value-masking | PASS (rerun) | 1m 03s |
+| persistence | PASS (rerun) | 0m 35s |
+| backup-roundtrip | PASS (rerun) | 1m 26s |
+
 ## 2026-11-22: Dashboard backup reminder flow (#759), 1 passed, 1m 12s
 
 - Commit: test/759-dashboard-reminder-e2e, based on `main` d9ffc90, version
