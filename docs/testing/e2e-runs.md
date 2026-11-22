@@ -3,6 +3,22 @@
 Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
+## 2026-11-22: Dashboard glance layout (#782), emulator smoke 15 passed after one flow fix
+
+- Commit: feat/782-dashboard-glance d77938c, based on `main` 13154dd, version
+  1.0.33. `npm run test:verify`: 3,226 passed, doctor 18/18.
+- Build: E2E APK for arm64-v8a and x86_64 from 738247a, SHA-256
+  452b6146f491fed59392d6707ef77cafa68722ff9c440cb4532364d2b76f47ce. Later
+  commits change only e2e flows.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`,
+  14 passed, 1 failed, 14m 11s. `holdings-csv-import` still asserted the old
+  "Invested" hero metric. It now checks `dashboard-invested-context` ("Holdings
+  P&L on ₹6K invested") and passes when rerun on its own.
+- Edited flows rerun on the emulator and passing: `dashboard-valuation-basis`,
+  `minimal-mode` (it also scrolls to the display-mode setting, which App lock
+  had pushed below the fold), `xirr-whole`, `xirr-start-earliest`.
+- Not run: Moto smoke; the phone was locked.
 
 ## 2026-11-22: Back on Android 13-15 (#780), emulator smoke 15 passed, Moto smoke 15 passed
 
