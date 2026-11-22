@@ -42,6 +42,53 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   priceDetails: {
     gap: spacing.sm,
   },
+  // Glance layout (#782): two quiet tiles under the hero value, stacked at
+  // large font sizes.
+  glanceTiles: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  glanceTilesStacked: {
+    flexDirection: "column",
+  },
+  glanceTile: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.button,
+    flex: 1,
+    flexBasis: 0,
+    justifyContent: "center",
+    minHeight: 72,
+    minWidth: 0,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.sm,
+  },
+  glanceTileFull: {
+    flexBasis: "auto",
+  },
+  gainLine: {
+    gap: spacing.xs,
+  },
+  // A tappable status pill: neutral, with warning text when it needs attention.
+  statusChip: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    maxWidth: "100%",
+    minHeight: 32,
+    paddingHorizontal: spacing.cardInner,
+    paddingVertical: spacing.xs,
+  },
+  allocationStackedBar: {
+    backgroundColor: colors.surface.elevated,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: 0,
+    height: 10,
+    overflow: "hidden",
+  },
   allocationHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -56,7 +103,7 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     flexShrink: 1,
   },
   allocationLegend: {
-    gap: spacing.md,
+    gap: spacing.xs,
   },
   allocationItem: {
     gap: spacing.xs,
@@ -85,15 +132,9 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   allocationAmount: {
-    minWidth: 80,
+    minWidth: 64,
     textAlign: "right",
     fontVariant: ["tabular-nums"],
-  },
-  allocationTrack: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: radii.pill,
-    height: 4,
-    overflow: "hidden",
   },
   brandText: {
     color: colors.primary,
@@ -103,7 +144,6 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.sm,
   },
-  quietActivity: { gap: spacing.xs, paddingHorizontal: spacing.xs },
   compactSection: { paddingVertical: spacing.sm },
   heroCard: {
     gap: spacing.sm,

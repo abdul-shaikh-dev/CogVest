@@ -139,3 +139,35 @@ export function getQuoteStatus({
     title,
   };
 }
+
+/**
+ * The note under an allocation of priced holdings only (#782): names the one
+ * unpriced holding, or counts several, with what was invested in them unless
+ * values are masked.
+ */
+export function formatExcludedHoldingsNote(
+  excluded: readonly { name: string; invested: number }[],
+  masked: boolean,
+) {
+  const invested = excluded.reduce((sum, item) => sum + item.invested, 0);
+  const subject = excluded.length === 1 ? excluded[0].name : `${excluded.length} holdings`;
+  const amount = masked ? "" : ` (${formatCompactINR(invested)} invested)`;
+  return `Of priced holdings · excludes ${subject}${amount}`;
+}
+
+/** "1 holding needs a price" / "3 holdings need a price". */
+export function formatPendingPricesLabel(count: number) {
+  return `${count} holding${count === 1 ? " needs" : "s need"} a price`;
+}
+
+/**
+ * This month's activity in a few words for the Dashboard tile (#782): what was
+ * invested and how Cash moved, or "No change".
+ */
+export function getMonthlyActivitySummary({ cashChange, investment }: { cashChange: number; investment: number }) {
+  if (investment === 0 && cashChange === 0) return { cash: null, invested: null };
+  return {
+    cash: cashChange === 0 ? null : formatSignedCompactINR(cashChange),
+    invested: investment === 0 ? null : formatCompactINR(investment),
+  };
+}

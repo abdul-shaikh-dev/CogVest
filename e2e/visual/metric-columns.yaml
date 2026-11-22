@@ -11,11 +11,11 @@ appId: ${APP_ID}
 - tapOn:
     id: display-mode-minimal
 - openLink: "${SCHEME}:///dashboard"
-- assertNotVisible: "Holdings P&L %"
+- assertNotVisible: "Holdings P&L on .*"
 - tapOn:
     id: dashboard-performance-toggle
-- assertVisible: "Holdings P&L"
-- assertVisible: "Holdings P&L %"
+- assertVisible: "Holdings P&L on .*"
+- assertVisible: "Holdings P&L on .*"
 - takeScreenshot: .expo/metric-columns/${SIZE}/dashboard-minimal-expanded
 - tapOn:
     id: dashboard-mask-toggle
@@ -30,7 +30,7 @@ appId: ${APP_ID}
 - tapOn:
     id: display-mode-standard
 - openLink: "${SCHEME}:///dashboard"
-- assertVisible: "Holdings P&L %"
+- assertVisible: "Holdings P&L on .*"
 - takeScreenshot: .expo/metric-columns/${SIZE}/dashboard
 - openLink: "${SCHEME}:///holdings"
 - assertVisible: "Holding P&L"

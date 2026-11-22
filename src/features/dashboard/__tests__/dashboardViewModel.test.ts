@@ -1,8 +1,11 @@
 import {
+  formatExcludedHoldingsNote,
+  formatPendingPricesLabel,
   formatSignedINR,
   formatUnsignedPercentage,
   getAllocationWidth,
   getDisplayAllocationLabel,
+  getMonthlyActivitySummary,
   getQuoteStatus,
 } from "@/src/features/dashboard/dashboardViewModel";
 import type { QuoteFreshnessSummary } from "@/src/services/quotes";
@@ -130,5 +133,34 @@ describe("dashboard quote status", () => {
     expect(
       quoteStatus({ quoteFreshness: freshness({ missing: 1, status: "missing" }) }),
     ).toMatchObject({ prominent: true, title: "Price coverage needs attention" });
+  });
+});
+
+describe("Dashboard glance text (#782)", () => {
+  it("names one excluded holding with what was invested", () => {
+    expect(formatExcludedHoldingsNote([{ invested: 20000, name: "Tata Motors" }], false))
+      .toBe("Of priced holdings · excludes Tata Motors (₹20K invested)");
+  });
+
+  it("counts several excluded holdings and adds their invested amounts", () => {
+    expect(formatExcludedHoldingsNote([
+      { invested: 100000, name: "A" }, { invested: 15000, name: "B" }, { invested: 5000, name: "C" },
+    ], false)).toBe("Of priced holdings · excludes 3 holdings (₹1.2L invested)");
+  });
+
+  it("leaves the invested amount out while values are masked", () => {
+    expect(formatExcludedHoldingsNote([{ invested: 20000, name: "Tata Motors" }], true))
+      .toBe("Of priced holdings · excludes Tata Motors");
+  });
+
+  it("counts holdings that need a price", () => {
+    expect(formatPendingPricesLabel(1)).toBe("1 holding needs a price");
+    expect(formatPendingPricesLabel(3)).toBe("3 holdings need a price");
+  });
+
+  it("summarises the month, with a sign on the Cash change", () => {
+    expect(getMonthlyActivitySummary({ cashChange: 0, investment: 0 })).toEqual({ cash: null, invested: null });
+    expect(getMonthlyActivitySummary({ cashChange: -5000, investment: 25000 })).toEqual({ cash: "-₹5K", invested: "₹25K" });
+    expect(getMonthlyActivitySummary({ cashChange: 10000, investment: 0 })).toEqual({ cash: "+₹10K", invested: null });
   });
 });

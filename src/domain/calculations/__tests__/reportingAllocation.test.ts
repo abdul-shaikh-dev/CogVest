@@ -1,4 +1,4 @@
-import { calculateReportingAllocation } from "../reportingAllocation";
+import { calculatePricedReportingAllocation, calculateReportingAllocation } from "../reportingAllocation";
 import { calculateHoldings } from "../holdings";
 import type { Asset } from "@/src/types";
 
@@ -43,5 +43,35 @@ describe("reporting allocation", () => {
     expect(calculateReportingAllocation({ ...input,
       holdings: holdings.map(holding => ({ ...holding, currentValue: null, calculationBasis: undefined })),
     })).toEqual([]);
+  });
+});
+
+describe("allocation of priced holdings (#782)", () => {
+  const unpriced = { ...holdings[0], asset: { ...asset, id: "eth", name: "Ether" }, currentValue: null,
+    currentPrice: null, calculationBasis: undefined, totalInvested: 20000,
+    valuation: { ...holdings[0].valuation, status: "pending" as const } };
+
+  it("leaves unpriced holdings out and lists each with what was invested", () => {
+    const result = calculatePricedReportingAllocation({ ...input, holdings: [...holdings, unpriced] });
+    expect(result?.allocation).toEqual(calculateReportingAllocation(input));
+    expect(result?.excluded).toEqual([{ assetId: "eth", name: "Ether", invested: 20000 }]);
+  });
+
+  it("matches the full allocation when every holding is priced", () => {
+    expect(calculatePricedReportingAllocation(input)).toEqual({ allocation: calculateReportingAllocation(input), excluded: [] });
+  });
+
+  it("never counts a missing value as zero", () => {
+    const missingValue = { ...holdings[0], asset: { ...asset, id: "sol", name: "Sol" }, currentValue: null, calculationBasis: undefined };
+    expect(calculatePricedReportingAllocation({ ...input, holdings: [...holdings, missingValue] })?.excluded
+      .map(item => item.assetId)).toEqual(["sol"]);
+  });
+
+  it.each([null, -1])("stays unavailable when Futures equity is %s, whatever the prices", futuresEquityInr => {
+    expect(calculatePricedReportingAllocation({ ...input, holdings: [...holdings, unpriced], futuresEquityInr })).toBeNull();
+  });
+
+  it("stays unavailable when the EPF balance is unknown", () => {
+    expect(calculatePricedReportingAllocation({ ...input, epfRecordedBalance: null })).toBeNull();
   });
 });

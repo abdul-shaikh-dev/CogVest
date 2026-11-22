@@ -18,10 +18,10 @@ appId: ${APP_ID}
     when:
       true: ${MODE == 'minimal'}
     commands:
-      - assertNotVisible: "Holdings P&L"
+      - assertNotVisible: "Holdings P&L on .*"
       - tapOn:
           id: dashboard-performance-toggle
-      - assertVisible: "Holdings P&L"
+      - assertVisible: "Holdings P&L on .*"
       - takeScreenshot: .expo/ux507/${SIZE}/${MODE}/dashboard-expanded
       - tapOn:
           id: dashboard-mask-toggle
@@ -121,7 +121,7 @@ appId: ${APP_ID}
     commands:
       - assertVisible:
           id: dashboard-performance-toggle
-      - assertNotVisible: "Holdings P&L"
+      - assertNotVisible: "Holdings P&L on .*"
 - openLink: "${SCHEME}:///cash"
 - assertVisible: "₹50,000.00"
 - stopApp

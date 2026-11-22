@@ -107,8 +107,9 @@ appId: ${APP_ID}
     timeout: 120000
 - assertVisible: "Portfolio value"
 - assertVisible: "₹6.51K"
-- assertVisible: "Invested"
-- assertVisible: "₹6K"
+- assertVisible:
+    id: dashboard-invested-context
+    text: "Holdings P&L on ₹6K invested"
 - openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
 - assertVisible: "Asset count: 2"
 - assertVisible: "Opening position count: 2"

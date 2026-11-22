@@ -13,11 +13,11 @@ appId: ${APP_ID}
     visible:
       id: dashboard-performance-toggle
     timeout: 30000
-- assertNotVisible: "Holdings P&L %"
+- assertNotVisible: "Holdings P&L on .*"
 - takeScreenshot: .expo/minimal-disclosures/${SIZE}/dashboard-collapsed
 - tapOn:
     id: dashboard-performance-toggle
-- assertVisible: "Holdings P&L %"
+- assertVisible: "Holdings P&L on .*"
 - takeScreenshot: .expo/minimal-disclosures/${SIZE}/dashboard-expanded
 - tapOn:
     id: dashboard-performance-toggle

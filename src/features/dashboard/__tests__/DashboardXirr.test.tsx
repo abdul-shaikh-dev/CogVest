@@ -27,7 +27,8 @@ const screenFor = async (store: ReturnType<typeof seed>) => await render(<Dashbo
 describe("Dashboard portfolio XIRR", () => {
   it.each([[110, "+10.00% a year"], [100, "0.00% a year"], [90, "-10.00% a year"]])("shows %d as %s with its period and totals", async (price, text) => {
     const screen = await screenFor(seed({ price }));
-    expect(screen.getByText("Portfolio return (XIRR)")).toBeTruthy();
+    expect(screen.getByText("Return (XIRR)")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Estimate · Breakdown ›");
     expect(screen.queryByTestId("dashboard-xirr-measure-investments")).toBeNull();
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent(text);
     await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
@@ -57,6 +58,8 @@ describe("Dashboard portfolio XIRR", () => {
 
   it("labels a short period", async () => {
     const screen = await screenFor(seed({ buyDate: "2025-10-01" }));
+    expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Over 92 days · Breakdown ›");
+    await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
     expect(screen.getByTestId("dashboard-xirr-short")).toHaveTextContent("Annualised over 92 days, not the gain for the period.");
   });
 
@@ -65,8 +68,9 @@ describe("Dashboard portfolio XIRR", () => {
     await act(() => { store.getState().setDistributionCoverage("stock", null); });
     const screen = await screenFor(store);
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent("+10.00% a year");
-    expect(screen.getByTestId("dashboard-xirr-assumptions")).toHaveTextContent("Estimate with 2 assumptions. Open Breakdown to see them.");
+    expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Estimate · Breakdown ›");
     await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByTestId("dashboard-xirr-assumptions")).toHaveTextContent("Estimate with 2 assumptions, listed below.");
     expect(screen.getByText("Dividends aren't recorded for 1 holding, so the return may be understated.")).toBeTruthy();
     expect(screen.getByText(tradeNote)).toBeTruthy();
     await act(() => { store.getState().setDistributionCoverage("stock", "2025-01-01"); });
@@ -90,8 +94,10 @@ describe("Dashboard portfolio XIRR", () => {
   it("starts automatically from the earliest month-end snapshot", async () => {
     const store = seed({ basis: false, buyDate: "2024-06-01" });
     const screen = await screenFor(store);
-    expect(screen.getByTestId("dashboard-xirr-reason"))
-      .toHaveTextContent("Save a month-end snapshot in Progress, or set a start date, to measure the return.");
+    expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Why ›");
+    await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByText("Save a month-end snapshot in Progress, or set a start date, to measure the return.")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
     // Worth 10,000 at the end of December 2024, 11,000 now (366 days later).
     await act(() => {
       store.setState({ monthlySnapshots: [{ id: "dec", month: "2024-12", portfolioValue: 10000, equityValue: 10000, debtValue: 0,
@@ -109,10 +115,9 @@ describe("Dashboard portfolio XIRR", () => {
     store.getState().setMeasurementBasis({ startDate: "2025-02-01", kind: "inception", openingBreakdown: [] });
     const onSetBasis = jest.fn();
     const screen = await render(<DashboardScreen now={now} onSetBasis={onSetBasis} store={store} />);
-    expect(screen.getByTestId("dashboard-xirr-reason"))
-      .toHaveTextContent("Your earliest record is a trade on 01 Jan 2025. Choose a start on or before that date, or use the automatic start.");
-    expect(screen.getByTestId("dashboard-xirr-more")).toHaveTextContent("1 more to fix. Open Breakdown for the full list.");
+    expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Why ›");
     await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+    expect(screen.getByText("Your earliest record is a trade on 01 Jan 2025. Choose a start on or before that date, or use the automatic start.")).toBeTruthy();
     expect(screen.getByTestId("dashboard-xirr-blocker-transfer-without-value-extent")).toHaveTextContent("1 holding: Synthetic Income Fund");
     await fireEvent.press(screen.getByTestId("dashboard-xirr-fix-records-before-start"));
     await fireEvent.press(screen.getByTestId("dashboard-xirr-set-basis"));

@@ -18,15 +18,18 @@ appId: ${APP_ID}
     id: xirr-qa-open-dashboard
 - scrollUntilVisible:
     element:
-      id: dashboard-xirr-reason
+      id: dashboard-xirr-tile-caption
     direction: DOWN
-# selector: the named record and its date are under test
 - assertVisible:
-    id: dashboard-xirr-reason
-    text: "Your earliest record is a trade on 01 Jan 2025.*"
-- takeScreenshot: .expo/xirr-start-earliest-dashboard
+    id: dashboard-xirr-tile-caption
+    text: "Why ›"
 - tapOn:
     id: dashboard-xirr-toggle
+# selector: the named record and its date are under test
+- scrollUntilVisible:
+    element: "Your earliest record is a trade on 01 Jan 2025.*"
+    direction: DOWN
+- takeScreenshot: .expo/xirr-start-earliest-dashboard
 - scrollUntilVisible:
     element:
       id: dashboard-xirr-fix-records-before-start

@@ -19,10 +19,13 @@ appId: ${APP_ID}
     id: "display-mode-minimal"
 - openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Portfolio value"
-- assertNotVisible: "Holdings P&L"
+- assertNotVisible:
+    id: dashboard-invested-context
 - tapOn:
     id: dashboard-performance-toggle
-- assertVisible: "Holdings P&L"
+- assertVisible:
+    id: dashboard-invested-context
+    text: "Holdings P&L on .*"
 - assertNotVisible: "This Month"
 - assertNotVisible: "Investment patterns"
 - openLink: "${SCHEME}:///holdings"
@@ -71,6 +74,11 @@ appId: ${APP_ID}
     id: "month-end-snapshot-status-card"
 - assertNotVisible: "What changed this month?"
 - openLink: "${SCHEME}:///settings"
+# App lock (#761) pushed Display below the fold.
+- scrollUntilVisible:
+    element:
+      id: "display-mode-standard"
+    direction: DOWN
 - tapOn:
     id: "display-mode-standard"
 - openLink: "${SCHEME}:///dashboard"

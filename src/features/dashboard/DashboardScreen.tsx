@@ -29,7 +29,6 @@ import {
   DashboardCurrencyWarning,
   DashboardEpfStatus,
   DashboardFuturesStatus,
-  DashboardMonthlyActivity,
   DashboardProgressLink,
 } from "./DashboardStatusCards";
 import { useStyles } from "./dashboardStyles";
@@ -157,6 +156,7 @@ export function DashboardScreen({
           onConfirmPayouts={onConfirmPayouts}
           onSetBasis={onSetBasis}
           adaptiveLayoutMode={adaptiveLayoutMode}
+          currentDate={currentDate}
           dashboard={dashboard}
           hasCompleteValuation={hasCompleteValuation}
           isMinimalMode={isMinimalMode}
@@ -189,12 +189,6 @@ export function DashboardScreen({
         <DashboardCashLiability
           dashboard={dashboard}
           hasCompleteValuation={hasCompleteValuation}
-        />
-
-        <DashboardMonthlyActivity
-          currentDate={currentDate}
-          dashboard={dashboard}
-          isMinimalMode={isMinimalMode}
         />
 
         <DashboardAllocation
