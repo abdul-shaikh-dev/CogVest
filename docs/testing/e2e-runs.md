@@ -9,7 +9,7 @@ the run cadence.
 - Commit: feat/783-motion-loading 88d889b, based on `main` eb85e86, version
   1.0.33. `npm run test:verify`: 3,241 passed, doctor 18/18.
 - Build: E2E APK for arm64-v8a and x86_64 from 88d889b, SHA-256
-  \e6f5f4785ee71ae8356c70cf5247c32a6a7e65eb3aa8a9ea92110f50b45056d.
+  e6f5f4785ee71ae8356c70cf5247c32a6a7e65eb3aa8a9ea92110f50b45056d8.
 - **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
   1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`,
   15 passed, 0 failed, 15m 48s, over the 15-minute budget. Timed against a
