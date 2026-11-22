@@ -19,10 +19,13 @@ appId: ${APP_ID}
     id: "display-mode-minimal"
 - openLink: "${SCHEME}:///dashboard"
 - assertVisible: "Portfolio value"
-- assertNotVisible: "Holdings P&L"
+- assertNotVisible:
+    id: dashboard-invested-context
 - tapOn:
     id: dashboard-performance-toggle
-- assertVisible: "Holdings P&L"
+- assertVisible:
+    id: dashboard-invested-context
+    text: "Holdings P&L on .*"
 - assertNotVisible: "This Month"
 - assertNotVisible: "Investment patterns"
 - openLink: "${SCHEME}:///holdings"

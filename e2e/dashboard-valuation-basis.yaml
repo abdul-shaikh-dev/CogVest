@@ -14,10 +14,14 @@ appId: ${APP_ID}
     visible: "Visual QA portfolio seeded."
     timeout: 30000
 - openLink: "${SCHEME}:///dashboard"
-- assertVisible: "Holdings P&L"
 - assertVisible: "₹15.9L"
-- assertVisible: "₹12.38L"
-- assertVisible: "+24.44%"
+# The gain and the invested amount read as one line under the value (#782).
+- assertVisible:
+    id: dashboard-top-metrics
+- assertVisible: "+₹3.02L (+24.44%)"
+- assertVisible:
+    id: dashboard-invested-context
+    text: "Holdings P&L on ₹12.38L invested"
 - assertVisible: "Using older and manual prices"
 - scrollUntilVisible:
     element:

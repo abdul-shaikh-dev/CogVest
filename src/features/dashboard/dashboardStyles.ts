@@ -103,7 +103,7 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     flexShrink: 1,
   },
   allocationLegend: {
-    gap: spacing.md,
+    gap: spacing.xs,
   },
   allocationItem: {
     gap: spacing.xs,

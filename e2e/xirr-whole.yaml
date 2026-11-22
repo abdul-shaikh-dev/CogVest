@@ -23,11 +23,14 @@ appId: ${APP_ID}
     id: dashboard-xirr-rate
     text: "\\+10.00% a year"
 - assertVisible:
-    id: dashboard-xirr-assumptions
-    text: "Estimate with 1 assumption. Open Breakdown to see it."
+    id: dashboard-xirr-tile-caption
+    text: "Estimate · Breakdown ›"
 - takeScreenshot: .expo/xirr-whole-${SHOT}-rate
 - tapOn:
     id: dashboard-xirr-toggle
+- assertVisible:
+    id: dashboard-xirr-assumptions
+    text: "Estimate with 1 assumption, listed below."
 - scrollUntilVisible:
     element:
       id: dashboard-xirr-set-basis
