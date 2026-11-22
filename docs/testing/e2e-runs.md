@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Dashboard backup reminder flow (#759), 1 passed, 1m 12s
+
+- Commit: test/759-dashboard-reminder-e2e, based on `main` d9ffc90, version
+  1.0.33. AVD CogVest_UX_Proof, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  emulator cold-booted just before the run. E2E APK built from 06fd142 (app
+  code identical to d9ffc90), SHA-256
+  4aa9dd6e0872db795696314511fc3ef977916f5da74b5cf470789a42db7ff3a0. Command:
+  `node scripts/maestro-run.mjs e2e/backup-reminder.yaml` with
+  `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e`.
+- New full-tier flow `backup-reminder`:
+  - It seeds 30 holdings with no backup, so the Dashboard note shows at once.
+  - Not now hides the note, and it stays hidden after a cold start.
+  - Choosing a 7-day interval in Settings clears the snooze.
+  - Back up now opens the backup export. After the export the note is gone, and
+    Settings shows the date.
+- It is not in the smoke tier, which already takes about 13 of its 15 minutes.
+
 ## 2026-11-22: Smoke tier with the backup reminder (#759), 15 passed, 13m 18s
 
 - Commit: feat/759-backup-reminder 06fd142, based on `main` 8d0b7dc, version
