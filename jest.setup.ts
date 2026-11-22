@@ -27,7 +27,25 @@ jest.mock("react-native-reanimated", () => {
     }, []);
   }
 
+  // Layout animations (#783): a builder that records its duration, so a test
+  // can tell whether a fade was requested.
+  const { Text, View } = require("react-native");
+  const fade = (duration?: number) => ({
+    duration: (value: number) => fade(value),
+    easing: () => fade(duration),
+    reduceMotion: () => fade(duration),
+    mockDuration: duration,
+  });
+  const Animated = { createAnimatedComponent: (component: unknown) => component, Text, View };
+
   return {
+    __esModule: true,
+    default: Animated,
+    ...Animated,
+    Easing: { out: (easing: unknown) => easing, quad: (value: number) => value },
+    FadeIn: fade(),
+    ReduceMotion: { System: "system" },
+    useReducedMotion: jest.fn(() => false),
     useAnimatedReaction,
     useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
     useSharedValue: <T,>(value: T) => ({ value }),

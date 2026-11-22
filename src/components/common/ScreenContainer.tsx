@@ -4,11 +4,12 @@ import {
   ScrollView,
   type ScrollViewInstance,
   StyleSheet,
-  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { spacing, createThemedStyles } from "@/src/theme";
+
+import { FadeInView } from "./Motion";
 
 type ScreenContainerProps = {
   children: ReactNode;
@@ -36,7 +37,7 @@ export function ScreenContainer({
           refreshControl={refreshControl}
           style={styles.scroll}
         >
-          {children}
+          <FadeInView kind="entry" style={styles.entry}>{children}</FadeInView>
         </ScrollView>
       </SafeAreaView>
     );
@@ -44,12 +45,14 @@ export function ScreenContainer({
 
   return (
     <SafeAreaView style={styles.safe} testID={testID}>
-      <View style={styles.content}>{children}</View>
+      <FadeInView kind="entry" style={styles.content}>{children}</FadeInView>
     </SafeAreaView>
   );
 }
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  // Screen entry fades the content in (#783); it keeps the scroll content's growth.
+  entry: { flexGrow: 1 },
   content: {
     flex: 1,
     paddingHorizontal: spacing.screenHorizontal,

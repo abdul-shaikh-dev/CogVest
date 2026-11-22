@@ -217,6 +217,7 @@ describe("AssetHistoryPanel", () => {
     mockHistory({ loading: true, entry: undefined });
     const screen = await renderPanel();
     expect(screen.getByTestId("asset-history-loading")).toHaveTextContent("Loading history…");
+    expect(screen.getByTestId("skeleton-bar")).toBeTruthy();
 
     mockHistory({
       entry: entry(undefined, { complete: false }),

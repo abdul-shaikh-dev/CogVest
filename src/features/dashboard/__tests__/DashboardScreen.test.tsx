@@ -169,6 +169,28 @@ describe("DashboardScreen", () => {
     });
   });
 
+  it("holds the allocation card's place while prices load (#783)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addOpeningPosition({
+      assetId: asset.id, averageCostPrice: 100, date: "2026-04-20", id: "opening-pending", quantity: 2,
+    });
+    let finish: (result: unknown) => void = () => undefined;
+    const refreshQuotes = jest.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const screen = await render(<DashboardScreen refreshQuotes={refreshQuotes} store={store} />);
+
+    await fireEvent.press(screen.getByTestId("dashboard-refresh-pending-prices"));
+    expect(screen.getByTestId("dashboard-allocation-loading")).toBeTruthy();
+    expect(screen.getByLabelText("Loading allocation")).toBeTruthy();
+    expect(screen.queryByText("Allocation unavailable")).toBeNull();
+
+    await act(async () => {
+      finish({ failed: [{ assetId: asset.id, error: "Provider unavailable." }], quoteCache: {}, timedOut: [] });
+    });
+    await waitFor(() => expect(screen.getByText("Allocation unavailable")).toBeTruthy());
+    expect(screen.queryByTestId("dashboard-allocation-loading")).toBeNull();
+  });
+
   it("prioritizes entry on a truly empty dashboard instead of zero summaries", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const onAddTrade = jest.fn();

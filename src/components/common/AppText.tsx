@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { TextProps, TextStyle } from "react-native";
 import { StyleSheet, Text } from "react-native";
+import Animated from "react-native-reanimated";
 
 import { typography, useTheme, type ThemeColors } from "@/src/theme";
 
@@ -11,6 +12,8 @@ export type AppTextProps = TextProps & {
   align?: TextStyle["textAlign"];
   children: ReactNode;
   color?: TextColor;
+  /** A fade for text that just changed, such as a mask toggle (#783). */
+  entering?: ComponentProps<typeof Animated.Text>["entering"];
   variant?: TextVariant;
   weight?: keyof typeof typography.weights;
 };
@@ -19,15 +22,18 @@ export function AppText({
   align,
   children,
   color = "primary",
+  entering,
   style,
   variant = "body",
   weight = "regular",
   ...props
 }: AppTextProps) {
   const { colors } = useTheme();
+  const TextComponent = entering ? Animated.Text : Text;
   return (
-    <Text
+    <TextComponent
       {...props}
+      {...(entering ? { entering } : null)}
       style={[
         styles.base,
         styles[variant],
@@ -40,7 +46,7 @@ export function AppText({
       ]}
     >
       {children}
-    </Text>
+    </TextComponent>
   );
 }
 

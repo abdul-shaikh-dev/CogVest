@@ -1,9 +1,10 @@
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps } from "react";
 import { StyleSheet } from "react-native";
 
 import { useTheme } from "@/src/theme";
 
 import { AppText } from "./AppText";
+import { useFadeIn } from "./Motion";
 
 export const MASKED_INR_VALUE = "₹••••";
 /** For amounts in a currency other than INR, such as USDT. */
@@ -33,10 +34,21 @@ export function MaskedValue({
 }: MaskedValueProps) {
   const { colors } = useTheme();
   const shouldMask = masked && valueType === "wealth";
+  // After the mask flips, the new text fades in. The old text leaves at once,
+  // so digits are never on screen once masking starts (#783).
+  const [lastMask, setLastMask] = useState(shouldMask);
+  const [maskChanged, setMaskChanged] = useState(false);
+  if (lastMask !== shouldMask) {
+    setLastMask(shouldMask);
+    setMaskChanged(true);
+  }
+  const fade = useFadeIn("mask");
 
   return (
     <AppText
       {...textProps}
+      entering={maskChanged ? fade : undefined}
+      key={shouldMask ? "masked" : "shown"}
       // A gain or loss colour would reveal the hidden amount's direction.
       style={[
         styles.numeric,
