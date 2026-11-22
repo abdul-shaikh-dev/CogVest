@@ -4,6 +4,61 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Button label fix (#746) on the S23 FE, emulator smoke 15 passed, Moto smoke 9 passed
+
+- Commit: fix/746-button-label-clipping e3f66bc (app code as 4320593), based on
+  `main` e726580, version 1.0.33. The runner change that adds `ANDROID_SERIAL`
+  is 7dc0951.
+- **Reproduction on a Samsung Galaxy S23 FE** (SM-S711B, Android 16, font scale
+  0.9, density override 384) with an arm64 E2E APK from main caca038.
+  - The EPF account screen was opened in the QA database and re-laid out 31
+    times (activity toggled). "Add entry" stayed whole: the label was 142 px
+    wide every time.
+  - Then the app theme was switched light and dark, and the app left with Home
+    and resumed, 8 times each. From the first theme switch on, all 24
+    screenshots showed only "Add": 56 px, starting where "Add entry" starts.
+  - `uiautomator` reported the label box as 146x48 px (one line), wider than
+    the 142 px the text needs. Android still drew two lines and the box hid
+    the second.
+- **Fix on the same phone**, arm64 E2E APK from 4320593 (SHA-256
+  2c373a236bbd1dc29730fe88abd59b7046045b469372ca5223efbfb33111f0a2). The same
+  theme and resume loop gave 25 of 25 screenshots with the full label
+  (140–142 px).
+- The same check on a Motorola Edge 30 (Android 14, font scale 0.85, density
+  384) and on the emulator never reproduced the bug, before or after the fix.
+- **Emulator smoke tier** passed 15 of 15 in 13m 18s. AVD CogVest_UX_Proof,
+  API 36, 1280x2856 at 480 dpi, font scale 1.0. Fresh x86_64 E2E APK from
+  e3f66bc, SHA-256
+  c929e41824ddcf7b23e5ebd47e6bc27a23570894893822bdd74e7f14c737394c.
+- **Moto Edge 30 smoke tier** (`ANDROID_SERIAL=ZD2224Z7DY`, the 2c373a23 APK)
+  passed 9 of 15 in 13m 30s. None of the six failures involves the change:
+  - `cash`, `payouts`, `xirr-holding` and `backup-roundtrip` fail on date
+    text. `formatDate` asks for the en-IN medium date, which Android 14 spells
+    "23-Oct-2026" and Android 16 spells "23 Oct 2026". This is an existing
+    difference between Android versions.
+  - `ppf-account`: the Moto's Back key closes the keyboard first, so the
+    discard dialog the flow expects never opens.
+  - `holdings-csv-import`: the fixture was not listed in the Moto's
+    Downloads picker. The cause was not investigated.
+
+| Flow | Emulator | Moto Edge 30 |
+| --- | --- | --- |
+| smoke-launch | PASS 0m 11s | PASS 0m 17s |
+| navigation | PASS 0m 20s | PASS 0m 22s |
+| add-holding-lookup | PASS 1m 00s | PASS 1m 04s |
+| record-purchase | PASS 0m 48s | PASS 0m 50s |
+| payouts | PASS 0m 43s | FAIL 0m 41s (date text) |
+| xirr-holding | PASS 0m 33s | FAIL 0m 43s (date text) |
+| cash | PASS 0m 46s | FAIL 0m 59s (date text) |
+| trade-correction | PASS 1m 55s | PASS 2m 01s |
+| holdings-csv-import | PASS 1m 11s | FAIL 0m 53s (picker) |
+| epf-accounts | PASS 1m 03s | PASS 1m 02s |
+| ppf-account | PASS 1m 16s | FAIL 1m 18s (Back key) |
+| progress-snapshot-history | PASS 0m 43s | PASS 0m 42s |
+| value-masking | PASS 1m 02s | PASS 1m 09s |
+| persistence | PASS 0m 35s | PASS 0m 37s |
+| backup-roundtrip | PASS 1m 11s | FAIL 0m 52s (date text) |
+
 ## 2026-11-22: Smoke tier and App lock flows (#761), 15 passed, 10m 45s + 3m 04s + 0m 20s + PIN flow
 
 - Commit: feat/761-app-lock 689c25f (before rebasing onto `main` 3605663; the

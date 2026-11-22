@@ -75,7 +75,12 @@ export function AppButton({
         style,
       ]}
     >
-      <AppText color={resolvedTextColor} variant="body" weight="bold">
+      {/* The label spans the button rather than its own measured width (#746).
+          After a configuration change such as a theme switch, Android can draw
+          bold text a few pixels wider than React Native measured it; a label
+          box exactly that measured width then wraps the last word onto a
+          second line that the one-line height hides. */}
+      <AppText align="center" color={resolvedTextColor} style={styles.label} variant="body" weight="bold">
         {title}
       </AppText>
     </Pressable>
@@ -93,6 +98,9 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   },
   ghost: {
     backgroundColor: "transparent",
+  },
+  label: {
+    alignSelf: "stretch",
   },
   primary: {
     backgroundColor: colors.primary,
