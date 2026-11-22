@@ -11,7 +11,10 @@ import {
   PremiumCard,
   type AdaptiveLayoutMode,
 } from "@/src/components/common";
-import { calculateReportingAllocation } from "@/src/domain/calculations/reportingAllocation";
+import {
+  calculatePricedReportingAllocation,
+  calculateReportingAllocation,
+} from "@/src/domain/calculations/reportingAllocation";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import {
   normalizeMoney,
@@ -21,6 +24,7 @@ import { useTheme } from "@/src/theme";
 
 import { useStyles } from "./dashboardStyles";
 import {
+  formatExcludedHoldingsNote,
   formatUnsignedPercentage,
   getAllocationColor,
   getAllocationWidth,
@@ -55,13 +59,21 @@ export function DashboardAllocation({
 }: DashboardAllocationProps) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const displayAllocation = calculateReportingAllocation({
+  const allocationInput = {
     holdings: dashboard.holdings,
     cashBalance: dashboard.cashBalance,
     futuresEquityInr: dashboard.futuresEquityInr,
     ppfConfirmedBalance: dashboard.ppfConfirmedBalance,
     epfRecordedBalance: dashboard.epfSummary.value,
-  });
+  };
+  const fullAllocation = calculateReportingAllocation(allocationInput);
+  // While a holding has no price, show the priced part and name what is left
+  // out, rather than hiding allocation (#782).
+  const pricedAllocation = fullAllocation.length ? null : calculatePricedReportingAllocation(allocationInput);
+  const excludedHoldings = pricedAllocation?.excluded ?? [];
+  const displayAllocation = fullAllocation.length ? fullAllocation
+    : pricedAllocation && excludedHoldings.length && pricedAllocation.allocation.some((item) => item.value > 0)
+      ? pricedAllocation.allocation : [];
   const positiveAllocation = displayAllocation.filter((item) => item.value > 0);
   const positiveAllocationTotal = normalizeMoney(
     sumFinancialValues(positiveAllocation.map((item) => item.value)),
@@ -170,7 +182,28 @@ export function DashboardAllocation({
             : "Allocation percentages are unavailable while net portfolio value is zero or negative."}
         </AppText>
       ) : null}
-      <View style={styles.allocationLegend} testID={hasNegativeCash ? undefined : "dashboard-allocation-visual"}>
+      {excludedHoldings.length ? (
+        <AppText color="secondary" testID="dashboard-allocation-excluded" variant="caption">
+          {formatExcludedHoldingsNote(excludedHoldings, dashboard.maskWealthValues)}
+        </AppText>
+      ) : null}
+      {!hasNegativeCash ? (
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.allocationStackedBar}
+          testID="dashboard-allocation-visual"
+        >
+          {displayAllocation.map((item) => (
+            <View key={item.assetClass} testID={`dashboard-allocation-bar-${item.assetClass}`} style={{
+              backgroundColor: getAllocationColor(colors, item.assetClass),
+              height: "100%",
+              width: getAllocationWidth(item.value, positiveAllocationTotal),
+            }} />
+          ))}
+        </View>
+      ) : null}
+      <View style={styles.allocationLegend}>
         {displayAllocation.map((item) => (
           <View key={item.assetClass} testID={`dashboard-allocation-${item.assetClass}`} style={styles.allocationItem}>
             <View style={[
@@ -190,23 +223,14 @@ export function DashboardAllocation({
                   </AppText>
                 ) : null}
                 <MaskedValue
+                  color="secondary"
                   exactValue={formatINR(item.value)}
                   masked={dashboard.maskWealthValues}
                   style={styles.allocationAmount}
                   value={formatCompactINR(item.value)}
-                  weight="bold"
                 />
               </View>
             </View>
-            {!hasNegativeCash ? (
-              <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.allocationTrack}>
-                <View testID={`dashboard-allocation-bar-${item.assetClass}`} style={{
-                  backgroundColor: getAllocationColor(colors, item.assetClass),
-                  height: "100%",
-                  width: getAllocationWidth(item.value, positiveAllocationTotal),
-                }} />
-              </View>
-            ) : null}
             {item.cryptoBreakdown && (item.value !== 0 || dashboard.futuresContributions.length > 0) ? (
               <>
                 <DisclosureButton title="Spot / Futures" expanded={showCryptoBreakdown}

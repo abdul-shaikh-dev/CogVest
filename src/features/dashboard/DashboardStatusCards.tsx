@@ -7,12 +7,9 @@ import {
   CategoryIcon,
   GroupedListRow,
   MaskedValue,
-  MetricGroup,
   PremiumCard,
-  SectionHeader,
   type AdaptiveLayoutMode,
 } from "@/src/components/common";
-import { formatMonthYear } from "@/src/domain/dates";
 import {
   formatCompactINR,
   formatDate,
@@ -20,10 +17,6 @@ import {
 } from "@/src/domain/formatters";
 
 import { useStyles } from "./dashboardStyles";
-import {
-  formatSignedCompactINR,
-  formatSignedINR,
-} from "./dashboardViewModel";
 import type { DashboardState } from "./useDashboard";
 
 export function DashboardCurrencyWarning({ dashboard }: { dashboard: DashboardState }) {
@@ -213,55 +206,6 @@ export function DashboardCashLiability({
           />
         </View>
       </View>
-    </PremiumCard>
-  );
-}
-
-export function DashboardMonthlyActivity({
-  currentDate,
-  dashboard,
-  isMinimalMode,
-}: {
-  currentDate: Date;
-  dashboard: DashboardState;
-  isMinimalMode: boolean;
-}) {
-  const styles = useStyles();
-
-  if (isMinimalMode) {
-    return null;
-  }
-
-  if (!dashboard.maskWealthValues && dashboard.monthlyMetrics.investment === 0 && dashboard.monthlyMetrics.cashChange === 0) {
-    return (
-      <View style={styles.quietActivity} testID="dashboard-monthly-context">
-        <AppText color="secondary" variant="caption" weight="medium">{`${formatMonthYear(currentDate)} activity`}</AppText>
-        <AppText color="secondary" variant="caption">No net investment or cash change</AppText>
-      </View>
-    );
-  }
-
-  return (
-    <PremiumCard section style={styles.compactSection} testID="dashboard-monthly-context">
-      <SectionHeader title={`${formatMonthYear(currentDate)} activity`} />
-      <MetricGroup
-        metrics={[
-          {
-            exactValue: formatINR(dashboard.monthlyMetrics.investment),
-            label: "Invested",
-            masked: dashboard.maskWealthValues,
-            value: formatCompactINR(dashboard.monthlyMetrics.investment),
-          },
-          {
-            exactValue: formatSignedINR(dashboard.monthlyMetrics.cashChange),
-            label: "Cash change",
-            masked: dashboard.maskWealthValues,
-            value: formatSignedCompactINR(
-              dashboard.monthlyMetrics.cashChange,
-            ),
-          },
-        ]}
-      />
     </PremiumCard>
   );
 }

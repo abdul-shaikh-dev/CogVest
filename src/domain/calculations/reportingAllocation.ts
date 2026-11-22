@@ -41,3 +41,28 @@ export function calculateReportingAllocation(input: {
     } : null,
   }));
 }
+
+export type UnpricedHolding = { assetId: string; name: string; invested: number };
+
+/**
+ * Allocation of the priced part of the portfolio when some holdings have no
+ * current value yet (#782). Unpriced holdings are listed, with what was
+ * invested in them, rather than counted as zero. Null when anything other than
+ * an unpriced holding makes allocation unavailable (Futures, EPF or Cash).
+ */
+export function calculatePricedReportingAllocation(input: Parameters<typeof calculateReportingAllocation>[0]) {
+  const isPriced = (holding: Holding) => {
+    const value = holding.calculationBasis?.currentValue ?? holding.currentValue;
+    return holding.valuation.status !== "pending" && value !== null && value !== undefined
+      && Number.isFinite(Number(value));
+  };
+  const priced = input.holdings.filter(isPriced);
+  const allocation = calculateReportingAllocation({ ...input, holdings: priced });
+  if (allocation.length === 0) return null;
+  const excluded: UnpricedHolding[] = input.holdings.filter(holding => !isPriced(holding)).map(holding => ({
+    assetId: holding.asset.id,
+    name: holding.asset.name,
+    invested: normalizeMoney(holding.calculationBasis?.totalInvested ?? holding.totalInvested),
+  }));
+  return { allocation, excluded };
+}

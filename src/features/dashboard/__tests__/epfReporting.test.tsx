@@ -41,10 +41,11 @@ test.each(["standard", "minimal"] as const)("shows EPF evidence, unknown basis a
   expect(screen.getByTestId("dashboard-epf-value").props.accessibilityLabel).toBe("₹1,40,000.00");
   expect(screen.getByText("EPF · as of 01 Jan 2026 · later activity unconfirmed")).toBeTruthy();
   if (displayMode === "minimal") await fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
-  expect(screen.getByText("Unknown")).toBeTruthy();
-  // P&L, P&L % and the portfolio return, which has no snapshot to start from.
-  expect(screen.getAllByText("Unavailable")).toHaveLength(3);
-  expect(within(screen.getByTestId("dashboard-xirr")).getByText("Save a month-end snapshot in Progress, or set a start date, to measure the return.")).toBeTruthy();
+  expect(screen.getByTestId("dashboard-invested-context")).toHaveTextContent("Portfolio P&L unavailable · invested unknown");
+  // The portfolio return has no snapshot to start from; its reason is one tap away (#782).
+  expect(screen.getAllByText("Unavailable")).toHaveLength(1);
+  await fireEvent.press(screen.getByTestId("dashboard-xirr-toggle"));
+  expect(within(screen.getByTestId("dashboard-xirr-details")).getByText("Save a month-end snapshot in Progress, or set a start date, to measure the return.")).toBeTruthy();
   await fireEvent.press(screen.getByTestId("dashboard-mask-toggle"));
   expect(screen.getByTestId("dashboard-epf-value").props.accessibilityLabel).toBe("Amount hidden");
 });

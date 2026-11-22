@@ -8,12 +8,7 @@ import { type XirrSummary, xirrFlowTotals } from "@/src/domain/xirrSummary";
 import { useStyles } from "./dashboardStyles";
 import { DashboardXirrBlockers } from "./DashboardXirrBlockers";
 
-/**
- * Annualised portfolio return (#535, simplified in #610) inside the Invested &
- * returns area: everything CogVest tracks, Cash included, from the user's start
- * or the earliest month-end snapshot. Assumptions are listed, not blocking.
- */
-export function DashboardXirr({ masked, names = {}, onConfirmPayouts, onReviewPayouts, onSetBasis, scope, summary }: {
+type XirrProps = {
   masked: boolean;
   /** Holding and account names for the blocker checklist. */
   names?: Record<string, string>;
@@ -23,77 +18,102 @@ export function DashboardXirr({ masked, names = {}, onConfirmPayouts, onReviewPa
   onSetBasis?: () => void;
   scope: string;
   summary: XirrSummary;
+};
+
+/**
+ * Annualised portfolio return (#535, simplified in #610): everything CogVest
+ * tracks, Cash included, from the user's start or the earliest month-end
+ * snapshot. Assumptions are listed, not blocking. The Dashboard shows it as a
+ * tile with its details below the tile row (#782).
+ */
+export function DashboardXirr(props: XirrProps) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View>
+      <DashboardXirrTile expanded={expanded} onToggle={() => setExpanded((value) => !value)} summary={props.summary} />
+      {expanded ? <DashboardXirrDetails {...props} /> : null}
+    </View>
+  );
+}
+
+/** What the tile says under the rate: why to read it with care, then where to tap. */
+export function getXirrTileCaption(summary: XirrSummary, expanded: boolean) {
+  if (expanded) return "Hide breakdown";
+  if (summary.status === "unavailable") return "Why ›";
+  const context = summary.shortPeriod ? `Over ${summary.days} days` : summary.notes.length ? "Estimate" : "";
+  return context ? `${context} · Breakdown ›` : "Breakdown ›";
+}
+
+export function DashboardXirrTile({ expanded, onToggle, stacked = false, summary }: {
+  expanded: boolean;
+  /** Full width, for large font sizes. */
+  stacked?: boolean;
+  onToggle: () => void;
+  summary: XirrSummary;
 }) {
   const styles = useStyles();
-  const [expanded, setExpanded] = useState(false);
   const rateText = summary.status === "rate" ? `${formatPercentage(summary.rate * 100)} a year` : "Unavailable";
   return (
-    <View testID="dashboard-xirr">
-      <Pressable
-        accessibilityLabel={`Portfolio return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        onPress={() => setExpanded((value) => !value)}
-        style={styles.priceDisclosure}
-        testID="dashboard-xirr-toggle"
-      >
-        <View style={styles.xirrLabel}>
-          <AppText color="secondary" variant="caption">Portfolio return (XIRR)</AppText>
-          <AppText
-            color={summary.status === "rate" ? undefined : "secondary"}
-            style={summary.status !== "rate" || summary.rate === 0 ? undefined
-              : summary.rate > 0 ? styles.positiveText : styles.negativeText}
-            testID="dashboard-xirr-rate"
-            weight="bold"
-          >
-            {rateText}
-          </AppText>
-        </View>
-        <AppText color="secondary" variant="caption">{expanded ? "Hide breakdown" : "Breakdown"}</AppText>
-      </Pressable>
-      {summary.status === "rate" && summary.notes.length && !expanded ? (
-        <AppText color="secondary" testID="dashboard-xirr-assumptions" variant="caption">
-          Estimate with {summary.notes.length} {summary.notes.length === 1 ? "assumption" : "assumptions"}. Open Breakdown to see {summary.notes.length === 1 ? "it" : "them"}.
+    <Pressable
+      accessibilityLabel={`Portfolio return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      onPress={onToggle}
+      style={[styles.glanceTile, stacked && styles.glanceTileFull]}
+      testID="dashboard-xirr-toggle"
+    >
+      <View testID="dashboard-xirr">
+        <AppText color="secondary" variant="caption">Return (XIRR)</AppText>
+        <AppText
+          color={summary.status === "rate" ? undefined : "secondary"}
+          style={summary.status !== "rate" || summary.rate === 0 ? undefined
+            : summary.rate > 0 ? styles.positiveText : styles.negativeText}
+          testID="dashboard-xirr-rate"
+          weight="bold"
+        >
+          {rateText}
         </AppText>
-      ) : null}
+        <AppText color="secondary" testID="dashboard-xirr-tile-caption" variant="caption">
+          {getXirrTileCaption(summary, expanded)}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}
+
+export function DashboardXirrDetails({ masked, names = {}, onConfirmPayouts, onReviewPayouts, onSetBasis, scope, summary }: XirrProps) {
+  const styles = useStyles();
+  return (
+    <View style={styles.priceDetails} testID="dashboard-xirr-details">
       {summary.status === "rate" && summary.shortPeriod ? (
         <AppText color="secondary" testID="dashboard-xirr-short" variant="caption">
           Annualised over {summary.days} days, not the gain for the period.
         </AppText>
       ) : null}
-      {summary.status === "unavailable" && !expanded ? (
-        <>
-          <AppText color="secondary" testID="dashboard-xirr-reason" variant="caption">{summary.messages[0]}</AppText>
-          {summary.blockers.length > 1 ? (
-            <AppText color="secondary" testID="dashboard-xirr-more" variant="caption">
-              {summary.blockers.length - 1} more to fix. Open Breakdown for the full list.
-            </AppText>
-          ) : null}
-        </>
+      {summary.status === "rate" && summary.notes.length ? (
+        <AppText color="secondary" testID="dashboard-xirr-assumptions" variant="caption">
+          Estimate with {summary.notes.length} {summary.notes.length === 1 ? "assumption" : "assumptions"}, listed below.
+        </AppText>
       ) : null}
-      {expanded ? (
-        <View style={styles.priceDetails} testID="dashboard-xirr-details">
-          <AppText color="secondary" variant="caption">{scope}</AppText>
-          {summary.status === "unavailable" ? (
-            <DashboardXirrBlockers
-              blockers={summary.blockers}
-              names={names}
-              onReviewPayouts={onReviewPayouts}
-              onSetBasis={onSetBasis}
-            />
-          ) : (
-            <XirrRateDetails masked={masked} summary={summary} />
-          )}
-          {summary.status === "rate" && (summary.payoutGapAssetIds?.length ?? 0) > 0 && onConfirmPayouts ? (
-            <AppButton onPress={onConfirmPayouts} testID="dashboard-xirr-confirm-payouts" title="Confirm payouts" variant="secondary" />
-          ) : null}
-          <AppText color="secondary" variant="caption">
-            XIRR weighs each amount by when it moved. It differs from P&amp;L, which compares value with what you invested.
-          </AppText>
-          {onSetBasis ? (
-            <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Change start" variant="secondary" />
-          ) : null}
-        </View>
+      <AppText color="secondary" variant="caption">{scope}</AppText>
+      {summary.status === "unavailable" ? (
+        <DashboardXirrBlockers
+          blockers={summary.blockers}
+          names={names}
+          onReviewPayouts={onReviewPayouts}
+          onSetBasis={onSetBasis}
+        />
+      ) : (
+        <XirrRateDetails masked={masked} summary={summary} />
+      )}
+      {summary.status === "rate" && (summary.payoutGapAssetIds?.length ?? 0) > 0 && onConfirmPayouts ? (
+        <AppButton onPress={onConfirmPayouts} testID="dashboard-xirr-confirm-payouts" title="Confirm payouts" variant="secondary" />
+      ) : null}
+      <AppText color="secondary" variant="caption">
+        XIRR weighs each amount by when it moved. It differs from P&amp;L, which compares value with what you invested.
+      </AppText>
+      {onSetBasis ? (
+        <AppButton onPress={onSetBasis} testID="dashboard-xirr-set-basis" title="Change start" variant="secondary" />
       ) : null}
     </View>
   );

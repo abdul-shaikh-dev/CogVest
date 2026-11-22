@@ -11,6 +11,7 @@ import {
   MASKED_INR_VALUE,
   MASKED_VALUE_ACCESSIBILITY_LABEL,
 } from "@/src/components/common";
+import { StyleSheet } from "react-native";
 import { DashboardScreen } from "@/src/features/dashboard";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
@@ -156,7 +157,9 @@ describe("DashboardScreen", () => {
 
     await fireEvent.press(getByTestId("dashboard-mask-toggle"));
     expect(getByText(/1 holding needs a price/u)).toBeTruthy();
-    expect(getByText("Valuation pending")).toBeTruthy();
+    // The hero shows what is known, the invested amount, until every price is in (#782).
+    expect(getByText("Invested")).toBeTruthy();
+    expect(getByText("Current value needs every price")).toBeTruthy();
 
     await fireEvent.press(getByTestId("dashboard-refresh-pending-prices"));
 
@@ -293,7 +296,6 @@ describe("DashboardScreen", () => {
     expect(toggle.props.style.minHeight + toggle.props.hitSlop.top + toggle.props.hitSlop.bottom).toBe(48);
     expect(toggle.props.accessibilityState).toEqual({ expanded: false });
     expect(screen.getByText("Prices up to date")).toBeTruthy();
-    expect(screen.getByText("Details")).toBeTruthy();
     expect(screen.queryByTestId("dashboard-price-details")).toBeNull();
     expect(screen.queryByText(/Current holdings, cash/u)).toBeNull();
     expect(screen.queryByText(/Current 1 · Stale 0 · Manual 0 · Missing 0/u)).toBeNull();
@@ -303,7 +305,6 @@ describe("DashboardScreen", () => {
 
     expect(toggle.props.accessibilityState).toEqual({ expanded: true });
     const details = within(screen.getByTestId("dashboard-price-details"));
-    expect(screen.getByText("Hide details")).toBeTruthy();
     expect(
       details.getByText(
         "Current holdings, cash and recorded PPF balances, using available prices. Not a month-end snapshot.",
@@ -667,10 +668,9 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Current 0 · Stale 1 · Manual 0 · Missing 0")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.getByText("Open Progress")).toBeTruthy();
-    expect(screen.getByText("September 2026 activity")).toBeTruthy();
-    expect(screen.getByText("No net investment or cash change")).toBeTruthy();
-    expect(screen.getByTestId("dashboard-monthly-context")).toHaveStyle({ gap: 4 });
-    expect(screen.getByText("September 2026 activity")).toHaveStyle({ fontSize: 12 });
+    // This month is a quiet tile beside the return (#782).
+    expect(screen.getByLabelText("September 2026 activity")).toBeTruthy();
+    expect(within(screen.getByTestId("dashboard-monthly-context")).getByText("No change")).toBeTruthy();
     expect(screen.queryByText("Investment rate")).toBeNull();
     expect(screen.queryByText("Cash balance")).toBeNull();
     expect(screen.queryByText("Holdings")).toBeNull();
@@ -695,7 +695,9 @@ describe("DashboardScreen", () => {
       />,
     );
 
-    expect(screen.getByText("September 2026 activity")).toBeTruthy();
+    expect(screen.getByLabelText("September 2026 activity")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-month-cash")).toHaveTextContent("Cash +₹100");
+    expect(screen.queryByTestId("dashboard-month-invested")).toBeNull();
     expect(screen.queryByText("Investment rate")).toBeNull();
     expect(screen.queryByTestId("dashboard-record-income")).toBeNull();
   });
@@ -724,12 +726,12 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText("Holdings P&L")).toBeNull();
     expect(screen.getByText("Using older saved prices")).toBeTruthy();
     await fireEvent.press(screen.getByTestId("dashboard-performance-toggle"));
-    expect(screen.getByText("Holdings P&L")).toBeTruthy();
-    const percentage = within(screen.getByTestId("dashboard-pnl-percent"));
-    expect(percentage.getByText("Holdings P&L %")).toBeTruthy();
-    expect(percentage.getByText("+50.00%")).toBeTruthy();
-    expect(percentage.queryByText("Holdings P&L")).toBeNull();
-    expect(screen.getByText("+50.00%")).toHaveStyle({ color: colors.profit });
+    // Gain and invested read as one line under the value (#782).
+    expect(screen.getByTestId("dashboard-pnl")).toHaveTextContent("+₹100");
+    expect(screen.getByTestId("dashboard-pnl-percent")).toHaveTextContent("(+50.00%)");
+    expect(screen.getByTestId("dashboard-pnl-percent")).toHaveStyle({ color: colors.profit });
+    expect(screen.getByTestId("dashboard-pnl-percent").props.accessibilityLabel).toBe("Holdings P&L percentage +50.00%");
+    expect(screen.getByTestId("dashboard-invested-context")).toHaveTextContent("Holdings P&L on ₹200 invested");
     expect(screen.getByText("Allocation")).toBeTruthy();
     expect(screen.getByText("Month-end snapshot")).toBeTruthy();
     expect(screen.queryByText("This Month")).toBeNull();
@@ -764,7 +766,7 @@ describe("DashboardScreen", () => {
       expect(within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)).toHaveLength(2);
       // A gain colour would reveal the hidden P&L's direction (#656).
       for (const masked of within(screen.getByTestId("dashboard-top-metrics")).getAllByText(MASKED_INR_VALUE)) {
-        expect(masked).toHaveStyle({ color: colors.text.primary });
+        expect([colors.text.primary, colors.text.secondary]).toContain(StyleSheet.flatten(masked.props.style).color);
       }
     }
 
@@ -866,7 +868,7 @@ describe("DashboardScreen", () => {
     expect(allocationCard.getByText("-50.00%")).toBeTruthy();
     expect(allocationCard.queryByText(/makes up/)).toBeNull();
     expect(allocationCard.getByText("-₹100")).toBeTruthy();
-    expect(queryByTestId("dashboard-allocation-visual")).toBeNull();
+    expect(queryByTestId("dashboard-allocation-visual", { includeHiddenElements: true })).toBeNull();
   });
 
   it("masks a cash-only liability without hiding its reconciliation state", async () => {
@@ -925,7 +927,7 @@ describe("DashboardScreen", () => {
     const { getByTestId } = await render(<DashboardScreen store={store} />);
 
     const allocationCard = within(getByTestId("dashboard-allocation-card"));
-    expect(getByTestId("dashboard-allocation-visual")).toBeTruthy();
+    expect(getByTestId("dashboard-allocation-visual", { includeHiddenElements: true })).toBeTruthy();
     expect(allocationCard.getAllByText("Equity")).toHaveLength(1);
     expect(allocationCard.getAllByText("100.00%")).toHaveLength(1);
     expect(getByTestId("dashboard-allocation-bar-equity", { includeHiddenElements: true })).toHaveStyle({ width: "100%" });
@@ -967,8 +969,9 @@ describe("DashboardScreen", () => {
     const supportIndex = indexOfText(testIds, "dashboard-support-card");
 
     expect(metricsIndex).toBeGreaterThan(heroIndex);
-    expect(quoteIndex).toBeGreaterThan(metricsIndex);
-    expect(monthlyIndex).toBeGreaterThan(quoteIndex);
+    // This month sits in the tile row, above the price status chip (#782).
+    expect(monthlyIndex).toBeGreaterThan(metricsIndex);
+    expect(quoteIndex).toBeGreaterThan(monthlyIndex);
     expect(monthlyIndex).toBeLessThan(allocationIndex);
     expect(quoteIndex).toBeLessThan(allocationIndex);
     expect(allocationIndex).toBeGreaterThan(metricsIndex);
@@ -1002,7 +1005,7 @@ describe("DashboardScreen", () => {
     expect(queryByText("₹300.00")).toBeNull();
     expect(queryByText("+₹100.00")).toBeNull();
     expect(queryByTestId("dashboard-exact-values")).toBeNull();
-    expect(getAllByText("+50.00%").length).toBeGreaterThan(0);
+    expect(getByTestId("dashboard-pnl-percent")).toHaveTextContent("(+50.00%)");
   });
 
   it("keeps allocation percentages visible while masking allocation values", async () => {
