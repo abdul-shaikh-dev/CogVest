@@ -3,6 +3,7 @@ export {
   formatCompactINR,
   formatCurrency,
   formatDate,
+  formatDayMonthYear,
   formatINR,
   formatPercentage,
   formatPrice,
