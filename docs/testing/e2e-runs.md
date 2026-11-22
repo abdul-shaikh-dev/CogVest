@@ -4,6 +4,28 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-22: Bottom sheets (#784), emulator smoke 15 passed, Moto sheet checks
+
+- Commit: feat/784-bottom-sheets a8be57b, based on `main` 4d7ff2d, version
+  1.0.33. `npm run test:verify`: 3,254 passed, doctor 18/18.
+- Build: E2E APK for arm64-v8a and x86_64 from a8be57b, SHA-256
+  45bbb5a21e7e29b026e2452af586414b30de7dd0bcd23393ba0a28973378fa0a.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`,
+  15 passed, 0 failed, 14m 49s.
+- Affected flows, run one by one on an earlier build of the branch (753ba89,
+  the same sheets with `statusBarTranslucent` still on): 17 of 18 passed.
+  `funded-buy-cash` failed: Holdings was drawn with a zero top inset, so
+  `holdings-add-button` sat under the status bar. The same flow then failed
+  the same way on a `main` build (88d889b) and passed on a8be57b, so the
+  zero inset is intermittent and predates this change.
+- **Motorola Edge 30** (ZD2224Z7DY, Android 14), a8be57b, checked by hand with
+  adb: the cash sheet keeps Save above the keyboard; Back first hides the
+  keyboard, then closes the sheet; a drag down closes it and the draft
+  survives; Holdings sheets close on Back and on a drag down; a 40 px drag
+  leaves a sheet open. `svc power stayon usb` during the checks, then off.
+- Not run: Moto smoke.
+
 ## 2026-11-22: Motion and loading (#783), emulator smoke 15 passed
 
 - Commit: feat/783-motion-loading 88d889b, based on `main` eb85e86, version
