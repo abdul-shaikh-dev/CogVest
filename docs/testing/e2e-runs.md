@@ -3,7 +3,7 @@
 Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
-## 2026-11-22: Dashboard glance layout (#782), emulator smoke 15 passed after one flow fix
+## 2026-11-22: Dashboard glance layout (#782), emulator smoke 14 of 15 passed, fixed flow passes
 
 - Commit: feat/782-dashboard-glance d77938c, based on `main` 13154dd, version
   1.0.33. `npm run test:verify`: 3,226 passed, doctor 18/18.
