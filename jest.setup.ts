@@ -48,7 +48,6 @@ jest.mock("react-native-reanimated", () => {
     useReducedMotion: jest.fn(() => false),
     // Bottom sheet motion (#784): styles compute once, timings land at once.
     useAnimatedStyle: (style: () => unknown) => style(),
-    useAnimatedKeyboard: () => ({ height: { get: () => 0, value: 0 }, state: { get: () => 0, value: 0 } }),
     withTiming: jest.fn(<T,>(value: T) => value),
     useAnimatedReaction,
     useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
