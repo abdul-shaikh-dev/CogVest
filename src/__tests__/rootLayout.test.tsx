@@ -1,16 +1,35 @@
 import React from "react";
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 
 import RootLayout from "../../app/_layout";
 import { getByComponentType } from "@/src/testing/componentQueries";
+import { setScreenSecureAsync } from "@/modules/cogvest-screen-security";
+import { getAppLockStore } from "@/src/services/security/appLock";
 
 const mockResetAffectedStorage = jest.fn();
 let mockRestoreEpoch = 0;
 const mockReplace = jest.fn();
 const mockDismissAll = jest.fn();
+
+// App lock reads native storage; these tests run with it off (#761).
+jest.mock("@/src/services/security/appLock", () => {
+  const actual = jest.requireActual("@/src/services/security/appLock");
+  const { createMemoryJsonStorage } = jest.requireActual("@/src/services/storage");
+  const store = actual.createAppLockStore({
+    auth: { authenticate: async () => ({ success: true }), hasDeviceLock: async () => true },
+    storage: createMemoryJsonStorage(),
+  });
+  return { ...actual, getAppLockStore: () => store };
+});
+jest.mock("@/modules/cogvest-screen-security", () => ({ setScreenSecureAsync: jest.fn(async () => undefined) }));
+jest.mock("expo-local-authentication", () => ({
+  SecurityLevel: { NONE: 0 },
+  authenticateAsync: jest.fn(),
+  getEnrolledLevelAsync: jest.fn(),
+}));
 
 jest.mock("@/src/features/progress", () => ({
   useMonthEndSnapshotAutomation: jest.fn(),
@@ -95,6 +114,28 @@ describe("RootLayout", () => {
     expect(view.queryByTestId("backup-restore-done")).toBeNull();
     await view.rerender(<RootLayout />);
     expect(view.queryByTestId("backup-restore-done")).toBeNull();
+  });
+
+  it("covers every route and blocks the recent-apps preview while App lock is on (#761)", async () => {
+    const view = await render(<RootLayout />);
+    await waitFor(() => expect(view.getByTestId("stack-screen-(tabs)")).toBeTruthy());
+    expect(view.queryByTestId("app-lock-screen")).toBeNull();
+    expect(setScreenSecureAsync).not.toHaveBeenCalled();
+
+    const store = getAppLockStore();
+    await act(async () => {
+      store.setState({ locked: true, settings: { enabled: true, relockAfterSeconds: 60 } });
+    });
+    // The navigator stays mounted under the lock, so a linked route is hidden too.
+    expect(view.getByTestId("app-lock-screen")).toBeTruthy();
+    expect(view.getByTestId("stack-screen-settings")).toBeTruthy();
+    expect(setScreenSecureAsync).toHaveBeenCalledWith(true);
+
+    await act(async () => {
+      store.setState({ locked: false, settings: { enabled: false, relockAfterSeconds: 60 } });
+    });
+    expect(view.queryByTestId("app-lock-screen")).toBeNull();
+    expect(setScreenSecureAsync).toHaveBeenLastCalledWith(false);
   });
 
   it("wraps navigation with the gesture handler root required by native navigation", async () => {

@@ -9,6 +9,22 @@ const mockResetAffectedStorage = jest.fn();
 let mockRecoveryState: { incidents: Array<Record<string, unknown>> } | undefined;
 let mockPathname = "/dashboard";
 
+// App lock reads native storage; these tests run with it off (#761).
+jest.mock("@/src/services/security/appLock", () => {
+  const actual = jest.requireActual("@/src/services/security/appLock");
+  const { createMemoryJsonStorage } = jest.requireActual("@/src/services/storage");
+  const store = actual.createAppLockStore({
+    auth: { authenticate: async () => ({ success: true }), hasDeviceLock: async () => true },
+    storage: createMemoryJsonStorage(),
+  });
+  return { ...actual, getAppLockStore: () => store };
+});
+jest.mock("expo-local-authentication", () => ({
+  SecurityLevel: { NONE: 0 },
+  authenticateAsync: jest.fn(),
+  getEnrolledLevelAsync: jest.fn(),
+}));
+
 jest.mock("expo-router", () => {
   const React = require("react");
   const { View } = require("react-native");
