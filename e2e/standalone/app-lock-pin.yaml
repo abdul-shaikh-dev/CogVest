@@ -1,0 +1,109 @@
+appId: ${APP_ID}
+---
+# App lock with a real screen lock (#761). Disposable emulator only: set a
+# temporary PIN first and remove it afterwards, e.g.
+#   adb shell locksettings set-pin 1234
+#   adb shell locksettings clear --old 1234
+# Pass it with `-e PIN=1234`. The emulator has no fingerprint, so the system
+# prompt asks for the PIN.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+
+# Turning it on needs the phone's lock.
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: app-lock-toggle
+    direction: DOWN
+- assertNotVisible:
+    id: app-lock-unavailable
+- tapOn:
+    id: app-lock-toggle
+- runFlow: helpers/enter-device-pin.yaml
+- extendedWaitUntil:
+    visible:
+      id: app-lock-relock-0
+    timeout: 10000
+- assertVisible:
+    id: app-lock-toggle
+    checked: true
+- assertVisible: "Screenshots and the recent-apps preview are blocked while App lock is on."
+- tapOn:
+    id: app-lock-relock-0
+- assertVisible:
+    id: app-lock-relock-0
+    checked: true
+
+# A cold start is locked, and cancelling the prompt keeps it locked.
+- launchApp
+# The system prompt opens over the lock screen at once; cancel it.
+# selector: the system prompt's title is the copy under test
+- extendedWaitUntil:
+    visible: Unlock CogVest
+    timeout: 120000
+- back
+- extendedWaitUntil:
+    visible:
+      id: app-lock-screen
+    timeout: 10000
+- assertVisible:
+    id: app-lock-screen
+- assertNotVisible:
+    id: dashboard-screen
+
+# A link opened while locked stays hidden behind the lock.
+- openLink: "${SCHEME}:///settings"
+- assertVisible:
+    id: app-lock-screen
+- assertNotVisible:
+    id: settings-screen
+
+# Unlocking shows the linked screen.
+- tapOn:
+    id: app-lock-unlock
+- runFlow: helpers/enter-device-pin.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 10000
+- assertNotVisible:
+    id: app-lock-screen
+
+# Set to Immediately: leaving and returning locks again.
+- pressKey: Home
+- launchApp:
+    stopApp: false
+# The lock's own system prompt shows that the app locked again.
+- extendedWaitUntil:
+    visible: Unlock CogVest
+    timeout: 10000
+- runFlow: helpers/enter-device-pin.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 10000
+
+# Turning it off needs the phone's lock too.
+- scrollUntilVisible:
+    element:
+      id: app-lock-toggle
+    direction: DOWN
+- tapOn:
+    id: app-lock-toggle
+- runFlow: helpers/enter-device-pin.yaml
+- extendedWaitUntil:
+    visible:
+      id: app-lock-toggle
+      checked: false
+    timeout: 10000
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- assertNotVisible:
+    id: app-lock-screen

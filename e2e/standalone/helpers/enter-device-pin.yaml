@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+# Types the emulator's temporary PIN into the system credential prompt (#761).
+# selector: the system PIN prompt has no app testID; its title is the anchor
+- extendedWaitUntil:
+    visible: ".*PIN.*"
+    timeout: 10000
+- inputText: ${PIN}
+- pressKey: Enter
