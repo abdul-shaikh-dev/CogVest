@@ -2,6 +2,7 @@ import { createContext, Fragment, useContext, useRef, useState, type ComponentPr
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, type TextInputInstance, View, type ViewInstance } from "react-native";
 
+import { formatDayMonthYear } from "@/src/domain/formatters";
 import { AppText, DisclosureButton, MASKED_AMOUNT, MASKED_INR_VALUE, MASKED_VALUE_ACCESSIBILITY_LABEL, MaskedValue } from "@/src/components/common";
 import { DateTimeField, FormTextField } from "@/src/components/forms";
 import { useTheme } from "@/src/theme";
@@ -70,7 +71,8 @@ const amountLineStyles = StyleSheet.create({
 });
 
 export function displayTime(value: string) {
-  return new Date(value).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const date = new Date(value);
+  return `${formatDayMonthYear(date, { padDay: false })}, ${date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 /** One visible sentence, with the rest of the explanation behind a disclosure. */

@@ -1,4 +1,4 @@
-import { formatDate } from "@/src/domain/formatters";
+import { formatDate, formatDayMonthYear } from "@/src/domain/formatters";
 import type { Holding, Quote, QuoteSource } from "@/src/types";
 
 import { classifyQuoteFreshness, type QuoteFreshness } from "./freshness";
@@ -25,14 +25,8 @@ function formatAsOf(asOf: string, source: QuoteSource) {
     return formatDate(asOf);
   }
 
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-    timeZoneName: "short",
-    year: "numeric",
-  }).format(date);
+  const time = new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" }).format(date);
+  return `${formatDayMonthYear(date)}, ${time}`;
 }
 
 export function getHoldingQuoteContext(

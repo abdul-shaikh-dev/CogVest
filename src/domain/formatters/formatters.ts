@@ -9,7 +9,6 @@ import type { Currency } from "@/src/types";
 // Fixed locales/options allow reuse without caching any portfolio values.
 const currencyFormatters = new Map<Currency, Intl.NumberFormat>();
 let inrFormatter: Intl.NumberFormat | undefined;
-let dateFormatter: Intl.DateTimeFormat | undefined;
 
 export function formatCurrency(value: number, currency: Currency) {
   const normalizedValue = normalizeMoney(value);
@@ -132,12 +131,24 @@ export function formatPercentage(value: number) {
   return `${sign}${normalizedValue.toFixed(2)}%`;
 }
 
+// The en-IN short month names. Built here rather than by Intl, because Android
+// 14 and older spell the en-IN date "05-Jan-2026" while newer releases spell it
+// "05 Jan 2026" (#779): their bundled ICU date patterns differ.
+const shortMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
+
+/**
+ * "05 Jan 2026" on every Android version. `utc` reads the calendar day in UTC
+ * (for stored ISO dates); otherwise the phone's local day. `padDay: false`
+ * gives "5 Jan 2026".
+ */
+export function formatDayMonthYear(date: Date, { padDay = true, utc = false }: { padDay?: boolean; utc?: boolean } = {}) {
+  if (Number.isNaN(date.getTime())) throw new RangeError("Invalid time value");
+  const day = utc ? date.getUTCDate() : date.getDate();
+  const month = utc ? date.getUTCMonth() : date.getMonth();
+  const year = utc ? date.getUTCFullYear() : date.getFullYear();
+  return `${padDay ? String(day).padStart(2, "0") : day} ${shortMonthNames[month]} ${year}`;
+}
+
 export function formatDate(isoDate: string) {
-  dateFormatter ??= new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-    year: "numeric",
-  });
-  return dateFormatter.format(new Date(isoDate));
+  return formatDayMonthYear(new Date(isoDate), { utc: true });
 }

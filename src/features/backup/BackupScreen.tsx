@@ -12,6 +12,7 @@ import {
   SectionHeader,
   getAdaptiveLayoutMode,
 } from "@/src/components/common";
+import { formatDayMonthYear } from "@/src/domain/formatters";
 import { FormTextField } from "@/src/components/forms";
 import { backupPassphraseProblem } from "@/src/domain/encryptedBackup";
 import { Checkbox } from "@/src/features/ppf/ppfImportParts";
@@ -47,10 +48,7 @@ export function formatBackupCreatedAt(createdAt: string) {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return "an unavailable date";
 
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return `${formatDayMonthYear(date, { padDay: false })}, ${new Intl.DateTimeFormat("en-IN", { timeStyle: "short" }).format(date)}`;
 }
 
 function safeErrorMessage(error: unknown, fallback: string) {

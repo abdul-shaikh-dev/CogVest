@@ -69,7 +69,8 @@ describe("formatters", () => {
         }
       });
       expect(numberConstructor).toHaveBeenCalledTimes(3);
-      expect(dateConstructor).toHaveBeenCalledTimes(1);
+      // Dates are assembled without Intl (#779).
+      expect(dateConstructor).not.toHaveBeenCalled();
     } finally {
       numberConstructor.mockRestore();
       dateConstructor.mockRestore();

@@ -1,6 +1,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useState, type Ref } from "react";
 import { Keyboard, Pressable, StyleSheet, View, type ViewInstance } from "react-native";
+import { formatDayMonthYear } from "@/src/domain/formatters";
 import { AppButton, AppText, DisclosureButton } from "@/src/components/common";
 import { futuresEntryDate, futuresTimeZone, replaceFuturesTimePart } from "@/src/domain/futuresEntry";
 import { radii, spacing, createThemedStyles } from "@/src/theme";
@@ -26,7 +27,7 @@ export function DateTimeField({ value, label, onChange, testID, error, suggested
         accessibilityLabel={`Choose ${label} ${part}`} accessibilityState={{ expanded: mode === part }}
         onPress={() => { Keyboard.dismiss(); setMode(part); }} testID={`${testID}-${part}`}
         style={[styles.button, error && styles.invalid]}>
-        <AppText>{selected ? part === "date" ? selected.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+        <AppText>{selected ? part === "date" ? formatDayMonthYear(selected, { padDay: false })
           : selected.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
           : `Choose ${part}`}</AppText>
       </Pressable>)}

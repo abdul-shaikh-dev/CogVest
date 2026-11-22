@@ -5,6 +5,7 @@ import type { Ref } from "react";
 import { useState } from "react";
 import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 
+import { formatDayMonthYear } from "@/src/domain/formatters";
 import { AppText } from "@/src/components/common";
 import { fieldAccessibilityLabel } from "./FormTextField";
 import {
@@ -30,11 +31,7 @@ function formatDisplayDate(value: string) {
     return "Choose date";
   }
 
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+  return formatDayMonthYear(date, { padDay: false });
 }
 
 export function DatePickerField({
