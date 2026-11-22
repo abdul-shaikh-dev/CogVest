@@ -151,6 +151,14 @@ describe("common UI primitives", () => {
     });
   });
 
+  it("lets the label span the button so Android cannot hide its last word (#746)", async () => {
+    const { getByText } = await render(<AppButton title="Add entry" />);
+
+    // A label box exactly as wide as React Native measured it wraps the last
+    // word out of sight when Android draws the text a little wider.
+    expect(getByText("Add entry")).toHaveStyle({ alignSelf: "stretch", textAlign: "center" });
+  });
+
   it("uses disabled opacity instead of pressed feedback", async () => {
     const { getByTestId } = await render(
       <AppButton
