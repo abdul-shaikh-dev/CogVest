@@ -104,8 +104,10 @@ function OpenBottomSheet({
       offset.set(duration === null ? 0 : withTiming(0, { duration }));
     });
 
-  // The modal window does not resize for the keyboard, so the sheet grows by
-  // the keyboard's height: fields and the save action stay reachable.
+  // The modal window does not resize for the keyboard (edge-to-edge), so the
+  // sheet grows by the keyboard's height: fields and the save action stay
+  // reachable. The modal is not statusBarTranslucent: that left later screens
+  // with a zero top inset, under the status bar.
   const keyboardHeight = useKeyboardHeight();
   const sheetMotion = useAnimatedStyle(() => ({ transform: [{ translateY: offset.get() }] }));
 
@@ -125,7 +127,6 @@ function OpenBottomSheet({
     <Modal
       animationType="none"
       onRequestClose={requestClose}
-      statusBarTranslucent
       testID={modalTestID}
       transparent
       visible={visible}
