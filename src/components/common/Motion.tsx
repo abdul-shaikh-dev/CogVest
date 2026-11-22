@@ -1,6 +1,14 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from "react-native";
-import Animated, { Easing, FadeIn, ReduceMotion, useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 import { getMotionDuration, radii, useTheme, type MotionKind } from "@/src/theme";
 
@@ -15,15 +23,29 @@ export function useFadeIn(kind: MotionKind) {
     : FadeIn.duration(duration).easing(Easing.out(Easing.quad)).reduceMotion(ReduceMotion.System);
 }
 
-/** Fades its children in when it mounts: screen entry and cards revealed after loading. */
+/**
+ * Fades its children in when it mounts: screen entry and cards revealed after loading.
+ *
+ * It animates opacity as a style, not as an `entering` layout animation. A screen's
+ * safe area insets arrive a frame after mount and move this view down; while an
+ * entering animation runs, Reanimated dropped that move, leaving the header under
+ * the status bar (#792).
+ */
 export function FadeInView({ children, kind = "reveal", style, testID }: {
   children: ReactNode;
   kind?: MotionKind;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
-  const entering = useFadeIn(kind);
-  return <Animated.View entering={entering} style={style} testID={testID}>{children}</Animated.View>;
+  const duration = getMotionDuration(kind, useReducedMotion());
+  const opacity = useSharedValue(duration === null ? 1 : 0);
+  useEffect(() => {
+    opacity.set(duration === null
+      ? 1
+      : withTiming(1, { duration, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.System }));
+  }, [duration, opacity]);
+  const fade = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  return <Animated.View style={[style, fade]} testID={testID}>{children}</Animated.View>;
 }
 
 /**
