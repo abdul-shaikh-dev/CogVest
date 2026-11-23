@@ -4,6 +4,23 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-24: Savings goals (#767), emulator smoke 15 passed, goals flow passed
+
+- Commits: feat/767-savings-goals 0e793aa, based on `main` b34945f.
+  `npm run test:verify` on 40882af: 3,316 passed. 0e793aa changes only the
+  goals flow's YAML quoting.
+- Build: E2E APK (release config, QA harness on) for x86_64 and arm64-v8a,
+  built from 40882af.
+- Emulator (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale 1.0):
+  - `npm run maestro:test -- e2e/savings-goals.yaml`: PASS, 1m 14s. It
+    creates, edits (whole portfolio to Cash only) and deletes a goal, and
+    checks the stored goal in `e2e-evidence` after each save.
+  - `npm run maestro:smoke`: 15 passed, 0 failed, 14m 25s. Per-flow times
+    were within 8 seconds of the #786 run.
+- Screens checked by hand on the visual QA seed: a ₹25L goal by 24 Nov 2027 at
+  10% showed ₹15.9L, the Dashboard value, as 63.6% reached, with about
+  ₹59,885 a month needed. This matches a calculation by hand.
+
 ## 2026-11-23: Home-screen widget (#786), emulator smoke 15 passed, widget checks
 
 - Commits: feat/786-home-widget a9f96eb, based on `main` bc84192, version
