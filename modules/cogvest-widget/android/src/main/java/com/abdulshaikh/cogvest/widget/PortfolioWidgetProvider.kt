@@ -36,8 +36,12 @@ class PortfolioWidgetProvider : AppWidgetProvider() {
   }
 
   companion object {
-    /** The full layout needs about this much height (dp); below it the widget uses the small one. */
-    private const val FULL_MIN_HEIGHT_DP = 100
+    /**
+     * The full layout needs about this much height (dp): padding, title, value,
+     * change and price lines. Below it, as at one row (about 100 dp), the widget
+     * uses the small layout rather than cut lines off.
+     */
+    private const val FULL_MIN_HEIGHT_DP = 130
 
     /** Redraws every placed widget from the stored snapshot. */
     fun refreshAll(context: Context) {
