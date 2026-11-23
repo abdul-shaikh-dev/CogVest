@@ -33,6 +33,16 @@ describe("getAssetHistoryRequest", () => {
     expect(getAssetHistoryRequest(stock, "bad", "2026-01-02")).toBeNull();
     expect(getAssetHistoryRequest(stock, "2010-01-01", "2020-01-02")).toBeNull();
   });
+
+  it("never asks Yahoo for a fund priced from AMFI (#797)", () => {
+    for (const instrumentType of ["mutualFund", "arbitrageFund", "liquidFund"] as const) {
+      const fund: Asset = { ...stock, instrumentType, quoteSourceId: "INF846K01PZ1", ticker: "INF846K01PZ1" };
+      expect(getAssetHistoryRequest(fund, "2026-01-01", "2026-01-02")).toBeNull();
+      expect(getAssetHistoryRequest({ ...fund, assetClass: "etf" }, "2026-01-01", "2026-01-02")).toBeNull();
+    }
+    expect(getAssetHistoryRequest({ ...stock, instrumentType: "stock" }, "2026-01-01", "2026-01-02"))
+      .toMatchObject({ provider: "yahoo" });
+  });
 });
 
 describe("fetchAssetHistory", () => {
