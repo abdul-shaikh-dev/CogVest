@@ -169,6 +169,7 @@ export function createV3ScaleFixture(): V3ScaleFixture {
     ppfAccounts: [],
     ppfLedgerEntries: [],
     preferences: createDefaultPreferences(),
+    savingsGoals: [],
     schemaVersion: portfolioSchemaVersion,
     trades,
   };

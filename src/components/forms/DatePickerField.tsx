@@ -20,6 +20,8 @@ type DatePickerFieldProps = {
   label: string;
   maximumDate?: Date;
   onChange: (value: string) => void;
+  /** Where the calendar opens while no date is chosen; the maximum date otherwise. */
+  openAt?: Date;
   testID: string;
   value: string;
 };
@@ -40,12 +42,13 @@ export function DatePickerField({
   label,
   maximumDate = new Date(),
   onChange,
+  openAt,
   testID,
   value,
 }: DatePickerFieldProps) {
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
-  const selectedDate = calendarDateToLocalDate(value) ?? maximumDate;
+  const selectedDate = calendarDateToLocalDate(value) ?? openAt ?? maximumDate;
 
   function handleChange(event: DateTimePickerEvent, nextDate?: Date) {
     setIsOpen(false);

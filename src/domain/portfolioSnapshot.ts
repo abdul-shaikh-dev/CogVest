@@ -11,10 +11,11 @@ import type {
   PpfAccount,
   PpfLedgerEntry,
   Preferences,
+  SavingsGoal,
   Trade,
 } from "@/src/types";
 
-export const portfolioSchemaVersion = 19;
+export const portfolioSchemaVersion = 20;
 
 /** The raw saved portfolio records, shared by the store and backup (#666). */
 export type RawPortfolioSnapshot = {
@@ -31,6 +32,8 @@ export type RawPortfolioSnapshot = {
   ppfAccounts: PpfAccount[];
   ppfLedgerEntries: PpfLedgerEntry[];
   preferences: Preferences;
+  /** Savings goals (#767); V20 and later. */
+  savingsGoals: SavingsGoal[];
   schemaVersion: typeof portfolioSchemaVersion;
   trades: Trade[];
 };

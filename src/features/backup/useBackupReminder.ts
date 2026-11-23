@@ -15,7 +15,7 @@ import { selectRawSnapshot, type PortfolioStoreState } from "@/src/store";
 const recordFields = [
   "assets", "cashEntries", "distributionCoverage", "distributions", "epf", "futuresAccounts",
   "measurementBasis", "monthlySnapshots", "openingPositions", "ppfAccounts", "ppfLedgerEntries",
-  "preferences", "trades",
+  "preferences", "savingsGoals", "trades",
 ] as const satisfies readonly (keyof PortfolioStoreState)[];
 
 export function useBackupReminder({

@@ -12,6 +12,7 @@ export type { Distribution, DistributionCoverage, DistributionTreatment } from "
 export type { CashEntry, CashEntryPurpose, CashEntryType } from "./cash";
 export type { Holding, HoldingValuation } from "./holding";
 export type { FundingSource, MeasurementBasis, MeasurementBasisLine } from "./measurementBasis";
+export type { SavingsGoal, SavingsGoalScope } from "./savingsGoal";
 export type { StockSplitEvent } from "./stockSplit";
 export type {
   MonthlyPerformanceBasis,

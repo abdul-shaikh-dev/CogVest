@@ -2538,6 +2538,7 @@ describe("portfolio store", () => {
       ppfAccounts: [],
       ppfLedgerEntries: [],
       preferences: createDefaultPreferences(),
+      savingsGoals: [],
       schemaVersion: portfolioSchemaVersion,
       trades: [trade],
     });

@@ -1,0 +1,132 @@
+appId: ${APP_ID}
+---
+# Savings goals (#767): create, edit and delete a goal, asserting the stored
+# records through e2e-evidence after each save.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+- openLink: "${SCHEME}:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: goals-add
+    direction: DOWN
+- tapOn:
+    id: goals-add
+- extendedWaitUntil:
+    visible:
+      id: goal-screen
+    timeout: 15000
+- tapOn:
+    id: goal-target-date
+# selector: the Android date picker's confirm button
+- tapOn: OK
+- tapOn:
+    id: goal-name
+- inputText: House
+- tapOn:
+    id: goal-target-amount
+- inputText: "2500000"
+- tapOn:
+    id: goal-return
+- inputText: "10"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: goal-save
+    direction: DOWN
+- tapOn:
+    id: goal-save
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 15000
+- runFlow: helpers/open-e2e-evidence.yaml
+- scrollUntilVisible:
+    element:
+      id: e2e-goal-count
+    direction: DOWN
+- assertVisible: "Goal count: 1"
+- assertVisible: 'Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope portfolio'
+
+# Count only Cash toward the goal.
+- openLink: "${SCHEME}:///progress"
+- scrollUntilVisible:
+    element:
+      id: "goal-card-.*"
+    direction: DOWN
+- tapOn:
+    id: "goal-card-.*"
+- extendedWaitUntil:
+    visible:
+      id: goal-summary
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: goal-scope-picker
+    direction: DOWN
+- tapOn:
+    id: goal-scope-picker
+- tapOn:
+    id: goal-scope-selected
+- scrollUntilVisible:
+    element:
+      id: goal-scope-cash
+    direction: DOWN
+- tapOn:
+    id: goal-scope-cash
+- scrollUntilVisible:
+    element:
+      id: goal-save
+    direction: DOWN
+- tapOn:
+    id: goal-save
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 15000
+- runFlow: helpers/open-e2e-evidence.yaml
+- scrollUntilVisible:
+    element:
+      id: e2e-goal-count
+    direction: DOWN
+- assertVisible: "Goal count: 1"
+- assertVisible: 'Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope cash'
+
+# Delete needs a second tap.
+- openLink: "${SCHEME}:///progress"
+- scrollUntilVisible:
+    element:
+      id: "goal-card-.*"
+    direction: DOWN
+- tapOn:
+    id: "goal-card-.*"
+- scrollUntilVisible:
+    element:
+      id: goal-delete
+    direction: DOWN
+- tapOn:
+    id: goal-delete
+- tapOn:
+    id: goal-delete
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 15000
+- runFlow: helpers/open-e2e-evidence.yaml
+- scrollUntilVisible:
+    element:
+      id: e2e-goal-count
+    direction: DOWN
+- assertVisible: "Goal count: 0"

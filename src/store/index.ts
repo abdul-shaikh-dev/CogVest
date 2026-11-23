@@ -23,6 +23,7 @@ import { createOpeningPositionActions } from "./openingPositionActions";
 import { createOpeningPositionBatchActions } from "./openingPositionBatchActions";
 import { createTransactionImportActions } from "./transactionImportActions";
 import { createReturnActions } from "./returnActions";
+import { createGoalActions } from "./goalActions";
 import { createPreferenceActions } from "./preferenceActions";
 import {
   assetGraphJournalStorageKey,
@@ -75,6 +76,9 @@ export {
   type ManualCashDeletionResult,
   type MeasurementBasisInput,
   type MeasurementBasisResult,
+  type SavingsGoalDeletionResult,
+  type SavingsGoalInput,
+  type SavingsGoalResult,
   type OpeningPositionBatchCommandInput,
   type OpeningPositionBatchCommandResult,
   type OpeningPositionCommandInput,
@@ -197,6 +201,7 @@ export function createPortfolioStore({
       ...createOpeningPositionBatchActions(context),
       ...createTransactionImportActions(context),
       ...createReturnActions(context),
+      ...createGoalActions(context),
       ...createPreferenceActions(context),
       historicalQuoteCache,
       quoteCache,

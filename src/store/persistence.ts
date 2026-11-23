@@ -73,6 +73,7 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
     ppfAccounts: [],
     ppfLedgerEntries: [],
     preferences: createDefaultPreferences(),
+    savingsGoals: [],
     schemaVersion: portfolioSchemaVersion,
     trades: [],
   };
@@ -263,6 +264,8 @@ export function migratePortfolioSnapshot(
       ...stored.preferences,
       appearance: stored.preferences?.appearance ?? "dark",
     },
+    // V20 adds savings goals; older portfolios start with none (#767).
+    savingsGoals: stored.savingsGoals ?? [],
     schemaVersion: portfolioSchemaVersion,
     // Migration preserves stored financial values exactly; normalization applies
     // only at write boundaries for new or corrected records.
@@ -433,6 +436,7 @@ export function selectRawSnapshot(
     ppfAccounts: state.ppfAccounts,
     ppfLedgerEntries: state.ppfLedgerEntries,
     preferences: state.preferences,
+    savingsGoals: state.savingsGoals,
     schemaVersion: portfolioSchemaVersion,
     trades: state.trades,
   };

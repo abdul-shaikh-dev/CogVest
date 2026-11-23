@@ -30,6 +30,8 @@ import type { resolveHistoricalPrice } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 
+import { GoalsSection } from "@/src/features/goals/GoalsSection";
+
 import { EpfHistoryScope } from "./EpfHistoryScope";
 import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
 import { MonthPickerField } from "./ProgressChartRange";
@@ -51,6 +53,8 @@ type ProgressScreenProps = {
   /** Opens the EPF account when there is one, or the EPF accounts list when there are several. */
   onOpenEpf?: (accountId?: string) => void;
   onOpenHoldings?: () => void;
+  /** Opens a savings goal, or a new one when no id is given (#767). */
+  onOpenGoal?: (goalId?: string) => void;
   onReviewSnapshot?: () => void;
   onSetUpPortfolio?: () => void;
   store?: StoreApi<PortfolioStoreState>;
@@ -62,6 +66,7 @@ export function ProgressScreen({
   onAddHolding,
   onOpenEpf,
   onOpenHoldings,
+  onOpenGoal,
   onReviewSnapshot,
   onSetUpPortfolio,
   store = getPortfolioStore(),
@@ -374,6 +379,9 @@ export function ProgressScreen({
           />
         )}
 
+        {selectedSummary || progress.hasData || epfAccountCount > 0 ? (
+          <GoalsSection now={now} onOpenGoal={(goalId) => onOpenGoal?.(goalId)} store={store} />
+        ) : null}
       </View>
     </ScreenContainer>
   );
