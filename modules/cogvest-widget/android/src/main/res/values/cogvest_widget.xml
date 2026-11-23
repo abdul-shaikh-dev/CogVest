@@ -8,7 +8,7 @@
   <string name="cogvest_widget_description">Portfolio value at a glance. Hidden until you allow it in Settings, and while masking or App lock is on.</string>
   <string name="cogvest_widget_title">Portfolio value</string>
   <string name="cogvest_widget_hidden">Hidden</string>
-  <string name="cogvest_widget_hidden_detail">Hidden by your privacy settings in CogVest</string>
+  <string name="cogvest_widget_hidden_detail">Change this in CogVest Settings</string>
   <string name="cogvest_widget_setup">Open CogVest</string>
   <string name="cogvest_widget_setup_detail">The value appears after the app opens</string>
   <string name="cogvest_widget_empty">No holdings yet</string>
