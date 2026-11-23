@@ -1,24 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  android:id="@+id/cogvest_widget_root"
+  android:id="@android:id/background"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   android:background="@drawable/cogvest_widget_background"
+  android:clipToOutline="true"
   android:contentDescription="@string/cogvest_widget_open"
   android:gravity="center_vertical"
   android:orientation="vertical"
   android:padding="16dp">
 
-  <TextView
-    android:id="@+id/cogvest_widget_title"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:ellipsize="end"
-    android:maxLines="1"
-    android:text="@string/cogvest_widget_title"
-    android:textColor="@color/cogvest_widget_text_secondary"
-    android:textSize="13sp"
-    android:textStyle="bold" />
+  <include layout="@layout/cogvest_widget_title_row" />
 
   <TextView
     android:id="@+id/cogvest_widget_value"

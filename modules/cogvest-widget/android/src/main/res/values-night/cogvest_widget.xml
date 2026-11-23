@@ -4,4 +4,5 @@
   <color name="cogvest_widget_background">#222527</color>
   <color name="cogvest_widget_text_primary">#F1F3F4</color>
   <color name="cogvest_widget_text_secondary">#AFB6BA</color>
+  <color name="cogvest_widget_accent">#5CDA86</color>
 </resources>
