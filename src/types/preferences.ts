@@ -15,4 +15,9 @@ export type Preferences = {
   hasCompletedOnboarding: boolean;
   maskWealthValues: boolean;
   nudgeVersions?: Partial<Record<"metadata" | "minimal" | "insights", number>>;
+  /**
+   * Lets the home-screen widget show the portfolio value (#786). Off unless
+   * the user turns it on; masking and App lock still hide it.
+   */
+  showWidgetValue?: boolean;
 };

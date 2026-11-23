@@ -203,6 +203,20 @@ describe("SettingsScreen", () => {
     expect(store.getState().preferences.blockScreenCapture).toBe(false);
   });
 
+  it("keeps the widget value off by default, and saves it when turned on (#786)", async () => {
+    const storage = createMemoryJsonStorage();
+    const store = createPortfolioStore({ storage });
+    const { getByLabelText, getByTestId } = await render(<SettingsScreen store={store} />);
+
+    expect(getByTestId("widget-value-toggle").props.accessibilityState).toEqual({ checked: false });
+    await fireEvent.press(getByLabelText("Show value on home-screen widget"));
+
+    expect(getByTestId("widget-value-toggle").props.accessibilityState).toEqual({ checked: true });
+    expect(createPortfolioStore({ storage }).getState().preferences.showWidgetValue).toBe(true);
+    await fireEvent.press(getByLabelText("Show value on home-screen widget"));
+    expect(store.getState().preferences.showWidgetValue).toBe(false);
+  });
+
   it("shows empty price information without refresh or provider claims", async () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const { getByTestId, getByText, queryByRole, queryByTestId, queryByText } =

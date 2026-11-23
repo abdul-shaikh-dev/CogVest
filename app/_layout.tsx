@@ -27,6 +27,7 @@ import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
 import { RecoveryScreen } from "@/src/features/recovery";
 import { AppLockGate } from "@/src/features/security";
+import { useWidgetPrivacySync } from "@/src/features/widget/useWidgetSync";
 import { useScreenCaptureProtection } from "@/src/hooks/useScreenCaptureProtection";
 import { getPortfolioStore } from "@/src/store";
 import { exportRecoveryCopies } from "@/src/services/backup";
@@ -175,6 +176,18 @@ function RootContents() {
     () => appLockStore.getState().settings.enabled, () => appLockStore.getState().settings.enabled);
   // While App lock is on, the recent-apps preview must not show values (#761).
   useScreenCaptureProtection(blockScreenCapture || appLockEnabled);
+  const maskWealthValues = useSyncExternalStore(
+    store.subscribe,
+    () => store.getState().preferences.maskWealthValues,
+    () => store.getState().preferences.maskWealthValues,
+  );
+  const showWidgetValue = useSyncExternalStore(
+    store.subscribe,
+    () => store.getState().preferences.showWidgetValue === true,
+    () => store.getState().preferences.showWidgetValue === true,
+  );
+  // The home-screen widget hides its value whenever the app would (#786).
+  useWidgetPrivacySync({ appLockEnabled, maskWealthValues, showWidgetValue });
 
   // A statement copy left by an interrupted CAS import must not stay in the cache (#659).
   useEffect(() => {

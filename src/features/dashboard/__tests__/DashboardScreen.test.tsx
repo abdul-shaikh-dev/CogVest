@@ -13,10 +13,14 @@ import {
 } from "@/src/components/common";
 import { StyleSheet } from "react-native";
 import { DashboardScreen } from "@/src/features/dashboard";
+import { setWidgetSnapshotAsync } from "@/modules/cogvest-widget";
+import { createAppLockStore } from "@/src/services/security/appLock";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { colors } from "@/src/theme";
 import type { Asset, CashEntry, Trade } from "@/src/types";
+
+jest.mock("@/modules/cogvest-widget", () => ({ setWidgetSnapshotAsync: jest.fn(async () => undefined) }));
 
 const asset: Asset = {
   assetClass: "stock",
@@ -290,6 +294,37 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Negative Futures equity cannot be shown as a share of positive holdings. Review the wallet.")).toBeTruthy();
     expect(screen.queryByText("No allocation yet")).toBeNull();
     expect(screen.getByTestId("dashboard-review-negative-futures")).toBeTruthy();
+  });
+
+  it("gives the home-screen widget the hero's own value once the user opts in (#786)", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    store.getState().addAsset(asset);
+    store.getState().addTrade(buyTrade);
+    store.getState().upsertQuote({
+      asOf: "2026-05-16T10:00:00.000Z",
+      assetId: asset.id,
+      currency: "INR",
+      dayChangePct: 10,
+      price: 150,
+      source: "yahoo",
+    });
+    const appLockStore = createAppLockStore({ storage: createMemoryJsonStorage() });
+    const sent = jest.mocked(setWidgetSnapshotAsync);
+    sent.mockClear();
+
+    const screen = await render(
+      <DashboardScreen appLockStore={appLockStore} now={new Date("2026-05-16T10:05:00.000Z")} store={store} />,
+    );
+    expect(sent).not.toHaveBeenCalled();
+
+    await act(async () => store.getState().updatePreferences({ showWidgetValue: true }));
+    expect(sent).toHaveBeenLastCalledWith(expect.objectContaining({
+      change: "+₹27 (+10.00%) at saved quotes",
+      kind: "value",
+      value: "₹300",
+    }));
+    // The same text the Dashboard hero shows.
+    expect(screen.getByTestId("dashboard-hero-value")).toHaveTextContent("₹300");
   });
 
   it("toggles price basis and saved-quote movement through an accessible disclosure", async () => {

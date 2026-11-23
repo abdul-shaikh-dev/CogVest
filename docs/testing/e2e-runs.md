@@ -4,6 +4,43 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-23: Home-screen widget (#786), emulator smoke 15 passed, widget checks
+
+- Commits: feat/786-home-widget a9f96eb, based on `main` bc84192, version
+  1.0.33. `npm run test:verify` on 75e02bf: 3,278 passed, doctor 18/18.
+  9ee4523 and a9f96eb change only the widget's native layouts and provider.
+- Builds: E2E APKs (release config) for arm64-v8a and x86_64:
+  - 2fcc058, SHA-256
+    771dbd191d20d79782fa1d6b092993540b0bc0cffae6715bb4d31359fb339530;
+  - 9ee4523, SHA-256
+    083950f301e0388f2f6a1c8bf7088db25a2b102062e4fd98a92f6b076d897a1a;
+  - a9f96eb, SHA-256
+    977af24f2889b5235082d22c6c68a8b6ebb3e3dead5b53799b6573b99c086933.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`
+  on the 2fcc058 APK, 15 passed, 0 failed, 15m 29s. No smoke flow covers the
+  widget, so the later native-only commits were checked by hand.
+- Widget checks on the emulator, visual QA seed:
+  - 2fcc058: a new widget reads "Open CogVest" until the app runs, then
+    "Hidden" while the Settings opt-in is off. After opting in it shows the
+    Dashboard hero's value and day change. Masking hides it at once, and
+    unmasking restores it. Dark mode and font scale 1.5 fit, with the change
+    wrapping to two lines.
+  - a9f96eb: the widget picker shows the sample preview at 3x2. At one row
+    the widget uses the compact layout: icon and value, ₹15.9L, matching the
+    hero, or "Hidden". At 9ee4523 the one-row size still chose the full
+    layout and cut off the detail line; a9f96eb moved the switch to 130 dp.
+- **Motorola Edge 30** (ZD2224Z7DY, Android 14, 1080x2400, font scale 0.85):
+  - 2fcc058: the placed widget opens the app. After opting in it showed
+    ₹15.91L; with App lock on it read "Hidden". From a cold start, a widget
+    tap brought up the fingerprint prompt (six checks), and the user unlocked
+    it. App lock was turned off again afterwards, confirmed by the user.
+  - 9ee4523: dark mode with the icon and the launcher's corner radius, at
+    four rows and at two rows. The launcher kept the widget's earlier
+    smallest size, so one row was checked on the emulator only.
+  - `svc power stayon usb` was on during the checks, then off.
+- Not run: Moto smoke.
+
 ## 2026-11-23: Material 3 Expressive touches (#785), emulator smoke 15 passed
 
 - Commit: feat/785-expressive 59de281 (code; 8e960bf adds DESIGN.md only),

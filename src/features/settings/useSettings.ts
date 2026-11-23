@@ -18,8 +18,10 @@ export type UseSettingsResult = {
   maskWealthValues: boolean;
   quoteStatus: SettingsQuoteStatus;
   setDisplayMode: (displayMode: DisplayMode) => void;
+  showWidgetValue: boolean;
   toggleBlockScreenCapture: () => void;
   toggleMaskWealthValues: () => void;
+  toggleShowWidgetValue: () => void;
 };
 
 export type SettingsQuoteSourceLabel = "Waiting" | "Live" | "Manual" | "Mixed";
@@ -118,6 +120,12 @@ export function useSettings({
     });
   }
 
+  function toggleShowWidgetValue() {
+    store.getState().updatePreferences({
+      showWidgetValue: !store.getState().preferences.showWidgetValue,
+    });
+  }
+
   function setDisplayMode(displayMode: DisplayMode) {
     store.getState().updatePreferences({ displayMode });
   }
@@ -130,7 +138,9 @@ export function useSettings({
     maskWealthValues: snapshot.preferences.maskWealthValues,
     quoteStatus: deriveQuoteStatus(snapshot.quoteCache),
     setDisplayMode,
+    showWidgetValue: snapshot.preferences.showWidgetValue === true,
     toggleBlockScreenCapture,
     toggleMaskWealthValues,
+    toggleShowWidgetValue,
   };
 }

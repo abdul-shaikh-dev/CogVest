@@ -5,6 +5,8 @@ jest.mock("@/src/features/quickSetup", () => ({
 }));
 // The real status store needs native MMKV (#759).
 jest.mock("@/src/services/backup/backupStatus", () => ({ getBackupStatusStore: () => undefined }));
+// App lock's store needs native MMKV too (#786).
+jest.mock("@/src/services/security/appLock", () => ({ getAppLockStore: () => undefined }));
 
 const DashboardRoute = require("../../app/(tabs)/dashboard").default;
 

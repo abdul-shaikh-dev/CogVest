@@ -66,8 +66,10 @@ export function SettingsScreen({
     maskWealthValues,
     quoteStatus,
     setDisplayMode,
+    showWidgetValue,
     toggleBlockScreenCapture,
     toggleMaskWealthValues,
+    toggleShowWidgetValue,
   } = useSettings({ store });
 
   async function handleToggleMasking() {
@@ -164,6 +166,29 @@ export function SettingsScreen({
           </View>
           <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, blockScreenCapture && styles.switchOn]}>
             <View style={[styles.switchThumb, blockScreenCapture && styles.switchThumbOn]} />
+          </View>
+        </Pressable>
+
+        <Pressable
+          accessibilityLabel="Show value on home-screen widget"
+          accessibilityHint="Lets the CogVest widget show your portfolio value. Masking and App lock still hide it."
+          accessibilityRole="switch"
+          accessibilityState={{ checked: showWidgetValue }}
+          onPress={toggleShowWidgetValue}
+          style={({ pressed }) => [styles.toggleRow, pressed && styles.pressed]}
+          testID="widget-value-toggle"
+        >
+          <View style={styles.toggleCopy}>
+            <AppText weight="bold">Show value on widget</AppText>
+            <AppText color="secondary">
+              Let the home-screen widget show your portfolio value and its change.
+            </AppText>
+            <AppText color="secondary" variant="caption">
+              Off by default. Masking and App lock hide it, whatever this says.
+            </AppText>
+          </View>
+          <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, showWidgetValue && styles.switchOn]}>
+            <View style={[styles.switchThumb, showWidgetValue && styles.switchThumbOn]} />
           </View>
         </Pressable>
 

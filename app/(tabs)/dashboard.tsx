@@ -3,12 +3,14 @@ import { router } from "expo-router";
 import { DashboardScreen as DashboardFeatureScreen } from "@/src/features/dashboard";
 import { useQuickSetupSession } from "@/src/features/quickSetup";
 import { getBackupStatusStore } from "@/src/services/backup/backupStatus";
+import { getAppLockStore } from "@/src/services/security/appLock";
 
 export default function DashboardScreen() {
   const quickSetup = useQuickSetupSession();
 
   return (
     <DashboardFeatureScreen
+      appLockStore={getAppLockStore()}
       backupStatusStore={getBackupStatusStore()}
       onOpenInsight={(kind) => router.push({ pathname: "/insight", params: { kind } })}
       onReviewPayouts={(assetId) => router.push({ pathname: "/payouts", params: { assetId } })}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Palette from src/theme/palettes.ts (light). Night values follow the system. -->
+  <color name="cogvest_widget_background">#FFFFFF</color>
+  <color name="cogvest_widget_text_primary">#18241D</color>
+  <color name="cogvest_widget_text_secondary">#526258</color>
+  <color name="cogvest_widget_accent">#176B3B</color>
+  <string name="cogvest_widget_label">CogVest portfolio</string>
+  <string name="cogvest_widget_description">Portfolio value at a glance. Hidden until you allow it in Settings, and while masking or App lock is on.</string>
+  <string name="cogvest_widget_title">Portfolio value</string>
+  <string name="cogvest_widget_hidden">Hidden</string>
+  <string name="cogvest_widget_hidden_detail">Change this in CogVest Settings</string>
+  <string name="cogvest_widget_setup">Open CogVest</string>
+  <string name="cogvest_widget_setup_detail">The value appears after the app opens</string>
+  <string name="cogvest_widget_empty">No holdings yet</string>
+  <string name="cogvest_widget_empty_detail">Add holdings in CogVest</string>
+  <string name="cogvest_widget_pending">Valuation pending</string>
+  <string name="cogvest_widget_pending_detail">Open CogVest to refresh prices</string>
+  <string name="cogvest_widget_open">Open CogVest</string>
+  <!-- Sample text for the widget picker's preview only. -->
+  <string name="cogvest_widget_preview_value">₹12.4L</string>
+  <string name="cogvest_widget_preview_change">+₹8.24K (+0.67%) at saved quotes</string>
+  <string name="cogvest_widget_preview_updated">Prices today, 3:40 pm</string>
+</resources>

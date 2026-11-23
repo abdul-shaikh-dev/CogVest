@@ -11,6 +11,8 @@ jest.mock("@/src/features/quickSetup", () => ({
 }));
 // The real status store needs native MMKV (#759).
 jest.mock("@/src/services/backup/backupStatus", () => ({ getBackupStatusStore: () => undefined }));
+// So does App lock, which the Dashboard route passes to the widget sync (#786).
+jest.mock("@/src/services/security/appLock", () => ({ getAppLockStore: () => undefined }));
 const CashRoute = require("../../app/(tabs)/cash").default;
 const DashboardRoute = require("../../app/(tabs)/dashboard").default;
 
