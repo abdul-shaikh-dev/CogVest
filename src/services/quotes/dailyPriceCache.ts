@@ -16,6 +16,8 @@ const maxPoints = 50_000;
 const maxEntryPoints = 4_000;
 const freshnessMs = 24 * 60 * 60 * 1000;
 const refreshTimeoutMs = 10_000;
+// AMFI answers each fund-house report in 1.5-15s and a year needs five (#799).
+const amfiRefreshTimeoutMs = 60_000;
 let generationCounter = 0;
 
 type Envelope = { entries: DailyPriceEntry[]; generation: string; version: number };
@@ -78,7 +80,7 @@ function nextGeneration() {
 
 function validRequest(request: DailyPriceRequest, now: Date) {
   if (!request || typeof request !== "object" ||
-    (request.provider !== "yahoo" && request.provider !== "coingecko") ||
+    (request.provider !== "yahoo" && request.provider !== "coingecko" && request.provider !== "amfi") ||
     (request.currency !== "INR" && request.currency !== "USD") ||
     (request.basis !== "close" && request.basis !== "adjusted-close") ||
     typeof request.providerId !== "string" || typeof request.from !== "string" || typeof request.to !== "string") return false;
@@ -242,7 +244,7 @@ export function createDailyPriceCache({ storage, now = () => new Date() }: { now
       let timedOut = false;
       let timeout: ReturnType<typeof setTimeout> | undefined;
       const deadline = new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => { timedOut = true; controller.abort(); reject(new Error("timeout")); }, refreshTimeoutMs);
+        timeout = setTimeout(() => { timedOut = true; controller.abort(); reject(new Error("timeout")); }, request.provider === "amfi" ? amfiRefreshTimeoutMs : refreshTimeoutMs);
       });
       try {
         const entry = await Promise.race([loader(request, controller.signal), deadline]);

@@ -213,6 +213,20 @@ describe("AssetHistoryPanel", () => {
     expect(screen.getByTestId("asset-history-range-1Y").props.accessibilityState).toEqual({ selected: true });
   });
 
+  it("offers a fund only the AMFI ranges and names AMFI as the source (#799)", async () => {
+    const fund: Asset = { ...asset, instrumentType: "arbitrageFund", isin: "INF846K01PZ1" };
+    mockHistory({ entry: entry(undefined, { provider: "amfi", providerId: "INF846K01PZ1" }) });
+    const screen = await renderPanel({ asset: fund });
+
+    for (const label of ["1M", "3M", "1Y"]) expect(screen.getByTestId(`asset-history-range-${label}`)).toBeTruthy();
+    expect(screen.queryByTestId("asset-history-range-5Y")).toBeNull();
+    expect(screen.queryByTestId("asset-history-range-10Y")).toBeNull();
+    expect(screen.getByText(/AMFI NAV · Cached history/u)).toBeTruthy();
+
+    const stock = await renderPanel();
+    expect(stock.getByTestId("asset-history-range-10Y")).toBeTruthy();
+  });
+
   it("communicates loading, partial cached, and offline states", async () => {
     mockHistory({ loading: true, entry: undefined });
     const screen = await renderPanel();

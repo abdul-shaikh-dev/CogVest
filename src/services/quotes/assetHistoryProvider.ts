@@ -5,6 +5,8 @@ import type {
   DailyPriceRequest,
 } from "./dailyPriceCache";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { normalizeIsin } from "@/src/domain/assets";
+import { AmfiDailyNavError, fetchAmfiDailyNav } from "@/src/services/mutualFunds/amfiDailyNav";
 import { isMutualFundAsset } from "@/src/services/mutualFunds/amfiQuote";
 
 const yahooChartUrl = "https://query1.finance.yahoo.com/v8/finance/chart";
@@ -90,7 +92,7 @@ function today(now: Date) {
 
 function requestIsValid(request: DailyPriceRequest, now: Date) {
   if (
-    request.provider !== "yahoo" && request.provider !== "coingecko" ||
+    request.provider !== "yahoo" && request.provider !== "coingecko" && request.provider !== "amfi" ||
     request.currency !== "INR" && request.currency !== "USD" ||
     request.basis !== "close" && request.basis !== "adjusted-close" ||
     !isDate(request.from) ||
@@ -105,7 +107,27 @@ function requestIsValid(request: DailyPriceRequest, now: Date) {
     return false;
   }
 
+  if (request.provider === "amfi") {
+    return request.currency === "INR" && rangeIsWithinAmfiCoverage(request.from, request.to);
+  }
+
   return rangeIsWithinTenYears(request.from, request.to);
+}
+
+/** Funds chart 1M, 3M and 1Y only: AMFI serves a year as five slow reports (#799). */
+export const amfiHistoryMaxMonths = 12;
+
+/** The longest History range, in months, this asset can request. */
+export function assetHistoryMaxMonths(asset: Asset) {
+  return isMutualFundAsset(asset) ? amfiHistoryMaxMonths : 120;
+}
+
+function rangeIsWithinAmfiCoverage(from: string, to: string) {
+  // A 1Y range starts on the same day a year and a month back, so allow 13 months.
+  const [year, month, day] = from.split("-").map(Number);
+  const limit = new Date(Date.UTC(year, month - 1 + amfiHistoryMaxMonths + 1, day));
+
+  return dateAtUtcMidnight(to) <= limit;
 }
 
 function providerId(asset: Asset) {
@@ -135,11 +157,18 @@ export function getAssetHistoryRequest(
     return null;
   }
 
+  if (isMutualFundAsset(asset)) {
+    // Funds take their price from AMFI; Yahoo does not know their ISINs (#797, #799).
+    const isin = normalizeIsin(asset.isin);
+
+    return isin && asset.currency === "INR" && rangeIsWithinAmfiCoverage(from, to)
+      ? { basis: "close", currency: "INR", from, provider: "amfi", providerId: isin, to }
+      : null;
+  }
+
   if (
     (asset.assetClass === "stock" || asset.assetClass === "etf") &&
     asset.currency === "INR" &&
-    // Funds take their price from AMFI; Yahoo does not know their ISINs (#797).
-    !isMutualFundAsset(asset) &&
     asset.instrumentType !== "ppf" &&
     asset.instrumentType !== "fixedDeposit"
   ) {
@@ -450,6 +479,15 @@ export async function fetchAssetHistory(
       coinGeckoUrlFor(request), signal, fetcher, "CoinGecko",
     );
     return coinGeckoEntry(request, payload, now);
+  }
+
+  if (request.provider === "amfi") {
+    try {
+      return await fetchAmfiDailyNav(request, signal, fetcher, now);
+    } catch (error) {
+      if (error instanceof AmfiDailyNavError) throw new AssetHistoryError(error.kind, error.message);
+      throw new AssetHistoryError("provider-error", "AMFI NAV history could not be loaded.");
+    }
   }
 
   throw new AssetHistoryError("unsupported", "Daily history provider is unsupported.");
