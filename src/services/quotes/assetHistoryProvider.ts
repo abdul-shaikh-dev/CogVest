@@ -5,6 +5,7 @@ import type {
   DailyPriceRequest,
 } from "./dailyPriceCache";
 import { compareCodeUnits } from "@/src/domain/ordering";
+import { isMutualFundAsset } from "@/src/services/mutualFunds/amfiQuote";
 
 const yahooChartUrl = "https://query1.finance.yahoo.com/v8/finance/chart";
 const coinGeckoUrl = "https://api.coingecko.com/api/v3/coins";
@@ -137,7 +138,8 @@ export function getAssetHistoryRequest(
   if (
     (asset.assetClass === "stock" || asset.assetClass === "etf") &&
     asset.currency === "INR" &&
-    asset.instrumentType !== "mutualFund" &&
+    // Funds take their price from AMFI; Yahoo does not know their ISINs (#797).
+    !isMutualFundAsset(asset) &&
     asset.instrumentType !== "ppf" &&
     asset.instrumentType !== "fixedDeposit"
   ) {
