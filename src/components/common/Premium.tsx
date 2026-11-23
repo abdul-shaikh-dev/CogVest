@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
+import Animated from "react-native-reanimated";
 import {
   Pressable,
   StyleSheet,
@@ -16,11 +17,14 @@ import type { AssetClass } from "@/src/types";
 
 import { AppText } from "./AppText";
 import { MaskedValue } from "./MaskedValue";
+import { ExpressiveLoader, usePressFeedback } from "./Motion";
 import {
   androidRipple,
   getPressedStateStyle,
   minimumTouchTargetStyle,
 } from "./pressableStyles";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PremiumCardProps = {
   children: ReactNode;
@@ -153,6 +157,7 @@ export function ScreenHeader({
 
 export function IconButton({
   plain = false,
+  prominent = false,
   accessibilityLabel,
   busy = false,
   disabled = false,
@@ -161,6 +166,11 @@ export function IconButton({
   testID,
 }: {
   plain?: boolean;
+  /**
+   * The screen's main header action (#785): a round filled container, apart
+   * from plain icons and the rounded-square Back button. Neutral, not green.
+   */
+  prominent?: boolean;
   accessibilityLabel: string;
   /** Work is running: the button is announced as busy and ignores taps (#670). */
   busy?: boolean;
@@ -171,30 +181,39 @@ export function IconButton({
 }) {
   const { colors } = useTheme();
   const styles = useStyles();
+  // An unavailable icon action fades further than a disabled text button.
+  const press = usePressFeedback(disabled, 0.4);
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ busy, disabled }}
       disabled={disabled || busy}
       android_ripple={androidRipple(colors.ripple)}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
         styles.iconButton,
         plain && styles.iconButtonPlain,
-        disabled && { opacity: 0.4 },
+        prominent && styles.iconButtonProminent,
         minimumTouchTargetStyle,
-        getPressedStateStyle({ pressed }),
+        press.style,
       ]}
       testID={testID}
     >
-      <Ionicons
-        accessible={false}
-        color={colors.text.primary}
-        name={icon}
-        size={20}
-      />
-    </Pressable>
+      {busy ? (
+        // Prices loading (#785): the indicator stands in for the icon.
+        <ExpressiveLoader color={colors.text.secondary} testID={testID ? `${testID}-loader` : undefined} />
+      ) : (
+        <Ionicons
+          accessible={false}
+          color={colors.text.primary}
+          name={icon}
+          size={20}
+        />
+      )}
+    </AnimatedPressable>
   );
 }
 
@@ -436,6 +455,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   headerCompact: { gap: spacing.sm },
   compactTitle: { fontSize: 24, lineHeight: 30 },
   iconButtonPlain: { backgroundColor: "transparent" },
+  iconButtonProminent: { backgroundColor: colors.surface.elevated, borderRadius: radii.pill },
   headerActionStacked: {
     alignSelf: "flex-end",
   },

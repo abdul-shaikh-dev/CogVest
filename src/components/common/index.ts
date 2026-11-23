@@ -34,5 +34,5 @@ export {
   SensitiveValueReveal,
   useSensitiveValueReveal,
 } from "./SensitiveValueReveal";
-export { FadeInView, Skeleton, SkeletonRows, useFadeIn } from "./Motion";
+export { ExpressiveLoader, FadeInView, Skeleton, SkeletonRows, useFadeIn, usePressFeedback } from "./Motion";
 export { BottomSheet, shouldCloseSheet } from "./BottomSheet";

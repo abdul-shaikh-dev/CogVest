@@ -22,7 +22,7 @@ import {
 } from "@/src/components/common";
 import { getButtonInteractionStyle } from "@/src/components/common/AppButton";
 import { EntryProgress } from "@/src/components/common/EntryProgress";
-import { colors, interaction } from "@/src/theme";
+import { colors, interaction, radii } from "@/src/theme";
 import { FormTextField } from "@/src/components/forms";
 import { getAllByComponentType, getByComponentType, queryAllComponents } from "@/src/testing/componentQueries";
 
@@ -146,9 +146,28 @@ describe("common UI primitives", () => {
     const { getByRole } = await render(<AppButton title="Save holding" />);
 
     expect(getByRole("button", { name: "Save holding" })).toHaveStyle({
-      minHeight: interaction.minimumTouchTarget,
+      minHeight: interaction.primaryActionHeight,
       minWidth: interaction.minimumTouchTarget,
     });
+  });
+
+  it("sets the primary action apart by shape and size (#785)", async () => {
+    const view = await render(
+      <>
+        <AppButton title="Save" />
+        <AppButton title="Cancel" variant="secondary" />
+      </>,
+    );
+
+    expect(view.getByRole("button", { name: "Save" })).toHaveStyle({
+      borderRadius: radii.pill,
+      minHeight: interaction.primaryActionHeight,
+    });
+    expect(view.getByRole("button", { name: "Cancel" })).toHaveStyle({
+      borderRadius: radii.button,
+      minHeight: interaction.minimumTouchTarget,
+    });
+    expect(interaction.primaryActionHeight).toBeGreaterThan(interaction.minimumTouchTarget);
   });
 
   it("lets the label span the button so Android cannot hide its last word (#746)", async () => {

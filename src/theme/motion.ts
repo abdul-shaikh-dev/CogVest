@@ -12,7 +12,23 @@ export const motionDurations = {
   mask: 160,
   /** A bottom sheet sliding up, or settling back after a short drag (#784). */
   sheet: 240,
+  /** One turn of the price refresh indicator (#785). It repeats while prices load. */
+  loader: 1400,
 } as const;
+
+/**
+ * Press feedback (#785): a firm spring that settles without overshoot, so a
+ * pressed control eases in a little and back. DESIGN.md §7 rules out bounce.
+ */
+export const pressSpring = {
+  damping: 30,
+  mass: 1,
+  overshootClamping: true,
+  stiffness: 500,
+} as const;
+
+/** How far a pressed control eases in. */
+export const pressedScale = 0.97;
 
 export type MotionKind = keyof typeof motionDurations;
 

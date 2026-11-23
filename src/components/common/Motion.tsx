@@ -1,16 +1,28 @@
 import { useEffect, type ReactNode } from "react";
 import { StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeIn,
   ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withRepeat,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
-import { getMotionDuration, radii, useTheme, type MotionKind } from "@/src/theme";
+import {
+  getMotionDuration,
+  interaction,
+  motionDurations,
+  pressedScale,
+  pressSpring,
+  radii,
+  useTheme,
+  type MotionKind,
+} from "@/src/theme";
 
 /**
  * A soft fade for content that appears (#783), or undefined when reduced motion
@@ -46,6 +58,83 @@ export function FadeInView({ children, kind = "reveal", style, testID }: {
   }, [duration, opacity]);
   const fade = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return <Animated.View style={[style, fade]} testID={testID}>{children}</Animated.View>;
+}
+
+/**
+ * Press feedback for a button (#785): the pressed control keeps 98% opacity
+ * (DESIGN.md §2) and eases in with a spring that does not overshoot. Reduced
+ * motion keeps the opacity change and skips the scale.
+ *
+ * The style is static, not a Pressable style function, so an animated
+ * Pressable can take it.
+ */
+export function usePressFeedback(disabled = false, disabledOpacity: number = interaction.disabledOpacity) {
+  const reduced = useReducedMotion();
+  const pressed = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({
+    opacity: disabled
+      ? disabledOpacity
+      : pressed.get() === 1 ? interaction.pressedOpacity : 1,
+    transform: [{ scale: scale.get() }],
+  }), [disabled, disabledOpacity]);
+  const springTo = (value: number) => (reduced
+    ? 1
+    : withSpring(value, { ...pressSpring, reduceMotion: ReduceMotion.System }));
+  return {
+    onPressIn: () => {
+      pressed.set(1);
+      scale.set(springTo(pressedScale));
+    },
+    onPressOut: () => {
+      pressed.set(0);
+      scale.set(springTo(1));
+    },
+    style,
+  };
+}
+
+/**
+ * The price refresh indicator (#785), after Material 3 Expressive's loading
+ * indicator: a small shape that turns and softens from a rounded square to a
+ * circle and back. It is neutral, not green, and holds still under reduced
+ * motion. Pair it with a busy label; it is hidden from screen readers.
+ */
+export function ExpressiveLoader({ color, size = 18, testID = "expressive-loader" }: {
+  color: string;
+  size?: number;
+  testID?: string;
+}) {
+  const reduced = useReducedMotion();
+  const turn = useSharedValue(0);
+  useEffect(() => {
+    if (reduced) {
+      turn.set(0);
+      return;
+    }
+    turn.set(withRepeat(
+      withTiming(1, { duration: motionDurations.loader, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      false,
+    ));
+    return () => cancelAnimation(turn);
+  }, [reduced, turn]);
+  const shape = useAnimatedStyle(() => {
+    const progress = turn.get();
+    // A square looks the same after half a turn, so each loop joins up.
+    return {
+      borderRadius: size * (0.3 + 0.2 * Math.sin(progress * Math.PI)),
+      transform: [{ rotate: `${progress * 180}deg` }],
+    };
+  }, [size]);
+  return (
+    <Animated.View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[{ backgroundColor: color, height: size, width: size }, shape]}
+      testID={testID}
+    />
+  );
 }
 
 /**

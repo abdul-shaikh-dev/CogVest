@@ -40,6 +40,8 @@ export const typography = {
 
 export const interaction = {
   minimumTouchTarget: 48,
+  /** Primary actions are a little taller than other buttons (#785). */
+  primaryActionHeight: 52,
   primaryRippleColor: "rgba(0,0,0,0.06)",
   pressedOpacity: 0.98,
   rippleColor: "rgba(0,0,0,0.18)",
@@ -54,5 +56,5 @@ export const shadows = {
   },
 } as const;
 
-export { getMotionDuration, motionDurations } from "./motion";
+export { getMotionDuration, motionDurations, pressedScale, pressSpring } from "./motion";
 export type { MotionKind } from "./motion";

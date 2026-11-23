@@ -1,14 +1,17 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import { StyleSheet, Text } from "react-native";
-import { useReducedMotion, withTiming } from "react-native-reanimated";
+import { useReducedMotion, withRepeat, withSpring, withTiming } from "react-native-reanimated";
 
 import {
+  AppButton,
+  ExpressiveLoader,
   FadeInView,
+  IconButton,
   MASKED_INR_VALUE,
   MaskedValue,
   SkeletonRows,
 } from "@/src/components/common";
-import { motionDurations } from "@/src/theme";
+import { interaction, motionDurations, pressedScale, pressSpring } from "@/src/theme";
 
 const mockedReducedMotion = jest.mocked(useReducedMotion);
 
@@ -62,5 +65,56 @@ describe("mask transition (#783)", () => {
     const view = await render(<MaskedValue value="₹1,200" />);
     await view.rerender(<MaskedValue masked value="₹1,200" />);
     expect(view.getByText(MASKED_INR_VALUE).props.entering).toBeUndefined();
+  });
+});
+
+describe("expressive touches (#785)", () => {
+  beforeEach(() => {
+    jest.mocked(withSpring).mockClear();
+    jest.mocked(withRepeat).mockClear();
+  });
+
+  it("eases a pressed button in with a spring that does not overshoot, then back", async () => {
+    const view = await render(<AppButton title="Save" />);
+    const button = view.getByRole("button", { name: "Save" });
+
+    await fireEvent(button, "pressIn");
+    expect(withSpring).toHaveBeenLastCalledWith(pressedScale, expect.objectContaining({ overshootClamping: true }));
+    await fireEvent(button, "pressOut");
+    expect(withSpring).toHaveBeenLastCalledWith(1, expect.objectContaining({ damping: pressSpring.damping }));
+  });
+
+  it("keeps the 98% pressed opacity and skips the spring under reduced motion", async () => {
+    mockedReducedMotion.mockReturnValue(true);
+    const pressIn = jest.fn();
+    const view = await render(<AppButton onPressIn={pressIn} title="Save" />);
+
+    await fireEvent(view.getByRole("button", { name: "Save" }), "pressIn");
+    expect(withSpring).not.toHaveBeenCalled();
+    expect(pressIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("fades a disabled button to the disabled opacity", async () => {
+    const view = await render(<AppButton disabled title="Save" />);
+    expect(view.getByRole("button", { name: "Save" })).toHaveStyle({ opacity: interaction.disabledOpacity });
+  });
+
+  it("shows the refresh indicator in place of the icon while busy", async () => {
+    const view = await render(
+      <IconButton busy accessibilityLabel="Refreshing quotes" icon="refresh-outline" testID="refresh" />,
+    );
+    // Hidden from screen readers: the button's busy label speaks for it.
+    expect(view.getByTestId("refresh-loader", { includeHiddenElements: true })).toBeTruthy();
+    expect(view.getByRole("button", { name: "Refreshing quotes" }).props.accessibilityState).toMatchObject({ busy: true });
+  });
+
+  it("turns the indicator on a repeating loop, and holds it still under reduced motion", async () => {
+    await render(<ExpressiveLoader color="#555" />);
+    expect(withRepeat).toHaveBeenCalledWith(expect.anything(), -1, false);
+
+    jest.mocked(withRepeat).mockClear();
+    mockedReducedMotion.mockReturnValue(true);
+    await render(<ExpressiveLoader color="#555" />);
+    expect(withRepeat).not.toHaveBeenCalled();
   });
 });
