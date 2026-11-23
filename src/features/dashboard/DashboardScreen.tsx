@@ -13,6 +13,8 @@ import type {
   QuoteRefreshResult,
   RefreshQuotesInput,
 } from "@/src/services/quotes";
+import { useDashboardWidgetSync } from "@/src/features/widget/useWidgetSync";
+import type { AppLockState } from "@/src/services/security/appLock";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { BackupReminderNote } from "@/src/features/backup/BackupReminderNote";
 import type { BackupStatusState } from "@/src/services/backup/backupStatus";
@@ -54,6 +56,8 @@ type DashboardScreenProps = {
   store?: StoreApi<PortfolioStoreState>;
   /** The backup reminder shows only when this is given (#759). */
   backupStatusStore?: StoreApi<BackupStatusState>;
+  /** App lock state for the home-screen widget; without it the widget stays hidden (#786). */
+  appLockStore?: StoreApi<AppLockState>;
 };
 
 export function DashboardScreen({
@@ -71,6 +75,7 @@ export function DashboardScreen({
   refreshQuotes,
   store = getPortfolioStore(),
   backupStatusStore,
+  appLockStore,
 }: DashboardScreenProps) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -91,6 +96,16 @@ export function DashboardScreen({
   const pendingFuturesCount = dashboard.futuresContributions.filter((item) => item.status === "pending").length;
   const hasCompleteValuation =
     dashboard.rollupTotals.valuationCoverage.status === "complete";
+  // The home-screen widget shows this same valuation (#786).
+  useDashboardWidgetSync({
+    appLockStore,
+    dashboard,
+    hasCompleteValuation,
+    maskWealthValues: dashboard.maskWealthValues,
+    now: currentDate,
+    showWidgetValue: dashboard.showWidgetValue,
+    store,
+  });
 
   if (!dashboard.hasPortfolioRecords && quickSetupSavedCount === 0 && dashboard.currencyIssues.length === 0) {
     return <ScreenContainer scroll testID="dashboard-screen"><View style={styles.content}>

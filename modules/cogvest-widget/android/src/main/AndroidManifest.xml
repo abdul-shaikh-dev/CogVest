@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- Home-screen portfolio widget (#786). It only shows what the app last
+         stored; it has no network access of its own and never reads records. -->
+    <receiver
+      android:name="com.abdulshaikh.cogvest.widget.PortfolioWidgetProvider"
+      android:exported="false"
+      android:label="@string/cogvest_widget_label">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/cogvest_widget_info" />
+    </receiver>
+  </application>
+</manifest>

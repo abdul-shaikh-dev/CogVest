@@ -143,13 +143,15 @@ export function createBackupActions(context: StoreContext): BackupActions {
 /**
  * A restore keeps this device's privacy settings (#718). An older backup, or
  * one made with masking off, must not quietly turn value masking or screenshot
- * blocking off here. Other display preferences come from the backup.
+ * blocking off here, nor put the value on this home screen's widget (#786).
+ * Other display preferences come from the backup.
  */
 function withDevicePrivacy(backup: Preferences, device: Preferences): Preferences {
-  const { blockScreenCapture: _backupBlock, ...rest } = backup;
+  const { blockScreenCapture: _backupBlock, showWidgetValue: _backupWidget, ...rest } = backup;
   return {
     ...rest,
     maskWealthValues: device.maskWealthValues,
     ...(device.blockScreenCapture === undefined ? {} : { blockScreenCapture: device.blockScreenCapture }),
+    ...(device.showWidgetValue === undefined ? {} : { showWidgetValue: device.showWidgetValue }),
   };
 }

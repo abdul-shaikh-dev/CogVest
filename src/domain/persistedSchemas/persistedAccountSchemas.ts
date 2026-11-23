@@ -166,6 +166,7 @@ export const preferencesSchema = z
       minimal: z.number().int().positive().optional().catch(undefined),
       insights: z.number().int().positive().optional().catch(undefined),
     }).catch({}).optional(),
+    showWidgetValue: z.boolean().optional(),
   })
   .optional();
 

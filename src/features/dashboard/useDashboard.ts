@@ -91,6 +91,8 @@ export type DashboardState = {
   rollupRows: ConsolidatedHoldingRow[];
   rollupTotals: PortfolioRollupTotals;
   sectorAllocation: MetadataAllocationItem[];
+  /** The home-screen widget opt-in (#786). */
+  showWidgetValue: boolean;
   toggleMaskWealthValues: () => void;
   totalValue: number | null;
 };
@@ -246,6 +248,7 @@ export function useDashboard({
     rollupRows: derived.rollupRows,
     rollupTotals,
     sectorAllocation: derived.sectorAllocation,
+    showWidgetValue: snapshot.preferences.showWidgetValue === true,
     toggleMaskWealthValues,
     totalValue: rollupTotals.totalCurrentValue,
   };
