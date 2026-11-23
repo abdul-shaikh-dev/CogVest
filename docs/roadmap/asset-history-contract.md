@@ -26,8 +26,16 @@ label them profit or return.
 ## Safety Boundaries
 
 - Supported provider-linked stocks/ETFs use Yahoo daily prices; crypto uses
-  CoinGecko daily observations. Manual assets, PPF and unsupported funds show
-  an explanation instead of inventing a market curve.
+  CoinGecko daily observations. Mutual, liquid and arbitrage funds with an ISIN
+  use AMFI's published daily NAVs (#799) and never Yahoo (#797). Manual assets,
+  PPF and funds without an ISIN show an explanation instead of inventing a
+  market curve.
+- AMFI's NAV history report returns a whole fund house and redirects requests
+  spanning more than about four calendar months, so a fund range is fetched in
+  windows of at most three calendar months, two at a time, under a 60-second
+  cache deadline (other providers keep 10 seconds). Funds offer 1M, 3M and 1Y
+  only. A window that ends more than six days early, is empty after NAVs began,
+  or has two NAVs for one date marks the history partial.
 - Yahoo stocks/ETFs remain INR-only under the current portfolio currency policy.
   Crypto retains INR or USD native identity. This does not enable foreign-stock
   onboarding or new currency conversion.
@@ -51,7 +59,7 @@ label them profit or return.
 ## Implemented Interaction
 
 The history section follows Your position inside Holding details. It has two
-modes and 1M, 3M, 1Y, 5Y and 10Y presets, ending on the last completed UTC day.
+modes and 1M, 3M, 1Y, 5Y and 10Y presets (1M, 3M and 1Y for funds), ending on the last completed UTC day.
 The plot uses Victory Native (Skia) with proportional calendar spacing, bounded
 sampling, gap-aware line segments, endpoint labels and a selected-point marker.
 Previous/Next selects observed dates, not invented daily values. Press and hold
@@ -77,7 +85,8 @@ check in the current app session. This prevents a failed cache-clear operation
 from reviving unsafe share-value history after restart. Offline cached price
 history remains readable, while unverified share-value history is withheld.
 
-Provider payloads have a 4 MiB pre-parse limit and bounded row counts. React
+Provider payloads have a 4 MiB pre-parse limit (6 million characters per AMFI
+report) and bounded row counts. React
 Native fetch may buffer a body before that limit can be checked; this is not a
 streaming transport-memory guarantee. Provider calls use the cache's deadline.
 
