@@ -8,14 +8,19 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import Animated from "react-native-reanimated";
+
 import { interaction, radii, spacing, createThemedStyles } from "@/src/theme";
 
 import { AppText } from "./AppText";
+import { usePressFeedback } from "./Motion";
 import {
   androidRipple,
   getPressedStateStyle,
   minimumTouchTargetStyle,
 } from "./pressableStyles";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonVariant = "destructive" | "primary" | "secondary" | "ghost";
 
@@ -42,6 +47,8 @@ export function AppButton({
   accessibilityRole = "button",
   buttonRef,
   disabled,
+  onPressIn,
+  onPressOut,
   style,
   textColor,
   title,
@@ -50,6 +57,7 @@ export function AppButton({
 }: AppButtonProps) {
   const styles = useStyles();
   const isDisabled = Boolean(disabled);
+  const press = usePressFeedback(isDisabled);
   const resolvedTextColor =
     textColor ??
     (variant === "primary" || variant === "destructive"
@@ -57,7 +65,7 @@ export function AppButton({
       : "primary");
 
   return (
-    <Pressable
+    <AnimatedPressable
       {...props}
       ref={buttonRef}
       accessibilityLabel={accessibilityLabel ?? title}
@@ -68,12 +76,16 @@ export function AppButton({
           : interaction.rippleColor,
       )}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.base,
-        styles[variant],
-        getButtonInteractionStyle({ disabled: isDisabled, pressed }),
-        style,
-      ]}
+      onPressIn={(event) => {
+        press.onPressIn();
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        press.onPressOut();
+        onPressOut?.(event);
+      }}
+      // Pressed and disabled opacity come from the press feedback (#785).
+      style={[styles.base, styles[variant], style, press.style]}
     >
       {/* The label spans the button rather than its own measured width (#746).
           After a configuration change such as a theme switch, Android can draw
@@ -83,7 +95,7 @@ export function AppButton({
       <AppText align="center" color={resolvedTextColor} style={styles.label} variant="body" weight="bold">
         {title}
       </AppText>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -102,8 +114,13 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   label: {
     alignSelf: "stretch",
   },
+  // The main action stands apart by shape and size (#785): a taller pill,
+  // where other buttons keep the rounded rectangle.
   primary: {
     backgroundColor: colors.primary,
+    borderRadius: radii.pill,
+    minHeight: interaction.primaryActionHeight,
+    paddingHorizontal: spacing.lg,
   },
   secondary: {
     backgroundColor: colors.surface.elevated,

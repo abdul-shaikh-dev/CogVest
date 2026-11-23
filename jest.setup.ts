@@ -42,13 +42,22 @@ jest.mock("react-native-reanimated", () => {
     __esModule: true,
     default: Animated,
     ...Animated,
-    Easing: { cubic: (value: number) => value, out: (easing: unknown) => easing, quad: (value: number) => value },
+    Easing: {
+      cubic: (value: number) => value,
+      inOut: (easing: unknown) => easing,
+      out: (easing: unknown) => easing,
+      quad: (value: number) => value,
+    },
+    cancelAnimation: jest.fn(),
     FadeIn: fade(),
     ReduceMotion: { System: "system" },
     useReducedMotion: jest.fn(() => false),
     // Bottom sheet motion (#784): styles compute once, timings land at once.
     useAnimatedStyle: (style: () => unknown) => style(),
     withTiming: jest.fn(<T,>(value: T) => value),
+    // Press springs and the refresh indicator (#785) land at once.
+    withRepeat: jest.fn(<T,>(value: T) => value),
+    withSpring: jest.fn(<T,>(value: T) => value),
     useAnimatedReaction,
     useDerivedValue: (compute: () => unknown) => ({ value: compute() }),
     useSharedValue: <T,>(value: T) => {

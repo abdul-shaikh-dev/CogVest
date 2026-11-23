@@ -194,6 +194,12 @@ Cards:
 Buttons:
 
 - Primary actions use `Primary Green`.
+- Material 3 Expressive emphasis (#785) comes from shape and size, not more
+  color: a primary action is a 52 dp pill, while secondary, ghost and
+  destructive buttons keep the 14 px rounded rectangle at 48 dp.
+- A screen's main header action, such as Holdings' Add, may sit in a round
+  neutral `Elevated Surface` container. It is never green; Back stays a
+  rounded square and other header icons stay plain.
 - Secondary actions use elevated neutral surfaces or subtle hairline separators.
 - Destructive actions use `Negative` only when the action is genuinely destructive.
 - Button labels should be direct: `Add Holding`, `Save`, `Refresh Quotes`, `Add Cash`.
@@ -310,6 +316,16 @@ Rules:
 - Avoid market-style flashing updates.
 - Do not animate financial values in a way that creates trading urgency.
 - Respect platform accessibility settings for reduced motion.
+- Springs are for pressed and selected states only (#785). A pressed button
+  eases to 97% scale and back on a spring with overshoot clamped, so it never
+  bounces. Reduced motion keeps the 98% pressed opacity and drops the scale.
+- Animate opacity and transforms as styles. Do not put a Reanimated layout
+  animation (`entering`) on a view whose position can change after mount,
+  such as a safe area child; Reanimated can drop the move (#792).
+- While prices refresh, the refresh button shows the expressive loading
+  indicator in place of its icon: a small neutral shape that turns and
+  softens between a rounded square and a circle, 1.4 s per loop. It holds
+  still under reduced motion, and the button's busy label speaks for it.
 
 Good motion:
 

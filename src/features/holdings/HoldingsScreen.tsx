@@ -356,7 +356,7 @@ export function HoldingsScreen({
               />
               {onAddTrade || onAddPpfAccount || onRecordPurchase || onOpenFutures ? (
                 <IconButton
-                  plain
+                  prominent
                   accessibilityLabel="Add Holding"
                   icon="add-outline"
                   onPress={() => setActivePanel("add")}

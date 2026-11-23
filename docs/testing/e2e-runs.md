@@ -4,6 +4,31 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-23: Material 3 Expressive touches (#785), emulator smoke 15 passed
+
+- Commit: feat/785-expressive 59de281 (code; 8e960bf adds DESIGN.md only),
+  based on `main` 0f113da, version 1.0.33. `npm run test:verify`: 3,263
+  passed, doctor 18/18.
+- Build: E2E APK for arm64-v8a and x86_64 from 59de281, SHA-256
+  e2f7884abd29553b0c9737a925d75aac7cae87d38b2038f3e2ccb5dbea837ecd.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`,
+  15 passed, 0 failed, 14m 04s.
+- Checked by screenshot on the visual QA seed: Holdings' round Add container
+  and the pill "Save deposit" in light mode, and both in dark mode at font
+  scale 1.5 with animations off; the refresh indicator shows in place of the
+  refresh icon while quotes load.
+- **Motorola Edge 30** (ZD2224Z7DY, Android 14, 1080x2400, font scale 0.85),
+  e2f7884a APK, checked with adb on the visual QA seed:
+  - Holdings' round Add opens the add sheet. Back closes it, and so does a
+    drag down from the handle.
+  - In the deposit sheet, the pill "Save deposit" stays above the keyboard.
+    The first Back hides the keyboard and the second closes the sheet.
+  - Saving a ₹1,234 deposit through the pill closed the sheet. The ledger then
+    showed +₹1,234.00, and the balance went from ₹50,000.00 to ₹51,234.00.
+  - `svc power stayon usb` was on during the checks, then off.
+- Not run: Moto smoke.
+
 ## 2026-11-23: Safe area under the screen fade (#792), emulator smoke 15 passed
 
 - Commit: fix/792-safe-area-inset 2687484, based on `main` 5437392, version
