@@ -76,12 +76,13 @@ function EnabledQa({ page }: { page?: string }) {
     <AppText testID="epf-qa-status">{status}</AppText>
     <AppButton testID="epf-qa-stage" title="Stage legacy fixture" disabled={busy} onPress={() => {
       native.clearAll();
-      // A real V15 record predates EPF (V16), payouts (V17) and the measurement basis (V18).
+      // A real V15 record predates EPF (V16), payouts (V17), the measurement basis (V18) and goals (V20).
       const {
         epf: _epf,
         distributions: _distributions,
         distributionCoverage: _distributionCoverage,
         measurementBasis: _measurementBasis,
+        savingsGoals: _savingsGoals,
         ...legacy
       } = createEmptyPortfolioSnapshot();
       storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...legacy, schemaVersion: 15,

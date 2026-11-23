@@ -41,6 +41,8 @@ export type E2ePortfolioEvidence = {
   ppfConfirmedBalance: number;
   ppfCount: number;
   rollupTotals: ReturnType<typeof calculatePortfolioRollupTotals>;
+  /** Saved savings goals (#767), as stored. */
+  savingsGoals: PortfolioStoreState["savingsGoals"];
   tradeCount: number;
 };
 
@@ -120,6 +122,7 @@ export function buildE2ePortfolioEvidence(
     ppfConfirmedBalance: ppfSummary.confirmedBalance,
     ppfCount: state.ppfAccounts.length,
     rollupTotals,
+    savingsGoals: state.savingsGoals,
     tradeCount: state.trades.length,
   };
 }

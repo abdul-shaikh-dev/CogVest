@@ -174,6 +174,8 @@ top-level flow is missing from the full tier, or a smoke flow is not in it.
 - `e2e/cash.yaml`: add cash and verify Cash.
 - `e2e/value-masking.yaml`: open Settings by deep link and toggle masking.
 - `e2e/persistence.yaml`: create local data, close/reopen, and verify it remains.
+- `e2e/savings-goals.yaml`: create, edit and delete a savings goal, asserting
+  the stored goal in `e2e-evidence` after each save (#767).
 
 ## Expected Missing-Tool Behavior
 
@@ -233,7 +235,7 @@ identity, classification, market/currency, quote source and price, opening
 positions, PPF balances, aggregate invested/current values, valuation
 completeness, allocation, and canonical-identity conflicts. It also reports the
 cash balance, EPF account and entry counts, the monthly snapshot count and
-latest month, and the value-mask preference. It does not seed or mutate data.
+latest month, saved savings goals, and the value-mask preference. It does not seed or mutate data.
 
 Open it with `runFlow: helpers/open-e2e-evidence.yaml`. Every smoke flow that
 saves data checks the stored result there. The exceptions: `smoke-launch` and

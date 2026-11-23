@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { decimal } from "@/src/domain/precision";
+import { savingsGoalProblems } from "@/src/domain/savingsGoals";
+import type { SavingsGoal } from "@/src/types";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
 
 import {
@@ -190,6 +192,7 @@ export const schemaVersionSchema = z.union([
   z.literal(17),
   z.literal(18),
   z.literal(19),
+  z.literal(20),
 ]);
 
 // D9: inception has no opening value or fingerprint; an opening value is the sum of its lines.
@@ -206,6 +209,31 @@ export const measurementBasisSchema = z.object({
     : basis.openingValueInr !== null && basis.openingBreakdown.length > 0 && basis.evidenceDigest !== null &&
       basis.openingBreakdown.reduce((sum, line) => sum.plus(line.valueInr), decimal(0)).equals(basis.openingValueInr);
   if (!valid) context.addIssue({ code: "custom", message: "Measurement basis is inconsistent." });
+});
+
+// #767: a goal's fields are checked by the same rules the editor uses.
+export const savingsGoalSchema = z.object({
+  assumedAnnualReturnPct: finiteNumberSchema,
+  createdAt: z.string().datetime({ offset: true }),
+  id: nonEmptyStringSchema,
+  name: z.string(),
+  scope: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("portfolio") }).strict(),
+    z.object({
+      assetIds: z.array(nonEmptyStringSchema).max(500),
+      epfAccountIds: z.array(nonEmptyStringSchema).max(500),
+      includeCash: z.boolean(),
+      kind: z.literal("selected"),
+      ppfAccountIds: z.array(nonEmptyStringSchema).max(500),
+    }).strict(),
+  ]),
+  targetAmountInr: finiteNumberSchema,
+  targetDate: calendarDateSchema,
+  updatedAt: z.string().datetime({ offset: true }),
+}).strict().superRefine((goal, context) => {
+  if (Object.keys(savingsGoalProblems(goal as SavingsGoal)).length > 0) {
+    context.addIssue({ code: "custom", message: "Savings goal is invalid." });
+  }
 });
 
 export const distributionSchema = z.object({

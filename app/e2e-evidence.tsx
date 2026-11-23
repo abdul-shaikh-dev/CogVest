@@ -75,6 +75,18 @@ export default function E2eEvidenceScreen() {
         <EvidenceText testID="e2e-snapshot-count">
           Monthly snapshot count: {evidence.monthlySnapshotCount} | latest {evidence.latestSnapshotMonth ?? "none"}
         </EvidenceText>
+        <EvidenceText testID="e2e-goal-count">
+          Goal count: {evidence.savingsGoals.length}
+        </EvidenceText>
+        {evidence.savingsGoals.map((goal) => (
+          <EvidenceText key={goal.id} testID={`e2e-goal-${goal.name}`}>
+            {`Goal: ${goal.name} | target ${goal.targetAmountInr} by ${goal.targetDate} | return ${goal.assumedAnnualReturnPct}% | scope ${
+              goal.scope.kind === "portfolio"
+                ? "portfolio"
+                : [goal.scope.includeCash ? "cash" : "", ...goal.scope.assetIds, ...goal.scope.ppfAccountIds, ...goal.scope.epfAccountIds].filter(Boolean).join(",")
+            }`}
+          </EvidenceText>
+        ))}
         <EvidenceText testID="e2e-value-mask">
           Value mask: {evidence.maskWealthValues ? "on" : "off"}
         </EvidenceText>

@@ -11,6 +11,7 @@ import {
 } from "@/src/domain/portfolioSnapshot";
 import type { PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
 import type { PpfMergeInput } from "@/src/domain/ppfCsvMerge";
+import type { savingsGoalProblems } from "@/src/domain/savingsGoals";
 import type { JsonStorage } from "@/src/services/storage";
 import type {
   Asset,
@@ -28,6 +29,7 @@ import type {
   Preferences,
   Quote,
   QuoteCache,
+  SavingsGoal,
   SellTrade,
   Trade,
 } from "@/src/types";
@@ -95,6 +97,9 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   confirmDistributionCoverage: (entries: ReadonlyArray<{ assetId: string; from: string }>) => DistributionCoverageResult;
   /** Confirms where whole-portfolio XIRR starts (D9); null removes it. Never changes other records. */
   setMeasurementBasis: (input: MeasurementBasisInput | null) => MeasurementBasisResult;
+  /** Creates or edits one savings goal (#767). Never changes another record. */
+  saveSavingsGoal: (input: SavingsGoalInput) => SavingsGoalResult;
+  deleteSavingsGoal: (goalId: string) => SavingsGoalDeletionResult;
   /** Marks trades without a Cash leg as paid from (or into) money outside CogVest (D10); null clears it. */
   setTradeFundingSource: (tradeIds: string[], source: "external" | null) => TradeFundingResult;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
@@ -261,6 +266,13 @@ export type PpfAccountMutationResult =
 export type PpfAccountDeletionResult =
   | { account: PpfAccount; deletedEntries: number; status: "applied" }
   | { reason: "notFound" | "insufficientCash"; status: "rejected" };
+
+export type SavingsGoalInput = Omit<SavingsGoal, "createdAt" | "updatedAt">;
+export type SavingsGoalResult =
+  | { status: "applied"; goal: SavingsGoal }
+  | { status: "rejected"; reason: "limit" }
+  | { status: "rejected"; reason: "invalidEntry"; problems: ReturnType<typeof savingsGoalProblems> };
+export type SavingsGoalDeletionResult = { status: "applied" } | { status: "rejected"; reason: "notFound" };
 
 export type MeasurementBasisInput = Pick<MeasurementBasis, "startDate" | "kind"> & { openingBreakdown: MeasurementBasisLine[] };
 export type MeasurementBasisResult =

@@ -43,6 +43,7 @@ describe("EPF durable account records", () => {
     delete legacy.distributions;
     delete legacy.distributionCoverage;
     delete legacy.measurementBasis;
+    delete legacy.savingsGoals;
     legacy.schemaVersion = 15;
     // V19 also adds the seed's unlinked purchase payments to saved bases (#647).
     const expected = { ...original, portfolio: { ...original.portfolio,
@@ -231,7 +232,7 @@ describe("EPF durable account records", () => {
     apply({ type: "eventPut", event: withdrawal, cash: { id: "cash", label: "From EPF" } });
     const payload = JSON.parse(JSON.stringify(store.getState().captureBackup().payload));
     if (kind === "missing") delete payload.portfolio.epf;
-    if (kind === "future") payload.portfolio.schemaVersion = 20;
+    if (kind === "future") payload.portfolio.schemaVersion = 21;
     if (kind === "dangling") payload.portfolio.epf.cashLinks[0].eventId = "missing";
     if (kind === "amount") payload.portfolio.cashEntries[0].amount += 1;
     if (kind === "audit") payload.portfolio.epf.audit.push(payload.portfolio.epf.audit[0]);

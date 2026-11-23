@@ -32,6 +32,7 @@ function fixture() {
   delete legacy.portfolio.distributions;
   delete legacy.portfolio.distributionCoverage;
   delete legacy.portfolio.measurementBasis;
+  delete legacy.portfolio.savingsGoals;
   legacy.portfolio.cashEntries[0].purpose = "income";
   legacy.portfolio.cashEntries[0].notes = "Salary money I chose to invest";
   expected.portfolio.cashEntries[0].notes = legacy.portfolio.cashEntries[0].notes;

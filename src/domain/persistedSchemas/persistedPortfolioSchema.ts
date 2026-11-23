@@ -3,6 +3,7 @@ import { emptyEpfState, epfStateSchema, validateEpfState } from "@/src/domain/ep
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
 import { ppfCashLinkProblems } from "@/src/domain/ppfCashLinks";
+import { maxSavingsGoals, savingsGoalsProblems } from "@/src/domain/savingsGoals";
 import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import type {
   Asset,
@@ -10,6 +11,7 @@ import type {
   Distribution,
   DistributionCoverage,
   PpfLedgerEntry,
+  SavingsGoal,
   Trade,
 } from "@/src/types";
 import {
@@ -37,6 +39,7 @@ import {
   ppfAccountSchema,
   ppfLedgerEntrySchema,
   preferencesSchema,
+  savingsGoalSchema,
   schemaVersionSchema,
 } from "./persistedAccountSchemas";
 
@@ -56,6 +59,7 @@ const persistedPortfolioSchema = z
     ppfAccounts: z.array(ppfAccountSchema).optional(),
     ppfLedgerEntries: z.array(ppfLedgerEntrySchema).optional(),
     preferences: preferencesSchema,
+    savingsGoals: z.array(savingsGoalSchema).max(maxSavingsGoals).optional(),
     schemaVersion: schemaVersionSchema,
     trades: z.array(tradeSchema).optional(),
   })
@@ -86,6 +90,12 @@ const persistedPortfolioSchema = z
     }
     if (portfolio.schemaVersion < 17 && (portfolio.cashEntries ?? []).some((entry) => entry.purpose === "distribution" || entry.linkedDistributionId)) {
       context.addIssue({ code: "custom", message: "Payout Cash entries require V17.", path: ["cashEntries"] });
+    }
+    if ((portfolio.schemaVersion >= 20) !== (portfolio.savingsGoals !== undefined)) {
+      context.addIssue({ code: "custom", message: "Savings goals are required from V20.", path: ["savingsGoals"] });
+    }
+    if (savingsGoalsProblems((portfolio.savingsGoals ?? []) as SavingsGoal[]).length) {
+      context.addIssue({ code: "custom", message: "Savings goals are invalid.", path: ["savingsGoals"] });
     }
     if ((portfolio.schemaVersion >= 18) !== (portfolio.measurementBasis !== undefined)) {
       context.addIssue({ code: "custom", message: "The measurement basis is required from V18.", path: ["measurementBasis"] });
@@ -321,7 +331,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

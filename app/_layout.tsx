@@ -307,6 +307,7 @@ function RootContents() {
               <Stack.Screen name="payout-entry" options={{ headerShown: false }} />
               <Stack.Screen name="payout-coverage" options={{ headerShown: false }} />
               <Stack.Screen name="measurement-basis" options={{ headerShown: false }} />
+              <Stack.Screen name="goal" options={{ headerShown: false }} />
               <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen name="investing-cash-qa" options={{ headerShown: false }} />
