@@ -3,7 +3,7 @@ export type DailyPriceRequest = {
   basis: "close" | "adjusted-close";
   currency: "INR" | "USD";
   from: string;
-  provider: "yahoo" | "coingecko";
+  provider: "yahoo" | "coingecko" | "amfi";
   providerId: string;
   to: string;
 };

@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { AppButton, AppText, FadeInView, SectionHeader, Skeleton } from "@/src/components/common";
 import { buildAssetHistory } from "@/src/domain/calculations/assetHistory";
 import { formatCompactAxisValue, formatDate, formatPrice } from "@/src/domain/formatters";
+import { assetHistoryMaxMonths } from "@/src/services/quotes/assetHistoryProvider";
 import type { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import { spacing, useTheme, createThemedStyles } from "@/src/theme";
 import type { Asset, OpeningPosition, Trade } from "@/src/types";
@@ -35,6 +36,8 @@ export function assetHistoryRange(months: number, now = new Date()) {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
+const historySourceLabel = { amfi: "AMFI NAV", coingecko: "CoinGecko", yahoo: "Yahoo Finance" } as const;
+
 type AssetHistoryPanelProps = {
   asset: Asset;
   assets?: Asset[];
@@ -64,6 +67,7 @@ export function AssetHistoryPanel({
   const [showDetails, setShowDetails] = useState(false);
   const [inspecting, setInspecting] = useState<number | null>(null);
   const [zoom, setZoom] = useState<{ key: string; from: number; to: number } | null>(null);
+  const maxMonths = assetHistoryMaxMonths(asset);
   const { from, to } = assetHistoryRange(months);
   const history = useAssetHistory(asset, from, to, historyCache);
   const entry = history.entry;
@@ -178,7 +182,7 @@ export function AssetHistoryPanel({
       </View>
 
       <View style={styles.controls}>
-        {ranges.map((range) => (
+        {ranges.filter((range) => range.months <= maxMonths).map((range) => (
           <AppButton
             accessibilityState={{ selected: months === range.months }}
             key={range.label}
@@ -327,7 +331,7 @@ export function AssetHistoryPanel({
 
       {history.entry ? (
         <AppText color="secondary" variant="caption">
-          {history.entry.provider === "yahoo" ? "Yahoo Finance" : "CoinGecko"} · {history.freshness === "stale" ? "Saved history may be out of date" : "Cached history"}
+          {historySourceLabel[history.entry.provider]} · {history.freshness === "stale" ? "Saved history may be out of date" : "Cached history"}
           {history.entry.complete ? "" : " · Partial history"}
         </AppText>
       ) : null}
@@ -350,7 +354,7 @@ export function AssetHistoryPanel({
       {showDetails ? (
         <AppText color="secondary" variant="caption">
           Requested {formatDate(from)} to {formatDate(to)}.
-          {history.entry ? ` Fetched ${formatDate(history.entry.fetchedAt)}.` : ""} Observed dates only; missing prices are not filled. Long ranges show up to 500 sampled observations; zooming in redraws that window from the daily observations, still capped at 500. Holding value begins when recorded quantity is known, includes transactions, and is not investment return. CoinGecko midnight observations are aligned to the preceding completed UTC day. No historical currency conversion is applied.
+          {history.entry ? ` Fetched ${formatDate(history.entry.fetchedAt)}.` : ""} Observed dates only; missing prices are not filled. Long ranges show up to 500 sampled observations; zooming in redraws that window from the daily observations, still capped at 500. Holding value begins when recorded quantity is known, includes transactions, and is not investment return. CoinGecko midnight observations are aligned to the preceding completed UTC day. No historical currency conversion is applied.{history.entry?.provider === "amfi" ? " Fund prices are the NAVs AMFI publishes for business days." : ""}
         </AppText>
       ) : null}
     </View>

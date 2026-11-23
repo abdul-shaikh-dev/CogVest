@@ -112,7 +112,7 @@ async function fetchText(fetcher: QuoteFetcher, url: string, label: string) {
   }
 }
 
-async function loadFundHouseIds(fetcher: QuoteFetcher) {
+export async function loadAmfiFundHouseIds(fetcher: QuoteFetcher) {
   if (fundHouseIds) return fundHouseIds;
   fundHouseRequest ??= (async () => {
     const parsed = parseAmfiFundHouseIds(
@@ -186,7 +186,7 @@ export async function fetchAmfiHistoricalNav({
         ok: false,
       };
     }
-    const ids = await loadFundHouseIds(fetcher);
+    const ids = await loadAmfiFundHouseIds(fetcher);
     const fundHouseId = ids[scheme.fundHouse];
     if (!fundHouseId) {
       return {

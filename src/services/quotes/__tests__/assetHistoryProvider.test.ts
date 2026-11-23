@@ -1,4 +1,4 @@
-import { fetchAssetHistory, getAssetHistoryRequest } from "@/src/services/quotes/assetHistoryProvider";
+import { assetHistoryMaxMonths, fetchAssetHistory, getAssetHistoryRequest } from "@/src/services/quotes/assetHistoryProvider";
 import type { Asset } from "@/src/types";
 
 const now = new Date("2026-01-10T12:00:00.000Z");
@@ -27,21 +27,34 @@ describe("getAssetHistoryRequest", () => {
 
   it("excludes unsupported instruments, currencies, missing crypto ids, and invalid ranges", () => {
     expect(getAssetHistoryRequest({ ...stock, currency: "USD" }, "2026-01-01", "2026-01-02")).toBeNull();
-    expect(getAssetHistoryRequest({ ...stock, instrumentType: "mutualFund" }, "2026-01-01", "2026-01-02")).toBeNull();
     expect(getAssetHistoryRequest({ ...crypto, quoteSourceId: undefined }, "2026-01-01", "2026-01-02")).toBeNull();
     expect(getAssetHistoryRequest({ ...crypto, quoteSourceId: " bitcoin " }, "2026-01-01", "2026-01-02")).toBeNull();
     expect(getAssetHistoryRequest(stock, "bad", "2026-01-02")).toBeNull();
     expect(getAssetHistoryRequest(stock, "2010-01-01", "2020-01-02")).toBeNull();
   });
 
-  it("never asks Yahoo for a fund priced from AMFI (#797)", () => {
+  it("asks AMFI, never Yahoo, for a fund's NAV history (#797, #799)", () => {
     for (const instrumentType of ["mutualFund", "arbitrageFund", "liquidFund"] as const) {
-      const fund: Asset = { ...stock, instrumentType, quoteSourceId: "INF846K01PZ1", ticker: "INF846K01PZ1" };
-      expect(getAssetHistoryRequest(fund, "2026-01-01", "2026-01-02")).toBeNull();
-      expect(getAssetHistoryRequest({ ...fund, assetClass: "etf" }, "2026-01-01", "2026-01-02")).toBeNull();
+      const fund: Asset = { ...stock, instrumentType, isin: "inf846k01pz1", quoteSourceId: "INF846K01PZ1", ticker: "INF846K01PZ1" };
+      for (const assetClass of ["stock", "etf", "debt"] as const) {
+        expect(getAssetHistoryRequest({ ...fund, assetClass }, "2026-01-01", "2026-01-02")).toEqual({
+          basis: "close", currency: "INR", from: "2026-01-01", provider: "amfi", providerId: "INF846K01PZ1", to: "2026-01-02",
+        });
+      }
+      expect(getAssetHistoryRequest({ ...fund, isin: undefined }, "2026-01-01", "2026-01-02")).toBeNull();
+      expect(getAssetHistoryRequest({ ...fund, currency: "USD" }, "2026-01-01", "2026-01-02")).toBeNull();
+      expect(assetHistoryMaxMonths(fund)).toBe(12);
     }
     expect(getAssetHistoryRequest({ ...stock, instrumentType: "stock" }, "2026-01-01", "2026-01-02"))
       .toMatchObject({ provider: "yahoo" });
+    expect(assetHistoryMaxMonths(stock)).toBe(120);
+  });
+
+  it("limits a fund to the 1Y range", () => {
+    const fund: Asset = { ...stock, instrumentType: "mutualFund", isin: "INF846K01PZ1" };
+    expect(getAssetHistoryRequest(fund, "2024-12-01", "2026-01-01")).toMatchObject({ provider: "amfi" });
+    expect(getAssetHistoryRequest(fund, "2024-11-30", "2026-01-01")).toBeNull();
+    expect(getAssetHistoryRequest(fund, "2021-01-01", "2026-01-01")).toBeNull();
   });
 });
 
