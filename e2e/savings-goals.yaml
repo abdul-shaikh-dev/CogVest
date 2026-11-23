@@ -58,7 +58,7 @@ appId: ${APP_ID}
       id: e2e-goal-count
     direction: DOWN
 - assertVisible: "Goal count: 1"
-- assertVisible: "Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope portfolio"
+- assertVisible: 'Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope portfolio'
 
 # Count only Cash toward the goal.
 - openLink: "${SCHEME}:///progress"
@@ -102,7 +102,7 @@ appId: ${APP_ID}
       id: e2e-goal-count
     direction: DOWN
 - assertVisible: "Goal count: 1"
-- assertVisible: "Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope cash"
+- assertVisible: 'Goal: House \| target 2500000 by 20\d\d-\d\d-\d\d \| return 10% \| scope cash'
 
 # Delete needs a second tap.
 - openLink: "${SCHEME}:///progress"
