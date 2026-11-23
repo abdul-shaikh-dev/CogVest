@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
-import { Text } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
+import { StyleSheet, Text } from "react-native";
+import { useReducedMotion, withTiming } from "react-native-reanimated";
 
 import {
   FadeInView,
@@ -17,13 +17,17 @@ afterEach(() => mockedReducedMotion.mockReturnValue(false));
 describe("motion components (#783)", () => {
   it("fades content in for its kind of motion", async () => {
     const view = await render(<FadeInView kind="entry" testID="fade"><Text>Ready</Text></FadeInView>);
-    expect(view.getByTestId("fade").props.entering.mockDuration).toBe(motionDurations.entry);
+    expect(withTiming).toHaveBeenCalledWith(1, expect.objectContaining({ duration: motionDurations.entry }));
+    // A style fade, not a layout animation, so a safe area inset can still move the view (#792).
+    expect(view.getByTestId("fade").props.entering).toBeUndefined();
   });
 
   it("skips the fade when reduced motion is on", async () => {
     mockedReducedMotion.mockReturnValue(true);
+    jest.mocked(withTiming).mockClear();
     const view = await render(<FadeInView testID="fade"><Text>Ready</Text></FadeInView>);
-    expect(view.getByTestId("fade").props.entering).toBeUndefined();
+    expect(withTiming).not.toHaveBeenCalled();
+    expect(StyleSheet.flatten(view.getByTestId("fade").props.style).opacity).toBe(1);
   });
 
   it("reads placeholder rows as one loading label", async () => {

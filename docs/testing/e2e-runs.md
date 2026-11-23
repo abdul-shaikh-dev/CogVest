@@ -4,6 +4,31 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-23: Safe area under the screen fade (#792), emulator smoke 15 passed
+
+- Commit: fix/792-safe-area-inset 2687484, based on `main` 5437392, version
+  1.0.33. `npm run test:verify`: 3,254 passed, doctor 18/18.
+- Build: E2E APK for arm64-v8a and x86_64 from 2687484, SHA-256
+  5775bbbe257bd928753cf1e44fd1c8686ea2a24dcbb4e69d4e1ca7bda752457e.
+- **Emulator** (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale
+  1.0): `COGVEST_APP_ID=com.abdulshaikh.cogvest.e2e ANDROID_SERIAL=emulator-5554 npm run maestro:smoke`,
+  15 passed, 0 failed, 18m 14s. Over the 15-minute budget: every flow ran
+  slower after the emulator's system server restarted. The first attempt hit
+  that restart ("Can't find service: package", Maestro driver UNAVAILABLE)
+  and failed 8 flows without an app assertion failing; it is not counted.
+- Reproduction order, run twice per build: add-holding-asset-class, add-trade,
+  asset-correction, cash-entry-focus, cash, epf-claim-transfer,
+  epf-corrections, epf-entries, epf-year-summary, funded-buy-cash, with the
+  Holdings `holdings-add-button` top read after each flow.
+  - Before (a8be57b, and 5ce6609 with a native safe-area patch): after
+    add-trade, asset-correction failed and the button sat at y=27, under the
+    status bar.
+  - After (2687484): 20 of 20 flows passed; the button read y=183 each time.
+- Cause, from logcat on an instrumented build: the native safe area state held
+  the right inset (52 dp), but the screen's child, faded in with a Reanimated
+  `entering` animation, kept y=0 with the inset-reduced height.
+- Not run: Moto checks.
+
 ## 2026-11-22: Bottom sheets (#784), emulator smoke 15 passed, Moto sheet checks
 
 - Commit: feat/784-bottom-sheets a8be57b, based on `main` 4d7ff2d, version
