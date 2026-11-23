@@ -18,7 +18,16 @@ the run cadence.
   and the pill "Save deposit" in light mode, and both in dark mode at font
   scale 1.5 with animations off; the refresh indicator shows in place of the
   refresh icon while quotes load.
-- Not run: Moto checks (the phone was not connected).
+- **Motorola Edge 30** (ZD2224Z7DY, Android 14, 1080x2400, font scale 0.85),
+  e2f7884a APK, checked with adb on the visual QA seed:
+  - Holdings' round Add opens the add sheet. Back closes it, and so does a
+    drag down from the handle.
+  - In the deposit sheet, the pill "Save deposit" stays above the keyboard.
+    The first Back hides the keyboard and the second closes the sheet.
+  - Saving a ₹1,234 deposit through the pill closed the sheet. The ledger then
+    showed +₹1,234.00, and the balance went from ₹50,000.00 to ₹51,234.00.
+  - `svc power stayon usb` was on during the checks, then off.
+- Not run: Moto smoke.
 
 ## 2026-11-23: Safe area under the screen fade (#792), emulator smoke 15 passed
 
