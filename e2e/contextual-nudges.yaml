@@ -18,6 +18,10 @@ appId: ${APP_ID}
 - openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: "nudge-minimal"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - assertVisible:
     id: "display-mode-minimal"
 - takeScreenshot: .expo/issue21-settings
