@@ -71,6 +71,9 @@ describe("App lock in Settings (#761)", () => {
     const view = await render(<AppLockSettings appLockStore={store} auth={auth} />);
     expect(await view.findByTestId("app-lock-unavailable")).toBeTruthy();
     expect(view.getByTestId("app-lock-toggle").props.accessibilityState).toMatchObject({ checked: false, disabled: true });
+    // The description stays at full contrast; only the switch dims (#809).
+    expect(view.getByTestId("app-lock-toggle")).not.toHaveStyle({ opacity: 0.6 });
+    expect(view.getByTestId("app-lock-switch", { includeHiddenElements: true })).toHaveStyle({ opacity: 0.6 });
   });
 
   it("turns on after the phone's lock, then offers the relock delay", async () => {

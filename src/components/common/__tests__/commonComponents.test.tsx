@@ -68,6 +68,20 @@ describe("common UI primitives", () => {
       dimensions.mockRestore();
     }
   });
+  it("can keep a short title's actions inline at large font sizes (#809)", async () => {
+    const dimensions = jest.spyOn(ReactNative, "useWindowDimensions")
+      .mockReturnValue({ fontScale: 1.5, height: 800, scale: 3, width: 360 });
+    try {
+      const stacked = await render(<ScreenHeader compact title="Holdings"
+        action={<IconButton plain icon="add-outline" accessibilityLabel="Add Holding" />} />);
+      expect(ReactNative.StyleSheet.flatten(stacked.root!.props.style)).toMatchObject({ flexDirection: "column" });
+      const inline = await render(<ScreenHeader compact keepActionInline title="Holdings"
+        action={<IconButton plain icon="add-outline" accessibilityLabel="Add Holding" />} />);
+      expect(ReactNative.StyleSheet.flatten(inline.root!.props.style)).toMatchObject({ flexDirection: "row" });
+    } finally {
+      dimensions.mockRestore();
+    }
+  });
   it("keeps routine sections open while preserving default decision cards", async () => {
     const screen = await render(<>
       <PremiumCard section testID="routine"><AppText>Activity</AppText></PremiumCard>

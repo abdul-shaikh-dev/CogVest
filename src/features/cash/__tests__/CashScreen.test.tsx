@@ -78,9 +78,8 @@ describe("CashScreen", () => {
     store.getState().addCashEntry({ id: "out", date: "2026-09-01", amount: 100,
       label: "Withdrawal", purpose: "withdrawal", type: "withdrawal" });
     const screen = await render(<CashScreen store={store} now={new Date(2026, 8, 2, 12)} />);
-    expect(screen.getByTestId("cash-zero-activity")).toHaveStyle({ flexWrap: "wrap" });
-    expect(screen.getByText("Cash added ₹0")).toBeTruthy();
-    expect(screen.getByText("Invested ₹0")).toBeTruthy();
+    expect(screen.getByTestId("cash-zero-activity")).toHaveTextContent("No cash activity in September 2026");
+    expect(screen.queryByText("Cash added ₹0")).toBeNull();
     expect(screen.getByText("-₹100.00")).toBeTruthy();
     expect(screen.getByText("₹900.00")).toBeTruthy();
     expect(screen.queryByText(/No cash movement/)).toBeNull();

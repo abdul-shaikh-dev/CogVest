@@ -117,7 +117,7 @@ export function ReviewCashEntryScreen({
     return (
       <ScreenContainer testID="review-cash-entry-screen">
         <EmptyState
-          actionLabel="Back to Cash Ledger"
+          actionLabel="Back to Cash"
           message="It may have already been removed or corrected on another screen."
           title="Cash entry unavailable"
           onAction={onCancel}
@@ -133,7 +133,7 @@ export function ReviewCashEntryScreen({
         <PremiumCard>
           <AppText color="secondary">This Cash movement is paired with an EPF record. It cannot be edited separately. EPF account editing will be available with the EPF account screens.</AppText>
         </PremiumCard>
-        <AppButton title="Back to Cash Ledger" variant="secondary" onPress={onCancel} />
+        <AppButton title="Back to Cash" variant="secondary" onPress={onCancel} />
       </View></ScreenContainer>;
     }
     if (entry.linkedFutures) {
@@ -147,7 +147,7 @@ export function ReviewCashEntryScreen({
           <AppText color="secondary" variant="caption">{formatDate(entry.date)}</AppText>
         </PremiumCard>
         {transfer && onReviewLinkedFutures ? <AppButton title="Review Futures wallet" onPress={onReviewLinkedFutures} testID="review-linked-cash-futures" /> : null}
-        <AppButton title="Back to Cash Ledger" variant="secondary" onPress={onCancel} />
+        <AppButton title="Back to Cash" variant="secondary" onPress={onCancel} />
       </View></ScreenContainer>;
     }
     const linkedTradeCandidate = snapshot.trades.find((trade) => trade.id === entry.linkedTradeId);
@@ -180,7 +180,7 @@ export function ReviewCashEntryScreen({
                 The linked transaction is missing. You cannot edit this cash movement separately from its investment record.
               </AppText>
               <AppText color="secondary" variant="caption">
-                Return to the Cash Ledger. Restore a backup or reimport the complete source history if this link should exist.
+                Return to Cash. Restore a backup or reimport the complete source history if this link should exist.
               </AppText>
             </>}
           </PremiumCard>
@@ -190,7 +190,7 @@ export function ReviewCashEntryScreen({
             title="Review linked transaction"
           /> : null}
           <AppButton
-            title="Back to Cash Ledger"
+            title="Back to Cash"
             variant="secondary"
             onPress={onCancel}
           />
@@ -215,7 +215,7 @@ export function ReviewCashEntryScreen({
           </PremiumCard>
           <AppButton
             onPress={onCancel}
-            title="Back to Cash Ledger"
+            title="Back to Cash"
             variant="secondary"
           />
         </View>

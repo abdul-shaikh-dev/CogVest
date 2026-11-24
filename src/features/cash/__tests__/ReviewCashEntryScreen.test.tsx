@@ -259,7 +259,7 @@ describe("ReviewCashEntryScreen", () => {
     expect(queryByTestId("delete-cash-entry-button")).toBeNull();
     await fireEvent.press(getByTestId("review-linked-cash-transaction"));
     expect(onReviewLinkedTrade).toHaveBeenCalledWith(trade.id);
-    await fireEvent.press(getByText("Back to Cash Ledger"));
+    await fireEvent.press(getByText("Back to Cash"));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -366,7 +366,7 @@ describe("ReviewCashEntryScreen", () => {
     );
 
     expect(getByText("Cash entry unavailable")).toBeTruthy();
-    expect(getByText("Back to Cash Ledger")).toBeTruthy();
+    expect(getByText("Back to Cash")).toBeTruthy();
   });
 
   it("retains the form and original entry after persistence failure", async () => {

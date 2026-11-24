@@ -8,7 +8,7 @@ export default function TradeRoute() {
 
   return (
     <ReviewTradeScreen
-      backLabel={returnsToCash ? "Back to Cash Ledger" : "Back to Holdings"}
+      backLabel={returnsToCash ? "Back to Cash" : "Back to Holdings"}
       tradeId={params.tradeId ?? ""}
       onCancel={() => returnsToCash ? router.dismissTo("/(tabs)/cash") : router.back()}
       onComplete={(status) =>

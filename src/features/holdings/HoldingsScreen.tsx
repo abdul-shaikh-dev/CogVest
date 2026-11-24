@@ -341,6 +341,7 @@ export function HoldingsScreen({
       <View style={styles.listHeaderContent}>
         <ScreenHeader
           compact
+          keepActionInline
           title="Holdings"
           subtitle={subtitle}
           action={
