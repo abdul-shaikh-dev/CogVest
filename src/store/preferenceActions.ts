@@ -1,8 +1,10 @@
+import { allocationTargetProblems } from "@/src/domain/allocationTargets";
+
 import type { StoreContext } from "./storeContext";
 import type { PortfolioStoreState } from "./storeTypes";
 import { persistPreferences } from "./persistence";
 
-type PreferenceActions = Pick<PortfolioStoreState, "updatePreferences" | "acknowledgeNudge">;
+type PreferenceActions = Pick<PortfolioStoreState, "updatePreferences" | "acknowledgeNudge" | "saveAllocationTargets">;
 
 export function createPreferenceActions({ get, set, storage }: StoreContext): PreferenceActions {
   return {
@@ -12,6 +14,19 @@ export function createPreferenceActions({ get, set, storage }: StoreContext): Pr
       const preferences = { ...get().preferences, ...changes };
       persistPreferences(storage, preferences);
       set({ preferences });
+    },
+    saveAllocationTargets: (targets) => {
+      if (targets) {
+        const problems = allocationTargetProblems(targets);
+        if (problems.length) return { problems, status: "rejected" };
+      }
+      const { allocationTargets: _previous, ...rest } = get().preferences;
+      const preferences = targets
+        ? { ...rest, allocationTargets: { cash: targets.cash, crypto: targets.crypto, debt: targets.debt, equity: targets.equity } }
+        : rest;
+      persistPreferences(storage, preferences);
+      set({ preferences });
+      return { status: "applied" };
     },
     acknowledgeNudge: (kind, version) => {
       if (!Number.isInteger(version) || version < 1) return;

@@ -25,7 +25,7 @@ export type {
   OpeningPosition,
   OpeningPositionManualValuation,
 } from "./openingPosition";
-export type { ChartRange, DisplayMode, Preferences } from "./preferences";
+export type { AllocationTargets, ChartRange, DisplayMode, Preferences } from "./preferences";
 export type {
   PpfAccount,
   PpfAccountStatus,

@@ -59,6 +59,7 @@ export function SettingsScreen({
     useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const {
+    allocationTargets,
     appearance,
     blockScreenCapture,
     setAppearance,
@@ -266,6 +267,16 @@ export function SettingsScreen({
             onPress={() => router.push("/futures")}
             showChevron
             testID="open-futures-action"
+          />
+          <GroupedListRow
+            icon="pie-chart-outline"
+            title="Target allocation"
+            meta={allocationTargets
+              ? `Equity ${allocationTargets.equity}% · Debt ${allocationTargets.debt}% · Crypto ${allocationTargets.crypto}% · Cash ${allocationTargets.cash}%`
+              : "Set the mix you aim for and see the drift on the Dashboard."}
+            onPress={() => router.push("/allocation-targets")}
+            showChevron
+            testID="open-allocation-targets"
           />
         </PremiumCard>
 

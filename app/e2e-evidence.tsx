@@ -87,6 +87,11 @@ export default function E2eEvidenceScreen() {
             }`}
           </EvidenceText>
         ))}
+        <EvidenceText testID="e2e-allocation-targets">
+          {evidence.allocationTargets
+            ? `Allocation targets: equity ${evidence.allocationTargets.equity} | debt ${evidence.allocationTargets.debt} | crypto ${evidence.allocationTargets.crypto} | cash ${evidence.allocationTargets.cash}`
+            : "Allocation targets: none"}
+        </EvidenceText>
         <EvidenceText testID="e2e-value-mask">
           Value mask: {evidence.maskWealthValues ? "on" : "off"}
         </EvidenceText>

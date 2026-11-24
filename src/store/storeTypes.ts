@@ -26,6 +26,7 @@ import type {
   OpeningPosition,
   PpfAccount,
   PpfLedgerEntry,
+  AllocationTargets,
   Preferences,
   Quote,
   QuoteCache,
@@ -166,6 +167,11 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   replaceMonthlySnapshots: (monthlySnapshots: readonly MonthlySnapshot[]) => void;
   updateOpeningPosition: (openingPosition: OpeningPosition) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
+  /**
+   * Saves a target mix, or clears it with null (#764). Targets that are out of
+   * range or do not add up to 100% are not saved.
+   */
+  saveAllocationTargets: (targets: AllocationTargets | null) => AllocationTargetsResult;
   acknowledgeNudge: (kind: "metadata" | "minimal" | "insights", version: number) => void;
   updateTrade: (trade: Trade) => void;
   upsertHistoricalQuote: (historicalQuote: HistoricalQuote) => void;
@@ -272,6 +278,7 @@ export type SavingsGoalResult =
   | { status: "applied"; goal: SavingsGoal }
   | { status: "rejected"; reason: "limit" }
   | { status: "rejected"; reason: "invalidEntry"; problems: ReturnType<typeof savingsGoalProblems> };
+export type AllocationTargetsResult = { status: "applied" } | { status: "rejected"; problems: string[] };
 export type SavingsGoalDeletionResult = { status: "applied" } | { status: "rejected"; reason: "notFound" };
 
 export type MeasurementBasisInput = Pick<MeasurementBasis, "startDate" | "kind"> & { openingBreakdown: MeasurementBasisLine[] };

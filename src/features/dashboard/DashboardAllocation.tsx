@@ -18,6 +18,7 @@ import {
   calculateReportingAllocation,
 } from "@/src/domain/calculations/reportingAllocation";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
+import { DashboardAllocationTargets } from "@/src/features/allocationTargets/DashboardAllocationTargets";
 import {
   normalizeMoney,
   sumFinancialValues,
@@ -269,6 +270,12 @@ export function DashboardAllocation({
           </View>
         ))}
       </View>
+      <DashboardAllocationTargets
+        allocation={fullAllocation.length && !hasNegativeCash && !hasNegativeFuturesEquity ? fullAllocation : null}
+        displayMode={dashboard.displayMode}
+        masked={dashboard.maskWealthValues}
+        targets={dashboard.allocationTargets}
+      />
     </PremiumCard>
     </FadeInView>
   );
