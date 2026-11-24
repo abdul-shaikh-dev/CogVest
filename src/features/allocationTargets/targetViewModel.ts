@@ -13,7 +13,7 @@ export function allocationLabel(assetClass: ReportingAllocationClass) {
 export function gapText(gapPts: number) {
   if (gapPts === 0) return "on target";
   const size = Math.abs(gapPts);
-  return `${size} ${size === 1 ? "pt" : "pts"} ${gapPts > 0 ? "above" : "below"}`;
+  return `${size} ${size === 1 ? "point" : "points"} ${gapPts > 0 ? "above" : "below"}`;
 }
 
 /** Whole rupees: the amount is a guide, not an order. */
@@ -24,10 +24,12 @@ function wholeRupees(value: number) {
 /** Neutral wording for the new money that would reach the targets without selling. */
 export function newMoneySummary(drift: Extract<AllocationDrift, { status: "available" }>, masked: boolean) {
   if (drift.newMoneyInr === null) {
-    const blocked = drift.newMoneyBlockedBy.map(allocationLabel).join(" and ");
-    return `New money alone cannot reach these targets while ${blocked} ${drift.newMoneyBlockedBy.length > 1 ? "hold" : "holds"} money with a 0% target.`;
+    const labels = drift.newMoneyBlockedBy.map(allocationLabel);
+    const blocked = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}` : labels[0];
+    const plural = drift.newMoneyBlockedBy.length > 1;
+    return `${blocked} ${plural ? "hold" : "holds"} money but ${plural ? "have" : "has"} a 0% target, so new money alone cannot match these targets.`;
   }
   if (drift.newMoneyInr < 1) return "Every class is at its target.";
   const amount = masked ? MASKED_INR_VALUE : wholeRupees(drift.newMoneyInr);
-  return `About ${amount} of new money, split as below, would bring every class to its target without selling.`;
+  return `About ${amount} of new money would bring every class to its target without selling. By class:`;
 }

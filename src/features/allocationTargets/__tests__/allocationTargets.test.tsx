@@ -19,11 +19,11 @@ describe("target allocation on the Dashboard (#764)", () => {
     expect(screen.queryByTestId("dashboard-targets")).toBeNull();
 
     await act(async () => store.getState().saveAllocationTargets({ cash: 0, crypto: 0, debt: 50, equity: 50 }));
-    expect(screen.getByTestId("dashboard-target-equity")).toHaveTextContent("Equity0% · target 50% · 50 pts below");
-    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent("Debt100% · target 50% · 50 pts above");
+    expect(screen.getByTestId("dashboard-target-equity")).toHaveTextContent("Equity0% · target 50% · 50 points below");
+    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent("Debt100% · target 50% · 50 points above");
     expect(screen.getByTestId("dashboard-target-cash")).toHaveTextContent("Cash0% · target 0% · on target");
     expect(screen.getByTestId("dashboard-targets-new-money"))
-      .toHaveTextContent("About ₹2,00,000 of new money, split as below, would bring every class to its target without selling.");
+      .toHaveTextContent("About ₹2,00,000 of new money would bring every class to its target without selling. By class:");
     expect(screen.getByTestId("dashboard-target-new-money-equity").props.accessibilityLabel).toBe("₹2,00,000.00");
     expect(screen.queryByTestId("dashboard-target-new-money-debt")).toBeNull();
     expect(screen.queryByText(/\b(buy|sell)\b/iu)).toBeNull();
@@ -47,7 +47,7 @@ describe("target allocation on the Dashboard (#764)", () => {
     store.getState().saveAllocationTargets({ cash: 0, crypto: 0, debt: 0, equity: 100 });
     const screen = await render(<DashboardScreen now={now} store={store} />);
     expect(screen.getByTestId("dashboard-targets-new-money"))
-      .toHaveTextContent("New money alone cannot reach these targets while Debt holds money with a 0% target.");
+      .toHaveTextContent("Debt holds money but has a 0% target, so new money alone cannot match these targets.");
   });
 });
 
@@ -61,7 +61,7 @@ describe("target allocation editor (#764)", () => {
     await fireEvent.changeText(screen.getByTestId("allocation-target-debt"), "30");
     expect(screen.getByTestId("allocation-target-total")).toHaveTextContent("Total 90% · 10% left to assign");
     await fireEvent.press(screen.getByTestId("allocation-target-save"));
-    expect(screen.getByTestId("allocation-target-error")).toHaveTextContent("Targets must add up to 100% before they can be saved.");
+    expect(screen.getByTestId("allocation-target-error")).toHaveTextContent("Make the targets add up to 100% to save them.");
     expect(store.getState().preferences.allocationTargets).toBeUndefined();
 
     await fireEvent.changeText(screen.getByTestId("allocation-target-cash"), "10");
@@ -84,7 +84,7 @@ describe("target allocation editor (#764)", () => {
     expect(buildAllocationTargets({ ...draft, equity: "1e2" })).toMatchObject({ errors: { equity: expect.any(String) } });
     expect(targetTotalText(112.5)).toBe("Total 112.5% · 12.5% over 100%");
     expect(targetTotalText(null)).toBe("Enter numbers only.");
-    expect(gapText(-1)).toBe("1 pt below");
-    expect(gapText(2.5)).toBe("2.5 pts above");
+    expect(gapText(-1)).toBe("1 point below");
+    expect(gapText(2.5)).toBe("2.5 points above");
   });
 });

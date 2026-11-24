@@ -26,8 +26,8 @@ comparison says it needs that. It uses the same INR values as the allocation,
 so the allocation's currency exclusions apply.
 
 For each class: the actual share, the target and the gap in percentage points
-(actual minus target), written as "N pts above", "N pts below" or "on target",
-so it never relies on colour.
+(actual minus target), written as "N points above", "N points below" or "on
+target", so it never relies on colour.
 
 ## New money without selling
 
@@ -36,7 +36,7 @@ largest of `value / target share` over classes with a target above 0%. The new
 money is that total minus today's total, and each class takes
 `total x target share - value`. Amounts show in whole rupees.
 
-While a class with a 0% target holds money, new money alone cannot reach the
+While a class with a 0% target holds money, new money alone cannot match the
 targets, and the Dashboard says so instead of giving an amount.
 
 ## Display

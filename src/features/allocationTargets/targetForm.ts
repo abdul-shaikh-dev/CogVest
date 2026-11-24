@@ -50,6 +50,6 @@ export function buildAllocationTargets(
   }
   if (Object.keys(errors).length) return { errors, ok: false };
   const total = targetDraftTotal(draft);
-  if (total !== 100) return { errors: { total: "Targets must add up to 100% before they can be saved." }, ok: false };
+  if (total !== 100) return { errors: { total: "Make the targets add up to 100% to save them." }, ok: false };
   return { ok: true, targets };
 }
