@@ -13,6 +13,10 @@ appId: ${APP_ID}
     visible: "Visual QA portfolio seeded."
     timeout: 30000
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - tapOn:
     id: "display-mode-minimal"
 - assertVisible:
@@ -95,6 +99,10 @@ appId: ${APP_ID}
 - assertVisible:
     id: dashboard-insights
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - tapOn:
     id: "display-mode-minimal"
 - openLink: "${SCHEME}:///add-holding?visualQaState=review&token=cogvest-local-visual-qa"

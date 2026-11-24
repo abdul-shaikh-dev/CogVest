@@ -60,6 +60,10 @@ appId: ${APP_ID}
 - tapOn:
     id: "insight-unavailable-back"
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - tapOn:
     id: "display-mode-minimal"
 - openLink: "${SCHEME}:///insight?kind=conviction"
@@ -68,5 +72,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "insight-paused-done"
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-standard"
+    direction: DOWN
 - tapOn:
     id: "display-mode-standard"

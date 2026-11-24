@@ -126,6 +126,10 @@ appId: ${APP_ID}
 - openLink: "${SCHEME}:///settings"
 - assertNotVisible:
     id: "nudge-minimal"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - tapOn:
     id: "display-mode-minimal"
 - takeScreenshot: .expo/issue21-minimal
@@ -136,6 +140,10 @@ appId: ${APP_ID}
 - tapOn:
     id: "insight-paused-done"
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-standard"
+    direction: DOWN
 - tapOn:
     id: "display-mode-standard"
 - openLink: "${SCHEME}:///insight?kind=conviction"

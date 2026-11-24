@@ -30,6 +30,10 @@ appId: ${APP_ID}
 - assertVisible:
     id: value-mask-toggle
     checked: true
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: DOWN
 - tapOn:
     id: display-mode-minimal
 - assertVisible:
@@ -55,6 +59,10 @@ appId: ${APP_ID}
     checked: true
 - tapOn:
     id: value-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: DOWN
 - tapOn:
     id: display-mode-standard
 - scrollUntilVisible:
