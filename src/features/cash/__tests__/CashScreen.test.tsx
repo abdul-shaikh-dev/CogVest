@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
 import { Keyboard, KeyboardAvoidingView, Modal } from "react-native";
 
 import { MASKED_INR_VALUE } from "@/src/components/common";
@@ -110,6 +110,10 @@ describe("CashScreen", () => {
     expect(screen.getByText("December 2025")).toBeTruthy();
     expect(screen.getByLabelText("08 Jan 2026")).toBeTruthy();
     expect(screen.getByText("-₹100.00")).toBeTruthy();
+    // Into or out of Cash, not up or down (#808).
+    expect(within(screen.getByTestId("cash-entry-row-jan-late")).getByText("exit-outline", { includeHiddenElements: true })).toBeTruthy();
+    expect(within(screen.getByTestId("cash-entry-row-dec")).getByText("enter-outline", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByText(/^arrow-(up|down)-outline$/u, { includeHiddenElements: true })).toBeNull();
     await fireEvent.press(screen.getByLabelText("Review jan-late. 08 Jan 2026. Cash withdrawal. -₹100.00."));
     expect(onCorrectEntry).toHaveBeenCalledWith("jan-late");
   });
