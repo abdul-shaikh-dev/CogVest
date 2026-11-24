@@ -39,7 +39,7 @@ export function SnapshotStatusCard({
     onPress: () => void;
   } | null = null;
 
-  if (status.kind === "missing-price") {
+  if (status.kind === "missing-price" || status.kind === "check-stalled") {
     action = {
       accessibilityLabel: "Retry monthly history",
       label: "Try again",
