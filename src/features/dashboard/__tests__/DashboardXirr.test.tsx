@@ -27,7 +27,7 @@ const screenFor = async (store: ReturnType<typeof seed>) => await render(<Dashbo
 describe("Dashboard portfolio XIRR", () => {
   it.each([[110, "+10.00% a year"], [100, "0.00% a year"], [90, "-10.00% a year"]])("shows %d as %s with its period and totals", async (price, text) => {
     const screen = await screenFor(seed({ price }));
-    expect(screen.getByText("Return (XIRR)")).toBeTruthy();
+    expect(screen.getByText("Whole portfolio return (XIRR)")).toBeTruthy();
     expect(screen.getByTestId("dashboard-xirr-tile-caption")).toHaveTextContent("Estimate · Breakdown ›");
     expect(screen.queryByTestId("dashboard-xirr-measure-investments")).toBeNull();
     expect(screen.getByTestId("dashboard-xirr-rate")).toHaveTextContent(text);

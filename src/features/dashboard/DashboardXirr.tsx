@@ -55,7 +55,7 @@ export function DashboardXirrTile({ expanded, onToggle, stacked = false, summary
   const rateText = summary.status === "rate" ? `${formatPercentage(summary.rate * 100)} a year` : "Unavailable";
   return (
     <Pressable
-      accessibilityLabel={`Portfolio return, XIRR: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
+      accessibilityLabel={`Whole portfolio return, XIRR, including Cash: ${rateText}. ${expanded ? "Hide" : "Show"} breakdown`}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
       onPress={onToggle}
@@ -63,7 +63,8 @@ export function DashboardXirrTile({ expanded, onToggle, stacked = false, summary
       testID="dashboard-xirr-toggle"
     >
       <View testID="dashboard-xirr">
-        <AppText color="secondary" variant="caption">Return (XIRR)</AppText>
+        {/* Says whose return this is, so it isn't read against the holdings P&L beside it (#805). */}
+        <AppText color="secondary" variant="caption">Whole portfolio return (XIRR)</AppText>
         <AppText
           color={summary.status === "rate" ? undefined : "secondary"}
           style={summary.status !== "rate" || summary.rate === 0 ? undefined
