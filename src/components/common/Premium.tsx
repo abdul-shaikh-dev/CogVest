@@ -38,6 +38,11 @@ type PremiumCardProps = {
 type ScreenHeaderProps = {
   compact?: boolean;
   action?: ReactNode;
+  /**
+   * Keep icon actions beside the title at large font sizes. For short titles
+   * only, where stacking leaves the actions alone on their own row (#809).
+   */
+  keepActionInline?: boolean;
   leading?: ReactNode;
   subtitle?: string;
   title: string;
@@ -122,13 +127,14 @@ export function PremiumCard({
 export function ScreenHeader({
   compact = false,
   action,
+  keepActionInline = false,
   leading,
   subtitle,
   title,
 }: ScreenHeaderProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
-  const shouldStack = getAdaptiveLayoutMode(fontScale) !== "standard";
+  const shouldStack = !keepActionInline && getAdaptiveLayoutMode(fontScale) !== "standard";
 
   return (
     <View style={[styles.header, compact && styles.headerCompact, shouldStack && styles.headerStacked]}>

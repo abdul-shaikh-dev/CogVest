@@ -70,7 +70,7 @@ export function AppLockSettings({ appLockStore, auth = expoDeviceAuth }: Props) 
         accessibilityState={{ checked: settings.enabled, disabled: !canToggle }}
         disabled={!canToggle}
         onPress={() => { void handleToggle(); }}
-        style={({ pressed }) => [styles.toggleRow, pressed && styles.pressed, !canToggle && styles.disabled]}
+        style={({ pressed }) => [styles.toggleRow, pressed && styles.pressed]}
         testID="app-lock-toggle"
       >
         <View style={styles.toggleCopy}>
@@ -87,7 +87,9 @@ export function AppLockSettings({ appLockStore, auth = expoDeviceAuth }: Props) 
         <View
           accessible={false}
           importantForAccessibility="no-hide-descendants"
-          style={[styles.switchTrack, settings.enabled && styles.switchOn]}
+          // Only the switch dims when unavailable; the text stays readable (#809).
+          style={[styles.switchTrack, settings.enabled && styles.switchOn, !canToggle && styles.disabled]}
+          testID="app-lock-switch"
         >
           <View style={[styles.switchThumb, settings.enabled && styles.switchThumbOn]} />
         </View>

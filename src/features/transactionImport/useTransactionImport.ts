@@ -411,7 +411,7 @@ export function useTransactionImport({
     } catch (error) {
       setScreenError(describeSaveFailure(
         error,
-        "Nothing was imported. Your portfolio and Cash Ledger stayed unchanged; review the conflicts and try again.",
+        "Nothing was imported. Your portfolio and Cash stayed unchanged; review the conflicts and try again.",
       ));
     } finally {
       setIsSaving(false);

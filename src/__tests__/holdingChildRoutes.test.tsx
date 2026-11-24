@@ -134,7 +134,7 @@ describe("holding child routes", () => {
     const tradeRoute = TradeRoute() as {
       props: { backLabel: string; onCancel: () => void; onComplete: (message: string) => void };
     };
-    expect(tradeRoute.props.backLabel).toBe("Back to Cash Ledger");
+    expect(tradeRoute.props.backLabel).toBe("Back to Cash");
     tradeRoute.props.onCancel();
     tradeRoute.props.onComplete("Transaction saved.");
 

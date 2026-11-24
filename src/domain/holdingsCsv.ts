@@ -354,7 +354,7 @@ export function parseHoldingsCsv(
         code: "unsupportedInstrument",
         message: rawInstrumentType === "ppf"
           ? "PPF must be added through the dedicated PPF account flow."
-          : "Cash must be added through Cash Ledger, not holdings import.",
+          : "Cash must be added on the Cash tab, not through holdings import.",
         rowNumber,
       });
     }

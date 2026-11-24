@@ -233,7 +233,7 @@ export function CashScreen({
       )}
       header={(
       <View style={styles.listHeader}>
-        <ScreenHeader compact title="Cash Ledger" />
+        <ScreenHeader compact title="Cash" />
 
         <View style={styles.balanceSection}>
           <HeroMetric
@@ -262,11 +262,10 @@ export function CashScreen({
         <View style={styles.activitySection}>
           {compactActivity ? (
             <>
-              <AppText color="secondary" variant="caption" weight="medium">{`${formatMonthYear(now)} activity`}</AppText>
-              <View style={styles.quietMetrics} testID="cash-zero-activity">
-                <AppText color="secondary" variant="caption">Cash added {formatCompactINR(0)}</AppText>
-                <AppText color="secondary" variant="caption">Invested {formatCompactINR(0)}</AppText>
-              </View>
+              {/* One plain line rather than two zero amounts (#809). */}
+              <AppText color="secondary" testID="cash-zero-activity" variant="caption">
+                {`No cash activity in ${formatMonthYear(now)}`}
+              </AppText>
             </>
           ) : <>
           <SectionHeader title={`${formatMonthYear(now)} activity`} />
@@ -330,29 +329,31 @@ export function CashScreen({
     >
         {mode && modeCopy ? (
           <View style={styles.content} testID="cash-entry-form" accessibilityViewIsModal>
-          <AppButton
-            disabled={isSaving}
-            onPress={closeEntry}
-            testID="close-cash-entry-button"
-            title="Cancel"
-            variant="ghost"
-          />
+          {/* Cancel sits in the header row, where Android puts a sheet's close (#809). */}
           <View style={styles.entryHeader}>
             <View style={styles.entryHeaderCopy}>
               <AppText accessibilityRole="header" variant="title" weight="bold">{modeCopy.title}</AppText>
               <AppText color="secondary" variant="caption">
                 {modeCopy.description}
               </AppText>
+              <View style={styles.balancePill}>
+                <AppText
+                  color="secondary"
+                  variant="caption"
+                  weight="bold"
+                >
+                  {modeCopy.balanceImpact}
+                </AppText>
+              </View>
             </View>
-            <View style={styles.balancePill}>
-              <AppText
-                color="secondary"
-                variant="caption"
-                weight="bold"
-              >
-                {modeCopy.balanceImpact}
-              </AppText>
-            </View>
+            <AppButton
+              disabled={isSaving}
+              onPress={closeEntry}
+              style={styles.cancelAction}
+              testID="close-cash-entry-button"
+              title="Cancel"
+              variant="ghost"
+            />
           </View>
           <View style={styles.formFields}>
             <View style={styles.formRowField}>
@@ -361,7 +362,6 @@ export function CashScreen({
                 error={errors.amount}
                 label="Amount"
                 onChangeText={setAmount}
-                placeholder="1000"
                 testID="cash-amount-input"
                 value={amount}
               />
@@ -465,6 +465,10 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  cancelAction: {
+    flexGrow: 0,
+    minWidth: 88,
+  },
   entryHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
@@ -502,7 +506,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   list: { paddingBottom: spacing.lg + spacing.xl, paddingTop: spacing.sm },
   listHeader: { gap: spacing.cardGap },
   balanceSection: { gap: spacing.sm },
-  quietMetrics: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md, rowGap: spacing.xs },
   activitySection: { gap: spacing.xs },
   monthHeading: { paddingTop: spacing.lg, paddingBottom: spacing.xs },
   firstMonthHeading: { paddingTop: spacing.cardGap },

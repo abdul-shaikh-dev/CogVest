@@ -45,7 +45,8 @@ appId: ${APP_ID}
 - assertNotVisible: "Dominant position"
 - assertNotVisible: "Best return"
 - openLink: "${SCHEME}:///cash"
-- assertVisible: "Cash Ledger"
+- assertVisible:
+    id: cash-screen
 - assertVisible: "Deposit"
 - assertVisible: "Withdraw"
 - assertNotVisible: "This month"

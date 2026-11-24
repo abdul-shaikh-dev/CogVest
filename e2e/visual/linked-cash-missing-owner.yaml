@@ -17,4 +17,4 @@ appId: ${APP_ID}
     id: "linked-cash-owner-missing"
 - assertNotVisible: "Review linked transaction"
 - assertNotVisible: "₹2,400.00"
-- assertVisible: "Back to Cash Ledger"
+- assertVisible: "Back to Cash"

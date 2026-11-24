@@ -241,7 +241,7 @@ describe("ReviewTradeScreen", () => {
     });
     const { getByTestId, getByText, queryByTestId } = await render(
       <ReviewTradeScreen
-        backLabel="Back to Cash Ledger"
+        backLabel="Back to Cash"
         onCancel={jest.fn()}
         onComplete={jest.fn()}
         store={store}
@@ -250,7 +250,7 @@ describe("ReviewTradeScreen", () => {
     );
 
     expect(getByText("Reveal to review")).toBeTruthy();
-    expect(getByText("Back to Cash Ledger")).toBeTruthy();
+    expect(getByText("Back to Cash")).toBeTruthy();
     expect(queryByTestId("trade-correction-quantity-input")).toBeNull();
     await fireEvent.press(getByTestId("reveal-trade-button"));
     expect(getByTestId("trade-correction-quantity-input")).toBeTruthy();
