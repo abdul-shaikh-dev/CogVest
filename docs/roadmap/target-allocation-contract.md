@@ -41,7 +41,9 @@ targets, and the Dashboard says so instead of giving an amount.
 
 ## Display
 
-The comparison sits under the allocation legend on the Dashboard, once targets
-are set. Masking hides every amount. Minimal Mode folds it behind "Compare
+Once targets are set, each row of the Dashboard allocation legend gains a bar
+of the class's share with a line at its target, the target and the gap, so
+each share is shown once. The new-money estimate sits under the legend.
+Masking hides every amount. Minimal Mode folds it behind "Compare
 with targets" until the user opens it. Targets are edited from Settings, under
 Investment tools.

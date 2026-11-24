@@ -22,7 +22,8 @@ describe("target allocation on the Dashboard (#764)", () => {
     expect(screen.getByTestId("dashboard-target-equity").props.accessibilityLabel)
       .toBe("Equity, 0% now, target 50%, 50 points below");
     expect(screen.getByTestId("dashboard-target-gap-debt")).toHaveTextContent(/50 points above$/u);
-    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent(/100% now · target 50%/u);
+    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent(/^Target 50%/u);
+    expect(screen.getAllByText(/^Debt$/u)).toHaveLength(1);
     expect(screen.getByTestId("dashboard-target-gap-cash")).toHaveTextContent(/on target$/u);
     expect(screen.getByTestId("dashboard-targets-new-money-total")).toHaveTextContent("About ₹2,00,000");
     expect(screen.getByTestId("dashboard-targets-new-money")).toHaveTextContent("An estimate, without selling. By class:");
@@ -38,6 +39,7 @@ describe("target allocation on the Dashboard (#764)", () => {
     const screen = await render(<DashboardScreen now={now} store={store} />);
 
     expect(screen.queryByTestId("dashboard-target-equity")).toBeNull();
+    expect(screen.queryByTestId("dashboard-targets-key")).toBeNull();
     await fireEvent.press(screen.getByTestId("dashboard-targets-toggle"));
     expect(screen.getByTestId("dashboard-target-equity")).toBeTruthy();
     expect(screen.getByTestId("dashboard-targets-new-money-total").props.accessibilityLabel).toBe("Amount hidden");
