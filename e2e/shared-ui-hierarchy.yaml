@@ -45,6 +45,10 @@ appId: ${APP_ID}
 - assertVisible:
     id: value-mask-toggle
     checked: false
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: DOWN
 - assertVisible:
     id: display-mode-standard
     checked: true

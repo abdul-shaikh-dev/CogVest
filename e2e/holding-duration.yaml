@@ -42,6 +42,10 @@ appId: ${APP_ID}
 - assertVisible:
     id: "holdings-screen"
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-minimal"
+    direction: DOWN
 - tapOn:
     id: "display-mode-minimal"
 - openLink: "${SCHEME}:///holding-duration"
@@ -50,5 +54,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "holding-duration-paused-done"
 - openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "display-mode-standard"
+    direction: DOWN
 - tapOn:
     id: "display-mode-standard"

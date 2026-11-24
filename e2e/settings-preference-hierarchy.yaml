@@ -17,6 +17,10 @@ appId: ${APP_ID}
 - assertVisible:
     id: value-mask-toggle
     checked: false
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: DOWN
 - assertVisible:
     id: display-mode-standard
     checked: true
@@ -25,11 +29,19 @@ appId: ${APP_ID}
     id: settings-price-details
 - waitForAnimationToEnd
 - takeScreenshot: .expo/ux14-settings
+- scrollUntilVisible:
+    element:
+      id: value-mask-toggle
+    direction: UP
 - tapOn:
     id: value-mask-toggle
 - assertVisible:
     id: value-mask-toggle
     checked: true
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: DOWN
 - tapOn:
     id: display-mode-minimal
 - assertVisible:
@@ -50,11 +62,23 @@ appId: ${APP_ID}
 - assertVisible:
     id: value-mask-toggle
     checked: true
+- scrollUntilVisible:
+    element:
+      id: display-mode-minimal
+    direction: DOWN
 - assertVisible:
     id: display-mode-minimal
     checked: true
+- scrollUntilVisible:
+    element:
+      id: value-mask-toggle
+    direction: UP
 - tapOn:
     id: value-mask-toggle
+- scrollUntilVisible:
+    element:
+      id: display-mode-standard
+    direction: DOWN
 - tapOn:
     id: display-mode-standard
 - scrollUntilVisible:
