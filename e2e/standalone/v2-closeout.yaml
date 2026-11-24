@@ -45,6 +45,13 @@ appId: ${APP_ID}
 - tapOn:
     id: duration-back
 - openLink: "${SCHEME}:///dashboard"
+# With no pattern to show, the card folds its rows behind a toggle (#806).
+- scrollUntilVisible:
+    element:
+      id: insights-empty-toggle
+    direction: DOWN
+- tapOn:
+    id: insights-empty-toggle
 - scrollUntilVisible:
     element:
       id: open-insight-conviction

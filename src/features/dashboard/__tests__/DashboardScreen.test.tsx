@@ -736,6 +736,8 @@ describe("DashboardScreen", () => {
     expect(screen.queryByText("View details")).toBeNull();
     expect(screen.queryByTestId("add-trade-button")).toBeNull();
     expect(screen.getByTestId("dashboard-insights")).toBeTruthy();
+    // No pattern has data yet, so the rows fold behind one toggle (#806).
+    await fireEvent.press(screen.getByTestId("insights-empty-toggle"));
     expect(screen.getByText("Conviction pattern")).toBeTruthy();
     expect(screen.queryByText(/LTCG/i)).toBeNull();
     expect(screen.queryByText(/Minimal Mode/i)).toBeNull();

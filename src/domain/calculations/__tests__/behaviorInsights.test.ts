@@ -343,6 +343,17 @@ describe("behaviour insight calculations", () => {
     expect(generateInsights(analyses)).toEqual(generateInsights(analyses));
   });
 
+  it("says plainly when a window has no buys or sells (#806)", () => {
+    const frequency = analyseTradeFrequency({
+      asOf: "2025-03-31",
+      openingPositions: [opening({ measuredAsOf: "2025-01-01" })],
+      trades: [],
+    });
+    expect(frequency.availability).toBe("available");
+    expect(generateInsights({ conviction: analyseConviction([]), frequency, patience: analysePatienceFromSells([]) }))
+      .toEqual([expect.objectContaining({ kind: "frequency", summary: "No buys or sells were recorded in this period." })]);
+  });
+
   it("describes met, earlier, and mixed patience outcomes without judgment", () => {
     const patience = {
       ...analysePatienceFromSells([]),

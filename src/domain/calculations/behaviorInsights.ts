@@ -403,10 +403,14 @@ export function generateInsights({
   if (frequency.availability === "available") {
     const buyLabel = frequency.buyCount === 1 ? "buy" : "buys";
     const sellLabel = frequency.sellCount === 1 ? "sell" : "sells";
+    const dayLabel = frequency.activeTradingDays === 1 ? "active day" : "active days";
     insights.push({
       evidence: `${frequency.observableDays} observable days`,
       kind: "frequency",
-      summary: `${frequency.buyCount} ${buyLabel} and ${frequency.sellCount} ${sellLabel} were recorded across ${frequency.activeTradingDays} active days.`,
+      // A sentence of zeros reads as filler (#806).
+      summary: frequency.buyCount + frequency.sellCount === 0
+        ? "No buys or sells were recorded in this period."
+        : `${frequency.buyCount} ${buyLabel} and ${frequency.sellCount} ${sellLabel} were recorded across ${frequency.activeTradingDays} ${dayLabel}.`,
       title: "Trading frequency",
     });
   }

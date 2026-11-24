@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StoreApi } from "zustand/vanilla";
-import { AppText, PremiumCard, SectionHeader } from "@/src/components/common";
+import { AppText, DisclosureButton, PremiumCard, SectionHeader } from "@/src/components/common";
 import type { InsightKind } from "@/src/domain/calculations/behaviorInsightDetails";
 import type { PortfolioStoreState } from "@/src/store";
 import { interaction, spacing, useTheme } from "@/src/theme";
+import { hasObservation } from "./insightCardsModel";
 import { useBehaviorInsights } from "./useBehaviorInsights";
 
 export function InsightCards({
@@ -18,14 +20,27 @@ export function InsightCards({
 }) {
   const { colors } = useTheme();
   const { details, masked, minimal } = useBehaviorInsights(store, now);
+  const [showEmpty, setShowEmpty] = useState(false);
   if (minimal) return null;
+  // With nothing to observe yet, one line beats a list of placeholders (#806).
+  const quiet = !masked && !details.some(hasObservation);
   return (
     <PremiumCard style={styles.group} testID="dashboard-insights">
       <SectionHeader title="Investment patterns" />
       <AppText color="secondary">
-        Optional observations, grounded in your records.
+        {quiet
+          ? "Patterns appear as you record buys, sells and planned holding periods."
+          : "Optional observations, grounded in your records."}
       </AppText>
-      {details.map((detail) => (
+      {quiet ? (
+        <DisclosureButton
+          expanded={showEmpty}
+          onPress={() => setShowEmpty((value) => !value)}
+          testID="insights-empty-toggle"
+          title="What each pattern needs"
+        />
+      ) : null}
+      {quiet && !showEmpty ? null : details.map((detail) => (
         <Pressable
           key={detail.kind}
           accessibilityRole="button"

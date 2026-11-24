@@ -15,6 +15,13 @@ appId: ${APP_ID}
     visible: "Visual QA portfolio seeded."
     timeout: 30000
 - openLink: "${SCHEME}:///dashboard"
+# With no pattern to show, the card folds its rows behind a toggle (#806).
+- scrollUntilVisible:
+    element:
+      id: "insights-empty-toggle"
+    direction: DOWN
+- tapOn:
+    id: "insights-empty-toggle"
 - scrollUntilVisible:
     element:
       id: "open-insight-conviction"
