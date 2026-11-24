@@ -4,6 +4,25 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-26: UI review fixes (#804 to #809), emulator smoke 15 passed and 14 of 15
+
+- #804 (PR #810), on its own: E2E APK built from 21ed059.
+  `npm run test:verify`: 3,335 passed. `npm run maestro:smoke`: 15 passed,
+  0 failed, 15m 33s.
+- #805 to #809 and the Settings Display scroll fix (PRs #811 to #816),
+  together: E2E APK built from an integration merge of them onto `main`
+  55f8c0d. `npm run test:verify`: 3,340 passed.
+  - `npm run maestro:smoke`: 14 passed, 1 failed, 18m 25s.
+    `epf-accounts.yaml` failed one evidence check during a slow run (3m 09s)
+    and passed on rerun (1m 24s); none of these changes touch EPF.
+  - `insight-details`, `minimal-mode`, `contextual-nudges`,
+    `holding-duration`, `settings-preference-hierarchy` and
+    `shared-ui-hierarchy` all pass. Before #816, `insight-details` and
+    `minimal-mode` failed because the #764 Settings row pushed Display below
+    the fold.
+- Emulator `CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi. Changed screens
+  were checked at font scale 1.0 and 1.5.
+
 ## 2026-11-25: Target allocation (#764), emulator smoke 15 passed, targets flow passed
 
 - Commits: feat/764-target-allocation e4ce6d9, based on `main` c145ee7.
