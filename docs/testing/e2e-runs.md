@@ -4,6 +4,33 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-25: Target allocation (#764), emulator smoke 15 passed, targets flow passed
+
+- Commits: feat/764-target-allocation e4ce6d9, based on `main` c145ee7.
+  `npm run test:verify` on a65562c: 3,331 passed. e3764105 and e4ce6d9
+  change the target wording and add the target bars and the PPF limit bar;
+  their suites were rerun.
+- Build: E2E APK (release config, QA harness on) for x86_64 and arm64-v8a,
+  built from e4ce6d9.
+- Emulator (`CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale 1.0),
+  cold-booted:
+  - `npm run maestro:test -- e2e/allocation-targets.yaml`: PASS, 0m 49s. It
+    checks that a 90% mix is refused, then that the 60/30/0/10 targets are
+    stored and compared on the Dashboard, and that removing them clears them.
+  - `npm run maestro:smoke`: 15 passed, 0 failed, 14m 25s.
+  - An earlier smoke run on e3764105 failed 12 of 15 with "Maestro Android
+    driver did not start up in time" while a game was using the PC (emulator
+    load average 13 to 17). It is environmental and was not counted.
+- Rerun on 0edf382, which moves the target bars into the allocation legend
+  rows (`npm run test:verify`: 3,332 passed), with a fresh E2E APK built from
+  it on the same emulator: `e2e/allocation-targets.yaml` PASS, 0m 49s;
+  `npm run maestro:smoke` 15 passed, 0 failed, 15m 12s. The Dashboard was
+  captured again in light and dark.
+- Screens checked by hand in light and dark at font scale 1.0, and light at
+  1.5: the Dashboard target bars, the new-money split (visual QA data, targets
+  40/20/30/10: about ₹30,44,648, matching a calculation by hand), the target
+  editor and the PPF yearly-limit bar.
+
 ## 2026-11-24: Savings goals (#767), emulator smoke 15 passed, goals flow passed
 
 - Commits: feat/767-savings-goals 0e793aa, based on `main` b34945f.

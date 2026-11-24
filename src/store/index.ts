@@ -76,6 +76,7 @@ export {
   type ManualCashDeletionResult,
   type MeasurementBasisInput,
   type MeasurementBasisResult,
+  type AllocationTargetsResult,
   type SavingsGoalDeletionResult,
   type SavingsGoalInput,
   type SavingsGoalResult,

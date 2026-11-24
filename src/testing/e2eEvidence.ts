@@ -41,6 +41,8 @@ export type E2ePortfolioEvidence = {
   ppfConfirmedBalance: number;
   ppfCount: number;
   rollupTotals: ReturnType<typeof calculatePortfolioRollupTotals>;
+  /** The saved target mix (#764), as stored. */
+  allocationTargets: PortfolioStoreState["preferences"]["allocationTargets"] | null;
   /** Saved savings goals (#767), as stored. */
   savingsGoals: PortfolioStoreState["savingsGoals"];
   tradeCount: number;
@@ -123,6 +125,7 @@ export function buildE2ePortfolioEvidence(
     ppfCount: state.ppfAccounts.length,
     rollupTotals,
     savingsGoals: state.savingsGoals,
+    allocationTargets: state.preferences.allocationTargets ?? null,
     tradeCount: state.trades.length,
   };
 }

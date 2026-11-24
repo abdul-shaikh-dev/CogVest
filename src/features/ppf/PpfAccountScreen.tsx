@@ -32,7 +32,7 @@ import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { PpfAccount } from "@/src/types";
 import { usePortfolioFields } from "@/src/hooks";
 
-import { Detail, Metric } from "./PpfAccountDetails";
+import { ContributionLimitBar, Detail, Metric } from "./PpfAccountDetails";
 import { PpfAccountForm } from "./PpfAccountForm";
 import { useStyles } from "./ppfAccountStyles";
 import { entryLabel, statusLabel } from "./ppfAccountViewModel";
@@ -213,6 +213,7 @@ export function PpfAccountScreen({
             value={formatCompactINR(summary.contributionContext.remainingTrackedCapacity)}
           />
         </View>
+        <ContributionLimitBar contributed={summary.contributionContext.financialYearContributions} masked={masked} />
         <AppText color="secondary" variant="caption">
           Capacity uses only PPF contributions recorded in CogVest. It is context, not a contribution recommendation.
         </AppText>

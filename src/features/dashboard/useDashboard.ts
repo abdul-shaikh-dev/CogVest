@@ -38,7 +38,7 @@ import {
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
 import { wholePortfolioScope, wholePortfolioXirrSummary, xirrNames } from "./portfolioXirr";
-import type { DisplayMode, Holding } from "@/src/types";
+import type { AllocationTargets, DisplayMode, Holding } from "@/src/types";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   calculatePpfPortfolioSummary,
@@ -61,6 +61,8 @@ type UseDashboardInput = {
 export type DashboardMonthlyMetrics = MonthlyInvestmentMetrics;
 
 export type DashboardState = {
+  /** The saved target mix, if any (#764). */
+  allocationTargets: AllocationTargets | undefined;
   epfSummary: EpfReportingSummary;
   epfAccountNames: Record<string, string>;
   investedCapitalComplete: boolean;
@@ -225,6 +227,7 @@ export function useDashboard({
     xirrNames: xirrNames(snapshot),
     ppfConfirmedBalance: derived.ppfConfirmedBalance,
     allocation: derived.allocation,
+    allocationTargets: snapshot.preferences.allocationTargets,
     cashBalance,
     convictionReadiness: derived.convictionReadiness,
     currencyIssues: derived.currencyIssues,

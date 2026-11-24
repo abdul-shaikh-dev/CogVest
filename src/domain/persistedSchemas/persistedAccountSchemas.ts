@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { decimal } from "@/src/domain/precision";
+import { allocationTargetProblems } from "@/src/domain/allocationTargets";
 import { savingsGoalProblems } from "@/src/domain/savingsGoals";
 import type { SavingsGoal } from "@/src/types";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
@@ -153,8 +154,19 @@ export const ppfLedgerEntrySchema = z.discriminatedUnion("type", [
     .strict(),
 ]);
 
+// #764: checked by the same rules the Settings editor uses.
+const allocationTargetsSchema = z.object({
+  cash: finiteNumberSchema,
+  crypto: finiteNumberSchema,
+  debt: finiteNumberSchema,
+  equity: finiteNumberSchema,
+}).strict().superRefine((targets, context) => {
+  for (const message of allocationTargetProblems(targets)) context.addIssue({ code: "custom", message });
+});
+
 export const preferencesSchema = z
   .object({
+    allocationTargets: allocationTargetsSchema.optional(),
     appearance: z.enum(["system", "light", "dark"]).optional(),
     blockScreenCapture: z.boolean().optional(),
     defaultChartRange: z

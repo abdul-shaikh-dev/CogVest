@@ -2,7 +2,7 @@ import type { StoreApi } from "zustand/vanilla";
 
 import { formatDate } from "@/src/domain/formatters";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
-import type { DisplayMode, Quote } from "@/src/types";
+import type { AllocationTargets, DisplayMode, Quote } from "@/src/types";
 import type { AppearancePreference } from "@/src/types/preferences";
 import { usePortfolioFields } from "@/src/hooks";
 
@@ -11,6 +11,8 @@ type UseSettingsInput = {
 };
 
 export type UseSettingsResult = {
+  /** The saved target mix, if any (#764). */
+  allocationTargets: AllocationTargets | undefined;
   appearance: AppearancePreference;
   blockScreenCapture: boolean;
   setAppearance: (appearance: AppearancePreference) => void;
@@ -139,6 +141,7 @@ export function useSettings({
     quoteStatus: deriveQuoteStatus(snapshot.quoteCache),
     setDisplayMode,
     showWidgetValue: snapshot.preferences.showWidgetValue === true,
+    allocationTargets: snapshot.preferences.allocationTargets,
     toggleBlockScreenCapture,
     toggleMaskWealthValues,
     toggleShowWidgetValue,

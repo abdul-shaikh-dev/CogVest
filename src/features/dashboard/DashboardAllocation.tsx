@@ -19,6 +19,12 @@ import {
 } from "@/src/domain/calculations/reportingAllocation";
 import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import {
+  AllocationTargetLine,
+  AllocationTargetsKey,
+  DashboardAllocationTargets,
+  useAllocationTargetComparison,
+} from "@/src/features/allocationTargets/DashboardAllocationTargets";
+import {
   normalizeMoney,
   sumFinancialValues,
 } from "@/src/domain/precision";
@@ -85,6 +91,11 @@ export function DashboardAllocation({
   const hasNegativeCash = dashboard.cashBalance < 0;
   const hasPositiveNetPortfolio =
     (dashboard.rollupTotals.totalCurrentValue ?? 0) > 0;
+  const targetComparison = useAllocationTargetComparison({
+    allocation: fullAllocation.length && !hasNegativeCash && !hasNegativeFuturesEquity ? fullAllocation : null,
+    displayMode: dashboard.displayMode,
+    targets: dashboard.allocationTargets,
+  });
 
   // Prices are on their way: hold the card's place instead of calling it
   // unavailable (#783).
@@ -218,8 +229,11 @@ export function DashboardAllocation({
           ))}
         </View>
       ) : null}
+      <AllocationTargetsKey comparison={targetComparison} />
       <View style={styles.allocationLegend}>
-        {displayAllocation.map((item) => (
+        {displayAllocation.map((item) => {
+          const targetRow = targetComparison?.rows.get(item.assetClass);
+          return (
           <View key={item.assetClass} testID={`dashboard-allocation-${item.assetClass}`} style={styles.allocationItem}>
             <View style={[
               styles.allocationLegendRow,
@@ -246,6 +260,7 @@ export function DashboardAllocation({
                 />
               </View>
             </View>
+            {targetRow ? <AllocationTargetLine row={targetRow} /> : null}
             {item.cryptoBreakdown && (item.value !== 0 || dashboard.futuresContributions.length > 0) ? (
               <>
                 <DisclosureButton title="Spot / Futures" expanded={showCryptoBreakdown}
@@ -267,8 +282,10 @@ export function DashboardAllocation({
               </>
             ) : null}
           </View>
-        ))}
+          );
+        })}
       </View>
+      <DashboardAllocationTargets comparison={targetComparison} masked={dashboard.maskWealthValues} />
     </PremiumCard>
     </FadeInView>
   );

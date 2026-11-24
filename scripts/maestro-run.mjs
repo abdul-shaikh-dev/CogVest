@@ -78,6 +78,7 @@ const defaultFlows = [
   "e2e/shared-ui-hierarchy.yaml",
   "e2e/workflow-exit-navigation.yaml",
   "e2e/savings-goals.yaml",
+  "e2e/allocation-targets.yaml",
 ];
 
 // One flow per primary journey, each asserting stored results. Run it for every

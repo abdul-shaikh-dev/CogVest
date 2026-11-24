@@ -36,3 +36,4 @@ export {
 } from "./SensitiveValueReveal";
 export { ExpressiveLoader, FadeInView, Skeleton, SkeletonRows, useFadeIn, usePressFeedback } from "./Motion";
 export { BottomSheet, shouldCloseSheet } from "./BottomSheet";
+export { GapLabel, TargetBar } from "./TargetBar";
