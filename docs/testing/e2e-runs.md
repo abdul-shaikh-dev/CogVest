@@ -21,6 +21,11 @@ the run cadence.
   - An earlier smoke run on e3764105 failed 12 of 15 with "Maestro Android
     driver did not start up in time" while a game was using the PC (emulator
     load average 13 to 17). It is environmental and was not counted.
+- Rerun on 0edf382, which moves the target bars into the allocation legend
+  rows (`npm run test:verify`: 3,332 passed), with a fresh E2E APK built from
+  it on the same emulator: `e2e/allocation-targets.yaml` PASS, 0m 49s;
+  `npm run maestro:smoke` 15 passed, 0 failed, 15m 12s. The Dashboard was
+  captured again in light and dark.
 - Screens checked by hand in light and dark at font scale 1.0, and light at
   1.5: the Dashboard target bars, the new-money split (visual QA data, targets
   40/20/30/10: about ₹30,44,648, matching a calculation by hand), the target
