@@ -53,6 +53,11 @@ function getCashEntryMovement(entry: CashEntry) {
   }
 }
 
+/** An arrow entering a tray for money added to Cash, leaving it for money out. */
+export function cashEntryIcon(type: CashEntry["type"]) {
+  return type === "addition" ? "enter-outline" : "exit-outline";
+}
+
 export function CashEntryRow({
   accessibilityHint = "Opens this cash entry for review and correction",
   correctionHint,
@@ -64,14 +69,20 @@ export function CashEntryRow({
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const stacked = getAdaptiveLayoutMode(fontScale) !== "standard";
-  const isAddition = entry.type === "addition";
   const content = (
     <PremiumCard section style={styles.row} testID={`cash-entry-row-${entry.id}`}>
       <View style={styles.dateRail}>
         <AppText accessibilityLabel={formatDate(entry.date)} color="secondary" variant="caption" weight="bold">
           {entry.date.slice(8, 10)}
         </AppText>
-        <Ionicons name={isAddition ? "arrow-down-outline" : "arrow-up-outline"} size={18} color={colors.text.secondary} accessible={false} />
+        {/* Into or out of Cash, so the icon can't be read as up = more (#808). */}
+        <Ionicons
+          name={cashEntryIcon(entry.type)}
+          size={18}
+          color={colors.text.secondary}
+          accessible={false}
+          testID={`cash-entry-icon-${cashEntryIcon(entry.type)}`}
+        />
       </View>
       <View style={[styles.entryBody, stacked && styles.stackedRow]}>
         <View style={[styles.details, stacked && styles.stackedDetails]}>
