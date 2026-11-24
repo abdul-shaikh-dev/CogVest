@@ -1,4 +1,4 @@
-import { startTransition, useMemo, useState, useSyncExternalStore } from "react";
+import { startTransition, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { buildPpfExcludedChartHistory } from "@/src/domain/calculations/ppfExcludedChartHistory";
 import type { StoreApi } from "zustand/vanilla";
 
@@ -61,6 +61,15 @@ type UseProgressInput = {
   store?: StoreApi<PortfolioStoreState>;
 };
 
+/**
+ * How long a month-end check may go without settling or reporting progress
+ * before Progress stops saying "Checking" and offers Try again (#804).
+ */
+export const monthEndCheckStallMs = 15_000;
+
+const stalledCheckMessage =
+  "Your stored history is shown. Try again to check for missing months.";
+
 export function useProgress({
   historicalPriceFetcher = resolveHistoricalPrice,
   now = new Date(),
@@ -103,6 +112,20 @@ export function useProgress({
       targetMonth: getPreviousCompletedMonth(now),
       warnings: [],
     }));
+  const [checkPending, setCheckPending] = useState(false);
+  // A check that throws, hangs or stops reporting progress must not leave
+  // Progress on "Checking" forever (#804). Each progress update restarts
+  // the wait, so long multi-month runs are not cut short.
+  useEffect(() => {
+    if (!checkPending) return undefined;
+    const timer = setTimeout(() => {
+      setCheckPending(false);
+      setSnapshotAutomationStatus((current) => current.status === "idle"
+        ? { ...current, message: stalledCheckMessage, progress: null, status: "stalled" }
+        : current);
+    }, monthEndCheckStallMs);
+    return () => clearTimeout(timer);
+  }, [activeAutomationProgress, checkPending]);
   const [portfolioChartRange, setPortfolioChartRange] =
     useState<MonthlyChartRange>(() =>
       getDefaultMonthlyChartRange(chartSnapshots.length),
@@ -282,15 +305,35 @@ export function useProgress({
   function ensureMonthEndSnapshot(
     { retryProvisional = true }: { retryProvisional?: boolean } = {},
   ) {
-    return ensureMonthEndSnapshotForStore({
+    setCheckPending(true);
+    setSnapshotAutomationStatus((current) => current.status === "stalled" || current.status === "skipped"
+      ? { ...current, message: "Checking completed months for missing snapshots.", status: "idle" }
+      : current);
+    const run = ensureMonthEndSnapshotForStore({
       historicalPriceFetcher,
       now,
       // The no-op check lands in the same task as the first render; let it yield (#138).
-      onSettled: (result) => startTransition(() =>
-        setSnapshotAutomationStatus(automationStatusFromResult(result))),
+      onSettled: (result) => startTransition(() => {
+        setCheckPending(false);
+        setSnapshotAutomationStatus(automationStatusFromResult(result));
+      }),
       retryProvisional,
       store,
     });
+    run.catch(() => {
+      setCheckPending(false);
+      setSnapshotAutomationStatus((current) => current.status === "idle"
+        ? { ...current, message: stalledCheckMessage, progress: null, status: "stalled" }
+        : current);
+    });
+    return run;
+  }
+
+  /** For sessions that never run checks, such as visual QA (#804). */
+  function skipMonthEndSnapshotCheck() {
+    setSnapshotAutomationStatus((current) => current.status === "idle"
+      ? { ...current, message: "Showing stored month-end snapshots. Month-end checks are off in this session.", status: "skipped" }
+      : current);
   }
 
   const progressSnapshotAutomationStatus = presentSnapshotAutomationStatus({
@@ -330,6 +373,7 @@ export function useProgress({
     setField,
     setPortfolioChartRange,
     setPortfolioChartCustomRange,
+    skipMonthEndSnapshotCheck,
     snapshotAutomationStatus: progressSnapshotAutomationStatus,
     snapshotDrift,
     totalInvested,

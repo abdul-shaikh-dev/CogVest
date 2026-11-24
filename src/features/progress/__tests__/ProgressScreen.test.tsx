@@ -8,6 +8,7 @@ import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
 import { createEpfReportingFixture, epfReportingDate } from "@/src/testing/epfReportingFixture";
 import * as visualQaSeed from "@/src/testing/visualQaSeed";
+import { monthEndCheckStallMs } from "../useProgress";
 import { colors, interaction } from "@/src/theme";
 import type { Asset, CashEntry, MonthlySnapshot, OpeningPosition } from "@/src/types";
 
@@ -543,6 +544,93 @@ describe("ProgressScreen", () => {
     expect(screen.queryByLabelText(/Review.*month-end/u)).toBeNull();
     await fireEvent.press(screen.getByLabelText("Retry monthly history"));
     await waitFor(() => expect(historicalPriceFetcher).toHaveBeenCalledTimes(2));
+  });
+
+  describe("a month-end check that cannot finish (#804)", () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    function storeWithMissingMonth() {
+      const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+      store.getState().addAsset(stockAsset);
+      store.getState().addOpeningPosition({
+        assetId: stockAsset.id,
+        averageCostPrice: 1450,
+        date: "2026-07-15T00:00:00.000Z",
+        id: "opening-stalled-check",
+        quantity: 10,
+      });
+      return store;
+    }
+
+    it("stops saying Checking when a price request never settles, and offers Try again", async () => {
+      jest.useFakeTimers();
+      const historicalPriceFetcher = jest.fn(() => new Promise<never>(() => undefined));
+      const screen = await render(
+        <ProgressScreen
+          historicalPriceFetcher={historicalPriceFetcher}
+          now={new Date("2026-08-02T10:00:00.000Z")}
+          store={storeWithMissingMonth()}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByText("Building monthly history")).toBeTruthy();
+
+      await act(async () => {
+        jest.advanceTimersByTime(monthEndCheckStallMs);
+      });
+      expect(screen.getByText("Couldn't finish checking month-end history")).toBeTruthy();
+      expect(screen.queryByText("Building monthly history")).toBeNull();
+      await fireEvent.press(screen.getByLabelText("Snapshot status details"));
+      expect(screen.getByText("Your stored history is shown. Try again to check for missing months.")).toBeTruthy();
+      await fireEvent.press(screen.getByLabelText("Retry monthly history"));
+      expect(screen.getByText("Building monthly history")).toBeTruthy();
+    });
+
+    it("offers Try again when the check fails outright", async () => {
+      const store = storeWithMissingMonth();
+      const addMonthlySnapshot = store.getState().addMonthlySnapshot;
+      store.setState({ addMonthlySnapshot: () => { throw new Error("storage unavailable"); } });
+      const screen = await render(
+        <ProgressScreen
+          historicalPriceFetcher={jest.fn().mockResolvedValue({
+            ok: true,
+            quote: {
+              assetId: stockAsset.id,
+              asOfMonth: "2026-07",
+              basis: "historical-close",
+              currency: "INR",
+              fetchedAt: "2026-08-01T10:00:00.000Z",
+              price: 1500,
+              source: "yahoo",
+            },
+          })}
+          now={new Date("2026-08-02T10:00:00.000Z")}
+          store={store}
+        />,
+      );
+      expect(await screen.findByText("Couldn't finish checking month-end history")).toBeTruthy();
+      store.setState({ addMonthlySnapshot });
+    });
+
+    it("says the stored history is shown when this session never checks", async () => {
+      const qa = jest.spyOn(visualQaSeed, "isVisualQaSessionActive").mockReturnValue(true);
+      const historicalPriceFetcher = jest.fn();
+      const screen = await render(
+        <ProgressScreen
+          historicalPriceFetcher={historicalPriceFetcher}
+          now={new Date("2026-08-02T10:00:00.000Z")}
+          store={storeWithMissingMonth()}
+        />,
+      );
+      expect(await screen.findByText("Showing stored monthly history")).toBeTruthy();
+      expect(screen.queryByText("Checking monthly history")).toBeNull();
+      expect(historicalPriceFetcher).not.toHaveBeenCalled();
+      qa.mockRestore();
+    });
   });
 
   it("directs incomplete PPF history to Holdings without listing every month", async () => {

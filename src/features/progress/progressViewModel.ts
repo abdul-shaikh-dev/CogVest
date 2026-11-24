@@ -169,7 +169,9 @@ export const snapshotStatusTitles: Record<
   ProgressSnapshotAutomationStatus["kind"],
   string
 > = {
+  "check-stalled": "Couldn't finish checking month-end history",
   checking: "Checking monthly history",
+  "not-checked": "Showing stored monthly history",
   complete: "Monthly history is up to date",
   empty: "No portfolio history yet",
   estimated: "Some months use estimates",

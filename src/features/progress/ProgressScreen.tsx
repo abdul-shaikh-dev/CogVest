@@ -103,7 +103,10 @@ export function ProgressScreen({
   const selectedSummary = progress.monthlySummaries.find(item => item.snapshot.month === summaryMonth) ?? progress.latestSummary;
 
   useEffect(() => {
-    if (hasRunAutomationRef.current || isVisualQaSessionActive()) {
+    if (hasRunAutomationRef.current) return;
+    if (isVisualQaSessionActive()) {
+      hasRunAutomationRef.current = true;
+      progress.skipMonthEndSnapshotCheck();
       return;
     }
 

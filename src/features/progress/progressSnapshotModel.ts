@@ -60,7 +60,9 @@ export type ProgressFormValues = ReturnType<typeof emptyProgressFormValues>;
 export type ProgressFormErrors = Partial<Record<keyof ProgressFormValues, string>>;
 
 export type ProgressSnapshotStatusKind =
+  | "check-stalled"
   | "checking"
+  | "not-checked"
   | "complete"
   | "empty"
   | "estimated"
@@ -83,7 +85,11 @@ export type SnapshotAutomationStatusState = {
   progress: SnapshotAutomationProgress | null;
   provisionalMonths: string[];
   snapshot: MonthlySnapshot | null;
-  status: GeneratedSnapshotStatus | "idle";
+  /**
+   * `idle` while a check is pending, `stalled` when it failed or stopped
+   * reporting, `skipped` when this session does not run checks (#804).
+   */
+  status: GeneratedSnapshotStatus | "idle" | "skipped" | "stalled";
   targetMonth: string;
   warnings: string[];
 };
@@ -138,6 +144,8 @@ export function getSnapshotStatusKind({
   }
   if (status.warnings.length > 0) return "records-incomplete";
   if (status.provisionalMonths.length > 0) return "estimated";
+  if (status.status === "stalled") return "check-stalled";
+  if (status.status === "skipped") return "not-checked";
   if (status.status === "idle") return "checking";
   if (status.status === "insufficient-data" && !hasStoredHistory) return "waiting-for-first-month";
   return "complete";
@@ -649,8 +657,10 @@ export function presentSnapshotAutomationStatus({
   ppfAccounts: PpfAccount[];
   reconstructedSnapshots: MonthlySnapshot[] | null;
 }): ProgressSnapshotAutomationStatus {
+  // A stalled check outranks its last progress report, which can no longer
+  // be trusted to move (#804).
   const displayedAutomationStatus: SnapshotAutomationStatusState =
-    activeProgress
+    activeProgress && automationStatus.status !== "stalled"
       ? {
           message: "Building monthly history.",
           pendingMonths: [],
