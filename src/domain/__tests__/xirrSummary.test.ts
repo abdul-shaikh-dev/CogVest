@@ -33,6 +33,22 @@ describe("XIRR summary", () => {
     expect(summary.status === "rate" && summary.flows.map((flow) => flow.source)).toEqual(["trade", "distribution", "terminal"]);
   });
 
+  it("gives one reason, not two, for a holding with only an opening position (#807)", () => {
+    const summary = assetXirrSummary(state({
+      trades: [],
+      openingPositions: [{ id: "open", assetId: "stock", date: "2025-01-01", quantity: 100, averageCostPrice: 100 }],
+    }), "stock", today);
+    expect(summary).toMatchObject({
+      status: "unavailable",
+      messages: ["Purchase history before the opening position isn't recorded."],
+    });
+  });
+
+  it("still says no purchases are recorded when there is no opening position either", () => {
+    expect(assetXirrSummary(state({ trades: [] }), "stock", today))
+      .toMatchObject({ status: "unavailable", messages: ["No purchases are recorded."] });
+  });
+
   it("blocks on a stale holding price but only notes missing payouts", () => {
     expect(assetXirrSummary(state({ distributionCoverage: [], quoteCache: { stock: quote(110, "2025-12-01T00:00:00Z") } }), "stock", today))
       .toMatchObject({ status: "unavailable", messages: ["Price is older than 7 days."] });

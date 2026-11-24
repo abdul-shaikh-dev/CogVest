@@ -147,8 +147,15 @@ function noRate(message: string): XirrSummary {
 
 export function summariseXirr(input: XirrInputResult): XirrSummary {
   if (input.status === "unavailable") {
+    // An opening position is not a purchase flow, so a holding with only an
+    // opening position also reports "no purchases". Showing both reads as a
+    // contradiction; the missing earlier history is the real gap (#807).
+    const openingHistoryAssets = new Set(input.reasons
+      .filter((item) => item.reason === "opening-history").map((item) => item.assetId));
+    const reasons = input.reasons.filter((item) =>
+      item.reason !== "no-purchases" || !openingHistoryAssets.has(item.assetId));
     const blockers = inputMessages.flatMap(([reason, fallback]): XirrBlocker[] => {
-      const issues = input.reasons.filter((item) => item.reason === reason);
+      const issues = reasons.filter((item) => item.reason === reason);
       if (!issues.length) return [];
       const earliest = issues.find((item) => item.earliest)?.earliest;
       const message = earliest ? earliestRecordMessage(earliest) : fallback;
