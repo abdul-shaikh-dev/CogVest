@@ -21,6 +21,7 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     gap: spacing.sm,
   },
   metric: { flexGrow: 1, flexBasis: "auto", minWidth: 0 },
+  limit: { gap: spacing.sm },
   metricRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   stacked: { flexDirection: "column", alignItems: "stretch" },
   stackedValue: { flex: 0, textAlign: "left" },

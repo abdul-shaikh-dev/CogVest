@@ -439,4 +439,15 @@ describe("PpfAccountScreen", () => {
     await fireEvent.press(getByTestId("continue-portfolio-setup"));
     expect(onContinuePortfolioSetup).toHaveBeenCalledTimes(1);
   });
+
+  it("shows this year's contributions against the ₹1.5 lakh limit as a bar, hidden when masked (#764)", async () => {
+    const store = createPortfolioStore({ now: () => now, storage: createMemoryJsonStorage() });
+    store.getState().addPpfAccount({ ...account, baselineFinancialYearContributions: { amount: 50_000, financialYearStart: 2026 } });
+    const props = { accountId: account.id, now, onBack: jest.fn(), onComplete: jest.fn(), onEntry: jest.fn(), store };
+    const screen = await render(<PpfAccountScreen {...props} />);
+    expect(screen.getByTestId("ppf-contribution-limit").props.accessibilityLabel).toBe("33% of the ₹1.5 lakh yearly limit");
+
+    await act(async () => store.getState().updatePreferences({ maskWealthValues: true }));
+    expect(screen.queryByTestId("ppf-contribution-limit")).toBeNull();
+  });
 });

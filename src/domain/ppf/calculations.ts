@@ -13,7 +13,8 @@ import {
 import { getFinancialYearStart } from "./validation";
 import { compareCodeUnits } from "@/src/domain/ordering";
 
-const annualContributionMaximum = 150_000;
+/** The PPF yearly contribution limit, in INR. */
+export const annualContributionMaximum = 150_000;
 const annualContributionMinimum = 500;
 
 export function comparePpfLedgerEntries(left: PpfLedgerEntry, right: PpfLedgerEntry) {

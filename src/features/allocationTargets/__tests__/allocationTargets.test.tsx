@@ -19,11 +19,13 @@ describe("target allocation on the Dashboard (#764)", () => {
     expect(screen.queryByTestId("dashboard-targets")).toBeNull();
 
     await act(async () => store.getState().saveAllocationTargets({ cash: 0, crypto: 0, debt: 50, equity: 50 }));
-    expect(screen.getByTestId("dashboard-target-equity")).toHaveTextContent("Equity0% · target 50% · 50 points below");
-    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent("Debt100% · target 50% · 50 points above");
-    expect(screen.getByTestId("dashboard-target-cash")).toHaveTextContent("Cash0% · target 0% · on target");
-    expect(screen.getByTestId("dashboard-targets-new-money"))
-      .toHaveTextContent("About ₹2,00,000 of new money would bring every class to its target without selling. By class:");
+    expect(screen.getByTestId("dashboard-target-equity").props.accessibilityLabel)
+      .toBe("Equity, 0% now, target 50%, 50 points below");
+    expect(screen.getByTestId("dashboard-target-gap-debt")).toHaveTextContent(/50 points above$/u);
+    expect(screen.getByTestId("dashboard-target-debt")).toHaveTextContent(/100% now · target 50%/u);
+    expect(screen.getByTestId("dashboard-target-gap-cash")).toHaveTextContent(/on target$/u);
+    expect(screen.getByTestId("dashboard-targets-new-money-total")).toHaveTextContent("About ₹2,00,000");
+    expect(screen.getByTestId("dashboard-targets-new-money")).toHaveTextContent("An estimate, without selling. By class:");
     expect(screen.getByTestId("dashboard-target-new-money-equity").props.accessibilityLabel).toBe("₹2,00,000.00");
     expect(screen.queryByTestId("dashboard-target-new-money-debt")).toBeNull();
     expect(screen.queryByText(/\b(buy|sell)\b/iu)).toBeNull();
@@ -38,7 +40,7 @@ describe("target allocation on the Dashboard (#764)", () => {
     expect(screen.queryByTestId("dashboard-target-equity")).toBeNull();
     await fireEvent.press(screen.getByTestId("dashboard-targets-toggle"));
     expect(screen.getByTestId("dashboard-target-equity")).toBeTruthy();
-    expect(screen.getByTestId("dashboard-targets-new-money")).toHaveTextContent(/^About ₹•+ of new money/u);
+    expect(screen.getByTestId("dashboard-targets-new-money-total").props.accessibilityLabel).toBe("Amount hidden");
     expect(screen.getByTestId("dashboard-target-new-money-equity").props.accessibilityLabel).toBe("Amount hidden");
   });
 

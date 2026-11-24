@@ -1,5 +1,4 @@
-import { MASKED_INR_VALUE } from "@/src/components/common";
-import type { AllocationDrift } from "@/src/domain/allocationTargets";
+import type { AllocationDrift, AllocationDriftRow } from "@/src/domain/allocationTargets";
 import type { ReportingAllocationClass } from "@/src/domain/calculations/reportingAllocation";
 import { formatINR } from "@/src/domain/formatters";
 
@@ -17,12 +16,17 @@ export function gapText(gapPts: number) {
 }
 
 /** Whole rupees: the amount is a guide, not an order. */
-function wholeRupees(value: number) {
+export function wholeRupees(value: number) {
   return formatINR(Math.ceil(value)).replace(/\.00$/u, "");
 }
 
-/** Neutral wording for the new money that would reach the targets without selling. */
-export function newMoneySummary(drift: Extract<AllocationDrift, { status: "available" }>, masked: boolean) {
+/** What a screen reader says for one class row. */
+export function rowAccessibilityLabel(row: AllocationDriftRow) {
+  return `${allocationLabel(row.assetClass)}, ${row.actualPct}% now, target ${row.targetPct}%, ${gapText(row.gapPts)}`;
+}
+
+/** The line under the new-money amount, or in its place when there is none (#764). */
+export function newMoneyNote(drift: Extract<AllocationDrift, { status: "available" }>) {
   if (drift.newMoneyInr === null) {
     const labels = drift.newMoneyBlockedBy.map(allocationLabel);
     const blocked = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}` : labels[0];
@@ -30,6 +34,5 @@ export function newMoneySummary(drift: Extract<AllocationDrift, { status: "avail
     return `${blocked} ${plural ? "hold" : "holds"} money but ${plural ? "have" : "has"} a 0% target, so new money alone cannot match these targets.`;
   }
   if (drift.newMoneyInr < 1) return "Every class is at its target.";
-  const amount = masked ? MASKED_INR_VALUE : wholeRupees(drift.newMoneyInr);
-  return `About ${amount} of new money would bring every class to its target without selling. By class:`;
+  return "An estimate, without selling. By class:";
 }
