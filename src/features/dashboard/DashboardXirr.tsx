@@ -6,6 +6,7 @@ import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters
 import { type XirrSummary, xirrFlowTotals } from "@/src/domain/xirrSummary";
 
 import { useStyles } from "./dashboardStyles";
+import { DashboardBenchmark } from "./DashboardBenchmark";
 import { DashboardXirrBlockers } from "./DashboardXirrBlockers";
 
 type XirrProps = {
@@ -105,7 +106,10 @@ export function DashboardXirrDetails({ masked, names = {}, onConfirmPayouts, onR
           onSetBasis={onSetBasis}
         />
       ) : (
-        <XirrRateDetails masked={masked} summary={summary} />
+        <>
+          <XirrRateDetails masked={masked} summary={summary} />
+          <DashboardBenchmark summary={summary} />
+        </>
       )}
       {summary.status === "rate" && (summary.payoutGapAssetIds?.length ?? 0) > 0 && onConfirmPayouts ? (
         <AppButton onPress={onConfirmPayouts} testID="dashboard-xirr-confirm-payouts" title="Confirm payouts" variant="secondary" />
