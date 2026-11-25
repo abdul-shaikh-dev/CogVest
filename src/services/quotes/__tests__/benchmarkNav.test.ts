@@ -24,8 +24,8 @@ describe("benchmark NAV windows (#765)", () => {
     const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
     const loader = jest.fn(async (request: DailyPriceRequest) => entryFor(request));
 
-    expect(readCachedBenchmarkNav(cache, "2025-06-01", "2026-11-26")).toEqual({ status: "missing" });
-    const loaded = await loadBenchmarkNav(cache, "2025-06-01", "2026-11-26", loader);
+    expect(readCachedBenchmarkNav(cache, "2025-06-01", "2026-11-26", now)).toEqual({ status: "missing" });
+    const loaded = await loadBenchmarkNav(cache, "2025-06-01", "2026-11-26", loader, now);
 
     expect(loader).toHaveBeenCalledTimes(2);
     expect(loader.mock.calls.map(([request]) => request.providerId)).toEqual(["INF789F01XA0", "INF789F01XA0"]);
@@ -33,14 +33,24 @@ describe("benchmark NAV windows (#765)", () => {
       { close: 100, date: "2025-05-26" }, { close: 101, date: "2025-12-31" },
       { close: 100, date: "2026-01-01" }, { close: 101, date: "2026-11-26" },
     ], status: "ready" });
-    expect(readCachedBenchmarkNav(cache, "2025-06-01", "2026-11-26")).toEqual(loaded);
-    await loadBenchmarkNav(cache, "2025-06-01", "2026-11-26", loader);
+    expect(readCachedBenchmarkNav(cache, "2025-06-01", "2026-11-26", now)).toEqual(loaded);
+    await loadBenchmarkNav(cache, "2025-06-01", "2026-11-26", loader, now);
     expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  it("ends the last window on the UTC date while the local date is a day ahead", async () => {
+    const earlyIst = new Date("2026-11-25T20:00:00Z"); // 01:30 on 26 Nov in India
+    const cache = createDailyPriceCache({ now: () => earlyIst, storage: createMemoryJsonStorage() });
+    const loader = jest.fn(async (request: DailyPriceRequest) => ({ ...entryFor(request), fetchedAt: earlyIst.toISOString() }));
+
+    await expect(loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", loader, earlyIst)).resolves.toMatchObject({ status: "ready" });
+    expect(loader.mock.calls[0][0]).toMatchObject({ from: "2026-02-23", to: "2026-11-25" });
+    expect(readCachedBenchmarkNav(cache, "2026-03-01", "2026-11-26", earlyIst)).toMatchObject({ status: "ready" });
   });
 
   it("says AMFI could not be reached when a window fails", async () => {
     const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
-    const result = await loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", async () => { throw new Error("offline"); });
+    const result = await loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", async () => { throw new Error("offline"); }, now);
     expect(result).toEqual({ message: expect.stringContaining("couldn't be loaded from AMFI"), status: "failed" });
   });
 });

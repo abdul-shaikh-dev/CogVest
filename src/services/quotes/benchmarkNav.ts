@@ -47,10 +47,20 @@ function merge(entries: DailyPriceEntry[]): NavPoint[] {
   return [...byDate].map(([date, close]) => ({ close, date })).sort((left, right) => left.date.localeCompare(right.date));
 }
 
+/**
+ * Providers date "today" in UTC, so the last window stops there. In India the
+ * local date runs ahead of UTC until 05:30; the end date then takes the
+ * previous NAV, within the holiday gap.
+ */
+function providerWindows(from: string, to: string, now: Date) {
+  const utcToday = now.toISOString().slice(0, 10);
+  return benchmarkWindows(from, to < utcToday ? to : utcToday);
+}
+
 /** NAV already cached for the whole period, without any network request. */
-export function readCachedBenchmarkNav(cache: Cache, from: string, to: string): BenchmarkNavResult {
+export function readCachedBenchmarkNav(cache: Cache, from: string, to: string, now = new Date()): BenchmarkNavResult {
   const entries: DailyPriceEntry[] = [];
-  for (const window of benchmarkWindows(from, to)) {
+  for (const window of providerWindows(from, to, now)) {
     const cached = cache.read(benchmarkRequest(window));
     if (cached.status !== "hit") return { status: "missing" };
     entries.push(cached.entry);
@@ -59,9 +69,15 @@ export function readCachedBenchmarkNav(cache: Cache, from: string, to: string): 
 }
 
 /** Loads every window, fetching only those not cached (and the current one when a day old). */
-export async function loadBenchmarkNav(cache: Cache, from: string, to: string, loader: Loader = fetchAssetHistory): Promise<BenchmarkNavResult> {
+export async function loadBenchmarkNav(
+  cache: Cache,
+  from: string,
+  to: string,
+  loader: Loader = fetchAssetHistory,
+  now = new Date(),
+): Promise<BenchmarkNavResult> {
   const entries: DailyPriceEntry[] = [];
-  for (const window of benchmarkWindows(from, to)) {
+  for (const window of providerWindows(from, to, now)) {
     const request = benchmarkRequest(window);
     const cached = cache.read(request);
     if (cached.status === "hit" && cached.freshness === "current") {
