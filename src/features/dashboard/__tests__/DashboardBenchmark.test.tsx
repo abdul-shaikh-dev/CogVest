@@ -61,3 +61,33 @@ describe("Dashboard benchmark (#765)", () => {
     expect(screen.getByTestId("dashboard-benchmark-retry")).toBeTruthy();
   });
 });
+
+describe("Dashboard benchmark chart (#765)", () => {
+  const monthly = [{ close: 100, date: "2025-11-20" }, { close: 102, date: "2025-11-28" }, { close: 105, date: "2026-05-29" },
+    { close: 110, date: "2026-11-20" }];
+  function monthlyLoader(request: DailyPriceRequest): Promise<DailyPriceEntry> {
+    const points = monthly.filter((point) => point.date >= request.from && point.date <= request.to);
+    return Promise.resolve({ ...request, complete: true, fetchedAt: now.toISOString(), points });
+  }
+  const snapshots = [{ month: "2025-11", portfolioValue: 1010 }, { month: "2026-05", portfolioValue: 1100 }];
+
+  it("draws the portfolio against the fund and reads the latest values, masked when values are hidden", async () => {
+    const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
+    const screen = await render(<DashboardBenchmark cache={cache} loader={monthlyLoader} monthlySnapshots={snapshots} summary={summary} />);
+    await fireEvent.press(screen.getByTestId("dashboard-benchmark-compare"));
+    await waitFor(() => expect(screen.getByTestId("dashboard-benchmark-chart")).toBeTruthy());
+    expect(screen.getByText("Same money in the Nifty 50 fund")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-benchmark-readout")).toHaveTextContent("NowPortfolio ₹1,200.00 · Fund ₹1,100.00");
+
+    const masked = await render(<DashboardBenchmark cache={cache} masked monthlySnapshots={snapshots} summary={summary} />);
+    expect(masked.getByTestId("dashboard-benchmark-readout")).toHaveTextContent("NowPortfolio ₹•••• · Fund ₹••••");
+  });
+
+  it("explains the missing chart when there are too few month-end snapshots", async () => {
+    const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
+    const screen = await render(<DashboardBenchmark cache={cache} loader={monthlyLoader} monthlySnapshots={snapshots.slice(0, 1)} summary={summary} />);
+    await fireEvent.press(screen.getByTestId("dashboard-benchmark-compare"));
+    await waitFor(() => expect(screen.getByTestId("dashboard-benchmark-chart-few")).toBeTruthy());
+    expect(screen.queryByTestId("dashboard-benchmark-chart")).toBeNull();
+  });
+});

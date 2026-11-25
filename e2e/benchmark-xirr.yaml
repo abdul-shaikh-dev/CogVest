@@ -41,6 +41,17 @@ appId: ${APP_ID}
 - assertVisible:
     id: dashboard-benchmark-note
     text: 'Hypothetical\..*UTI Nifty 50 Index Fund.*Not advice\.'
+# Visual QA data has month-end snapshots in the period, so the chart is drawn.
+- scrollUntilVisible:
+    element:
+      id: dashboard-benchmark-readout
+    direction: DOWN
+- assertVisible:
+    id: dashboard-benchmark-chart
+- assertVisible:
+    id: dashboard-benchmark-readout
+    text: 'Now.*Portfolio ₹[\d,.]+ · Fund ₹[\d,.]+'
+- takeScreenshot: .expo/benchmark-xirr-chart
 
 # Closing and reopening the breakdown reads the comparison from cached NAV
 # without asking again. (A restart can move the start date once month-end

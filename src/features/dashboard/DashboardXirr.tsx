@@ -4,6 +4,7 @@ import { Pressable, View } from "react-native";
 import { AppButton, AppText, MaskedValue } from "@/src/components/common";
 import { formatDate, formatINR, formatPercentage } from "@/src/domain/formatters";
 import { type XirrSummary, xirrFlowTotals } from "@/src/domain/xirrSummary";
+import type { MonthlySnapshot } from "@/src/types";
 
 import { useStyles } from "./dashboardStyles";
 import { DashboardBenchmark } from "./DashboardBenchmark";
@@ -11,6 +12,8 @@ import { DashboardXirrBlockers } from "./DashboardXirrBlockers";
 
 type XirrProps = {
   masked: boolean;
+  /** Stored month-end values, for the benchmark chart (#765). */
+  monthlySnapshots?: readonly Pick<MonthlySnapshot, "month" | "portfolioValue">[];
   /** Holding and account names for the blocker checklist. */
   names?: Record<string, string>;
   /** Opens bulk payout confirmation for the holdings behind the payouts note (#619). */
@@ -83,7 +86,7 @@ export function DashboardXirrTile({ expanded, onToggle, stacked = false, summary
   );
 }
 
-export function DashboardXirrDetails({ masked, names = {}, onConfirmPayouts, onReviewPayouts, onSetBasis, scope, summary }: XirrProps) {
+export function DashboardXirrDetails({ masked, monthlySnapshots, names = {}, onConfirmPayouts, onReviewPayouts, onSetBasis, scope, summary }: XirrProps) {
   const styles = useStyles();
   return (
     <View style={styles.priceDetails} testID="dashboard-xirr-details">
@@ -108,7 +111,7 @@ export function DashboardXirrDetails({ masked, names = {}, onConfirmPayouts, onR
       ) : (
         <>
           <XirrRateDetails masked={masked} summary={summary} />
-          <DashboardBenchmark summary={summary} />
+          <DashboardBenchmark masked={masked} monthlySnapshots={monthlySnapshots} summary={summary} />
         </>
       )}
       {summary.status === "rate" && (summary.payoutGapAssetIds?.length ?? 0) > 0 && onConfirmPayouts ? (

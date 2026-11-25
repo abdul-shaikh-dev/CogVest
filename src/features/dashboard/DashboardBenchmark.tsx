@@ -2,22 +2,26 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { AppButton, AppText } from "@/src/components/common";
-import { benchmarkFund, benchmarkXirr, type BenchmarkXirr } from "@/src/domain/benchmarkXirr";
+import { benchmarkFund, benchmarkXirr, type BenchmarkXirr, type NavPoint } from "@/src/domain/benchmarkXirr";
 import { formatDate, formatPercentage } from "@/src/domain/formatters";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
 import { loadBenchmarkNav, readCachedBenchmarkNav, type BenchmarkNavResult } from "@/src/services/quotes/benchmarkNav";
 import { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
+import type { MonthlySnapshot } from "@/src/types";
+
+import { buildBenchmarkChartData } from "./benchmarkChartModel";
+import { DashboardBenchmarkChart } from "./DashboardBenchmarkChart";
 
 import { useStyles } from "./dashboardStyles";
 
 type RateSummary = Extract<XirrSummary, { status: "rate" }>;
 type Cache = Parameters<typeof readCachedBenchmarkNav>[0];
-type State = { status: "idle" } | { status: "loading" } | { status: "failed"; message: string } | { status: "done"; result: BenchmarkXirr };
+type State = { status: "idle" } | { status: "loading" } | { status: "failed"; message: string } | { status: "done"; points: readonly NavPoint[]; result: BenchmarkXirr };
 
 function compute(summary: RateSummary, nav: BenchmarkNavResult): State {
   if (nav.status === "failed") return { message: nav.message, status: "failed" };
   if (nav.status === "missing") return { status: "idle" };
-  return { result: benchmarkXirr(summary.flows, summary.endDate, nav.points), status: "done" };
+  return { points: nav.points, result: benchmarkXirr(summary.flows, summary.endDate, nav.points), status: "done" };
 }
 
 /** Percentage points between two annual rates, written out so it never relies on colour. */
@@ -32,9 +36,11 @@ export function benchmarkGapText(portfolioRate: number, benchmarkRate: number) {
  * in a Nifty 50 index fund instead. NAV comes from AMFI only when asked, then
  * from the cache. Information, not advice.
  */
-export function DashboardBenchmark({ cache: suppliedCache, loader, summary }: {
+export function DashboardBenchmark({ cache: suppliedCache, loader, masked = false, monthlySnapshots = [], summary }: {
   cache?: Cache;
   loader?: Parameters<typeof loadBenchmarkNav>[3];
+  masked?: boolean;
+  monthlySnapshots?: readonly Pick<MonthlySnapshot, "month" | "portfolioValue">[];
   summary: RateSummary;
 }) {
   const styles = useStyles();
@@ -47,6 +53,11 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, summary }: {
     setState({ key, value: compute(summary, readCachedBenchmarkNav(cache, summary.startDate, summary.endDate)) });
   }
   const value = state.key === key ? state.value : { status: "idle" as const };
+  const chart = value.status === "done" && value.result.status === "rate"
+    ? buildBenchmarkChartData({
+      endDate: summary.endDate, flows: summary.flows, points: value.points, snapshots: monthlySnapshots, startDate: summary.startDate,
+    })
+    : undefined;
 
   function load() {
     setState({ key, value: { status: "loading" } });
@@ -84,16 +95,22 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, summary }: {
       {value.status === "done" && value.result.status === "rate" ? (
         <>
           <View style={styles.xirrLine}>
-            <AppText color="secondary" variant="caption">Index fund, same flows</AppText>
+            <AppText color="secondary" variant="caption">Nifty 50 index fund, same money</AppText>
             <AppText testID="dashboard-benchmark-rate" variant="caption" weight="bold">
               {`${formatPercentage(value.result.rate * 100)} a year`}
             </AppText>
           </View>
-          <AppText testID="dashboard-benchmark-gap" variant="caption">
+          <AppText testID="dashboard-benchmark-gap" variant="caption" weight="bold">
             {`Your portfolio: ${benchmarkGapText(summary.rate, value.result.rate)}`}
           </AppText>
+          {chart?.status === "chart" ? <DashboardBenchmarkChart data={chart} masked={masked} /> : null}
+          {chart?.status === "few" ? (
+            <AppText color="secondary" testID="dashboard-benchmark-chart-few" variant="caption">
+              The chart appears once there are a few month-end snapshots in this period.
+            </AppText>
+          ) : null}
           <AppText color="secondary" testID="dashboard-benchmark-note" variant="caption">
-            {`Hypothetical. Each amount is bought or sold in ${benchmarkFund.name} at that day's NAV from AMFI, valued at the NAV of ${formatDate(value.result.navAsOf)}. Your portfolio includes Cash, which the fund doesn't hold. Not advice.`}
+            {`Hypothetical. The same money in and out, on the same dates, in ${benchmarkFund.name}, at AMFI NAV to ${formatDate(value.result.navAsOf)}. Your portfolio includes Cash; the fund doesn't. Not advice.`}
           </AppText>
         </>
       ) : null}

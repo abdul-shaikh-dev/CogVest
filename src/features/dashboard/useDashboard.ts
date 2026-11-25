@@ -38,7 +38,7 @@ import {
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
 import { wholePortfolioScope, wholePortfolioXirrSummary, xirrNames } from "./portfolioXirr";
-import type { AllocationTargets, DisplayMode, Holding } from "@/src/types";
+import type { AllocationTargets, DisplayMode, Holding, MonthlySnapshot } from "@/src/types";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   calculatePpfPortfolioSummary,
@@ -70,6 +70,8 @@ export type DashboardState = {
   wholePortfolioXirr: XirrSummary;
   wholePortfolioXirrScope: string;
   xirrNames: Record<string, string>;
+  /** Stored month-end values, for the benchmark chart (#765). */
+  monthlySnapshots: readonly Pick<MonthlySnapshot, "month" | "portfolioValue">[];
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
@@ -225,6 +227,7 @@ export function useDashboard({
     wholePortfolioXirr,
     wholePortfolioXirrScope: wholePortfolioScope(snapshot, now),
     xirrNames: xirrNames(snapshot),
+    monthlySnapshots: snapshot.monthlySnapshots,
     ppfConfirmedBalance: derived.ppfConfirmedBalance,
     allocation: derived.allocation,
     allocationTargets: snapshot.preferences.allocationTargets,
