@@ -36,14 +36,24 @@ function decodeBoundedBase64(encoded: string) {
   return result.text;
 }
 
-export async function pickPpfCsvFile(): Promise<
-  { name: string; size: number; text: string } | undefined
-> {
+type PickedPpfCsvFile = { name: string; size: number; text: string };
+
+export async function pickPpfCsvFile(): Promise<PickedPpfCsvFile | undefined> {
   try {
     const picked = await File.pickFileAsync(undefined, "text/*");
     const selected = Array.isArray(picked) ? picked[0] : picked;
     if (!selected) return undefined;
+    return await readPpfCsvFile(selected);
+  } catch (error) {
+    if (isCancelled(error)) return undefined;
+    if (error instanceof Error && error.message === tooLargeMessage) throw error;
+    throw new Error(readErrorMessage);
+  }
+}
 
+/** Reads a chosen or shared PPF CSV (#771) within the 256 KB limit. */
+export async function readPpfCsvFile(selected: { name?: string; size?: number | null; uri: string }): Promise<PickedPpfCsvFile> {
+  try {
     const name = selectedFileName(selected);
     const size = Number(selected.size);
     if (Number.isFinite(size) && size > ppfCsvMaxBytes) {
@@ -59,7 +69,6 @@ export async function pickPpfCsvFile(): Promise<
 
     return { name, size: ppfCsvByteLength(text), text };
   } catch (error) {
-    if (isCancelled(error)) return undefined;
     if (error instanceof Error && error.message === tooLargeMessage) throw error;
     throw new Error(readErrorMessage);
   }

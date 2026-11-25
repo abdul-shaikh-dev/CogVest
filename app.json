@@ -32,6 +32,7 @@
       "./plugins/withBoundedDocumentRead",
       "./plugins/withModalAppearance",
       "./plugins/withStartupLinks",
+      "./plugins/withShareTarget",
       "./plugins/withAndroidBuildSettings",
       [
         "expo-splash-screen",

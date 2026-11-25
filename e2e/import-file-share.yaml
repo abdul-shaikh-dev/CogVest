@@ -1,0 +1,128 @@
+appId: ${APP_ID}
+---
+# Share to CogVest (#771): a PPF statement shared from the Files app opens the
+# PPF review for the only PPF account, with the file already read. Destructive
+# synthetic-data test; run only on a disposable emulator. The runner copies
+# fixtures/ppf-merge.csv into Downloads.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///ppf-account"
+- tapOn:
+    id: ppf-nickname-input
+- eraseText
+- inputText: "Merge PPF"
+- hideKeyboard
+- tapOn:
+    id: ppf-provider-input
+- inputText: "Synthetic bank"
+- hideKeyboard
+- tapOn:
+    id: ppf-opening-fy-input
+- eraseText
+- inputText: "2020"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-input
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-input
+- inputText: "10000"
+- hideKeyboard
+# Date the opening balance in 2024 so every file row comes after it.
+- scrollUntilVisible:
+    element:
+      id: ppf-balance-date
+    direction: DOWN
+- tapOn:
+    id: ppf-balance-date
+- tapOn:
+    id: android:id/date_picker_header_year
+# selector: the year list in the Android date picker has no testID
+- scrollUntilVisible:
+    element:
+      text: "2024"
+    direction: UP
+# selector: the year list in the Android date picker has no testID
+- tapOn: "2024"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: ppf-fy-contribution-input
+    direction: DOWN
+- tapOn:
+    id: ppf-fy-contribution-input
+- inputText: "0"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: review-ppf-account
+    direction: DOWN
+- tapOn:
+    id: review-ppf-account
+- tapOn:
+    id: save-ppf-account
+- assertVisible:
+    id: ppf-confirmed-balance-card
+# Leave CogVest running in the background, then share from Files.
+- launchApp:
+    appId: com.google.android.documentsui
+    clearState: true
+- runFlow: standalone/helpers/open-downloads.yaml
+- scrollUntilVisible:
+    element: "ppf-merge.csv"
+    direction: DOWN
+    timeout: 20000
+# selector: Files app rows and actions have no CogVest testIDs
+- longPressOn: "ppf-merge.csv"
+- extendedWaitUntil:
+    visible: "1 selected"
+    timeout: 10000
+# selector: the Files app's Share action has no CogVest testID
+- tapOn: "Share"
+# selector: the share sheet lists apps by label (CogVest or CogVest E2E)
+- extendedWaitUntil:
+    visible: "CogVest.*"
+    timeout: 15000
+# selector: the system share sheet lists CogVest only by its label
+- tapOn: "CogVest.*"
+# Detection sends the file to the only PPF account's review, already read.
+- extendedWaitUntil:
+    visible: "Selected: ppf-merge.csv"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-preview
+    direction: DOWN
+- tapOn:
+    id: ppf-merge-preview
+- assertVisible:
+    id: ppf-merge-preview-screen
+- takeScreenshot: .expo/import-file-share-review
+- scrollUntilVisible:
+    element:
+      id: ppf-merge-save
+    direction: DOWN
+- assertVisible:
+    id: ppf-merge-save
+    text: "Add 4 entries"
+- tapOn:
+    id: ppf-merge-save
+- assertVisible:
+    id: ppf-account-screen
+- assertVisible: "₹16,850.00"
+# The saved entries survive a restart.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 30000
+- openLink: "${SCHEME}:///holdings"
+# selector: the account id is generated, so its holdings row is found by name
+- tapOn: "Merge PPF"
+- assertVisible: "₹16,850.00"

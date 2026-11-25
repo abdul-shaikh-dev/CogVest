@@ -24,6 +24,7 @@ import {
 } from "@/src/store";
 import { createId } from "@/src/utils";
 import { usePortfolioSlice } from "@/src/hooks";
+import { useAutoSelectOnce } from "@/src/features/importFile/useAutoSelectOnce";
 
 import {
   assetFromLookupResult,
@@ -46,6 +47,8 @@ export type PickedHoldingsCsv = {
 };
 
 type UseHoldingImportOptions = {
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
   now?: () => Date;
   onImported: (result: {
     items: OpeningPositionCommandResult[];
@@ -82,6 +85,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 export function useHoldingImport({
+  autoSelect,
   now = () => new Date(),
   onImported,
   pickCsvFile,
@@ -271,6 +275,8 @@ export function useHoldingImport({
       setIsSaving(false);
     }
   }
+
+  useAutoSelectOnce(autoSelect, selectFile);
 
   return {
     allowExistingUpdate,

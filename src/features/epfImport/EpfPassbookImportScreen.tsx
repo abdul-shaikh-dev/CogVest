@@ -19,16 +19,16 @@ import { createThemedStyles, interaction, spacing } from "@/src/theme";
 import { balanceChange, defaultChoice, NEW_ACCOUNT, targetOptions } from "./epfPassbookImportViewModel";
 import { useEpfPassbookImport, type EpfPassbookImportDeps } from "./useEpfPassbookImport";
 
-type Props = Partial<Pick<EpfPassbookImportDeps, "now" | "store" | "readPassbook">> & Pick<EpfPassbookImportDeps, "pickPassbooks"> & {
+type Props = Partial<Pick<EpfPassbookImportDeps, "autoSelect" | "now" | "store" | "readPassbook">> & Pick<EpfPassbookImportDeps, "pickPassbooks"> & {
   onBack: () => void;
   onComplete: (accountId: string) => void;
 };
 
 /** Imports EPFO Member Passbook PDFs, read on the device and checked before anything is saved (#740). */
-export function EpfPassbookImportScreen({ now = new Date(), store = getPortfolioStore(), readPassbook = (source) => readEpfPassbookFile({ source }),
+export function EpfPassbookImportScreen({ autoSelect, now = new Date(), store = getPortfolioStore(), readPassbook = (source) => readEpfPassbookFile({ source }),
   pickPassbooks, onBack, onComplete }: Props) {
   const styles = useStyles();
-  const state = useEpfPassbookImport({ now, store, pickPassbooks, readPassbook });
+  const state = useEpfPassbookImport({ autoSelect, now, store, pickPassbooks, readPassbook });
   const { isRevealed, reveal } = useSensitiveValueReveal(state.maskWealthValues);
   const { grouped, review } = state;
 

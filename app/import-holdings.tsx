@@ -11,6 +11,8 @@ import {
 } from "@/src/domain/holdingsCsvTemplate";
 import { getQuickSetupSessionStore } from "@/src/features/quickSetup";
 import { readPickedCsvFile } from "@/src/services/import-export/boundedTextFile";
+import type { ImportFileRef } from "@/src/services/import-export/importFileProbe";
+import { withPendingFile } from "@/src/services/import-export/pendingImportFile";
 import {
   canUseVisualQaHarness,
   resolveVisualQaQuote,
@@ -40,6 +42,12 @@ async function pickCsvFile() {
   }
 }
 
+async function readCsvFile(file: ImportFileRef) {
+  return { name: file.name, ...(await readPickedCsvFile({ size: file.size ?? undefined, uri: file.uri }, holdingsCsvMaxBytes)) };
+}
+
+const pickPendingOrCsvFile = withPendingFile(readCsvFile, pickCsvFile);
+
 async function saveCsvTemplate() {
   try {
     const directory = await Directory.pickDirectoryAsync();
@@ -55,6 +63,7 @@ async function saveCsvTemplate() {
 
 export default function ImportHoldingsRoute() {
   const params = useLocalSearchParams<{
+    file?: string;
     token?: string;
     visualQaState?: string;
   }>();
@@ -81,7 +90,8 @@ export default function ImportHoldingsRoute() {
         sessionStore.getState().showReview();
         router.replace("/quick-portfolio-setup");
       }}
-      pickCsvFile={pickCsvFile}
+      autoSelect={params.file === "1"}
+      pickCsvFile={params.file === "1" ? pickPendingOrCsvFile : pickCsvFile}
       saveCsvTemplate={saveCsvTemplate}
       resolveQuote={
         visualQaState === "lookup"

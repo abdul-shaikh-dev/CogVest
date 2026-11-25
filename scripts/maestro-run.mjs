@@ -23,6 +23,8 @@ const defaultFlows = [
   "e2e/cas-native-import.yaml",
   "e2e/cas-native-fresh-portfolio.yaml",
   "e2e/zerodha-tradebook-import.yaml",
+  "e2e/import-file-picker.yaml",
+  "e2e/import-file-share.yaml",
   "e2e/futures-manual-wallet.yaml",
   "e2e/futures-draft-protection.yaml",
   "e2e/futures-timestamp-evidence.yaml",
@@ -251,6 +253,8 @@ function prepareFlow(flow) {
     [transactionsCsvFlow]: [transactionsCsvFixture],
     [zerodhaTradebookFlow]: zerodhaTradebookFixtures,
     ["e2e/ppf-csv-merge.yaml"]: ["e2e/fixtures/ppf-merge.csv"],
+    ["e2e/import-file-picker.yaml"]: [transactionsCsvFixture],
+    ["e2e/import-file-share.yaml"]: ["e2e/fixtures/ppf-merge.csv"],
     [casNativeFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
     [casNativeFreshPortfolioFlow]: ["e2e/fixtures/cas-native-synthetic.pdf"],
     [epfPassbookImportFlow]: [

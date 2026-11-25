@@ -29,6 +29,8 @@ import type { PickedHoldingsCsv } from "./useHoldingImport";
 import { useHoldingImport } from "./useHoldingImport";
 
 type HoldingImportScreenProps = {
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
   now?: () => Date;
   onCancel: () => void;
   onImported: (result: {

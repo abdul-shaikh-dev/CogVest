@@ -48,6 +48,7 @@ import {
   resolveTransactionRows,
 } from "./transactionImportResolution";
 import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
+import { useAutoSelectOnce } from "@/src/features/importFile/useAutoSelectOnce";
 import { usePortfolioSlice } from "@/src/hooks";
 
 /** This flow plans against most of the portfolio, so it follows every store change (#662). */
@@ -61,6 +62,10 @@ export const transactionImportMaxFiles = 10;
 export type PickedCasStatement = CasPdfSourceFile;
 
 export type UseTransactionImportOptions = {
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
+  /** The source "Import a file" detected; defaults to Zerodha Tradebook. */
+  initialSourceId?: TransactionImportSourceId;
   lookupAmfiSchemeClassifications?: (input: {
     isins: string[];
   }) => Promise<AmfiSchemeLookupResult>;
@@ -79,6 +84,8 @@ export type UseTransactionImportOptions = {
 };
 
 export function useTransactionImport({
+  autoSelect,
+  initialSourceId,
   lookupAmfiSchemeClassifications = lookupAmfiSchemeClassificationsService,
   now = () => new Date(),
   onImported,
@@ -102,7 +109,7 @@ export function useTransactionImport({
   const [casReviewErrors, setCasReviewErrors] = useState<string[]>([]);
   const [casSource, setCasSource] = useState<PickedCasStatement>();
   const [sourceId, setSourceIdState] =
-    useState<TransactionImportSourceId>("zerodhaTradebookEqV1");
+    useState<TransactionImportSourceId>(initialSourceId ?? "zerodhaTradebookEqV1");
   const [externalActivityConfirmed, setExternalActivityConfirmed] =
     useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -314,6 +321,8 @@ export function useTransactionImport({
       );
     }
   }
+
+  useAutoSelectOnce(autoSelect, selectFile);
 
   async function removeFile(fileId: string) {
     await replaceFiles(files.filter((file) => file.id !== fileId));

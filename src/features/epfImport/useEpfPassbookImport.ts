@@ -5,6 +5,7 @@ import { formatLocalCalendarDate } from "@/src/domain/dates";
 import type { PassbookReadResult } from "@/src/domain/epf/passbook";
 import { planPassbookImport } from "@/src/domain/epf/passbookImport";
 import { mergePassbookImport, type PassbookBatchItem } from "@/src/domain/epf/passbookImportMerge";
+import { useAutoSelectOnce } from "@/src/features/importFile/useAutoSelectOnce";
 import { usePortfolioFields } from "@/src/hooks";
 import type { CasPdfSourceFile } from "@/src/services/import-export/casPdfExtraction";
 import type { PortfolioStoreState } from "@/src/store";
@@ -22,6 +23,8 @@ import {
 export type PickedPassbookFile = CasPdfSourceFile & { name: string };
 
 export type EpfPassbookImportDeps = {
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
   now: Date;
   store: StoreApi<PortfolioStoreState>;
   pickPassbooks: () => Promise<PickedPassbookFile[]>;
@@ -36,7 +39,7 @@ type Review = {
   firstAccountId: string;
 };
 
-export function useEpfPassbookImport({ now, store, pickPassbooks, readPassbook }: EpfPassbookImportDeps) {
+export function useEpfPassbookImport({ autoSelect, now, store, pickPassbooks, readPassbook }: EpfPassbookImportDeps) {
   const snapshot = usePortfolioFields(store, ["epf", "preferences"]);
   const today = formatLocalCalendarDate(now);
   const [files, setFiles] = useState<PickedPassbook[]>([]);
@@ -72,6 +75,8 @@ export function useEpfPassbookImport({ now, store, pickPassbooks, readPassbook }
       return next;
     });
   }
+
+  useAutoSelectOnce(autoSelect, addFiles);
 
   function removeFile(key: string) {
     setFiles((current) => current.filter((file) => file.key !== key));
