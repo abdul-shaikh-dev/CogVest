@@ -1,7 +1,9 @@
 import { File } from "expo-file-system";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 import { EpfPassbookImportScreen } from "@/src/features/epfImport";
+import type { ImportFileRef } from "@/src/services/import-export/importFileProbe";
+import { withPendingFile } from "@/src/services/import-export/pendingImportFile";
 
 async function pickPassbooks() {
   try {
@@ -18,12 +20,20 @@ async function pickPassbooks() {
   }
 }
 
+// A passbook chosen under "Import a file" (#771), read first; later picks use the system picker.
+const pickPendingOrPassbooks = withPendingFile(
+  async (file: ImportFileRef) => [{ name: file.name, size: file.size ?? new File(file.uri).size, uri: file.uri }],
+  pickPassbooks,
+);
+
 export default function EpfImportRoute() {
+  const { file } = useLocalSearchParams<{ file?: string }>();
   return (
     <EpfPassbookImportScreen
+      autoSelect={file === "1"}
       onBack={() => router.back()}
       onComplete={(accountId) => router.replace({ pathname: "/epf-account", params: { accountId } })}
-      pickPassbooks={pickPassbooks}
+      pickPassbooks={async () => (await (file === "1" ? pickPendingOrPassbooks : pickPassbooks)()) ?? []}
     />
   );
 }

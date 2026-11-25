@@ -7,12 +7,14 @@ const mockPickFileAsync = jest.fn();
 const mockReplace = jest.fn();
 const mockWrite = jest.fn();
 let capturedProps: Record<string, unknown> | undefined;
+let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
   router: {
     back: (...args: unknown[]) => mockBack(...args),
     replace: (...args: unknown[]) => mockReplace(...args),
   },
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.mock("expo-file-system", () => ({
@@ -155,5 +157,40 @@ describe("Import transactions route", () => {
       undefined,
       "application/pdf",
     );
+  });
+
+  it("reads the file chosen under Import a file first, once, with the detected source (#771)", async () => {
+    const { setPendingImportFile } = require("@/src/services/import-export/pendingImportFile");
+    mockParams = { file: "1", source: "camsKfinCasPdfV1" };
+    const shared = { name: "cas.pdf", size: 4096, uri: "content://shared/cas.pdf" };
+    mockPickFileAsync.mockResolvedValue({ size: 10, uri: "content://picked/other.pdf" });
+    try {
+      setPendingImportFile(shared);
+      await render(<ImportTransactionsRoute />);
+      expect(capturedProps).toMatchObject({ autoSelect: true, initialSourceId: "camsKfinCasPdfV1" });
+      const pick = capturedProps?.pickCasStatement as () => Promise<unknown>;
+      await expect(pick()).resolves.toEqual({ size: 4096, uri: "content://shared/cas.pdf" });
+      expect(mockPickFileAsync).not.toHaveBeenCalled();
+      await expect(pick()).resolves.toEqual({ size: 10, uri: "content://picked/other.pdf" });
+    } finally {
+      mockParams = {};
+      setPendingImportFile(null);
+    }
+  });
+
+  it("never takes a pending file on a normal visit or for an unknown source (#771)", async () => {
+    const { peekPendingImportFile, setPendingImportFile } = require("@/src/services/import-export/pendingImportFile");
+    mockParams = { source: "somethingElse" };
+    mockPickFileAsync.mockResolvedValue({ size: 10, uri: "content://picked/other.pdf" });
+    try {
+      setPendingImportFile({ name: "cas.pdf", size: 4096, uri: "content://shared/cas.pdf" });
+      await render(<ImportTransactionsRoute />);
+      expect(capturedProps).toMatchObject({ autoSelect: false, initialSourceId: undefined });
+      await (capturedProps?.pickCasStatement as () => Promise<unknown>)();
+      expect(peekPendingImportFile()).not.toBeNull();
+    } finally {
+      mockParams = {};
+      setPendingImportFile(null);
+    }
   });
 });

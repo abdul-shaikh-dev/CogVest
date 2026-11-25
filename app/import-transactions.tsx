@@ -1,9 +1,23 @@
 import { Directory, File } from "expo-file-system";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useMemo } from "react";
 
 import { transactionCsvTemplate, transactionCsvTemplateFileName } from "@/src/domain/transactionCsvTemplate";
 import { TransactionImportScreen, transactionCsvMaxBytes } from "@/src/features/transactionImport";
+import type { TransactionImportSourceId } from "@/src/domain/transactionImportSources";
 import { readPickedCsvFile } from "@/src/services/import-export/boundedTextFile";
+import type { ImportFileRef } from "@/src/services/import-export/importFileProbe";
+import { withPendingFile } from "@/src/services/import-export/pendingImportFile";
+
+const detectedSources = new Set<TransactionImportSourceId>(["camsKfinCasPdfV1", "cogvestCsvV1", "zerodhaTradebookEqV1"]);
+
+async function readCsvFile(file: ImportFileRef) {
+  return { name: file.name, ...(await readPickedCsvFile({ size: file.size ?? undefined, uri: file.uri }, transactionCsvMaxBytes)) };
+}
+
+async function readCasStatement(file: ImportFileRef) {
+  return { size: file.size ?? new File(file.uri).size, uri: file.uri };
+}
 
 async function pickCsvFile() {
   try {
@@ -45,12 +59,23 @@ async function saveCsvTemplate() {
 }
 
 export default function ImportTransactionsRoute() {
+  // Set by "Import a file" (#771): the file is already chosen and detected.
+  const params = useLocalSearchParams<{ file?: string; source?: string }>();
+  const fromImportFile = params.file === "1";
+  const source = detectedSources.has(params.source as TransactionImportSourceId)
+    ? params.source as TransactionImportSourceId
+    : undefined;
+  const pickers = useMemo(() => fromImportFile
+    ? { cas: withPendingFile(readCasStatement, pickCasStatement), csv: withPendingFile(readCsvFile, pickCsvFile) }
+    : { cas: pickCasStatement, csv: pickCsvFile }, [fromImportFile]);
   return <TransactionImportScreen
+    autoSelect={fromImportFile}
+    initialSourceId={source}
     onAddPpfAccount={() => router.push("/ppf-account")}
     onCancel={() => router.back()}
     onImported={() => router.replace({ pathname: "/(tabs)/holdings", params: { status: "transactionsImported" } })}
-    pickCasStatement={pickCasStatement}
-    pickCsvFile={pickCsvFile}
+    pickCasStatement={pickers.cas}
+    pickCsvFile={pickers.csv}
     saveCsvTemplate={saveCsvTemplate}
   />;
 }

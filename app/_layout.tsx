@@ -25,6 +25,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useMonthEndSnapshotAutomation } from "@/src/features/progress";
 import { AppButton, AppText, PremiumCard, ScreenContainer } from "@/src/components/common";
+import { SharedFileReceiver } from "@/src/features/importFile";
 import { RecoveryScreen } from "@/src/features/recovery";
 import { AppLockGate } from "@/src/features/security";
 import { useWidgetPrivacySync } from "@/src/features/widget/useWidgetSync";
@@ -268,6 +269,7 @@ function RootContents() {
           <FontRelaunchNavigationGuard />
           <Fragment key={restoreEpoch}>
             <StartupLinkReplay />
+            <SharedFileReceiver />
             <MonthEndSnapshotAutomation
               enabled={
                 pathname !== "/visual-qa-seed" &&
@@ -314,6 +316,7 @@ function RootContents() {
               <Stack.Screen name="sip-due" options={{ headerShown: false }} />
               <Stack.Screen name="sip-confirm" options={{ headerShown: false }} />
               <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
+              <Stack.Screen name="import-file" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen name="investing-cash-qa" options={{ headerShown: false }} />
               <Stack.Screen name="xirr-qa" options={{ headerShown: false }} />

@@ -74,6 +74,7 @@ type HoldingsScreenProps = {
   onOpenFutures?: () => void;
   onImportHoldings?: () => void;
   onImportTransactions?: () => void;
+  onImportFile?: () => void;
   onManageAssets?: () => void;
   onReviewAllTrades?: () => void;
   onReviewOpeningPosition?: (openingPositionId: string) => void;
@@ -103,6 +104,7 @@ export function HoldingsScreen({
   onOpenFutures,
   onImportHoldings,
   onImportTransactions,
+  onImportFile,
   onManageAssets,
   onReviewAllTrades,
   onReviewOpeningPosition,
@@ -518,6 +520,7 @@ export function HoldingsScreen({
               onClose={() => setActivePanel(undefined)}
               onImportHoldings={onImportHoldings}
               onImportTransactions={onImportTransactions}
+              onImportFile={onImportFile}
               onOpenFutures={onOpenFutures}
               onQuickSetup={onQuickSetup}
               onRecordPurchase={onRecordPurchase}

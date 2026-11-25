@@ -149,6 +149,11 @@ function matchColumns(header: readonly string[]) {
   return { columns, errors };
 }
 
+/** Whether a header row is one the PPF import reads, for file detection (#771). */
+export function isPpfCsvHeader(header: readonly string[]) {
+  return matchColumns(header).errors.length === 0;
+}
+
 export function parsePpfCsv(text: string, now = new Date()): PpfCsvParseResult {
   const errors: PpfCsvError[] = [];
   const rows: PpfCsvRow[] = [];

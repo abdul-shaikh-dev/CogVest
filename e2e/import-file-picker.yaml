@@ -1,0 +1,141 @@
+appId: ${APP_ID}
+---
+# "Import a file" (#771): one entry in Settings reads the chosen file, detects
+# a CogVest transactions CSV and opens its review with the file already read.
+# The runner copies fixtures/transactions-import-v1.csv into Downloads.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 120000
+# The system picker remembers its last folder and view; start it fresh.
+- clearState: com.google.android.documentsui
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible: "Replace with visual QA data"
+    timeout: 10000
+- tapOn: "Replace with visual QA data"
+- extendedWaitUntil:
+    visible:
+      id: "visual-qa-seed-screen"
+    timeout: 10000
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: "open-import-file"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "open-import-file"
+- extendedWaitUntil:
+    visible:
+      id: "import-file-screen"
+    timeout: 10000
+- tapOn:
+    id: "import-file-choose"
+- runFlow: standalone/helpers/open-downloads.yaml
+- extendedWaitUntil:
+    visible: "transactions-import-v1.csv"
+    timeout: 10000
+- tapOn: "transactions-import-v1.csv"
+- runFlow:
+    when:
+      visible: "1 selected"
+    commands:
+      # A slow emulator can turn the tap into a long press (selection mode).
+      - tapOn: "Select"
+# Detection opens the transactions review with the file already read.
+- extendedWaitUntil:
+    visible:
+      id: "transaction-import-screen"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-preflight"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-mode-full-history"
+    direction: DOWN
+- tapOn:
+    id: "transaction-import-mode-full-history"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "transaction-import-mode-full-history"
+    selected: true
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-shared-cutover"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "transaction-import-shared-cutover"
+- assertVisible: "OK"
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-dry-run"
+    direction: DOWN
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-show-balances"
+    direction: DOWN
+- tapOn:
+    id: "transaction-import-show-balances"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "transaction-import-holding-summary-visual-qa-asset-niftybees"
+- scrollUntilVisible:
+    element:
+      id: "transaction-import-replacement-visual-qa-asset-niftybees"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "transaction-import-replacement-visual-qa-asset-niftybees"
+- takeScreenshot:
+    path: import-file-transactions-preview
+- scrollUntilVisible:
+    element:
+      id: "confirm-transaction-import"
+    direction: DOWN
+    timeout: 10000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "94%,93%"
+- scrollUntilVisible:
+    element:
+      id: "confirm-transaction-import"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "confirm-transaction-import"
+- extendedWaitUntil:
+    visible:
+      id: "holdings-screen"
+    timeout: 10000
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-evidence-screen"
+    timeout: 10000
+- assertVisible: "Trade count: 3"
+- assertVisible: "Imported transaction count: 3"
+- assertVisible: "Cash entry count: 4"
+- assertVisible: "Opening position count: 3"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-niftybees-ns-values"
+    direction: DOWN
+    timeout: 10000
+# Includes the second buy's fees 10 + taxes 2 in the acquisition cost (#649).
+- assertVisible: "Values: invested ₹48,363.60 | current ₹50,553.36 | quantity 198"

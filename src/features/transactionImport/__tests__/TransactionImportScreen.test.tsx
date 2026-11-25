@@ -863,3 +863,22 @@ describe("TransactionImportScreen", () => {
     ).toBe(true);
   });
 });
+
+describe("TransactionImportScreen opened by Import a file (#771)", () => {
+  it("reads the chosen file once with the detected source, and never on a normal visit", async () => {
+    const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const pickCsvFile = jest.fn(async () => undefined);
+    const pickCasStatement = jest.fn(async () => undefined);
+    const screen = await render(<TransactionImportScreen autoSelect initialSourceId="camsKfinCasPdfV1" onCancel={jest.fn()}
+      onImported={jest.fn()} pickCasStatement={pickCasStatement} pickCsvFile={pickCsvFile} store={store} />);
+    await waitFor(() => expect(pickCasStatement).toHaveBeenCalledTimes(1));
+    await screen.rerender(<TransactionImportScreen autoSelect initialSourceId="camsKfinCasPdfV1" onCancel={jest.fn()}
+      onImported={jest.fn()} pickCasStatement={pickCasStatement} pickCsvFile={pickCsvFile} store={store} />);
+    expect(pickCasStatement).toHaveBeenCalledTimes(1);
+    expect(pickCsvFile).not.toHaveBeenCalled();
+
+    const plain = jest.fn(async () => undefined);
+    await render(<TransactionImportScreen onCancel={jest.fn()} onImported={jest.fn()} pickCsvFile={plain} store={store} />);
+    expect(plain).not.toHaveBeenCalled();
+  });
+});

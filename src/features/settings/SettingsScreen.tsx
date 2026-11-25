@@ -289,6 +289,14 @@ export function SettingsScreen({
             showChevron
             testID="open-sips"
           />
+          <GroupedListRow
+            icon="document-attach-outline"
+            title="Import a file"
+            meta="CAS, Zerodha tradebook, EPF or PPF statement, or a CogVest CSV. CogVest opens the matching review."
+            onPress={() => router.push("/import-file")}
+            showChevron
+            testID="open-import-file"
+          />
         </PremiumCard>
 
         <PremiumCard section testID="backup-settings-card">

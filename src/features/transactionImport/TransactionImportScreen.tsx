@@ -34,6 +34,9 @@ import { useStyles } from "./transactionImportStyles";
 import { getMatchGroups } from "./transactionImportViewModel";
 
 type TransactionImportScreenProps = {
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
+  initialSourceId?: TransactionImportSourceId;
   lookupAmfiSchemeClassifications?: (input: { isins: string[] }) => Promise<AmfiSchemeLookupResult>;
   now?: () => Date;
   onAddPpfAccount?: () => void;

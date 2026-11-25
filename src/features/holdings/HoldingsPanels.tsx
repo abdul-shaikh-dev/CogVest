@@ -78,6 +78,7 @@ export function AddHoldingsPanel({
   onAddPpfAccount,
   onAddTrade,
   onClose,
+  onImportFile,
   onImportHoldings,
   onImportTransactions,
   onOpenFutures,
@@ -90,6 +91,7 @@ export function AddHoldingsPanel({
   onAddPpfAccount?: (legacy?: { assetId?: string; name?: string }) => void;
   onAddTrade?: () => void;
   onClose: () => void;
+  onImportFile?: () => void;
   onImportHoldings?: () => void;
   onImportTransactions?: () => void;
   onOpenFutures?: () => void;
@@ -132,6 +134,7 @@ export function AddHoldingsPanel({
     },
     {
       rows: [
+        ...option(onImportFile, "Any statement file", "CogVest detects the type and opens its review", "import-file-option"),
         ...option(onImportHoldings, "Holdings CSV", "Current positions from a spreadsheet", "import-holdings-csv-option"),
         ...option(onImportTransactions, "Transaction history", "Zerodha tradebook, CAS or CSV", "import-transactions-csv-option"),
       ],

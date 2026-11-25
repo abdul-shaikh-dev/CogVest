@@ -28,6 +28,7 @@ import { planPpfCsvMerge, type PpfMergePlan } from "@/src/domain/ppfCsvMerge";
 import { describeSaveFailure, getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing, createThemedStyles } from "@/src/theme";
 import { useBackHandler, usePortfolioFields } from "@/src/hooks";
+import { useAutoSelectOnce } from "@/src/features/importFile/useAutoSelectOnce";
 
 import { PpfMergePreview } from "./PpfMergePreview";
 import { Checkbox, friendlyEntryType, Summary } from "./ppfImportParts";
@@ -36,6 +37,8 @@ type PickedPpfCsv = { name: string; size: number; text: string };
 
 type PpfImportScreenProps = {
   accountId: string;
+  /** Read the chosen file on arrival (#771): "Import a file" already picked it. */
+  autoSelect?: boolean;
   onCancel: () => void;
   onImported: (accountId: string) => void;
   pickCsvFile: () => Promise<PickedPpfCsv | undefined>;
@@ -48,6 +51,7 @@ const rowsPerPage = 50;
 
 export function PpfImportScreen({
   accountId,
+  autoSelect,
   onCancel,
   onImported,
   pickCsvFile,
@@ -112,6 +116,8 @@ export function PpfImportScreen({
     }
     onCancel();
   });
+
+  useAutoSelectOnce(autoSelect && Boolean(account), chooseCsv);
 
   if (!account) {
     return (
