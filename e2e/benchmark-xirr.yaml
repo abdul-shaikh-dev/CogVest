@@ -3,7 +3,7 @@ appId: ${APP_ID}
 # Benchmark return (#765): with the visual QA portfolio, open the Dashboard
 # return breakdown and compare with the Nifty 50 index fund. Needs network:
 # NAV history comes from AMFI. Asserts the hypothetical rate, the gap and
-# the note, then that a restart reads the comparison from the cache.
+# the note, then that reopening reads the comparison from the cache.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -42,13 +42,17 @@ appId: ${APP_ID}
     id: dashboard-benchmark-note
     text: 'Hypothetical\..*UTI Nifty 50 Index Fund.*Not advice\.'
 
-# A restart shows the comparison from cached NAV without asking again.
-- stopApp
-- launchApp
-- extendedWaitUntil:
-    visible:
+# Closing and reopening the breakdown reads the comparison from cached NAV
+# without asking again. (A restart can move the start date once month-end
+# automation adds snapshots, which needs more NAV, so it is not used here.)
+- scrollUntilVisible:
+    element:
       id: dashboard-xirr-toggle
-    timeout: 60000
+    direction: UP
+- tapOn:
+    id: dashboard-xirr-toggle
+- assertNotVisible:
+    id: dashboard-benchmark
 - tapOn:
     id: dashboard-xirr-toggle
 - scrollUntilVisible:
