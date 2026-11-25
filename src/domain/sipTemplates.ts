@@ -74,14 +74,21 @@ export type DueSipInstalment = { templateId: string; month: string; dueDate: str
 
 /**
  * Instalments whose date has arrived and that were neither confirmed nor
- * skipped, oldest first. Missed months are listed, never filled in.
+ * skipped, oldest first. Missed months are listed, never filled in. With
+ * `tradeIds`, a month whose confirmed purchase was later deleted is due again.
  */
-export function dueSipInstalments(templates: readonly SipTemplate[], today: string): DueSipInstalment[] {
+export function dueSipInstalments(
+  templates: readonly SipTemplate[],
+  today: string,
+  tradeIds?: ReadonlySet<string>,
+): DueSipInstalment[] {
   const due: DueSipInstalment[] = [];
   const currentMonth = today.slice(0, 7);
   for (const template of templates) {
     if (template.paused || !isSipMonth(template.startMonth)) continue;
-    const handled = new Set(template.handledMonths.map((item) => item.month));
+    const handled = new Set(template.handledMonths
+      .filter((item) => item.status === "skipped" || !tradeIds || tradeIds.has(item.tradeId))
+      .map((item) => item.month));
     for (let month = template.startMonth; month <= currentMonth; month = nextSipMonth(month)) {
       const dueDate = sipDueDate(month, template.dayOfMonth);
       if (dueDate <= today && !handled.has(month)) due.push({ dueDate, month, templateId: template.id });

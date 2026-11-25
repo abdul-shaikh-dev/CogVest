@@ -10,7 +10,8 @@ import { decimal } from "@/src/domain/precision";
 import { getImportedTradeCharges, isManualTrade } from "@/src/domain/transactionSemantics";
 
 import type { StoreContext } from "./storeContext";
-import type { PortfolioStoreState } from "./storeTypes";
+import type { LinkedTradeCommandInput, LinkedTradeCommandResult, PortfolioStoreState } from "./storeTypes";
+import type { CashEntry, Trade } from "@/src/types";
 import { persistPortfolioTransition } from "./persistence";
 import { cashBalance, rebuildPortfolioSnapshots, refreshSnapshotsForChange } from "./recordValidation";
 import {
@@ -225,103 +226,11 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
     },
     recordFundedBuy: (input) => {
       const state = get();
-      const currentDate = now();
-      let commandInput = input;
-
-      if (input.asset) {
-        const normalizedCandidate = normalizeAssetMetadata(input.asset);
-        const canonicalMatch = findCanonicalAsset(
-          state.assets,
-          normalizedCandidate,
-        );
-        const candidateWithCanonicalId = canonicalMatch
-          ? { ...normalizedCandidate, id: canonicalMatch.id }
-          : normalizedCandidate;
-
-        if (
-          hasCanonicalAssetConflict(state.assets, candidateWithCanonicalId)
-        ) {
-          return { isValid: false, reason: "invalidTrade" };
-        }
-
-        const asset = canonicalMatch ?? normalizedCandidate;
-        commandInput = {
-          ...input,
-          asset,
-          trade: {
-            ...input.trade,
-            assetId: asset.id,
-          },
-        };
-      }
-
-      const invalidResult = validateLinkedTrade(
-        state,
-        commandInput,
-        commandInput.trade,
-        "buy",
-        currentDate,
-      );
-
-      if (invalidResult) {
-        return invalidResult;
-      }
-
-      commandInput = {
-        ...commandInput,
-        trade: normalizeTrade(commandInput.trade),
-      };
-      const normalizedInvalidResult = validateLinkedTrade(
-        state,
-        commandInput,
-        commandInput.trade,
-        "buy",
-        currentDate,
-      );
-      if (normalizedInvalidResult) {
-        return normalizedInvalidResult;
-      }
-
-      const availableCash = cashBalance(state.cashEntries);
-
-      if (
-        decimal(commandInput.trade.totalValue)
-          .minus(availableCash)
-          .greaterThan(0)
-      ) {
-        return {
-          availableCash,
-          isValid: false,
-          reason: "insufficientCash",
-          requiredCash: commandInput.trade.totalValue,
-        };
-      }
-
-      const cashEntry = linkedCashEntry(commandInput, "purchaseFunding");
-      const assets =
-        commandInput.asset &&
-        !state.assets.some(
-          (currentAsset) => currentAsset.id === commandInput.asset?.id,
-        )
-          ? [...state.assets, commandInput.asset]
-          : state.assets;
-      const cashEntries = [...state.cashEntries, cashEntry];
-      const trades = [...state.trades, commandInput.trade];
-
-      const shortfallDate = firstNegativeCashDate(cashEntries);
-      if (shortfallDate) {
-        return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue, shortfallDate };
-      }
-
-      // A new asset rides on state so the rebuild can value it.
-      const history = refreshSnapshotsForChange({ cashEntries, now: currentDate, state: { ...state, assets }, trades });
-      const transition = history
-        ? { assets, cashEntries, monthlySnapshots: history.monthlySnapshots, trades }
-        : { assets, cashEntries, trades };
-      persistPortfolioTransition(storage, state, transition);
-      set(transition);
-
-      return { cashEntry, isValid: true, trade: commandInput.trade };
+      const plan = planFundedBuy(state, input, now());
+      if (!plan.isValid) return plan;
+      persistPortfolioTransition(storage, state, plan.transition);
+      set(plan.transition);
+      return { cashEntry: plan.cashEntry, isValid: true, trade: plan.trade };
     },
     recordSaleWithProceeds: (input) => {
       const state = get();
@@ -410,4 +319,119 @@ export function createTradeActions({ get, now, set, storage }: StoreContext): Tr
       return { status: "applied" };
     },
   };
+}
+
+export type FundedBuyPlan =
+  | Extract<LinkedTradeCommandResult, { isValid: false }>
+  | {
+      cashEntry: CashEntry;
+      isValid: true;
+      trade: Trade;
+      transition: Pick<PortfolioStoreState, "assets" | "cashEntries" | "trades"> &
+        Partial<Pick<PortfolioStoreState, "monthlySnapshots">>;
+    };
+
+/**
+ * Plans a purchase paid from Cash without saving it: the trade, its linked Cash
+ * withdrawal and refreshed snapshots. Record Purchase and SIP confirmation
+ * (#766) share it, so both apply the same checks.
+ */
+export function planFundedBuy(
+  state: PortfolioStoreState,
+  input: LinkedTradeCommandInput,
+  currentDate: Date,
+): FundedBuyPlan {
+  let commandInput = input;
+
+  if (input.asset) {
+    const normalizedCandidate = normalizeAssetMetadata(input.asset);
+    const canonicalMatch = findCanonicalAsset(
+      state.assets,
+      normalizedCandidate,
+    );
+    const candidateWithCanonicalId = canonicalMatch
+      ? { ...normalizedCandidate, id: canonicalMatch.id }
+      : normalizedCandidate;
+
+    if (
+      hasCanonicalAssetConflict(state.assets, candidateWithCanonicalId)
+    ) {
+      return { isValid: false, reason: "invalidTrade" };
+    }
+
+    const asset = canonicalMatch ?? normalizedCandidate;
+    commandInput = {
+      ...input,
+      asset,
+      trade: {
+        ...input.trade,
+        assetId: asset.id,
+      },
+    };
+  }
+
+  const invalidResult = validateLinkedTrade(
+    state,
+    commandInput,
+    commandInput.trade,
+    "buy",
+    currentDate,
+  );
+
+  if (invalidResult && !invalidResult.isValid) {
+    return invalidResult;
+  }
+
+  commandInput = {
+    ...commandInput,
+    trade: normalizeTrade(commandInput.trade),
+  };
+  const normalizedInvalidResult = validateLinkedTrade(
+    state,
+    commandInput,
+    commandInput.trade,
+    "buy",
+    currentDate,
+  );
+  if (normalizedInvalidResult && !normalizedInvalidResult.isValid) {
+    return normalizedInvalidResult;
+  }
+
+  const availableCash = cashBalance(state.cashEntries);
+
+  if (
+    decimal(commandInput.trade.totalValue)
+      .minus(availableCash)
+      .greaterThan(0)
+  ) {
+    return {
+      availableCash,
+      isValid: false,
+      reason: "insufficientCash",
+      requiredCash: commandInput.trade.totalValue,
+    };
+  }
+
+  const cashEntry = linkedCashEntry(commandInput, "purchaseFunding");
+  const assets =
+    commandInput.asset &&
+    !state.assets.some(
+      (currentAsset) => currentAsset.id === commandInput.asset?.id,
+    )
+      ? [...state.assets, commandInput.asset]
+      : state.assets;
+  const cashEntries = [...state.cashEntries, cashEntry];
+  const trades = [...state.trades, commandInput.trade];
+
+  const shortfallDate = firstNegativeCashDate(cashEntries);
+  if (shortfallDate) {
+    return { isValid: false, reason: "insufficientCash", requiredCash: commandInput.trade.totalValue, shortfallDate };
+  }
+
+  // A new asset rides on state so the rebuild can value it.
+  const history = refreshSnapshotsForChange({ cashEntries, now: currentDate, state: { ...state, assets }, trades });
+  const transition = history
+    ? { assets, cashEntries, monthlySnapshots: history.monthlySnapshots, trades }
+    : { assets, cashEntries, trades };
+  return { cashEntry, isValid: true, trade: commandInput.trade, transition };
 }
