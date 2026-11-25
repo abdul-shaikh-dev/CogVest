@@ -23,7 +23,7 @@ function savedV18Portfolio(febBasis = savedBefore647(), storage: JsonStorage = c
   store.getState().addMonthlySnapshot(snapshot("2026-01", 5000, savedBefore647()));
   store.getState().addMonthlySnapshot(snapshot("2026-02", 15000, febBasis));
   // V20 adds savings goals (#767); a V18 record has none.
-  const { savingsGoals: _goals, ...saved } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
+  const { savingsGoals: _goals, sipTemplates: _sips, ...saved } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
   storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...saved, schemaVersion: 18 }));
   return { backup: store.getState().captureBackup().payload, saved: { ...saved, schemaVersion: 18 }, storage };
 }
@@ -38,12 +38,12 @@ describe("schema 19 saved-basis migration (#647)", () => {
     const store = createPortfolioStore({ storage, now });
 
     expect(store.getState().storageRecovery).toBeUndefined();
-    expect(store.getState().schemaVersion).toBe(20);
+    expect(store.getState().schemaVersion).toBe(21);
     // Bought on 10 February: weight 19/28 of the month.
     expect(february(store).performanceBasis).toEqual(savedBefore647(10000, 6785.71));
     const [january] = store.getState().monthlySnapshots;
     expect(calculateMonthlyPerformance(january, february(store))).toMatchObject({ marketMovement: 0, status: "available" });
-    expect(JSON.parse(storage.getRawItem(portfolioStorageKey)!).schemaVersion).toBe(20);
+    expect(JSON.parse(storage.getRawItem(portfolioStorageKey)!).schemaVersion).toBe(21);
   });
 
   it("runs once: a second launch neither changes nor rewrites the portfolio", () => {
@@ -72,8 +72,9 @@ describe("schema 19 saved-basis migration (#647)", () => {
     const migrated = JSON.parse(JSON.stringify(createPortfolioStore({ storage, now }).getState().captureBackup().payload.portfolio));
 
     // V20 adds an empty savings-goal list (#767).
-    const { monthlySnapshots: migratedSnapshots, savingsGoals, schemaVersion: _v19, ...rest } = migrated;
+    const { monthlySnapshots: migratedSnapshots, savingsGoals, sipTemplates, schemaVersion: _v19, ...rest } = migrated;
     expect(savingsGoals).toEqual([]);
+    expect(sipTemplates).toEqual([]);
     const { monthlySnapshots: savedSnapshots, schemaVersion: _v18, ...savedRest } = saved;
     expect(rest).toEqual(savedRest);
     expect(migratedSnapshots.map(({ performanceBasis: _b, ...item }: MonthlySnapshot) => item))
@@ -90,7 +91,7 @@ describe("schema 19 saved-basis migration (#647)", () => {
     store.getState().addCashEntry({ amount: 10000, date: "2026-02-10", id: "pay", label: "Buy", linkedTradeId: "buy",
       purpose: "purchaseFunding", type: "withdrawal" });
     store.getState().addMonthlySnapshot(snapshot("2026-02", 10000, savedBefore647(10000, 10000)));
-    const { savingsGoals: _goals, ...saved } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
+    const { savingsGoals: _goals, sipTemplates: _sips, ...saved } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
     storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...saved, schemaVersion: 18 }));
 
     expect(february(createPortfolioStore({ storage, now })).performanceBasis).toEqual(savedBefore647(10000, 10000));
@@ -107,7 +108,7 @@ describe("schema 19 saved-basis migration (#647)", () => {
     const { backup } = savedV18Portfolio();
     const target = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
 
-    const { savingsGoals: _goals, ...v18Portfolio } = backup.portfolio;
+    const { savingsGoals: _goals, sipTemplates: _sips, ...v18Portfolio } = backup.portfolio;
     target.getState().replaceFromBackup({ ...backup, portfolio: { ...v18Portfolio, schemaVersion: 18 } as never },
       target.getState().getBackupRevision());
     expect(february(target).performanceBasis).toEqual(savedBefore647(10000, 6785.71));

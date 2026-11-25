@@ -1,0 +1,127 @@
+appId: ${APP_ID}
+---
+# SIP templates (#766): add a deposit-funded SIP from Settings, confirm the
+# due instalment from the Dashboard with a typed price, and assert the stored
+# template, purchase and Cash deposit through e2e-evidence.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+- openLink: "${SCHEME}:///settings"
+- scrollUntilVisible:
+    element:
+      id: open-sips
+    direction: DOWN
+- tapOn:
+    id: open-sips
+- extendedWaitUntil:
+    visible:
+      id: sips-screen
+    timeout: 15000
+- tapOn:
+    id: sips-add-empty
+- extendedWaitUntil:
+    visible:
+      id: sip-screen
+    timeout: 15000
+- tapOn:
+    id: sip-holding-picker
+- tapOn:
+    id: sip-holding-visual-qa-asset-hdfc
+- tapOn:
+    id: sip-amount
+- inputText: "5000"
+- hideKeyboard
+# The first instalment is today, so it is due at once.
+- tapOn:
+    id: sip-first-date
+# selector: the Android date picker's confirm button
+- tapOn: OK
+- scrollUntilVisible:
+    element:
+      id: sip-funding-picker
+    direction: DOWN
+- tapOn:
+    id: sip-funding-picker
+- tapOn:
+    id: sip-funding-deposit
+- scrollUntilVisible:
+    element:
+      id: sip-save
+    direction: DOWN
+- tapOn:
+    id: sip-save
+- extendedWaitUntil:
+    visible:
+      id: sips-row-.*
+    timeout: 15000
+- runFlow: helpers/open-e2e-evidence.yaml
+- scrollUntilVisible:
+    element:
+      id: e2e-sip-count
+    direction: DOWN
+- assertVisible: "SIP count: 1 \\| SIP deposits: 0"
+- assertVisible: 'SIP: visual-qa-asset-hdfc \| 5000 on day \d+ from 20\d\d-\d\d \| deposit \| active \| none handled'
+
+# The Dashboard asks for the due instalment; confirm it with a typed price.
+- openLink: "${SCHEME}:///dashboard"
+- scrollUntilVisible:
+    element:
+      id: dashboard-sip-due-open
+    direction: DOWN
+- assertVisible: "1 SIP instalment to confirm"
+- tapOn:
+    id: dashboard-sip-due-open
+- extendedWaitUntil:
+    visible:
+      id: sip-due-screen
+    timeout: 15000
+- tapOn:
+    id: "sip-due-confirm-.*"
+- extendedWaitUntil:
+    visible:
+      id: sip-confirm-screen
+    timeout: 15000
+- tapOn:
+    id: sip-confirm-price
+- eraseText: 30
+- inputText: "250"
+- hideKeyboard
+- assertVisible:
+    id: sip-confirm-units
+    text: "20"
+- scrollUntilVisible:
+    element:
+      id: sip-confirm-save
+    direction: DOWN
+- tapOn:
+    id: sip-confirm-save
+- extendedWaitUntil:
+    visible:
+      id: sip-due-screen
+    timeout: 15000
+- assertVisible:
+    id: sip-due-empty
+- runFlow: helpers/open-e2e-evidence.yaml
+- scrollUntilVisible:
+    element:
+      id: e2e-sip-count
+    direction: DOWN
+- assertVisible: "SIP count: 1 \\| SIP deposits: 1"
+- assertVisible: 'SIP: visual-qa-asset-hdfc \| 5000 on day \d+ from 20\d\d-\d\d \| deposit \| active \| 20\d\d-\d\d confirmed 20 @ 250 = 5000 on 20\d\d-\d\d-\d\d'
+
+# Nothing is left to confirm.
+- openLink: "${SCHEME}:///dashboard"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 15000
+- assertNotVisible:
+    id: dashboard-sip-due

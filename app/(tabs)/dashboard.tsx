@@ -16,6 +16,7 @@ export default function DashboardScreen() {
       onReviewPayouts={(assetId) => router.push({ pathname: "/payouts", params: { assetId } })}
       onConfirmPayouts={() => router.push("/payout-coverage")}
       onSetBasis={() => router.push("/measurement-basis")}
+      onOpenSipDue={() => router.push("/sip-due")}
       onAddTrade={() => {
         router.push("/add-holding");
       }}

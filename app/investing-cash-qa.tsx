@@ -43,12 +43,13 @@ function EnabledQa({ page }: { page?: string }) {
         storage.setRawItem(expectedKey, canonical(payload));
         const legacy = JSON.parse(JSON.stringify(payload.portfolio));
         legacy.schemaVersion = 14;
-        // A real V14 record predates EPF (V16), payouts (V17), the measurement basis (V18) and goals (V20).
+        // A real V14 record predates EPF (V16), payouts (V17), the measurement basis (V18), goals (V20) and SIPs (V21).
         delete legacy.epf;
         delete legacy.distributions;
         delete legacy.distributionCoverage;
         delete legacy.measurementBasis;
         delete legacy.savingsGoals;
+        delete legacy.sipTemplates;
         legacy.cashEntries[0].purpose = "income";
         legacy.monthlySnapshots.forEach((snapshot: Record<string, unknown>) => { snapshot.salary = 165000; snapshot.monthlyExpense = 50000; });
         storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));

@@ -12,6 +12,7 @@ import {
 import type { PpfCsvImportInput } from "@/src/domain/ppfCsvImport";
 import type { PpfMergeInput } from "@/src/domain/ppfCsvMerge";
 import type { savingsGoalProblems } from "@/src/domain/savingsGoals";
+import type { sipTemplateProblems } from "@/src/domain/sipTemplates";
 import type { JsonStorage } from "@/src/services/storage";
 import type {
   Asset,
@@ -31,6 +32,7 @@ import type {
   Quote,
   QuoteCache,
   SavingsGoal,
+  SipTemplate,
   SellTrade,
   Trade,
 } from "@/src/types";
@@ -101,6 +103,18 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   /** Creates or edits one savings goal (#767). Never changes another record. */
   saveSavingsGoal: (input: SavingsGoalInput) => SavingsGoalResult;
   deleteSavingsGoal: (goalId: string) => SavingsGoalDeletionResult;
+  /** Creates or edits one SIP template (#766). Never records a purchase. */
+  saveSipTemplate: (input: SipTemplateInput) => SipTemplateResult;
+  /** Deletes a SIP template. Purchases it confirmed stay. */
+  deleteSipTemplate: (templateId: string) => SipTemplateChangeResult;
+  setSipTemplatePaused: (templateId: string, paused: boolean) => SipTemplateChangeResult;
+  /** Marks a due instalment as skipped. Records nothing else. */
+  skipSipInstalment: (templateId: string, month: string) => SipTemplateChangeResult;
+  /**
+   * Confirms a due instalment as one purchase, through the same checks as
+   * Record Purchase, and marks the month confirmed in the same save.
+   */
+  confirmSipInstalment: (input: SipConfirmationInput) => SipConfirmationResult;
   /** Marks trades without a Cash leg as paid from (or into) money outside CogVest (D10); null clears it. */
   setTradeFundingSource: (tradeIds: string[], source: "external" | null) => TradeFundingResult;
   saveFuturesAccount: (account: UsdmFuturesAccount) => void;
@@ -279,6 +293,17 @@ export type SavingsGoalResult =
   | { status: "rejected"; reason: "limit" }
   | { status: "rejected"; reason: "invalidEntry"; problems: ReturnType<typeof savingsGoalProblems> };
 export type AllocationTargetsResult = { status: "applied" } | { status: "rejected"; problems: string[] };
+export type SipTemplateInput = Pick<SipTemplate, "amountInr" | "assetId" | "dayOfMonth" | "funding" | "id" | "startMonth">;
+export type SipTemplateResult =
+  | { status: "applied"; template: SipTemplate }
+  | { status: "rejected"; reason: "limit" | "unknownHolding" }
+  | { status: "rejected"; reason: "invalidEntry"; problems: ReturnType<typeof sipTemplateProblems> };
+export type SipTemplateChangeResult = { status: "applied" } | { status: "rejected"; reason: "notFound" | "notDue" };
+export type SipConfirmationInput = { cashLabel: string; cashNotes?: string; month: string; templateId: string; trade: BuyTrade };
+export type SipConfirmationResult =
+  | { status: "applied"; cashEntry: CashEntry; depositEntry: CashEntry | null; trade: Trade }
+  | { status: "rejected"; reason: "notFound" | "notDue" | "wrongHolding" }
+  | { status: "rejected"; reason: "purchase"; purchase: Extract<LinkedTradeCommandResult, { isValid: false }> };
 export type SavingsGoalDeletionResult = { status: "applied" } | { status: "rejected"; reason: "notFound" };
 
 export type MeasurementBasisInput = Pick<MeasurementBasis, "startDate" | "kind"> & { openingBreakdown: MeasurementBasisLine[] };

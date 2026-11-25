@@ -309,6 +309,10 @@ function RootContents() {
               <Stack.Screen name="measurement-basis" options={{ headerShown: false }} />
               <Stack.Screen name="goal" options={{ headerShown: false }} />
               <Stack.Screen name="allocation-targets" options={{ headerShown: false }} />
+              <Stack.Screen name="sips" options={{ headerShown: false }} />
+              <Stack.Screen name="sip" options={{ headerShown: false }} />
+              <Stack.Screen name="sip-due" options={{ headerShown: false }} />
+              <Stack.Screen name="sip-confirm" options={{ headerShown: false }} />
               <Stack.Screen name="import-ppf" options={{ headerShown: false }} />
               <Stack.Screen name="cash-entry" options={{ headerShown: false }} />
               <Stack.Screen name="investing-cash-qa" options={{ headerShown: false }} />

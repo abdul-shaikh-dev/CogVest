@@ -2,7 +2,8 @@ import { z } from "zod";
 import { decimal } from "@/src/domain/precision";
 import { allocationTargetProblems } from "@/src/domain/allocationTargets";
 import { savingsGoalProblems } from "@/src/domain/savingsGoals";
-import type { SavingsGoal } from "@/src/types";
+import { sipTemplateProblems } from "@/src/domain/sipTemplates";
+import type { SavingsGoal, SipTemplate } from "@/src/types";
 import { validateUsdmFuturesAccount } from "@/src/domain/usdmFutures";
 
 import {
@@ -205,6 +206,7 @@ export const schemaVersionSchema = z.union([
   z.literal(18),
   z.literal(19),
   z.literal(20),
+  z.literal(21),
 ]);
 
 // D9: inception has no opening value or fingerprint; an opening value is the sum of its lines.
@@ -245,6 +247,26 @@ export const savingsGoalSchema = z.object({
 }).strict().superRefine((goal, context) => {
   if (Object.keys(savingsGoalProblems(goal as SavingsGoal)).length > 0) {
     context.addIssue({ code: "custom", message: "Savings goal is invalid." });
+  }
+});
+
+export const sipTemplateSchema = z.object({
+  amountInr: finiteNumberSchema,
+  assetId: nonEmptyStringSchema,
+  createdAt: z.string().datetime({ offset: true }),
+  dayOfMonth: finiteNumberSchema,
+  funding: z.enum(["cash", "deposit"]),
+  handledMonths: z.array(z.discriminatedUnion("status", [
+    z.object({ month: z.string(), status: z.literal("confirmed"), tradeId: nonEmptyStringSchema }).strict(),
+    z.object({ month: z.string(), status: z.literal("skipped") }).strict(),
+  ])).max(1000),
+  id: nonEmptyStringSchema,
+  paused: z.boolean(),
+  startMonth: z.string(),
+  updatedAt: z.string().datetime({ offset: true }),
+}).strict().superRefine((template, context) => {
+  if (Object.keys(sipTemplateProblems(template as SipTemplate)).length > 0) {
+    context.addIssue({ code: "custom", message: "SIP template is invalid." });
   }
 });
 

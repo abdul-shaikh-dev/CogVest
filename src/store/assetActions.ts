@@ -168,6 +168,8 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
           removedTradeIds.has(entry.linkedTradeId ?? ""),
       );
       const assets = state.assets.filter((item) => item.id !== assetId);
+      // A SIP for a deleted holding has nothing left to buy (#766).
+      const sipTemplates = state.sipTemplates.filter((template) => template.assetId !== assetId);
       const openingPositions = state.openingPositions.filter(
         (position) => position.assetId !== assetId,
       );
@@ -217,6 +219,7 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
         cashEntries,
         monthlySnapshots: history.monthlySnapshots,
         openingPositions,
+        sipTemplates,
         trades,
       };
 
@@ -233,6 +236,7 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
         monthlySnapshots: history.monthlySnapshots,
         openingPositions,
         quoteCache,
+        sipTemplates,
         trades,
       });
 

@@ -37,6 +37,7 @@ describe("measurement basis (D9)", () => {
     const legacy = { ...current, schemaVersion: 17 };
     delete legacy.measurementBasis;
     delete legacy.savingsGoals;
+    delete legacy.sipTemplates;
     storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));
     const migrated = createPortfolioStore({ storage, now });
     expect(migrated.getState().measurementBasis).toBeNull();
@@ -48,6 +49,7 @@ describe("measurement basis (D9)", () => {
     const current = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
     delete current.measurementBasis;
     delete current.savingsGoals;
+    delete current.sipTemplates;
     current.schemaVersion = 17;
     current.trades[0].fundingSource = "external";
     storage.setRawItem(portfolioStorageKey, JSON.stringify(current));

@@ -183,6 +183,7 @@ describe("payout records", () => {
     delete legacy.distributionCoverage;
     delete legacy.measurementBasis;
     delete legacy.savingsGoals;
+    delete legacy.sipTemplates;
     storage.setRawItem(portfolioStorageKey, JSON.stringify(legacy));
     const migrated = createPortfolioStore({ storage, now });
     expect(migrated.getState().captureBackup().payload).toEqual(store.getState().captureBackup().payload);
