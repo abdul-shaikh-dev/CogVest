@@ -1,0 +1,63 @@
+appId: ${APP_ID}
+---
+# Benchmark return (#765): with the visual QA portfolio, open the Dashboard
+# return breakdown and compare with the Nifty 50 index fund. Needs network:
+# NAV history comes from AMFI. Asserts the hypothetical rate, the gap and
+# the note, then that reopening reads the comparison from the cache.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 120000
+- openLink: "${SCHEME}:///visual-qa-seed?token=cogvest-local-visual-qa"
+- tapOn: Replace with visual QA data
+- extendedWaitUntil:
+    visible: Visual QA portfolio seeded.
+    timeout: 30000
+- openLink: "${SCHEME}:///dashboard"
+- extendedWaitUntil:
+    visible:
+      id: dashboard-xirr-toggle
+    timeout: 15000
+- tapOn:
+    id: dashboard-xirr-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-benchmark-compare
+    direction: DOWN
+- tapOn:
+    id: dashboard-benchmark-compare
+- extendedWaitUntil:
+    visible:
+      id: dashboard-benchmark-rate
+    timeout: 240000
+- assertVisible:
+    id: dashboard-benchmark-rate
+    text: '[+-]?\d+\.\d\d% a year'
+- assertVisible:
+    id: dashboard-benchmark-gap
+    text: 'Your portfolio: (\d+\.\d points (above|below) the index fund|Same as the index fund)'
+- assertVisible:
+    id: dashboard-benchmark-note
+    text: 'Hypothetical\..*UTI Nifty 50 Index Fund.*Not advice\.'
+
+# Closing and reopening the breakdown reads the comparison from cached NAV
+# without asking again. (A restart can move the start date once month-end
+# automation adds snapshots, which needs more NAV, so it is not used here.)
+- scrollUntilVisible:
+    element:
+      id: dashboard-xirr-toggle
+    direction: UP
+- tapOn:
+    id: dashboard-xirr-toggle
+- assertNotVisible:
+    id: dashboard-benchmark
+- tapOn:
+    id: dashboard-xirr-toggle
+- scrollUntilVisible:
+    element:
+      id: dashboard-benchmark-rate
+    direction: DOWN
+- assertNotVisible:
+    id: dashboard-benchmark-compare

@@ -10,6 +10,12 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     gap: spacing.sm,
   },
   xirrBlocker: { gap: spacing.xs },
+  benchmark: {
+    borderTopColor: colors.border.subtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+  },
   xirrBlockerAction: { alignSelf: "flex-start", justifyContent: "center", minHeight: 48 },
   xirrBlockers: { gap: spacing.md },
   xirrLabel: {
