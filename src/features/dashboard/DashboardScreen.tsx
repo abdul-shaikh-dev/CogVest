@@ -22,6 +22,7 @@ import { useTheme } from "@/src/theme";
 
 import { useDashboard } from "./useDashboard";
 import { InsightCards } from "@/src/features/insights";
+import { SipDueCard } from "@/src/features/sips";
 import type { InsightKind } from "@/src/domain/calculations/behaviorInsightDetails";
 import { DashboardAllocation } from "./DashboardAllocation";
 import { DashboardPortfolioHero } from "./DashboardPortfolioHero";
@@ -50,6 +51,8 @@ type DashboardScreenProps = {
   onReviewPayouts?: (assetId: string) => void;
   onConfirmPayouts?: () => void;
   onSetBasis?: () => void;
+  /** Opens the due SIP instalments (#766). */
+  onOpenSipDue?: () => void;
   onQuickSetup?: () => void;
   quickSetupSavedCount?: number;
   refreshQuotes?: RefreshQuotes;
@@ -71,6 +74,7 @@ export function DashboardScreen({
   onReviewPayouts,
   onConfirmPayouts,
   onSetBasis,
+  onOpenSipDue,
   quickSetupSavedCount = 0,
   refreshQuotes,
   store = getPortfolioStore(),
@@ -190,6 +194,8 @@ export function DashboardScreen({
             store={store}
           />
         ) : null}
+
+        <SipDueCard now={currentDate} onOpen={onOpenSipDue} store={store} />
 
         <DashboardEpfStatus dashboard={dashboard} onOpenEpf={onOpenEpf} />
 

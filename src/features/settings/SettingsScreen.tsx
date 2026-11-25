@@ -60,6 +60,7 @@ export function SettingsScreen({
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const {
     allocationTargets,
+    sipTemplates,
     appearance,
     blockScreenCapture,
     setAppearance,
@@ -277,6 +278,16 @@ export function SettingsScreen({
             onPress={() => router.push("/allocation-targets")}
             showChevron
             testID="open-allocation-targets"
+          />
+          <GroupedListRow
+            icon="repeat-outline"
+            title="SIPs"
+            meta={sipTemplates.length
+              ? `${sipTemplates.length === 1 ? "1 SIP" : `${sipTemplates.length} SIPs`}. The Dashboard asks you to confirm each instalment.`
+              : "Get a monthly reminder to confirm each SIP purchase."}
+            onPress={() => router.push("/sips")}
+            showChevron
+            testID="open-sips"
           />
         </PremiumCard>
 
