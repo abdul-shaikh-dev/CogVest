@@ -194,6 +194,7 @@ export function DashboardPortfolioHero({
       {showPerformanceArea && showXirrDetails ? (
         <DashboardXirrDetails
           masked={dashboard.maskWealthValues}
+          monthlySnapshots={dashboard.monthlySnapshots}
           names={dashboard.xirrNames}
           onConfirmPayouts={onConfirmPayouts}
           onReviewPayouts={onReviewPayouts}

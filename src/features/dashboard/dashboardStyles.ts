@@ -10,6 +10,11 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
     gap: spacing.sm,
   },
   xirrBlocker: { gap: spacing.xs },
+  benchmarkChart: { gap: spacing.xs, paddingBottom: spacing.xs, paddingTop: spacing.xs },
+  benchmarkLegend: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md },
+  legendItem: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  legendLine: { borderTopWidth: 2, width: 14 },
+  legendLineDashed: { borderStyle: "dashed" },
   benchmark: {
     borderTopColor: colors.border.subtle,
     borderTopWidth: StyleSheet.hairlineWidth,

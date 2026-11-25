@@ -39,6 +39,27 @@ export function navOn(points: readonly NavPoint[], date: string): NavPoint | nul
   return best && daysBetween(best.date, date) <= benchmarkMaxNavGapDays ? best : null;
 }
 
+/**
+ * What the index fund would have been worth on each date (#765 chart): the
+ * units bought and sold by the flows up to that date, at that date's NAV.
+ * Null where NAV is missing or withdrawals exceed the units held.
+ */
+export function benchmarkValuesOn(flows: readonly XirrFlow[], dates: readonly string[], points: readonly NavPoint[]): (number | null)[] {
+  const ordered = [...flows].filter((item) => item.source !== "terminal").sort((a, b) => a.date.localeCompare(b.date));
+  return dates.map((date) => {
+    let units = decimal(0);
+    for (const flow of ordered) {
+      if (flow.date > date) break;
+      const nav = navOn(points, flow.date);
+      if (!nav) return null;
+      units = units.minus(decimal(flow.amountInr).dividedBy(nav.close));
+      if (units.lessThan(-1e-9)) return null;
+    }
+    const end = navOn(points, date);
+    return end ? units.times(end.close).toDecimalPlaces(2).toNumber() : null;
+  });
+}
+
 export function benchmarkXirr(flows: readonly XirrFlow[], endDate: string, points: readonly NavPoint[]): BenchmarkXirr {
   const missing = (date: string): BenchmarkXirr => ({
     message: `The ${benchmarkFund.shortName}'s NAV for ${formatDate(date)} isn't available, so the comparison can't be made.`,
