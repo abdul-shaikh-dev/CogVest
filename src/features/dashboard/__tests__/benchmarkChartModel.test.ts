@@ -1,7 +1,7 @@
 import { benchmarkValuesOn, type NavPoint } from "@/src/domain/benchmarkXirr";
 import type { XirrFlow } from "@/src/domain/xirrInputs";
 
-import { buildBenchmarkChartData, monthEndOf } from "../benchmarkChartModel";
+import { benchmarkChartCeiling, buildBenchmarkChartData, monthEndOf } from "../benchmarkChartModel";
 
 // Synthetic NAV: 100 at the start, 110 at the end of February, 121 by April.
 const points: NavPoint[] = [
@@ -60,5 +60,14 @@ describe("benchmark chart data (#765)", () => {
   it("draws nothing when NAV is missing for a point", () => {
     expect(buildBenchmarkChartData({ endDate: "2026-04-20", flows, points: points.slice(1), snapshots, startDate: "2026-01-31" }))
       .toEqual({ status: "unavailable" });
+  });
+});
+
+describe("benchmark chart ceiling (#765)", () => {
+  it("rounds up to a half step, so the lines fill the plot", () => {
+    expect(benchmarkChartCeiling(2_619_514)).toBe(3_000_000);
+    expect(benchmarkChartCeiling(1_590_019)).toBe(2_000_000);
+    expect(benchmarkChartCeiling(1_200)).toBe(1_500);
+    expect(benchmarkChartCeiling(0)).toBe(1);
   });
 });

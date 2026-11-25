@@ -17,6 +17,13 @@ export type BenchmarkChartData =
 /** At least this many points, so the chart shows a path rather than a jump. */
 export const benchmarkChartMinPoints = 3;
 
+/** The smallest step of half a power of ten at or above the value, so labels stay round. */
+export function benchmarkChartCeiling(value: number) {
+  if (!(value > 0)) return 1;
+  const step = 10 ** Math.floor(Math.log10(value)) / 2;
+  return Math.ceil(value / step) * step;
+}
+
 export function monthEndOf(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
   const day = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();

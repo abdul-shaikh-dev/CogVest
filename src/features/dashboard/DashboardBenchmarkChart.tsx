@@ -9,7 +9,7 @@ import { buildProgressTrendModel } from "@/src/features/progress/progressTrendCh
 import { formatChartYLabel, getSeriesColor } from "@/src/features/progress/progressViewModel";
 import { useTheme } from "@/src/theme";
 
-import type { BenchmarkChartData } from "./benchmarkChartModel";
+import { benchmarkChartCeiling, type BenchmarkChartData } from "./benchmarkChartModel";
 import { useStyles } from "./dashboardStyles";
 
 type ChartData = Extract<BenchmarkChartData, { status: "chart" }>;
@@ -35,7 +35,7 @@ export function DashboardBenchmarkChart({ data, masked }: { data: ChartData; mas
       { label: "Portfolio", values: data.portfolio },
       { label: benchmarkSeriesLabel, values: data.fund },
     ];
-    return buildProgressTrendModel({
+    const model = buildProgressTrendModel({
       colors,
       dashedLabels: [benchmarkSeriesLabel],
       drawnSeries: series,
@@ -48,6 +48,9 @@ export function DashboardBenchmarkChart({ data, masked }: { data: ChartData; mas
       scaleSeries: series,
       selectedIndex: last,
     });
+    // A tighter ceiling than the Progress scale, so the two lines use the plot's height.
+    const maxValue = benchmarkChartCeiling(Math.max(...data.portfolio, ...data.fund));
+    return { ...model, maxValue, yTicks: [0, maxValue / 2, maxValue] };
   }, [colors, data, fontScale, last, reducedMotion]);
   const formatYLabel = useCallback((value: number) => formatChartYLabel(value, masked), [masked]);
   const plotColors = useMemo(() => ({ label: colors.text.secondary, rule: colors.border.subtle }), [colors]);
@@ -73,7 +76,7 @@ export function DashboardBenchmarkChart({ data, masked }: { data: ChartData; mas
       </View>
       <View accessibilityLiveRegion="polite" style={styles.xirrLine} testID="dashboard-benchmark-readout">
         <AppText color="secondary" variant="caption">{data.labels[index]}</AppText>
-        <AppText variant="caption">
+        <AppText testID="dashboard-benchmark-readout-values" variant="caption">
           {`Portfolio ${money(data.portfolio[index])} · Fund ${money(data.fund[index])}`}
         </AppText>
       </View>
