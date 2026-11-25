@@ -87,6 +87,12 @@ export default function E2eEvidenceScreen() {
             }`}
           </EvidenceText>
         ))}
+        <EvidenceText testID="e2e-sip-count">
+          SIP count: {evidence.sipLines.length} | SIP deposits: {evidence.sipDepositCount}
+        </EvidenceText>
+        {evidence.sipLines.map((line, index) => (
+          <EvidenceText key={line} testID={`e2e-sip-${index}`}>{line}</EvidenceText>
+        ))}
         <EvidenceText testID="e2e-allocation-targets">
           {evidence.allocationTargets
             ? `Allocation targets: equity ${evidence.allocationTargets.equity} | debt ${evidence.allocationTargets.debt} | crypto ${evidence.allocationTargets.crypto} | cash ${evidence.allocationTargets.cash}`

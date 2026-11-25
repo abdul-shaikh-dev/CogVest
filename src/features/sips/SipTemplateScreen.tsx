@@ -108,6 +108,7 @@ export function SipTemplateScreen({ now = new Date(), onBack, store = getPortfol
               onChange={(firstDate) => update({ firstDate })} openAt={now} testID="sip-first-date" value={draft.firstDate} />
             <AppText color="secondary" variant="caption">
               Later instalments fall on the same day each month, or the month&apos;s last day when it is shorter.
+              Pick the first one you have not recorded yet: every instalment from that date waits on the Dashboard.
             </AppText>
             <SelectionField
               helperText={draft.funding === "deposit"

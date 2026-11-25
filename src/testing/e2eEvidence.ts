@@ -45,6 +45,10 @@ export type E2ePortfolioEvidence = {
   allocationTargets: PortfolioStoreState["preferences"]["allocationTargets"] | null;
   /** Saved savings goals (#767), as stored. */
   savingsGoals: PortfolioStoreState["savingsGoals"];
+  /** One line per SIP template (#766) with its handled months and confirmed purchases. */
+  sipLines: string[];
+  /** Cash deposits recorded by deposit-funded SIP confirmations. */
+  sipDepositCount: number;
   tradeCount: number;
 };
 
@@ -125,6 +129,17 @@ export function buildE2ePortfolioEvidence(
     ppfCount: state.ppfAccounts.length,
     rollupTotals,
     savingsGoals: state.savingsGoals,
+    sipDepositCount: state.cashEntries.filter((entry) => entry.id.startsWith("cash-sip-")).length,
+    sipLines: state.sipTemplates.map((template) => {
+      const handled = template.handledMonths.map((item) => {
+        if (item.status === "skipped") return `${item.month} skipped`;
+        const trade = state.trades.find((candidate) => candidate.id === item.tradeId);
+        return trade && trade.type === "buy"
+          ? `${item.month} confirmed ${trade.quantity} @ ${trade.pricePerUnit} = ${trade.totalValue} on ${trade.date}`
+          : `${item.month} confirmed, purchase missing`;
+      });
+      return `SIP: ${template.assetId} | ${template.amountInr} on day ${template.dayOfMonth} from ${template.startMonth} | ${template.funding} | ${template.paused ? "paused" : "active"} | ${handled.join("; ") || "none handled"}`;
+    }),
     allocationTargets: state.preferences.allocationTargets ?? null,
     tradeCount: state.trades.length,
   };

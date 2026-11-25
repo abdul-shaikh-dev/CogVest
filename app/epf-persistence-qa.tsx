@@ -83,6 +83,7 @@ function EnabledQa({ page }: { page?: string }) {
         distributionCoverage: _distributionCoverage,
         measurementBasis: _measurementBasis,
         savingsGoals: _savingsGoals,
+        sipTemplates: _sipTemplates,
         ...legacy
       } = createEmptyPortfolioSnapshot();
       storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...legacy, schemaVersion: 15,
