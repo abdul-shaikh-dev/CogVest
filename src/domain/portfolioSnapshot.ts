@@ -12,10 +12,11 @@ import type {
   PpfLedgerEntry,
   Preferences,
   SavingsGoal,
+  SipTemplate,
   Trade,
 } from "@/src/types";
 
-export const portfolioSchemaVersion = 20;
+export const portfolioSchemaVersion = 21;
 
 /** The raw saved portfolio records, shared by the store and backup (#666). */
 export type RawPortfolioSnapshot = {
@@ -35,5 +36,7 @@ export type RawPortfolioSnapshot = {
   /** Savings goals (#767); V20 and later. */
   savingsGoals: SavingsGoal[];
   schemaVersion: typeof portfolioSchemaVersion;
+  /** Recurring purchase templates (#766); V21 and later. */
+  sipTemplates: SipTemplate[];
   trades: Trade[];
 };

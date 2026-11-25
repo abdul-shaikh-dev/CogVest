@@ -51,7 +51,7 @@ describe("persisted portfolio schema", () => {
   });
 
   it("returns a safe failure for an unsupported schema version", () => {
-    expect(parsePersistedPortfolio(serialize({ schemaVersion: 21 }))).toEqual({
+    expect(parsePersistedPortfolio(serialize({ schemaVersion: 22 }))).toEqual({
       reason: "unsupported-schema",
       success: false,
     });

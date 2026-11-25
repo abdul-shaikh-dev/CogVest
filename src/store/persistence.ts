@@ -75,6 +75,7 @@ export function createEmptyPortfolioSnapshot(): RawPortfolioSnapshot {
     preferences: createDefaultPreferences(),
     savingsGoals: [],
     schemaVersion: portfolioSchemaVersion,
+    sipTemplates: [],
     trades: [],
   };
 }
@@ -267,6 +268,8 @@ export function migratePortfolioSnapshot(
     // V20 adds savings goals; older portfolios start with none (#767).
     savingsGoals: stored.savingsGoals ?? [],
     schemaVersion: portfolioSchemaVersion,
+    // V21 adds SIP templates; older portfolios start with none (#766).
+    sipTemplates: stored.sipTemplates ?? [],
     // Migration preserves stored financial values exactly; normalization applies
     // only at write boundaries for new or corrected records.
     trades: stored.trades ?? [],
@@ -438,6 +441,7 @@ export function selectRawSnapshot(
     preferences: state.preferences,
     savingsGoals: state.savingsGoals,
     schemaVersion: portfolioSchemaVersion,
+    sipTemplates: state.sipTemplates,
     trades: state.trades,
   };
 }

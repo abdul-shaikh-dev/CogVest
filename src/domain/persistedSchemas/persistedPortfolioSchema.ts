@@ -4,6 +4,7 @@ import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
 import { ppfCashLinkProblems } from "@/src/domain/ppfCashLinks";
 import { maxSavingsGoals, savingsGoalsProblems } from "@/src/domain/savingsGoals";
+import { maxSipTemplates, sipTemplatesProblems } from "@/src/domain/sipTemplates";
 import { getRecordValidationReference } from "@/src/domain/recordValidationReference";
 import type {
   Asset,
@@ -12,6 +13,7 @@ import type {
   DistributionCoverage,
   PpfLedgerEntry,
   SavingsGoal,
+  SipTemplate,
   Trade,
 } from "@/src/types";
 import {
@@ -41,6 +43,7 @@ import {
   preferencesSchema,
   savingsGoalSchema,
   schemaVersionSchema,
+  sipTemplateSchema,
 } from "./persistedAccountSchemas";
 
 export { stockSplitEventSchema } from "./persistedRecordSchemas";
@@ -61,6 +64,7 @@ const persistedPortfolioSchema = z
     preferences: preferencesSchema,
     savingsGoals: z.array(savingsGoalSchema).max(maxSavingsGoals).optional(),
     schemaVersion: schemaVersionSchema,
+    sipTemplates: z.array(sipTemplateSchema).max(maxSipTemplates).optional(),
     trades: z.array(tradeSchema).optional(),
   })
   .superRefine((portfolio, context) => {
@@ -96,6 +100,13 @@ const persistedPortfolioSchema = z
     }
     if (savingsGoalsProblems((portfolio.savingsGoals ?? []) as SavingsGoal[]).length) {
       context.addIssue({ code: "custom", message: "Savings goals are invalid.", path: ["savingsGoals"] });
+    }
+    if ((portfolio.schemaVersion >= 21) !== (portfolio.sipTemplates !== undefined)) {
+      context.addIssue({ code: "custom", message: "SIP templates are required from V21.", path: ["sipTemplates"] });
+    }
+    if (sipTemplatesProblems((portfolio.sipTemplates ?? []) as SipTemplate[],
+      new Set((portfolio.assets ?? []).map((asset) => asset.id))).length) {
+      context.addIssue({ code: "custom", message: "SIP templates are invalid.", path: ["sipTemplates"] });
     }
     if ((portfolio.schemaVersion >= 18) !== (portfolio.measurementBasis !== undefined)) {
       context.addIssue({ code: "custom", message: "The measurement basis is required from V18.", path: ["measurementBasis"] });
@@ -331,7 +342,7 @@ export function parsePersistedPortfolio(
     !parsedJson.data ||
     typeof parsedJson.data !== "object" ||
     !Object.hasOwn(parsedJson.data, "schemaVersion") ||
-    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].includes(
+    ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].includes(
       (parsedJson.data as { schemaVersion?: unknown }).schemaVersion as number,
     )
   ) {

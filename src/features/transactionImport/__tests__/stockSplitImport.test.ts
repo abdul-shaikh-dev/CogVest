@@ -86,8 +86,8 @@ describe("verified split import", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage(), now });
     const backup = store.getState().captureBackup().payload;
     const { futuresAccounts: _currentOnly, ...legacyPortfolio } = backup.portfolio;
-    const { epf: _epf, distributions: _distributions, distributionCoverage: _coverage, measurementBasis: _basis, savingsGoals: _goals, ...preEpfPortfolio } = legacyPortfolio;
-    expect(validateBackupPayload({ ...backup, portfolio: { ...preEpfPortfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(20);
+    const { epf: _epf, distributions: _distributions, distributionCoverage: _coverage, measurementBasis: _basis, savingsGoals: _goals, sipTemplates: _sips, ...preEpfPortfolio } = legacyPortfolio;
+    expect(validateBackupPayload({ ...backup, portfolio: { ...preEpfPortfolio, schemaVersion: 9 } }).portfolio.schemaVersion).toBe(21);
   });
 
   it("revisits old automatic snapshots when attaching a split but preserves manual snapshots", () => {

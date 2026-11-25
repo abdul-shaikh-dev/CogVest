@@ -170,6 +170,7 @@ export function createV3ScaleFixture(): V3ScaleFixture {
     ppfLedgerEntries: [],
     preferences: createDefaultPreferences(),
     savingsGoals: [],
+    sipTemplates: [],
     schemaVersion: portfolioSchemaVersion,
     trades,
   };

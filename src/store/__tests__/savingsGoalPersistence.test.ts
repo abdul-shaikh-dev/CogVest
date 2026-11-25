@@ -82,14 +82,14 @@ describe("savings goals persistence (#767)", () => {
 
   it("migrates a V19 record once with no goals", () => {
     const { storage, store } = harness();
-    const { savingsGoals: _goals, ...v19 } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
+    const { savingsGoals: _goals, sipTemplates: _sips, ...v19 } = JSON.parse(storage.getRawItem(portfolioStorageKey)!);
     storage.setRawItem(portfolioStorageKey, JSON.stringify({ ...v19, schemaVersion: 19 }));
 
     const migrated = createPortfolioStore({ storage, now });
 
     expect(migrated.getState().storageRecovery).toBeUndefined();
     expect(migrated.getState().captureBackup().payload).toEqual(store.getState().captureBackup().payload);
-    expect(JSON.parse(storage.getRawItem(portfolioStorageKey)!)).toMatchObject({ savingsGoals: [], schemaVersion: 20 });
+    expect(JSON.parse(storage.getRawItem(portfolioStorageKey)!)).toMatchObject({ savingsGoals: [], schemaVersion: 21 });
   });
 
   it("rejects a V19 record that already carries goals, and a V20 record with an invalid goal", () => {
@@ -114,9 +114,9 @@ describe("savings goals persistence (#767)", () => {
     target.getState().replaceFromBackup((await parsePortfolioBackup(text, digest)).payload, target.getState().getBackupRevision());
     expect(target.getState().captureBackup().payload).toEqual(payload);
 
-    const { savingsGoals: _goals, ...v19Portfolio } = payload.portfolio;
+    const { savingsGoals: _goals, sipTemplates: _sips, ...v19Portfolio } = payload.portfolio;
     expect(validateBackupPayload({ ...payload, portfolio: { ...v19Portfolio, schemaVersion: 19 } as never }).portfolio)
-      .toMatchObject({ savingsGoals: [], schemaVersion: 20 });
+      .toMatchObject({ savingsGoals: [], schemaVersion: 21 });
 
     const tampered = JSON.parse(JSON.stringify(payload));
     tampered.portfolio.savingsGoals[0].targetAmountInr = 0;
