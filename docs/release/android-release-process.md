@@ -107,11 +107,21 @@ Preview release checklist:
    `android-version-history.json`. Merge it after CI passes.
    Check that the PPF rate schedule covers the current quarter (see
    [PPF Interest Rate Schedule](#ppf-interest-rate-schedule)).
+   Put the emulator and Maestro evidence for the release in a
+   `## Release verification` section of that PR's description.
 2. Tag the merge commit on `main` (annotated) and push the tag.
-3. Publish a GitHub pre-release for the tag: what changed since the previous
-   preview, the verification evidence, and any known gaps. Say whether the EAS
-   APK was verified at publication time.
-4. When the workflow finishes, add the EAS build link to the pre-release.
+3. The workflow publishes the GitHub pre-release after the EAS build
+   (`scripts/release-notes.mjs`, #827):
+   - The APK and EAS build links.
+   - The `## Release note` section of each PR merged since the previous
+     preview tag. A PR without one is listed by its title; "None" leaves it out.
+   - The release gates that ran, the release PR's `## Release verification`
+     section, and a statement that the EAS APK was not installed.
+   - Open bugs as known issues.
+
+   An existing release for the tag is left unchanged. Edit the published notes
+   by hand when they need more. Preview them locally with
+   `node scripts/release-notes.mjs <tag> --dry-run`.
 
 The preview profile builds `arm64-v8a` only, through
 `ORG_GRADLE_PROJECT_reactNativeArchitectures`. The four-ABI 1.0.31 preview hit
