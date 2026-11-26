@@ -118,6 +118,23 @@ describe("GitHub workflows", () => {
     expect(workflow.indexOf("EXPO_TOKEN")).toBeGreaterThan(build);
   });
 
+  it("publishes the pre-release from a separate job without the EAS token (#827)", () => {
+    const workflow = readWorkflow("android-preview.yml");
+    const start = workflow.indexOf("  publish-release:\n");
+    expect(start).toBeGreaterThan(-1);
+    const job = workflow.slice(start);
+
+    expect(job).toContain("needs: preview-apk");
+    expect(job).toContain("permissions:\n      contents: write\n      issues: read\n      pull-requests: read\n");
+    expect(job).toContain("persist-credentials: false");
+    expect(job).toContain('run: node scripts/release-notes.mjs "$GITHUB_REF_NAME"');
+    expect(job).toContain("EAS_APK_URL: ${{ needs.preview-apk.outputs.apk-url }}");
+    expect(job).not.toContain("EXPO_TOKEN");
+    expect(job).not.toContain("npm ci");
+    // The build job keeps read-only contents and exposes the build for the notes.
+    expect(workflow.slice(0, start)).toContain(`echo "apk-url=$(jq -r '.[0].artifacts.buildUrl' build.json)" >> "$GITHUB_OUTPUT"`);
+  });
+
   it("runs the tests once more in UTC (#673)", () => {
     const workflow = readWorkflow("ci.yml");
     const start = workflow.indexOf("  test-utc:\n");
