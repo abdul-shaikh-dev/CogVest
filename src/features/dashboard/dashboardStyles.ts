@@ -15,6 +15,8 @@ export const useStyles = createThemedStyles((colors) => StyleSheet.create({
   legendItem: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
   legendLine: { borderTopWidth: 2, width: 14 },
   legendLineDashed: { borderStyle: "dashed" },
+  benchmarkProgressTrack: { backgroundColor: colors.border.subtle, borderRadius: radii.pill, height: 4, overflow: "hidden" },
+  benchmarkProgressFill: { backgroundColor: colors.primary, height: 4 },
   benchmark: {
     borderTopColor: colors.border.subtle,
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -16,8 +16,9 @@ const maxPoints = 50_000;
 const maxEntryPoints = 4_000;
 const freshnessMs = 24 * 60 * 60 * 1000;
 const refreshTimeoutMs = 10_000;
-// AMFI answers each fund-house report in 1.5-15s and a year needs five (#799).
-const amfiRefreshTimeoutMs = 60_000;
+// AMFI answers each monthly fund-house report in about 1-7s, two at a time,
+// and a year needs twelve or thirteen (#799). Allow for a slower phone link.
+const amfiRefreshTimeoutMs = 90_000;
 let generationCounter = 0;
 
 type Envelope = { entries: DailyPriceEntry[]; generation: string; version: number };
